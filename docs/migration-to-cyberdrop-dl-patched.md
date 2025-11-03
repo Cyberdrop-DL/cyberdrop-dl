@@ -14,11 +14,17 @@ layout:
     visible: true
 ---
 
-# Migration to Cyberdrop-DL-Patched
+# Move to Cyberdrop-DL-Patched
 
-To migrate to the patched version of Cyberdrop-DL, you can follow the steps below.
+If you used the original version of the package (`cyberdrop-dl` instead of `cyberdrop-dl-patched`), you can follow the steps below to migrate.
 
-## If you installed on your own using pip,
+{% hint style="warning" %}
+You may need to adjust your config to make sure it's compatible with the newer versions.
+
+See: [Transition to V8](https://script-ware.gitbook.io/cyberdrop-dl/upgrade)
+{% endhint %}
+
+## If you installed on your own using pip
 
 You can simply uninstall the old version and install the new one using the following commands:
 
@@ -27,7 +33,7 @@ pip uninstall -y cyberdrop-dl
 pip install cyberdrop-dl-patched
 ```
 
-The command to use the new version will remain as `cyberdrop-dl`.
+The command to use the new version will be `cyberdrop-dl-patched`.
 
 ## If you installed using the start files
 
@@ -36,5 +42,3 @@ You can find the new ones here: [new start scripts](https://github.com/jbsparrow
 Put the new start scripts on the same folder as the old ones, them delete the old ones.
 
 You also have to delete any `venv` or `.venv` folder (if you have any)
-
-If you have custom start files, you can follow the commands for the pip installation to uninstall the old package and install the new one. Then update your start files to install `cyberdrop-dl-patched` instead of `cyberdrop-dl`.

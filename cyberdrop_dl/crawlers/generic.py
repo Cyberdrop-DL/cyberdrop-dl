@@ -4,32 +4,38 @@ import mimetypes
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, ParamSpec, TypeVar
 
-from cyberdrop_dl.clients.errors import InvalidContentTypeError, NoExtensionError, ScrapeError
-from cyberdrop_dl.crawlers.crawler import Crawler, create_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.exceptions import InvalidContentTypeError, NoExtensionError, ScrapeError
 from cyberdrop_dl.scraper.filters import has_valid_extension
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.logger import log
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_filename_and_ext
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
     from bs4 import BeautifulSoup
-    from yarl import URL
 
-    from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 VIDEO_SELECTOR = "video > source"
 
 
-def log_unsupported_wrapper(func: Callable) -> Callable:
+def log_unsupported_wrapper(
+    func: Callable[P, Coroutine[None, None, R]],
+) -> Callable[P, Coroutine[None, None, R | None]]:
     @wraps(func)
-    async def wrapper(self: GenericCrawler, item: ScrapeItem, *args, **kwargs):
+    async def wrapper(*args, **kwargs) -> R | None:
+        self: GenericCrawler = args[0]
+        item: ScrapeItem = args[1]
         try:
-            return await func(self, item, *args, **kwargs)
+            return await func(*args, **kwargs)
         except (InvalidContentTypeError, ScrapeError) as e:
             await self.log_unsupported(item, f"({e})")
         except Exception:
@@ -48,27 +54,19 @@ class FakeURL:
 
 
 class GenericCrawler(Crawler):
-    primary_base_domain = FakeURL(host=".")  # type: ignore
-    scrape_prefix = "Scraping (unsupported domain):"
-    scrape_mapper_domain = "."
+    DOMAIN: ClassVar[str] = "generic"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = FakeURL(host=".")  # type: ignore
 
-    def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, "generic", "Generic")
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    @create_task_id
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        """Determines where to send the scrape item based on the url."""
         await self.file(scrape_item)
 
     @error_handling_wrapper
     @log_unsupported_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        """Scrapes a file trying to guess the ext from the headers"""
-        content_type = await self.get_content_type(scrape_item.url)
-        if "html" in content_type:
-            return await self.try_video_from_soup(scrape_item)
+        async with self.request(scrape_item.url) as resp:
+            content_type = resp.content_type
+            if "html" in content_type:
+                return await self.try_video_from_soup(scrape_item, await resp.soup())
 
         filename, ext = guess_filename_and_ext(scrape_item.url, content_type)
         if not ext:
@@ -78,40 +76,28 @@ class GenericCrawler(Crawler):
         filename, _ = self.get_filename_and_ext(fullname.name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext)
 
-    async def get_content_type(self, url: URL) -> str:
-        async with self.request_limiter:
-            headers: dict = await self.client.get_head(self.domain, url)
-        content_type: str = headers.get("Content-Type", "")
-        if not content_type:
-            raise ScrapeError(422)
-        return content_type.lower()
+    async def try_video_from_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
+        try:
+            title = css.select_one_get_text(soup, "title").rsplit(" - ", 1)[0].rsplit("|", 1)[0]
+            link_str: str = css.select_one_get_attr(soup, VIDEO_SELECTOR, "src")
+        except (AssertionError, AttributeError, KeyError):
+            raise ScrapeError(422) from None
 
-    async def try_video_from_soup(self, scrape_item: ScrapeItem) -> None:
-        async with self.request_limiter:
-            soup: BeautifulSoup = await self.client.get_soup(self.domain, scrape_item.url)
-
-        title: str = soup.select_one("title").text  # type: ignore
-        title = title.rsplit(" - ", 1)[0].rsplit("|", 1)[0]
-
-        video = soup.select_one(VIDEO_SELECTOR)
-        if not video:
-            raise ScrapeError(422)
-
-        link_str: str = video.get("src")  # type: ignore
         link = self.parse_url(link_str, scrape_item.url.with_path("/"))
         try:
             filename, ext = self.get_filename_and_ext(link.name)
         except NoExtensionError:
             filename, ext = self.get_filename_and_ext(link.name + ".mp4")
-        await self.handle_file(link, scrape_item, filename, ext)
+        custom_filename = self.create_custom_filename(title, ext)
+        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
     async def log_unsupported(self, scrape_item: ScrapeItem, msg: str = "") -> None:
         log(f"Unsupported URL: {scrape_item.url} {msg}", 30)
-        await self.manager.log_manager.write_unsupported_urls_log(scrape_item.url, scrape_item.origin())
+        self.manager.log_manager.write_unsupported_urls_log(scrape_item.url, scrape_item.origin)
         self.manager.progress_manager.scrape_stats_progress.add_unsupported()
 
 
-def guess_filename_and_ext(url: URL, content_type: str) -> tuple[str, str | None]:
+def guess_filename_and_ext(url: AbsoluteHttpURL, content_type: str) -> tuple[str, str | None]:
     filename, ext = get_name_and_ext_from_url(url)
     if filename and ext:
         return filename, ext
@@ -122,7 +108,7 @@ def get_ext_from_content_type(content_type: str) -> str | None:
     return mimetypes.guess_extension(content_type) or CONTENT_TYPE_TO_EXTENSION.get(content_type)
 
 
-def get_name_and_ext_from_url(url: URL) -> tuple[str, str | None]:
+def get_name_and_ext_from_url(url: AbsoluteHttpURL) -> tuple[str, str | None]:
     if not has_valid_extension(url):
         return url.name, None
     try:

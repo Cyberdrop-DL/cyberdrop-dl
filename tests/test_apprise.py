@@ -6,11 +6,12 @@ from pathlib import Path
 import pytest
 from rich.text import Text
 
+from cyberdrop_dl import constants
+from cyberdrop_dl.constants import NotificationResult
 from cyberdrop_dl.managers.config_manager import ConfigManager
 from cyberdrop_dl.managers.manager import Manager
 from cyberdrop_dl.managers.path_manager import PathManager
-from cyberdrop_dl.utils import apprise, constants
-from cyberdrop_dl.utils.constants import NotificationResult
+from cyberdrop_dl.utils import apprise
 from tests.fake_classes.managers import FakeCacheManager
 
 TEST_FILES_PATH = Path(__file__).parent / "test_files/apprise"
@@ -19,8 +20,11 @@ FAKE_MANAGER.cache_manager = FakeCacheManager(FAKE_MANAGER)
 FAKE_MANAGER.config_manager = ConfigManager(FAKE_MANAGER)
 
 URL_FAIL = "mailto://test_user:test_email@gmail.com"
-URL_SUCCESS = os.environ.get("APPRISE_TEST_EMAIL_URL", "")
+APPRISE_ENV_VAR = "APPRISE_TEST_EMAIL_URL"
+URL_SUCCESS = os.environ.get(APPRISE_ENV_VAR, "")
 URL_SUCCESS_ATTACH_LOGS = f"attach_logs={URL_SUCCESS}"
+
+pytestmark = pytest.mark.skipif(not URL_SUCCESS, reason=f"{APPRISE_ENV_VAR} environment variable is not set")
 
 
 @dataclass
@@ -33,7 +37,7 @@ class AppriseTestCase:
     name: str = "Testing Apprise"
 
 
-def test_get_apprise_urls():
+def test_get_apprise_urls() -> None:
     with pytest.raises(ValueError):
         apprise.get_apprise_urls()
 
@@ -76,8 +80,7 @@ def test_get_apprise_urls():
         assert got == expected, f"Parsed URL: {got.raw_url}, Expected URL: {expected.raw_url}"
 
 
-async def send_notification(test_case: AppriseTestCase):
-    assert URL_SUCCESS, "Apprise URL should be set on enviroment"
+async def send_notification(test_case: AppriseTestCase) -> None:
     FAKE_MANAGER.config_manager.apprise_urls = []
     if test_case.urls and any(test_case.urls):
         FAKE_MANAGER.config_manager.apprise_urls = apprise.get_apprise_urls(urls=test_case.urls)
@@ -97,7 +100,7 @@ async def send_notification(test_case: AppriseTestCase):
         assert not any(match in logs_as_str for match in test_case.exclude), "Logs should not match exclude pattern"
 
 
-async def test_failed_notification():
+async def test_failed_notification() -> None:
     test_case = AppriseTestCase(
         urls=[URL_FAIL],
         result=NotificationResult.FAILED,
@@ -106,7 +109,7 @@ async def test_failed_notification():
     await send_notification(test_case)
 
 
-async def test_successful_notification():
+async def test_successful_notification() -> None:
     test_case = AppriseTestCase(
         urls=[URL_SUCCESS],
         result=NotificationResult.SUCCESS,
@@ -116,7 +119,7 @@ async def test_successful_notification():
     await send_notification(test_case)
 
 
-async def test_successful_notification_with_successful_attachment():
+async def test_successful_notification_with_successful_attachment() -> None:
     test_case = AppriseTestCase(
         urls=[URL_SUCCESS_ATTACH_LOGS],
         result=NotificationResult.SUCCESS,
@@ -126,7 +129,7 @@ async def test_successful_notification_with_successful_attachment():
     await send_notification(test_case)
 
 
-async def test_successful_notification_with_failed_attachment():
+async def test_successful_notification_with_failed_attachment() -> None:
     test_case = AppriseTestCase(
         urls=[URL_SUCCESS_ATTACH_LOGS],
         result=NotificationResult.SUCCESS,
@@ -137,7 +140,7 @@ async def test_successful_notification_with_failed_attachment():
     await send_notification(test_case)
 
 
-async def test_none_notification():
+async def test_none_notification() -> None:
     test_case = AppriseTestCase(
         urls=[""],
         result=NotificationResult.NONE,
@@ -147,7 +150,7 @@ async def test_none_notification():
     await send_notification(test_case)
 
 
-async def test_partial_notification():
+async def test_partial_notification() -> None:
     test_case = AppriseTestCase(
         urls=[URL_SUCCESS_ATTACH_LOGS, URL_FAIL],
         result=NotificationResult.PARTIAL,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import field
+from dataclasses import Field, field
 from datetime import timedelta
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING, Any
 from aiohttp_client_cache import CacheBackend, SQLiteBackend
 
 from cyberdrop_dl import __version__ as current_version
-from cyberdrop_dl.scraper.filters import filter_fn
+from cyberdrop_dl.scraper.filters import cache_filter_fn
 from cyberdrop_dl.utils import yaml
-from cyberdrop_dl.utils.data_enums_classes.supported_domains import SUPPORTED_FORUMS, SUPPORTED_WEBSITES
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,6 +40,8 @@ class CacheManager:
         self._cache = yaml.load(self.cache_file)
 
     def load_request_cache(self) -> None:
+        from cyberdrop_dl.supported_domains import SUPPORTED_FORUMS, SUPPORTED_WEBSITES
+
         rate_limiting_options = self.manager.config_manager.global_settings_data.rate_limiting_options
         urls_expire_after = {
             "*.simpcity.su": rate_limiting_options.file_host_cache_expire_after,
@@ -51,7 +52,7 @@ class CacheManager:
         for forum in SUPPORTED_FORUMS.values():
             urls_expire_after[forum] = rate_limiting_options.forum_cache_expire_after
         self.request_cache = SQLiteBackend(
-            cache_name=self.manager.path_manager.cache_db,
+            cache_name=self.manager.path_manager.cache_db,  # type: ignore
             autoclose=False,
             allowed_codes=(
                 HTTPStatus.OK,
@@ -62,7 +63,7 @@ class CacheManager:
             allowed_methods=["GET"],
             expire_after=timedelta(days=7),
             urls_expire_after=urls_expire_after,
-            filter_fn=filter_fn,
+            filter_fn=cache_filter_fn,
         )
 
     def get(self, key: str) -> Any:
@@ -86,7 +87,9 @@ class CacheManager:
             yaml.save(self.cache_file, self._cache)
 
     async def close(self):
-        await self.request_cache.close()
-
-    def close_sync(self):
+        if not isinstance(self.request_cache, Field):
+            try:
+                await self.request_cache.close()
+            except Exception:
+                pass
         self.save("version", current_version)

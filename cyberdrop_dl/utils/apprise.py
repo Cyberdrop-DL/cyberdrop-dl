@@ -1,28 +1,30 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import sys
 import tempfile
 from dataclasses import dataclass
 from enum import IntEnum
+from io import StringIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import apprise
 import rich
 from pydantic import ValidationError
 from rich.text import Text
 
-from cyberdrop_dl.config_definitions.custom.types import AppriseURLModel
-from cyberdrop_dl.utils import constants
+from cyberdrop_dl import constants
+from cyberdrop_dl.models import AppriseURLModel
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 from cyberdrop_dl.utils.yaml import handle_validation_error
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
 
-DEFAULT_APPRISE_MESSAGE = {
+DEFAULT_APPRISE_MESSAGE: dict[str, Any] = {
     "body": "Finished downloading. Enjoy :)",
     "title": "Cyberdrop-DL",
     "body_format": apprise.NotifyFormat.TEXT,
@@ -86,7 +88,8 @@ def get_apprise_urls(*, file: Path | None = None, urls: list[str] | None = None)
     if not urls:
         return []
     try:
-        return _simplify_urls([AppriseURLModel(url=url) for url in set(urls)])
+        return _simplify_urls([AppriseURLModel.model_validate({"url": url}) for url in set(urls)])
+        AppriseURLModel.model_construct()
 
     except ValidationError as e:
         handle_validation_error(e, title="Apprise", file=file)
@@ -191,10 +194,9 @@ async def send_apprise_notifications(manager: Manager) -> tuple[constants.Notifi
 
     apprise_obj = apprise.Apprise()
     for apprise_url in apprise_urls:
-        apprise_obj.add(apprise_url.url, tag=apprise_url.tags)
+        apprise_obj.add(apprise_url.url, tag=list(apprise_url.tags))
 
     main_log = manager.path_manager.main_log
-    results = {}
     all_urls = [x.raw_url for x in apprise_urls]
     log_lines = []
 
@@ -203,13 +205,14 @@ async def send_apprise_notifications(manager: Manager) -> tuple[constants.Notifi
         tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir,
     ):
         temp_dir = Path(temp_dir)
+        assert isinstance(capture, StringIO)
         temp_main_log = temp_dir / main_log.name
-        notifications_to_send = {
+        notifications_to_send: dict[str, dict[str, Any]] = {
             "no_logs": {"body": text.plain},
             "attach_logs": {"body": text.plain},
             "simplified": {},
         }
-        attach_file_failed_msg = "Unable to get copy of main log file. 'attach_logs' URLs will be proccessed without it"
+        attach_file_failed_msg = "Unable to get copy of main log file. 'attach_logs' URLs will be processed without it"
         log_lines = [LogLine(LogLevel.ERROR, attach_file_failed_msg)]
         try:
             shutil.copy(main_log, temp_main_log)
@@ -217,9 +220,16 @@ async def send_apprise_notifications(manager: Manager) -> tuple[constants.Notifi
         except OSError:
             log(attach_file_failed_msg, 40)
 
-        for tag, extras in notifications_to_send.items():
-            msg = DEFAULT_APPRISE_MESSAGE | extras
-            results[tag] = await apprise_obj.async_notify(**msg, tag=tag)
+        async def notify(tag: str, msg: dict[str, Any]) -> tuple[str, bool | None]:
+            result = await apprise_obj.async_notify(**msg, tag=tag)
+            return tag, result
+
+        def prepare_notifications():
+            for tag, extras in notifications_to_send.items():
+                msg = DEFAULT_APPRISE_MESSAGE | extras
+                yield notify(tag, msg)
+
+        results = dict(await asyncio.gather(*prepare_notifications()))
         apprise_logs = capture.getvalue()
 
     result, new_log_lines = _process_results(all_urls, results, apprise_logs)

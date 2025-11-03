@@ -17,23 +17,562 @@
 
 # CHANGELOG
 
-All notable changes to this project will be documented here. For more details, visit the wiki: https://script-ware.gitbook.io/cyberdrop-dl
+All notable changes to this project will be documented here. For more details, visit the wiki: <https://script-ware.gitbook.io/cyberdrop-dl>
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.9.0] - 2025-04-17
+## [8.6.0] - 2025-10-30
 
 ### Added
+
+- Support hotleaks.tv
+- Support direct URLs (GoFile)
+
+### Fixed
+
+- Date parsing (Transflix)
+- Prevent duplicated extensions in custom filenames
+- Handle newer encryption formats in URLs (6,7) (xHamster)
+- Parsing of filenames with brackets (Mega.nz)
+
+## [8.5.0] - 2025-10-25
+
+### Added
+
+- Support for static images (RedGifs)
+- Support for JPG7 URLS (JPG5)
+- Support for Transflix
+- Support for individual files within folders (PixelDrain)
+- Support for subfolders in filesystem URLs (PixelDrain)
+- Support collections, tags and search URLs (MissAV)
+- Update supported domains and proxies (PixelDrain)
+
+### Changed
+
+- Improve hash query performance
+- Add rate limit back (Gofile)
+- New blocked domains: `twitter`, `x.com`
+
+### Fixed
+
+- Some `timeout` errors being reported as `Unknown`
+- Do not crash if webhook request failed
+- Date parsing (eHentai)
+- URL parsing (ImageBam)
+
+## [8.4.0] - 2025-10-18
+
+### Added
+
+- Support search URLs (erome)
+- Support direct image URLs (ashemaletube)
+
+### Changed
+
+- Remove hardcoded limiter (GoFile)
+- Remove hardcoded limiter, limit concurrent downloads to 1 file per unique server (Bunkr)
+- Retry client connector errors
+- Always override download URL with selti CDN (JPG5)
+
+### Fixed
+
+- Handle newer encryption formats in URLs (xHamster)
+- Do not crash processing images (PornHub)
+- Spankbang crawler
+
+## [8.3.0] - 2025-10-16
+
+### Added
+
+- New `--impersonate` cli option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#impersonate>
+
+### Removed
+
+- ImgAcid support (site no longer exists)
+
+### Fixed
+
+- MP4 downloads (ePorner)
+- HTTP errors crashing CDL (MediaFire)
+- Albums downloads (ImgBB)
+- Some exceptions not being logged if they happen during startup
+
+## [8.2.0] - 2025-10-06
+
+### Added
+
+- Candfans support (coomer)
+- Support user's albums URLs (Chevereto)
+- Support folders with 1000+ items (GoFile)
+
+### Changed
+
+- Use impersonation for all Chevereto sites  
+
+### Fixed
+
+- Parsing of account's favorites URLs (Kemono, Coomer, Nekohouse)
+- Download of videos without an explicit resolution (ThisVid, CamwhoresTv)
+- Directory hashing from the main UI
+- Incorrect hash being logged when files are deleted
+- Do not try to fetch more pages if only 1 exists (KVS sites)
+- `TooManyRedirects` error trying to download images/albums with encoded characters in their URL (ImagePond, ImgLike)
+- Download of albums without a thumbnail (Chevereto)
+- Entire albums being skipped if the full res version of their thumbnail was downloaded before (Chevereto)
+
+## [8.1.0] - 2025-09-27
+
+### Added
+
+- imglike support
+- Support for channel photos (xVideos)
+
+### Changed
+
+- Remove SimpCity disclaimer on first time startup
+- Tiktok now has a hardcoded rate limit of 0.5 req/s
+
+### Fixed
+
+- `str object cannot be interpreted as an integer` error when using any retry option
+- Date parsing (pixeldrain)
+- Date parsing (bunkr)
+- Channel's pagination (xVideos)
+- Http errors being reported as `Not Implemented` (Pixeldrain, MediaFire, GoFile)
+- Http errors causing CDL to crash while downloading galleries (xVideos)
+- CDL getting stuck after 100 TCP connections
+
+## [8.0.0] - 2025-09-23
+
+### Added
+
+- Allow downloading google docs files with a custom format by using a `format` query param
+- Cloudflare stream support
+- pCloud support
+- MegaCloud support
+- PimpBunny support
+- HiAnime support
+- Safe.Soul support
+- Voe.sx support
+- Support for subfolders (MediaFire)
+- Support for short URL formats (MediaFire)
+- Support for subfolders (Dropbox)
+- Support for alternative pixeldrain domains: `pixeldrain.net`, `pixeldra.in`
+- Support for `pd.cybar.xyz` URLs to bypass pixeldrain daily limit
+- The `--separate-post` and `--separate-post-format` options now work for tiktok posts
+- CDL can now download private TikTok posts when using cookies
+- New config option to download tiktok videos in original quality: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#download-tiktok-src-quality-videos>
+- New `--max-thread-folder-depth` config option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#maximum_thread_folder_depth>
+- New `--ignore-coomer-post-content` config option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#ignore_coomer_post_content>
+- The `--ignore-coomer-ads` config option now affects all Kemono based crawlers (Coomer, Kemono & Nekohouse)
+
+### Changed
+
+- The recommended python version is now python 3.12+, to take advandage of eager tasks
+- Start scripts will automatically install a compatible python version
+- Start scripts no longer support 32bit systems
+- Handle shared folders with single file as loose files (Yetishare)
+- Increase default rate limit, from 10req/s to 25req/s
+- Increase max concurrent bunkr downloads, from 1 to 3
+- Parse full spec cookies from Flaresolverr responses
+- CDL will no longer try to merge subtitles for HLS downloads. They will be downloaded as separate files
+- Make requests with the same domain as the original input URL (saint2.su)
+- Tiktok downloads use a new logic to create filenames and folders. Folder structure will be different from previous versions.
+- CDL will now iterate over each file and subfolder recursively, instead of downloading an entire folder as a zip (dropbox)
+- `--read-timeout` now accepts `None` as value. This will make CDL keep the socket connection open indefinitely, even if the server is not sending data anymore
+- `--read-timeout` and `--connection-timeout` now accept fractions of a seconds as value (ex: `0.3`)
+- `--read-timeout` and `--connection-timeout` now affect all requests CDL will make (flaresolverr requests, scrape requests and download requests)
+- General performance improvements
+
+### Deprecated
+
+- Support for v5 and v6 (config, database and auto-migration) is deprecated and will be removed on the next major release
+
+### Removed
+
+- `--download-dropbox-folders-as-zip` config option
+
+### Fixed
+
+- `--dump-json` output file missing some fields
+- CDL trying to download all HLS segments at once
+- Download retries always re-starting from zero
+- Global rate limiter being ignored while crawling
+- Crashing when using any value for `--download-speed-limit`
+- Handle b64 encoded URLs (MediaFire)
+- Previously downloaded HLS fragments not being detected
+- HLS subtitle downloads always failing
+- Parsing of 1440p, 2K, 4K and 8K videos (KVS sites)
+- Possible infinite loop when using the bunkrr.org domain (Bunkr)
+- Crashing if a single error happens while crawling a Discord channel (Kemono)
+- Nekohouse crawler
+- Thumbnails being downloaded as is instead of full resolution (Coomer, Kemono, Nekohouse)
+- Handle new rot13 encryption (xHamster)
+- Handle new hex encryption (xHamster)
+- Videos being skipped if the audio was downloaded before (TikTok)
+- Do not crash if the `URL.txt` file has ipv6 URLs or invalid URLs
+- `ConnectionError` after the first attempt of a DNS lookup failed, without trying any DNS fallbacks
+
+## [7.5.0] - 2025-09-02
+
+### Added
+
+- Support for subfolders URLs (Mega.nz)
+
+### Changed
+
+- Removed `is_segment` and `parent_media_item` from output jsonl file
+- The `hash` attribute of the jsonl file now has `xxh128:` as prefix
+
+### Fixed
+
+- API response parse (RealDebrid)
+- Nested folders for the same creator (TikTok)
+- Handle paginated albums (Bunkr)
+- Handle encrypted URLs (xhamster)
+- Incompatible dependencies declarations causing CDL to crash on startup
+
+## [7.4.1] - 2025-08-23
+
+### Changed
+
+- Try to download images in original quality (twitter images)
+- Ignore auto translated titles, always use original title (xhamster)
+- Detect and report captcha responses as `DDoS-Guard` Errors (iceyfile)
+- Better detection and error messages for geo blocked videos (PornHub)
+- Fallback to HLS source when MP4 sources are blocked (PornHub)
+
+### Fixed
+
+- Folder downloads always being skipped as duplicates (mega.nz)
+- Handle videos without http sources (xhamster)
+- User URL parsing and pagination (xhamster)
+- Shared folders always using `Shared Files Folders` as title instead of the actual folder name (cyberfile, iceyfile)
+- Handle files with malformed download URLs (emojis / special characters in name/URL slug) (cyberfile, iceyfile)
+- 404 when downloading from albums (PornHub)
+- Update API endpoints and parsing (Coomer, Kemono)
+- Files with mangled names if they had non english characters (Coomer, Kemono)
+
+## [7.4.0] - 2025-08-21
+
+### Added
+
+- xVideos support
+- odnoklassniki (ok.ru) support
+
+### Changed
+
+- Handle subalbum URLs as normal albums (chevereto)
+- Read cookie files asynchronously
+- Parse full spec cookies, including expire values
+- Downloading videos no longer requires an account (xxxbunkrr)
+- Subfolders created from the same site will no longer include the folder domain
+- Update cdns (bunkr)
+- Do not retry mega.nz downloads
+
+### Removed
+
+- PHPSESSID session auth option (xxxbunkrr)
+
+### Fixed
+
+- Password protected album downloads (chevereto)
+- Resolution parsing for videos (ashemaletube)
+- Some videos missing when downloading from a playlist (xxxbunkrr)
+- Playlist pagination (xxxbunkrr)
+- Profile downloads being abruptly terminated if a post has images (tiktok)
+- DDoSGuard error on every download (nHentai)
+- Handle videos with invalid character in description and title (ePorner)
+- Series and chapter downloads (toonily)
+- `--ui` options not working
+- Do not sort unjoined HSL files.
+
+## [7.3.1] - 2025-08-02
+
+### Changed
+
+- Update primary coomer domain to `coomer.st`. CDL will automatically change the host of any URL that uses the old domain
+- Update primary kemono domain to `kemono.cr`. CDL will automatically change the host of any URL that uses the old domain
+- Improve performance when writing CSV files
+- CDL will assume english as the language to parse any human date found on sites
+- The jsonl file generated by `--dump-json` will now include every file processed in the current run, even skipped ones. Files that were actually downloaded will have a value of `True` as the `downloaded` attribute
+- `--dump-json` will write new entries in real time instead of writing everything at the end of the run
+
+### Fixed
+
+- DDoS-Guard errors even when using cookies because CDL was using an old domain (Coomer, Kemono)
+- `ffprobe` version is always being logged as `None` if not available on path, even though it comes built-in with CDL
+- Catch and log any warnings while parsing dates
+- Albums downloads (pixhost)
+- Download of videos that are not part of a playlist (spankbang)
+- Jdownloader connection
+- CDL always timing out when downloading any file that takes longer than 5 minutes
+
+## [7.3.0] - 2025-07-21
+
+### Added
+
+- JPG6 support
+- File support (yandex.disk)
+
+### Changed
+
+- Make chevereto a generic crawler. See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/generic_crawlers_instances>
+- Make RealDebrid calls asynchronously
+
+### Fixed
+
+- Title creation on some edge cases (twpornstars)
+- `NotImplemented` error when CDL tries to use `ffmpeg` on Windows machines
+- Handle unicode escaped URLs (Bunkr)
+
+## [7.2.1] - 2025-07-18
+
+### Changed
+
+- Add back crawler name when logging posts stats (Xenforo)
+
+### Fixed
+
+- Messages being logged twice
+- Tag pagination (camwhores)
+- `Generator didn't yield` error when CDL finds an invalid URL
+
+## [7.2.0] - 2025-07-17
+
+### Added
+
+- Everia.club support
+- Mega.nz support
+- Handle direct links URLs (redgifs)
+- New `file_date` field for sorting options
+
+### Changed
+
+- Use canonical URL to skip duplicates faster (redgifs)
+- Try to resolve confirmation links without a request (xenforo)
+- Download m3u8 playlist without codec information
+
+### Fixed
+
+- Laggy playback and frozen start on hls downloads
+- Downloads from password protected albums (jpg5, imagepond)
+- Multiple nested attachments folders being created (forums)
+- `file_date_iso` and `file_date_us` not being parsed as valid format fields for sorting
+- Mangled fields names in errors messages from formatting options
+- Missav HLS downloads
+
+## [7.1.0] - 2025-07-14
+
+### Added
+
+- Hotleak.vip support
+- Leakedzone.com support
+- Support for galleries with multiple pages (imagebam)
+
+### Changed
+
+- CDL will automatically disable crawlers that have 10 `DDoS-Guard` errors in the current run. All URLs mapping to that crawler will be ignored.
+- URLs from forums will be processed as completely new items with their own subfolder (same behavior as v6)
+- Fallback to HLS for newer videos that do not have MP4 formats available (PornHub)
+
+### Fixed
+
+- Fallback to the old threaded DNS resolver if the async resolver does not work on the current platform (e.g: Android)
+- Do not download videos downloaded before (beeg.com)
+- Handle attachments without name (kemono)
+- Handle old and new URL formats (imagebam)
+- Private videos not being logged as private (tokyomotion)
+- Handling host with "www." prefix (redgifs)
+- Parsing HQ resolution (thisvid)
+
+## [7.0.1] - 2025-07-04
+
+### Changed
+
+- Do not try to download thumbnails (redgifs)
+
+### Fixed
+
+- Handle new player script format and HLS videos (ashemaletube)
+- Custom filename creation (4chan)
+- Usernames not being fetch at startup (coomer)
+- Handle file URLs with unknown filenames (dropbox)
+
+## [7.0.0] - 2025-07-02
+
+### Added
+
+- Camwhores.tv support
+- Flugel-anime support
+- Missav support
+- Beeg.com support
+- efukt support
+- Vipergirls support
+- Initial HLS support (requires ffmpeg)
+- Support for any WordPress media site. See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/generic_crawlers_instances>
+- Support for any Discourse site See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/generic_crawlers_instances>
+- Add a config option to disable specific crawlers: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers>
+- Add new `ssl_context` config option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#ssl_context>
+- Add a config option to map unknown URLs to generic crawlers: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/generic_crawlers_instances>
+
+### Changed
+
+- Date parsing errors will be logged as warnings, not errors
+- Use an asynchronous DNS resolver
+- Use native system certificates by default, with fallback to `certifi`. See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#ssl_context>
+- Some crawlers have a new logic to create a filename. The name format for newly downloaded files may not match previous versions.
+- Config options that take format strings will be validated at startup
+- URLs will only be processed once, ignoring duplicates, even if they come from different crawlers. ex: If you have a dropbox URL in `URLs.txt` and CDL finds that same URL while crawling a forum, it will silently ignore the URL from the forum.
+- General performance improvements
+- New blocked domains:
+
+> gfycat
+> ko-fi.com
+> paypal.me
+> amazon.com
+> throne.com
+> youtu.be
+> youtube.com
+> linktr.ee
+> beacons.page
+> beacons.ai
+> allmylinks.com
+
+### Deprecated
+
+- Support for 32-bit Python and 32-bit operating systems in general is deprecated. On a future version, the start scripts will explicitly fail when trying to install on 32-bit systems. This deprecation only applies to the start scripts. 32-bit versions can still be installed manually via `pip`, but the user may need to compile any missing wheels.
+
+### Removed
+
+- `no-ui` option
+- `allow_insecure_connections` option
+- Importing cookies from multi browsers is no longer supported. CDL will only try to extract cookies from a single browser. The `browsers` option was renamed `browser`
+
+### Fixed
+
+- `ImportError: cannot import name 'MethodType'` on startup
+- Handle errors while processing confirmation links (Xenforo)
+- Redgifs not being downloaded (Xenforo)
+- Attachments not being downloaded (Xenforo)
+- Posts not being fully scraped if a single link in them failed (Xenforo)
+- Download from user profiles (xHamster)
+- Folder downloads (Cyberfile)
+- Do not crash when using the `Create file hashes` option from the main menu
+- Do not download "related" or "favorites" videos from a profile (PornHub)
+- `KeyError` when using the `--separate-posts` option
+- Using Real Debrid no longer causes CDL to crash
+- Image downloads (HotPic)
+- Do not try to download emojis (twitter_images)
+- Fix albums downloads (saint)
+- Handle all possible response errors (reddit)
+- Do not use reddit's `user-agent` for every site
+- Fix `unclose client session` error at the end of a run
+- Fix parsing of dropbox folders URLS
+- Handle embedded URLS (box.com)
+- [Regression] Fixed free space check when using network drives (windows)
+
+## [6.10.1] - 2025-06-15
+
+### Changed
+
+- CDL will try to parse upload dates from human expressions. ex: "Last friday at 10:55", "3 hours, 50 minutes ago",
+- Scrape errors from the generic crawler will be logged as "Unsupported" instead of "Unknown"
+- Normalize posix paths
+
+### Fixed
+
+- Download individual posts (Kemono, Coomer, Nekohouse)
+- Pagination (Kemono, Coomer, Nekohouse)
+- Handling of redirects (Xenforo)
+- Date parsing (Cyberfile)
+- Remove invalid characters from filenames (Cyberfile)
+- Discord server name (Kemono)
+
+## [6.10.0] - 2025-05-30
+
+### Added
+
+- 4chan support
+- AcidImg support
+- Archivebate support (individual videos only)
+- Box.com support
+- Buzzheavier support
+- Files.vc support
+- Imx.to support
+- Mixdrop support
+- NoodleMagazine support
+- Pkmncards.com support
+- Pornhub support
+- Influencerbitches.com support
+- IncestFlix support
+- Porntrex support
+- Twpornstars.com support
+- Vipr.im support
+- Albums support (ThisVid)
+- Parse upload date of files (rule34xxx)
+- Support for albums and searches (ashemaletube)
+- Add a config option to disable the generic crawler: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#enable_generic_crawler>
+- Auto switch primary host if the default host is blocked on the current network (bunkr)
+- Download entire discord server (Kemono)
+- Download favorites (Kemono)
+- `jitter` option to wait a random extra number of seconds in between downloads: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/rate-limiting-options#jitter>
+
+### Changed
+
+- Coomer/Kemono caching support has been temporarily removed
+- Cookies are only extracted once per browser
+- Prioritize Real-Debrid and Jdownloader over the generic crawler
+- Improve DDosGuard detection
+- Try to set creation time of files in macOS
+- Check DDoS-Guard even on successful pages
+- Try to use original server (kemono, coomer, nekohouse)
+- Improve cloudflare captcha detection
+- General performance improvements
+- CDL will remove symbols and emojis from filenames in Windows and macOS
+
+### Removed
+
+- Support for img.kiwi (site no longer exists)
+
+### Fixed
+
+- Individual file downloads (Google Drive)
+- Filename parsing (BestPrettyGirls)
+- Images downloads (Erome)
+- Use canonical URL to check previously downloaded files (Ashemaletube)
+- Only 1 file being downloaded from chevereto profiles (Imagepond, JPG5.su)
+- Playlists and tags support (Rule34xyz , Rule34vault)
+- `NoExtensionError` even when `--exclude-files-with-no-extension` was `false` (bunkr)
+- Parsing of filenames with `@` in it (bunkr)
+- Do not crash if a mountpoint is not available (Windows BitLocker)
+- Handle videos with unknown resolution (ThisVid)
+- Discord channel download (Kemono)
+- Gif downloads (reddit)
+
+## [6.9.1] - 2025-04-18
+
+### Fixes
+
+- Do not crash if `ffmpeg` is not installed
+
+## [6.9.0] - 2025-04-18
+
+### Added
+
 - aShemaleTube.com support
 - Thisvid.com support
 - ePorner.com profile, photo, and gallery support
-- New `--show-supported-sites` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#show-supported-sites
+- New `--show-supported-sites` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#show-supported-sites>
+
 ### Changed
+
 - The `import cookies` menu will only display the browsers supported by the user's OS
 - Discord.com support
 
 ### Fixed
+
 - Choosing 'All Supported Websites' in cookie extraction will no longer extract all cookies from the browser
 - Fixed free space check when using network drives (windows)
 - Fixed embed parsing on XenForo
@@ -45,10 +584,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save canonical URL to database to prevent downloading the same file twice (tiktok)
 
 ### Deprecated
+
 - Importing cookies from multiple browsers at the same time is deprecated and will be removed in a future version
 
-
-## [6.8.0] - 2025-04-05
+## [6.8.0] - 2025-04-07
 
 ### Added
 
@@ -63,7 +602,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - xHamster support
 - Auto detect orientation
 - `generic crawler` to scrape pages from sites that are not supported. This replaces the basic `no crawler` logic
-- Save scraped pages as html with the new `--save-pages-html` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/files#save_pages_html
+- Save scraped pages as html with the new `--save-pages-html` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/files#save_pages_html>
 
 ### Changed
 
@@ -94,8 +633,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handle confirmation links as input URL (forums)
 - General performance improvements
 
-
-## [6.7.0] - 2025-03-07
+## [6.7.0] - 2025-03-10
 
 ### Added
 
@@ -109,9 +647,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FileDitch support
 - Sex.com support (shorts and images from profiles only)
 - Option to import cookies from all supported websites in the main UI
-- Get information about all the downloaded files with the new `--dump-json` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/files#dump_json
-- Run CDL with a portrait layout using the `--portrait` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#portrait
-- Disable requests caching (reading and writing) with the `--disable-cache` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#disable-cache
+- Get information about all the downloaded files with the new `--dump-json` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/files#dump_json>
+- Run CDL with a portrait layout using the `--portrait` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#portrait>
+- Disable requests caching (reading and writing) with the `--disable-cache` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#disable-cache>
 
 ### Changed
 
@@ -159,13 +697,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show `--links (CLI args)` as input (if they were used)
 - Paths printed to the stats will have hyperlinks to their location (when supported by the terminal)
 
-
-## [6.6.0] - 2025-02-23
+## [6.6.0] - 2025-02-24
 
 ### Added
 
-- Skip download of video and audio files by duration: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/media_duration_limits
-- Show simplified progress bar with new `--ui simple` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#ui
+- Skip download of video and audio files by duration: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/media_duration_limits>
+- Show simplified progress bar with new `--ui simple` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/cli-arguments#ui>
 - e621.net support (pools, posts, and tags)
 - Streamable.com support
 - Youjizz.com support
@@ -230,9 +767,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Iceyfile.com support
 - Support cookie extraction from Arc Browser, Lynx and W3M
-- `--exclude-files-with-no-extension` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#exclude_files_with_no_extension
+- `--exclude-files-with-no-extension` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#exclude_files_with_no_extension>
 - `--print-stats` CLI only option
-- Scrape nested threads with  `--maximum-thread-depth`: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#maximum-thread-depth
+- Scrape nested threads with  `--maximum-thread-depth`: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#maximum-thread-depth>
 
 ### Removed
 
@@ -257,18 +794,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add support for TikTok profiles, videos, and photos
 - Add new CLI argument `--download-tiktok-audios` to download audio files from TikTok posts
-- Add support for https://www.imagebam.com
-- Add support for https://comics.8muses.com
+- Add support for <https://www.imagebam.com>
+- Add support for <https://comics.8muses.com>
 - Pornpics.com support
 - Twitter images (twimg) support
 - Members.luscious.net search support
-- Skip slow downloads with `--slow-download-speed`: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options#slow_download_speed
+- Skip slow downloads with `--slow-download-speed`: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options#slow_download_speed>
 - Support for forums redirect URLs (`/goto/...`, `/posts/...`)
 
 ### Changed
 
 - Files in the download queue are saved to the database and can be retried with `--retry-failed`
-- CLI `--skip-hosts` and `--only-hosts` values will be added to / removed from config values when passing `+` or `-` as the first argument, respectively. See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/special_setting_types#additiveargs
+- CLI `--skip-hosts` and `--only-hosts` values will be added to / removed from config values when passing `+` or `-` as the first argument, respectively. See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/special_setting_types#additiveargs>
 - CLI arguments that accept multiple values can now be used multiple times in the same command
 - Forum posts are now processed asynchronously instead of sequentially
 - Prettify failures messages
@@ -283,11 +820,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ImgBB crawler
 - Download path structure (Tokyomotion)
 - Empty `download_filename` on database
-- Missing tread id on `Last_Scraped_Forum_Post.csv` URLs
+- Missing thread id on `Last_Scraped_Forum_Post.csv` URLs
 - Nudostar Crawler
 - Invalid URL parsing (imgur)
 - Invalid link confirmation URL parsing (forums)
-
 
 ## [6.3.0] - 2025-01-23
 
@@ -297,8 +833,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coomer and Kemono search results support
 - SendVid.com support
 - Support for forum direct link URLs (attachments) as input URLs
-- `--logs-expire-after` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/logs#logs_expire_after
-- `--filename-regex-filter` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#filename_regex_filter
+- `--logs-expire-after` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/logs#logs_expire_after>
+- `--filename-regex-filter` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#filename_regex_filter>
 
 ### Changed
 
@@ -346,7 +882,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make a single login request try per forum
 - DDoS-Guard detection
 
-
 ## [6.1.1] - 2025-01-05
 
 ### Changed
@@ -385,11 +920,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `--deep-scrape` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options#deep_scrape
-- `--separate-posts-format` option: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#separate_posts_format
+- `--deep-scrape` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options#deep_scrape>
+- `--separate-posts-format` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#separate_posts_format>
 - Allow any file name for cookie files
 - Redact username from log tracebacks
-
 
 ## [6.0.1] - 2024-12-24
 
@@ -401,29 +935,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ⚠️**BREAKING CHANGES**
 
-> 1. Stricter config validation logic. CDL will verify that every config value and CLI argument is valid before running
+1. Stricter config validation logic. CDL will verify that every config value and CLI argument is valid before running
 
-> 2. All dedupe and hashing functions has been replaced.
->   - `xxh128` is now the default hashing algorithm, replacing `md5`
-> - By default, all v5 hashes will be ignored for deduplication matches. You can re-enable md5 with `--add-md5-hash`
-> - It's no longer possible to keep the newest file while deduplicating.
-> - Every file previously downloaded is taken into account for deduplication. Files no longer need to currently exists on disk
+2. All dedupe and hashing functions has been replaced.
 
-> 3. Removed `--sort-cdl-only` option
+   - `xxh128` is now the default hashing algorithm, replacing `md5`
+   - By default, all v5 hashes will be ignored for deduplication matches. You can re-enable md5 with `--add-md5-hash`
+   - It's no longer possible to keep the newest file while deduplicating.
+   - Every file previously downloaded is taken into account for deduplication. Files no longer need to currently exists on disk
 
-> 4. The following arguments are deprecated and will be removed in a future version:
->  - `--output-folder`
->  - `--download-all-configs`
->  - `--sort-all-configs`
->  - `--sort-all-downloads`
->  - `--main-log-filename`
->  - `--last-forum-post-filename`
->  - `--unsupported-urls-filename`
->  - `--download-error-urls-filename`
->  - `--scrape-error-urls-filename`
+3. Removed `--sort-cdl-only` option
 
+4. The following arguments are deprecated and will be removed in a future version:
+
+   - `--output-folder`
+   - `--download-all-configs`
+   - `--sort-all-configs`
+   - `--sort-all-downloads`
+   - `--main-log-filename`
+   - `--last-forum-post-filename`
+   - `--unsupported-urls-filename`
+   - `--download-error-urls-filename`
+   - `--scrape-error-urls-filename`
 
 This update introduces the following changes:
+
 - Add Python 3.13 support
 - Add requests caching to speed up future download sessions for forums, Coomer, and Kemono.
 - Update Kemono & Coomer crawlers to use API calls
@@ -438,7 +974,6 @@ This update introduces the following changes:
 - Added option to clear cookies for selected websites
 - General improvements and bug fixes
 
-
 ## [5.7.2] - 2024-11-20
 
 This update introduces the following changes:
@@ -450,14 +985,13 @@ This update introduces the following changes:
 5. Rework entire TUI user input options
 6. General logging improvements and bug fixes
 
-#### Details
+### Details
 
-- User can import cookies from their browser. CDL will use these cookies to login to websites and pass Cloudflare DDoS challenges. For more information on cookies extraction and configuration, visit: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/browser_cookies
+- User can import cookies from their browser. CDL will use these cookies to login to websites and pass Cloudflare DDoS challenges. For more information on cookies extraction and configuration, visit: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/browser_cookies>
 - When using flaresolverr, CDL will try to apply the cookies from the response and make a new request if necessary.
 - User can set CDL to automatically import cookies at startup. User must specify browser and domains to export cookies from
 - Add logic validation for config path values
 - Remove integrated config edit options. Modifications to the config must be done directly on the config file.
-
 
 ## [5.7.1] - 2024-11-05
 
@@ -469,9 +1003,9 @@ This update introduces the following changes:
 
 1. Adds the option to limit how many items are scraped
 2. Add support for scraping a users' coomer favorites
-3. Add integration to handle downloads supported by https://real-debrid.com
-4. Add support for https://nekohouse.su profiles and posts
-5. Add support for https://imagepond.net URLs
+3. Add integration to handle downloads supported by <https://real-debrid.com>
+4. Add support for <https://nekohouse.su> profiles and posts
+5. Add support for <https://imagepond.net> URLs
 6. Add support for password protected albums from Chevereto sites (`jpg5`, `Img.kiwi` and `Imagepond`)
 7. Show `total runtime` and `total downloaded data` on final report
 8. Add support to send the main log file as an attachment to the `webhook_url` report
@@ -479,27 +1013,27 @@ This update introduces the following changes:
 10. Add support for `%` encoded URLs in the input file
 11. General logging improvements and bug fixes
 
-#### Details:
+### Details
 
-- Users can limit the number of items to scrape by type, using the `--maximum-number-of-children` parameter. For more details on how to use this feature, visit the wiki: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options
-- Add support for scraping a users' coomer favorites by allowing the user to pass the coomer favorites page URL as an input URL (https://coomer.su/favorites). This requires them to have their coomer session token in the `authentication.yaml` file.
+- Users can limit the number of items to scrape by type, using the `--maximum-number-of-children` parameter. For more details on how to use this feature, visit the wiki: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options>
+- Add support for scraping a users' coomer favorites by allowing the user to pass the coomer favorites page URL as an input URL (<https://coomer.su/favorites>). This requires them to have their coomer session token in the `authentication.yaml` file.
 - Add real-debrid integration to download from any site that they support (`mega.nz`,`rapidgator`, `google drive`, `k2s`, etc). User needs to provide their API key in the `authentication.yaml` file in order to allow downloads
 - Nekohouse URLs can now be scraped and downloaded by CDL
-- Users can now get the stats report of the run via multiple services and include the main log as an attachment. For more information on how to setup notifications, visit: https://script-ware.gitbook.io/cyberdrop-dl/reference/notifications
+- Users can now get the stats report of the run via multiple services and include the main log as an attachment. For more information on how to setup notifications, visit: <https://script-ware.gitbook.io/cyberdrop-dl/reference/notifications>
 - Fix parsing of bunkr file extensions when `--remove-generated-id` is enabled
 - Remove console markdown data from log files
 - Fix `only_hosts` skip logic
 - Better handling of some unknown errors
 
-
 ## [5.7.0] - 2024-10-25
 
 This update introduces the following changes:
+
 1. Rotating log files
 2. Overhaul hashing functions
-3. Add support for https://tokyomotion.net URLs
-4. Add support for https://xxxbunker.com URLs
-5. Add support for https://saint2.su albums
+3. Add support for <https://tokyomotion.net> URLs
+4. Add support for <https://xxxbunker.com> URLs
+5. Add support for <https://saint2.su> albums
 6. Add support for password protected Cyberfile URLs
 7. Simplify some UI elements
 8. Improve jdownloader integration
@@ -507,8 +1041,7 @@ This update introduces the following changes:
 10. Add a "Check for Updates" UI option
 11. General bug fixes
 
-
-#### Details:
+### Details
 
 - Add option to rotate log file names. If enabled, current `date-time` will be used as a suffix for each log file, in the format `YYMMDD_HHMMSS`. This will prevent overriding old log files
 - Refactor hashing functions and logic
@@ -518,9 +1051,9 @@ This update introduces the following changes:
 - Add support for both password protected files and folders on Cyberfile. Users can include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it. Example: `https://cyberfile.me/folder/xUGg?password=1234`
 - Replace built-in log file handler with rich handler for better error reports
 - UI changes: remove redundant 'X of Y files' from every progress bar, sort scrape and download error by reverse frequency, use equal height for top row UI, fix padding issues, show unsupported URLs stats at the end
-- Add `whitelist` filter, `autostart` and custom `download_dir` options for jdownloader. For more details, visit the wiki: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options
+- Add `whitelist` filter, `autostart` and custom `download_dir` options for jdownloader. For more details, visit the wiki: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/runtime_options>
 - Added a "Check for Updates" UI option and improved the update check logic to check for new testing versions.
-- Fix error during program exit when referers table no longer exists
+- Fix error during program exit when referrer table no longer exists
 - Prevents crashes when there are insufficient permissions to move a file
 - Fix an issue where CDL would delete URLs input file
 - Move functions for after download to `post_runtime`
@@ -528,67 +1061,68 @@ This update introduces the following changes:
 - Fix Cyberfile deleted folders not being correctly scraped
 - Update logging to include when a file is being downloaded with no crawler
 
-
 ## [5.6.54] - 2024-10-21
 
 This update introduces the following changes:
+
 1. Fix error on some bunkr videos
 
-#### Details:
+### Details
 
 - Fix error when downloading videos with no thumbnail (bunkr)
 - Update possible CDNs (bunkr)
 - Better error handling (bunkr)
 
-
 ## [5.6.53] - 2024-10-20
 
 This update introduces the following changes:
+
 1. Update bunkr crawler
 
-#### Details:
+### Details
 
 - Update bunkr crawler to work on the new site design
-
 
 ## [5.6.52] - 2024-10-10
 
 This update introduces the following changes:
+
 1. Fix scan_folder saved as invalid value
 
-#### Details:
+### Details
 
 - Fixes issue that causes the config file to be corrupted with an invalid scan_folder value.
 
 ## [5.6.51] - 2024-10-10
 
 This update introduces the following changes:
+
 1. Skip file download by referer
 2. Fixes album_id not been saved to database
 
-#### Details:
+### Details
 
 - Using the flag `--skip-referer-seen-before` will skip downloading files from any referer that have been scraped before. The file (s) will always be skipped regardless of whether the referer was successfully scraped or not
 - Fixes album_id property not being saved to database on supported crawlers
 
-
 ## [5.6.50] - 2024-10-07
 
 This update introduces the following changes:
+
 1. Support for password protected GoFile links
 
-#### Details:
+### Details
 
 1. Users can include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
- Example: https://gofile.io/d/xUprGg?password=1234
-
+ Example: <https://gofile.io/d/xUprGg?password=1234>
 
 ## [5.6.43] - 2024-10-03
 
 This update introduces the following changes:
+
 1. Update True/False CLI arguments to integrate better with the config file.
 
-#### Details:
+### Details
 
 - CLI arguments that toggle settings to `True` or `False` can now be passed as either `--arg` or `--no-arg` to set the value to `True` or `False` respectively.
 - This also solves an issue where CLI arguments that toggle settings would override config file settings even if the CLI argument was never passed.
@@ -596,20 +1130,22 @@ This update introduces the following changes:
 ## [5.6.42] -  2024-10-03
 
 This update introduces the following changes:
+
 1. Filter final URL with `--skip-hosts` and `--only-hosts` arguments
 
-#### Details:
+### Details
 
 - This allows the user to skip or only download from specific bunkr hosts
 
 ## [5.6.41] - 2024-10-01
 
 This update introduces the following changes:
+
 1. Fixes crash when unsupported URLs have no parents
 2. Display new changelog if an update is available
 3. Updated supported sites in Wiki
 
-#### Details:
+### Details
 
 - Fixes crash if an unsupported url have no parents
 - Always display an updated changelog if a new version has been released on pypi
@@ -618,87 +1154,97 @@ This update introduces the following changes:
 ## [5.6.40] - 2024-10-01
 
 This update introduces the following changes:
+
 1. Fixes empty folder cleanup
 
-#### Details:
+### Details
+
 - Fix incorrect path objects on post-runtime folder cleanup
 
 ## [5.6.39] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Add external CHANGELOG file
 
-#### Details:
-- Project changes will documented on https://github.com/jbsparrow/CyberDropDownloader/blob/master/CHANGELOG.md for better tracking
+### Details
+
+- Project changes will documented on <https://github.com/jbsparrow/CyberDropDownloader/blob/master/CHANGELOG.md> for better tracking
 - Built-in viewer will fetch CHANGELOG history on first use
 
 ## [5.6.38] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Fix `scrape_items` creation for Kemono and coomer links
 
-#### Details:
-- Fixes parents tracking for Kemono and coomer links
+### Details
 
+- Fixes parents tracking for Kemono and coomer links
 
 ## [5.6.37] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Fixes empty folder cleanup on python 3.11
 
-#### Details:
-- Fixes logic by walking the directory tree using `os.walk` to remain compatibility with python 3.11
+### Details
 
+- Fixes logic by walking the directory tree using `os.walk` to remain compatibility with python 3.11
 
 ## [5.6.36] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Delete empty files after a successful run.
 2. Added a feature to save the origin of unsupported URLs
 
-#### Details:
+### Details
+
 - Empty files (0 bytes) inside download_dir will be deleted alongside empty folders after a successful run
 - Each unsupported URL will now be saved alongside the URL of the original item they came from (`Unsupported_URLs.txt`)
 - Origin is also saved for password protected links, allowing the user to visit the URL (ex. forum post) and retrieve the password if available
 
-
 ## [5.6.35] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Small fixes for sorting system
 
-#### Details:
-- Fixes `scan_dir` selection logic
+### Details
 
+- Fixes `scan_dir` selection logic
 
 ## [5.6.34] - 2024-09-30
 
 This update introduces the following changes:
+
 1. Added a feature to fix the names of multipart archives.
 
-#### Details:
-- Multipart archives will be renamed to have the proper naming format when the `--remove-generated-id-from-filenames` argument is passed.
+### Details
 
+- Multipart archives will be renamed to have the proper naming format when the `--remove-generated-id-from-filenames` argument is passed.
 
 ## [5.6.33] - 2024-09-25
 
 This update introduces the following changes:
+
 1. Fix issues with checking how much free space is available on the disk.
 2. Skip clearing the console when running with the `--no-ui` flag.
 
-#### Details:
+### Details
 
 - Fixed an issue with free space not being properly checked when running with the `--retry-failed` flag.
 - Made error output more clear when there is not enough free space to download a file.
 - Skip clearing the console when running with the `--no-ui` flag to allow users to see the output of all runs done with `--no-ui`.
 
-
 ## [5.6.32] - 2024-09-22
 
 This update introduces the following changes:
+
 1. Add new URLs categorization feature for the URLs.txt file.
 
-#### Details:
+### Details
 
 - You can now group links under one download folder by adding a category name above the links in the `URLs.txt` file.
 - The category name must be prefixed by three dashes (`---`) and must be on a new line.
@@ -706,100 +1252,99 @@ This update introduces the following changes:
 - To end a category, add three dashes (`---`) on a new line after the links.
 - You can have multiple categories in the URLs.txt file, and the links will be grouped accordingly.
 
-
-For more details, visit the wiki: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/sorting
-
+For more details, visit the wiki: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/sorting>
 
 ## [5.6.30] - 2024-09-21
 
 **SIMPCITY HAS BEEN REMOVED FROM THE SUPPORTED WEBSITES LIST.**
 
-**TO SEE WHY, VISIT THE WIKI:** https://script-ware.gitbook.io/cyberdrop-dl/simpcity-support-dropped
+**TO SEE WHY, VISIT THE WIKI:** <https://script-ware.gitbook.io/cyberdrop-dl/simpcity-support-dropped>
 
 ## [5.6.20] - 2024-09-19
 
 This update introduces the following changes:
+
 1. Ability to scrape URLs from PixelDrain text post
 
-#### Details:
+### Details
 
 - Cyberdrop-DL will now scrape URLs from PixelDrain text posts and make a folder for all the URLs within the post, reducing clutter.
-
 
 ## [5.6.13] - 2024-09-19
 
 This update introduces the following changes:
+
 1. Per-config authentication settings
 
-#### Details:
+### Details
 
 - If an `authentication.yaml` file is placed within your config directory, it will be used instead of the global authentication values.
-
 
 ## [5.6.12] - 2024-09-19
 
 This update introduces the following changes:
+
 1. Reformat code and organize imports
 
-#### Details:
+### Details
 
 - Reformatted code to be more readable and removed unused imports.
-
 
 ## [5.6.11] - 2024-09-16
 
 This update introduces the following changes:
+
 1. Detect and raise an error for private GoFile folders
 
-#### Details:
+### Details
 
 - Private GoFile folders will now raise an error when attempting to download them instead of crashing CDL
-
 
 ## [5.6.1] - 2024-09-13
 
 This update introduces the following changes:
+
 1. Fixes issue with `--sort-all-downloads`
 2. Improves sort status visibility
 
-#### Details:
+### Details
 
 - The sort status is now display under hash, along with other statuses
 - `--sort-all-downloads` is disabled by default, thus only cdl downloads are sorted without the flag
 - `sort_folder` can not be the same as the `scan_dir`
 
-
 ## [5.6.0] - 2024-09-13
 
 This update introduces the following changes:
+
 1. Updated the sorting progress UI to display more information.
 2. Removed unused functions from progress bars.
 
-#### Details:
+### Details
 
 - The sorting UI now displays the progress of each folder as it is being processed, including the number of files that have been sorted and the percentage of the folder that has been processed.
 - The sorting UI now also shows what folders are in the queue to be sorted.
 
-
 ## [5.5.1] - 2024-09-12
 
 This update introduces the following changes:
+
 1. Small fixes for sorting system
 
-#### Details:
+### Details
 
 - use `-` instead of `_` for new arguments
 - fix bug where `purge_dir` is called for each file, instead of each directory when done
 
-
 ## [5.5.0] - 2024-09-12
 
 This update introduces the following changes:
+
 1. Finalizes new sorting feature
 2. add scanning directory for sorting
 3. adds progress bar for sorting
 
-#### Details:
+### Details
 
 - skips need to scan database if `sort_cdl_only` is false
 - progress bar for current progress of sorting files, incremented for each folder

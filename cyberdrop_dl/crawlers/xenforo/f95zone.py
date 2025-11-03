@@ -1,47 +1,36 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import ClassVar
 
-from yarl import URL
-
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
-from .xenforo import PostSelectors, Selector, XenforoCrawler, XenforoSelectors
+from .xenforo import XenforoCrawler
 
-if TYPE_CHECKING:
-    from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
+_confirmation_data = ({"xhr": "1", "download": "1"},)
 
 
 class F95ZoneCrawler(XenforoCrawler):
-    primary_base_domain = URL("https://f95zone.to")
-    post_selectors = PostSelectors(
-        date=Selector("time", "data-time"),
-        number=Selector("a[class=u-concealed]", "href"),
-    )
-    selectors = XenforoSelectors(posts=post_selectors)
-    domain = "f95zone"
-
-    def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, self.domain, "F95Zone")
-
-    def is_confirmation_link(self, link: URL) -> bool:
-        return "masked" in link.parts or super().is_confirmation_link(link)
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://f95zone.to")
+    DOMAIN: ClassVar[str] = "f95zone"
+    FOLDER_DOMAIN: ClassVar[str] = "F95Zone"
 
     @error_handling_wrapper
-    async def handle_confirmation_link(self, link: URL, *, origin: ScrapeItem | None = None) -> URL | None:
-        """Override to handle protected link confirmation."""
-        async with self.request_limiter:
-            data = ({"xhr": "1", "download": "1"},)
-            JSON_Resp = await self.client.post_data(self.domain, link, data=data, origin=origin)
+    async def resolve_confirmation_link(self, link: AbsoluteHttpURL) -> AbsoluteHttpURL | None:
+        json_resp = await self.request_json(link, method="POST", data=_confirmation_data)
+        if json_resp["status"] == "ok":
+            return self.parse_url(json_resp["msg"])
 
-        if JSON_Resp["status"] == "ok":
-            return self.parse_url(JSON_Resp["msg"])
-        return None
+    @classmethod
+    def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
+        return "thumb" in link.parts
 
-    def filter_link(self, link: URL) -> URL:
-        if "thumb" in link.parts:
-            parts = [x for x in link.parts if x not in ("thumb", "/")]
-            new_path = "/".join(parts)
-            return link.with_path(new_path)
-        return link
+    @classmethod
+    def thumbnail_to_img(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        return url.with_path(url.path.replace("/thumb/", ""))
+
+    def parse_url(self, link: str) -> AbsoluteHttpURL:
+        url = super().parse_url(link)
+        if self.is_thumbnail(url):
+            return self.thumbnail_to_img(url)
+        return url

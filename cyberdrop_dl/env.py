@@ -1,6 +1,7 @@
 import os
 from hashlib import sha256
 
+os.environ["PYDANTIC_ERRORS_INCLUDE_URL"] = "0"
 RUNNING_IN_IDE = bool(os.getenv("PYCHARM_HOSTED") or os.getenv("TERM_PROGRAM") == "vscode")
 RUNNING_IN_TERMUX = bool(
     os.getenv("TERMUX_VERSION") or os.getenv("TERMUX_MAIN_PACKAGE_FORMAT") or "com.termux" in os.getenv("$PREFIX", "")
@@ -12,4 +13,6 @@ if ENABLE_DEBUG_CRAWLERS:
 
 DEBUG_LOG_FOLDER = os.getenv("CDL_DEBUG_LOG_FOLDER")
 PROFILING = os.getenv("CDL_PROFILING")
+PIXELDRAIN_PROXY = os.getenv("CDL_PIXELDRAIN_PROXY")
+MAX_CRAWLER_ERRORS = int(os.getenv("CDL_MAX_CRAWLER_ERRORS") or 10)
 DEBUG_VAR = RUNNING_IN_IDE or DEBUG_LOG_FOLDER or PROFILING

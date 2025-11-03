@@ -1,29 +1,30 @@
 from __future__ import annotations
 
-import contextlib
+import asyncio
 import itertools
+from datetime import datetime
 from fractions import Fraction
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 
-import PIL
-from filedate import File
-from PIL import Image
+import imagesize
 from videoprops import get_audio_properties, get_video_properties
 
-from cyberdrop_dl.utils.constants import FILE_FORMATS
-from cyberdrop_dl.utils.logger import log_with_color
+from cyberdrop_dl.constants import FILE_FORMATS
+from cyberdrop_dl.utils import strings
+from cyberdrop_dl.utils.logger import log, log_with_color
 from cyberdrop_dl.utils.utilities import purge_dir_tree
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.managers.manager import Manager
 
 
-def get_modified_date(file: Path) -> datetime:
-    return File(str(file)).modified
+async def get_modified_date(file: Path) -> datetime:
+    stat = await asyncio.to_thread(file.stat)
+    return datetime.fromtimestamp(stat.st_mtime).replace(microsecond=0)
 
 
 class Sorter:
@@ -40,9 +41,16 @@ class Sorter:
         self.video_format: str | None = settings.sorted_video
         self.other_format: str | None = settings.sorted_other
 
-    def _get_files(self, directory: Path) -> list[Path]:
+    async def _get_files(self, directory: Path) -> AsyncGenerator[Path]:
         """Finds all files in a directory and returns them in a list."""
-        return [file.resolve() for file in directory.rglob("*") if file.is_file()]
+
+        def resolve_if_file(path: Path) -> Path | None:
+            if path.is_file():
+                return path.resolve()
+
+        for file in directory.rglob("*"):
+            if file := await asyncio.to_thread(resolve_if_file, file):
+                yield file
 
     def _move_file(self, old_path: Path, new_path: Path) -> bool:
         """Moves a file to a destination folder."""
@@ -74,19 +82,20 @@ class Sorter:
 
     async def run(self) -> None:
         """Sorts the files in the download directory into their respective folders."""
-        if not self.download_folder.is_dir():
+        if not await asyncio.to_thread(self.download_folder.is_dir):
             log_with_color(f"Download directory ({self.download_folder}) does not exist", "red", 40)
             return
 
         log_with_color("\nSorting downloads, please wait", "cyan", 20)
-        self.sorted_folder.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(self.sorted_folder.mkdir, parents=True, exist_ok=True)
 
         files_to_sort: dict[str, list[Path]] = {}
 
         with self.manager.live_manager.get_sort_live(stop=True):
-            subfolders = [f for f in self.download_folder.iterdir() if f.is_dir()]
-            for folder in subfolders:
-                files_to_sort[folder.name] = self._get_files(folder)
+            for subfolder in self.download_folder.iterdir():
+                if not await asyncio.to_thread(subfolder.is_dir):
+                    continue
+                files_to_sort[subfolder.name] = [file async for file in self._get_files(subfolder)]
             await self._sort_files(files_to_sort)
             log_with_color("DONE!", "green", 20)
 
@@ -101,17 +110,17 @@ class Sorter:
 
             for file in files:
                 ext = file.suffix.lower()
-                if ".part" in ext:
-                    continue
 
+                if ext in (".cdl_hls", ".cdl_hsl", ".part"):
+                    continue
                 if ext in FILE_FORMATS["Audio"]:
-                    self.sort_audio(file, folder_name)
+                    await self.sort_audio(file, folder_name)
                 elif ext in FILE_FORMATS["Images"]:
-                    self.sort_image(file, folder_name)
+                    await self.sort_image(file, folder_name)
                 elif ext in FILE_FORMATS["Videos"]:
-                    self.sort_video(file, folder_name)
+                    await self.sort_video(file, folder_name)
                 else:
-                    self.sort_other(file, folder_name)
+                    await self.sort_other(file, folder_name)
 
                 self.manager.progress_manager.sort_progress.advance_folder(task_id)
 
@@ -119,18 +128,20 @@ class Sorter:
             queue_length -= 1
             self.manager.progress_manager.sort_progress.set_queue_length(queue_length)
 
-    def sort_audio(self, file: Path, base_name: str) -> None:
+    async def sort_audio(self, file: Path, base_name: str) -> None:
         """Sorts an audio file into the sorted audio folder."""
         if not self.audio_format:
             return
         bitrate = duration = sample_rate = None
-        with contextlib.suppress(RuntimeError, CalledProcessError):
+        try:
             props: dict = get_audio_properties(str(file))
             duration = int(float(props.get("duration", 0))) or None
             bitrate = int(float(props.get("bit_rate", 0))) or None
             sample_rate = int(float(props.get("sample_rate", 0))) or None
+        except (RuntimeError, CalledProcessError):
+            log(f"Unable to get audio properties of '{file}'")
 
-        if self._process_file_move(
+        if await self._process_file_move(
             file,
             base_name,
             self.audio_format,
@@ -141,86 +152,99 @@ class Sorter:
         ):
             self.manager.progress_manager.sort_progress.increment_audio()
 
-    def sort_image(self, file: Path, base_name: str) -> None:
+    async def sort_image(self, file: Path, base_name: str) -> None:
         """Sorts an image file into the sorted image folder."""
         if not self.image_format:
             return
         height = resolution = width = None
-        with (
-            contextlib.suppress(PIL.UnidentifiedImageError, PIL.Image.DecompressionBombError),  # type: ignore
-            Image.open(file) as image,
-        ):  # type: ignore
-            width, height = image.size
-            resolution = f"{width}x{height}"
+        try:
+            width, height = await asyncio.to_thread(imagesize.get, file)
+            if width > 0 and height > 0:
+                resolution = f"{width}x{height}"
+            else:
+                # imagesize returns (-1, -1) for unsupported/corrupted images
+                width = height = resolution = None
+        except (OSError, ValueError):
+            log(f"Unable to get some image properties of '{file}'")
 
-        if self._process_file_move(
-            file, base_name, self.image_format, resolution=resolution, width=width, height=height
+        if await self._process_file_move(
+            file,
+            base_name,
+            self.image_format,
+            height=height,
+            resolution=resolution,
+            width=width,
         ):
             self.manager.progress_manager.sort_progress.increment_image()
 
-    def sort_video(self, file: Path, base_name: str) -> None:
+    async def sort_video(self, file: Path, base_name: str) -> None:
         """Sorts a video file into the sorted video folder."""
         if not self.video_format:
             return
 
         codec = duration = fps = height = resolution = width = None
 
-        with contextlib.suppress(RuntimeError, CalledProcessError):
+        try:
             props: dict = get_video_properties(str(file))
             width = int(float(props.get("width", 0))) or None
             height = int(float(props.get("height", 0))) or None
             if width and height:
                 resolution = f"{width}x{height}"
 
-            codec = props.get("codec_name")
+            codec: str | None = props.get("codec_name")
             duration = int(float(props.get("duration", 0))) or None
             fps = (
                 float(Fraction(props.get("avg_frame_rate", 0)))
                 if str(props.get("avg_frame_rate", 0)) not in {"0/0", "0"}
                 else None
             )
-            if fps:
-                fps = int(fps) if fps.is_integer() else f"{fps:.2f}"
+        except (RuntimeError, CalledProcessError):
+            log(f"Unable to get some video properties of '{file}'")
 
-        if self._process_file_move(
+        if fps is not None:
+            fps = str(int(fps)) if fps.is_integer() else f"{fps:.2f}"
+
+        if await self._process_file_move(
             file,
             base_name,
             self.video_format,
             codec=codec,
             duration=duration,
             fps=fps,
+            height=height,
             resolution=resolution,
             width=width,
-            height=height,
         ):
             self.manager.progress_manager.sort_progress.increment_video()
 
-    def sort_other(self, file: Path, base_name: str) -> None:
+    async def sort_other(self, file: Path, base_name: str) -> None:
         """Sorts an other file into the sorted other folder."""
         if not self.other_format:
             return
-        if self._process_file_move(file, base_name, self.other_format):
+        if await self._process_file_move(file, base_name, self.other_format):
             self.manager.progress_manager.sort_progress.increment_other()
 
-    def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs) -> bool:
-        file_date = get_modified_date(file)
+    async def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs) -> bool:
+        file_date = await get_modified_date(file)
         file_date_us = file_date.strftime("%Y-%d-%m")
         file_date_iso = file_date.strftime("%Y-%m-%d")
 
-        for name, value in kwargs.items():
-            if value is None:
-                kwargs[name] = "Unknown"
+        duration = kwargs.get("duration") or kwargs.get("length")
+        if duration is not None:
+            kwargs["duration"] = kwargs["length"] = duration
 
-        new_file = Path(
-            format_str.format(
-                base_dir=base_name,
-                ext=file.suffix,
-                file_date_iso=file_date_iso,
-                file_date_us=file_date_us,
-                filename=file.stem,
-                parent_dir=file.parent.name,
-                sort_dir=self.sorted_folder,
-                **kwargs,
-            ),
+        file_path, _ = strings.safe_format(
+            format_str,
+            base_dir=base_name,
+            ext=file.suffix,
+            file_date=file_date,
+            file_date_iso=file_date_iso,
+            file_date_us=file_date_us,
+            filename=file.stem,
+            parent_dir=file.parent.name,
+            sort_dir=self.sorted_folder,
+            **kwargs,
         )
+
+        new_file = Path(file_path)
         return self._move_file(file, new_file)

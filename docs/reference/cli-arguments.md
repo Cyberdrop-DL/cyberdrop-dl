@@ -17,16 +17,16 @@ layout:
 # CLI Arguments
 
 {% hint style="info" %}
-Anything input as a CLI argument will take priority over config values.
+CLI inputs always take priority over config values.
 {% endhint %}
 
 {% hint style="info" %}
-Use `-` instead of `_` to separate words in an option name when using it as a CLI argument: Ex: `auto-dedupe` instead of `auto_dedupe`
+Use `-` instead of `_` to separate words in an config option name when using it as a CLI argument: Ex: `auto_dedupe` needs to be `auto-dedupe` when using it via the CLI
 {% endhint %}
 
-You can pass any of the **Config Settings** and **Global Settings** options as a cli argument for the program
+You can pass any of the **Config Settings** and **Global Settings** options as a cli argument for the program.
 
-For items not explained below, you can find their counterparts in the configuration options to see what they do
+For items not explained below, you can find their counterparts in the configuration options to see what they do.
 
 ## CLI only arguments
 
@@ -36,7 +36,7 @@ For items not explained below, you can find their counterparts in the configurat
 | ------ | ----------------------------- |
 | `Path` | `<Current Working Directory>` |
 
-Folder where Cyberdrop-DL will store its data files.
+Folder where Cyberdrop-DL will store it's database, cache and config files.
 
 ### `completed-after`
 
@@ -44,7 +44,11 @@ Folder where Cyberdrop-DL will store its data files.
 | ------ | ------- |
 | `date` | `None`  |
 
-Only download files that were completed on or after this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+Only retry downloads that were completed on or after this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+
+{% hint style="info" %}
+This option has no effect unless you run CDL with `--retry-all`
+{% endhint %}
 
 ### `completed-before`
 
@@ -52,7 +56,11 @@ Only download files that were completed on or after this date. The date should b
 | ------ | ------- |
 | `date` | `None`  |
 
-Only download files that were completed on or before this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+Only retry downloads that were completed on or before this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+
+{% hint style="info" %}
+This option has no effect unless you run CDL with `--retry-all`
+{% endhint %}
 
 ### `config`
 
@@ -80,11 +88,7 @@ If both `config` and `config-file` are supplied, `config-file` takes priority
 | ---------- | ------- | ------------ |
 | `BoolFlag` | `False` | `store_true` |
 
-Disables the use of the requests cache for the current run only. All config settings or arguments related to the cache (ex: `file_host_cache_expire_after`) will be ignored.
-
-{% hint style="info" %}
-This does not affect the original cache
-{% endhint %}
+Disables read/writes to requests cache for the current run only. All config settings or arguments related to the cache (ex: `file_host_cache_expire_after`) will be ignored.
 
 ### `download`  
 
@@ -94,15 +98,6 @@ This does not affect the original cache
 
 Skips UI, start download immediately
 
-### `download-dropbox-folders-as-zip`
-
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Folder downloads from Dropbox are disabled by default because they will be downloaded as a single zip file. Enable them with this option
-
 ### `download-tiktok-audios`
 
 | Type       | Default | Action       |
@@ -110,6 +105,43 @@ Folder downloads from Dropbox are disabled by default because they will be downl
 | `BoolFlag` | `False` | `store_true` |
 
 Download TikTok audios from posts and save them as separate files
+
+### `download-tiktok-src-quality-videos`
+
+| Type       | Default | Action       |
+| ---------- | ------- | ------------ |
+| `BoolFlag` | `False` | `store_true` |
+
+By default, CDL will download the  "optimized for streaming" version of tiktok videos. Setting this option to `True` will download videos in original (source) quality.
+
+`_original` will be added as a suffix to their filename.
+
+{% hint style="warning" %}
+This will make video downloads several times slower
+
+When it is set to `False` (the default) CDL can download 50 videos with a single request.
+When it is set to `True` , CDL needs to make at least 3 requests _per_ video to download them.
+
+There's also a daily limit of the API CDL uses: 5000 requests per day per IP
+
+Setting this option to `True` will consume the daily limit faster
+{% endhint %}
+
+### `impersonate`
+
+| Type                                                                                         | Default | Action                        |
+| -------------------------------------------------------------------------------------------- | ------- | ----------------------------- |
+| `chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"`, `BoolFlag` or `null` | `null`  | `store_true` or `store_const` |
+
+Impersonation allows CDL to make requests and appear to be a legitimate web browser. This helps bypass bot-protection on some sites and it's required for any site that only accepts HTTP2 connections.
+
+- The default value (`null`) means CDL will automatically use impersonation for crawlers that were programmed to use it.
+- Passing the flag without any value (`--impersonate`) is the same as `--impersonate True`: CDL will use impersonation for ALL requests, using the default impersonation target
+- Passing an specific target (ex: `--impersonate chrome_android`) will make CDL use impersonation for all requests, using that tarjet
+
+{% hint style="info" %}
+The current default target is `chrome`. The default target can change on any new release without notice
+{% endhint %}
 
 ### `max-items-retry`
 
@@ -119,13 +151,9 @@ Download TikTok audios from posts and save them as separate files
 
 Max number of links to retry. Using `0` means no limit
 
-### `no-textual-ui`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Disable CDL's textual UI (TUI with buttons and mouse support)
+{% hint style="info" %}
+This option has no effect unless you run CDL with one of the retry options: `--retry-all`, `--retry-failed` or `--retry-maintenance`
+{% endhint %}
 
 ### `portrait`
 
@@ -133,7 +161,15 @@ Disable CDL's textual UI (TUI with buttons and mouse support)
 | ---------- | ------- | ------------ |
 | `BoolFlag` | `False` | `store_true` |
 
-Run CDL with a vertical layout
+Force CDL to run with a vertical layout
+
+### `print-stats`
+
+| Type       | Default | Action        |
+| ---------- | ------- | ------------- |
+| `BoolFlag` | `True`  | `store_false` |
+
+Show stats report at the end of a run
 
 ### `retry-all`
 
@@ -169,18 +205,20 @@ Shows a list of all supported sites and exits
 
 ### `ui`  
 
-| Type       | Default |
-| ---------- | ------- |
-| `StrEnum` | `FULLSCREEN` |
+| Type                     | Default      |
+| ------------------------ | ------------ |
+| `CaseInsensitiveStrEnum` | `FULLSCREEN` |
 
 UI can have 1 of these values:
 
 - `DISABLED` : no output at all
-- `ACTIVITY` : only shows a spinner with the text `running CDL`
+- `ACTIVITY` : only shows a spinner with the text `running CDL...`
 - `SIMPLE`: shows spinner + simplified progress bar
 - `FULLSCREEN`: shows the normal UI/progress view
 
+{% hint style="info" %}
 Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
+{% endhint %}
 
 ## Overview
 
@@ -198,18 +236,18 @@ options:
 CLI-only options:
   LINK(S)                                                                       link(s) to content to download (passing multiple links is supported)
   --appdata-folder APPDATA_FOLDER                                               AppData folder path
-  --completed-after COMPLETED_AFTER                                             only download completed downloads at or after this date
-  --completed-before COMPLETED_BEFORE                                           only download completed downloads at or before this date
+  --completed-after COMPLETED_AFTER                                             only retry downloads that were completed on or after this date
+  --completed-before COMPLETED_BEFORE                                           only retry downloads that were completed on or before this date
   --config CONFIG                                                               name of config to load
   --config-file CONFIG_FILE                                                     path to the CDL settings.yaml file to load
-  --disable-cache                                                               Temporarily disable the requests cache
-  --download                                                                    skips UI, start download immediatly
-  --download-dropbox-folders-as-zip                                             download Dropbox folder without api key as zip
-  --download-tiktok-audios                                                      download TikTok audios
+  --disable-cache                                                               temporarily disable the requests cache
+  --download                                                                    skips UI, start download immediately
+  --download-tiktok-audios                                                      download TikTok audios from posts and save them as separate files
+  --download-tiktok-src-quality-videos                                          download TikTok videos in source quality
+  --impersonate [IMPERSONATE]                                                   Use this target as impersonation for all scrape requests
   --max-items-retry MAX_ITEMS_RETRY                                             max number of links to retry
-  --no-textual-ui                                                               Disable textual UI (TUI with mouse support)
-  --portrait                                                                    show UI in a portrait layout
-  --print-stats                                                                 Show stats report at the end of a run
+  --portrait                                                                    force CDL to run with a vertical layout
+  --print-stats                                                                 show stats report at the end of a run
   --retry-all                                                                   retry all downloads
   --retry-failed                                                                retry failed downloads
   --retry-maintenance                                                           retry download of maintenance files (bunkr). Requires files to be hashed
@@ -218,7 +256,7 @@ CLI-only options:
 
 browser_cookies:
   --auto-import, --no-auto-import
-  --browsers [BROWSERS ...]
+  --browser BROWSER
   --sites [SITES ...]
 
 download_options:
@@ -236,6 +274,7 @@ download_options:
   --skip-download-mark-completed, --no-skip-download-mark-completed
   --skip-referer-seen-before, --no-skip-referer-seen-before
   --maximum-thread-depth MAXIMUM_THREAD_DEPTH
+  --maximum-thread-folder-depth MAXIMUM_THREAD_FOLDER_DEPTH
 
 dupe_cleanup_options:
   --add-md5-hash, --no-add-md5-hash
@@ -271,9 +310,12 @@ ignore_options:
   --exclude-videos, --no-exclude-videos
   --filename-regex-filter FILENAME_REGEX_FILTER
   --ignore-coomer-ads, --no-ignore-coomer-ads
+  --ignore-coomer-post-content, --no-ignore-coomer-post-content
   --only-hosts [ONLY_HOSTS ...]
   --skip-hosts [SKIP_HOSTS ...]
   --exclude-files-with-no-extension, --no-exclude-files-with-no-extension
+  --exclude-posts-before EXCLUDE_POSTS_BEFORE
+  --exclude-posts-after EXCLUDE_POSTS_AFTER
 
 logs:
   --download-error-urls DOWNLOAD_ERROR_URLS
@@ -313,25 +355,27 @@ sorting:
   --sorted-video SORTED_VIDEO
 
 general:
-  --allow-insecure-connections, --no-allow-insecure-connections
+  --ssl-context SSL_CONTEXT
+  --disable-crawlers [DISABLE_CRAWLERS ...]
+  --enable-generic-crawler, --no-enable-generic-crawler
   --flaresolverr FLARESOLVERR
   --max-file-name-length MAX_FILE_NAME_LENGTH
   --max-folder-name-length MAX_FOLDER_NAME_LENGTH
   --proxy PROXY
   --required-free-space REQUIRED_FREE_SPACE
   --user-agent USER_AGENT
-  --pause-on-insufficient-space, --no-pause-on-insufficient-space
 
 rate_limiting_options:
-  --connection-timeout CONNECTION_TIMEOUT
   --download-attempts DOWNLOAD_ATTEMPTS
   --download-delay DOWNLOAD_DELAY
   --download-speed-limit DOWNLOAD_SPEED_LIMIT
   --file-host-cache-expire-after FILE_HOST_CACHE_EXPIRE_AFTER
   --forum-cache-expire-after FORUM_CACHE_EXPIRE_AFTER
+  --jitter JITTER
   --max-simultaneous-downloads-per-domain MAX_SIMULTANEOUS_DOWNLOADS_PER_DOMAIN
   --max-simultaneous-downloads MAX_SIMULTANEOUS_DOWNLOADS
   --rate-limit RATE_LIMIT
+  --connection-timeout CONNECTION_TIMEOUT
   --read-timeout READ_TIMEOUT
 
 ui_options:
@@ -340,7 +384,10 @@ ui_options:
   --scraping-item-limit SCRAPING_ITEM_LIMIT
   --vi-mode, --no-vi-mode
 
-deprecated:
-  --no-ui                                                                       disables the UI/progress view entirely
+generic_crawlers_instances:
+  --wordpress-media [WORDPRESS_MEDIA ...]
+  --wordpress-html [WORDPRESS_HTML ...]
+  --discourse [DISCOURSE ...]
+  --chevereto [CHEVERETO ...]
 
 ```

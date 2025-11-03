@@ -58,7 +58,28 @@ Any download with a filename that matches this regex expression will be skipped
 | ------ | ------- |
 | `bool` | `false` |
 
-When this is set to `true`, the program will skip post marked as ads by models in coomer profiles.
+When this is set to `true`, CDL will skip posts marked as `#ad` by models.
+
+Despite the name, this option affects all kemono based sites (Nekohouse, Kemono and Coomer)
+
+{% hint style="info" %}
+This requires fetching all posts with the tag `#ad` first and them filter them out from the normal ones.
+This means at least 1 additional request per profile is needed, depending on how many ads the profile has.
+{% endhint %}
+
+## `ignore_coomer_post_content`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `true` |
+
+When this is set to `false`, CDL will scan the text inside each post for URLs and process them.
+
+Despite the name, this option affects all kemono based sites (Nekohouse, Kemono and Coomer)
+
+{% hint style="warning" %}
+This requires making 50x more requests when downloading an entire profile. Only enable this option if you actually need it
+{% endhint %}
 
 ## `only_hosts`
 
@@ -75,3 +96,19 @@ You can supply hosts that you'd like the program to exclusively scrape/download 
 | `list[NonEmptyStr]` | `[]`    | This is an [`AdditiveArg`](../special_setting_types.md#additiveargs) |
 
 You can supply hosts that you'd like the program to skip, to not scrape/download from them. This setting accepts any domain, even if they are no supported.
+
+## `exclude_posts_before`
+
+| Type                 | Default | Additional Info                                                    |
+| -------------------- | ------- | ------------------------------------------------------------------ |
+| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+
+When a valid datetime value is provided, this excludes all posts published before that particular datetime.
+
+## `exclude_posts_after`
+
+| Type                 | Default | Additional Info                                                    |
+| -------------------- | ------- | ------------------------------------------------------------------ |
+| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+
+When a valid datetime value is provided, this excludes all posts published after that particular datetime.

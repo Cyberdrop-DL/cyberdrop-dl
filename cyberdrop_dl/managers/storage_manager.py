@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING, NamedTuple
 import psutil
 from pydantic import ByteSize
 
-from cyberdrop_dl.clients.errors import InsufficientFreeSpaceError
+from cyberdrop_dl.exceptions import InsufficientFreeSpaceError
 from cyberdrop_dl.utils.logger import log, log_debug
 
 if TYPE_CHECKING:
     from psutil._common import sdiskpart
 
+    from cyberdrop_dl.data_structures.url_objects import MediaItem
     from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import MediaItem
 
 
 @dataclass(frozen=True, slots=True, order=True)
@@ -58,7 +58,16 @@ class StorageManager:
         self._period: int = 2  # how often the check_free_space_loop will run (in seconds)
         self._log_period: int = 10  # log storage details every <x> loops, AKA log every 20 (2x10) seconds,
         self._timedelta_period = timedelta(seconds=self._period)
-        self._partitions = [DiskPartition.from_psutil(p) for p in psutil.disk_partitions(all=True)]
+        self._partitions = []
+        for p in psutil.disk_partitions(all=True):
+            try:
+                part = DiskPartition.from_psutil(p)
+            except OSError as e:
+                msg = f"Unable to get information about {p.mountpoint}. All files with that mountpoint as target will be skipped: {e!r}"
+                log(msg, 40)
+            else:
+                self._partitions.append(part)
+
         self._loop = asyncio.create_task(self._check_free_space_loop())
         self._unavailable_mounts: set[Path] = set()
 
@@ -68,12 +77,12 @@ class StorageManager:
 
     @property
     def _simplified_stats(self) -> str:
-        def simplify(mount_stats: MountStats) -> str:
+        def stringify(mount_stats: MountStats) -> str:
             free_space = mount_stats.free_space.human_readable(decimal=True)
             stats_as_dict = asdict(mount_stats.partition) | {"free_space": free_space}
             return ", ".join(f"'{k}': '{v}'" for k, v in stats_as_dict.items())
 
-        stats_as_str = "\n".join(f"    {simplify(mount_stats)}" for mount_stats in self.get_used_mounts_stats())
+        stats_as_str = "\n".join(f"    {stringify(mount_stats)}" for mount_stats in self.get_used_mounts_stats())
         return f"Storage status:\n {stats_as_str}"
 
     def get_used_mounts_stats(self) -> list[MountStats]:
@@ -91,22 +100,9 @@ class StorageManager:
 
         await self.manager.states.RUNNING.wait()
         if not await self._has_sufficient_space(media_item.download_folder):
-            """ Needs textual UI
-            if self.manager.config_manager.global_settings_data.general.pause_on_insufficient_space:
-                if not self._paused_datetime:
-                    self.manager.progress_manager.pause("Insufficient Free Space")
-                    self.manager.notify(
-                        title="Insufficient Free Space",
-                        msg="Clean up storage space and click resume to continue",
-                        severity="warning",
-                    )
-                    self._paused_datetime = datetime.now()
-                if (datetime.now() - self._paused_datetime) < self._timedelta_period:
-                    return await self.check_free_space(media_item)
-            """
             raise InsufficientFreeSpaceError(origin=media_item)
 
-    async def reset(self):
+    async def reset(self) -> None:
         # This is causing lockups
         # await self._updated.wait()  # Make sure a query is not running right now
         self.total_data_written = 0
@@ -146,7 +142,12 @@ class StorageManager:
                     return
                 msg = f"Checking new possible network_drive: '{folder_drive}' for folder '{folder}'"
                 log_debug(msg)
-                if await asyncio.to_thread(folder_drive.is_dir):
+
+                try:
+                    is_dir = await asyncio.to_thread(folder_drive.is_dir)
+                except OSError:
+                    is_dir = False
+                if is_dir:
                     net_drive = DiskPartition(folder_drive, folder_drive, "network_drive", "")
                     self._partitions.append(net_drive)
                 else:

@@ -1,38 +1,37 @@
 from __future__ import annotations
 
-import calendar
 import itertools
-from typing import TYPE_CHECKING, Any
-
-from aiolimiter import AsyncLimiter
-from dateutil import parser
-from yarl import URL
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.clients.errors import ScrapeError
-from cyberdrop_dl.crawlers.crawler import Crawler, create_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+PRIMARY_URL = AbsoluteHttpURL("https://e621.net")
 
 
 class E621Crawler(Crawler):
-    primary_base_domain = URL("https://e621.net")
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Post": "/posts/...",
+        "Tags": "/posts?tags=...",
+        "Pools": "/pools/...",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    DOMAIN: ClassVar[str] = "e621.net"
+    FOLDER_DOMAIN: ClassVar[str] = "E621"
+    _RATE_LIMIT = 2, 1
 
-    def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, "e621.net", "E621")
-        self.custom_headers = {"User-Agent": f"CyberDrop-DL/{__version__} (by B05FDD249DF29ED3)"}
-        self.request_limiter = AsyncLimiter(2, 1)
+    def __post_init__(self) -> None:
+        self.headers = {"User-Agent": f"CyberDrop-DL/{__version__} (by B05FDD249DF29ED3)"}
 
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    @create_task_id
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        """Determines where to send the scrape item based on the URL."""
         if scrape_item.url.query.get("tags"):
             return await self.tag(scrape_item)
         if "posts" in scrape_item.url.parts:
@@ -41,17 +40,13 @@ class E621Crawler(Crawler):
             return await self.pool(scrape_item)
         raise ValueError
 
-    async def paginator(self, scrape_item: ScrapeItem) -> AsyncGenerator[list[dict[str, Any]]]:
+    async def _pager(self, scrape_item: ScrapeItem) -> AsyncGenerator[list[dict[str, Any]]]:
         """Generator for album pages."""
         initial_page = int(scrape_item.url.query.get("page", 1))
+        url = PRIMARY_URL / "posts.json"
         for page in itertools.count(initial_page):
-            url = self.primary_base_domain / "posts.json"
-            async with self.request_limiter:
-                params = {"tags": scrape_item.url.query["tags"], "page": page}
-                json_resp: dict = await self.client.get_json(
-                    self.domain, url, params=params, headers_inc=self.custom_headers
-                )
-
+            url = url.with_query(tags=scrape_item.url.query["tags"], page=page)
+            json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
             posts: list[dict] = json_resp.get("posts", [])
             if not posts:
                 break
@@ -64,13 +59,13 @@ class E621Crawler(Crawler):
         title = self.create_title(tags.replace("+", " "))
         scrape_item.setup_as_album(title)
 
-        async for posts in self.paginator(scrape_item):
+        async for posts in self._pager(scrape_item):
             for post in posts:
                 try:
                     file_url = post["file"]["url"]
                 except KeyError:
                     continue
-                timestamp = parse_datetime(post["created_at"])
+                timestamp = self.parse_date(post["created_at"])
                 link = self.parse_url(file_url)
                 new_scrape_item = scrape_item.create_child(link, possible_datetime=timestamp)
                 filename, ext = self.get_filename_and_ext(link.name)
@@ -80,42 +75,30 @@ class E621Crawler(Crawler):
     @error_handling_wrapper
     async def pool(self, scrape_item: ScrapeItem) -> None:
         """Fetches posts from an e621 pool."""
-        async with self.request_limiter:
-            pool_id = scrape_item.url.name
-            url = self.primary_base_domain / f"pools/{pool_id}.json"
-            json_resp: dict = await self.client.get_json(self.domain, url, headers_inc=self.custom_headers)
-
+        pool_id = scrape_item.url.name
+        url = PRIMARY_URL / f"pools/{pool_id}.json"
+        json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
         posts = json_resp.get("post_ids", [])
         title: str = json_resp.get("name", "Unknown Pool").replace("_", " ")
         scrape_item.setup_as_album(title)
 
         for post_id in posts:
-            url = self.primary_base_domain / f"posts/{post_id}"
+            url = PRIMARY_URL / f"posts/{post_id}"
             new_scrape_item = scrape_item.create_child(url)
-            self.manager.task_group.create_task(self.run(new_scrape_item))
+            self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
         """Fetches a single post by extracting the ID from the URL."""
-        async with self.request_limiter:
-            post_id = scrape_item.url.name
-            url = self.primary_base_domain / f"posts/{post_id}.json"
-            json_resp: dict = await self.client.get_json(self.domain, url, headers_inc=self.custom_headers)
-
+        post_id = scrape_item.url.name
+        url = PRIMARY_URL / f"posts/{post_id}.json"
+        json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
         try:
-            file_url = json_resp["post"]["file"]["url"]
+            file_url: str = json_resp["post"]["file"]["url"]
         except KeyError:
             raise ScrapeError(422) from None
 
         link = self.parse_url(file_url)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-
-def parse_datetime(date: str) -> int:
-    """Parses a datetime string into a unix timestamp."""
-    parsed_date = parser.isoparse(date)
-    return calendar.timegm(parsed_date.utctimetuple())

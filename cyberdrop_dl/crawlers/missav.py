@@ -1,142 +1,100 @@
 from __future__ import annotations
 
-import calendar
-from datetime import datetime
-from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, ClassVar
 
-from yarl import URL
-
-from cyberdrop_dl.clients.errors import ScrapeError
-from cyberdrop_dl.crawlers.crawler import Crawler, create_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from bs4 import BeautifulSoup, Tag
 
-    from bs4 import BeautifulSoup
-
-    from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-M3U8_SERVER = URL("https://surrit.com/")
-TITLE_SELECTOR = "meta [property='og:title']"
-
-DATE_SELECTOR = "div > span:contains('Release date:') + time"
-DVD_CODE_SELECTOR = "div > span:contains('Code:') + span"
+_M3U8_SERVER = AbsoluteHttpURL("https://surrit.com/")
+_PRIMARY_URL = AbsoluteHttpURL("https://missav.ws")
+_COLLECTION_TYPES = "makers", "search", "genres", "labels", "tags"
 
 
-class Format(NamedTuple):
-    height: int
-    width: int
+class Selector:
+    UUID = "script:-soup-contains('m3u8|')"
+    DATE = "div > span:-soup-contains('Release date:') + time"
+    DVD_CODE = "div > span:-soup-contains('Code:') + span"
+    NEXT_PAGE = "nav a[rel=next]"
+    ITEM = ".grid .thumbnail.group a"
 
 
 class MissAVCrawler(Crawler):
-    primary_base_domain = URL("https://missav.ws")
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/...",
+        **{name.capitalize(): f"/{name}/<{name.removesuffix('s')}>" for name in _COLLECTION_TYPES},
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    DOMAIN: ClassVar[str] = "missav"
+    FOLDER_DOMAIN: ClassVar[str] = "MissAV"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
-    def __init__(self, manager: Manager, _=None) -> None:
-        super().__init__(manager, "missav", "MissAV")
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    @create_task_id
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        """Determines where to send the scrape item based on the url."""
+        n_parts = len(scrape_item.url.parts)
+        for part in _COLLECTION_TYPES:
+            if part in scrape_item.url.parts and n_parts == scrape_item.url.parts.index(part) + 2:
+                return await self.collection(scrape_item, part)
         return await self.video(scrape_item)
 
     @error_handling_wrapper
+    async def collection(self, scrape_item: ScrapeItem, collection_type: str) -> None:
+        name = scrape_item.url.name
+        title = self.create_title(f"{name} [{collection_type}]")
+        scrape_item.setup_as_album(title)
+
+        async for soup in self.web_pager(scrape_item.url.update_query(page=1), cffi=True):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+                self.create_task(self.run(new_scrape_item))
+
+    @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        canonical_url = self.primary_base_domain / "en" / scrape_item.url.name
+        canonical_url = _PRIMARY_URL / "en" / scrape_item.url.name
         scrape_item.url = canonical_url
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        async with self.request_limiter:
-            soup: BeautifulSoup = await self.client.get_soup_cffi(self.domain, scrape_item.url)
+        soup = await self.request_soup(scrape_item.url, impersonate=True)
 
-        title = clean_title = soup.select_one(TITLE_SELECTOR)["content"].strip()  # type: ignore
-        date_tag = soup.select_one(DATE_SELECTOR)
-        dvd_code_tag = soup.select_one(DVD_CODE_SELECTOR)
-
-        date_str: str = date_tag.get("datetime") if date_tag else ""  # type: ignore
-        dvd_code = dvd_code_tag.text.strip().upper() if dvd_code_tag else None
-
-        if dvd_code:
-            clean_title = clean_title.replace(dvd_code.lower(), "").replace(dvd_code.upper(), "").strip()
-            title = f"{dvd_code} {clean_title}"
+        title, date_str = open_graph.title(soup), open_graph.get("video_release_date", soup)
+        if dvd_code_tag := soup.select_one(Selector.DVD_CODE):
+            title = _fix_title(title, dvd_code_tag)
 
         if date_str:
-            date = parse_datetime(date_str)
-            scrape_item.possible_datetime = date
+            scrape_item.possible_datetime = self.parse_iso_date(date_str)
+        elif date_tag := soup.select_one(Selector.DATE):
+            scrape_item.possible_datetime = self.parse_iso_date(css.get_attr(date_tag, "datetime"))
+        else:
+            _ = self.parse_date("")  # Trigger warning
 
-        uuid = get_uuid(soup)
-        del soup
-        m3u8_playlist_url = M3U8_SERVER / uuid / "playlist.m3u8"
-
-        async with self.request_limiter:
-            m3u8_playlist_content: str = await self.client.get_text(self.domain, m3u8_playlist_url)
-
-        playlist_name, resolution = get_best_resolution(m3u8_playlist_content)
-        m3u8_video_url = M3U8_SERVER / uuid / playlist_name
-        video_part_base_url = m3u8_video_url.parent
-
-        async with self.request_limiter:
-            m3u8_video_content: str = await self.client.get_text(self.domain, m3u8_video_url)
-
-        title = Path(title).as_posix().replace("/", "-")  # remove OS separators
-        filename = f"{title} [{resolution}].mp4"
-        filename, ext = self.get_filename_and_ext(filename)
-
-        await self.handle_file(
-            m3u8_playlist_url,
-            scrape_item,
-            filename,
-            ext,
-            m3u8_content=m3u8_video_content,
-            debrid_link=video_part_base_url,
-        )
+        uuid = _get_uuid(soup)
+        m3u8_playlist_url = _M3U8_SERVER / uuid / "playlist.m3u8"
+        m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_playlist_url)
+        ext = ".mp4"
+        filename = self.create_custom_filename(title, ext, resolution=info.resolution)
+        await self.handle_file(m3u8_playlist_url, scrape_item, title, ext, m3u8=m3u8, custom_filename=filename)
 
 
-def get_best_resolution(m3u8_playlist_content: str) -> tuple[str, str]:
-    resolutions = get_available_formats(m3u8_playlist_content)
-    best_resolution = max(resolutions)
-    name = get_playlist_name(m3u8_playlist_content, best_resolution)
-    return name, f"{best_resolution.height}p"
-
-
-def get_available_formats(m3u8_playlist_content: str) -> Generator[Format]:
-    for line in m3u8_playlist_content.splitlines():
-        if "RESOLUTION=" not in line:
-            continue
-        dimentions = line.split("RESOLUTION=")[-1].strip().split("x")
-        yield Format(*map(int, reversed(dimentions)))
-
-
-def get_playlist_name(m3u8_playlist_content: str, res: Format) -> str:
-    format_str = f"{res.width}x{res.height}"
-    get_next = False
-    for line in m3u8_playlist_content.splitlines():
-        if get_next:
-            return line.strip()
-        if f"RESOLUTION={format_str}" in line:
-            get_next = True
-
-    raise ScrapeError(422)
-
-
-def get_uuid(soup: BeautifulSoup) -> str:
-    info_js_script = soup.select_one("script:contains('m3u8|')")
-    js_text = info_js_script.text if info_js_script else None
-    if not js_text:
-        raise ScrapeError(422)
-
+def _get_uuid(soup: BeautifulSoup) -> str:
+    js_text = css.select_one_get_text(soup, Selector.UUID)
     uuid_joined_parts = js_text.split("m3u8|", 1)[-1].split("|com|surrit", 1)[0]
     uuid_parts = reversed(uuid_joined_parts.split("|"))
     return "-".join(uuid_parts)
 
 
-def parse_datetime(date: str) -> int:
-    """Parses a datetime string into a unix timestamp."""
-    parsed_date = datetime.fromisoformat(date)
-    return calendar.timegm(parsed_date.timetuple())
+def _fix_title(title: str, dvd_code_tag: Tag) -> str:
+    dvd_code = css.get_text(dvd_code_tag).upper()
+    uncensored = "UNCENSORED" in dvd_code
+    leak = "LEAK" in dvd_code
+    for trash in ("-UNCENSORED", "-LEAK"):
+        dvd_code = dvd_code.replace(trash, "").removesuffix("-")
+
+    title = " ".join(word for word in title.split(" ") if dvd_code not in word.upper())
+    full_dvd_code = f"{dvd_code}{(uncensored and '-UNCENSORED') or ''}{(leak and '-LEAK') or ''}"
+    return f"{full_dvd_code} {title}"

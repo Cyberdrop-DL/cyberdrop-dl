@@ -1,105 +1,40 @@
 from __future__ import annotations
 
 import asyncio
-import calendar
-import copy
+import contextlib
 import itertools
 import time
-from functools import partial, wraps
+import weakref
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import aiofiles
-import aiohttp
-from aiohttp import ClientSession
-from dateutil import parser
-from videoprops import get_audio_properties, get_video_properties
-from yarl import URL
 
-from cyberdrop_dl.clients.errors import DownloadError, InvalidContentTypeError, SlowDownloadError
-from cyberdrop_dl.utils.constants import FILE_FORMATS
+from cyberdrop_dl.constants import FILE_FORMATS
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.utils.dates import parse_http_date
 from cyberdrop_dl.utils.logger import log, log_debug
+from cyberdrop_dl.utils.utilities import get_size_or_none
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Callable, Coroutine, Generator, Mapping
     from pathlib import Path
     from typing import Any
 
-    from multidict import CIMultiDictProxy
+    import aiohttp
 
+    from cyberdrop_dl.data_structures.url_objects import MediaItem
     from cyberdrop_dl.managers.client_manager import ClientManager
     from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import MediaItem
 
 
-CONTENT_TYPES_OVERRIDES = {"text/vnd.trolltech.linguist": "video/MP2T"}
-
-
-def limiter(func: Callable) -> Any:
-    """Wrapper handles limits for download session."""
-
-    @wraps(func)
-    async def wrapper(self: DownloadClient, *args, **kwargs) -> Any:
-        domain_limiter = await self.client_manager.get_rate_limiter(args[0])
-        await asyncio.sleep(await self.client_manager.get_downloader_spacer(args[0]))
-        await self._global_limiter.acquire()
-        await domain_limiter.acquire()
-
-        async with aiohttp.ClientSession(
-            headers=self._headers,
-            raise_for_status=False,
-            cookie_jar=self.client_manager.cookies,
-            timeout=self._timeouts,
-            trace_configs=self.trace_configs,
-        ) as client:
-            kwargs["client_session"] = client
-            return await func(self, *args, **kwargs)
-
-    return wrapper
-
-
-def check_file_duration(media_item: MediaItem, manager: Manager) -> bool:
-    """Checks the file runtime against the config runtime limits."""
-    if media_item.is_segment:
-        return True
-
-    is_video = media_item.ext.lower() in FILE_FORMATS["Videos"]
-    is_audio = media_item.ext.lower() in FILE_FORMATS["Audio"]
-    if not (is_video or is_audio):
-        return True
-
-    def get_duration() -> float | None:
-        if media_item.duration:
-            return media_item.duration
-        props: dict = {}
-        if is_video:
-            props: dict = get_video_properties(str(media_item.complete_file))
-        elif is_audio:
-            props: dict = get_audio_properties(str(media_item.complete_file))
-        return float(props.get("duration", 0)) or None
-
-    duration_limits = manager.config_manager.settings_data.media_duration_limits
-    min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
-    max_video_duration: float = duration_limits.maximum_video_duration.total_seconds()
-    min_audio_duration: float = duration_limits.minimum_audio_duration.total_seconds()
-    max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
-    video_duration_limits = min_video_duration, max_video_duration
-    audio_duration_limits = min_audio_duration, max_audio_duration
-    if is_video and not any(video_duration_limits):
-        return True
-    if is_audio and not any(audio_duration_limits):
-        return True
-
-    duration: float = get_duration()  # type: ignore
-    media_item.duration = duration
-    if duration is None:
-        return True
-
-    max_video_duration = max_video_duration or float("inf")
-    max_audio_duration = max_audio_duration or float("inf")
-    if is_video:
-        return min_video_duration <= media_item.duration <= max_video_duration
-    return min_audio_duration <= media_item.duration <= max_audio_duration
+_CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
+_SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
+_CHROME_ANDROID_USER_AGENT: str = (
+    "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.180 Mobile Safari/537.36"
+)
+_FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 
 
 class DownloadClient:
@@ -108,99 +43,88 @@ class DownloadClient:
     def __init__(self, manager: Manager, client_manager: ClientManager) -> None:
         self.manager = manager
         self.client_manager = client_manager
-
-        self._headers = {"user-agent": client_manager.user_agent}
-        self._timeouts = aiohttp.ClientTimeout(
-            total=client_manager.read_timeout + client_manager.connection_timeout,
-            connect=client_manager.connection_timeout,
-        )
-        self._global_limiter = self.client_manager.global_rate_limiter
-        self.trace_configs = []
-        self._file_path = None
-        self.slow_download_period = 10  # seconds
         self.download_speed_threshold = self.manager.config_manager.settings_data.runtime_options.slow_download_speed
-        self.chunk_size = client_manager.speed_limiter.chunk_size
-        self.add_request_log_hooks()
+        self._null_context = contextlib.nullcontext()
+        self._server_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+        self._use_server_locks: set[str] = set()
 
-    def add_request_log_hooks(self) -> None:
-        async def on_request_start(*args):
-            params: aiohttp.TraceRequestStartParams = args[2]
-            log_debug(f"Starting download {params.method} request to {params.url}", 10)
+    def server_limiter(self, domain: str, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
+        if domain not in self._use_server_locks:
+            return self._null_context
 
-        async def on_request_end(*args):
-            params: aiohttp.TraceRequestEndParams = args[2]
-            msg = f"Finishing download {params.method} request to {params.url}"
-            msg += f" -> response status: {params.response.status}"
-            log_debug(msg, 10)
+        if server not in self._server_locks:
+            lock = asyncio.Lock()
+            self._server_locks[server] = lock
 
-        trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_start.append(on_request_start)
-        trace_config.on_request_end.append(on_request_end)
-        self.trace_configs.append(trace_config)
+        log_debug(f"Using lock for server '{server}'", 20)
+        return self._server_locks[server]
 
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
+    @contextlib.asynccontextmanager
+    async def _track_errors(self, domain: str):
+        with self.client_manager.request_context(domain):
+            await self.client_manager.manager.states.RUNNING.wait()
+            yield
 
-    def add_api_key_headers(self, domain: str, referer: URL) -> dict:
-        download_headers = copy.deepcopy(self._headers)
-        download_headers["Referer"] = str(referer)
+    def _get_download_headers(self, domain: str, referer: AbsoluteHttpURL) -> dict[str, str]:
+        download_headers = self.client_manager._default_headers | {"Referer": str(referer)}
         auth_data = self.manager.config_manager.authentication_data
         if domain == "pixeldrain" and auth_data.pixeldrain.api_key:
-            download_headers["Authorization"] = self.manager.download_manager.basic_auth(
+            download_headers["Authorization"] = self.manager.client_manager.basic_auth(
                 "Cyberdrop-DL", auth_data.pixeldrain.api_key
             )
         elif domain == "gofile":
-            gofile_cookies = self.client_manager.cookies.filter_cookies(URL("https://gofile.io"))
+            gofile_cookies = self.client_manager.cookies.filter_cookies(AbsoluteHttpURL("https://gofile.io"))
             api_key = gofile_cookies.get("accountToken", "")
             if api_key:
-                download_headers["Authorization"] = f"Bearer {api_key.value}"
+                download_headers["Authorization"] = f"Bearer {api_key.value}"  # type: ignore
+        elif domain == "odnoklassniki":
+            # TODO: Add "headers" attribute to MediaItem to use custom headers for downloads
+            download_headers |= {
+                "Accept-Language": "en-gb, en;q=0.8",
+                "User-Agent": _CHROME_ANDROID_USER_AGENT,
+                "Referer": "https://m.ok.ru/",
+                "Origin": "https://m.ok.ru",
+            }
+        elif domain == "megacloud":
+            download_headers["Referer"] = "https://megacloud.blog/"
         return download_headers
 
-    @limiter
-    async def _download(
-        self,
-        domain: str,
-        manager: Manager,
-        media_item: MediaItem,
-        save_content: Callable[[aiohttp.StreamReader], Coroutine[Any, Any, None]],
-        client_session: ClientSession,
-    ) -> bool:
+    async def _download(self, domain: str, media_item: MediaItem) -> bool:
         """Downloads a file."""
-        download_headers = self.add_api_key_headers(domain, media_item.referer)
-
+        download_headers = self._get_download_headers(domain, media_item.referer)
         downloaded_filename = await self.manager.db_manager.history_table.get_downloaded_filename(domain, media_item)
         download_dir = self.get_download_dir(media_item)
-        media_item.partial_file = download_dir / f"{downloaded_filename}.part"
+        if media_item.is_segment:
+            media_item.partial_file = media_item.complete_file = download_dir / media_item.filename
+        else:
+            media_item.partial_file = download_dir / f"{downloaded_filename}.part"
 
         resume_point = 0
-        if media_item.partial_file and media_item.partial_file.exists():
-            resume_point = media_item.partial_file.stat().st_size if media_item.partial_file.exists() else 0
-            download_headers["Range"] = f"bytes={resume_point}-"
+        if media_item.partial_file and (size := await asyncio.to_thread(get_size_or_none, media_item.partial_file)):
+            resume_point = size
+            download_headers["Range"] = f"bytes={size}-"
 
         await asyncio.sleep(self.manager.config_manager.global_settings_data.rate_limiting_options.total_delay)
 
-        download_url = media_item.debrid_link or media_item.url
-        await self.manager.states.RUNNING.wait()
-        async with client_session.get(
-            download_url,
-            headers=download_headers,
-            ssl=self.client_manager.ssl_context,
-            proxy=self.client_manager.proxy,
-        ) as resp:
+        async def process_response(resp: aiohttp.ClientResponse) -> bool:
             if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
-                media_item.partial_file.unlink()
+                await asyncio.to_thread(media_item.partial_file.unlink)
 
-            await self.client_manager.check_http_status(resp, download=True, origin=media_item.url)
+            await self.client_manager.check_http_status(resp, download=True)
 
-            _ = get_content_type(media_item.ext, resp.headers)
+            if not media_item.is_segment:
+                _ = get_content_type(media_item.ext, resp.headers)
 
-            media_item.filesize = int(resp.headers.get("Content-Length", "0"))
+            media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
             if not media_item.complete_file:
                 proceed, skip = await self.get_final_file_info(media_item, domain)
-                self.client_manager.check_bunkr_maint(resp.headers)
+                self.client_manager.check_content_length(resp.headers)
                 if skip:
                     self.manager.progress_manager.download_progress.add_skipped()
                     return False
                 if not proceed:
+                    if media_item.is_segment:
+                        return True
                     log(f"Skipping {media_item.url} as it has already been downloaded", 10)
                     self.manager.progress_manager.download_progress.add_previously_completed(False)
                     await self.process_completed(media_item, domain)
@@ -208,8 +132,8 @@ class DownloadClient:
 
                     return False
 
-            if resp.status != HTTPStatus.PARTIAL_CONTENT and media_item.partial_file.is_file():
-                media_item.partial_file.unlink()
+            if resp.status != HTTPStatus.PARTIAL_CONTENT:
+                await asyncio.to_thread(media_item.partial_file.unlink, missing_ok=True)
 
             if not media_item.datetime and (last_modified := get_last_modified(resp.headers)):
                 msg = f"Unable to parse upload date for {media_item.url}, using `Last-Modified` header as file datetime"
@@ -218,93 +142,144 @@ class DownloadClient:
 
             task_id = media_item.task_id
             if task_id is None:
+                size = (media_item.filesize + resume_point) if media_item.filesize is not None else None
                 task_id = self.manager.progress_manager.file_progress.add_task(
-                    domain=domain,
-                    filename=media_item.filename,
-                    expected_size=media_item.filesize + resume_point,
+                    domain=domain, filename=media_item.filename, expected_size=size
                 )
                 media_item.set_task_id(task_id)
 
-            if media_item.partial_file.is_file():
-                resume_point = media_item.partial_file.stat().st_size
-                self.manager.progress_manager.file_progress.advance_file(task_id, resume_point)
+            self.manager.progress_manager.file_progress.advance_file(task_id, resume_point)
 
-            await save_content(resp.content)
+            await self._append_content(media_item, resp.content)
             return True
 
-    async def _append_content(
+        return await self._request_download(media_item, download_headers, process_response)
+
+    async def _request_download(
         self,
         media_item: MediaItem,
-        content: aiohttp.StreamReader,
-        update_progress: partial,
-    ) -> None:
+        download_headers: dict[str, str],
+        process_response: Callable[[aiohttp.ClientResponse], Coroutine[None, None, bool]],
+    ) -> bool:
+        download_url = media_item.debrid_link or media_item.url
+        await self.manager.states.RUNNING.wait()
+        fallback_url_generator = _fallback_generator(media_item)
+        fallback_count = 0
+        while True:
+            resp = None
+            try:
+                async with self.client_manager._download_session.get(download_url, headers=download_headers) as resp:
+                    return await process_response(resp)
+            except (DownloadError, DDOSGuardError):
+                if resp is None:
+                    raise
+                try:
+                    next_download_url = fallback_url_generator.send(resp)
+                except StopIteration:
+                    pass
+                else:
+                    if not next_download_url:
+                        raise
+                    if media_item.debrid_link and media_item.debrid_link == download_url:
+                        msg = f" with debrid URL {download_url} failed, retrying with fallback URL: "
+                    elif media_item.url == download_url:
+                        msg = " failed, retrying with fallback URL: "
+                    else:
+                        fallback_count += 1
+                        msg = f" with fallback URL #{fallback_count} {download_url} failed, retrying with new fallback URL: "
+                    log(f"Download of {media_item.url}{msg}{next_download_url}", 40)
+                    download_url = next_download_url
+                    continue
+                raise
+
+    async def _append_content(self, media_item: MediaItem, content: aiohttp.StreamReader) -> None:
         """Appends content to a file."""
 
-        check_free_space = partial(self.manager.storage_manager.check_free_space, media_item)
+        assert media_item.task_id is not None
+        check_free_space = self.make_free_space_checker(media_item)
+        check_download_speed = self.make_speed_checker(media_item)
         await check_free_space()
+        await self._pre_download_check(media_item)
 
-        media_item.partial_file.parent.mkdir(parents=True, exist_ok=True)
-        if not media_item.partial_file.is_file():
-            media_item.partial_file.touch()
+        async with aiofiles.open(media_item.partial_file, mode="ab") as f:
+            async for chunk in content.iter_chunked(self.client_manager.speed_limiter.chunk_size):
+                await self.manager.states.RUNNING.wait()
+                await check_free_space()
+                chunk_size = len(chunk)
+                await self.client_manager.speed_limiter.acquire(chunk_size)
+                await f.write(chunk)
+                self.manager.progress_manager.file_progress.advance_file(media_item.task_id, chunk_size)
+                check_download_speed()
 
+        self._post_download_check(media_item, content)
+
+    def _pre_download_check(self, media_item: MediaItem) -> Coroutine[Any, Any, None]:
+        def prepare() -> None:
+            media_item.partial_file.parent.mkdir(parents=True, exist_ok=True)
+            if not media_item.partial_file.is_file():
+                media_item.partial_file.touch()
+
+        return asyncio.to_thread(prepare)
+
+    def _post_download_check(self, media_item: MediaItem, content: aiohttp.StreamReader) -> None:
+        if not content.total_bytes and not media_item.partial_file.stat().st_size:
+            media_item.partial_file.unlink()
+            raise DownloadError(status=HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
+
+    def make_free_space_checker(self, media_item: MediaItem) -> Callable[[], Coroutine[Any, Any, None]]:
+        current_chunk = 0
+
+        async def check_free_space() -> None:
+            nonlocal current_chunk
+            if current_chunk % _FREE_SPACE_CHECK_PERIOD == 0:
+                await self.manager.storage_manager.check_free_space(media_item)
+            current_chunk += 1
+
+        return check_free_space
+
+    def make_speed_checker(self, media_item: MediaItem) -> Callable[[], None]:
         last_slow_speed_read = None
 
-        def check_download_speed():
+        def check_download_speed() -> None:
             nonlocal last_slow_speed_read
+            if not self.download_speed_threshold:
+                return
+            assert media_item.task_id is not None
             speed = self.manager.progress_manager.file_progress.get_speed(media_item.task_id)
             if speed > self.download_speed_threshold:
                 last_slow_speed_read = None
             elif not last_slow_speed_read:
                 last_slow_speed_read = time.perf_counter()
-            elif time.perf_counter() - last_slow_speed_read > self.slow_download_period:
+            elif time.perf_counter() - last_slow_speed_read > _SLOW_DOWNLOAD_PERIOD:
                 raise SlowDownloadError(origin=media_item)
 
-        async with aiofiles.open(media_item.partial_file, mode="ab") as f:  # type: ignore
-            async for chunk in content.iter_chunked(self.chunk_size):
-                await self.manager.states.RUNNING.wait()
-                await check_free_space()
-                chunk_size = len(chunk)
-                await self.client_manager.speed_limiter.acquire(chunk_size)
-                await asyncio.sleep(0)
-                await f.write(chunk)
-                update_progress(chunk_size)
+        return check_download_speed
 
-                if self.download_speed_threshold:
-                    check_download_speed()
-
-        if not content.total_bytes and not media_item.partial_file.stat().st_size:
-            media_item.partial_file.unlink()
-            raise DownloadError(status=HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
-
-    async def download_file(self, manager: Manager, domain: str, media_item: MediaItem) -> bool:
+    async def download_file(self, domain: str, media_item: MediaItem) -> bool:
         """Starts a file."""
-        if self.manager.config_manager.settings_data.download_options.skip_download_mark_completed:
+        if self.manager.config.download_options.skip_download_mark_completed and not media_item.is_segment:
             log(f"Download Removed {media_item.url} due to mark completed option", 10)
             self.manager.progress_manager.download_progress.add_skipped()
             # set completed path
             await self.process_completed(media_item, domain)
             return False
 
-        async def save_content(content: aiohttp.StreamReader) -> None:
-            await self._append_content(
-                media_item,
-                content,
-                partial(manager.progress_manager.file_progress.advance_file, media_item.task_id),
-            )
+        async with self._track_errors(domain):
+            downloaded = await self._download(domain, media_item)
 
-        downloaded = await self._download(domain, manager, media_item, save_content)
         if downloaded:
-            media_item.partial_file.rename(media_item.complete_file)
-            proceed = check_file_duration(media_item, self.manager)
-            await self.manager.db_manager.history_table.add_duration(domain, media_item)
-            if not proceed:
-                log(f"Download Skip {media_item.url} due to runtime restrictions", 10)
-                media_item.complete_file.unlink()
-                await self.mark_incomplete(media_item, domain)
-                self.manager.progress_manager.download_progress.add_skipped()
-                return False
-            await self.process_completed(media_item, domain)
-            await self.handle_media_item_completion(media_item, downloaded=True)
+            await asyncio.to_thread(media_item.partial_file.rename, media_item.complete_file)
+            if not media_item.is_segment:
+                proceed = self.client_manager.check_file_duration(media_item)
+                await self.manager.db_manager.history_table.add_duration(domain, media_item)
+                if not proceed:
+                    log(f"Download Skip {media_item.url} due to runtime restrictions", 10)
+                    await asyncio.to_thread(media_item.complete_file.unlink)
+                    await self.mark_incomplete(media_item, domain)
+                    self.manager.progress_manager.download_progress.add_skipped()
+                    return False
+                await self.process_completed(media_item, domain)
+                await self.handle_media_item_completion(media_item, downloaded=True)
         return downloaded
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
@@ -326,7 +301,7 @@ class DownloadClient:
     async def add_file_size(self, domain: str, media_item: MediaItem) -> None:
         if not media_item.complete_file:
             media_item.complete_file = self.get_file_location(media_item)
-        if media_item.complete_file.is_file():
+        if await asyncio.to_thread(media_item.complete_file.is_file):
             await self.manager.db_manager.history_table.add_filesize(domain, media_item)
 
     async def handle_media_item_completion(self, media_item: MediaItem, downloaded: bool = False) -> None:
@@ -365,8 +340,11 @@ class DownloadClient:
         proceed = True
         skip = False
 
+        if not TYPE_CHECKING:
+            log = log_debug if media_item.is_segment else globals()["log"]
+
         while True:
-            if expected_size:
+            if expected_size and not media_item.is_segment:
                 file_size_check = self.check_filesize_limits(media_item)
                 if not file_size_check:
                     log(f"Download Skip {media_item.url} due to filesize restrictions", 10)
@@ -396,13 +374,16 @@ class DownloadClient:
             if media_item.filename == downloaded_filename:
                 if media_item.partial_file.exists():
                     log(f"Found {downloaded_filename} locally, trying to resume")
-                    if media_item.partial_file.stat().st_size >= media_item.filesize != 0:
+                    assert media_item.filesize
+                    size = media_item.partial_file.stat().st_size
+                    if size >= media_item.filesize != 0:
                         log(f"Deleting partial file {media_item.partial_file}")
                         media_item.partial_file.unlink()
-                    if media_item.partial_file.stat().st_size == media_item.filesize:
+
+                    elif size == media_item.filesize:
                         if media_item.complete_file.exists():
                             log(
-                                f"Found conflicting complete file {media_item.complete_file} locally, iterating filename",
+                                f"Found conflicting complete file '{media_item.complete_file}' locally, iterating filename",
                                 30,
                             )
                             new_complete_filename, new_partial_file = await self.iterate_filename(
@@ -418,15 +399,15 @@ class DownloadClient:
                             proceed = False
                             media_item.partial_file.rename(media_item.complete_file)
                         log(
-                            f"Renaming found partial file {media_item.partial_file} to complete file {media_item.complete_file}"
+                            f"Renaming found partial file '{media_item.partial_file}' to complete file {media_item.complete_file}"
                         )
                 elif media_item.complete_file.exists():
                     if media_item.complete_file.stat().st_size == media_item.filesize:
-                        log(f"Found complete file {media_item.complete_file} locally, skipping download")
+                        log(f"Found complete file '{media_item.complete_file}' locally, skipping download")
                         proceed = False
                     else:
                         log(
-                            f"Found conflicting complete file {media_item.complete_file} locally, iterating filename",
+                            f"Found conflicting complete file '{media_item.complete_file}' locally, iterating filename",
                             30,
                         )
                         media_item.complete_file, media_item.partial_file = await self.iterate_filename(
@@ -440,9 +421,9 @@ class DownloadClient:
         await self.manager.db_manager.history_table.add_download_filename(domain, media_item)
         return proceed, skip
 
-    async def iterate_filename(self, complete_file: Path, media_item: MediaItem) -> tuple[Path, Path | None]:
+    async def iterate_filename(self, complete_file: Path, media_item: MediaItem) -> tuple[Path, Path]:
         """Iterates the filename until it is unique."""
-        partial_file = None
+        partial_file = complete_file.with_suffix(complete_file.suffix + ".part")
         for iteration in itertools.count(1):
             filename = f"{complete_file.stem} ({iteration}){complete_file.suffix}"
             temp_complete_file = media_item.download_folder / filename
@@ -466,6 +447,7 @@ class DownloadClient:
         max_other_filesize = file_size_limits.maximum_other_size or float("inf")
         min_other_filesize = file_size_limits.minimum_other_size
 
+        assert media.filesize is not None
         if media.ext in FILE_FORMATS["Images"]:
             proceed = min_image_filesize < media.filesize < max_image_filesize
         elif media.ext in FILE_FORMATS["Videos"]:
@@ -475,16 +457,8 @@ class DownloadClient:
 
         return proceed
 
-    @property
-    def file_path(self) -> str | None:
-        return self._file_path
 
-    @file_path.setter
-    def file_path(self, media_item: MediaItem):
-        self._file_path = media_item.filename
-
-
-def get_content_type(ext: str, headers: CIMultiDictProxy) -> str | None:
+def get_content_type(ext: str, headers: Mapping[str, str]) -> str | None:
     content_type: str = headers.get("Content-Type", "")
     content_length = headers.get("Content-Length")
     if not content_type and not content_length:
@@ -494,8 +468,8 @@ def get_content_type(ext: str, headers: CIMultiDictProxy) -> str | None:
     if not content_type:
         return None
 
-    override_key = next((name for name in CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
-    override: str | None = CONTENT_TYPES_OVERRIDES.get(override_key)
+    override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
+    override: str | None = _CONTENT_TYPES_OVERRIDES.get(override_key)
     content_type = override or content_type
     content_type = content_type.lower()
 
@@ -506,11 +480,35 @@ def get_content_type(ext: str, headers: CIMultiDictProxy) -> str | None:
     return content_type
 
 
-def get_last_modified(headers: CIMultiDictProxy) -> int | None:
+def get_last_modified(headers: Mapping[str, str]) -> int | None:
     if date_str := headers.get("Last-Modified"):
-        parsed_date = parser.parse(date_str)
-        return calendar.timegm(parsed_date.timetuple())
+        return parse_http_date(date_str)
 
 
 def is_html_or_text(content_type: str) -> bool:
     return any(s in content_type for s in ("html", "text"))
+
+
+def _fallback_generator(media_item: MediaItem):
+    fallbacks = media_item.fallbacks
+
+    def gen_fallback() -> Generator[AbsoluteHttpURL | None, aiohttp.ClientResponse, None]:
+        response = yield
+        if fallbacks is None:
+            return
+
+        if callable(fallbacks):
+            for retry in itertools.count(1):
+                if not response:
+                    return
+                url = fallbacks(response, retry)
+                if not url:
+                    return
+                response = yield url
+
+        else:
+            yield from fallbacks
+
+    gen = gen_fallback()
+    next(gen)  # Prime the generator, waiting for response
+    return gen

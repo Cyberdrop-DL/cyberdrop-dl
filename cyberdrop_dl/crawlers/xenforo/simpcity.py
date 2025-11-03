@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import ClassVar
 
-from yarl import URL
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 
 from .xenforo import XenforoCrawler
 
-if TYPE_CHECKING:
-    from cyberdrop_dl.managers.manager import Manager
-
 
 class SimpCityCrawler(XenforoCrawler):
-    primary_base_domain = URL("https://simpcity.su")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://simpcity.cr")
+    DOMAIN: ClassVar[str] = "simpcity"
+    FOLDER_DOMAIN: ClassVar[str] = "SimpCity"
+    LOGIN_USER_COOKIE_NAME = "ogaddgmetaprof_user"
     login_required = False
-    domain = "simpcity"
-    session_cookie_name = "dontlikebots_user"
-
-    def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, self.domain, "SimpCity")
+    IGNORE_EMBEDED_IMAGES_SRC = False
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("simpcity.su",)
+    _RATE_LIMIT = 1, 20

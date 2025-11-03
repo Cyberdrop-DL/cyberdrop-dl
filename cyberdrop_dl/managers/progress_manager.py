@@ -15,6 +15,7 @@ from rich.progress import Progress, SpinnerColumn, TaskID
 from rich.text import Text
 from yarl import URL
 
+from cyberdrop_dl import __version__
 from cyberdrop_dl.ui.progress.downloads_progress import DownloadsProgress
 from cyberdrop_dl.ui.progress.file_progress import FileProgress
 from cyberdrop_dl.ui.progress.hash_progress import HashProgress
@@ -63,7 +64,7 @@ class ProgressManager:
         self.status_message_task_id: TaskID = field(init=False)
 
     @asynccontextmanager
-    async def show_status_msg(self, msg: str | None) -> AsyncGenerator:
+    async def show_status_msg(self, msg: str | None) -> AsyncGenerator[None]:
         try:
             self.status_message.update(self.status_message_task_id, description=msg, visible=bool(msg))
             yield
@@ -92,7 +93,7 @@ class ProgressManager:
         self.status_message = Progress(spinner, "[progress.description]{task.description}")
 
         self.status_message_task_id = self.status_message.add_task("", total=100, completed=0, visible=False)
-        self.activity_task_id = activity.add_task("Running Cyberdrop-DL", total=100, completed=0)
+        self.activity_task_id = activity.add_task(f"Running Cyberdrop-DL: v{__version__}", total=100, completed=0)
         self.activity = activity
 
         simple_layout = Group(activity, self.download_progress.simple_progress)
@@ -169,11 +170,7 @@ class ProgressManager:
         log_yellow(f"  Sent to Jdownloader: {self.scrape_stats_progress.sent_to_jdownloader:,}")
         log_yellow(f"  Skipped: {self.scrape_stats_progress.unsupported_urls_skipped:,}")
 
-        log_spacer(20, "")
-        log_cyan("Dupe Stats:")
-        log_yellow(f"  Newly Hashed: {self.hash_progress.hashed_files:,} files")
-        log_yellow(f"  Previously Hashed: {self.hash_progress.prev_hashed_files:,} files")
-        log_yellow(f"  Removed (Downloads): {self.hash_progress.removed_files:,} files")
+        self.print_dedupe_stats()
 
         log_spacer(20, "")
         log_cyan("Sort Stats:")
@@ -184,6 +181,13 @@ class ProgressManager:
 
         last_padding = log_failures(self.scrape_stats_progress.return_totals(), "Scrape Failures:")
         log_failures(self.download_stats_progress.return_totals(), "Download Failures:", last_padding)
+
+    def print_dedupe_stats(self) -> None:
+        log_spacer(20, "")
+        log_cyan("Dupe Stats:")
+        log_yellow(f"  Newly Hashed: {self.hash_progress.hashed_files:,} files")
+        log_yellow(f"  Previously Hashed: {self.hash_progress.prev_hashed_files:,} files")
+        log_yellow(f"  Removed (Downloads): {self.hash_progress.removed_files:,} files")
 
 
 def log_failures(failures: list[UiFailureTotal], title: str = "Failures:", last_padding: int = 0) -> int:
@@ -198,7 +202,7 @@ def log_failures(failures: list[UiFailureTotal], title: str = "Failures:", last_
         error_padding = max(len(str(max(error_codes))), error_padding)
     for f in failures:
         error = f.error_code if f.error_code is not None else ""
-        log_red(f"  {error:>{error_padding}}{' ' if error_padding else ''}{f.msg}: {f.count:,}")
+        log_red(f"  {error:>{error_padding}}{' ' if error_padding else ''}{f.msg}: {f.total:,}")
     return error_padding
 
 

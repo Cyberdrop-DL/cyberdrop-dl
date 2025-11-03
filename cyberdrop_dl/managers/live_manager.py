@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import contextmanager
-from dataclasses import field
 from functools import partialmethod
 from typing import TYPE_CHECKING
 
 from rich.live import Live
 
-from cyberdrop_dl.utils import constants
+from cyberdrop_dl import constants
 from cyberdrop_dl.utils.args import is_terminal_in_portrait
-from cyberdrop_dl.utils.logger import console
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -26,10 +24,8 @@ class LiveManager:
         self.ui_setting = self.manager.parsed_args.cli_only_args.ui
         self.fullscreen = f = self.manager.parsed_args.cli_only_args.fullscreen_ui
         self.refresh_rate = rate = self.manager.config_manager.global_settings_data.ui_options.refresh_rate
-        self.use_textual = False  # manager.parsed_args.cli_only_args.textual_ui and self.fullscreen
-        self.auto_refresh = a = not self.use_textual
-        self.live = Live(refresh_per_second=rate, console=console, transient=True, screen=f, auto_refresh=a)
-        self.current_layout: str = field(init=False)
+        self.live = Live(refresh_per_second=rate, transient=True, screen=f, auto_refresh=True)
+        self.current_layout: str = ""
 
     @contextmanager
     def get_live(self, name: str, stop: bool = False) -> Generator[Live | None]:
@@ -57,19 +53,22 @@ class LiveManager:
             if new_layout != self.current_layout:
                 self.current_layout = new_layout
                 layout = self.get_layout(new_layout)
-                self.live.update(layout, refresh=not self.use_textual)
+                self.live.update(layout, refresh=True)  # type: ignore[reportArgumentType]
             await asyncio.sleep(0.5)
 
     @contextmanager
     def live_context_manager(self, layout: RenderableType | None, stop: bool = False) -> Generator[Live | None]:
         stop_event = asyncio.Event()
         orientation_task = None
+
         try:
-            self.live.start()
-            if not (10 <= constants.CONSOLE_LEVEL <= 50) and layout:
-                self.live.update(layout, refresh=not self.use_textual)
-                orientation_task = asyncio.create_task(self.watch_orientation(stop_event))
-            yield self.live
+            with self.replace_console():
+                self.live.start()
+                if layout:
+                    self.live.update(layout, refresh=True)
+                    if self.current_layout in ("vertical_layout", "horizontal_layout"):
+                        orientation_task = asyncio.create_task(self.watch_orientation(stop_event))
+                yield self.live
         finally:
             stop_event.set()
             if orientation_task:
@@ -77,3 +76,14 @@ class LiveManager:
             if stop:
                 self.live.update("")
                 self.live.stop()
+
+    @contextmanager
+    def replace_console(self) -> Generator[None]:
+        """Disable the default console, replacing it with the internal live's console"""
+
+        default_console = constants.console_handler.console
+        try:
+            constants.console_handler.console = self.live.console
+            yield
+        finally:
+            constants.console_handler.console = default_console

@@ -1,3 +1,4 @@
+# type: ignore[reportPrivateImportUsage]
 from __future__ import annotations
 
 import asyncio
@@ -14,15 +15,10 @@ from InquirerPy.enum import (
 from rich.console import Console
 
 from cyberdrop_dl import __version__
+from cyberdrop_dl.constants import BROWSERS, RESERVED_CONFIG_NAMES
 from cyberdrop_dl.ui.prompts import basic_prompts
 from cyberdrop_dl.ui.prompts.defaults import ALL_CHOICE, DONE_CHOICE, EXIT_CHOICE
-from cyberdrop_dl.utils.constants import BROWSERS, RESERVED_CONFIG_NAMES
 from cyberdrop_dl.utils.cookie_management import get_cookies_from_browsers
-from cyberdrop_dl.utils.data_enums_classes.supported_domains import (
-    SUPPORTED_FORUMS,
-    SUPPORTED_SITES_DOMAINS,
-    SUPPORTED_WEBSITES,
-)
 from cyberdrop_dl.utils.utilities import clear_term
 
 if TYPE_CHECKING:
@@ -45,16 +41,8 @@ def main_prompt(manager: Manager) -> int:
     }
 
     choices = basic_prompts.create_choices(OPTIONS, append_last=EXIT_CHOICE)
-    simp_disclaimer_shown = manager.cache_manager.get("simp_disclaimer_shown")
-    if not simp_disclaimer_shown:
-        choices = [Choice(-1, "!! PRESS <ENTER> TO VIEW DISCLAIMER !!")]
 
-    prompt_options = {"style": get_style({"pointer": "#ff0000 bold"}) if not simp_disclaimer_shown else None}
-
-    if not simp_disclaimer_shown:
-        prompt_options["long_instruction"] = "ENTER: view disclaimer"
-
-    return basic_prompts.ask_choice(choices, **prompt_options)
+    return basic_prompts.ask_choice(choices)
 
 
 """ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MANAGE CONFIG PROMPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
@@ -159,6 +147,8 @@ class DomainType(IntEnum):
 
 def domains_prompt(*, domain_message: str = "Select site(s):") -> tuple[list[str], list[str]]:
     """Asks the user to select website(s) for cookie actions and cache actions."""
+    from cyberdrop_dl.supported_domains import SUPPORTED_FORUMS, SUPPORTED_SITES_DOMAINS, SUPPORTED_WEBSITES
+
     OPTIONS = [["Forum", "File Host"], ["All Supported Websites"]]
     choices = basic_prompts.create_choices(OPTIONS)
     domain_type = basic_prompts.ask_choice(choices, message="Select category:")
@@ -199,23 +189,37 @@ def domains_prompt(*, domain_message: str = "Select site(s):") -> tuple[list[str
 
 def extract_cookies(manager: Manager, *, dry_run: bool = False) -> None:
     """Asks the user to select browser(s) and domains(s) to import cookies from."""
+    from cyberdrop_dl.supported_domains import SUPPORTED_FORUMS, SUPPORTED_SITES_DOMAINS, SUPPORTED_WEBSITES
 
+    supported_forums, supported_websites = list(SUPPORTED_FORUMS.values()), list(SUPPORTED_WEBSITES.values())
     domains, all_domains = domains_prompt(domain_message="Select site(s) to import cookies from:")
     if domains == []:
         return
-    browsers = browser_prompt()
-
-    if ALL_CHOICE.value in browsers:
-        browsers = list(BROWSERS)
+    browser = BROWSERS(browser_prompt())
 
     if dry_run:
-        manager.config_manager.settings_data.browser_cookies.browsers = browsers
+        manager.config_manager.settings_data.browser_cookies.browser = browser
         current_sites = set(manager.config_manager.settings_data.browser_cookies.sites)
-        new_sites = (current_sites - set(all_domains)) | set(domains)
+        new_sites = current_sites - set(all_domains)
+        if domains == supported_forums:
+            new_sites -= {"all"}
+            new_sites.add("all_forums")
+        elif domains == supported_websites:
+            new_sites -= {"all"}
+            new_sites.add("all_file_hosts")
+        elif domains == SUPPORTED_SITES_DOMAINS:
+            new_sites -= {"all_forums", "all_file_hosts"}
+            new_sites.add("all")
+        else:
+            new_sites -= {"all", "all_forums", "all_file_hosts"}
+            new_sites.update(domains)
+        if "all_forums" in new_sites and "all_file_hosts" in new_sites:
+            new_sites -= {"all_forums", "all_file_hosts"}
+            new_sites.add("all")
         manager.config_manager.settings_data.browser_cookies.sites = sorted(new_sites)
         return
 
-    get_cookies_from_browsers(manager, browsers=browsers, domains=domains)
+    get_cookies_from_browsers(manager, browser=browser, domains=domains)
     console.print("Import finished", style="green")
     basic_prompts.enter_to_continue()
 
@@ -244,7 +248,7 @@ def browser_prompt() -> str:
         for browser in BROWSERS
         if browser not in unsupported_browsers
     ]
-    return basic_prompts.ask_checkbox(choices, message="Select the browser(s) for extraction:")
+    return basic_prompts.ask_choice(choices, message="Select the browser(s) for extraction:")
 
 
 """ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CACHE PROMPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""

@@ -1,26 +1,28 @@
+import dataclasses
 import sys
 import time
 import warnings
 from argparse import SUPPRESS, ArgumentParser, BooleanOptionalAction, RawDescriptionHelpFormatter
 from argparse import _ArgumentGroup as ArgGroup
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import date
 from enum import StrEnum, auto
 from pathlib import Path
 from shutil import get_terminal_size
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NoReturn, Self
 
 from pydantic import BaseModel, Field, ValidationError, computed_field, field_validator, model_validator
 
 from cyberdrop_dl import __version__, env
-from cyberdrop_dl.config_definitions import ConfigSettings, GlobalSettings
-from cyberdrop_dl.config_definitions.custom.types import AliasModel, HttpURL
+from cyberdrop_dl.config import ConfigSettings, GlobalSettings
+from cyberdrop_dl.models import AliasModel
+from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.utils.yaml import handle_validation_error
 
 if TYPE_CHECKING:
     from pydantic.fields import FieldInfo
 
-CLI_ARGUMENTS_MD = Path("docs/reference/cli-arguments.md")
+
 CDL_EPILOG = "Visit the wiki for additional details: https://script-ware.gitbook.io/cyberdrop-dl"
 
 
@@ -42,9 +44,9 @@ def _check_mutually_exclusive(group: Iterable, msg: str) -> None:
 
 def is_terminal_in_portrait() -> bool:
     """Check if CDL is being run in portrait mode based on a few conditions."""
-    # Return True if running in portait mode, False otherwise (landscape mode)
+    # Return True if running in portrait mode, False otherwise (landscape mode)
 
-    def check_terminal_size():
+    def check_terminal_size() -> bool:
         terminal_size = get_terminal_size()
         width, height = terminal_size.columns, terminal_size.lines
         aspect_ratio = width / height
@@ -66,21 +68,42 @@ def is_terminal_in_portrait() -> bool:
     return check_terminal_size()
 
 
+_NOT_SET: Any = object()
+
+
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class CommandOptions:
+    nargs: int | str | None = _NOT_SET
+    const: Any = _NOT_SET
+
+    def as_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in dataclasses.asdict(self).items() if v is not _NOT_SET}
+
+
 class CommandLineOnlyArgs(BaseModel):
     links: list[HttpURL] = Field([], description="link(s) to content to download (passing multiple links is supported)")
     appdata_folder: Path | None = Field(None, description="AppData folder path")
-    completed_after: date | None = Field(None, description="only download completed downloads at or after this date")
-    completed_before: date | None = Field(None, description="only download completed downloads at or before this date")
+    completed_after: date | None = Field(
+        None, description="only retry downloads that were completed on or after this date"
+    )
+    completed_before: date | None = Field(
+        None, description="only retry downloads that were completed on or before this date"
+    )
     config: str | None = Field(None, description="name of config to load")
     config_file: Path | None = Field(None, description="path to the CDL settings.yaml file to load")
-    disable_cache: bool = Field(False, description="Temporarily disable the requests cache")
-    download: bool = Field(False, description="skips UI, start download immediatly")
-    download_dropbox_folders_as_zip: bool = Field(False, description="download Dropbox folder without api key as zip")
-    download_tiktok_audios: bool = Field(False, description="download TikTok audios")
+    disable_cache: bool = Field(False, description="temporarily disable the requests cache")
+    download: bool = Field(False, description="skips UI, start download immediately")
+    download_tiktok_audios: bool = Field(
+        False, description="download TikTok audios from posts and save them as separate files"
+    )
+    download_tiktok_src_quality_videos: bool = Field(False, description="download TikTok videos in source quality")
+    impersonate: Annotated[
+        Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"] | bool | None,
+        CommandOptions(nargs="?", const=True),
+    ] = Field(None, description="Use this target as impersonation for all scrape requests")
     max_items_retry: int = Field(0, description="max number of links to retry")
-    no_textual_ui: bool = Field(False, description="Disable textual UI (TUI with mouse support)")
-    portrait: bool = Field(is_terminal_in_portrait(), description="show UI in a portrait layout")
-    print_stats: bool = Field(True, description="Show stats report at the end of a run")
+    portrait: bool = Field(is_terminal_in_portrait(), description="force CDL to run with a vertical layout")
+    print_stats: bool = Field(True, description="show stats report at the end of a run")
     retry_all: bool = Field(False, description="retry all downloads")
     retry_failed: bool = Field(False, description="retry failed downloads")
     retry_maintenance: bool = Field(
@@ -121,12 +144,7 @@ class CommandLineOnlyArgs(BaseModel):
         return value.lower()
 
 
-class DeprecatedArgs(BaseModel):
-    no_ui: bool = Field(
-        False,
-        description="disables the UI/progress view entirely",
-        deprecated="'--no-ui' is deprecated and will be removed in the future. Use '--ui disabled'",
-    )
+class DeprecatedArgs(BaseModel): ...
 
 
 class ParsedArgs(AliasModel):
@@ -158,11 +176,6 @@ class ParsedArgs(AliasModel):
                 sys.exit(1)
             time.sleep(WARNING_TIMEOUT)
 
-    @staticmethod
-    def parse_args() -> "ParsedArgs":
-        """Parses the command line arguments passed into the program. Returns an instance of `ParsedArgs`"""
-        return parse_args()
-
     def prepare_warnings(self) -> set[str]:
         warnings_to_emit = set()
 
@@ -174,24 +187,36 @@ class ParsedArgs(AliasModel):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
-            if self.deprecated_args.no_ui:
-                add_warning_msg_from("no_ui")
-                self.cli_only_args.ui = UIOptions.DISABLED
+            pass
 
         return warnings_to_emit
 
 
 def _add_args_from_model(
-    parser: ArgumentParser | ArgGroup, model: type[BaseModel], *, cli_args: bool = False, deprecated: bool = False
+    parser: ArgumentParser | ArgGroup,
+    model: type[BaseModel],
+    *,
+    cli_args: bool = False,
+    deprecated: bool = False,
+    prefix: str = "",
 ) -> None:
     for name, field in model.model_fields.items():
-        cli_name = name.replace("_", "-")
+        full_name = prefix + name
+        cli_name = full_name.replace("_", "-")
         arg_type = type(field.default)
+        if issubclass(arg_type, BaseModel):
+            _add_args_from_model(parser, arg_type, cli_args=cli_args, deprecated=deprecated, prefix=f"{cli_name}.")
+            continue
         if arg_type not in (list, set, bool):
             arg_type = str
         help_text = field.description or ""
         default = field.default if cli_args else SUPPRESS
-        default_options = {"default": default, "dest": name, "help": help_text}
+        default_options = {"default": default, "dest": full_name, "help": help_text}
+        for meta in field.metadata:
+            if isinstance(meta, CommandOptions):
+                default_options |= meta.as_dict()
+                break
+
         name_or_flags = [f"--{cli_name}"]
         alias: str = field.alias or field.validation_alias or field.serialization_alias  # type: ignore
         if alias and len(alias) == 1:
@@ -206,7 +231,7 @@ def _add_args_from_model(
             parser.add_argument(*name_or_flags, action=action, **default_options)
             continue
         if cli_name == "links":
-            default_options.pop("dest")
+            _ = default_options.pop("dest")
             parser.add_argument(cli_name, metavar="LINK(S)", nargs="*", action="extend", **default_options)
             continue
         if arg_type in (list, set):
@@ -226,29 +251,22 @@ def _create_groups_from_nested_models(parser: ArgumentParser, model: type[BaseMo
 
 
 class CustomHelpFormatter(RawDescriptionHelpFormatter):
-    def __init__(self, prog):
-        witdh = 300 if env.RUNNING_IN_IDE else None
-        super().__init__(prog, max_help_position=80, width=witdh)
+    MAX_HELP_POS = 80
+    INDENT_INCREMENT = 2
 
-    def _get_help_string(self, action):
+    def __init__(self, prog: str, width: int | None = None) -> None:
+        super().__init__(prog, self.INDENT_INCREMENT, self.MAX_HELP_POS, width)
+
+    def _get_help_string(self, action) -> str | None:
         if action.help:
-            return action.help.replace("program's", "CDL")  ## The ' messes up the markdown formatting
+            return action.help.replace("program's", "CDL")  # The ' messes up the markdown formatting
         return action.help
 
-    def format_help(self):
-        help_text = super().format_help()
-        if env.RUNNING_IN_IDE and CLI_ARGUMENTS_MD.is_file():
-            cli_overview, *_ = help_text.partition(CDL_EPILOG)
-            current_text = CLI_ARGUMENTS_MD.read_text(encoding="utf8")
-            new_text, *_ = current_text.partition("```shell")
-            new_text += f"```shell\n{cli_overview}```\n"
-            if current_text != new_text:
-                CLI_ARGUMENTS_MD.write_text(new_text, encoding="utf8")
-        return help_text
+
+USING_DEPRECATED_ARGS: bool = bool(DeprecatedArgs.model_fields)
 
 
-def parse_args() -> ParsedArgs:
-    """Parses the command line arguments passed into the program."""
+def make_parser() -> tuple[ArgumentParser, dict[str, list[ArgGroup]]]:
     parser = ArgumentParser(
         description="Bulk asynchronous downloader for multiple file hosts",
         usage="cyberdrop-dl [OPTIONS] URL [URL...]",
@@ -260,39 +278,79 @@ def parse_args() -> ParsedArgs:
     cli_only = parser.add_argument_group("CLI-only options")
     _add_args_from_model(cli_only, CommandLineOnlyArgs, cli_args=True)
 
-    group_lists = {
+    groups_mapping = {
         "config_settings": _create_groups_from_nested_models(parser, ConfigSettings),
         "global_settings": _create_groups_from_nested_models(parser, GlobalSettings),
         "cli_only_args": [cli_only],
     }
 
-    using_deprecated_args: bool = bool(DeprecatedArgs.model_fields)
-    if using_deprecated_args:
+    if USING_DEPRECATED_ARGS:
         deprecated = parser.add_argument_group("deprecated")
         _add_args_from_model(deprecated, DeprecatedArgs, cli_args=True, deprecated=True)
-        group_lists["deprecated_args"] = [deprecated]
+        groups_mapping["deprecated_args"] = [deprecated]
 
-    args = parser.parse_intermixed_args()
-    parsed_args: dict[str, dict] = {}
-    for name, groups in group_lists.items():
+    return parser, groups_mapping
+
+
+def get_parsed_args_dict(args: Sequence[str] | None = None) -> dict[str, dict[str, Any]]:
+    parser, groups_mapping = make_parser()
+    namespace = parser.parse_intermixed_args(args)
+    parsed_args: dict[str, dict[str, Any]] = {}
+    for name, groups in groups_mapping.items():
         parsed_args[name] = {}
         for group in groups:
             group_dict = {
-                arg.dest: getattr(args, arg.dest)
+                arg.dest: getattr(namespace, arg.dest)
                 for arg in group._group_actions
-                if getattr(args, arg.dest, None) is not None
+                if getattr(namespace, arg.dest, None) is not None
             }
             if group_dict:
-                parsed_args[name][group.title] = group_dict
+                assert group.title
+                parsed_args[name][group.title] = parse_nested_values(group_dict)
 
-    if using_deprecated_args:
+    if USING_DEPRECATED_ARGS:
         parsed_args["deprecated_args"] = parsed_args["deprecated_args"].get("deprecated") or {}
     parsed_args["cli_only_args"] = parsed_args["cli_only_args"]["CLI-only options"]
+    return parsed_args
 
+
+def parse_args(args: Sequence[str] | None = None) -> ParsedArgs:
+    """Parses the command line arguments passed into the program."""
+    parsed_args_dict = get_parsed_args_dict(args)
     try:
-        parsed_args_model = ParsedArgs.model_validate(parsed_args)
+        parsed_args_model = ParsedArgs.model_validate(parsed_args_dict)
 
     except ValidationError as e:
         handle_validation_error(e, title="CLI arguments")
         sys.exit(1)
+
+    if parsed_args_model.cli_only_args.show_supported_sites:
+        show_supported_sites()
+
     return parsed_args_model
+
+
+def show_supported_sites() -> NoReturn:
+    from rich import print
+
+    from cyberdrop_dl.utils.markdown import get_crawlers_info_as_rich_table
+
+    table = get_crawlers_info_as_rich_table()
+    print(table)
+    sys.exit(0)
+
+
+def parse_nested_values(data_list: dict[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+
+    for command_name, value in data_list.items():
+        inner_names = command_name.split(".")
+        current_level = result
+        for index, key in enumerate(inner_names):
+            if index < len(inner_names) - 1:
+                if key not in current_level:
+                    current_level[key] = {}
+                current_level = current_level[key]
+            else:
+                current_level[key] = value
+    return result

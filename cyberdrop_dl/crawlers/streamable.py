@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from yarl import URL
-
-from cyberdrop_dl.clients.errors import ScrapeError
-from cyberdrop_dl.crawlers.crawler import Crawler, create_task_id
-from cyberdrop_dl.utils.logger import log_debug
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
-
-    from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-AJAX_ENTRYPOINT = URL("https://ajax.streamable.com/videos/")
+PRIMARY_URL = AbsoluteHttpURL("https://streamable.com")
+AJAX_ENTRYPOINT = AbsoluteHttpURL("https://ajax.streamable.com/videos/")
 
 STATUS_OK = 2
 VIDEO_STATUS = {
@@ -29,47 +25,40 @@ VIDEO_STATUS = {
 
 
 class StreamableCrawler(Crawler):
-    primary_base_domain = URL("https://streamable.com")
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/..."}
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    DOMAIN: ClassVar[str] = "streamable"
 
-    def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, "streamable", "Streamable")
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
-    @create_task_id
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        """Determines where to send the scrape item based on the url."""
         await self.video(scrape_item)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        """Scrapes a video."""
         video_id = scrape_item.url.name or scrape_item.url.parent.name
-        canonical_url = self.primary_base_domain / video_id
+        canonical_url = PRIMARY_URL / video_id
         scrape_item.url = canonical_url
 
         if await self.check_complete_from_referer(canonical_url):
             return
 
         ajax_url = AJAX_ENTRYPOINT / video_id
-        async with self.request_limiter:
-            json_resp: BeautifulSoup = await self.client.get_json(self.domain, ajax_url)
+        json_resp: dict[str, Any] = await self.request_json(ajax_url)
 
-        status: int = json_resp.get("status")  # type: ignore
+        status: int = json_resp["status"]
         if status != STATUS_OK:
             raise ScrapeError(404, VIDEO_STATUS.get(status))
 
         title = json_resp.get("reddit_title") or json_resp["title"]
-        scrape_item.possible_datetime = json_resp.get("date_added")  # type: ignore
+        scrape_item.possible_datetime = json_resp["date_added"]
 
-        log_debug(json.dumps(json_resp, indent=4))
-        link_str = get_best_quality(json_resp["files"])  # type: ignore
+        self.log_debug(json.dumps(json_resp, indent=4))
+        link_str = get_best_quality(json_resp["files"])
         if not link_str:
             raise ScrapeError(422)
 
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename, _ = self.get_filename_and_ext(f"{title} [{video_id}]{ext}")
+        custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
 

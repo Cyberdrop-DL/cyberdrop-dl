@@ -6,8 +6,8 @@ from dataclasses import field
 from time import sleep
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl.clients.errors import InvalidYamlError
-from cyberdrop_dl.config_definitions import AuthSettings, ConfigSettings, GlobalSettings
+from cyberdrop_dl.config import AuthSettings, ConfigSettings, GlobalSettings
+from cyberdrop_dl.exceptions import InvalidYamlError
 from cyberdrop_dl.managers.log_manager import LogManager
 from cyberdrop_dl.utils import yaml
 from cyberdrop_dl.utils.apprise import get_apprise_urls
@@ -85,7 +85,7 @@ class ConfigManager:
 
     def _load_authentication_config(self) -> None:
         """Verifies the authentication config file and creates it if it doesn't exist."""
-        needs_update = is_in_file("jdownloader_username:", self.authentication_settings)
+        needs_update = is_in_file("socialmediagirls_username:", self.authentication_settings)
         posible_fields = self.get_model_fields(AuthSettings(), exclude_unset=False)
         if self.authentication_settings.is_file():
             self.authentication_data = AuthSettings.model_validate(yaml.load(self.authentication_settings))
@@ -114,13 +114,16 @@ class ConfigManager:
             if posible_fields == set_fields and not needs_update and self.pydantic_config:
                 return
         else:
-            from cyberdrop_dl.utils import constants
-
             self.settings_data = ConfigSettings()
-            self.settings_data.files.input_file = constants.APP_STORAGE / "Configs" / self.loaded_config / "URLs.txt"
-            self.settings_data.files.download_folder = constants.DOWNLOAD_STORAGE / "Cyberdrop-DL Downloads"
-            self.settings_data.logs.log_folder = constants.APP_STORAGE / "Configs" / self.loaded_config / "Logs"
-            self.settings_data.sorting.sort_folder = constants.DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
+            self.settings_data.files.input_file = (
+                self.manager.path_manager.appdata / "Configs" / self.loaded_config / "URLs.txt"
+            )
+            downloads = self.manager.path_manager.cwd / "Downloads"
+            self.settings_data.sorting.sort_folder = downloads / "Cyberdrop-DL Sorted Downloads"
+            self.settings_data.files.download_folder = downloads / "Cyberdrop-DL Downloads"
+            self.settings_data.logs.log_folder = (
+                self.manager.path_manager.appdata / "Configs" / self.loaded_config / "Logs"
+            )
 
         yaml.save(self.settings, self.settings_data)
 
@@ -194,8 +197,13 @@ class ConfigManager:
         if apprise_fixed:
             return
         if os.name == "nt":
-            with self.apprise_file.open("a", encoding="utf8") as f:
-                f.write("windows://\n")
+            try:
+                import win32con  # noqa: F401
+            except ImportError:
+                pass
+            else:
+                with self.apprise_file.open("a", encoding="utf8") as f:
+                    f.write("windows://\n")
         self.manager.cache_manager.save("apprise_fixed", True)
 
     def _set_pydantic_config(self):
@@ -209,6 +217,6 @@ def is_in_file(search_value: str, file: Path) -> bool:
     if not file.is_file():
         return False
     try:
-        return search_value.casefold() in file.read_text().casefold()
+        return search_value.casefold() in file.read_text(encoding="utf8").casefold()
     except Exception as e:
         raise InvalidYamlError(file, e) from e

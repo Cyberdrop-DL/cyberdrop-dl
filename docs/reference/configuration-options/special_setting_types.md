@@ -24,9 +24,9 @@ You will get the following results:
 
 | Value you used                                 | Value CDL interpreted                                          | Details                                        |
 | ---------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
-| `--skip-host instagram.com`                    | `[instagram.com]`                                              | config values were overridden by CLI values    |
-| `--skip-host "+" instagram.com`                | `[drive.google.com, youtube.com, facebook.com, instagram.com]` | config values and CLI values were merged       |
-| `--skip-host "-" drive.google.com youtube.com` | `[facebook.com]`                                               | CLI values were removed from the config values |
+| `--skip-hosts instagram.com`                    | `[instagram.com]`                                              | config values were overridden by CLI values    |
+| `--skip-hosts "+" instagram.com`                | `[drive.google.com, youtube.com, facebook.com, instagram.com]` | config values and CLI values were merged       |
+| `--skip-hosts "-" drive.google.com youtube.com` | `[facebook.com]`                                               | CLI values were removed from the config values |
 
 {% hint style="info" %}
 Always use quotes for "+" and "-" to make sure your shell does not try to parse them as additional flags
@@ -45,7 +45,7 @@ A special kind of `bool`. Within a config file, it can have a `true` or `false` 
 
 ## `ByteSize`
 
-A special kind of `int` that accepts suffixes like `GB`, `MiB` and `KB`
+A special kind of `int` that also accepts suffixes like `GB`, `MiB` and `KB` to specify valid values
 
 In conformance with IEC 80000-13 Standard, `1KB` means `1000 bytes`, and `1KiB` means `1024 bytes`. In general, including a middle 'i' will cause the unit to be interpreted as a power of 2, rather than a power of 10.
 
