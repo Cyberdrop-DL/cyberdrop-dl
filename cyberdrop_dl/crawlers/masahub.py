@@ -32,7 +32,7 @@ class MasahubCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
         soup = await self.request_soup(scrape_item.url)
-        download_url = AbsoluteHttpURL(soup.select_one("a.video-btn, a.download-btn")["href"])
+        download_url = self.parse_url(soup.select_one("a.video-btn, a.download-btn").get("href"))
         title = soup.select_one("div.posts > h1 > strong, div.video_page_toolbar > h1").text.strip()
         filename, ext = self.get_filename_and_ext(download_url.name)
 
