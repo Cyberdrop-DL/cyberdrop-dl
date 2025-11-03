@@ -14,7 +14,7 @@ PRIMARY_URL = AbsoluteHttpURL("https://masahub.com")
 
 
 class MasahubCrawler(Crawler):
-    SUPPORTED_DOMAINS = "masa49.com", "masahub.com", "masahub2.com", "masafun.net"
+    SUPPORTED_DOMAINS = "masa49.com", "masahub.com", "masahub2.com", "masafun.net", "lol49.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Videos": "/title", "Search": "?s="}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "masahub.com"
