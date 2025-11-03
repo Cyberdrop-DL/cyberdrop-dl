@@ -18,6 +18,7 @@ from .coomer import CoomerCrawler
 from .crawler import Crawler
 from .cyberdrop import CyberdropCrawler
 from .cyberfile import CyberfileCrawler
+from .desivideo import DesiVideoCrawler
 from .dirtyship import DirtyShipCrawler
 from .discourse import DISCOURSE_CRAWLERS, DiscourseCrawler
 from .doodstream import DoodStreamCrawler
