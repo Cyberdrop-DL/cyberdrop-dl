@@ -38,7 +38,7 @@ class StreamtapeCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.parts[1] == "v":
-            await self.video(scrape_item)
+            return await self.video(scrape_item)
         else:
             raise ValueError
 
@@ -54,10 +54,10 @@ class StreamtapeCrawler(Crawler):
                 break
         else:
             raise RuntimeError("Could not find video script")
-        video_url = await self.decode_links(script.text)
-        new_url = await self._get_redirect_url(video_url)
+        generator_url = await self.decode_links(script.text)
+        download_url = await self._get_redirect_url(generator_url)
 
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=new_url)
+        return await self.handle_file(download_url, scrape_item, filename, ext)
 
     async def decode_links(self, javascript: str) -> AbsoluteHttpURL:
         scripts = javascript.split(";")[:-1]
@@ -72,5 +72,5 @@ class StreamtapeCrawler(Crawler):
         for parts in encoded_links:
             decoded_link = parts.part_one + parts.part_two[parts.removals :]
             if decoded_link.startswith("streamtape.com/get_video?id="):
-                decoded_links.append(AbsoluteHttpURL(f"https://{decoded_link}"))
+                decoded_links.append(self.parse_url(f"https://{decoded_link}"))
         return max(set(decoded_links), key=decoded_links.count)
