@@ -9,6 +9,10 @@ class CoomerAuth(BaseModel):
     session: str = ""
 
 
+class DiscordAuth(BaseModel):
+    token: str = ""
+
+
 class ImgurAuth(AliasModel):
     client_id: str = Field("", "imgur_client_id")
 
@@ -55,3 +59,4 @@ class AuthSettings(ConfigModel):
     pixeldrain: PixeldrainAuth = Field(PixeldrainAuth(), "PixelDrain")
     realdebrid: RealDebridAuth = Field(RealDebridAuth(), "RealDebrid")
     reddit: RedditAuth = Field(RedditAuth(), "Reddit")
+    discord: DiscordAuth = Field(DiscordAuth(), "Discord")

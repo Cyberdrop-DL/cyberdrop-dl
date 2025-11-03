@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import calendar
 from dataclasses import dataclass
-from datetime import datetime
 from json import dumps
 from typing import TYPE_CHECKING, ClassVar
 
-from aiolimiter import AsyncLimiter
 from yarl import URL
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_filename_and_ext
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -31,19 +29,21 @@ class DiscordURLData:
         return self.server_id == "@me"
 
 
+PRIMARY_URL = AbsoluteHttpURL("https://discord.com/")
+
+
 class DiscordCrawler(Crawler):
     SUPPORTED_SITES: ClassVar[dict[str, list]] = {"discord": ["discord", "discordapp", "fixcdn.hyonsu"]}
-    primary_base_domain = URL("https://discord.com/")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    DOMAIN: ClassVar[str] = "discord.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Server": "/channels/server_id",
         "Channel": "/channels/server_id/channel_id",
         "Direct Message": "/channels/@me/channel_id",
     }
+    API_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://discord.com/api/")
 
-    def __init__(self, manager: Manager, site: str) -> None:
-        super().__init__(manager, "discord", "Discord")
-        self.api_url = URL("https://discord.com/api/")
-        self.request_limiter = AsyncLimiter(3, 2)
+    def __post_init__(self) -> None:
         self.headers = {
             "Authorization": self.manager.config_manager.authentication_data.discord.token,
             "Content-Type": "application/json",
@@ -57,31 +57,30 @@ class DiscordCrawler(Crawler):
             parts = scrape_item.url.parts
             if len(parts) > 2 and len(parts) < 5:  # https://discord.com/channels/.../.../...
                 # Server/DM or Channel/Group DM
-                await self.scrape(scrape_item)
+                return await self.scrape(scrape_item)
             elif parts[-1] == "channels":  # https://discord.com/channels
                 # Scrape all servers
-                await self.scrape_all_servers(scrape_item)
+                return await self.scrape_all_servers(scrape_item)
         elif "attachments" in scrape_item.url.parts:  # https://cdn.discordapp.com/attachments/.../.../...
-            await self.file(scrape_item)
+            return await self.file(scrape_item)
         else:
             raise ValueError
 
     async def scrape_all_servers(self, scrape_item: ScrapeItem) -> None:
         """Fetches all servers and creates scrape items for each server, then starts them."""
-        async with self.request_limiter:
-            servers_url = self.api_url / "v9/users/@me/guilds"
-            data = await self.client.get_json(self.domain, url=servers_url, headers_inc=self.headers)
-            for server in data:
-                server_id = server.get("id")
-                server_name = server.get("name")
-                if server_id:
-                    new_url = scrape_item.url / server_id
-                    new_scrape_item = scrape_item.create_new(new_url, new_title_part=server_name, add_parent=True)
-                    self.manager.task_group.create_task(self.run(new_scrape_item))
+        servers_url = self.API_URL / "v9/users/@me/guilds"
+        data = await self.request_json(servers_url, headers=self.headers)
+        for server in data:
+            server_id = server.get("id")
+            server_name = server.get("name")
+            if server_id:
+                new_url = scrape_item.url / server_id
+                new_scrape_item = scrape_item.create_new(new_url, new_title_part=server_name, add_parent=True)
+                self.manager.task_group.create_task(self.run(new_scrape_item))
 
     async def get_request_data(self, scrape_item: ScrapeItem) -> tuple[dict, URL]:
         """Gets the JSON request to use for the desired search."""
-        data = await self.get_info(scrape_item)
+        data: DiscordURLData = await self.get_info(scrape_item)
 
         request_json = {
             "tabs": {
@@ -109,7 +108,7 @@ class DiscordCrawler(Crawler):
             path = f"guilds/{data.server_id}"
 
         full_path = f"v9/{path}/messages/search/tabs"
-        request_url = self.api_url / full_path
+        request_url = self.API_URL / full_path
         return request_json, request_url
 
     async def get_media(self, scrape_item: ScrapeItem) -> AsyncGenerator[dict, None]:
@@ -117,25 +116,22 @@ class DiscordCrawler(Crawler):
         request_json, request_url = await self.get_request_data(scrape_item)
 
         while True:
-            async with self.request_limiter:
-                data = await self.client.post_data(
-                    self.domain, url=request_url, data=dumps(request_json), headers_inc=self.headers
-                )
-                if "rate limited" in data.get("message", ""):
-                    wait_time = data.get("retry_after", 0)
-                    await asyncio.sleep(wait_time * 1.2)
-                    continue
-                media = data.get("tabs", {}).get("media", {})
-                messages = media.get("messages", [])
+            data = await self.request(request_url, data=dumps(request_json), headers=self.headers)
+            if "rate limited" in data.get("message", ""):
+                wait_time = data.get("retry_after", 0)
+                await asyncio.sleep(wait_time * 1.2)
+                continue
+            media = data.get("tabs", {}).get("media", {})
+            messages = media.get("messages", [])
 
-                if messages:
-                    timestamp = media.get("cursor", {}).get("timestamp")
-                    yield messages
-                else:
-                    break
+            if messages:
+                timestamp = media.get("cursor", {}).get("timestamp")
+                yield messages
+            else:
+                break
 
-                if timestamp:
-                    request_json["tabs"]["media"]["cursor"] = {"timestamp": timestamp, "type": "timestamp"}
+            if timestamp:
+                request_json["tabs"]["media"]["cursor"] = {"timestamp": timestamp, "type": "timestamp"}
 
     @error_handling_wrapper
     async def scrape(self, scrape_item: ScrapeItem) -> None:
@@ -150,7 +146,7 @@ class DiscordCrawler(Crawler):
             filename = attachment.get("filename")
             user_id = message.get("author", {}).get("id")
             username = message.get("author", {}).get("username")
-            timestamp = self.parse_datetime(message.get("timestamp"))
+            timestamp = self.parse_date(message.get("timestamp").split("+")[0])
 
             canonical_url = await self.get_canonical_url(scrape_item.url)
             if await self.check_complete_from_referer(canonical_url):
@@ -161,10 +157,9 @@ class DiscordCrawler(Crawler):
                 possible_datetime=timestamp,
             )
 
-            filename, ext = get_filename_and_ext(filename)
+            filename, ext = self.get_filename_and_ext(filename)
             link = self.parse_url(url)
-            await self.handle_file(link, new_scrape_item, filename, ext)
-            scrape_item.add_children()
+            return await self.handle_file(link, new_scrape_item, filename, ext)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
@@ -175,27 +170,13 @@ class DiscordCrawler(Crawler):
 
         new_scrape_item = scrape_item.create_new(url=canonical_url, add_parent=True)
 
-        filename, ext = get_filename_and_ext(scrape_item.url.name)
-        await self.handle_file(scrape_item.url, new_scrape_item, filename, ext)
+        filename, ext = self.get_filename_and_ext(scrape_item.url.name)
+        return await self.handle_file(scrape_item.url, new_scrape_item, filename, ext)
 
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
+    def get_info(scrape_item: ScrapeItem) -> DiscordURLData:
+        """Gets the server, channel, and message IDs from the URL."""
+        return DiscordURLData(*scrape_item.url.parts[2:5])
 
-
-def parse_datetime(date: str) -> int:
-    """Parses a datetime string into a unix timestamp."""
-    date = date.split("+")[0]
-    try:
-        dt = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%f")
-    except ValueError:
-        dt = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S")
-    return calendar.timegm(dt.timetuple())
-
-
-def get_canonical_url(url: URL) -> URL:
-    """Normalizes CDN URLs for consistency."""
-    return url.with_host("cdn.discordapp.com")
-
-
-def get_info(scrape_item: ScrapeItem) -> DiscordURLData:
-    """Gets the server, channel, and message IDs from the URL."""
-    return DiscordURLData(*scrape_item.url.parts[2:5])
+    def get_canonical_url(url: URL) -> URL:
+        """Normalizes CDN URLs for consistency."""
+        return url.with_host("cdn.discordapp.com")
