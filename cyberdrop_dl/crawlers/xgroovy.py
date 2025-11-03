@@ -46,12 +46,12 @@ class CollectionType(StrEnum):
 
 class XGroovyCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": ("/shemale/videos/<video_id>/...", "/videos/<video_id>/..."),
-        "Gif": ("/shemale/gifs/<gif_id>/...", "/gifs/<gif_id>/..."),
-        "Search": ("/shemale/search/...", "/search/..."),
-        "Pornstar": ("/shemale/pornstars/<pornstar_id>/...", "/pornstars/<pornstar_id>/..."),
-        "Tag": ("/shemale/tags/...", "/tags/..."),
-        "Channel": ("/shemale/channels/...", "/channels/..."),
+        "Video": ("/<category>/videos/<video_id>/...", "/videos/<video_id>/..."),
+        "Gif": ("/<category>/gifs/<gif_id>/...", "/gifs/<gif_id>/..."),
+        "Search": ("/<category>/search/...", "/search/..."),
+        "Pornstar": ("/<category>/pornstars/<pornstar_id>/...", "/pornstars/<pornstar_id>/..."),
+        "Tag": ("/<category>/tags/...", "/tags/..."),
+        "Channel": ("/<category>/channels/...", "/channels/..."),
     }
     DOMAIN: ClassVar[str] = "xgroovy"
     FOLDER_DOMAIN: ClassVar[str] = "XGroovy"
