@@ -10,21 +10,21 @@ from typing import TYPE_CHECKING, ClassVar
 from aiolimiter import AsyncLimiter
 from yarl import URL
 
-from cyberdrop_dl.crawlers.crawler import Crawler, create_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_filename_and_ext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
     from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.data_enums_classes.url_objects import ScrapeItem
 
 
 @dataclass(frozen=True, slots=True)
 class DiscordURLData:
-    server_id: str =""
-    channel_id: str =""
-    message_id: str =""
+    server_id: str = ""
+    channel_id: str = ""
+    message_id: str = ""
 
     @property
     def is_dm(self) -> bool:
@@ -34,6 +34,11 @@ class DiscordURLData:
 class DiscordCrawler(Crawler):
     SUPPORTED_SITES: ClassVar[dict[str, list]] = {"discord": ["discord", "discordapp", "fixcdn.hyonsu"]}
     primary_base_domain = URL("https://discord.com/")
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Server": "/channels/server_id",
+        "Channel": "/channels/server_id/channel_id",
+        "Direct Message": "/channels/@me/channel_id",
+    }
 
     def __init__(self, manager: Manager, site: str) -> None:
         super().__init__(manager, "discord", "Discord")
@@ -46,7 +51,6 @@ class DiscordCrawler(Crawler):
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
-    @create_task_id
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         """Determines where to send the scrape item based on the url."""
         if "channels" in scrape_item.url.parts:
@@ -66,9 +70,7 @@ class DiscordCrawler(Crawler):
         """Fetches all servers and creates scrape items for each server, then starts them."""
         async with self.request_limiter:
             servers_url = self.api_url / "v9/users/@me/guilds"
-            data = await self.client.get_json(
-                self.domain, url=servers_url, headers_inc=self.headers
-            )
+            data = await self.client.get_json(self.domain, url=servers_url, headers_inc=self.headers)
             for server in data:
                 server_id = server.get("id")
                 server_name = server.get("name")
@@ -178,6 +180,7 @@ class DiscordCrawler(Crawler):
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
+
 def parse_datetime(date: str) -> int:
     """Parses a datetime string into a unix timestamp."""
     date = date.split("+")[0]
@@ -187,9 +190,11 @@ def parse_datetime(date: str) -> int:
         dt = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S")
     return calendar.timegm(dt.timetuple())
 
+
 def get_canonical_url(url: URL) -> URL:
     """Normalizes CDN URLs for consistency."""
     return url.with_host("cdn.discordapp.com")
+
 
 def get_info(scrape_item: ScrapeItem) -> DiscordURLData:
     """Gets the server, channel, and message IDs from the URL."""
