@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from json import dumps
 from typing import TYPE_CHECKING, ClassVar
 
-from yarl import URL
-
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
@@ -15,7 +13,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-    from cyberdrop_dl.managers.manager import Manager
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +75,7 @@ class DiscordCrawler(Crawler):
                 new_scrape_item = scrape_item.create_new(new_url, new_title_part=server_name, add_parent=True)
                 self.manager.task_group.create_task(self.run(new_scrape_item))
 
-    async def get_request_data(self, scrape_item: ScrapeItem) -> tuple[dict, URL]:
+    async def get_request_data(self, scrape_item: ScrapeItem) -> tuple[dict, AbsoluteHttpURL]:
         """Gets the JSON request to use for the desired search."""
         data: DiscordURLData = await self.get_info(scrape_item)
 
@@ -173,10 +170,10 @@ class DiscordCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(scrape_item.url.name)
         return await self.handle_file(scrape_item.url, new_scrape_item, filename, ext)
 
-    def get_info(scrape_item: ScrapeItem) -> DiscordURLData:
+    def get_info(self, scrape_item: ScrapeItem) -> DiscordURLData:
         """Gets the server, channel, and message IDs from the URL."""
         return DiscordURLData(*scrape_item.url.parts[2:5])
 
-    def get_canonical_url(url: URL) -> URL:
+    def get_canonical_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         """Normalizes CDN URLs for consistency."""
         return url.with_host("cdn.discordapp.com")
