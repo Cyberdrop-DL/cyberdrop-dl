@@ -66,7 +66,7 @@ class TNAFlixCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        video_id: str = scrape_item.url.parts[-1].replace("video", "")
+        video_id: str = scrape_item.url.parts[-1].replace("video", "").split("&")[0]
         soup = await self.request_soup(scrape_item.url)
         best_format: Format = _get_best_format(css.select_one(soup, _SELECTORS.VIDEO))
         return await self.download_video(
