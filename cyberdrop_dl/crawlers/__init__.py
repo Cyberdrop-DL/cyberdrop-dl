@@ -63,6 +63,7 @@ from .megacloud import MegaCloudCrawler
 from .missav import MissAVCrawler
 from .mixdrop import MixDropCrawler
 from .motherless import MotherlessCrawler
+from .mydesi import MyDesiCrawler
 from .nekohouse import NekohouseCrawler
 from .nhentai import NHentaiCrawler
 from .noodle_magazine import NoodleMagazineCrawler
