@@ -43,7 +43,7 @@ class CollectionType(StrEnum):
 class TNAFlixCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/<category>/<title>/video<video_id>",
-        "Channel": "/channels/...",
+        "Channel": "/channel/...",
         "Profile": "/profile/...",
         "Search": "/search?what=<query>",
     }
