@@ -54,7 +54,7 @@ class MyDesiCrawler(Crawler):
                 scrape_item.setup_as_album(title)
                 album_initialized = True
 
-            videos = soup.select("a.infos")
+            videos: tuple[BeautifulSoup] = soup.select("a.infos")
             for video in videos:
                 video_url = self.parse_url(video.get("href"))
                 new_scrape_item = scrape_item.create_child(video_url)
@@ -67,6 +67,8 @@ class MyDesiCrawler(Crawler):
             raise ValueError("No video links found")
         if "Original" in quality_map:
             selected_url = quality_map["Original"]
+        elif x := next((href for href in quality_map.values() if "4K" in href), None):
+            selected_url = x
         else:
             selected_url = quality_map[max(quality_map.keys(), key=lambda x: int(x.rstrip("p")))]
         return self.parse_url(selected_url)
