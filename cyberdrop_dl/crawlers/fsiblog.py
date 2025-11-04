@@ -25,6 +25,7 @@ class PostType(StrEnum):
 
 
 class FSIBlogCrawler(Crawler):
+    SUPPORTED_DOMAINS = "fsiblog5.com", "fsiblog5.club"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Posts": "/category/", "Search": "?s="}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "fsiblog.com"
