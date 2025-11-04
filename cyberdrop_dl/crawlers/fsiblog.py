@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://fsiblog.com")
+PRIMARY_URL = AbsoluteHttpURL("https://fsiblog5.com")
 
 
 class PostType(StrEnum):
@@ -60,16 +59,17 @@ class FSIBlogCrawler(Crawler):
         elif post_type == PostType.IMAGES:
             return await self.images(scrape_item, soup)
         elif post_type == PostType.STORY:
+            raise ValueError
             return await self.story(scrape_item, soup)
         else:
-            raise ScrapeError("Unknown post type detected in FSIBlogCrawler filter")
+            raise ValueError
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
         title = self.create_title(scrape_item.url.query.get("s"))
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="a.next"):
-            posts = soup.select("div.elementor-posts-container > article > div > a")
+            posts: tuple[BeautifulSoup] = soup.select("div.elementor-posts-container > article > div > a")
             for post in posts:
                 post_type = post.parent.get("data-id")
                 post_link = self.parse_url(post.get("href"))
@@ -110,7 +110,7 @@ class FSIBlogCrawler(Crawler):
 
     @error_handling_wrapper
     async def story(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
-        raise NotImplementedError("Stories are not yet implemented for FSIBlogCrawler")
+        raise NotImplementedError
 
     async def read_metadata(self, soup: BeautifulSoup) -> dict[str, str]:
         metadata_script = soup.select_one("script.yoast-schema-graph").string
