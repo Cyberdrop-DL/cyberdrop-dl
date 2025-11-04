@@ -7,6 +7,8 @@ from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
@@ -43,7 +45,7 @@ class MasahubCrawler(Crawler):
         title = self.create_title(scrape_item.url.query.get("s"))
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="div > a:contains('Next')"):
-            videos = soup.select("a.title, div.title > a")
+            videos: tuple[BeautifulSoup] = soup.select("a.title, div.title > a")
             for video in videos:
                 video_url = self.parse_url(video.get("href"))
                 new_scrape_item = scrape_item.create_child(video_url)
