@@ -8,10 +8,12 @@ from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://mydesi.net")
+PRIMARY_URL = AbsoluteHttpURL("https://lolpol.com")
 
 
 class MyDesiCrawler(Crawler):
@@ -46,7 +48,7 @@ class MyDesiCrawler(Crawler):
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
         album_initialized: bool = False
-        async for soup in self.web_pager(scrape_item.url, next_page_selector="li.page-item > a:contains('»')"):
+        async for soup in self.web_pager(scrape_item.url, next_page_selector=self.paginate):
             if not album_initialized:
                 title = self.create_title(soup.select_one("title").text.split("“")[1].split("”")[0])
                 scrape_item.setup_as_album(title)
@@ -68,3 +70,18 @@ class MyDesiCrawler(Crawler):
         else:
             selected_url = quality_map[max(quality_map.keys(), key=lambda x: int(x.rstrip("p")))]
         return self.parse_url(selected_url)
+
+    def paginate(self, soup: BeautifulSoup) -> str | None:
+        # Extract search term from RSS feed link
+        RSS_Feed = soup.select("link[rel='alternate']")[-1].get("href")
+        searchTerm = RSS_Feed.split("search/")[1].split("/feed")[0]
+
+        # Determine current page number
+        currentPage = 1
+        body = soup.select_one("body.paged")
+        if body:
+            _class = next((c for c in body.get("class", []) if c.startswith("search-paged-")), None)
+            currentPage = int(_class.split("search-paged-")[1]) if _class else 1
+
+        next_page_url = self.PRIMARY_URL / f"search/{searchTerm}/page/{currentPage + 1}/"
+        return str(next_page_url)
