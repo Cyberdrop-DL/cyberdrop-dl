@@ -277,6 +277,12 @@ class DownloadClient:
                     await asyncio.to_thread(media_item.complete_file.unlink)
                     await self.mark_incomplete(media_item, domain)
                     self.manager.progress_manager.download_progress.add_skipped()
+                    if media_item.task_id is not None:
+                        try:
+                            self.manager.progress_manager.file_progress.remove_task(media_item.task_id)
+                        except ValueError:
+                            pass
+                        media_item.set_task_id(None)
                     return False
                 await self.process_completed(media_item, domain)
                 await self.handle_media_item_completion(media_item, downloaded=True)
