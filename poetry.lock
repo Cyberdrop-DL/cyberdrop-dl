@@ -2252,6 +2252,22 @@ files = [
 typing-extensions = ">=4.14.1"
 
 [[package]]
+name = "pyffmpeg"
+version = "2.5.2.3.1"
+description = "FFmpeg wrapper for python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-macosx_10_9_universal2.whl", hash = "sha256:47fa229c9b93b8bb707d5043e354a13cbd9eb3a9296abf5ebfd000465c948b12"},
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:df71c11d5109563e95ad29cc3abeeb68fa23946c2c8b467d7617cdd712999dde"},
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:fd412a6361ed3f50701ae82a07af64d931d06a288fbadd3b5e304c531eabee7e"},
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:de53ebbb9af8c5d09f6d4e3449eec7fa505d5bddcad9656ded987bcfa36a97d5"},
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:52913bc820823ae932beb37ed39b50df0f7f8079c0e62c9283f26e3f1ec44a1b"},
+    {file = "pyffmpeg-2.5.2.3.1-py3-none-win_amd64.whl", hash = "sha256:bbf0d97e90811355e8e1a5c8b1f273149f5bc7c1e25c78dd859ee9b430e1c608"},
+]
+
+[[package]]
 name = "pygments"
 version = "2.19.2"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -3211,4 +3227,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "e59e1557c7e3aad99930f34afb35b9b5bceaf119b975824458c02f7381391253"
+content-hash = "82e5a758b52989bc805f3dc0573c4c398421229af38123808ae7e4a5953e309b"
