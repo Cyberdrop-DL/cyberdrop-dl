@@ -23,8 +23,8 @@ class MasahubCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "Masahub"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.query.get("s"):
-            return await self.search(scrape_item)
+        if query:= scrape_item.url.query.get("s"):
+            return await self.search(scrape_item, query)
         elif len(scrape_item.url.parts) >= 2:
             return await self.video(scrape_item)
         raise ValueError
@@ -41,12 +41,9 @@ class MasahubCrawler(Crawler):
         return await self.handle_file(download_url, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        title = self.create_title(scrape_item.url.query.get("s"))
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = self.create_title(query)
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="div > a:contains('Next')"):
-            videos: tuple[BeautifulSoup] = soup.select("a.title, div.title > a")
-            for video in videos:
-                video_url = self.parse_url(video.get("href"))
-                new_scrape_item = scrape_item.create_child(video_url)
+            for _, new_scrape_item in self.iter_children(scrape_item, soup,"a.title, div.title > a")
                 self.create_task(self.run(new_scrape_item))
