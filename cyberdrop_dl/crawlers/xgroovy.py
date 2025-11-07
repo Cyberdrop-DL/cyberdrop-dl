@@ -21,7 +21,6 @@ PRIMARY_URL = AbsoluteHttpURL("https://xgroovy.com")
 class Selectors:
     VIDEO = "video#main_video"
     GIF = "div.gif-video-wrapper > video"
-    UPLOAD_DATE = "script:-soup-contains('uploadDate')"
     PORNSTAR_NAME = "h2.object-title"
     SEARCH_VIDEOS = "div.list-videos a.popito"
     NEXT_PAGE = "div.pagination-holder li.next > a"
@@ -91,8 +90,7 @@ class XGroovyCrawler(Crawler):
     ):
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.get_title(soup)
-        context = json.loads(css.select_one_get_text(soup, _SELECTORS.UPLOAD_DATE))
-        scrape_item.possible_datetime = self.parse_iso_date(context.get("uploadDate"))
+        scrape_item.possible_datetime = self.parse_iso_date(css.get_json_ld_date(soup))
         custom_filename = self.create_custom_filename(title, ext, file_id=file_id, resolution=resolution)
         return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
