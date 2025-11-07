@@ -103,10 +103,12 @@ class TNAFlixCrawler(Crawler):
 
 
 def _get_best_format(video_tag):
-    options = []
-    for src in video_tag.find_all("source"):
-        url = src.get("src")
-        resolution = int(src.get("size"))
-        options.append((resolution, url))
-    best = max(options, key=lambda x: x[0])
-    return Format(f"{best[0]}p", best[1])
+    def parse():
+        options = []
+        for src in video_tag.find_all("source"):
+            url = src.get("src")
+            resolution = int(src.get("size"))
+            options.append((resolution, url))
+            yield Format(resolution, url)
+
+    return max(parse(), key=lambda f: int(f.resolution))
