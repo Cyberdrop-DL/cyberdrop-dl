@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Selector:
     VIDEO_SRC = css.CssAttributeSelector("a.video-btn, a.download-btn", "href")
     TITLE = "div.posts > h1 > strong, div.video_page_toolbar > h1"
-    NEXT_PAGE = "div > a:contains('Next')"
+    NEXT_PAGE = "div > a:-soup-contains('Next')"
     VIDEOS = "a.title, div.title > a"
 
 
