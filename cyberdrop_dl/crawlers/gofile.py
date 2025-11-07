@@ -162,6 +162,8 @@ class GoFileCrawler(Crawler):
                 children = {single_file_id: file}
 
             self._handle_children(scrape_item, children)
+            if single_file_id:
+                return
 
     def _handle_children(self, scrape_item: ScrapeItem, children: dict[str, Node]) -> None:
         def get_website_url(node: Node) -> AbsoluteHttpURL:
@@ -172,7 +174,7 @@ class GoFileCrawler(Crawler):
 
         for node in children.values():
             web_url = get_website_url(node)
-            new_scrape_item = scrape_item.create_child(web_url)
+            new_scrape_item = scrape_item.create_new(web_url, add_parent=True)
             self._handle_node(new_scrape_item, node)
             scrape_item.add_children()
 
