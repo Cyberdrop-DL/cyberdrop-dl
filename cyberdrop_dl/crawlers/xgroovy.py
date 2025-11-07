@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 PRIMARY_URL = AbsoluteHttpURL("https://xgroovy.com")
-PICTURES_DOMAIN = "photos.xgroovy.com"
 
 
 class Selectors:
@@ -36,14 +35,6 @@ class Format(NamedTuple):
     link_str: str
 
 
-class CollectionType(StrEnum):
-    CATEGORIES = "categories"
-    CHANNELS = "channels"
-    PORNSTARS = "pornstars"
-    SEARCH = "search"
-    TAG = "tag"
-
-
 class XGroovyCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": ("/<category>/videos/<video_id>/...", "/videos/<video_id>/..."),
@@ -57,19 +48,18 @@ class XGroovyCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "XGroovy"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
-    _COLLECTION_TYPES = tuple(item.value for item in CollectionType)
     _RATE_LIMIT = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "videos" in scrape_item.url.parts:
-            return await self.video(scrape_item)
-        elif "gifs" in scrape_item.url.parts:
-            return await self.gif(scrape_item)
-        elif scrape_item.url.host == PICTURES_DOMAIN:
-            return await self.direct_file(scrape_item)
-        elif collection_type := next((p for p in self._COLLECTION_TYPES if p in scrape_item.url.parts), None):
-            return await self.collection(scrape_item, collection_type)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case [*_, "videos", _, _]:
+                return await self.video(scrape_item)
+            case [*_, "gifs", _, _]:
+                return await self.gif(scrape_item)
+            case [*_, collection_type, _] if collection_type in ("categories", "channels", "pornstars", "search", "tag"):
+                return await self.collection(scrape_item, collection_type)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def gif(self, scrape_item: ScrapeItem) -> None:
@@ -109,9 +99,9 @@ class XGroovyCrawler(Crawler):
         return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem, collection_type: CollectionType) -> None:
+    async def collection(self, scrape_item: ScrapeItem, collection_type: str) -> None:
         title = scrape_item.url.parts[-1]
-        if collection_type == CollectionType.PORNSTARS:
+        if collection_type == "pornstars":
             soup = await self.request_soup(scrape_item.url)
             title = css.select_one_get_text(soup, _SELECTORS.PORNSTAR_NAME)
 
