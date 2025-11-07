@@ -45,6 +45,7 @@ class XGroovyCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "XGroovy"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
+    _COLLECTION_TYPES = ("categories", "channels", "pornstars", "search", "tag")
     _RATE_LIMIT = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -53,7 +54,7 @@ class XGroovyCrawler(Crawler):
                 return await self.video(scrape_item, video_id)
             case [*_, "gifs", gif_id, _]:
                 return await self.gif(scrape_item, gif_id)
-            case [*_, collection_type, _] if collection_type in ("categories", "channels", "pornstars", "search", "tag"):
+            case [*_, collection_type, _] if collection_type in self._COLLECTION_TYPES:
                 return await self.collection(scrape_item, collection_type)
             case _:
                 raise ValueError
