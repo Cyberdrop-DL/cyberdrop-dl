@@ -114,4 +114,5 @@ def _get_best_format(video_tag: Tag) -> Format:
             title = css.get_attr_or_none(src, "title") or "0p"
             resolution = int(title.replace("p", ""))
             yield Format(resolution, url)
+
     return max(parse(), key=lambda f: int(f.resolution))
