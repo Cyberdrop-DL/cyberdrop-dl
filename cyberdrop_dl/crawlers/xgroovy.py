@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -10,7 +8,7 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
@@ -108,12 +106,11 @@ class XGroovyCrawler(Crawler):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _get_best_format(video_tag):
-    options = []
-    for src in video_tag.find_all("source"):
-        url = src.get("src")
-        title = src.get("title", "0p")
-        resolution = int(title.replace("p", ""))
-        options.append((resolution, url, title))
-    best = max(options, key=lambda x: x[0])
-    return Format(best[2], best[1])
+def _get_best_format(video_tag: Tag) -> Format:
+    def parse():
+        for src in video_tag.select("source"):
+            url = css.get_attr(src, "src")
+            title = css.get_attr_or_none(src, "title") or "0p"
+            resolution = int(title.replace("p", ""))
+            yield Format(resolution, url)
+    return max(parse(), key=lambda f: int(f.resolution))
