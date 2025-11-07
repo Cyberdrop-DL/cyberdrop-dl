@@ -37,8 +37,8 @@ class MasahubCrawler(Crawler):
         download_url = self.parse_url(soup.select_one("a.video-btn, a.download-btn").get("href"))
         title = soup.select_one("div.posts > h1 > strong, div.video_page_toolbar > h1").text.strip()
         filename, ext = self.get_filename_and_ext(download_url.name)
-
-        return await self.handle_file(download_url, scrape_item, filename, ext, custom_filename=f"{title}{ext}")
+        custom_filename = self.create_custom_filename(title, ext)
+        return await self.handle_file(download_url, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
