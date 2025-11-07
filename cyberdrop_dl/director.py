@@ -111,6 +111,28 @@ async def _run_manager(manager: Manager) -> None:
 
         await send_webhook_message(manager)
         await send_apprise_notifications(manager)
+
+        # Always show the interactive Program UI after downloads finish so the user
+        # can continue (for example re-run downloads or edit configs). If the user
+        # selects the download action in the UI we re-insert the current config
+        # at the front of `configs_to_run` to run it again.
+        if not manager.states.SHUTTING_DOWN.is_set():
+            try:
+                ui = ProgramUI(manager, run=False)
+                # Run the blocking UI code in a thread so it doesn't interfere with the
+                # manager's asyncio event loop. This prevents prompt_toolkit/Application
+                # coroutine warnings when called from an active loop.
+                ui_result = await asyncio.to_thread(ui.run)
+            except SystemExit:
+                # user chose to exit from the UI
+                raise
+            except Exception:
+                # if UI fails for any reason, do not crash the director — continue shutdown
+                ui_result = False
+            else:
+                if ui_result:
+                    configs_to_run.insert(0, current_config)
+
         start_time = perf_counter()
         if manager.states.SHUTTING_DOWN.is_set():
             return

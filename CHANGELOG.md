@@ -22,6 +22,32 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Post-download interactive UI: Show options menu after downloads complete
+  regardless of how the program was started, allowing users to perform
+  additional actions without having to restart.
+
+### Changed
+
+- The program now shows the interactive Program UI after downloads complete
+  for all runs, not just when started with `--download`.
+
+- `ProgramUI.run()` is now invoked from the director using a thread (`asyncio.to_thread`)
+  to avoid prompt_toolkit coroutine warnings when running inside the program's async
+  runtime.
+
+- `cyberdrop_dl.__init__` now falls back to a local version string when distribution
+  metadata is not available. This makes running from a development checkout more
+  convenient (no editable install required to start the program).
+
+### Fixed
+
+- Prevent a "coroutine was never awaited" RuntimeWarning when invoking the TUI from
+  the running event loop.
+
 ## [8.6.0] - 2025-10-30
 
 ### Added
@@ -108,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Use impersonation for all Chevereto sites  
+- Use impersonation for all Chevereto sites
 
 ### Fixed
 
@@ -686,7 +712,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TikTok crawler returning 403 on all downloads
 - Use new API to download files (bunkr)
 - Download encrypted URLs (jpg5)
-- Do not overwrite user provided regex  (`--filename-regex-filter`)
+- Do not overwrite user provided regex (`--filename-regex-filter`)
 
 ### Changed
 
@@ -768,7 +794,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support cookie extraction from Arc Browser, Lynx and W3M
 - `--exclude-files-with-no-extension` option: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/ignore_options#exclude_files_with_no_extension>
 - `--print-stats` CLI only option
-- Scrape nested threads with  `--maximum-thread-depth`: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#maximum-thread-depth>
+- Scrape nested threads with `--maximum-thread-depth`: <https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/settings/download_options#maximum-thread-depth>
 
 ### Removed
 
@@ -1113,7 +1139,7 @@ This update introduces the following changes:
 ### Details
 
 1. Users can include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
- Example: <https://gofile.io/d/xUprGg?password=1234>
+   Example: <https://gofile.io/d/xUprGg?password=1234>
 
 ## [5.6.43] - 2024-10-03
 
@@ -1126,7 +1152,7 @@ This update introduces the following changes:
 - CLI arguments that toggle settings to `True` or `False` can now be passed as either `--arg` or `--no-arg` to set the value to `True` or `False` respectively.
 - This also solves an issue where CLI arguments that toggle settings would override config file settings even if the CLI argument was never passed.
 
-## [5.6.42] -  2024-10-03
+## [5.6.42] - 2024-10-03
 
 This update introduces the following changes:
 
