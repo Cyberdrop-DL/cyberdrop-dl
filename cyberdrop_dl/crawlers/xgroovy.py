@@ -52,8 +52,8 @@ class XGroovyCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [*_, "videos", _, _]:
-                return await self.video(scrape_item)
+            case [*_, "videos", video_id, _]:
+                return await self.video(scrape_item, video_id)
             case [*_, "gifs", gif_id, _]:
                 return await self.gif(scrape_item, gif_id)
             case [*_, collection_type, _] if collection_type in ("categories", "channels", "pornstars", "search", "tag"):
@@ -71,11 +71,10 @@ class XGroovyCrawler(Crawler):
         return await self.download_video(scrape_item, gif_id, soup, link)
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        video_id: str = scrape_item.url.parts[scrape_item.url.parts.index("videos") + 1]
         soup = await self.request_soup(scrape_item.url)
         best_format: Format = _get_best_format(css.select_one(soup, _SELECTORS.VIDEO))
         return await self.download_video(
