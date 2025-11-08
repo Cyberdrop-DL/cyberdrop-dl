@@ -44,7 +44,7 @@ class TrannyOneCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["view", video_id]:
                 return await self.video(scrape_item, video_id)
-            case ["search" as query]:
+            case ["search", query]:
                 return await self.search(scrape_item, query)
             case ["pornstars", model_id, _]:
                 return await self.model(scrape_item, model_id)
@@ -89,7 +89,8 @@ class TrannyOneCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         name = css.select_one_get_text(soup, Selector.ALBUM_TITLE)
         scrape_item.setup_as_album(self.create_title(f"{name} [album]"), album_id=album_id)
-        for _, pic in self.iter_tags(soup, Selector.IMAGES):
+        results = await self.get_album_results(album_id)
+        for _, pic in self.iter_tags(soup, Selector.IMAGES, results=results):
             self.create_task(self.direct_file(scrape_item, pic))
 
     @error_handling_wrapper
