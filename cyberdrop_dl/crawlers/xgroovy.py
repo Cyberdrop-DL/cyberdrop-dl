@@ -104,7 +104,9 @@ class XGroovyCrawler(Crawler):
         title = open_graph.title(soup)
         scrape_item.possible_datetime = self.parse_iso_date(css.get_json_ld_date(soup))
         custom_filename = self.create_custom_filename(title, ext, file_id=file_id, resolution=resolution)
-        return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        return await self.handle_file(
+            scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link
+        )
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_type: str, name: str | None = None) -> None:

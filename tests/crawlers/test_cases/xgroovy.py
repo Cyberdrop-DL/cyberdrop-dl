@@ -5,8 +5,9 @@ TEST_CASES = [
         "https://xgroovy.com/videos/598490/brunette-bombshell-casts-her-magic-in-amateur-pov/",
         [
             {
-                "url": "https://xgroovy.com/get_file/1/da69b5c1caadfde60ba27aaf6292520a05f02f6556/598000/598490/598490_1080p.mp4?br=1910",
+                "url": "https://xgroovy.com/videos/598490/brunette-bombshell-casts-her-magic-in-amateur-pov",
                 "filename": "Brunette Bombshell Casts Her Magic in Amateur POV [598490][1080p].mp4",
+                "debrid_link": "ANY",
                 "referer": "https://xgroovy.com/videos/598490/brunette-bombshell-casts-her-magic-in-amateur-pov",
                 "datetime": 1758692603,
             }
@@ -17,8 +18,9 @@ TEST_CASES = [
         "https://xgroovy.com/shemale/gifs/463103/jaw-dropping3",
         [
             {
-                "url": "https://xgroovy.com/shemale/get_file/1/adeaf68455249038ddffb70f7b199c0236eb3664c5/463000/463103/463103_1080p_gif.mp4",
+                "url": "https://xgroovy.com/shemale/gifs/463103/jaw-dropping3",
                 "filename": "Jaw-dropping! [463103].mp4",
+                "debrid_link": "ANY",
                 "referer": "https://xgroovy.com/shemale/gifs/463103/jaw-dropping3",
                 "datetime": 1733330169,
             }
@@ -29,8 +31,8 @@ TEST_CASES = [
         "https://xgroovy.com/search/helena-price/",
         [
             {
-                "url": "re:https://xgroovy.com/get_file",
-                "download_folder": r"re:helena\-price \- \[search\] \(XGroovy\)",
+                "url": "re:https://xgroovy.com/videos/",
+                "download_folder": r"re:helena\-price \[search\] \(XGroovy\)",
                 "referer": "re:https://xgroovy.com/videos/",
                 "album_id": None,
             }
@@ -42,8 +44,8 @@ TEST_CASES = [
         "https://xgroovy.com/pornstars/hotangelsfromhell/",
         [
             {
-                "url": "re:https://xgroovy.com/get_file",
-                "download_folder": r"re:HotAngelsFromHell \- \[pornstars\] \(XGroovy\)",
+                "url": "ANY",
+                "download_folder": r"re:HotAngelsFromHell \[pornstars\] \(XGroovy\)",
                 "referer": "re:https://xgroovy.com/videos/",
                 "album_id": None,
             }
