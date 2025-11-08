@@ -9,14 +9,13 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup, Tag
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
 class Selector:
-    GIF = css.CssAttributeSelector("div.gif-video-wrapper > video", "src")
-    VIDEO_SRC = "video#main_video source"
+    VIDEO_SRC = ".gif-video, #main_video source"
     COLLECTION_TITLE = "h2.object-title"
     SEARCH_VIDEOS = "div.list-videos a.popito"
     NEXT_PAGE = "div.pagination-holder li.next > a"
@@ -62,25 +61,14 @@ class XGroovyCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [*_, "videos", video_id, _]:
+            case [*_, "videos" | "gifs", video_id, _]:
                 return await self.video(scrape_item, video_id)
-            case [*_, "gifs", gif_id, _]:
-                return await self.gif(scrape_item, gif_id)
             case [*_, "pornstars" as type_, _]:
                 return await self.collection(scrape_item, type_)
             case [*_, "categories" | "channels" | "search" | "tag" as type_, slug]:
                 return await self.collection(scrape_item, type_, slug)
             case _:
                 raise ValueError
-
-    @error_handling_wrapper
-    async def gif(self, scrape_item: ScrapeItem, gif_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
-            return
-
-        soup = await self.request_soup(scrape_item.url)
-        link = self.parse_url(Selector.GIF(soup))
-        return await self._video(scrape_item, gif_id, soup, link)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -90,20 +78,10 @@ class XGroovyCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         best_format = _get_best_format(soup)
         link = self.parse_url(best_format.link_str)
-        return await self._video(scrape_item, video_id, soup, link, resolution=best_format.resolution)
-
-    async def _video(
-        self,
-        scrape_item: ScrapeItem,
-        file_id: str,
-        soup: BeautifulSoup,
-        link: AbsoluteHttpURL,
-        resolution: Resolution | None = None,
-    ):
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.title(soup)
         scrape_item.possible_datetime = self.parse_iso_date(css.get_json_ld_date(soup))
-        custom_filename = self.create_custom_filename(title, ext, file_id=file_id, resolution=resolution)
+        custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=best_format.resolution)
         return await self.handle_file(
             scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link
         )
@@ -121,14 +99,12 @@ class XGroovyCrawler(Crawler):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _get_best_format(soup: Tag) -> Format:
+def _get_best_format(soup: BeautifulSoup) -> Format:
     def parse():
         for src in soup.select(Selector.VIDEO_SRC):
             url = css.get_attr(src, "src")
-            if title := css.get_attr_or_none(src, "title"):
-                resolution = Resolution.parse(title)
-            else:
-                resolution = Resolution.unknown()
+            quality = css.get_attr_or_none(src, "title")
+            resolution = Resolution.parse(quality)
             yield Format(resolution, url)
 
     return max(parse())
