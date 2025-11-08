@@ -71,7 +71,6 @@ class TrannyOneCrawler(Crawler):
         scrape_item.setup_as_album(title)
         await self._iter_videos(scrape_item)
 
-    @error_handling_wrapper
     async def _iter_videos(self, scrape_item: ScrapeItem) -> None:
         for page in itertools.count(1):
             page_url = scrape_item.url.with_query(pageId=page)

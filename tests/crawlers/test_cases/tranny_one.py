@@ -25,7 +25,7 @@ TEST_CASES = [
             {
                 "url": "re:https://pics.tranny.one/work/orig/2904/339248",
                 "download_folder": r"re:Natalie mars cuckolds the world \[album\] \(Tranny\.One\)",
-                "referer": "re:https://pics.tranny.one/work/orig/2904/339248",
+                "referer": "https://www.tranny.one/pics/album/2967",
                 "album_id": "2967",
             }
         ],
