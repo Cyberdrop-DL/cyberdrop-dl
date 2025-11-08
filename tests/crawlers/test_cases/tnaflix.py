@@ -18,4 +18,14 @@ TEST_CASES = [
         [],
         2,
     ),
+    (
+        "https://www.tnaflix.com/channel/titty-attack",
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:Titty Attack - \[channel\] \(TNAFlix\)",
+            }
+        ],
+        2,
+    ),
 ]
