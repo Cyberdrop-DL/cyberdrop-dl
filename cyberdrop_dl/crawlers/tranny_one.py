@@ -34,7 +34,7 @@ class TrannyOneCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "tranny.one"
     FOLDER_DOMAIN: ClassVar[str] = "Tranny.One"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://tranny.one")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tranny.one")
     _RATE_LIMIT = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
