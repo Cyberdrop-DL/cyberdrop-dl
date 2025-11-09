@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -54,10 +55,10 @@ class MyDesiCrawler(Crawler):
                 scrape_item.setup_as_album(title)
                 album_initialized = True
 
-            for _, new_scrape_item in self.iter_children(scrape_item,soup,"a.infos" ):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
                 self.create_task(self.run(new_scrape_item))
 
-     def select_highest_quality_video(self, soup: BeautifulSoup) -> tuple[Resolution, AbsoluteHttpURL]:
+    def select_highest_quality_video(self, soup: BeautifulSoup) -> tuple[Resolution, AbsoluteHttpURL]:
         def parse():
             for src in soup.select("a.btn.btn-dark.btn-sm"):
                 quality = css.get_attr(src, "title")
@@ -65,7 +66,8 @@ class MyDesiCrawler(Crawler):
                 resolution = Resolution.highest() if "original" in quality.casefold() else Resolution.parse(quality)
                 yield resolution, link
 
-        return max(parse())
+        return_link = max(parse())
+        return return_link[0], self.parse_url(return_link[1])
 
     def paginate(self, soup: BeautifulSoup) -> str | None:
         # Extract search term from RSS feed link
