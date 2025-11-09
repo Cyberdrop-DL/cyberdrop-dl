@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -70,8 +70,8 @@ class FSIBlogCrawler(Crawler):
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="a.next"):
             for post in soup.select("div.elementor-posts-container > article > div > a"):
-                post_type = PostType(css.get_attr(post.parent,"data-id")))
-                post_link = self.parse_url(css.get_attr(post,"href"))
+                post_type = PostType(css.get_attr(post.parent, "data-id"))
+                post_link = self.parse_url(css.get_attr(post, "href"))
                 new_scrape_item = scrape_item.create_child(post_link)
                 self.create_task(self.filter(new_scrape_item, post_type))
 
@@ -81,7 +81,7 @@ class FSIBlogCrawler(Crawler):
             return
         soup = soup or await self.request_soup(scrape_item.url)
 
-        metadata = await self.read_metadata(soup)
+        metadata = self.read_metadata(soup)
         published_date = metadata[0]["datePublished"]
         scrape_item.possible_datetime = self.parse_iso_date(published_date)
 
@@ -97,7 +97,7 @@ class FSIBlogCrawler(Crawler):
         title = self.create_title(soup.select_one("h1.elementor-heading-title").text.strip())
         scrape_item.setup_as_album(title)
 
-        metadata = await self.read_metadata(soup)
+        metadata = self.read_metadata(soup)
         published_date = metadata[0]["datePublished"]
         scrape_item.possible_datetime = self.parse_iso_date(published_date)
 
