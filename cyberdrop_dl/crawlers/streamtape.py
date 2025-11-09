@@ -37,14 +37,15 @@ class StreamtapeCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "Streamtape"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.parts[1] in ("e", "v"):
-            return await self.video(scrape_item)
-        else:
+        match scrape_item.url.parts[1:]:
+          case ["e"| "v", video_id, *_]:
+            return await self.video(scrape_item, video_id)
+          case _:
             raise ValueError
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
-        scrape_item.url = await self.create_canonical_url(scrape_item)
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        scrape_item.url = PRIMARY_URL / "v" / video_id
         if await self.check_complete_from_referer(scrape_item):
             return
         soup = await self.request_soup(scrape_item.url)
