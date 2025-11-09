@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, cast
-
-from pydantic import dataclasses
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -17,22 +16,12 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class TransferFile:
+class File:
     name: str
     id: str
     transfer_id: str
-    timestamp: int | None = None
-
-    @staticmethod
-    def from_file(file: mega.File, xh: str) -> TransferFile:
-        attrs = file["attributes"]
-        timestamp = file.get("ts") or attrs.get("t")
-        return TransferFile(
-            name=attrs["n"],
-            id=file["h"],
-            transfer_id=xh,
-            timestamp=timestamp if isinstance(timestamp, int) else None,
-        )
+    timestamp: int | None
+    password: str | None = None
 
 
 class TransferItAPI(mega.MegaApi):
@@ -41,18 +30,14 @@ class TransferItAPI(mega.MegaApi):
         self.entrypoint = "https://bt7.api.mega.co.nz/cs"
         self._url = AbsoluteHttpURL(self.entrypoint)
         self.shared_keys: mega.SharedkeysDict = {}
+        self._default_params = {"v": 3, "domain": "transferit", "lang": "en", "bc": 1}
 
     async def request(
         self,
         data_input: list[dict[str, Any]] | dict[str, Any],
         add_params: dict[str, Any] | None = None,
     ) -> Any:
-        add_params = {
-            "v": 3,
-            "domain": "transferit",
-            "lang": "en",
-            "bc": 1,
-        } | (add_params or {})
+        add_params = self._default_params | (add_params or {})
         return await super().request(data_input, add_params)
 
     async def get_transfer_nodes(self, transfer_id: str) -> dict[str, mega.FileOrFolder]:
@@ -63,15 +48,23 @@ class TransferItAPI(mega.MegaApi):
         nodes = await self._process_nodes(folder["f"])
         return cast("dict[str, mega.FileOrFolder]", nodes)
 
-    def _process_node(self, node: mega.Node) -> mega.Node:
+    def _process_node(self, node: mega.Node) -> mega.Node:  # pyright: ignore[reportIncompatibleMethodOverride]
         node_type = node["t"]
         if node_type == mega.NodeType.FILE or node_type == mega.NodeType.FOLDER:
             attributes_bytes = mega.base64_url_decode(node["a"])
             full_key = mega.base64_to_a32(node["k"])
-            k = mega.get_decrypt_data(node_type, full_key).k
-            attributes = mega.decrypt_attr(attributes_bytes, k)
-            node["attributes"] = cast("mega.Attributes", attributes)
+            crypto = mega.get_decrypt_data(node_type, full_key)
+            attributes = mega.decrypt_attr(attributes_bytes, crypto.k)
+            node["attributes"] = cast("mega.Attributes", attributes)  # pyright: ignore[reportInvalidCast]
         return node
+
+    def get_download_link(self, file: File, *, direct: bool = True) -> AbsoluteHttpURL:
+        if not direct:
+            raise NotImplementedError
+        url = (self._url / "g").with_query(x=file.transfer_id, n=file.id, fn=file.name)
+        if file.password:
+            return url.update_query(pw=file.password)
+        return url
 
 
 class TransferItCrawler(Crawler):
@@ -94,27 +87,34 @@ class TransferItCrawler(Crawler):
         # TODO: handle expired links and password protected links
         nodes = await self.api.get_transfer_nodes(transfer_id)
         root_id = next(iter(nodes))
-        folder_name = nodes[root_id]["attributes"]["n"]
+        root_name = nodes[root_id]["attributes"]["n"]
         filesystem = await self.api.build_file_system(nodes, [root_id])
-        title = self.create_title(folder_name, transfer_id)
+        title = self.create_title(root_name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
-        self._process_folder_filesystem(scrape_item, filesystem, transfer_id)
+        self._process_filesystem(scrape_item, filesystem, transfer_id)
 
-    def _process_folder_filesystem(
-        self, scrape_item: ScrapeItem, filesystem: dict[Path, mega.Node], transfer_id: str
-    ) -> None:
+    def _process_filesystem(self, scrape_item: ScrapeItem, filesystem: dict[Path, mega.Node], transfer_id: str) -> None:
+        password = scrape_item.url.query.get("pw") or scrape_item.password
+
         def filter_files():
             for path, node in filesystem.items():
                 if node["t"] != mega.NodeType.FILE:
                     continue
 
-                file = cast("mega.File", node)
-                yield path, TransferFile.from_file(file, xh=transfer_id)
+                attrs = node["attributes"]
+                timestamp = node.get("ts") or attrs.get("t")
+                file = File(
+                    name=attrs["n"],
+                    id=node["h"],
+                    transfer_id=transfer_id,
+                    password=password,
+                    timestamp=timestamp if isinstance(timestamp, int) else None,
+                )
+                yield path, file
 
         for path, file in filter_files():
             canonical_url = scrape_item.url.with_fragment(file.id)
             new_scrape_item = scrape_item.create_child(canonical_url)
-            new_scrape_item.possible_datetime = file.timestamp
             for part in path.parent.parts[1:]:
                 new_scrape_item.add_to_parent_title(part)
 
@@ -122,10 +122,8 @@ class TransferItCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def _file(self, scrape_item: ScrapeItem, file: TransferFile) -> None:
-        link = (self.api._url / "g").with_query(x=file.transfer_id, n=file.id, fn=file.name)
-        if password := (scrape_item.url.query.get("pw") or scrape_item.password):
-            link = link.update_query(pw=password)
-
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
+        link = self.api.get_download_link(file)
         filename, ext = self.get_filename_and_ext(file.name)
+        scrape_item.possible_datetime = file.timestamp
         await self.handle_file(link, scrape_item, file.name, ext, custom_filename=filename)
