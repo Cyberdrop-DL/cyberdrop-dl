@@ -77,5 +77,3 @@ class StreamtapeCrawler(Crawler):
                 decoded_links.append(self.parse_url(f"https://{decoded_link}"))
         return max(set(decoded_links), key=decoded_links.count)
 
-    async def create_canonical_url(self, scrape_item: ScrapeItem) -> AbsoluteHttpURL:
-        return self.parse_url(f"https://{scrape_item.url.host}/v/{scrape_item.url.parts[2]}")
