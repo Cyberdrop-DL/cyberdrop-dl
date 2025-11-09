@@ -25,7 +25,7 @@ class PostType(StrEnum):
 
 class FSIBlogCrawler(Crawler):
     SUPPORTED_DOMAINS = "fsiblog5.com", "fsiblog5.club"
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Posts": "/category/", "Search": "?s="}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Posts": "/<category>/<title>", "Search": "?s=<query>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "fsiblog.com"
     FOLDER_DOMAIN: ClassVar[str] = "FSIBlog"
@@ -43,9 +43,9 @@ class FSIBlogCrawler(Crawler):
     )
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.query.get("s"):
-            return await self.search(scrape_item)
-        elif len(scrape_item.url.parts) >= 2 and len(scrape_item.url.parts) <= 4:
+        if query := scrape_item.url.query.get("s"):
+            return await self.search(scrape_item, query)
+        if len(scrape_item.url.parts) == 3:
             return await self.filter(scrape_item)
         raise ValueError
 
@@ -65,36 +65,35 @@ class FSIBlogCrawler(Crawler):
             raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        title = self.create_title(scrape_item.url.query.get("s"))
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = self.create_title(query)
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="a.next"):
-            posts: tuple[BeautifulSoup] = soup.select("div.elementor-posts-container > article > div > a")
-            for post in posts:
-                post_type = post.parent.get("data-id")
-                post_link = self.parse_url(post.get("href"))
+            for post in soup.select("div.elementor-posts-container > article > div > a"):
+                post_type = PostType(css.get_attr(post.parent,"data-id")))
+                post_link = self.parse_url(css.get_attr(post,"href"))
                 new_scrape_item = scrape_item.create_child(post_link)
-                self.create_task(self.filter(new_scrape_item, post_type=post_type))
+                self.create_task(self.filter(new_scrape_item, post_type))
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
-        soup = await self.request_soup(scrape_item.url) or soup
+        soup = soup or await self.request_soup(scrape_item.url)
 
         metadata = await self.read_metadata(soup)
         published_date = metadata[0]["datePublished"]
         scrape_item.possible_datetime = self.parse_iso_date(published_date)
 
-        video_url = self.parse_url(soup.select_one("meta[itemprop='contentURL']").get("content"))
+        video_url = self.parse_url(open_graph.get("video", soup))
         title = soup.select_one("h1.elementor-heading-title").text.strip()
         filename, ext = self.get_filename_and_ext(video_url.name)
-
-        return await self.handle_file(video_url, scrape_item, filename, ext, custom_filename=f"{title}{ext}")
+        custom_filename = self.create_custom_filename(title, ext)
+        return await self.handle_file(video_url, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def images(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
-        soup = await self.request_soup(scrape_item.url) or soup
+        soup = soup or await self.request_soup(scrape_item.url)
         title = self.create_title(soup.select_one("h1.elementor-heading-title").text.strip())
         scrape_item.setup_as_album(title)
 
@@ -112,6 +111,6 @@ class FSIBlogCrawler(Crawler):
     async def story(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
         raise NotImplementedError
 
-    async def read_metadata(self, soup: BeautifulSoup) -> dict[str, str]:
-        metadata_script = soup.select_one("script.yoast-schema-graph").string
-        return json.loads(metadata_script)["@graph"]
+    @staticmethod
+    def read_metadata(soup: BeautifulSoup) -> dict[str, str]:
+        return css.get_json_ld(soup)["@graph"]
