@@ -188,7 +188,7 @@ class MediaItem:
             if "mediafire" in domain:
                 return url.name
 
-            if "mega.nz" in domain:
+            if "mega.nz" in domain or "transfer.it" in domain:
                 return url.path_qs if not (frag := url.fragment) else f"{url.path_qs}#{frag}"
 
         return url.path

@@ -164,6 +164,8 @@ class Chunk(NamedTuple):
 
 class Attributes(TypedDict):
     n: str  # name
+    c: str  # encoded hash # TODO: add decode logic
+    t: str | int  # encoded tags or timestamp
 
 
 class NodeType(IntEnum):
