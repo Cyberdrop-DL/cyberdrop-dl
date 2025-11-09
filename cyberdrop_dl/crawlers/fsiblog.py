@@ -54,15 +54,14 @@ class FSIBlogCrawler(Crawler):
         if not post_type:
             soup = await self.request_soup(scrape_item.url)
             post_type = soup.select_one("section.elementor-section.elementor-inner-section").get("data-id")
-        if post_type == PostType.VIDEO:
+            
+        post_type = PostType(post_type)
+        if post_type is PostType.Video:
             return await self.video(scrape_item, soup)
-        elif post_type == PostType.IMAGES:
+        if post_type is PostType.IMAGES:
             return await self.images(scrape_item, soup)
-        elif post_type == PostType.STORY:
-            raise ValueError
+        if post_type is PostType.STORY:
             return await self.story(scrape_item, soup)
-        else:
-            raise ValueError
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
