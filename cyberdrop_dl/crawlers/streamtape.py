@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from typing import TYPE_CHECKING, ClassVar
+from cyberdrop_dl.utils import css
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -48,11 +49,8 @@ class StreamtapeCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
         soup = await self.request_soup(scrape_item.url)
-        scripts = soup.find_all("script")[::-1]
-        for script in scripts:
-            if "document.getElementById('ideoooolink').innerHTML" in script.text:
-                break
-        else:
+        script = css.select_one(soup, "script:-soup-contains('document.getElementById(\"ideoooolink\").innerHTML')")
+        if script is None:
             raise RuntimeError("Could not find video script")
         generator_url = await self.decode_links(script.text)
         download_url = await self._get_redirect_url(generator_url)
