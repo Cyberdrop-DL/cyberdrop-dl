@@ -98,9 +98,9 @@ class TransferItCrawler(Crawler):
         filesystem = await self.api.build_file_system(nodes, [root_id])
         title = self.create_title(folder_name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
-        await self._process_folder_filesystem(scrape_item, filesystem, transfer_id)
+        self._process_folder_filesystem(scrape_item, filesystem, transfer_id)
 
-    async def _process_folder_filesystem(
+    def _process_folder_filesystem(
         self, scrape_item: ScrapeItem, filesystem: dict[Path, mega.Node], transfer_id: str
     ) -> None:
         def filter_files():
@@ -128,11 +128,4 @@ class TransferItCrawler(Crawler):
             link = link.update_query(pw=password)
 
         filename, ext = self.get_filename_and_ext(file.name)
-        await self.handle_file(
-            scrape_item.url,
-            scrape_item,
-            file.name,
-            ext,
-            debrid_link=link,
-            custom_filename=filename,
-        )
+        await self.handle_file(link, scrape_item, file.name, ext, custom_filename=filename)
