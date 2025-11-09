@@ -54,9 +54,9 @@ class FSIBlogCrawler(Crawler):
         if not post_type:
             soup = await self.request_soup(scrape_item.url)
             post_type = soup.select_one("section.elementor-section.elementor-inner-section").get("data-id")
-            
+
         post_type = PostType(post_type)
-        if post_type is PostType.Video:
+        if post_type is PostType.VIDEO:
             return await self.video(scrape_item, soup)
         if post_type is PostType.IMAGES:
             return await self.images(scrape_item, soup)
