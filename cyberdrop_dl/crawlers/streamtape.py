@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import re
 from typing import TYPE_CHECKING, ClassVar
-from cyberdrop_dl.utils import css
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -39,10 +39,10 @@ class StreamtapeCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-          case ["e"| "v", video_id, *_]:
-            return await self.video(scrape_item, video_id)
-          case _:
-            raise ValueError
+            case ["e" | "v", video_id, *_]:
+                return await self.video(scrape_item, video_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -74,4 +74,3 @@ class StreamtapeCrawler(Crawler):
             if decoded_link.startswith("streamtape.com/get_video?id="):
                 decoded_links.append(self.parse_url(f"https://{decoded_link}"))
         return max(set(decoded_links), key=decoded_links.count)
-
