@@ -31,6 +31,7 @@ class PixHostCrawler(Crawler):
     UPDATE_UNSUPPORTED: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "pixhost"
     FOLDER_DOMAIN: ClassVar[str] = "PixHost"
+    OLD_DOMAINS = ("pixhost.org",)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if self.is_thumbnail(scrape_item.url):
