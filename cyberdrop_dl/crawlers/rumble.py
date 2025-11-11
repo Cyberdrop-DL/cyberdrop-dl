@@ -37,7 +37,7 @@ class RumbleCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        embed_id = self.parse_url(css.get_json_ld_value(soup, "embedUrl")).name
+        embed_id = self.parse_url(css.get_json_ld(soup)["embedUrl"]).name
         await self.embed(scrape_item, embed_id)
 
     @error_handling_wrapper
@@ -46,22 +46,20 @@ class RumbleCrawler(Crawler):
         video = _parse_video(await self.request_json(api_url))
         link = self.parse_url(video.format.url)
         _, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(
-            video.title, ext, file_id=embed_id, resolution=video.format.resolution
-        )
+        video_name = self.create_custom_filename(video.title, ext, file_id=embed_id, resolution=video.format.resolution)
         scrape_item.possible_datetime = self.parse_iso_date(video.upload_date)
         scrape_item.url = self.parse_url(video.url)
-        self.create_task(self.handle_file(link, scrape_item, link.name, ext, custom_filename=custom_filename))
-        self.handle_subs(scrape_item, custom_filename, video.subtitles)
+        self.create_task(self.handle_file(link, scrape_item, link.name, ext, custom_filename=video_name))
+        self.handle_subs(scrape_item, video_name, video.subtitles)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Video:
     upload_date: str
     title: str
-    format: Format
-    subtitles: list[Subtitle]
     url: str
+    format: Format
+    subtitles: tuple[Subtitle, ...]
 
 
 class Format(NamedTuple):
@@ -88,14 +86,15 @@ def _parse_video(video: dict[str, Any]) -> Video:
                 yield Format(resolution, meta["bitrate"], format["url"])
 
     def parse_subs():
-        for lang_code, sub_info in subs.items():
-            if url := sub_info.get("path"):
-                yield Subtitle(url, lang_code)
+        for lang_code, sub in subs.items():
+            if url := sub.get("path"):
+                name = sub.get("language")
+                yield Subtitle(url, lang_code, name)
 
     return Video(
         upload_date=video["pubDate"],
         title=video["title"],
-        format=max(parse_formats()),
-        subtitles=list(parse_subs()),
         url=video["l"],
+        format=max(parse_formats()),
+        subtitles=tuple(parse_subs()),
     )
