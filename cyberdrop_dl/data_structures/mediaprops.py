@@ -133,3 +133,14 @@ COMMON_RESOLUTIONS: Final = tuple(
         (256, 144),
     )
 )
+
+
+class ISO639Subtitle(NamedTuple):
+    """`lang_code` MUST be a valid ISO639 code (ex: en, eng, fra)"""
+
+    url: str
+    lang_code: str
+    name: str | None = None
+
+
+Subtitle = ISO639Subtitle

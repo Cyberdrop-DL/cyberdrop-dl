@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
-from collections import Counter
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.data_structures.mediaprops import Resolution
+from cyberdrop_dl.data_structures.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
@@ -56,22 +52,7 @@ class RumbleCrawler(Crawler):
         scrape_item.possible_datetime = self.parse_iso_date(video.upload_date)
         scrape_item.url = self.parse_url(video.url)
         self.create_task(self.handle_file(link, scrape_item, link.name, ext, custom_filename=custom_filename))
-        self._handle_subs(scrape_item, custom_filename, video.subtitles)
-
-    def _handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[Subtitle]) -> None:
-        counter = Counter()
-        video_stem = Path(video_filename).stem
-        for sub in subtitles:
-            link = self.parse_url(sub.url)
-            counter[sub.lang_code] += 1
-            if (count := counter[sub.lang_code]) > 1:
-                suffix = f"{sub.lang_code}.{count}{link.suffix}"
-            else:
-                suffix = f"{sub.lang_code}{link.suffix}"
-
-            sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
-            new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
-            self.create_task(self.handle_file(link, new_scrape_item, link.name, ext, custom_filename=sub_name))
+        self.handle_subs(scrape_item, custom_filename, video.subtitles)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -87,11 +68,6 @@ class Format(NamedTuple):
     resolution: Resolution
     bitrate: int
     url: str
-
-
-class Subtitle(NamedTuple):
-    url: str
-    lang_code: str
 
 
 def _parse_video(video: dict[str, Any]) -> Video:

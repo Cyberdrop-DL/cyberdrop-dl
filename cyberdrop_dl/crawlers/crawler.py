@@ -7,6 +7,7 @@ import inspect
 import re
 import warnings
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -18,7 +19,7 @@ from yarl import URL
 
 from cyberdrop_dl import constants
 from cyberdrop_dl.clients.scraper_client import ScraperClient
-from cyberdrop_dl.data_structures.mediaprops import Resolution
+from cyberdrop_dl.data_structures.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, copy_signature
 from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -849,6 +850,30 @@ class Crawler(ABC):
 
         if newest := max(get_morsels_by_name(), key=lambda x: int(x["max-age"] or 0), default=None):
             return newest.value
+
+    @final
+    def handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[ISO639Subtitle]) -> None:
+        counter = Counter()
+        video_stem = Path(video_filename).stem
+        for sub in subtitles:
+            link = self.parse_url(sub.url)
+            counter[sub.lang_code] += 1
+            if (count := counter[sub.lang_code]) > 1:
+                suffix = f"{sub.lang_code}.{count}{link.suffix}"
+            else:
+                suffix = f"{sub.lang_code}{link.suffix}"
+
+            sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
+            new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
+            self.create_task(
+                self.handle_file(
+                    link,
+                    new_scrape_item,
+                    sub.name or link.name,
+                    ext,
+                    custom_filename=sub_name,
+                )
+            )
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
