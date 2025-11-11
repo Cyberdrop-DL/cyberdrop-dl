@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple
 
 from bs4 import BeautifulSoup
 
@@ -77,7 +77,11 @@ class RumbleCrawler(Crawler):
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:
         video = await self._get_video_info(embed_id)
-        ext = ".mp4"
+        if video.best_format.m3u8:
+            ext = ".mp4"
+        else:
+            _, ext = self.get_filename_and_ext(video.url.name)
+
         video_name = self.create_custom_filename(
             video.title, ext, file_id=embed_id, resolution=video.best_format.resolution
         )
@@ -127,21 +131,22 @@ class RumbleCrawler(Crawler):
         return max(*hls_formats, *other_formats)
 
     async def _resolve_m3u8(self, format: Format) -> Format:
-        resolution = format.resolution
-        if resolution != Resolution.unknown():
-            m3u8 = await self.get_m3u8_from_index_url(format.url)
-        else:
-            m3u8, info = await self.get_m3u8_from_playlist_url(format.url)
-            resolution = info.resolution
-
-        return Format(resolution, format.type, 0, format.url, m3u8)
+        m3u8, info = await self.get_m3u8_from_playlist_url(format.url)
+        return format._replace(resolution=info.resolution, m3u8=m3u8)
 
 
-@dataclasses.dataclass(slots=True, frozen=True, order=True)
-class Format:
+class Metadata(NamedTuple):
+    bitrate: int = 0
+    size: int = 0
+    w: int = 0
+    h: int = 0
+
+
+class Format(NamedTuple):
     resolution: Resolution
     type: Literal["hls", "mp4", "webm"]  # if resolution is the same, prefer: webm > mp4 > hls
     bitrate: int
+    size: int
     url: AbsoluteHttpURL
     m3u8: m3u8.RenditionGroup | None = None
 
@@ -155,7 +160,7 @@ class Video:
     subtitles: tuple[Subtitle, ...]
 
     @staticmethod
-    def parse_formats(formats: dict[str, dict[str, dict[str, Any]]]) -> Generator[Format]:
+    def parse_formats(formats: dict[str, list[dict[str, Any]]]) -> Generator[Format]:
         for name, format_options in formats.items():
             if name in ("audio", "tar", "timeline"):
                 continue
@@ -163,16 +168,14 @@ class Video:
             if name not in ("hls", "mp4", "webm"):
                 raise ScrapeError(422, f"Unknown format type: {name} ()")
 
-            for res, format in format_options.items():
-                url = parse_url(format["url"])
-                if name == "hls":
-                    resolution = Resolution.parse(res) if res != "auto" else Resolution.unknown()
-                    yield Format(resolution, name, 0, url)
-                    continue
+            if isinstance(format_options, dict):
+                format_options = format_options.values()
 
-                meta: dict[str, Any] = format["meta"]
-                resolution = Resolution(meta["w"], meta["h"])
-                yield Format(resolution, name, meta["bitrate"], url)
+            for format in format_options:
+                url = parse_url(format["url"])
+                meta = Metadata(**(format.get("meta") or {}))
+                res = Resolution(meta.w, meta.h) if meta.w and meta.h else Resolution.unknown()
+                yield Format(res, name, meta.bitrate, meta.size, url)
 
     @staticmethod
     def parse_subs(subs: dict[str, dict[str, str]]) -> Generator[Subtitle]:
