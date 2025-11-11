@@ -160,7 +160,7 @@ class Video:
     subtitles: tuple[Subtitle, ...]
 
     @staticmethod
-    def parse_formats(formats: dict[str, list[dict[str, Any]]]) -> Generator[Format]:
+    def parse_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
         for name, format_options in formats.items():
             if name in ("audio", "tar", "timeline"):
                 continue
@@ -168,13 +168,15 @@ class Video:
             if name not in ("hls", "mp4", "webm"):
                 raise ScrapeError(422, f"Unknown format type: {name} ()")
 
-            if isinstance(format_options, dict):
-                format_options = format_options.values()
+            if isinstance(format_options, list):
+                pairs = ((None, f) for f in format_options)
+            else:
+                pairs = format_options.items()
 
-            for format in format_options:
+            for height, format in pairs:
                 url = parse_url(format["url"])
                 meta = Metadata(**(format.get("meta") or {}))
-                res = Resolution(meta.w, meta.h) if meta.w and meta.h else Resolution.unknown()
+                res = Resolution(meta.w, meta.h) if meta.w and meta.h else Resolution.parse(height)
                 yield Format(res, name, meta.bitrate, meta.size, url)
 
     @staticmethod
