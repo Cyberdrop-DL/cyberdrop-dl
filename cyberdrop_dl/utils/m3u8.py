@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 
+import m3u8.model
 from m3u8 import M3U8 as _M3U8
 from m3u8 import Media, Playlist
 
@@ -14,8 +15,6 @@ from cyberdrop_dl.utils.utilities import parse_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-
-    from m3u8.model import StreamInfo
 
     from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 
@@ -74,6 +73,29 @@ class RenditionGroup(NamedTuple):
 
 
 @dataclass(frozen=True, slots=True, order=True)
+class StreamInfo:
+    """Exactly the same as m3u8.model.StreamInfo but as a dataclass, to support sorting rendition groups with the same resolution but different bitrates (bandwidth)"""
+
+    bandwidth: int | None
+    closed_captions: Any | None
+    average_bandwidth: int | None
+    program_id: int | None
+    resolution: tuple[int, int] | None
+    codecs: str | None
+    audio: str | None
+    video: str | None
+    subtitles: str | None
+    frame_rate: float | None
+    video_range: str | None
+    hdcp_level: str | None
+    pathway_id: str | None
+    stable_variant_id: str | None
+    req_video_layout: str | None
+
+    __str__ = m3u8.model.StreamInfo.__str__
+
+
+@dataclass(frozen=True, slots=True, order=True)
 class RenditionGroupDetails:
     resolution: Resolution
     codecs: Codecs
@@ -108,7 +130,8 @@ class RenditionGroupDetails:
             subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)
-        return RenditionGroupDetails(resolution, codecs, playlist.stream_info, media, media_urls)
+        stream_info = StreamInfo(**vars(playlist.stream_info))
+        return RenditionGroupDetails(resolution, codecs, stream_info, media, media_urls)
 
 
 class M3U8(_M3U8):

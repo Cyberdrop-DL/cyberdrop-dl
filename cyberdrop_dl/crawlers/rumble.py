@@ -12,6 +12,8 @@ from cyberdrop_dl.utils import aio, css, m3u8
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
@@ -71,8 +73,7 @@ class RumbleCrawler(Crawler):
 
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:
-        api_url = (self.PRIMARY_URL / "embedJS/u3").with_query(request="video", ver=2, v=embed_id)
-        video = await self._parse_video(await self.request_json(api_url))
+        video = await self._get_video_info(embed_id)
         ext = ".mp4"
         video_name = self.create_custom_filename(
             video.title, ext, file_id=embed_id, resolution=video.best_format.resolution
@@ -91,11 +92,15 @@ class RumbleCrawler(Crawler):
         )
         self.handle_subs(scrape_item, video_name, video.subtitles)
 
-    async def _parse_video(self, video: dict[str, Any]) -> Video:
+    async def _get_video_info(self, embed_id: str) -> Video:
+        api_url = (self.PRIMARY_URL / "embedJS/u3").with_query(request="video", ver=2, v=embed_id)
+        video: dict[str, Any] = await self.request_json(api_url)
+
         if video.get("live"):
             raise ScrapeError(422, "live videos are not supported")
 
         formats = tuple(Video.parse_formats(video.get("ua") or {}))
+        subs = tuple(Video.parse_subs(video.get("cc") or {}))
 
         async def resolve_m3u8(format: Format) -> Format:
             if format.resolution != Resolution.unknown():
@@ -116,7 +121,7 @@ class RumbleCrawler(Crawler):
             title=video["title"],
             url=self.parse_url(video["l"]),
             best_format=max(resolved_formats),
-            subtitles=tuple(Video.parse_subs(video.get("cc") or {})),
+            subtitles=subs,
         )
 
 
@@ -131,14 +136,14 @@ class Format:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Video:
-    upload_date: str
     title: str
+    upload_date: str
     url: AbsoluteHttpURL
     best_format: Format
     subtitles: tuple[Subtitle, ...]
 
     @staticmethod
-    def parse_formats(formats: dict[str, dict[str, dict[str, Any]]]):
+    def parse_formats(formats: dict[str, dict[str, dict[str, Any]]]) -> Generator[Format]:
         for name, format_options in formats.items():
             if name not in ("hls", "mp4"):
                 continue
@@ -155,7 +160,7 @@ class Video:
                 yield Format(resolution, name, meta["bitrate"], url)
 
     @staticmethod
-    def parse_subs(subs: dict[str, dict[str, str]]):
+    def parse_subs(subs: dict[str, dict[str, str]]) -> Generator[Subtitle]:
         for lang_code, sub in subs.items():
             if url := sub.get("path"):
                 name = sub.get("language")
