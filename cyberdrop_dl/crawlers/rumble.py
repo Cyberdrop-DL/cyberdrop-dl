@@ -14,7 +14,7 @@ from cyberdrop_dl.utils import aio, css, m3u8
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
@@ -102,36 +102,45 @@ class RumbleCrawler(Crawler):
         if video.get("live"):
             raise ScrapeError(422, "live videos are not supported")
 
-        formats = tuple(Video.parse_formats(video.get("ua") or {}))
-        subs = tuple(Video.parse_subs(video.get("cc") or {}))
-
-        async def resolve_m3u8(format: Format) -> Format:
-            if format.resolution != Resolution.unknown():
-                m3u8 = await self.get_m3u8_from_index_url(format.url)
-                return Format(format.resolution, "hls", 0, format.url, m3u8)
-
-            m3u8, info = await self.get_m3u8_from_playlist_url(format.url)
-            return Format(info.resolution, "hls", 0, format.url, m3u8)
-
-        hls_formats = [f for f in formats if f.type == "hls"]
-        if hls_formats:
-            hls_formats = await aio.gather([resolve_m3u8(f) for f in hls_formats])
-
-        resolved_formats = *hls_formats, *(f for f in formats if f.type == "mp4")
+        formats = Video.parse_formats(video.get("ua") or {})
+        subs = Video.parse_subs(video.get("cc") or {})
 
         return Video(
             upload_date=video["pubDate"],
             title=BeautifulSoup(video["title"]).get_text(),
             url=self.parse_url(video["l"]),
-            best_format=max(resolved_formats),
-            subtitles=subs,
+            best_format=await self._get_best_format(formats),
+            subtitles=tuple(subs),
         )
+
+    async def _get_best_format(self, formats: Iterable[Format]) -> Format:
+        hls_formats: list[Format] = []
+        other_formats: list[Format] = []
+
+        for f in formats:
+            group = hls_formats if f.type == "hls" else other_formats
+            group.append(f)
+
+        if hls_formats:
+            hls_formats = await aio.gather([self._resolve_m3u8(f) for f in hls_formats])
+
+        return max(*hls_formats, *other_formats)
+
+    async def _resolve_m3u8(self, format: Format) -> Format:
+        resolution = format.resolution
+        if resolution != Resolution.unknown():
+            m3u8 = await self.get_m3u8_from_index_url(format.url)
+        else:
+            m3u8, info = await self.get_m3u8_from_playlist_url(format.url)
+            resolution = info.resolution
+
+        return Format(resolution, format.type, 0, format.url, m3u8)
 
 
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
 class Format:
     resolution: Resolution
-    type: Literal["hls", "mp4"]  # mp4 > hls
+    type: Literal["hls", "mp4", "webm"]  # if resolution is the same, prefer: webm > mp4 > hls
     bitrate: int
     url: AbsoluteHttpURL
     m3u8: m3u8.RenditionGroup | None = None
@@ -148,8 +157,11 @@ class Video:
     @staticmethod
     def parse_formats(formats: dict[str, dict[str, dict[str, Any]]]) -> Generator[Format]:
         for name, format_options in formats.items():
-            if name not in ("hls", "mp4"):
+            if name in ("audio", "tar", "timeline"):
                 continue
+
+            if name not in ("hls", "mp4", "webm"):
+                raise ScrapeError(422, f"Unknown format type: {name} ()")
 
             for res, format in format_options.items():
                 url = parse_url(format["url"])
