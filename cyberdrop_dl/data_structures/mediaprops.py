@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
     import yarl
 
+    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+
 
 VIDEO_CODECS = "avc1", "avc2", "avc3", "avc4", "av1", "hevc", "hev1", "hev2", "hvc1", "hvc2", "vp8", "vp9", "vp10"
 AUDIO_CODECS = "ac-3", "ec-3", "mp3", "mp4a", "opus", "vorbis"
@@ -138,7 +140,7 @@ COMMON_RESOLUTIONS: Final = tuple(
 class ISO639Subtitle(NamedTuple):
     """`lang_code` MUST be a valid ISO639 code (ex: en, eng, fra)"""
 
-    url: str
+    url: AbsoluteHttpURL | str
     lang_code: str
     name: str | None = None
 
