@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
+
+from bs4 import BeautifulSoup
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.mediaprops import Resolution, Subtitle
@@ -19,6 +21,8 @@ if TYPE_CHECKING:
 
 class RumbleCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Channel": "/c/<name>",
+        "User": "/user/<name>",
         "Video": "<video_id>-<video-title>.html",
         "Embed": "/embed/<video_id>",
     }
@@ -37,7 +41,6 @@ class RumbleCrawler(Crawler):
                 raise ValueError
 
     @classmethod
-    @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         match url.parts[1:]:
             case [slug] if slug.startswith("v") and slug.endswith(".html"):
@@ -80,7 +83,7 @@ class RumbleCrawler(Crawler):
         )
         scrape_item.possible_datetime = self.parse_iso_date(video.upload_date)
         scrape_item.url = video.url
-        self.create_task(  # pyright: ignore[reportUnusedCallResult]
+        self.create_task(
             self.handle_file(
                 video.best_format.url,
                 scrape_item,
@@ -118,7 +121,7 @@ class RumbleCrawler(Crawler):
 
         return Video(
             upload_date=video["pubDate"],
-            title=video["title"],
+            title=BeautifulSoup(video["title"]).get_text(),
             url=self.parse_url(video["l"]),
             best_format=max(resolved_formats),
             subtitles=subs,
@@ -164,4 +167,4 @@ class Video:
         for lang_code, sub in subs.items():
             if url := sub.get("path"):
                 name = sub.get("language")
-                yield Subtitle(url, lang_code, name)
+                yield Subtitle(url, lang_code.removesuffix("-auto"), name)
