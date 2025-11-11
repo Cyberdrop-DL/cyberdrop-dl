@@ -56,9 +56,9 @@ class RumbleCrawler(Crawler):
         scrape_item.possible_datetime = self.parse_iso_date(video.upload_date)
         scrape_item.url = self.parse_url(video.url)
         self.create_task(self.handle_file(link, scrape_item, link.name, ext, custom_filename=custom_filename))
-        self.handle_subs(scrape_item, custom_filename, video.subtitles)
+        self._handle_subs(scrape_item, custom_filename, video.subtitles)
 
-    def handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[Subtitle]) -> None:
+    def _handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[Subtitle]) -> None:
         counter = Counter()
         video_stem = Path(video_filename).stem
         for sub in subtitles:
@@ -70,7 +70,8 @@ class RumbleCrawler(Crawler):
                 suffix = f"{sub.lang_code}{link.suffix}"
 
             sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
-            self.create_task(self.handle_file(link, scrape_item, link.name, ext, custom_filename=sub_name))
+            new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
+            self.create_task(self.handle_file(link, new_scrape_item, link.name, ext, custom_filename=sub_name))
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

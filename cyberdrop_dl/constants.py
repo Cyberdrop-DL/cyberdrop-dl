@@ -184,6 +184,8 @@ FILE_FORMATS = {
         ".md",
         ".nfo",
         ".txt",
+        ".vtt",
+        ".sub",
     },
     "7z": {
         ".7z",
