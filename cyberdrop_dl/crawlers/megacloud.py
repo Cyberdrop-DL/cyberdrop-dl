@@ -100,10 +100,9 @@ class MegaCloudCrawler(Crawler):
                 if track["kind"] != "captions":
                     continue
 
-                url: str = track["file"]
-                name = self.parse_url(url).name
+                url = self.parse_url(track["file"])
                 label: str = track["label"]
-                lang_code = _parse_lang_code(name, label)
+                lang_code = _parse_lang_code(url.name, label)
 
                 yield Subtitle(url, lang_code, label)
 

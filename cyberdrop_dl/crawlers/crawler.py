@@ -856,7 +856,7 @@ class Crawler(ABC):
         counter = Counter()
         video_stem = Path(video_filename).stem
         for sub in subtitles:
-            link = self.parse_url(sub.url)
+            link = self.parse_url(sub.url) if isinstance(sub.url, str) else sub.url
             counter[sub.lang_code] += 1
             if (count := counter[sub.lang_code]) > 1:
                 suffix = f"{sub.lang_code}.{count}{link.suffix}"
