@@ -377,7 +377,7 @@ class Crawler(ABC):
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
         if not ext:
-            _, ext = filename.rsplit(".", 1)
+            ext = Path(filename).suffix
         if custom_filename:
             original_filename, filename = filename, custom_filename
         elif self.DOMAIN in ["cyberdrop"]:
