@@ -100,7 +100,7 @@ class RumbleCrawler(Crawler):
                 return await self.embed(scrape_item, video_id)
             case [slug] if slug.startswith("v") and slug.endswith(".html"):
                 return await self.video(scrape_item)
-            case ["c" | "user", user_name, "videos"]:
+            case ["c" | "user", user_name, *_]:
                 return await self.channel(scrape_item, user_name)
             case _:
                 raise ValueError
@@ -110,8 +110,6 @@ class RumbleCrawler(Crawler):
         match url.parts[1:]:
             case [slug] if slug.startswith("v") and slug.endswith(".html"):
                 return url.with_query(None)
-            case ["c" | "user", _]:
-                return url / "videos"
             case _:
                 return url
 
