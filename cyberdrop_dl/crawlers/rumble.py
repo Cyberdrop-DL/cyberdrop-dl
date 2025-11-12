@@ -36,8 +36,8 @@ class Metadata(NamedTuple):
 class Format(NamedTuple):
     resolution: Resolution
     type: Literal["hls", "mp4", "webm"]  # if resolution is the same, prefer: webm > mp4 > hls
-    bitrate: int  # For hls formats with the same resolution, choose the bigger bitrate (this is 0 on mp4s)
-    size: int  # For mp4 formats with the same resolution, choose the bigger size (this is 0 on hls)
+    bitrate: int  # For hls formats with the same resolution, choose the bigger bitrate (this is 0 on mp4/webm)
+    size: int  # For mp4/webm formats with the same resolution, choose the bigger size (this is 0 on hls)
     url: AbsoluteHttpURL
     m3u8: m3u8.RenditionGroup | None = None
 
@@ -52,12 +52,12 @@ class Video:
 
     @staticmethod
     def parse_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
-        for name, format_options in formats.items():
-            if name in ("audio", "tar", "timeline"):
+        for type_, format_options in formats.items():
+            if type_ in ("audio", "tar", "timeline"):
                 continue
 
-            if name not in ("hls", "mp4", "webm"):
-                raise ScrapeError(422, f"Video has unknown format types: {name}")
+            if type_ not in ("hls", "mp4", "webm"):
+                raise ScrapeError(422, f"Video has unknown format types: {type_}")
 
             if isinstance(format_options, list):
                 pairs = ((None, f) for f in format_options)
@@ -67,8 +67,14 @@ class Video:
             for height, format in pairs:
                 url = parse_url(format["url"])
                 meta = Metadata(**(format.get("meta") or {}))
-                res = Resolution(meta.w, meta.h) if meta.w and meta.h else Resolution.parse(height)
-                yield Format(res, name, meta.bitrate, meta.size, url)
+
+                if height == "auto":
+                    resolution = Resolution.unknown()
+                elif meta.w and meta.h:
+                    resolution = Resolution(meta.w, meta.h)
+                else:
+                    resolution = Resolution.parse(height)
+                yield Format(resolution, type_, meta.bitrate, meta.size, url)
 
     @staticmethod
     def parse_subs(subs: dict[str, dict[str, str]]) -> Generator[Subtitle]:
@@ -162,7 +168,7 @@ class RumbleCrawler(Crawler):
         video: dict[str, Any] = await self.request_json(api_url)
 
         if video.get("live") == LiveStatus.CURRENTLY_LIVE:
-            raise ScrapeError(422, "live videos are not supported")
+            raise ScrapeError(422, "livestreams are not supported")
 
         formats = Video.parse_formats(video.get("ua") or {})
         subs = Video.parse_subs(video.get("cc") or {})
