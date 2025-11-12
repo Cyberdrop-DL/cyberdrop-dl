@@ -86,6 +86,7 @@ from .postimg import PostImgCrawler
 from .realbooru import RealBooruCrawler
 from .reddit import RedditCrawler
 from .redgifs import RedGifsCrawler
+from .rootz import RootzCrawler
 from .rule34vault import Rule34VaultCrawler
 from .rule34video import Rule34VideoCrawler
 from .rule34xxx import Rule34XXXCrawler
