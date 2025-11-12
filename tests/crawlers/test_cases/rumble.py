@@ -34,4 +34,25 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://rumble.com/c/RumbleEvents",
+        [
+            {
+                "url": "https://1a-1791.com/video/s8/2/5/s/Q/8/5sQ8e.aaa.rec.mp4",
+                "filename": "CLOSING OUT Dave Rubin & Benny Johnson LIVE - Rumble Exclusive Live at TPU [v1at1kt][1080p].mp4",
+                "referer": "https://rumble.com/v1df7i1-rumble-exclusive-live-at-tpusa.html",
+                "album_id": None,
+            },
+            {
+                "url": "https://1a-1791.com/video/s8/2/p/W/J/7/pWJ7e.aaa.rec.mp4",
+                "filename": "Turning Point USA 2022 Student Action Summit DAY 1  - Rumble Exclusive Liv [v1amumr][1080p].mp4",
+                "referer": "https://rumble.com/v1d90jz-rumble-exclusive-live-at-tpusa.html",
+            },
+            {
+                "url": "https://1a-1791.com/video/s8/2/b/f/f/8/bff8e.aaa.rec.mp4",
+                "filename": "President Donald J. Trump LIVE at Turning Point - Rumble Exclusive Live at [v1apryd][1080p].mp4",
+                "referer": "https://rumble.com/v1dbxvl-rumble-exclusive-live-at-tpusa.html",
+            },
+        ],
+    ),
 ]
