@@ -43,6 +43,8 @@ class PixHostCrawler(Crawler):
                 return await self.gallery(scrape_item, gallery_id)
             case ["show", _, *_]:
                 return await self.image(scrape_item)
+            case ["images", _, *_]:
+                return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 
