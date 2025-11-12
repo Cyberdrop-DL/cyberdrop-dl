@@ -144,7 +144,7 @@ class RumbleCrawler(Crawler):
         if best_format.m3u8:
             ext = ".mp4"
         else:
-            _, ext = self.get_filename_and_ext(video.url.name)
+            _, ext = self.get_filename_and_ext(best_format.url.name)
 
         video_name = self.create_custom_filename(video.title, ext, file_id=embed_id, resolution=best_format.resolution)
         scrape_item.possible_datetime = self.parse_iso_date(video.upload_date)
@@ -173,7 +173,7 @@ class RumbleCrawler(Crawler):
 
         return Video(
             upload_date=video["pubDate"],
-            title=BeautifulSoup(video["title"]).get_text(),
+            title=BeautifulSoup(video["title"], "html.parser").get_text(),
             url=self.parse_url(video["l"]),
             best_format=await self._get_best_format(formats),
             subtitles=tuple(subs),
