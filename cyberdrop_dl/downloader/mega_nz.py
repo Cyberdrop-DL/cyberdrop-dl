@@ -164,6 +164,8 @@ class Chunk(NamedTuple):
 
 class Attributes(TypedDict):
     n: str  # name
+    c: str  # encoded hash # TODO: add decode logic
+    t: str | int  # encoded tags or timestamp
 
 
 class NodeType(IntEnum):
@@ -466,6 +468,9 @@ def _check_response_status(response: aiohttp.ClientResponse) -> None:
         raise DownloadError(response.status)
 
 
+_MEGA_NZ_LIMITER = AsyncLimiter(100, 60)
+
+
 class MegaApi:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
@@ -483,7 +488,7 @@ class MegaApi:
         self.root_id: str = ""
         self.inbox_id: str = ""
         self.trashbin_id: str = ""
-        self._limiter = AsyncLimiter(100, 60)
+        self._limiter = _MEGA_NZ_LIMITER
         self._files = {}
         self.shared_keys: SharedkeysDict
 

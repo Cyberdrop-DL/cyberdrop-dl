@@ -90,7 +90,7 @@ class NoodleMagazineCrawler(Crawler):
         best_source = max(Source.new(source) for source in playlist_data["sources"])
         title: str = css.select_one(soup, "title").get_text().split(" watch online")[0]
 
-        scrape_item.possible_datetime = self.parse_date(metadata["uploadDate"], "%Y-%m-%d")
+        scrape_item.possible_datetime = self.parse_iso_date(metadata["uploadDate"])
         content_url = self.parse_url(metadata["contentUrl"])
         filename, ext = self.get_filename_and_ext(content_url.name)
         video_id = filename.removesuffix(ext)

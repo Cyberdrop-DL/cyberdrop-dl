@@ -425,9 +425,9 @@ class Downloader:
                 await asyncio.to_thread(Path.chmod, media_item.complete_file, 0o666)
                 if not media_item.is_segment:
                     await self.set_file_datetime(media_item, media_item.complete_file)
-                    self.attempt_task_removal(media_item)
                     self.manager.progress_manager.download_progress.add_completed()
                     log(f"Download finished: {media_item.url}", 20)
+            self.attempt_task_removal(media_item)
             return downloaded
 
         except RestrictedFiletypeError:

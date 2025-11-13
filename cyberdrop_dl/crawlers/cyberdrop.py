@@ -12,8 +12,8 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-API_ENTRYPOINT = AbsoluteHttpURL("https://api.cyberdrop.me/api/")
-PRIMARY_URL = AbsoluteHttpURL("https://cyberdrop.me/")
+API_ENTRYPOINT = AbsoluteHttpURL("https://api.cyberdrop.cr/api/")
+PRIMARY_URL = AbsoluteHttpURL("https://cyberdrop.cr/")
 
 
 class Selectors:
@@ -35,6 +35,7 @@ class CyberdropCrawler(Crawler):
     DOMAIN: ClassVar[str] = "cyberdrop"
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 5, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
+    OLD_DOMAINS = ("cyberdrop.me",)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "a" in scrape_item.url.parts:
@@ -89,3 +90,8 @@ class CyberdropCrawler(Crawler):
 
         async with self.request(url) as resp:
             return resp.url
+
+
+def fix_db_referer(referer: str) -> str:
+    url = AbsoluteHttpURL(referer)
+    return str(CyberdropCrawler.transform_url(url))

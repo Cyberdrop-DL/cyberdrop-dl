@@ -18,6 +18,7 @@ from .coomer import CoomerCrawler
 from .crawler import Crawler
 from .cyberdrop import CyberdropCrawler
 from .cyberfile import CyberfileCrawler
+from .desivideo import DesiVideoCrawler
 from .dirtyship import DirtyShipCrawler
 from .discourse import DISCOURSE_CRAWLERS, DiscourseCrawler
 from .doodstream import DoodStreamCrawler
@@ -57,6 +58,7 @@ from .jpg5 import JPG5Crawler
 from .kemono import KemonoCrawler
 from .leakedzone import LeakedZoneCrawler
 from .luscious import LusciousCrawler
+from .masahub import MasahubCrawler
 from .mediafire import MediaFireCrawler
 from .mega_nz import MegaNzCrawler
 from .megacloud import MegaCloudCrawler
@@ -99,8 +101,11 @@ from .streamable import StreamableCrawler
 from .streamtape import StreamtapeCrawler
 from .thisvid import ThisVidCrawler
 from .tiktok import TikTokCrawler
+from .tnaflix import TNAFlixCrawler
 from .tokyomotion import TokioMotionCrawler
 from .toonily import ToonilyCrawler
+from .tranny_one import TrannyOneCrawler
+from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
@@ -111,6 +116,7 @@ from .wetransfer import WeTransferCrawler
 from .wordpress import WP_CRAWLERS, WordPressHTMLCrawler, WordPressMediaCrawler
 from .xbunkr import XBunkrCrawler
 from .xenforo import XF_CRAWLERS, SimpCityCrawler
+from .xgroovy import XGroovyCrawler
 from .xhamster import XhamsterCrawler
 from .xvideos import XVideosCrawler
 from .xxxbunker import XXXBunkerCrawler
