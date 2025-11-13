@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 class File(NamedTuple):
     name: str
     url: AbsoluteHttpURL
+    size: int
 
 
 class RootzCrawler(Crawler):
@@ -41,7 +42,7 @@ class RootzCrawler(Crawler):
 
         is_short_code = "-" not in file_id
         api_url = self._API_ENTRYPOINT / ("download-by-short" if is_short_code else "download") / file_id
-        name, url = await self._request_file(api_url)
+        name, url, _ = await self._request_file(api_url)
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, name, ext, debrid_link=url, custom_filename=filename)
 
@@ -50,6 +51,7 @@ class RootzCrawler(Crawler):
         return File(
             name=data.get("filename") or data["fileName"],
             url=self.parse_url(data["url"]),
+            size=data["size"],
         )
 
 
@@ -66,7 +68,7 @@ class RanozCrawler(RootzCrawler):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        name, _ = await self._request_file(self._API_ENTRYPOINT / file_id)
+        name, *_ = await self._request_file(self._API_ENTRYPOINT / file_id)
         url = self._FILE_SERVER / f"{file_id}-{name}"
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, name, ext, debrid_link=url, custom_filename=filename)
