@@ -427,7 +427,7 @@ class Downloader:
                     await self.set_file_datetime(media_item, media_item.complete_file)
                     self.manager.progress_manager.download_progress.add_completed()
                     log(f"Download finished: {media_item.url}", 20)
-                self.attempt_task_removal(media_item)
+            self.attempt_task_removal(media_item)
             return downloaded
 
         except RestrictedFiletypeError:
