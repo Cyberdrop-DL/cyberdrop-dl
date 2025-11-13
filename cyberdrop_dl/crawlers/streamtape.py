@@ -41,9 +41,9 @@ class StreamtapeCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        download_url = _extract_download_link(soup)
-        filename, ext = self.get_filename_and_ext(download_url.name)
-        return await self.handle_file(download_url, scrape_item, filename, ext)
+        link = _extract_download_link(soup)
+        filename, ext = self.get_filename_and_ext(link.name)
+        return await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=link)
 
 
 def _extract_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
