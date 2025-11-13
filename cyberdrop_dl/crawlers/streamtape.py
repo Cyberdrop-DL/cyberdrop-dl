@@ -52,5 +52,5 @@ class StreamtapeCrawler(Crawler):
 def _extract_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
     script = css.select_one_get_text(soup, Selector.JS_TOKEN)
     token = get_text_between(script, "&token=", "'")
-    url = css.select_one_get_text(soup, Selector.BAIT_LINK)
-    return parse_url(f"https:/{url}").update_query(token=token)
+    bait_url = css.select_one_get_text(soup, Selector.BAIT_LINK)
+    return parse_url(f"https:/{bait_url}").update_query(token=token)

@@ -5,10 +5,11 @@ TEST_CASES = [
         "https://streamtape.com/v/oelrLvaa3lIJyrR/TnkrBh.mp4",
         [
             {
-                "url": r"re:https://\d+\.tapecontent.net/radosgw/oelrLvaa3lIJyrR/.*?/TnkrBh\.mp4",
+                "url": "https://streamtape.com/v/oelrLvaa3lIJyrR",
                 "filename": "TnkrBh.mp4",
                 "referer": "https://streamtape.com/v/oelrLvaa3lIJyrR",
                 "datetime": None,
+                "debrid_link": "ANY",
             }
         ],
     ),
@@ -17,9 +18,10 @@ TEST_CASES = [
         "https://streamtape.com/e/oelrLvaa3lIJyrR",
         [
             {
-                "url": r"re:https://\d+\.tapecontent.net/radosgw/oelrLvaa3lIJyrR/.*?/TnkrBh\.mp4",
+                "url": "https://streamtape.com/v/oelrLvaa3lIJyrR",
                 "filename": "TnkrBh.mp4",
                 "referer": "https://streamtape.com/v/oelrLvaa3lIJyrR",
+                "debrid_link": "ANY",
                 "datetime": None,
             }
         ],
