@@ -1,39 +1,29 @@
 from __future__ import annotations
 
-import dataclasses
-import re
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
-from cyberdrop_dl.utils.utilities import error_handling_wrapper
+from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between, parse_url
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://streamtape.com")
-
-
-class RegexSelectors:
-    url_parts = re.compile(r"['\"]/+(.*?)['\"].*?\(['\"](.*?)['\"]\)")
-    url_part_removals = re.compile(r"substring\((\d+)\)")
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class LinkComponents:
-    part_one: str
-    part_two: str
-    removals: int
-
-
-_REGEX_SELECTORS = RegexSelectors()
+class Selector:
+    BAIT_LINK = "#ideoooolink"
+    JS_TOKEN = "script:-soup-contains(ideoooolink)"
 
 
 class StreamtapeCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Videos": "/v/", "Player": "/e/"}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Videos": "/v/<video_id>",
+        "Player": "/e/<video_id>",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://streamtape.com")
     DOMAIN: ClassVar[str] = "streamtape.com"
     FOLDER_DOMAIN: ClassVar[str] = "Streamtape"
 
@@ -46,31 +36,18 @@ class StreamtapeCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        scrape_item.url = PRIMARY_URL / "v" / video_id
+        scrape_item.url = self.PRIMARY_URL / "v" / video_id
         if await self.check_complete_from_referer(scrape_item):
             return
-        soup = await self.request_soup(scrape_item.url)
-        script = css.select_one(soup, "script:-soup-contains('document.getElementById(\"ideoooolink\").innerHTML')")
-        if script is None:
-            raise RuntimeError("Could not find video script")
-        generator_url = await self.decode_links(script.text)
-        download_url = await self._get_redirect_url(generator_url)
-        filename, ext = self.get_filename_and_ext(download_url.name)
 
+        soup = await self.request_soup(scrape_item.url)
+        download_url = _extract_download_link(soup)
+        filename, ext = self.get_filename_and_ext(download_url.name)
         return await self.handle_file(download_url, scrape_item, filename, ext)
 
-    async def decode_links(self, javascript: str) -> AbsoluteHttpURL:
-        scripts = javascript.split(";")[:-1]
-        encoded_links: list[LinkComponents] = []
-        decoded_links: list[AbsoluteHttpURL] = []
-        for script in scripts:
-            script = script.strip()
-            parts = _REGEX_SELECTORS.url_parts.search(script)
-            removals = _REGEX_SELECTORS.url_part_removals.findall(script)
-            if parts is not None:
-                encoded_links.append(LinkComponents(parts.group(1), parts.group(2), sum(int(num) for num in removals)))
-        for parts in encoded_links:
-            decoded_link = parts.part_one + parts.part_two[parts.removals :]
-            if decoded_link.startswith("streamtape.com/get_video?id="):
-                decoded_links.append(self.parse_url(f"https://{decoded_link}"))
-        return max(set(decoded_links), key=decoded_links.count)
+
+def _extract_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
+    script = css.select_one_get_text(soup, Selector.JS_TOKEN)
+    token = get_text_between(script, "&token=", "'")
+    url = css.select_one_get_text(soup, Selector.BAIT_LINK)
+    return parse_url(f"https:/{url}").update_query(token=token)
