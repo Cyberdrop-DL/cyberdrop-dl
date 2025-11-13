@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, NamedTuple, ParamSpec, TypeVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import CustomHTTPStatus
 from cyberdrop_dl.data_structures.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.exceptions import (
@@ -211,7 +212,7 @@ class Downloader:
     ) -> tuple[Path, Path | None, Path | None]:
         async def download(m3u8: M3U8):
             assert m3u8.media_type
-            download_folder = media_item.complete_file.with_suffix(".cdl_hls") / m3u8.media_type
+            download_folder = media_item.complete_file.with_suffix(constants.TempExt.HLS) / m3u8.media_type
             coros = self._prepare_hls_downloads(media_item, m3u8, download_folder)
             n_segmets = len(m3u8.segments)
             if n_segmets > 1:
@@ -266,7 +267,7 @@ class Downloader:
         def create_segments() -> Generator[HlsSegment]:
             for index, segment in enumerate(m3u8.segments, 1):
                 assert segment.uri
-                name = f"{index:0{padding}d}.cdl_hls"
+                name = f"{index:0{padding}d}{constants.TempExt.HLS}"
                 yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
 
         async def download_segment(segment: HlsSegment):

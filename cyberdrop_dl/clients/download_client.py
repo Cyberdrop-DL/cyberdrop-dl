@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
@@ -334,7 +335,8 @@ class DownloadClient:
     async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:
         """Complicated checker for if a file already exists, and was already downloaded."""
         media_item.complete_file = self.get_file_location(media_item)
-        media_item.partial_file = media_item.complete_file.with_suffix(media_item.complete_file.suffix + ".part")
+        part_suffix = media_item.complete_file.suffix + constants.TempExt.PART
+        media_item.partial_file = media_item.complete_file.with_suffix(part_suffix)
 
         expected_size = media_item.filesize
         proceed = True
@@ -423,7 +425,8 @@ class DownloadClient:
 
     async def iterate_filename(self, complete_file: Path, media_item: MediaItem) -> tuple[Path, Path]:
         """Iterates the filename until it is unique."""
-        partial_file = complete_file.with_suffix(complete_file.suffix + ".part")
+        part_suffix = complete_file.suffix + constants.TempExt.PART
+        partial_file = complete_file.with_suffix(part_suffix)
         for iteration in itertools.count(1):
             filename = f"{complete_file.stem} ({iteration}){complete_file.suffix}"
             temp_complete_file = media_item.download_folder / filename
@@ -433,7 +436,7 @@ class DownloadClient:
             ):
                 media_item.filename = filename
                 complete_file = media_item.download_folder / media_item.filename
-                partial_file = complete_file.with_suffix(complete_file.suffix + ".part")
+                partial_file = complete_file.with_suffix(part_suffix)
                 break
         return complete_file, partial_file
 
