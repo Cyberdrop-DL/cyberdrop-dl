@@ -1,20 +1,12 @@
-"""Real-Debrid API Implementation. All methods return their JSON response (if any).
-
-For details, visit: https://api.real-debrid.com
-
-All API methods require authentication except the regexes
-
-The API is limited to 250 requests per minute.
-"""
+"""https://api.real-debrid.com"""
 
 from __future__ import annotations
 
 import asyncio
 import re
-from re import Pattern
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.logger import log
@@ -23,7 +15,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://real-debrid.com")
+_PRIMARY_URL = AbsoluteHttpURL("https://real-debrid.com")
 _API_ENTRYPOINT = AbsoluteHttpURL("https://api.real-debrid.com/rest/1.0")
 _ERROR_CODES = {
     -1: "Internal error",
@@ -67,10 +59,10 @@ _ERROR_CODES = {
 
 
 class RealDebridCrawler(Crawler):
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
     DOMAIN: ClassVar[str] = "real-debrid"
     FOLDER_DOMAIN: ClassVar[str] = "RealDebrid"
-    _RATE_LIMIT = 250, 60
+    _RATE_LIMIT: ClassVar[RateLimit] = 250, 60
 
     @classmethod
     def _json_response_check(cls, json_resp: dict[str, Any]) -> None:
@@ -89,8 +81,11 @@ class RealDebridCrawler(Crawler):
         await self._get_regexes(_API_ENTRYPOINT)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "real-debrid" in scrape_item.url.host and not URLParser.is_unrestricted_download(scrape_item.url):
+        if "real-debrid" in scrape_item.url.host:
+            if URLParser.is_unrestricted_download(scrape_item.url):
+                return await self.direct_file(scrape_item)
             raise ValueError
+
         scrape_item.url = URLParser.reconstruct_original_url(scrape_item.url)
         if self.api.is_supported_folder(scrape_item.url):
             return await self.folder(scrape_item)
@@ -100,12 +95,8 @@ class RealDebridCrawler(Crawler):
     async def _get_regexes(self, *_) -> None:
         if self.disabled:
             return
-        try:
+        with self.disable_on_error("Setup failed. Unable to get URL regex"):
             await self.api.startup()
-        except Exception as e:
-            log(f"Failed RealDebrid setup: {e}", 40)
-            self.disabled = True
-            raise
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem) -> None:
@@ -122,34 +113,31 @@ class RealDebridCrawler(Crawler):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        original_url = scrape_item.url
-        if await self.check_complete_from_referer(original_url):
+        url = scrape_item.url
+        if await self.check_complete_from_referer(scrape_item):
             return
 
-        if URLParser.is_unrestricted_download(original_url):
-            database_url = debrid_url = original_url
-        else:
-            host = original_url.host
-            title = self.create_title(f"files [{host}]")
-            scrape_item.setup_as_album(title)
-            debrid_url = await self.api.unrestrict(original_url, scrape_item.password)
-            database_url = URLParser.flatten_url(original_url, host)
-
-        if await self.check_complete_from_referer(debrid_url):
-            return
-
-        log(f"Real Debrid:\n  Original URL: {original_url}\n  Debrid URL: {debrid_url}", 10)
-        filename, ext = self.get_filename_and_ext(debrid_url.name)
+        title = self.create_title(f"files [{url.host}]")
+        scrape_item.setup_as_album(title)
+        debrid_link = await self.api.unrestrict(url, scrape_item.password)
+        database_url = URLParser.flatten_url(url, url.host)
+        log(f"Real Debrid:\n  Original URL: {url}\n  Debrid URL: {debrid_link}", 10)
+        filename, ext = self.get_filename_and_ext(debrid_link.name)
         await self.handle_file(
-            database_url, scrape_item, debrid_url.name, ext, debrid_link=debrid_url, custom_filename=filename
+            database_url,
+            scrape_item,
+            debrid_link.name,
+            ext,
+            debrid_link=debrid_link,
+            custom_filename=filename,
         )
 
 
 class RealDebridAPI:
     def __init__(self, crawler: RealDebridCrawler, token: str) -> None:
         self._crawler = crawler
-        self._folder_regex: Pattern[str]
-        self._file_regex: Pattern[str]
+        self._folder_regex: re.Pattern[str]
+        self._file_regex: re.Pattern[str]
         self._headers = {"Authorization": f"Bearer {token}", "User-Agent": "CyberDrop-DL"}
 
     def is_supported(self, url: AbsoluteHttpURL) -> bool:
@@ -157,8 +145,7 @@ class RealDebridAPI:
         return bool(match) or "real-debrid" in url.host or self.is_supported_folder(url)
 
     def is_supported_folder(self, url: AbsoluteHttpURL) -> bool:
-        match = self._folder_regex.search(str(url))
-        return bool(match)
+        return bool(self._folder_regex.search(str(url)))
 
     async def startup(self) -> None:
         responses: tuple[list[str], list[str]] = await asyncio.gather(
@@ -168,7 +155,7 @@ class RealDebridAPI:
 
         file_regex = [pattern[1:-1] for pattern in responses[0]]
         folder_regex = [pattern[1:-1] for pattern in responses[1]]
-        self._file_regex = re.compile("|".join(file_regex + folder_regex))
+        self._file_regex = re.compile("|".join(file_regex))
         self._folder_regex = re.compile("|".join(folder_regex))
 
     async def unrestrict(self, url: AbsoluteHttpURL, password: str | None) -> AbsoluteHttpURL:
@@ -181,9 +168,9 @@ class RealDebridAPI:
         return await self._api_request("unrestrict/folder", url)
 
     async def _api_request(self, path: str, /, link: AbsoluteHttpURL | None = None, **data: Any) -> Any:
-        method = "POST" if data else "GET"
         if link:
             data["link"] = str(link)
+        method = "POST" if data else "GET"
         url = _API_ENTRYPOINT / path
         return await self._crawler.request_json(url, method, headers=self._headers, data=data or None)
 
@@ -215,7 +202,7 @@ class URLParser:
         """Reconstructs an URL that might have been flatten for the database."""
         if (
             len(url.parts) < 3
-            or url.host != PRIMARY_URL.host
+            or url.host != _PRIMARY_URL.host
             or url.parts[1].count(".") == 0
             or cls.is_unrestricted_download(url)
         ):
@@ -245,7 +232,7 @@ class URLParser:
     def flatten_url(cls, original_url: AbsoluteHttpURL, host: str) -> AbsoluteHttpURL:
         """Some hosts use query params or fragment as id or password (ex: mega.nz)
         This function flattens the query and fragment as parts of the URL path because database lookups only use the url path"""
-        flatten_url = PRIMARY_URL / host / original_url.path[1:]
+        flatten_url = _PRIMARY_URL / host / original_url.path[1:]
         if original_url.query:
             query_params = (item for pair in original_url.query.items() for item in pair)
             flatten_url = flatten_url / "query" / "/".join(query_params)
