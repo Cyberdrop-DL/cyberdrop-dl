@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between, parse_url
 
 if TYPE_CHECKING:
@@ -42,8 +42,11 @@ class StreamtapeCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         link = _extract_download_link(soup)
-        filename, ext = self.get_filename_and_ext(link.name)
-        return await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=link)
+        name = open_graph.title(soup)
+        filename, ext = self.get_filename_and_ext(name)
+        return await self.handle_file(
+            scrape_item.url, scrape_item, name, ext, debrid_link=link, custom_filename=filename
+        )
 
 
 def _extract_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
