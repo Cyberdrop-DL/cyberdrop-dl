@@ -227,7 +227,7 @@ class ScrapeMapper:
             self.manager.task_group.create_task(crawler_match.run(scrape_item))
             return
 
-        if not self.real_debrid.disabled and self.real_debrid.is_supported(scrape_item.url):
+        if not self.real_debrid.disabled and self.real_debrid.api.is_supported(scrape_item.url):
             log(f"Using RealDebrid for unsupported URL: {scrape_item.url}", 10)
             self.manager.task_group.create_task(self.real_debrid.run(scrape_item))
             return

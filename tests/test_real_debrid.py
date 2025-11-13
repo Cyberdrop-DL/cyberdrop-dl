@@ -57,7 +57,7 @@ from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 def test_decode_original_url(input_url_str: str, expected_url_str: str) -> None:
     input_url = AbsoluteHttpURL(input_url_str)
     expected_url = AbsoluteHttpURL(expected_url_str)
-    decoded_url = realdebrid._reconstruct_original_url(input_url)
+    decoded_url = realdebrid.URLParser.reconstruct_original_url(input_url)
     assert decoded_url == expected_url
 
 
@@ -102,5 +102,5 @@ def test_decode_original_url(input_url_str: str, expected_url_str: str) -> None:
 def test_encode_url(input_url_str: str, expected_url_str: str) -> None:
     input_url = AbsoluteHttpURL(input_url_str)
     expected_url = AbsoluteHttpURL(expected_url_str)
-    encoded_url = realdebrid._flatten_url(input_url, input_url.host)
+    encoded_url = realdebrid.URLParser.flatten_url(input_url, input_url.host)
     assert encoded_url == expected_url
