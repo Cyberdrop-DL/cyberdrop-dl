@@ -211,13 +211,16 @@ class Downloader:
     ) -> tuple[Path, Path | None, Path | None]:
         async def download(m3u8: M3U8):
             assert m3u8.media_type
+            if not m3u8.segments:
+                raise DownloadError(204, f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments")
+
             download_folder = media_item.complete_file.with_suffix(".cdl_hls") / m3u8.media_type
             coros = self._prepare_hls_downloads(media_item, m3u8, download_folder)
             n_segmets = len(m3u8.segments)
             if n_segmets > 1:
                 suffix = f".{m3u8.media_type}.ts"
             else:
-                suffix = media_item.complete_file.suffix + Path(m3u8.segments[0].absolute_uri).suffix
+                suffix = media_item.complete_file.suffix + parse_url(m3u8.segments[0].absolute_uri).suffix
 
             output = media_item.complete_file.with_suffix(suffix)
             if await asyncio.to_thread(output.is_file):
