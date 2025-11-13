@@ -64,7 +64,7 @@ class Video:
             try:
                 type_ = FormatType[type_.upper()]
             except KeyError:
-                raise ScrapeError(422, f"Video has an unknown format types: {type_}") from None
+                raise ScrapeError(422, f"Video has an unknown format type: {type_}") from None
 
             if isinstance(format_options, list):
                 pairs = ((None, f) for f in format_options)
@@ -199,7 +199,11 @@ class RumbleCrawler(Crawler):
 
         async def resolve_m3u8(format: Format) -> Format:
             m3u8, info = await self.get_m3u8_from_playlist_url(format.url)
-            return format._replace(resolution=info.resolution, m3u8=m3u8)
+            return format._replace(
+                resolution=info.resolution,
+                m3u8=m3u8,
+                bitrate=info.stream_info.bandwidth or 0,
+            )
 
         if hls_formats:
             hls_formats = await aio.gather([resolve_m3u8(f) for f in hls_formats])
