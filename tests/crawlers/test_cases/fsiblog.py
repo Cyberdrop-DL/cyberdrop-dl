@@ -6,7 +6,8 @@ TEST_CASES = [
         [
             {
                 "url": "https://cdn.fsiblog5.com/2025/06/chubby-boudi-pussy-fucking-xxx-with-neighbor.mp4",
-                "filename": "Chubby boudi pussy fucking xxx with neighbor.mp4",
+                "filename": "chubby-boudi-pussy-fucking-xxx-with-neighbor.mp4",
+                "download_folder": r"re:2025-06-23 - Chubby boudi pussy fucking xxx with neighbor \(FSIBlog\)",
                 "referer": "https://www.fsiblog5.com/bangla-sex-video/chubby-boudi-pussy-fucking-xxx/",
                 "datetime": 1750674625,
             }
