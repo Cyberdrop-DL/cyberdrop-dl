@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -9,24 +8,16 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-
-
-PRIMARY_URL = AbsoluteHttpURL("https://fsiblog5.com")
-
-
-class PostType(StrEnum):
-    VIDEO = "3356d45d"
-    IMAGES = "1beff4ae"
-    STORY = "4683db71"
 
 
 class FSIBlogCrawler(Crawler):
     SUPPORTED_DOMAINS = "fsiblog5.com", "fsiblog5.club"
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Posts": "/<category>/<title>", "Search": "?s=<query>"}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Posts": "/<category>/<title>",
+        "Search": "?s=<query>",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fsiblog5.com")
     DOMAIN: ClassVar[str] = "fsiblog.com"
     FOLDER_DOMAIN: ClassVar[str] = "FSIBlog"
     OLD_DOMAINS = (
@@ -41,75 +32,39 @@ class FSIBlogCrawler(Crawler):
         "fsiblog3.club",
         "fsiblog4.club",
     )
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title}"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if query := scrape_item.url.query.get("s"):
             return await self.search(scrape_item, query)
         if len(scrape_item.url.parts) == 3:
-            return await self.filter(scrape_item)
+            return await self.post(scrape_item)
         raise ValueError
 
-    @error_handling_wrapper
-    async def filter(self, scrape_item: ScrapeItem, post_type: str | None = None) -> None:
-        if not post_type:
-            soup = await self.request_soup(scrape_item.url)
-            post_type = soup.select_one("section.elementor-section.elementor-inner-section").get("data-id")
+    @property
+    def separate_posts(self) -> bool:
+        return True
 
-        post_type = PostType(post_type)
-        if post_type is PostType.VIDEO:
-            return await self.video(scrape_item, soup)
-        if post_type is PostType.IMAGES:
-            return await self.images(scrape_item, soup)
-        if post_type is PostType.STORY:
-            return await self.story(scrape_item, soup)
+    @error_handling_wrapper
+    async def post(self, scrape_item: ScrapeItem) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        meta: dict[str, str] = css.get_json_ld(soup)["@graph"][0]
+        name = meta["name"].rpartition("-")[0]
+        scrape_item.possible_datetime = date = self.parse_iso_date(meta["datePublished"])
+        title = self.create_separate_post_title(name, None, date)
+        scrape_item.setup_as_album(self.create_title(title))
+
+        if video := open_graph.get("video", soup):
+            link = self.parse_url(video)
+            self.create_task(self.direct_file(scrape_item, link))
+
+        for _, image in self.iter_tags(soup, "a.elementor-gallery-item"):
+            self.create_task(self.direct_file(scrape_item, image))
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(query)
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url, next_page_selector="a.next"):
-            for post in soup.select("div.elementor-posts-container > article > div > a"):
-                post_type = PostType(css.get_attr(post.parent, "data-id"))
-                post_link = self.parse_url(css.get_attr(post, "href"))
-                new_scrape_item = scrape_item.create_child(post_link)
-                self.create_task(self.filter(new_scrape_item, post_type))
-
-    @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
-        if await self.check_complete_from_referer(scrape_item):
-            return
-        soup = soup or await self.request_soup(scrape_item.url)
-
-        metadata = self.read_metadata(soup)
-        published_date = metadata[0]["datePublished"]
-        scrape_item.possible_datetime = self.parse_iso_date(published_date)
-
-        video_url = self.parse_url(open_graph.get("video", soup))
-        title = soup.select_one("h1.elementor-heading-title").text.strip()
-        filename, ext = self.get_filename_and_ext(video_url.name)
-        custom_filename = self.create_custom_filename(title, ext)
-        return await self.handle_file(video_url, scrape_item, filename, ext, custom_filename=custom_filename)
-
-    @error_handling_wrapper
-    async def images(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
-        soup = soup or await self.request_soup(scrape_item.url)
-        title = self.create_title(soup.select_one("h1.elementor-heading-title").text.strip())
-        scrape_item.setup_as_album(title)
-
-        metadata = self.read_metadata(soup)
-        published_date = metadata[0]["datePublished"]
-        scrape_item.possible_datetime = self.parse_iso_date(published_date)
-
-        image_list = soup.select("a.elementor-gallery-item")
-        for image in image_list:
-            image_url = self.parse_url(image.get("href"))
-            filename, ext = self.get_filename_and_ext(image_url.name)
-            await self.handle_file(image_url, scrape_item, filename, ext)
-
-    @error_handling_wrapper
-    async def story(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
-        raise NotImplementedError
-
-    @staticmethod
-    def read_metadata(soup: BeautifulSoup) -> dict[str, str]:
-        return css.get_json_ld(soup)["@graph"]
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, ".elementor-post__title a"):
+                self.create_task(self.post(new_scrape_item))
