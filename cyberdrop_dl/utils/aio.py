@@ -12,12 +12,12 @@ from typing import TYPE_CHECKING, Final, Generic, ParamSpec, TypeVar, cast
 
 from cyberdrop_dl.utils.logger import log_debug
 
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+_R = TypeVar("_R")
+
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Sequence
-
-    _P = ParamSpec("_P")
-    _T = TypeVar("_T")
-    _R = TypeVar("_R")
 
 
 async def gather(coros: Sequence[Awaitable[_T]], batch_size: int = 10) -> list[_T]:
