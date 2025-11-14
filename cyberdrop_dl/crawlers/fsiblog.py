@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+
+class Selector:
+    IMAGES = "a.elementor-gallery-item"
+    NEXT_PAGE = "a.next"
+    ARTICLE = ".elementor-post__title a"
 
 
 class FSIBlogCrawler(Crawler):
@@ -33,6 +39,7 @@ class FSIBlogCrawler(Crawler):
         "fsiblog4.club",
     )
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title}"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if query := scrape_item.url.query.get("s"):
@@ -58,13 +65,15 @@ class FSIBlogCrawler(Crawler):
             link = self.parse_url(video)
             self.create_task(self.direct_file(scrape_item, link))
 
-        for _, image in self.iter_tags(soup, "a.elementor-gallery-item"):
+        for _, image in self.iter_tags(soup, Selector.IMAGES):
             self.create_task(self.direct_file(scrape_item, image))
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(query)
         scrape_item.setup_as_album(title)
-        async for soup in self.web_pager(scrape_item.url, next_page_selector="a.next"):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, ".elementor-post__title a"):
-                self.create_task(self.post(new_scrape_item))
+        async for soup in self.web_pager(scrape_item.url):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ARTICLE):
+                self.create_task(self._post_task(new_scrape_item))
+
+    _post_task = auto_task_id(post)
