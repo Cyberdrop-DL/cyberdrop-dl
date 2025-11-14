@@ -402,8 +402,8 @@ class Downloader:
 
         if not media_item.is_segment:
             log(f"{self.log_prefix} starting: {media_item.url}", 20)
-        lock = self._file_lock_vault.get_lock(media_item.filename)
-        async with lock:
+
+        async with self._file_lock_vault.lock(media_item.filename):
             return bool(await self.download(media_item))
 
     @error_handling_wrapper
