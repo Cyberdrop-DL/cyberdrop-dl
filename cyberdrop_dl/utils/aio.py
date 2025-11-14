@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import builtins
+import contextlib
 import pathlib
+import weakref
 from stat import S_ISREG
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Final, Generic, ParamSpec, TypeVar, cast
+
+from cyberdrop_dl.utils.logger import log_debug
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Sequence
+    from collections.abc import AsyncGenerator, Awaitable, Sequence
 
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
@@ -79,3 +83,30 @@ async def get_size(path: pathlib.Path) -> int | None:
     else:
         if S_ISREG(stat_result.st_mode):
             return stat_result.st_size
+
+
+class WeakAsyncLocks(Generic[_T]):
+    """A WeakValueDictionary wrapper for asyncio.Locks.
+
+    Unused locks are automatically garbage collected. When trying to retrieve a
+    lock that does not exists, a new lock will be created.
+    """
+
+    slots: Final = ("__locks",)
+
+    def __init__(self) -> None:
+        self.__locks: Final = weakref.WeakValueDictionary[_T, asyncio.Lock]()
+
+    def __getitem__(self, key: _T, /) -> asyncio.Lock:
+        lock = self.__locks.get(key)
+        if lock is None:
+            self.__locks[key] = lock = asyncio.Lock()
+        return lock
+
+    @contextlib.asynccontextmanager
+    async def lock(self, key: _T) -> AsyncGenerator[None]:
+        """Acquire a lock and log it"""
+        async with self[key]:
+            log_debug(f"Lock for {key!r} acquired", 20)
+            yield
+            log_debug(f"Lock for {key!r} released", 20)
