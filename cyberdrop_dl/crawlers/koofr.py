@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 from typing import Any, ClassVar, Literal
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import DownloadError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, type_adapter
@@ -20,14 +19,11 @@ class Node:
     name: str
     type: Literal["file", "dir"]
     modified: int
-    size: int
-    contentType: str  # noqa: N815
     hash: str  # md5
 
 
 @dataclasses.dataclass(slots=True)
 class Folder:
-    id: str
     name: str
     file: Node
     root_id: str = ""
@@ -42,7 +38,7 @@ _parse_node = type_adapter(Node)
 class KooFrCrawler(Crawler):
     SUPPORTED_DOMAIN = "koofr.net", "koofr.eu", _SHORT_LINK_CDN.host
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File": (
+        "File / Folder": (
             "/links/<content_id>",
             f"{_SHORT_LINK_CDN}/<short_id>",
         ),
@@ -83,18 +79,20 @@ class KooFrCrawler(Crawler):
     @error_handling_wrapper
     async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder, path: str):
         children = await self.api.get_children(folder, path)
-        async with asyncio.TaskGroup() as tg:
-            for node in children:
-                if node.type == "file":
-                    tg.create_task(self._file(scrape_item, node))
-                    continue
+        for node in children:
+            if node.type == "file":
+                self.create_task(self._file(scrape_item, node))
+                continue
 
-                else:
-                    new_path = f"{path}/{node.name}"
-                    new_scrape_item = scrape_item.create_child(scrape_item.url.update_query(path=path))
-                    new_scrape_item.add_to_parent_title(node.name)
-                    tg.create_task(self._walk_folder(new_scrape_item, folder, new_path))
-                scrape_item.add_children()
+            else:
+                new_path = f"{path}/{node.name}"
+                new_scrape_item = scrape_item.create_child(scrape_item.url.update_query(path=path))
+                new_scrape_item.add_to_parent_title(node.name)
+                self.create_task(self._walk_folder_task(new_scrape_item, folder, new_path))
+
+            scrape_item.add_children()
+
+    _walk_folder_task = auto_task_id(_walk_folder)
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node) -> None:
