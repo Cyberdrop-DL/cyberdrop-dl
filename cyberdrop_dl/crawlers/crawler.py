@@ -259,7 +259,7 @@ class Crawler(ABC):
             if self._DOWNLOAD_SLOTS:
                 self.manager.client_manager.download_slots[self.DOMAIN] = self._DOWNLOAD_SLOTS
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.manager.client_manager.download_client._use_server_locks.add(self.DOMAIN)
+                self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
             self.downloader = self._init_downloader()
             self._register_response_checks()
             await self.async_startup()

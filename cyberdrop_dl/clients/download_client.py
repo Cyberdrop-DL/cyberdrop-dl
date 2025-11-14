@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import itertools
 import time
-import weakref
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -13,6 +12,7 @@ import aiofiles
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.dates import parse_http_date
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import get_size_or_none
@@ -35,6 +35,7 @@ _CHROME_ANDROID_USER_AGENT: str = (
     "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.180 Mobile Safari/537.36"
 )
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
+_NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
 
 
 class DownloadClient:
@@ -44,17 +45,12 @@ class DownloadClient:
         self.manager = manager
         self.client_manager = client_manager
         self.download_speed_threshold = self.manager.config_manager.settings_data.runtime_options.slow_download_speed
-        self._null_context = contextlib.nullcontext()
-        self._server_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
-        self._use_server_locks: set[str] = set()
+        self._server_locks = WeakAsyncLocks[str]()
+        self.server_locked_domains: set[str] = set()
 
     def server_limiter(self, domain: str, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
-        if domain not in self._use_server_locks:
-            return self._null_context
-
-        if server not in self._server_locks:
-            lock = asyncio.Lock()
-            self._server_locks[server] = lock
+        if domain not in self.server_locked_domains:
+            return _NULL_CONTEXT
 
         log_debug(f"Using lock for server '{server}'", 20)
         return self._server_locks[server]
