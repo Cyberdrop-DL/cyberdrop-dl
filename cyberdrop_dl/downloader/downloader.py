@@ -21,6 +21,7 @@ from cyberdrop_dl.exceptions import (
     DurationError,
     ErrorLogMessage,
     InvalidContentTypeError,
+    RestrictedDateRangeError,
     RestrictedFiletypeError,
     TooManyCrawlerErrors,
 )
@@ -309,6 +310,8 @@ class Downloader:
             raise RestrictedFiletypeError(origin=media_item)
         if not self.manager.client_manager.pre_check_duration(media_item):
             raise DurationError(origin=media_item)
+        if not self.manager.client_manager.check_allowed_date_range(media_item):
+            raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
         """Sets the file's datetime."""
@@ -422,9 +425,9 @@ class Downloader:
                 await asyncio.to_thread(Path.chmod, media_item.complete_file, 0o666)
                 if not media_item.is_segment:
                     await self.set_file_datetime(media_item, media_item.complete_file)
-                    self.attempt_task_removal(media_item)
                     self.manager.progress_manager.download_progress.add_completed()
                     log(f"Download finished: {media_item.url}", 20)
+            self.attempt_task_removal(media_item)
             return downloaded
 
         except RestrictedFiletypeError:
@@ -432,6 +435,16 @@ class Downloader:
                 log(f"Download skip {media_item.url} due to ignore_extension config ({media_item.ext})", 10)
                 self.manager.progress_manager.download_progress.add_skipped()
                 self.attempt_task_removal(media_item)
+
+        except RestrictedDateRangeError:
+            timestamp_str = (
+                datetime.fromtimestamp(media_item.datetime).strftime("%Y-%m-%d %H:%M:%S")
+                if media_item.datetime
+                else "Unknown date"
+            )
+            log(f"Download skip {media_item.url} due to exclude_posts_date config ({timestamp_str})", 10)
+            self.manager.progress_manager.download_progress.add_skipped()
+            self.attempt_task_removal(media_item)
 
         except (DownloadError, ClientResponseError, InvalidContentTypeError):
             raise

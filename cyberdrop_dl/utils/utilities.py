@@ -4,7 +4,6 @@ import contextlib
 import dataclasses
 import inspect
 import itertools
-import json
 import os
 import platform
 import re
@@ -28,7 +27,7 @@ from typing import (
     overload,
 )
 
-from aiohttp import ClientConnectorError
+from aiohttp import ClientConnectorError, TooManyRedirects
 from pydantic import ValidationError
 from yarl import URL
 
@@ -44,13 +43,14 @@ from cyberdrop_dl.exceptions import (
     create_error_msg,
     get_origin,
 )
+from cyberdrop_dl.utils import json
 from cyberdrop_dl.utils.logger import log, log_with_color
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator, Iterable, Mapping
 
     from cyberdrop_dl.crawlers import Crawler
-    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, AnyURL, MediaItem, ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
     from cyberdrop_dl.downloader.downloader import Downloader
     from cyberdrop_dl.managers.manager import Manager
 
@@ -87,6 +87,10 @@ def error_handling_context(self: Crawler | Downloader, item: ScrapeItem | MediaI
     except NotImplementedError as e:
         error_log_msg = ErrorLogMessage("NotImplemented")
         exc_info = e
+    except TooManyRedirects as e:
+        ui_failure = "Too Many Redirects"
+        info = json.dumps({"url": e.request_info.real_url, "history": [r.real_url for r in e.history]}, indent=4)
+        error_log_msg = ErrorLogMessage(ui_failure, f"{ui_failure}\n{info}")
     except TimeoutError as e:
         error_log_msg = ErrorLogMessage("Timeout", repr(e))
     except ClientConnectorError as e:
@@ -396,7 +400,7 @@ def is_absolute_http_url(url: URL) -> TypeGuard[AbsoluteHttpURL]:
     return url.absolute and url.scheme.startswith("http")
 
 
-def remove_trailing_slash(url: AnyURL) -> AnyURL:
+def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     if url.name or url.path == "/":
         return url
     return url.parent.with_fragment(url.fragment).with_query(url.query)
