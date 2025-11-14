@@ -92,7 +92,7 @@ class WeakAsyncLocks(Generic[_T]):
     lock that does not exists, a new lock will be created.
     """
 
-    slots: Final = ("__locks",)
+    __slots__ = ("__locks",)
 
     def __init__(self) -> None:
         self.__locks: Final = weakref.WeakValueDictionary[_T, asyncio.Lock]()
