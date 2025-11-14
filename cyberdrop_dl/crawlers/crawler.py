@@ -23,7 +23,6 @@ from cyberdrop_dl.data_structures.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, copy_signature
 from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
-from cyberdrop_dl.scraper import filters
 from cyberdrop_dl.utils import css, m3u8
 from cyberdrop_dl.utils.dates import TimeStamp, parse_human_date, to_timestamp
 from cyberdrop_dl.utils.logger import log, log_debug
@@ -48,10 +47,9 @@ _T_co = TypeVar("_T_co", covariant=True)
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine, Generator, Iterable
+    from collections.abc import AsyncGenerator, Callable, Coroutine, Generator, Iterable
     from http.cookies import BaseCookie
 
-    from aiohttp_client_cache.response import AnyResponse
     from bs4 import BeautifulSoup, Tag
     from rich.progress import TaskID
 
@@ -583,7 +581,7 @@ class Crawler(ABC):
             trim = self.DEFAULT_TRIM_URLS
         return parse_url(link_str, base, trim=trim)
 
-    def update_cookies(self, cookies: dict, url: URL | None = None) -> None:
+    def update_cookies(self, cookies: dict[str, Any], url: URL | None = None) -> None:
         """Update cookies for the provided URL
 
         If `url` is `None`, defaults to `self.PRIMARY_URL`
@@ -743,12 +741,6 @@ class Crawler(ABC):
             raise ScrapeError(422, "Infinite redirect")
         scrape_item.url = redirect
         self.create_task(self.run(scrape_item))
-
-    @staticmethod
-    def register_cache_filter(
-        url: URL, filter_fn: Callable[[AnyResponse], bool] | Callable[[AnyResponse], Awaitable[bool]]
-    ) -> None:
-        filters.cache_filter_functions[url.host] = filter_fn
 
     async def get_m3u8_from_playlist_url(
         self,

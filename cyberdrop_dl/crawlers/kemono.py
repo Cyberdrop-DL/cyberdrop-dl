@@ -24,7 +24,6 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper, remove_parts
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine, Generator
 
-    from aiohttp_client_cache.response import AnyResponse
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
@@ -207,14 +206,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         return self.manager.config.ignore_options.ignore_coomer_ads
 
     async def async_startup(self) -> None:
-        def check_kemono_page(response: AnyResponse) -> bool:
-            if any(x in response.url.parts for x in self.SERVICES):
-                return False
-            if "discord/channel" in response.url.path:
-                return False
-            return True
-
-        self.register_cache_filter(self.PRIMARY_URL, check_kemono_page)
         if getattr(self, "API_ENTRYPOINT", None):
             await self._get_usernames(self.API_ENTRYPOINT / "creators")
 
@@ -479,7 +470,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             server_profile: dict[str, Any] = await self.__api_request(server_api_url)
             name = server_profile.get("name") or f"Discord Server {server_id}"
             channels_api_url = self.API_ENTRYPOINT / "discord/channel/lookup" / server_id
-            channels_resp: list[dict] = await self.__api_request(channels_api_url)
+            channels_resp: list[dict[str, Any]] = await self.__api_request(channels_api_url)
             channels = tuple(DiscordChannel(channel["name"], channel["id"]) for channel in channels_resp)
             self.__known_discord_servers[server_id] = server = DiscordServer(name, server_id, channels)
             return server
@@ -572,7 +563,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             id=post_id,
             title=partial_post.title,
             content=partial_post.content,
-            published_or_added=partial_post.date,  # type: ignore[reportArgumentType]
+            published_or_added=partial_post.date,  # pyright: ignore[reportArgumentType]
             soup_attachments=list(files()),
         )
 

@@ -30,7 +30,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_betwee
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Sequence
 
-    from aiohttp_client_cache.response import AnyResponse
+    from aiohttp import ClientResponse
 
     from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 
@@ -390,14 +390,6 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     def __post_init__(self) -> None:
         self.scraped_threads = set()
 
-    @final
-    async def async_startup(self) -> None:
-        await super().async_startup()
-        self.register_cache_filter(self.PRIMARY_URL, self.check_is_not_last_page)
-
-    async def check_is_not_last_page(self, response: AnyResponse) -> bool:
-        return await check_is_not_last_page(response, self.SELECTORS)
-
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
         return False
@@ -659,7 +651,7 @@ def get_thread_page_and_post(
     return page_number, post_id
 
 
-async def check_is_not_last_page(response: AnyResponse, selectors: MessageBoardSelectors) -> bool:
+async def check_is_not_last_page(response: ClientResponse, selectors: MessageBoardSelectors) -> bool:
     soup = BeautifulSoup(await response.text(), "html.parser")
     return not is_last_page(soup, selectors)
 

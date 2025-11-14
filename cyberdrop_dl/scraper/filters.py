@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import datetime
-import inspect
-from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from yarl import URL
 
-import cyberdrop_dl.constants as constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import NoExtensionError
@@ -16,12 +13,8 @@ from cyberdrop_dl.utils.utilities import get_filename_and_ext
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from aiohttp import ClientResponse
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-
-return_values: dict[AbsoluteHttpURL | str, tuple] = {}
 
 MEDIA_EXTENSIONS = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"] | FILE_FORMATS["Audio"]
 
@@ -69,22 +62,3 @@ def has_valid_extension(url: URL, forum: bool = False) -> bool:
         return False
     else:
         return ext in MEDIA_EXTENSIONS
-
-
-cache_filter_functions = {}
-HTTP_404_LIKE_STATUS = {HTTPStatus.NOT_FOUND, HTTPStatus.GONE, HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS}
-
-
-async def cache_filter_fn(response: ClientResponse) -> bool:
-    """Filter function for aiohttp_client_cache"""
-    if constants.DISABLE_CACHE:
-        return False
-
-    if response.status in HTTP_404_LIKE_STATUS:
-        return True
-
-    filter_fn = cache_filter_functions.get(response.url.host)
-    if filter_fn:
-        return await filter_fn(response) if inspect.iscoroutinefunction(filter_fn) else filter_fn(response)
-
-    return False
