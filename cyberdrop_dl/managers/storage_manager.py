@@ -161,8 +161,19 @@ class StorageManager:
         async with self._mount_addition_locks[mount]:
             if mount not in self._free_space:
                 # Manually query this mount now. Next time it will be part of the loop
-                result = await asyncio.to_thread(psutil.disk_usage, str(mount))
-                self._free_space[mount] = result.free
+                try:
+                    result = await asyncio.to_thread(psutil.disk_usage, str(mount))
+                    free_space = result.free
+                except OSError as e:
+                    if "operation not supported" in str(e).casefold():
+                        msg = f"Unable to get free space from mount point ('{mount!s}')'. Skipping free space check"
+                        log(msg, 40, exc_info=e)
+
+                        free_space = 0
+                    else:
+                        raise
+
+                self._free_space[mount] = free_space
                 self._used_mounts.add(mount)
                 log(f"A new mountpoint ('{mount!s}') will be used for '{folder}'")
                 log(self._simplified_stats)
