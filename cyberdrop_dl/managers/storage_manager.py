@@ -82,8 +82,9 @@ class StorageManager:
         """Returns information of every used mount + its free space."""
 
         for partition in self._partitions:
-            free_space = ByteSize(self._free_space[partition.mountpoint])
-            yield MountStats(partition, free_space)
+            free_space =  self._free_space.get(partition.mountpoint)
+            if free_space is not None:
+                yield MountStats(partition, ByteSize(free_space))
 
     async def check_free_space(self, media_item: MediaItem) -> None:
         """Checks if there is enough free space to download this item."""
