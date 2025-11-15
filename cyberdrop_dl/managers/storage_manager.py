@@ -4,10 +4,9 @@ import asyncio
 import itertools
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
-from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 import psutil
 from pydantic import ByteSize
@@ -27,39 +26,45 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, slots=True, order=True)
 class DiskPartition:
     mountpoint: Path
-    device: Path = field(compare=False, hash=False)
-    fstype: str = field(compare=False, hash=False)
-    opts: str = field(compare=False, hash=False)
+    device: Path = field(compare=False)
+    fstype: str = field(compare=False)
+    opts: str = field(compare=False)
 
-    @classmethod
-    def from_psutil(cls, diskpart: sdiskpart) -> DiskPartition:
-        def resolve(path: str):
-            # Resolve converts any mapped drive to UNC paths (windows)
-            return Path(path).resolve()
-
-        device, mount = tuple(map(resolve, diskpart[:2]))
-        return DiskPartition(mount, device, *diskpart[2:4])
+    @staticmethod
+    def from_psutil(diskpart: sdiskpart) -> DiskPartition:
+        # Resolve converts any mapped drive to UNC paths (windows)
+        return DiskPartition(
+            Path(diskpart.mountpoint).resolve(),
+            Path(diskpart.device).resolve(),
+            diskpart.fstype,
+            diskpart.opts,
+        )
 
 
 class MountStats(NamedTuple):
     partition: DiskPartition
     free_space: ByteSize
 
+    def __str__(self) -> str:
+        free_space = self.free_space.human_readable(decimal=True)
+        stats_as_dict = asdict(self.partition) | {"free_space": free_space}
+        return ", ".join(f"'{k}': '{v}'" for k, v in stats_as_dict.items())
+
+
+_CHECK_PERIOD: Final = 2  # how often the check_free_space_loop will run (in seconds)
+_LOG_PERIOD: Final = 10  # log storage details every <x> loops, AKA log every 20 (2x10) seconds,
+
 
 class StorageManager:
     """Runs an infinite loop to keep an updated value of the available space on all storage devices."""
 
     def __init__(self, manager: Manager):
-        self.manager = manager
+        self.manager: Manager = manager
         self.total_data_written: int = 0
-        self._paused_datetime = None
         self._used_mounts: set[Path] = set()
         self._free_space: dict[Path, int] = {}
         self._mount_addition_locks: dict[Path, asyncio.Lock] = defaultdict(asyncio.Lock)
-        self._updated = asyncio.Event()
-        self._period: int = 2  # how often the check_free_space_loop will run (in seconds)
-        self._log_period: int = 10  # log storage details every <x> loops, AKA log every 20 (2x10) seconds,
-        self._timedelta_period = timedelta(seconds=self._period)
+        self._updated: asyncio.Event = asyncio.Event()
         self._partitions = list(_get_disk_partitions())
         self._loop = asyncio.create_task(self._check_free_space_loop())
         self._unavailable_mounts: set[Path] = set()
@@ -70,24 +75,15 @@ class StorageManager:
 
     @property
     def _simplified_stats(self) -> str:
-        def stringify(mount_stats: MountStats) -> str:
-            free_space = mount_stats.free_space.human_readable(decimal=True)
-            stats_as_dict = asdict(mount_stats.partition) | {"free_space": free_space}
-            return ", ".join(f"'{k}': '{v}'" for k, v in stats_as_dict.items())
-
-        stats_as_str = "\n".join(f"    {stringify(mount_stats)}" for mount_stats in self.get_used_mounts_stats())
+        stats_as_str = "\n".join(f"    {mount_stats!s}" for mount_stats in self._mount_stats())
         return f"Storage status:\n {stats_as_str}"
 
-    def get_used_mounts_stats(self) -> list[MountStats]:
+    def _mount_stats(self) -> Generator[MountStats]:
         """Returns information of every used mount + its free space."""
 
-        def get_mounts():
-            for mount in self._used_mounts:
-                free_space = ByteSize(self._free_space[mount])
-                partition = next(p for p in self._partitions if p.mountpoint == mount)
-                yield MountStats(partition, free_space)
-
-        return list(get_mounts())
+        for partition in self._partitions:
+            free_space = ByteSize(self._free_space[partition.mountpoint])
+            yield MountStats(partition, free_space)
 
     async def check_free_space(self, media_item: MediaItem) -> None:
         """Checks if there is enough free space to download this item."""
@@ -129,6 +125,7 @@ class StorageManager:
         async with self._mount_addition_locks[folder_drive]:
             if folder_drive in itertools.chain(self._unavailable_mounts, self.mounts):
                 return
+
             msg = f"Checking new possible network_drive: '{folder_drive}' for folder '{folder}'"
             log_debug(msg)
 
@@ -136,9 +133,11 @@ class StorageManager:
                 is_dir = await asyncio.to_thread(folder_drive.is_dir)
             except OSError:
                 is_dir = False
+
             if is_dir:
                 net_drive = DiskPartition(folder_drive, folder_drive, "network_drive", "")
                 self._partitions.append(net_drive)
+
             else:
                 self._unavailable_mounts.add(folder_drive)
 
@@ -148,7 +147,7 @@ class StorageManager:
         `folder` must be an absolute path"""
 
         await self._check_nt_network_drive(folder)
-        mount = get_mount_point(folder, self.mounts)
+        mount = _get_mount_point(folder, self.mounts)
         if not mount:
             return False
 
@@ -210,15 +209,15 @@ class StorageManager:
                 results = await asyncio.gather(*tasks)
                 for mount, free_space in zip(used_mounts, results, strict=True):
                     self._free_space[mount] = free_space
-                if last_check % self._log_period == 0:
+                if last_check % _LOG_PERIOD == 0:
                     log_debug(self._simplified_stats)
 
             self._updated.set()
-            await asyncio.sleep(self._period)
+            await asyncio.sleep(_CHECK_PERIOD)
 
 
 @lru_cache
-def get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
+def _get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
     # Cached for performance.
     # It's not an expensive operation nor IO blocking, but it's very common for multiple files to share the same download folder
     # ex: HLS downloads could have over a thousand segments. All of them will go to the same folder
