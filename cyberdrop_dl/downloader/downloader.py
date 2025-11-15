@@ -315,6 +315,9 @@ class Downloader:
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
         """Sets the file's datetime."""
+        if media_item.is_segment:
+            return
+
         if self.manager.config_manager.settings_data.download_options.disable_file_timestamps:
             return
         if not media_item.datetime:

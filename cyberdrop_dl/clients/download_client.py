@@ -135,7 +135,11 @@ class DownloadClient:
             if resp.status != HTTPStatus.PARTIAL_CONTENT:
                 await asyncio.to_thread(media_item.partial_file.unlink, missing_ok=True)
 
-            if not media_item.datetime and (last_modified := get_last_modified(resp.headers)):
+            if (
+                not media_item.is_segment
+                and not media_item.datetime
+                and (last_modified := get_last_modified(resp.headers))
+            ):
                 msg = f"Unable to parse upload date for {media_item.url}, using `Last-Modified` header as file datetime"
                 log(msg, 30)
                 media_item.datetime = last_modified
