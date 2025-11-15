@@ -193,8 +193,7 @@ class StorageManager:
             except ValueError:
                 continue
             else:
-                if "fuse" in p.fstype:
-                    return True
+                return "fuse" in p.fstype
         return False
 
     async def _check_free_space_loop(self) -> None:
