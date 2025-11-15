@@ -60,9 +60,7 @@ class StorageManager:
         self._period: int = 2  # how often the check_free_space_loop will run (in seconds)
         self._log_period: int = 10  # log storage details every <x> loops, AKA log every 20 (2x10) seconds,
         self._timedelta_period = timedelta(seconds=self._period)
-
         self._partitions = list(_get_disk_partitions())
-
         self._loop = asyncio.create_task(self._check_free_space_loop())
         self._unavailable_mounts: set[Path] = set()
 
@@ -82,13 +80,14 @@ class StorageManager:
 
     def get_used_mounts_stats(self) -> list[MountStats]:
         """Returns information of every used mount + its free space."""
-        mounts_stats: list[MountStats] = []
-        for mount in self._used_mounts:
-            free_space = ByteSize(self._free_space[mount])
-            partition = next(p for p in self._partitions if p.mountpoint == mount)
-            mounts_stats.append(MountStats(partition, free_space))
 
-        return mounts_stats
+        def get_mounts():
+            for mount in self._used_mounts:
+                free_space = ByteSize(self._free_space[mount])
+                partition = next(p for p in self._partitions if p.mountpoint == mount)
+                yield MountStats(partition, free_space)
+
+        return list(get_mounts())
 
     async def check_free_space(self, media_item: MediaItem) -> None:
         """Checks if there is enough free space to download this item."""
@@ -106,8 +105,8 @@ class StorageManager:
 
     async def close(self) -> None:
         await self.reset()
-        self._loop.cancel()
         try:
+            self._loop.cancel()
             await self._loop
         except asyncio.CancelledError:
             pass
@@ -126,7 +125,7 @@ class StorageManager:
         if is_mapped_drive or not is_unc_path:
             return
 
-        folder_drive = drive_as_path(folder.drive)
+        folder_drive = _drive_as_path(folder.drive)
         async with self._mount_addition_locks[folder_drive]:
             if folder_drive in itertools.chain(self._unavailable_mounts, self.mounts):
                 return
@@ -165,7 +164,7 @@ class StorageManager:
         free_space = self._free_space[mount]
         if free_space == -1:
             return True
-        return self._free_space[mount] > self.manager.config_manager.global_settings_data.general.required_free_space
+        return free_space > self.manager.global_config.general.required_free_space
 
     async def _get_free_space(self, mount: Path) -> int:
         exc_info = None
@@ -237,11 +236,11 @@ def get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
     # This will only happen on Windows, ex: an USB drive (`D:`) that is not currently available (AKA disconnected)
     # On Unix there's always at least 1 mountpoint, root (`/`)
     msg = f"No available mountpoint found for '{folder}'"
-    msg += f"\n -> drive = '{drive_as_path(folder.drive)}' , last_parent = '{folder.parents[-1]}'"
+    msg += f"\n -> drive = '{_drive_as_path(folder.drive)}' , last_parent = '{folder.parents[-1]}'"
     log(msg, 40)
 
 
-def drive_as_path(drive: str) -> Path:
+def _drive_as_path(drive: str) -> Path:
     is_mapped_drive = ":" in drive and len(drive) == 2
     return Path(f"{drive}/" if is_mapped_drive else drive)
 
