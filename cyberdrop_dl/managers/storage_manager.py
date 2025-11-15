@@ -186,14 +186,17 @@ class StorageManager:
 
         return free_space
 
-    def _is_fuse_fs(self, mount: Path) -> bool:
-        for p in self._partitions:
+    def _get_partition(self, mount: Path) -> DiskPartition | None:
+        for partition in self._partitions:
             try:
-                mount.relative_to(p.mountpoint)
+                mount.relative_to(partition.mountpoint)
+                return partition
             except ValueError:
                 continue
-            else:
-                return "fuse" in p.fstype
+
+    def _is_fuse_fs(self, mount: Path) -> bool:
+        if partition := self._get_partition(mount):
+            return "fuse" in partition.fstype
         return False
 
     async def _check_free_space_loop(self) -> None:
