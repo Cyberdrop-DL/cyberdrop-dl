@@ -82,7 +82,7 @@ class StorageManager:
         """Returns information of every used mount + its free space."""
 
         for partition in self._partitions:
-            free_space =  self._free_space.get(partition.mountpoint)
+            free_space = self._free_space.get(partition.mountpoint)
             if free_space is not None:
                 yield MountStats(partition, ByteSize(free_space))
 
