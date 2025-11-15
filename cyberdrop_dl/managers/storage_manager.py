@@ -188,11 +188,8 @@ class StorageManager:
 
     def _get_partition(self, mount: Path) -> DiskPartition | None:
         for partition in self._partitions:
-            try:
-                mount.relative_to(partition.mountpoint)
+            if mount.is_relative_to(partition.mountpoint):
                 return partition
-            except ValueError:
-                continue
 
     def _is_fuse_fs(self, mount: Path) -> bool:
         if partition := self._get_partition(mount):
@@ -226,13 +223,14 @@ def get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
     # It's not an expensive operation nor IO blocking, but it's very common for multiple files to share the same download folder
     # ex: HLS downloads could have over a thousand segments. All of them will go to the same folder
     assert folder.is_absolute()
-    possible_mountpoints = [mount for mount in all_mounts if mount in folder.parents or mount == folder]
-    if possible_mountpoints:
-        # Get the closest mountpoint to `folder`
-        # mount_a = /home/user/  -> points to an internal SSD
-        # mount_b = /home/user/USB -> points to an external USB drive
-        # If `folder`` is `/home/user/USB/videos`, the correct mountpoint is mount_b
-        return max(possible_mountpoints, key=lambda path: len(path.parts))
+    possible_mountpoints = (mount for mount in all_mounts if folder.is_relative_to(mount))
+
+    # Get the closest mountpoint to `folder`
+    # mount_a = /home/user/  -> points to an internal SSD
+    # mount_b = /home/user/USB -> points to an external USB drive
+    # If `folder`` is `/home/user/USB/videos`, the correct mountpoint is mount_b
+    if mount_point := max(possible_mountpoints, key=lambda path: len(path.parts), default=None):
+        return mount_point
 
     # Mount point for this path does not exists
     # This will only happen on Windows, ex: an USB drive (`D:`) that is not currently available (AKA disconnected)
