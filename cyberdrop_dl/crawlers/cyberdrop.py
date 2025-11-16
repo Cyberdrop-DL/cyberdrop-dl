@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
@@ -22,6 +22,7 @@ class Selector:
 
 
 class CyberdropCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "k1-cd.cdn.gigachad-cdn.ru", "cyberdrop"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "File": (
@@ -65,7 +66,7 @@ class CyberdropCrawler(Crawler):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        scrape_item.url = scrape_item.url.origin() / "f" / file_id
+        scrape_item.url = self.PRIMARY_URL / "f" / file_id
         if await self.check_complete_from_referer(scrape_item):
             return
 
