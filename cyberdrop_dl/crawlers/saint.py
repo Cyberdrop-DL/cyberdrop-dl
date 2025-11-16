@@ -75,7 +75,7 @@ class SaintCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         try:
             link_str: str = css.select_one_get_attr(soup, _SELECTORS.EMBED_SRC, "src")
-        except AssertionError:
+        except css.SelectorError:
             if _is_not_found(soup):
                 raise ScrapeError(404) from None
             raise ScrapeError(422, "Couldn't find video source") from None
