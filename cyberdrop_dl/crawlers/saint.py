@@ -10,15 +10,16 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
 class Selector:
-    VIDEOS = "a.action.play"
+    VIDEOS_PLAY = "a.action.play"
+    VIDEOS_DOWNLOAD = "a.action.download"
     EMBED_SRC = css.CssAttributeSelector("#main-video source", "src")
-    DOWNLOAD_BUTTON = css.CssAttributeSelector("a:-soup-contains('Download Video')", "href")
+    DOWNLOAD_BTN = css.CssAttributeSelector("a:-soup-contains('Download Video')", "href")
     NOT_FOUND_IMAGE = "#video-container img[src*='assets/notfound.gif']"
 
 
@@ -30,7 +31,10 @@ class SaintCrawler(Crawler):
             "/embed/...",
             "/d/...",
         ),
-        "Direct links": "",
+        "Direct links": (
+            "/data/...",
+            "/videos/...",
+        ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://saint2.su/")
     DOMAIN: ClassVar[str] = "saint"
@@ -41,7 +45,7 @@ class SaintCrawler(Crawler):
                 return await self.album(scrape_item, album_id)
             case ["embed" | "d", _, *_]:
                 return await self.video(scrape_item)
-            case ["data", _, *_]:
+            case ["data" | "videos", _, *_]:
                 return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
@@ -49,17 +53,22 @@ class SaintCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        title_portion = css.select_one_get_text(soup, "title").rsplit(" - Saint Video Hosting")[0].strip()
-        if not title_portion:
-            title_portion = scrape_item.url.name
-        title = self.create_title(title_portion, album_id)
+        name = css.page_title(soup).removesuffix(" - Saint Video Hosting")
+        title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        for video in soup.select(Selector.VIDEOS):
-            on_click_text: str = css.get_attr(video, "onclick")
-            link_str = get_text_between(on_click_text, "('", "');")
-            link = self.parse_url(link_str)
-            self.create_task(self.direct_file(scrape_item, link))
+        def get_url(tag: Tag) -> AbsoluteHttpURL:
+            on_click: str = css.get_attr(tag, "onclick")
+            link_str = get_text_between(on_click, "('", "');")
+            return self.parse_url(link_str)
+
+        for download, play in zip(
+            soup.select(Selector.VIDEOS_DOWNLOAD), soup.select(Selector.VIDEOS_PLAY), strict=True
+        ):
+            web_url = get_url(download)
+            source = get_url(play)
+            new_scrape_item = scrape_item.create_child(web_url)
+            self.create_task(self.direct_file(new_scrape_item, source))
             scrape_item.add_children()
 
     @error_handling_wrapper
@@ -67,12 +76,12 @@ class SaintCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        link = await self._get_download_url(scrape_item.url)
+        soup = await self.request_soup(scrape_item.url)
+        link = self._select_download_url(soup)
         await self.direct_file(scrape_item, link)
 
-    async def _get_download_url(self, web_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        soup = await self.request_soup(web_url)
-        for selector in (Selector.EMBED_SRC, Selector.DOWNLOAD_BUTTON):
+    def _select_download_url(self, soup: BeautifulSoup) -> AbsoluteHttpURL:
+        for selector in (Selector.EMBED_SRC, Selector.DOWNLOAD_BTN):
             try:
                 return self.parse_url(selector(soup))
             except css.SelectorError:
