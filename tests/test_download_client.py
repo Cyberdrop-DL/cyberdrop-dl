@@ -17,7 +17,7 @@ def test_fallback_generator_with_none() -> None:
     item = _item(None)
     gen = download_client._fallback_generator(item)
     with pytest.raises(StopIteration):
-        _ = gen.__next__()
+        _ = gen.send(None)
 
 
 def test_fallback_generator_with_list() -> None:
@@ -27,7 +27,7 @@ def test_fallback_generator_with_list() -> None:
     assert gen.__next__() == "url2"
     assert gen.send(12345) == "url3"
     with pytest.raises(StopIteration):
-        _ = gen.__next__()
+        _ = gen.send(None)
 
 
 def test_fallback_generator_with_generator() -> None:
