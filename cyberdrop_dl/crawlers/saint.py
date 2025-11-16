@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class Selector:
-    VIDEOS = "a.action.download"
+    VIDEOS = "a.action.play"
     EMBED_SRC = css.CssAttributeSelector("#main-video source", "src")
     DOWNLOAD_BUTTON = css.CssAttributeSelector("a:-soup-contains('Download Video')", "href")
     NOT_FOUND_IMAGE = "#video-container img[src*='assets/notfound.gif']"
@@ -43,12 +43,12 @@ class SaintCrawler(Crawler):
                 return await self.video(scrape_item)
             case ["data", _, *_]:
                 return await self.direct_file(scrape_item)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        results = await self.get_album_results(album_id)
         soup = await self.request_soup(scrape_item.url)
-
         title_portion = css.select_one_get_text(soup, "title").rsplit(" - Saint Video Hosting")[0].strip()
         if not title_portion:
             title_portion = scrape_item.url.name
@@ -59,10 +59,8 @@ class SaintCrawler(Crawler):
             on_click_text: str = css.get_attr(video, "onclick")
             link_str = get_text_between(on_click_text, "('", "');")
             link = self.parse_url(link_str)
-            if not self.check_album_results(link, results):
-                new_scrape_item = scrape_item.create_child(link)
-                self.create_task(self.run(new_scrape_item))
-                scrape_item.add_children()
+            self.create_task(self.direct_file(scrape_item, link))
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
