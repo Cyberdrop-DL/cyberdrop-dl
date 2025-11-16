@@ -507,8 +507,9 @@ def _fallback_generator(media_item: MediaItem):
                 response = yield url
 
         else:
-            yield from fallbacks
+            for fall in fallbacks:  # noqa: UP028
+                yield fall
 
     gen = gen_fallback()
-    next(gen)  # Prime the generator, waiting for response
+    _ = next(gen)
     return gen
