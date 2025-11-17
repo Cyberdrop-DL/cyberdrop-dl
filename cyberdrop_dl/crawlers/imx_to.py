@@ -20,8 +20,15 @@ class Selector:
 
 class ImxToCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Image": "/i/...",
-        "Thumbnail": "/t/...",
+        "Image": (
+            "/i/...",
+            "/u/i/...",
+        ),
+        "Thumbnail": (
+            "/t/...",
+            "/u/t/",
+        ),
+        "Gallery": "/g/<gallery_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imx.to")
     DOMAIN: ClassVar[str] = "imx.to"

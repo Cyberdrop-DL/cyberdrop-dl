@@ -69,4 +69,14 @@ TEST_CASES = [
             },
         ],
     ),
+    (
+        "https://imx.to/u/t/2025/08/01/68g6y2.jpg",
+        [
+            {
+                "url": "https://image.imx.to/u/i/2025/08/01/68g6y2.jpg",
+                "filename": "525669511_18517410283043270_6195144073773837855_n.jpg",
+                "referer": "https://imx.to/i/68g6y2",
+            },
+        ],
+    ),
 ]
