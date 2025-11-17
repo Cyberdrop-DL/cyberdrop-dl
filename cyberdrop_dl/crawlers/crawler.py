@@ -367,11 +367,10 @@ class Crawler(ABC):
     async def write_metadata(self, scrape_item: ScrapeItem, name: str, metadata: object) -> None:
         """Write general metadata (not specific to a single file) to json output"""
 
-        ext = ".metadata"
-        filename = f"{name}{ext}"  # we won't write to fs, so we skip name sanitization
+        filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
-        url = AbsoluteHttpURL((download_folder / filename).as_uri())
-        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename, ext=ext)
+        url = scrape_item.url.with_scheme("metadata")
+        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename)
         media_item.metadata = metadata
         await self.__write_to_jsonl(media_item)
 

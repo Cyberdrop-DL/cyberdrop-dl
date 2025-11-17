@@ -179,11 +179,14 @@ class MediaItem:
         return f"{type(self).__name__}(domain={self.domain!r}, url={self.url!r}, referer={self.referer!r}, filename={self.filename!r}"
 
     def __post_init__(self) -> None:
-        self.db_path = "" if self.is_local_file else self.create_db_path(self.url, self.domain)
+        self.db_path = self.create_db_path(self.url, self.domain)
 
     @staticmethod
     def create_db_path(url: yarl.URL, domain: str) -> str:
         """Gets the URL path to be put into the DB and checked from the DB."""
+
+        if url.scheme == "metadata":
+            return ""
 
         if domain:
             if "e-hentai" in domain:
@@ -259,10 +262,6 @@ class MediaItem:
         for name in ("fallbacks", "_task_id", "is_segment", "parent_media_item"):
             _ = item.pop(name)
         return item
-
-    @property
-    def is_local_file(self) -> bool:
-        return self.url.scheme == "file"
 
 
 @dataclass(kw_only=True, slots=True)
