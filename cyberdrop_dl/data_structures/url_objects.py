@@ -260,6 +260,10 @@ class MediaItem:
             _ = item.pop(name)
         return item
 
+    @property
+    def is_local_file(self) -> bool:
+        return self.url.scheme == "file"
+
 
 @dataclass(kw_only=True, slots=True)
 class ScrapeItem:

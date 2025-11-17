@@ -366,13 +366,13 @@ class Crawler(ABC):
     # TODO: make this sync
     async def handle_file(
         self,
-        url: URL,
+        url: AbsoluteHttpURL | None,
         scrape_item: ScrapeItem,
         filename: str,
         ext: str | None = None,
         *,
         custom_filename: str | None = None,
-        debrid_link: URL | None = None,
+        debrid_link: AbsoluteHttpURL | None = None,
         m3u8: m3u8.RenditionGroup | None = None,
         metadata: object = None,
     ) -> None:
@@ -386,24 +386,23 @@ class Crawler(ABC):
         else:
             original_filename = filename
 
-        assert is_absolute_http_url(url)
-        if isinstance(debrid_link, URL):
-            assert is_absolute_http_url(debrid_link)
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        url = url or AbsoluteHttpURL((download_folder / filename).as_uri())
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
         media_item.metadata = metadata
 
-        self.create_task(self.handle_media_item(media_item, m3u8))
+        await self.handle_media_item(media_item, m3u8)
 
     @final
     async def _download(self, media_item: MediaItem, m3u8: m3u8.RenditionGroup | None) -> None:
         try:
-            if m3u8:
-                await self.downloader.download_hls(media_item, m3u8)
-            else:
-                await self.downloader.run(media_item)
+            if not media_item.is_local_file:
+                if m3u8:
+                    await self.downloader.download_hls(media_item, m3u8)
+                else:
+                    await self.downloader.run(media_item)
 
         finally:
             if self.manager.config_manager.settings_data.files.dump_json:
@@ -426,6 +425,9 @@ class Crawler(ABC):
         if media_item.datetime and not isinstance(media_item.datetime, int):
             msg = f"Invalid datetime from '{self.FOLDER_DOMAIN}' crawler . Got {media_item.datetime!r}, expected int."
             log(msg, bug=True)
+
+        if media_item.is_local_file:
+            return await self._download(media_item, m3u8)
 
         check_complete = await self.check_complete(media_item.url, media_item.referer)
         if check_complete:
