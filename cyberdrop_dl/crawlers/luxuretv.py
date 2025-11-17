@@ -48,6 +48,7 @@ class LuxureTVCrawler(Crawler):
         async for soup in self.web_pager(url, cffi=True):
             if not title:
                 title = css.select_one_get_text(soup, Selector.TITLE)
+                title = title.split(":")[-1].strip()
                 title = self.create_title(f"{title} - [search]")
                 scrape_item.setup_as_album(title)
 
