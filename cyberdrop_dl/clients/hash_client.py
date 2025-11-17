@@ -56,9 +56,6 @@ class HashClient:
     def dupe_cleanup_options(self) -> DupeCleanup:
         return self.manager.config.dupe_cleanup_options
 
-    async def startup(self) -> None:
-        pass
-
     async def hash_directory(self, path: Path) -> None:
         path = Path(path)
         with (

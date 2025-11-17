@@ -25,9 +25,6 @@ class HashManager:
         self._cwd: Path = Path.cwd()
         self.hash_client: HashClient = HashClient(manager)
 
-    async def startup(self) -> None:
-        await self.hash_client.startup()
-
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
         return await asyncio.to_thread(_compute_hash, file_path, hash_type)
