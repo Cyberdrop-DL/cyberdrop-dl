@@ -76,6 +76,13 @@ class File(TypedDict):
     server: NotRequired[str]  # Sometimes present in attachments
 
 
+class Embed(NamedTuple):
+    url: str
+    subject: str
+    description: str
+
+
+EmbedOrNone = Annotated[Embed | None, BeforeValidator(falsy_as_none)]
 FileOrNone = Annotated[File | None, BeforeValidator(falsy_as_none)]
 Tags = Annotated[list[str], BeforeValidator(lambda x: falsy_as(x, []))]
 
@@ -88,6 +95,7 @@ class Post(AliasModel):
     published_or_added: datetime | None = Field(None, validation_alias=AliasChoices("published", "added"))
     date: int | None = None
     tags: Tags = []  # noqa: RUF012
+    embed: EmbedOrNone = None
 
     # `Any` to skip validation, but these are `yarl.URL`. We generate them internally so no validation is needed
     soup_attachments: list[Any] = []  # noqa: RUF012
