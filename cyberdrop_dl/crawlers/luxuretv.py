@@ -23,10 +23,7 @@ PRIMARY_URL = AbsoluteHttpURL("https://luxuretv.com")
 
 
 class LuxureTVCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": "/videos/...",
-        "Search": "/searchgate/videos/<search>/..."
-    }
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/videos/...", "Search": "/searchgate/videos/<search>/..."}
     DOMAIN: ClassVar[str] = "luxuretv"
     FOLDER_DOMAIN: ClassVar[str] = "LuxureTV"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
