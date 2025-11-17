@@ -60,6 +60,7 @@ from .jpg5 import JPG5Crawler
 from .kemono import KemonoCrawler
 from .leakedzone import LeakedZoneCrawler
 from .luscious import LusciousCrawler
+from .luxuretv import LuxureTVCrawler
 from .masahub import MasahubCrawler
 from .mediafire import MediaFireCrawler
 from .mega_nz import MegaNzCrawler
