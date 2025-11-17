@@ -445,7 +445,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if self.ignore_ads and self.__has_ads(post):
             return
 
-        self.create_task(self.handle_metadata(scrape_item, f"post_{post.id}", post))
+        self.create_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
 
         files = (self.__make_file_url(file) for file in post.all_files)
 
