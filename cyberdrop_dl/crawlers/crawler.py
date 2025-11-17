@@ -400,7 +400,8 @@ class Crawler(ABC):
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
-        media_item.metadata = metadata
+        if metadata is not None:
+            media_item.metadata = metadata
         await self.handle_media_item(media_item, m3u8)
 
     @final
