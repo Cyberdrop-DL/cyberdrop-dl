@@ -374,6 +374,7 @@ class Crawler(ABC):
         custom_filename: str | None = None,
         debrid_link: URL | None = None,
         m3u8: m3u8.RenditionGroup | None = None,
+        metadata: object = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
         if not ext:
@@ -392,6 +393,7 @@ class Crawler(ABC):
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
+        media_item.metadata = metadata
 
         self.create_task(self.handle_media_item(media_item, m3u8))
 
