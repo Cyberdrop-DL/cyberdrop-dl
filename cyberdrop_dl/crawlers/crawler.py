@@ -363,6 +363,12 @@ class Crawler(ABC):
             return False
         return primary_domain in other_domain and other_domain.count(".") > primary_domain.count(".")
 
+    @final
+    async def handle_metadata(self, scrape_item: ScrapeItem, stem: str, metadata: object) -> None:
+        ext = ".metadata"
+        filename = f"{stem}{ext}"
+        await self.handle_file(None, scrape_item, filename, ext, metadata=metadata)
+
     # TODO: make this sync
     async def handle_file(
         self,
