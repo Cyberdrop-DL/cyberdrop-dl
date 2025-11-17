@@ -179,7 +179,7 @@ class MediaItem:
         return f"{type(self).__name__}(domain={self.domain!r}, url={self.url!r}, referer={self.referer!r}, filename={self.filename!r}"
 
     def __post_init__(self) -> None:
-        self.db_path = self.create_db_path(self.url, self.domain)
+        self.db_path = "" if self.is_local_file else self.create_db_path(self.url, self.domain)
 
     @staticmethod
     def create_db_path(url: yarl.URL, domain: str) -> str:
