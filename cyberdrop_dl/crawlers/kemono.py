@@ -16,12 +16,10 @@ from typing import (
     Concatenate,
     Literal,
     NamedTuple,
-    NotRequired,
     ParamSpec,
 )
 
 from pydantic import BeforeValidator, Field
-from typing_extensions import TypedDict  # Import from typing is not compatible with pydantic
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -80,10 +78,10 @@ class User(NamedTuple):
     id: str
 
 
-class File(TypedDict):
-    name: NotRequired[str]  # Sometimes present
+class File(NamedTuple):
     path: str
-    server: NotRequired[str]  # Sometimes present in attachments
+    name: str | None = None  # Sometimes present
+    server: str | None = None  # Sometimes present in attachments
 
 
 class Embed(NamedTuple):
@@ -383,11 +381,11 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     def _register_attachments_servers(self, attachments: list[File]) -> None:
         for attach in attachments:
-            server = attach.get("server")
+            server = attach.server
             if not server:
                 continue
 
-            path = attach["path"]
+            path = attach.path
             if previous_server := self.__known_attachment_servers.get(path):
                 if previous_server != server:
                     msg = (
@@ -484,10 +482,10 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         self._handle_post_content(scrape_item, post)
 
     def __make_file_url(self, file: File) -> AbsoluteHttpURL:
-        path = file["path"]
+        path = file.path
         server = self.__known_attachment_servers.get(path) or ""
         url = self.parse_url(server + f"/data{path}")
-        return url.with_query(f=file.get("name") or url.name)
+        return url.with_query(f=file.name or url.name)
 
     def __make_api_url_w_offset(self, web_url: AbsoluteHttpURL, path: str | None = None) -> AbsoluteHttpURL:
         api_url = self.API_ENTRYPOINT / (path or web_url.path).removeprefix("/")
@@ -599,8 +597,8 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             id=post_id,
             title=partial_post.title,
             content=partial_post.content,
-            published=partial_post.published,  # type: ignore[reportArgumentType]
-            added=partial_post.added,  # type: ignore[reportArgumentType]
+            published=partial_post.published,  # type: ignore[reportArgumentType]  # pyright: ignore[reportArgumentType]
+            added=partial_post.added,  # type: ignore[reportArgumentType]  # pyright: ignore[reportArgumentType]
             soup_attachments=list(files()),
         )
 
@@ -630,7 +628,7 @@ class KemonoCrawler(KemonoBaseCrawler):
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = "kemono.party", "kemono.su"
 
     @property
-    def session_cookie(self):
+    def session_cookie(self) -> str:
         return self.manager.config_manager.authentication_data.kemono.session
 
 
