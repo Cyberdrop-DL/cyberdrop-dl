@@ -4,6 +4,7 @@ from __future__ import annotations
 from cyberdrop_dl import env
 
 from ._chevereto import CheveretoCrawler
+from .anontransfer import AnonTransferCrawler
 from .archivebate import ArchiveBateCrawler
 from .ashemaletube import AShemaleTubeCrawler
 from .beeg import BeegComCrawler
@@ -34,6 +35,7 @@ from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
+from .fsiblog import FSIBlogCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
@@ -83,6 +85,7 @@ from .pornhub import PornHubCrawler
 from .pornpics import PornPicsCrawler
 from .porntrex import PorntrexCrawler
 from .postimg import PostImgCrawler
+from .ranoz import RanozCrawler, RootzCrawler
 from .realbooru import RealBooruCrawler
 from .reddit import RedditCrawler
 from .redgifs import RedGifsCrawler
@@ -90,6 +93,7 @@ from .rule34vault import Rule34VaultCrawler
 from .rule34video import Rule34VideoCrawler
 from .rule34xxx import Rule34XXXCrawler
 from .rule34xyz import Rule34XYZCrawler
+from .rumble import RumbleCrawler
 from .safe_soul import SafeSoulCrawler
 from .saint import SaintCrawler
 from .scrolller import ScrolllerCrawler
@@ -98,6 +102,7 @@ from .sendvid import SendVidCrawler
 from .sex_dot_com import SexDotComCrawler
 from .spankbang import SpankBangCrawler
 from .streamable import StreamableCrawler
+from .streamtape import StreamtapeCrawler
 from .thisvid import ThisVidCrawler
 from .tiktok import TikTokCrawler
 from .tnaflix import TNAFlixCrawler

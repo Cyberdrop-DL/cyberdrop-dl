@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import builtins
-import pathlib
 from stat import S_ISREG
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
 
 if TYPE_CHECKING:
+    import pathlib
     from collections.abc import Awaitable, Sequence
 
     _P = ParamSpec("_P")
@@ -70,11 +70,7 @@ async def get_size(path: pathlib.Path) -> int | None:
 
     try:
         stat_result = await stat(path)
-    except OSError as e:
-        if not pathlib._ignore_error(e):  # type: ignore[reportAttributeAccessIssue]
-            raise
-        return
-    except ValueError:
+    except (OSError, ValueError):
         return
     else:
         if S_ISREG(stat_result.st_mode):

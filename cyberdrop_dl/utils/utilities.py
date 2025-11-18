@@ -231,13 +231,7 @@ def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) ->
     """Returns the path to the download folder."""
     download_dir = manager.path_manager.download_folder
 
-    if scrape_item.retry:
-        return scrape_item.retry_path  # type: ignore
-    if scrape_item.parent_title and scrape_item.part_of_album:
-        return download_dir / scrape_item.parent_title
-    if scrape_item.parent_title:
-        return download_dir / scrape_item.parent_title / f"Loose Files ({domain})"
-    return download_dir / f"Loose Files ({domain})"
+    return download_dir / scrape_item.create_download_path(domain)
 
 
 def remove_file_id(manager: Manager, filename: str, ext: str) -> tuple[str, str]:
@@ -309,7 +303,7 @@ def purge_dir_tree(dirname: Path | str) -> bool:
         return False
 
 
-def check_partials_and_empty_folders(manager: Manager):
+def check_partials_and_empty_folders(manager: Manager) -> None:
     """Checks for partial downloads, deletes partial files and empty folders."""
     settings = manager.config_manager.settings_data.runtime_options
     if settings.delete_partial_files:
@@ -320,18 +314,21 @@ def check_partials_and_empty_folders(manager: Manager):
         delete_empty_folders(manager)
 
 
-def delete_partial_files(manager: Manager):
+def delete_partial_files(manager: Manager) -> None:
     """Deletes partial download files recursively."""
     log_red("Deleting partial downloads...")
-    for file in manager.path_manager.download_folder.rglob("*.part"):
-        file.unlink(missing_ok=True)
+    for file in manager.path_manager.download_folder.rglob("*"):
+        if file.suffix in constants.TempExt:
+            file.unlink(missing_ok=True)
 
 
-def check_for_partial_files(manager: Manager):
+def check_for_partial_files(manager: Manager) -> None:
     """Checks if there are partial downloads in any subdirectory and logs if found."""
     log_yellow("Checking for partial downloads...")
-    if next(manager.path_manager.download_folder.rglob("*.part"), None) is not None:
-        log_yellow("There are partial downloads in the downloads folder")
+    for file in manager.path_manager.download_folder.rglob("*"):
+        if file.suffix in constants.TempExt:
+            log_yellow("There are partial downloads in the downloads folder")
+            return
 
 
 def delete_empty_folders(manager: Manager):
