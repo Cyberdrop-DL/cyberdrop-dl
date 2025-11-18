@@ -33,7 +33,7 @@ from cyberdrop_dl.exceptions import (
 )
 from cyberdrop_dl.ui.prompts.user_prompts import get_cookies_from_browsers
 from cyberdrop_dl.utils.cookie_management import read_netscape_files
-from cyberdrop_dl.utils.ffmpeg import probe_sync as probe
+from cyberdrop_dl.utils.ffmpeg import probe
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 
 _VALID_EXTENSIONS = (
@@ -246,9 +246,9 @@ class ClientManager:
             return False
         return not (ignore_options.exclude_other and media_item.ext.lower() not in _VALID_EXTENSIONS)
 
-    def pre_check_duration(self, media_item: MediaItem) -> bool:
+    async def pre_check_duration(self, media_item: MediaItem) -> bool:
         """Checks if the download is above the maximum runtime."""
-        return self.check_file_duration(media_item)
+        return await self.check_file_duration(media_item)
 
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
         """Checks if the file is published within the date range configured."""
@@ -463,7 +463,7 @@ class ClientManager:
 
         return bool(soup.select_one(CloudflareTurnstile.ALL_SELECTORS))
 
-    def check_file_duration(self, media_item: MediaItem) -> bool:
+    async def check_file_duration(self, media_item: MediaItem) -> bool:
         """Checks the file runtime against the config runtime limits."""
         if media_item.is_segment:
             return True
@@ -473,13 +473,13 @@ class ClientManager:
         if not (is_video or is_audio):
             return True
 
-        def get_duration() -> float | None:
+        async def get_duration() -> float | None:
             if media_item.duration:
                 return media_item.duration
 
             probe_path = media_item.complete_file if media_item.downloaded else media_item.url
             probe_headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
-            properties: FFprobeResult = probe(probe_path, headers=probe_headers)
+            properties: FFprobeResult = await probe(probe_path, headers=probe_headers)
             if is_video:
                 if video := properties.video:
                     return video.duration
@@ -500,8 +500,9 @@ class ClientManager:
         if is_audio and not any(audio_duration_limits):
             return True
 
-        duration: float = get_duration()  # type: ignore
+        duration: float = await get_duration()  # type: ignore
         media_item.duration = duration
+        await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
         if duration is None:
             return True
 

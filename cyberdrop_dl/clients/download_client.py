@@ -270,7 +270,7 @@ class DownloadClient:
         if downloaded:
             await asyncio.to_thread(media_item.partial_file.rename, media_item.complete_file)
             if not media_item.is_segment:
-                proceed = self.client_manager.check_file_duration(media_item)
+                proceed = await self.client_manager.check_file_duration(media_item)
                 await self.manager.db_manager.history_table.add_duration(domain, media_item)
                 if not proceed:
                     log(f"Download Skip {media_item.url} due to runtime restrictions", 10)
