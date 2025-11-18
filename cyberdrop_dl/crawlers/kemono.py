@@ -5,11 +5,22 @@ import functools
 import itertools
 import re
 from collections import defaultdict
+from collections.abc import Generator
 from datetime import datetime  # noqa: TC003
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, Literal, NamedTuple, NotRequired, ParamSpec
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    ClassVar,
+    Concatenate,
+    Literal,
+    NamedTuple,
+    NotRequired,
+    ParamSpec,
+)
 
-from pydantic import AliasChoices, BeforeValidator, Field
+from pydantic import BeforeValidator, Field
 from typing_extensions import TypedDict  # Import from typing is not compatible with pydantic
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
@@ -48,7 +59,6 @@ class PostSelectors:
 
     DATE_PUBLISHED = "div[class*=__published] time[class=timestamp]"
     DATE_ADDED = "div[class*=__added]"
-    DATE = f"{DATE_PUBLISHED}, {DATE_ADDED}"
 
     TITLE = "h1[class*=__title]"
     USERNAME = "a[class*=__user-name]"
@@ -92,8 +102,10 @@ class Post(AliasModel):
     content: str = ""
     file: FileOrNone = None
     attachments: list[File] = []  # noqa: RUF012
-    published_or_added: datetime | None = Field(None, validation_alias=AliasChoices("published", "added"))
-    date: int | None = None
+    published: datetime | None = None
+    added: datetime | None = None
+    edited: datetime | None = None
+    timestamp: int | None = None
     tags: Tags = []  # noqa: RUF012
     embed: EmbedOrNone = None
 
@@ -101,8 +113,8 @@ class Post(AliasModel):
     soup_attachments: list[Any] = []  # noqa: RUF012
 
     def model_post_init(self, *_) -> None:
-        if self.published_or_added:
-            self.date = to_timestamp(self.published_or_added)
+        if date := self.published or self.added:
+            self.timestamp = to_timestamp(date)
 
     @property
     def all_files(self) -> Generator[File]:
@@ -142,12 +154,19 @@ class PartialUserPost(NamedTuple):
     title: str = ""
     content: str = ""
     user_name: str = ""
-    date: str | None = None
+    published: str | None = None
+    added: str | None = None
 
     @staticmethod
     def from_soup(soup: BeautifulSoup) -> PartialUserPost:
         params = {}
-        selectors = (PostSelectors.TITLE, PostSelectors.ALL_CONTENT, PostSelectors.USERNAME, PostSelectors.DATE)
+        selectors = (
+            PostSelectors.TITLE,
+            PostSelectors.ALL_CONTENT,
+            PostSelectors.USERNAME,
+            PostSelectors.DATE_PUBLISHED,
+            PostSelectors.DATE_ADDED,
+        )
         for name, selector in zip(PartialUserPost._fields, selectors, strict=True):
             if tag := soup.select_one(selector):
                 params[name] = tag.get_text().strip()
@@ -383,8 +402,8 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         user_name = self._user_names[post.user]
         title = self.create_title(user_name, post.user_id)
         scrape_item.setup_as_album(title, album_id=post.user_id)
-        scrape_item.possible_datetime = post.date
-        post_title = self.create_separate_post_title(post.title, post.id, post.date)
+        scrape_item.possible_datetime = post.timestamp
+        post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.add_to_parent_title(post_title)
         self.__handle_post(scrape_item, post)
 
@@ -393,9 +412,9 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         title = self.create_title(f"{server.name} [discord]", server.id)
         channel_name = next(c.name for c in server.channels if c.id == post.channel_id)
         scrape_item.setup_as_album(title, album_id=server.id)
-        scrape_item.possible_datetime = post.date
+        scrape_item.possible_datetime = post.timestamp
         scrape_item.add_to_parent_title(f"#{channel_name}")
-        post_title = self.create_separate_post_title(None, post.id, post.date)
+        post_title = self.create_separate_post_title(None, post.id, post.timestamp)
         scrape_item.add_to_parent_title(post_title)
         self.__handle_post(scrape_item, post)
 
@@ -453,10 +472,10 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if self.ignore_ads and self.__has_ads(post):
             return
 
+        embeds = (self.parse_url(post.embed.url),) if post.embed else ()
         files = (self.__make_file_url(file) for file in post.all_files)
-
         seen: set[AbsoluteHttpURL] = set()
-        for url in itertools.chain(files, post.soup_attachments):
+        for url in itertools.chain(files, post.soup_attachments, embeds):
             if url not in seen:
                 seen.add(url)
                 self.create_task(self.handle_direct_link(scrape_item, url))
@@ -487,7 +506,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             server_profile: dict[str, Any] = await self.__api_request(server_api_url)
             name = server_profile.get("name") or f"Discord Server {server_id}"
             channels_api_url = self.API_ENTRYPOINT / "discord/channel/lookup" / server_id
-            channels_resp: list[dict] = await self.__api_request(channels_api_url)
+            channels_resp: list[dict[str, Any]] = await self.__api_request(channels_api_url)
             channels = tuple(DiscordChannel(channel["name"], channel["id"]) for channel in channels_resp)
             self.__known_discord_servers[server_id] = server = DiscordServer(name, server_id, channels)
             return server
@@ -580,7 +599,8 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             id=post_id,
             title=partial_post.title,
             content=partial_post.content,
-            published_or_added=partial_post.date,  # type: ignore[reportArgumentType]
+            published=partial_post.published,  # type: ignore[reportArgumentType]
+            added=partial_post.added,  # type: ignore[reportArgumentType]
             soup_attachments=list(files()),
         )
 
