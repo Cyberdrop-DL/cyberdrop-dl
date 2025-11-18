@@ -18,7 +18,6 @@ from aiohttp_client_cache.response import CachedResponse
 from aiohttp_client_cache.session import CachedSession
 from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
-from videoprops import get_audio_properties, get_video_properties
 
 from cyberdrop_dl import constants, env
 from cyberdrop_dl.clients.download_client import DownloadClient
@@ -34,6 +33,7 @@ from cyberdrop_dl.exceptions import (
 )
 from cyberdrop_dl.ui.prompts.user_prompts import get_cookies_from_browsers
 from cyberdrop_dl.utils.cookie_management import read_netscape_files
+from cyberdrop_dl.utils.ffmpeg import probe_sync as probe
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 
 _VALID_EXTENSIONS = (
@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.utils.ffmpeg import FFprobeResult
 
 _curl_import_error = None
 try:
@@ -247,9 +248,6 @@ class ClientManager:
 
     def pre_check_duration(self, media_item: MediaItem) -> bool:
         """Checks if the download is above the maximum runtime."""
-        if not media_item.duration:
-            return True
-
         return self.check_file_duration(media_item)
 
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
@@ -478,12 +476,17 @@ class ClientManager:
         def get_duration() -> float | None:
             if media_item.duration:
                 return media_item.duration
-            props: dict = {}
+
+            probe_path = media_item.complete_file if media_item.downloaded else media_item.url
+            probe_headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
+            properties: FFprobeResult = probe(probe_path, headers=probe_headers)
             if is_video:
-                props: dict = get_video_properties(str(media_item.complete_file))
-            elif is_audio:
-                props: dict = get_audio_properties(str(media_item.complete_file))
-            return float(props.get("duration", 0)) or None
+                if video := properties.video:
+                    return video.duration
+            if is_audio:
+                if audio := properties.audio:
+                    return audio.duration
+            return None
 
         duration_limits = self.manager.config.media_duration_limits
         min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()

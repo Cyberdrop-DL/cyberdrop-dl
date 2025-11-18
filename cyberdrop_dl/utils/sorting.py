@@ -3,16 +3,15 @@ from __future__ import annotations
 import asyncio
 import itertools
 from datetime import datetime
-from fractions import Fraction
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 
 import imagesize
-from videoprops import get_audio_properties, get_video_properties
 
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.utils import strings
+from cyberdrop_dl.utils.ffmpeg import probe_sync as probe
 from cyberdrop_dl.utils.logger import log, log_with_color
 from cyberdrop_dl.utils.utilities import purge_dir_tree
 
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.utils.ffmpeg import FFprobeResult
 
 
 async def get_modified_date(file: Path) -> datetime:
@@ -134,10 +134,11 @@ class Sorter:
             return
         bitrate = duration = sample_rate = None
         try:
-            props: dict = get_audio_properties(str(file))
-            duration = int(float(props.get("duration", 0))) or None
-            bitrate = int(float(props.get("bit_rate", 0))) or None
-            sample_rate = int(float(props.get("sample_rate", 0))) or None
+            properties: FFprobeResult = probe(file)
+            if audio := properties.audio:
+                duration = audio.duration
+                bitrate = audio.bitrate
+                sample_rate = audio.sample_rate
         except (RuntimeError, CalledProcessError):
             log(f"Unable to get audio properties of '{file}'")
 
@@ -182,27 +183,21 @@ class Sorter:
         if not self.video_format:
             return
 
-        codec = duration = fps = height = resolution = width = None
+        codec = duration = framerate = height = resolution = width = None
 
         try:
-            props: dict = get_video_properties(str(file))
-            width = int(float(props.get("width", 0))) or None
-            height = int(float(props.get("height", 0))) or None
-            if width and height:
-                resolution = f"{width}x{height}"
+            properties: FFprobeResult = probe(file)
+            if video := properties.video:
+                width = video.width
+                height = video.height
+                if width and height:
+                    resolution = f"{width}x{height}"
 
-            codec: str | None = props.get("codec_name")
-            duration = int(float(props.get("duration", 0))) or None
-            fps = (
-                float(Fraction(props.get("avg_frame_rate", 0)))
-                if str(props.get("avg_frame_rate", 0)) not in {"0/0", "0"}
-                else None
-            )
+                codec = video.codec_name
+                duration = video.duration
+                framerate = video.fps
         except (RuntimeError, CalledProcessError):
             log(f"Unable to get some video properties of '{file}'")
-
-        if fps is not None:
-            fps = str(int(fps)) if fps.is_integer() else f"{fps:.2f}"
 
         if await self._process_file_move(
             file,
@@ -210,7 +205,7 @@ class Sorter:
             self.video_format,
             codec=codec,
             duration=duration,
-            fps=fps,
+            fps=framerate,
             height=height,
             resolution=resolution,
             width=width,

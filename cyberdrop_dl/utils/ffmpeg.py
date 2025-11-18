@@ -125,6 +125,35 @@ async def probe(input: Path | URL, /, *, headers: Mapping[str, str] | None = Non
     return FFprobeResult.from_output(output)
 
 
+@overload
+def probe_sync(input: Path, /) -> FFprobeResult: ...
+
+
+@overload
+def probe_sync(input: URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
+
+
+def probe_sync(input: Path | URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
+    assert _FFPROBE_AVAILABLE
+    if isinstance(input, URL):
+        assert is_absolute_http_url(input)
+
+    elif isinstance(input, Path):
+        assert input.is_absolute()
+        assert not headers
+
+    else:
+        raise ValueError("Can only probe a Path or a yarl.URL")
+
+    command = *_FFPROBE_CALL_PREFIX, str(input)
+    if headers:
+        headers_cmd = itertools.chain.from_iterable(("-headers", f"{name}: {value}") for name, value in headers.items())
+        command = *command, *headers_cmd
+    result = _run_command_sync(command)
+    output = json.loads(result.stdout) if result.success else _EMPTY_FFPROBE_OUTPUT
+    return FFprobeResult.from_output(output)
+
+
 async def _async_delete_files(files: Sequence[Path]) -> None:
     await asyncio.gather(*[aiofiles.os.unlink(file) for file in files])
 
@@ -364,6 +393,26 @@ async def _run_command(command: _CMD) -> SubProcessResult:
     log_debug(f"Running command: {command_}")
     process = await asyncio.create_subprocess_exec(*command_, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
+    return_code = process.returncode
+    stdout_str = stdout.decode("utf-8", errors="ignore")
+    stderr_str = stderr.decode("utf-8", errors="ignore")
+    results = SubProcessResult(return_code, stdout_str, stderr_str, return_code == 0, command_)
+    log_debug(results.as_jsonable_dict())
+    return results
+
+
+def _run_command_sync(command: _CMD) -> SubProcessResult:
+    assert not isinstance(command, str)
+    bin_path, cmd = command[0], command[1:]
+    if bin_path == "ffmpeg":
+        bin_path = which_ffmpeg()
+    elif bin_path == "ffprobe":
+        bin_path = which_ffprobe()
+    assert bin_path
+    command_ = bin_path, *cmd
+    log_debug(f"Running synchronous command: {command_}")
+    process = subprocess.run(command_, capture_output=True)
+    stdout, stderr = process.stdout, process.stderr
     return_code = process.returncode
     stdout_str = stdout.decode("utf-8", errors="ignore")
     stderr_str = stderr.decode("utf-8", errors="ignore")

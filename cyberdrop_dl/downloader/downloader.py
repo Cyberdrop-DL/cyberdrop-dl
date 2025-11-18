@@ -309,6 +309,7 @@ class Downloader:
         if not self.manager.client_manager.check_allowed_filetype(media_item):
             raise RestrictedFiletypeError(origin=media_item)
         if not self.manager.client_manager.pre_check_duration(media_item):
+            await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
             raise DurationError(origin=media_item)
         if not self.manager.client_manager.check_allowed_date_range(media_item):
             raise RestrictedDateRangeError(origin=media_item)
