@@ -8,16 +8,7 @@ from collections import defaultdict
 from collections.abc import Generator
 from datetime import datetime  # noqa: TC003
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Annotated,
-    Any,
-    ClassVar,
-    Concatenate,
-    Literal,
-    NamedTuple,
-    ParamSpec,
-)
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, Literal, NamedTuple, ParamSpec
 
 from pydantic import BeforeValidator, Field
 
@@ -470,14 +461,19 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if self.ignore_ads and self.__has_ads(post):
             return
 
-        embeds = (self.parse_url(post.embed.url),) if post.embed else ()
         files = (self.__make_file_url(file) for file in post.all_files)
         seen: set[AbsoluteHttpURL] = set()
-        for url in itertools.chain(files, post.soup_attachments, embeds):
+        for url in itertools.chain(files, post.soup_attachments):
             if url not in seen:
                 seen.add(url)
                 self.create_task(self.handle_direct_link(scrape_item, url))
                 scrape_item.add_children()
+
+        if post.embed:
+            embed_url = self.parse_url(post.embed.url)
+            new_scrape_item = scrape_item.create_child(embed_url)
+            self.handle_external_links(new_scrape_item)
+            scrape_item.add_children()
 
         self._handle_post_content(scrape_item, post)
 
