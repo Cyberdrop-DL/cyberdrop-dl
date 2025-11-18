@@ -410,6 +410,15 @@ class ScrapeItem:
         if self.parents:
             return self.parents[-1]
 
+    def create_download_path(self, domain: str) -> Path:
+        if self.retry_path:
+            return self.retry_path
+        if self.parent_title and self.part_of_album:
+            return Path(self.parent_title)
+        if self.parent_title:
+            return Path(self.parent_title) / f"Loose Files ({domain})"
+        return Path(f"Loose Files ({domain})")
+
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""
         return copy.deepcopy(self)
