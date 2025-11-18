@@ -190,8 +190,7 @@ class Sorter:
             if video := properties.video:
                 width = video.width
                 height = video.height
-                if width and height:
-                    resolution = f"{width}x{height}"
+                resolution = video.resolution
 
                 codec = video.codec_name
                 duration = video.duration
