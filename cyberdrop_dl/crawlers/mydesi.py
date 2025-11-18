@@ -68,17 +68,3 @@ class MyDesiCrawler(Crawler):
 
         return max(parse())
 
-    def paginate(self, soup: BeautifulSoup) -> str | None:
-        # Extract search term from RSS feed link
-        RSS_Feed = soup.select("link[rel='alternate']")[-1].get("href")
-        searchTerm = RSS_Feed.split("search/")[1].split("/feed")[0]
-
-        # Determine current page number
-        currentPage = 1
-        body = soup.select_one("body.paged")
-        if body:
-            _class = next((c for c in body.get("class", []) if c.startswith("search-paged-")), None)
-            currentPage = int(_class.split("search-paged-")[1]) if _class else 1
-
-        next_page_url = self.PRIMARY_URL / f"search/{searchTerm}/page/{currentPage + 1}/"
-        return str(next_page_url)
