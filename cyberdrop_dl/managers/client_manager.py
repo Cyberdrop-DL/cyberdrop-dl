@@ -479,17 +479,15 @@ class ClientManager:
 
             if media_item.downloaded:
                 probe_path = media_item.complete_file
-                probe_headers = None 
+                probe_headers = None
             else:
                 probe_path = media_item.url
                 probe_headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
             properties: FFprobeResult = await probe(probe_path, headers=probe_headers)
-            if is_video:
-                if video := properties.video:
-                    return video.duration
-            if is_audio:
-                if audio := properties.audio:
-                    return audio.duration
+            if is_video and (video := properties.video):
+                return video.duration
+            if is_audio and (audio := properties.audio):
+                return audio.duration
             return None
 
         duration_limits = self.manager.config.media_duration_limits

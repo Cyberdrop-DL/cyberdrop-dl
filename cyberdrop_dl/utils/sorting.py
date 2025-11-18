@@ -11,7 +11,7 @@ import imagesize
 
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.utils import strings
-from cyberdrop_dl.utils.ffmpeg import probe_sync as probe
+from cyberdrop_dl.utils.ffmpeg import probe
 from cyberdrop_dl.utils.logger import log, log_with_color
 from cyberdrop_dl.utils.utilities import purge_dir_tree
 
@@ -134,7 +134,7 @@ class Sorter:
             return
         bitrate = duration = sample_rate = None
         try:
-            properties: FFprobeResult = probe(file)
+            properties: FFprobeResult = await probe(file)
             if audio := properties.audio:
                 duration = audio.duration
                 bitrate = audio.bitrate
@@ -186,7 +186,7 @@ class Sorter:
         codec = duration = framerate = height = resolution = width = None
 
         try:
-            properties: FFprobeResult = probe(file)
+            properties: FFprobeResult = await probe(file)
             if video := properties.video:
                 width = video.width
                 height = video.height
