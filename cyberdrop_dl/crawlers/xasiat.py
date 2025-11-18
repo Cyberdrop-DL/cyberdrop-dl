@@ -17,14 +17,14 @@ class XasiatCrawler(KernelVideoSharingCrawler):
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.xasiat.com")
-    DOMAIN: ClassVar[str] = "xasiat.com"
+    DOMAIN: ClassVar[str] = "xasiat"
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["albums", album_id, _]:
+            case ["albums", album_id, _, *_]:
                 return await self.album(scrape_item, album_id)
-            case ["videos", _, _]:
+            case ["videos", _, _, *_]:
                 return await self.video(scrape_item)
             case ["get_image", _, *_]:
                 return await self.direct_file(scrape_item)
