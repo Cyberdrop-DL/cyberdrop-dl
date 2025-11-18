@@ -500,7 +500,7 @@ class ClientManager:
         if is_audio and not any(audio_duration_limits):
             return True
 
-        duration: float = await get_duration()  # type: ignore
+        duration: float | None = await get_duration()
         media_item.duration = duration
         await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
         if duration is None:
