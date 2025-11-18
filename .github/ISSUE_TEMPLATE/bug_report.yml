@@ -40,17 +40,6 @@ body:
     type: textarea
     validations:
       required: true
-  - id: reproduce-steps
-    attributes:
-      label: Steps to help reproduce the behavior
-      placeholder: |
-          1. In this environment...
-          2. With this config...
-          3. Run '...'
-          4. See error...
-    type: textarea
-    validations:
-      required: true
   - id: logs
     attributes:
       description: |
@@ -60,24 +49,6 @@ body:
         Bug reports without a log file will be closed
       label: Relevant logs
     type: textarea
-    validations:
-      required: true
-  - id: environment
-    attributes:
-      description: What operating system, version, and/or environment are you working with?
-      label: Operating system/environment
-      placeholder: "Example: Windows 11 24H2"
-    type: input
-    validations:
-      required: true
-  - id: python-version
-    attributes:
-      description: |
-        What implementation and version of Python are you working with?
-        CPython is assumed unless indicated otherwise.
-      label: Python Version
-      placeholder: "Example: 3.12.0"
-    type: input
     validations:
       required: true
   - id: cyberdrop-dl-version
