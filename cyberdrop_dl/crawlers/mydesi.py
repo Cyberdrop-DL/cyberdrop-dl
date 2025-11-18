@@ -67,4 +67,3 @@ class MyDesiCrawler(Crawler):
                 yield resolution, self.parse_url(link)
 
         return max(parse())
-
