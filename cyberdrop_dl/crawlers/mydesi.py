@@ -37,37 +37,35 @@ class MyDesiCrawler(Crawler):
             return
         soup = await self.request_soup(scrape_item.url)
         resolution, download_url = self.select_highest_quality_video(soup)
-        title = soup.select_one("div.col-12.col-md-8.col-left > h1").text.strip()
         filename, ext = self.get_filename_and_ext(download_url.name)
-
-        metadata_script = css.get_json_ld(soup)
-        upload_date = metadata_script.get("subjectOf", {}).get("uploadDate", "")
-        scrape_item.possible_datetime = self.parse_date(upload_date)
+        metadata = css.get_json_ld(soup)["subjectOf"]
+        upload_date = metadata.get("uploadDate", "")
+        title: str = metadata["name"]
+        scrape_item.possible_datetime = self.parse_iso_date(upload_date)
         custom_filename = self.create_custom_filename(title, ext, resolution=resolution)
         return await self.handle_file(download_url, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        album_initialized: bool = False
-        async for soup in self.web_pager(scrape_item.url, next_page_selector=self.paginate):
-            if not album_initialized:
-                title = self.create_title(soup.select_one("title").text.split("“")[1].split("”")[0])
-                scrape_item.setup_as_album(title)
-                album_initialized = True
+    async def search(self, scrape_item: ScrapeItem, query: str, init_page: int = 1) -> None:
+        title = self.create_title(f"{query} [search]")
+        scrape_item.setup_as_album(title)
+        
+        for page in itertools.count(init_page):
+            soup = await self.request_soup(scrape_item.url.with_name(str(page))):
+                
 
             for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
                 self.create_task(self.run(new_scrape_item))
 
     def select_highest_quality_video(self, soup: BeautifulSoup) -> tuple[Resolution, AbsoluteHttpURL]:
         def parse():
-            for src in soup.select("a.btn.btn-dark.btn-sm"):
+            for src in soup.select("#video-rate > a"):
                 quality = css.get_attr(src, "title")
                 link = css.get_attr(src, "href")
                 resolution = Resolution.highest() if "original" in quality.casefold() else Resolution.parse(quality)
-                yield resolution, link
+                yield resolution, self.parse_url(link)
 
-        return_link = max(parse())
-        return return_link[0], self.parse_url(return_link[1])
+        max(parse())
 
     def paginate(self, soup: BeautifulSoup) -> str | None:
         # Extract search term from RSS feed link
