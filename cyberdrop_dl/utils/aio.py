@@ -5,12 +5,15 @@ from __future__ import annotations
 import asyncio
 import builtins
 import contextlib
-import pathlib
 import weakref
 from stat import S_ISREG
 from typing import TYPE_CHECKING, Final, Generic, ParamSpec, TypeVar, cast
 
 from cyberdrop_dl.utils.logger import log_debug
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Awaitable, Sequence
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
@@ -74,11 +77,7 @@ async def get_size(path: pathlib.Path) -> int | None:
 
     try:
         stat_result = await stat(path)
-    except OSError as e:
-        if not pathlib._ignore_error(e):  # type: ignore[reportAttributeAccessIssue]
-            raise
-        return
-    except ValueError:
+    except (OSError, ValueError):
         return
     else:
         if S_ISREG(stat_result.st_mode):

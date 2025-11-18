@@ -35,6 +35,7 @@ from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
+from .fsiblog import FSIBlogCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler

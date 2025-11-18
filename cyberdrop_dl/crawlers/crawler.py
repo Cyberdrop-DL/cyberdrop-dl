@@ -363,17 +363,28 @@ class Crawler(ABC):
             return False
         return primary_domain in other_domain and other_domain.count(".") > primary_domain.count(".")
 
-    # TODO: make this sync
+    @final
+    async def write_metadata(self, scrape_item: ScrapeItem, name: str, metadata: object) -> None:
+        """Write general metadata (not specific to a single file) to json output"""
+
+        filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
+        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        url = scrape_item.url.with_scheme("metadata")
+        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename)
+        media_item.metadata = metadata
+        await self.__write_to_jsonl(media_item)
+
     async def handle_file(
         self,
-        url: URL,
+        url: AbsoluteHttpURL,
         scrape_item: ScrapeItem,
         filename: str,
         ext: str | None = None,
         *,
         custom_filename: str | None = None,
-        debrid_link: URL | None = None,
+        debrid_link: AbsoluteHttpURL | None = None,
         m3u8: m3u8.RenditionGroup | None = None,
+        metadata: object = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
         if not ext:
@@ -385,15 +396,13 @@ class Crawler(ABC):
         else:
             original_filename = filename
 
-        assert is_absolute_http_url(url)
-        if isinstance(debrid_link, URL):
-            assert is_absolute_http_url(debrid_link)
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
-
-        self.create_task(self.handle_media_item(media_item, m3u8))
+        if metadata is not None:
+            media_item.metadata = metadata
+        await self.handle_media_item(media_item, m3u8)
 
     @final
     async def _download(self, media_item: MediaItem, m3u8: m3u8.RenditionGroup | None) -> None:
@@ -404,9 +413,14 @@ class Crawler(ABC):
                 await self.downloader.run(media_item)
 
         finally:
-            if self.manager.config_manager.settings_data.files.dump_json:
-                data = [media_item.as_jsonable_dict()]
-                await self.manager.log_manager.write_jsonl(data)
+            await self.__write_to_jsonl(media_item)
+
+    async def __write_to_jsonl(self, media_item: MediaItem) -> None:
+        if not self.manager.config.files.dump_json:
+            return
+
+        data = [media_item.as_jsonable_dict()]
+        await self.manager.log_manager.write_jsonl(data)
 
     async def check_complete(self, url: AbsoluteHttpURL, referer: AbsoluteHttpURL) -> bool:
         """Checks if this URL has been download before.
