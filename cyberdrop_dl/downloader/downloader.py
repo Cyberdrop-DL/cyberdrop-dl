@@ -214,7 +214,7 @@ class Downloader:
             assert m3u8.media_type
             if not m3u8.segments:
                 raise DownloadError(204, f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments")
-                
+
             download_folder = media_item.complete_file.with_suffix(constants.TempExt.HLS) / m3u8.media_type
             coros = self._prepare_hls_downloads(media_item, m3u8, download_folder)
             n_segmets = len(m3u8.segments)
