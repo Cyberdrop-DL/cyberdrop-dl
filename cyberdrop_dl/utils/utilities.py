@@ -231,8 +231,8 @@ def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) ->
     """Returns the path to the download folder."""
     download_dir = manager.path_manager.download_folder
 
-    if scrape_item.retry:
-        return scrape_item.retry_path  # type: ignore
+    if scrape_item.retry_path:
+        return scrape_item.retry_path
     if scrape_item.parent_title and scrape_item.part_of_album:
         return download_dir / scrape_item.parent_title
     if scrape_item.parent_title:

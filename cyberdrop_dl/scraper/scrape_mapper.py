@@ -384,7 +384,7 @@ def regex_links(line: str) -> Generator[AbsoluteHttpURL]:
 def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
     referer: str = row["referer"]
     url = AbsoluteHttpURL(referer, encoded="%" in referer)
-    item = ScrapeItem(url=url, retry_path=Path(row["download_path"]), part_of_album=True, retry=True)
+    item = ScrapeItem(url=url, retry_path=Path(row["download_path"]), part_of_album=True)
     if completed_at := row["completed_at"]:
         item.completed_at = int(datetime.fromisoformat(completed_at).timestamp())
     if created_at := row["created_at"]:

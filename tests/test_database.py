@@ -39,7 +39,6 @@ def test_scrape_item_creation(row: aiosqlite.Row) -> None:
     assert item.url == AbsoluteHttpURL("https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit")
     assert item.retry_path == Path("/cdl/downloads")
     assert item.part_of_album is True
-    assert item.retry is True
     assert item.completed_at is None
     assert item.created_at is None
 
