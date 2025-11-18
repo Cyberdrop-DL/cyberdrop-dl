@@ -18,8 +18,7 @@ from aiohttp_client_cache.response import CachedResponse
 from aiohttp_client_cache.session import CachedSession
 from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
-from pyffmpeg import FFprobe
-from pyffmpeg import logger as fflogger
+from videoprops import get_audio_properties, get_video_properties
 
 from cyberdrop_dl import constants, env
 from cyberdrop_dl.clients.download_client import DownloadClient
@@ -73,8 +72,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
 
 _null_context = contextlib.nullcontext()
-
-fflogger.setLevel(50)
 
 
 class DownloadSpeedLimiter(AsyncLimiter):
@@ -250,6 +247,9 @@ class ClientManager:
 
     def pre_check_duration(self, media_item: MediaItem) -> bool:
         """Checks if the download is above the maximum runtime."""
+        if not media_item.duration:
+            return True
+
         return self.check_file_duration(media_item)
 
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
@@ -478,17 +478,12 @@ class ClientManager:
         def get_duration() -> float | None:
             if media_item.duration:
                 return media_item.duration
-
-            target = str(media_item.url) if media_item.downloaded is False else str(media_item.complete_file)
-            file_info = FFprobe(target)
-
-            duration_segments = file_info.duration.split(":")
-            hours = int(duration_segments[0])
-            minutes = int(duration_segments[1])
-            seconds = float(duration_segments[2])
-
-            total_seconds = hours * 3600 + minutes * 60 + seconds
-            return total_seconds if total_seconds > 0 else None
+            props: dict = {}
+            if is_video:
+                props: dict = get_video_properties(str(media_item.complete_file))
+            elif is_audio:
+                props: dict = get_audio_properties(str(media_item.complete_file))
+            return float(props.get("duration", 0)) or None
 
         duration_limits = self.manager.config.media_duration_limits
         min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
