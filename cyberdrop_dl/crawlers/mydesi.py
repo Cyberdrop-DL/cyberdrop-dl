@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -49,11 +50,11 @@ class MyDesiCrawler(Crawler):
     async def search(self, scrape_item: ScrapeItem, query: str, init_page: int = 1) -> None:
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
-        
-        for page in itertools.count(init_page):
-            soup = await self.request_soup(scrape_item.url.with_name(str(page))):
-                
+        if len(scrape_item.url.parts) <= 4:
+            scrape_item.url = scrape_item.url / "page" / str(init_page)
 
+        for page in itertools.count(init_page):
+            soup = await self.request_soup(scrape_item.url.with_name(str(page)))
             for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
                 self.create_task(self.run(new_scrape_item))
 
@@ -65,7 +66,7 @@ class MyDesiCrawler(Crawler):
                 resolution = Resolution.highest() if "original" in quality.casefold() else Resolution.parse(quality)
                 yield resolution, self.parse_url(link)
 
-        max(parse())
+        return max(parse())
 
     def paginate(self, soup: BeautifulSoup) -> str | None:
         # Extract search term from RSS feed link
