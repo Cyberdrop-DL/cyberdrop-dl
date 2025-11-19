@@ -158,10 +158,11 @@ class RestrictedFiletypeError(CDLBaseError):
 
 
 class DurationError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
+    def __init__(self, origin: MediaItem) -> None:
         """THis error will be thrown when the file duration is not allowed by the config."""
         ui_failure = "Duration Not Allowed"
-        super().__init__(ui_failure, origin=origin)
+        message = f"Duration ({origin.duration}s) out of config range"
+        super().__init__(ui_failure, message=message, origin=origin)
 
 
 class ScrapeError(CDLBaseError):
