@@ -150,18 +150,30 @@ class InsufficientFreeSpaceError(CDLBaseError):
         super().__init__(ui_failure, origin=origin)
 
 
-class RestrictedFiletypeError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
-        """This error will be thrown when has a filytpe not allowed by config."""
+class SkipDownloadError(CDLBaseError):
+    """Throw this when a download is not allowed by config options"""
+
+
+class RestrictedFiletypeError(SkipDownloadError):
+    def __init__(self, origin: MediaItem) -> None:
+        """This error will be thrown when has a filetype not allowed by config."""
         ui_failure = "Restricted Filetype"
         super().__init__(ui_failure, origin=origin)
 
 
-class DurationError(CDLBaseError):
+class DurationError(SkipDownloadError):
     def __init__(self, origin: MediaItem) -> None:
-        """THis error will be thrown when the file duration is not allowed by the config."""
+        """This error will be thrown when the file duration is not allowed by the config."""
         ui_failure = "Duration Not Allowed"
         message = f"Duration ({origin.duration}s) out of config range"
+        super().__init__(ui_failure, message=message, origin=origin)
+
+
+class RestrictedDateRangeError(SkipDownloadError):
+    def __init__(self, origin: MediaItem) -> None:
+        """This error will be thrown when the publication date of the media item is not allowed by config."""
+        ui_failure = "Restricted DateRange"
+        message = f"File upload date ({origin.datetime}s) out of config range"
         super().__init__(ui_failure, message=message, origin=origin)
 
 
@@ -211,13 +223,6 @@ class InvalidYamlError(CDLBaseError):
         msg += f"\n\n{problem.capitalize()}"
         msg += f"\n\n{VALIDATION_ERROR_FOOTER}"
         super().__init__(ui_failure, message=msg, origin=file)
-
-
-class RestrictedDateRangeError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
-        """This error will be thrown when the publication date of the media item is not allowed by config."""
-        ui_failure = "Restricted DateRange"
-        super().__init__(ui_failure, origin=origin)
 
 
 def create_error_msg(error: int | str) -> str:

@@ -24,6 +24,7 @@ from cyberdrop_dl.exceptions import (
     InvalidContentTypeError,
     RestrictedDateRangeError,
     RestrictedFiletypeError,
+    SkipDownloadError,
     TooManyCrawlerErrors,
 )
 from cyberdrop_dl.utils import aio, ffmpeg
@@ -441,21 +442,11 @@ class Downloader:
             self.attempt_task_removal(media_item)
             return downloaded
 
-        except RestrictedFiletypeError:
+        except SkipDownloadError as e:
             if not media_item.is_segment:
-                log(f"Download skip {media_item.url} due to ignore_extension config ({media_item.ext})", 10)
+                log(f"Download skip {media_item.url}: {e}", 10)
                 self.manager.progress_manager.download_progress.add_skipped()
                 self.attempt_task_removal(media_item)
-
-        except RestrictedDateRangeError:
-            timestamp_str = (
-                datetime.fromtimestamp(media_item.datetime).strftime("%Y-%m-%d %H:%M:%S")
-                if media_item.datetime
-                else "Unknown date"
-            )
-            log(f"Download skip {media_item.url} due to exclude_posts_date config ({timestamp_str})", 10)
-            self.manager.progress_manager.download_progress.add_skipped()
-            self.attempt_task_removal(media_item)
 
         except (DownloadError, ClientResponseError, InvalidContentTypeError):
             raise
