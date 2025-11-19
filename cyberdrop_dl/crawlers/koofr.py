@@ -26,19 +26,10 @@ class Node:
     hash: str = ""  # md5
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class Folder:
-    id: str
-    name: str
-    file: Node
-    password: str
-    children: tuple[Node, ...] = ()
-
-
 class KooFrCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "koofr.net", "koofr.eu", _SHORT_LINK_CDN.host
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File / Folder": (
+        "Public Share": (
             "/links/<content_id>",
             f"{_SHORT_LINK_CDN}/<short_id>",
         ),
@@ -55,7 +46,7 @@ class KooFrCrawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["links", content_id]:
-                return await self.folder(scrape_item, content_id)
+                return await self.share(scrape_item, content_id)
             case _:
                 raise ValueError
 
@@ -66,19 +57,19 @@ class KooFrCrawler(Crawler):
         return redirect
 
     @error_handling_wrapper
-    async def folder(self, scrape_item: ScrapeItem, content_id: str) -> None:
+    async def share(self, scrape_item: ScrapeItem, content_id: str) -> None:
         path = scrape_item.url.query.get("path") or "/"
-        folder = await self.api.get_folder(content_id, path, scrape_item.password)
-        if folder.file.type == "file":
-            return await self._file(scrape_item, folder.file)
+        root = await self.api.get_info(content_id, path, scrape_item.password)
+        if root.type == "file":
+            return await self._file(scrape_item, root)
 
-        title = self.create_title(folder.file.name, content_id)
+        title = self.create_title(root.name, content_id)
         scrape_item.setup_as_album(title, album_id=content_id)
-        await self._walk_folder(scrape_item, folder, path)
+        await self._walk_folder(scrape_item, content_id, path)
 
     @error_handling_wrapper
-    async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder, path: str) -> None:
-        children = await self.api.get_children(folder.id, path, folder.password)
+    async def _walk_folder(self, scrape_item: ScrapeItem, content_id: str, path: str) -> None:
+        children = await self.api.get_children(content_id, path, scrape_item.password)
         async with asyncio.TaskGroup() as tg:
             for node in children:
                 if node.type == "file":
@@ -88,7 +79,7 @@ class KooFrCrawler(Crawler):
                 url = scrape_item.url.update_query(path=node.path)
                 new_scrape_item = scrape_item.create_child(url)
                 new_scrape_item.add_to_parent_title(node.name)
-                tg.create_task(self._walk_folder(new_scrape_item, folder, node.path))
+                tg.create_task(self._walk_folder(new_scrape_item, content_id, node.path))
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node) -> None:
@@ -107,7 +98,7 @@ class KooFrAPI:
     def __init__(self, crawler: KooFrCrawler) -> None:
         self._crawler = crawler
 
-    async def get_folder(self, content_id: str, path: str, password: str | None) -> Folder:
+    async def get_info(self, content_id: str, path: str, password: str | None) -> Node:
         password = password or ""
         api_url = (_APP_LINKS / content_id).with_query(path=path, password=password)
         try:
@@ -121,8 +112,7 @@ class KooFrAPI:
         if not resp.get("isOnline"):
             raise ScrapeError(404)
 
-        resp["password"] = password
-        return Folder(id=content_id, **resp)
+        return Node(**resp["file"])
 
     async def get_children(self, content_id: str, path: str, password: str | None) -> list[Node]:
         password = password or ""
