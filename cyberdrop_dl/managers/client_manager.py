@@ -447,6 +447,19 @@ class ClientManager:
         if not (is_video or is_audio):
             return True
 
+        duration_limits = self.manager.config.media_duration_limits
+        min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
+        max_video_duration: float = duration_limits.maximum_video_duration.total_seconds()
+        min_audio_duration: float = duration_limits.minimum_audio_duration.total_seconds()
+        max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
+        video_duration_limits = min_video_duration, max_video_duration
+        audio_duration_limits = min_audio_duration, max_audio_duration
+
+        if is_video and not any(video_duration_limits):
+            return True
+        if is_audio and not any(audio_duration_limits):
+            return True
+
         async def get_duration() -> float | None:
             if media_item.duration:
                 return media_item.duration
@@ -463,19 +476,6 @@ class ClientManager:
             if is_audio and (audio := properties.audio):
                 return audio.duration
             return None
-
-        duration_limits = self.manager.config.media_duration_limits
-        min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
-        max_video_duration: float = duration_limits.maximum_video_duration.total_seconds()
-        min_audio_duration: float = duration_limits.minimum_audio_duration.total_seconds()
-        max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
-        video_duration_limits = min_video_duration, max_video_duration
-        audio_duration_limits = min_audio_duration, max_audio_duration
-
-        if is_video and not any(video_duration_limits):
-            return True
-        if is_audio and not any(audio_duration_limits):
-            return True
 
         duration: float | None = await get_duration()
         media_item.duration = duration
