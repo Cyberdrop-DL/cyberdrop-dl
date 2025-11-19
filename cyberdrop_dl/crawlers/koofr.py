@@ -30,7 +30,7 @@ class Node:
 class Folder:
     name: str
     file: Node
-    root_id: str
+    id: str
     password: str
     children: tuple[Node, ...] = ()
 
@@ -55,7 +55,7 @@ class KooFrCrawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["links", content_id]:
-                return await self.content(scrape_item, content_id)
+                return await self.folder(scrape_item, content_id)
             case _:
                 raise ValueError
 
@@ -66,7 +66,7 @@ class KooFrCrawler(Crawler):
             return resp.url
 
     @error_handling_wrapper
-    async def content(self, scrape_item: ScrapeItem, content_id: str) -> None:
+    async def folder(self, scrape_item: ScrapeItem, content_id: str) -> None:
         path = scrape_item.url.query.get("path") or "/"
         folder = await self.api.get_folder(content_id, path, scrape_item.password)
         if folder.file.type == "file":
@@ -122,9 +122,10 @@ class KooFrAPI:
             raise ScrapeError(404)
 
         resp["password"] = password
-        return Folder(root_id=content_id, **resp)
+        return Folder(id=content_id, **resp)
 
     async def get_children(self, folder: Folder, path: str) -> list[Node]:
-        api_url = (_APP_LINKS / folder.root_id / "bundle").with_query(path=path, password=folder.password)
+        api_url = (_APP_LINKS / folder.id / "bundle").with_query(path=path, password=folder.password)
         nodes: list[dict[str, Any]] = (await self._crawler.request_json(api_url))["files"]
-        return [Node(path=f"{path.removesuffix('/')}/{node['name']}", **node) for node in nodes]
+        base = path.removesuffix("/")
+        return [Node(path=f"{base}/{node['name']}", **node) for node in nodes]
