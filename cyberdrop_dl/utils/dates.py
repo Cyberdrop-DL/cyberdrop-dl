@@ -1,5 +1,6 @@
 import datetime
 import email.utils
+import warnings
 from functools import lru_cache
 from typing import Literal, NewType, TypeAlias, TypeVar
 
@@ -14,6 +15,9 @@ DEFAULT_PARSERS: list[ParserKind] = ["relative-time", "custom-formats", "absolut
 DEFAULT_DATE_ORDER = "MDY"
 
 _S = TypeVar("_S", bound=str)
+
+
+warnings.filterwarnings("ignore", "day of month without a year specified is ambiguious", DeprecationWarning)
 
 
 def coerce_to_list(value: _S | set[_S] | list[_S] | tuple[_S, ...] | None) -> list[_S]:
@@ -64,7 +68,7 @@ class DateParser(dateparser.date.DateDataParser):
                 "DATE_ORDER": date_order,
                 "PREFER_DAY_OF_MONTH": "first",
                 "PREFER_DATES_FROM": "past",
-                "REQUIRE_PARTS": ["year", "month"],
+                "REQUIRE_PARTS": ["month"],
                 "RETURN_TIME_AS_PERIOD": True,
                 "PARSERS": parsers,
             },
@@ -117,8 +121,9 @@ def parse_human_date(
     date_order: DateOrder | None = None,
 ) -> datetime.datetime | None:
     parser = get_parser(parser_kind, date_order)
-    date = parser.parse_possible_incomplete_date(date_string, date_formats)
-    return date or parser.parse_human_date(date_string, date_formats)
+    if date_formats and (parsed_date := parser.parse_possible_incomplete_date(date_string, date_formats)):
+        return parsed_date
+    return parser.parse_human_date(date_string, date_formats)
 
 
 def to_timestamp(date: datetime.datetime) -> TimeStamp:

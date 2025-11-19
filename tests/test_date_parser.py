@@ -1,8 +1,4 @@
 import datetime
-import sys
-import warnings
-
-import pytest
 
 from cyberdrop_dl.utils import dates
 
@@ -24,15 +20,6 @@ def test_parse_today_at_midnight() -> None:
 
 
 def test_parse_date_with_no_year() -> None:
-    def parse() -> None:
-        expected = today_at_midnight().replace(month=10, day=14)
-        result = dates.parse_human_date("oct 14")
-        assert expected == result
-
-    with warnings.catch_warnings(action="error"):
-        if sys.version_info > (3, 13):
-            with pytest.raises(DeprecationWarning):
-                parse()
-
-        dates.patch_dateparser()
-        parse()
+    expected = today_at_midnight().replace(month=10, day=14)
+    result = dates.parse_human_date("oct 14")
+    assert expected == result

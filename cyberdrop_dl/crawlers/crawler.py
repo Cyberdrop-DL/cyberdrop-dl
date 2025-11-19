@@ -5,7 +5,6 @@ import contextlib
 import datetime
 import inspect
 import re
-import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field
@@ -715,27 +714,27 @@ class Crawler(ABC):
         if parsed_date := self._parse_date(date_or_datetime, None, iso=True):
             return to_timestamp(parsed_date)
 
-    @final
+    @classmethod
     def _parse_date(
-        self, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
+        cls, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
     ) -> datetime.datetime | None:
         assert not (iso and format), "Only `format` or `iso` can be used, not both"
-        msg = f"Date parsing for {self.DOMAIN} seems to be broken"
+        msg = f"Date parsing for {cls.DOMAIN} seems to be broken"
         if not date_or_datetime:
             log(f"{msg}: Unable to extract date", bug=True)
             return
+
         if format:
             assert not (format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S")), (
                 f"{msg} Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead"
             )
         try:
-            with warnings.catch_warnings(action="error"):
-                if iso:
-                    parsed_date = datetime.datetime.fromisoformat(date_or_datetime)
-                elif format:
-                    parsed_date = datetime.datetime.strptime(date_or_datetime, format)
-                else:
-                    parsed_date = parse_human_date(date_or_datetime)
+            if iso:
+                parsed_date = datetime.datetime.fromisoformat(date_or_datetime)
+            elif format:
+                parsed_date = datetime.datetime.strptime(date_or_datetime, format)
+            else:
+                parsed_date = parse_human_date(date_or_datetime)
 
             if parsed_date:
                 return parsed_date
