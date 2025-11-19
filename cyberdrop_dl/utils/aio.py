@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import Awaitable, Sequence
 
-    _T = TypeVar("_T")
+_T = TypeVar("_T")
 
 
 if TYPE_CHECKING:
