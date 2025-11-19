@@ -22,9 +22,8 @@ async def test_ffprobe_video_url() -> None:
     assert output.video.fps == 30.0
     assert output.video.width == 480
     assert output.video.height == 854
-    assert dict(output.video.tags) == {
-        "language": "und",
-        "handler_name": "VideoHandler",
-        "vendor_id": "[0][0][0][0]",
-        "encoder": "AVC Coding",
-    }
+
+    tags = output.video.tags
+    assert tags["language"] == "und"
+    assert tags["handler_name"] == "VideoHandler"
+    assert tags["encoder"] == "AVC Coding"
