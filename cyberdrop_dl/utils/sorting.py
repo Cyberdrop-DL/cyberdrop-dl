@@ -5,7 +5,7 @@ import itertools
 from datetime import datetime
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import imagesize
 
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.ffmpeg import FFprobeResult
 
 
 async def get_modified_date(file: Path) -> datetime:
@@ -134,14 +133,16 @@ class Sorter:
         """Sorts an audio file into the sorted audio folder."""
         if not self.audio_format:
             return
+
         bitrate = duration = sample_rate = None
         try:
-            properties: FFprobeResult = await probe(file)
+            properties = await probe(file)
             if audio := properties.audio:
                 duration = audio.duration
                 bitrate = audio.bitrate
                 sample_rate = audio.sample_rate
-        except (RuntimeError, CalledProcessError):
+
+        except (RuntimeError, CalledProcessError, OSError):
             log(f"Unable to get audio properties of '{file}'")
 
         if await self._process_file_move(
@@ -167,6 +168,7 @@ class Sorter:
             else:
                 # imagesize returns (-1, -1) for unsupported/corrupted images
                 width = height = resolution = None
+
         except (OSError, ValueError):
             log(f"Unable to get some image properties of '{file}'")
 
@@ -188,16 +190,16 @@ class Sorter:
         codec = duration = framerate = height = resolution = width = None
 
         try:
-            properties: FFprobeResult = await probe(file)
+            properties = await probe(file)
             if video := properties.video:
                 width = video.width
                 height = video.height
                 resolution = video.resolution
-
                 codec = video.codec_name
                 duration = video.duration
                 framerate = video.fps
-        except (RuntimeError, CalledProcessError):
+
+        except (RuntimeError, CalledProcessError, OSError):
             log(f"Unable to get some video properties of '{file}'")
 
         if await self._process_file_move(
@@ -217,10 +219,11 @@ class Sorter:
         """Sorts an other file into the sorted other folder."""
         if not self.other_format:
             return
+
         if await self._process_file_move(file, base_name, self.other_format):
             self.manager.progress_manager.sort_progress.increment_other()
 
-    async def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs) -> bool:
+    async def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs: Any) -> bool:
         file_date = await get_modified_date(file)
         file_date_us = file_date.strftime("%Y-%d-%m")
         file_date_iso = file_date.strftime("%Y-%m-%d")

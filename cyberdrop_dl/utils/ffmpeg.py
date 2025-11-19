@@ -60,7 +60,7 @@ def which_ffprobe() -> str | None:
     global _FFPROBE_AVAILABLE
     try:
         bin_path = shutil.which("ffprobe") or _builtin_ffprobe()
-        _FFPROBE_AVAILABLE = True
+        _FFPROBE_AVAILABLE = True  # pyright: ignore[reportConstantRedefinition]
         return bin_path
     except RuntimeError:
         return
