@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 class Selector:
     VIDEO_PLAYER = "video.video-js > source"
-    METADATA_SELECTOR = "script[type='application/ld+json']"
     TITLE = "h1.title-right"
     NEXT_PAGE = "div#pagination > a:-soup-contains('Suivante »')"
     VIDEOS_THUMBS = "div.contents div.content a"
@@ -23,9 +22,13 @@ PRIMARY_URL = AbsoluteHttpURL("https://luxuretv.com")
 
 
 class LuxureTVCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/videos/...", "Search": "/searchgate/videos/<search>/..."}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/videos/<name>-<id>.html",
+        "Search": "/searchgate/videos/<search>/...",
+    }
     DOMAIN: ClassVar[str] = "luxuretv"
     FOLDER_DOMAIN: ClassVar[str] = "LuxureTV"
+    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT = 3, 10
