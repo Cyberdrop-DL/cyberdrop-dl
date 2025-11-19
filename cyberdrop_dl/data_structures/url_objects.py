@@ -171,8 +171,12 @@ class MediaItem:
     downloaded: bool = field(default=False, compare=False)
 
     parent_media_item: MediaItem | None = field(default=None, compare=False)
-    db_path: str = field(init=False, repr=False)
+    db_path: str = field(init=False)
     _task_id: TaskID | None = field(default=None, compare=False)
+    metadata: object = field(init=False, default_factory=dict, compare=False)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(domain={self.domain!r}, url={self.url!r}, referer={self.referer!r}, filename={self.filename!r}"
 
     def __post_init__(self) -> None:
         self.db_path = self.create_db_path(self.url, self.domain)
@@ -180,6 +184,9 @@ class MediaItem:
     @staticmethod
     def create_db_path(url: yarl.URL, domain: str) -> str:
         """Gets the URL path to be put into the DB and checked from the DB."""
+
+        if url.scheme == "metadata":
+            return ""
 
         if domain:
             if "e-hentai" in domain:
@@ -264,7 +271,6 @@ class ScrapeItem:
     part_of_album: bool = False
     album_id: str | None = None
     possible_datetime: int | None = None
-    retry: bool = False
     retry_path: Path | None = None
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
@@ -284,8 +290,9 @@ class ScrapeItem:
         """Adds a title to the parent title."""
         from cyberdrop_dl.utils.utilities import sanitize_folder
 
-        if not title or self.retry:
+        if not title or self.retry_path:
             return
+
         title = sanitize_folder(title)
         if title.endswith(")") and " (" in title:
             for part in reversed(self.parent_title.split("/")):
@@ -409,6 +416,15 @@ class ScrapeItem:
     def parent(self) -> AbsoluteHttpURL | None:
         if self.parents:
             return self.parents[-1]
+
+    def create_download_path(self, domain: str) -> Path:
+        if self.retry_path:
+            return self.retry_path
+        if self.parent_title and self.part_of_album:
+            return Path(self.parent_title)
+        if self.parent_title:
+            return Path(self.parent_title) / f"Loose Files ({domain})"
+        return Path(f"Loose Files ({domain})")
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""

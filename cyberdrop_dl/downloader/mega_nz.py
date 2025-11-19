@@ -61,7 +61,7 @@ from collections.abc import Callable, Coroutine, Sequence
 from enum import IntEnum
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, NotRequired, TypeAlias, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, NotRequired, TypeAlias, TypedDict, TypeVar, cast
 
 import aiofiles
 import aiohttp
@@ -74,7 +74,7 @@ from Crypto.Util import Counter
 
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.downloader.downloader import Downloader
-from cyberdrop_dl.exceptions import CDLBaseError, DownloadError
+from cyberdrop_dl.exceptions import CDLBaseError, DownloadError, create_error_msg
 from cyberdrop_dl.utils.logger import log
 
 if TYPE_CHECKING:
@@ -96,48 +96,8 @@ AnyDict: TypeAlias = dict[str, Any]
 
 
 class MegaNzError(CDLBaseError):
-    def __init__(self, msg: str | int, **kwargs) -> None:
-        super().__init__(f"MegaNZ Error ({msg})", **kwargs)
-
-
-ERROR_CODES = {
-    -1: (
-        "EINTERNAL",
-        "An internal error has occurred. Please submit a bug report, detailing the exact circumstances in which this error occurred",
-    ),
-    -2: ("EARGS", "You have passed invalid arguments to this command"),
-    -3: (
-        "EAGAIN",
-        "A temporary congestion or server malfunction prevented your request from being processed. No data was altered",
-    ),
-    -4: (
-        "ERATELIMIT",
-        "You have exceeded your command weight per time quota. Please wait a few seconds, then try again (this should never happen in sane real-life applications)",
-    ),
-    -5: ("EFAILED", "The upload failed. Please restart it from scratch"),
-    -6: ("ETOOMANY", "Too many concurrent IP addresses are accessing this upload target URL"),
-    -7: ("ERANGE", "The upload file packet is out of range or not starting and ending on a chunk boundary"),
-    -8: ("EEXPIRED", "The upload target URL you are trying to access has expired. Please request a fresh one"),
-    -9: ("ENOENT", "Object (typically, node or user) not found. Wrong password?"),
-    -10: ("ECIRCULAR", "Circular linkage attempted"),
-    -11: ("EACCESS", "Access violation (e.g., trying to write to a read-only share)"),
-    -12: ("EEXIST", "Trying to create an object that already exists"),
-    -13: ("EINCOMPLETE", "Trying to access an incomplete resource"),
-    -14: ("EKEY", "A decryption operation failed (never returned by the API)"),
-    -15: ("ESID", "Invalid or expired user session, please relogin"),
-    -16: ("EBLOCKED", "User blocked"),
-    -17: ("EOVERQUOTA", "Request over quota"),
-    -18: ("ETEMPUNAVAIL", "Resource temporarily not available, please try again later"),
-    -19: ("ETOOMANYCONNECTIONS", ""),
-    -24: ("EGOINGOVERQUOTA", ""),
-    -25: ("EROLLEDBACK", ""),
-    -26: ("EMFAREQUIRED", "Multi-Factor Authentication Required"),
-    -27: ("EMASTERONLY", ""),
-    -28: ("EBUSINESSPASTDUE", ""),
-    -29: ("EPAYWALL", "ODQ paywall state"),
-    -400: ("ETOOERR", ""),
-    -401: ("ESHAREROVERQUOTA", ""),
-}
+    def __init__(self, error: str | int, **kwargs) -> None:
+        super().__init__(f"MegaNZ Error ({error})", **kwargs)
 
 
 class RequestError(MegaNzError):
@@ -145,12 +105,59 @@ class RequestError(MegaNzError):
 
     def __init__(self, msg: str | int) -> None:
         self.code = code = msg if isinstance(msg, int) else None
-        if code is not None:
-            name, message = ERROR_CODES[code]
-            ui_failure = f"{name}({code})"
-        else:
-            ui_failure = message = f"({msg})"
+
+        if code is None:
+            super().__init__(error=msg, message=msg)
+            return
+
+        name, message = ERROR_CODES[code]
+        ui_failure = f"{name}[{code}]"
         super().__init__(ui_failure, message=message)
+        if http_code := _HTTP_ERRORS_OVERRIDES.get(code):
+            self.ui_failure = create_error_msg(http_code)
+
+
+ERROR_CODES: Final = {
+    -1: ("EINTERNAL", "An internal error has occurred"),
+    -2: ("EARGS", "You have passed invalid arguments to this command"),
+    -3: ("EAGAIN", "Request failed. No data was altered. Please retry"),
+    -4: ("ERATELIMIT", "Rate limited. Please wait a few seconds, then try again"),
+    -5: ("EFAILED", "The upload failed. Please restart it from scratch"),
+    -6: ("ETOOMANY", "Too many concurrent connections or transfers"),
+    -7: ("ERANGE", "The upload file packet is out of range or not starting and ending on a chunk boundary"),
+    -8: ("EEXPIRED", "The URL has expired"),
+    -9: ("ENOENT", "Resource not found"),
+    -10: ("ECIRCULAR", "Circular linkage attempted"),
+    -11: ("EACCESS", "Access violation (e.g., trying to write to a read-only share)"),
+    -12: ("EEXIST", "Trying to create an object that already exists"),
+    -13: ("EINCOMPLETE", "Trying to access an incomplete resource"),
+    -14: ("EKEY", "Cryptographic error, invalid key"),  # Only used within the client. Never returned by the API
+    -15: ("ESID", "Invalid or expired user session, please relogin"),
+    -16: (
+        "EBLOCKED",
+        "File can't be downloaded as it violates our Terms of Service",
+    ),  # or Suspended account during login
+    -17: ("EOVERQUOTA", "Request exceeds transfer quota"),
+    -18: ("ETEMPUNAVAIL", "Resource temporarily not available, please try again later"),
+    -19: ("ETOOMANYCONNECTIONS", "Too many connections"),
+    -24: ("EGOINGOVERQUOTA", "Not enough quota"),
+    -25: ("EROLLEDBACK", "Request rolled back"),
+    -26: ("EMFAREQUIRED", "Multi-Factor Authentication Required"),
+    -27: ("EMASTERONLY", "Access denied for sub-users"),
+    -28: ("EBUSINESSPASTDUE", "Business account expired"),
+    -29: ("EPAYWALL", "Over Disk Quota Paywall"),
+    -400: ("ETOOERR", "Too many concurrent errors"),
+    -401: ("ESHAREROVERQUOTA", "Share owner is over storage quota"),
+}
+
+_BANDWIDTH_LIMIT_EXCEEDED: Final = 509
+
+_HTTP_ERRORS_OVERRIDES: Final = {
+    -9: HTTPStatus.GONE,
+    -16: HTTPStatus.FORBIDDEN,
+    -24: _BANDWIDTH_LIMIT_EXCEEDED,
+    -401: _BANDWIDTH_LIMIT_EXCEEDED,
+}
 
 
 CHUNK_BLOCK_LEN = 16  # Hexadecimal

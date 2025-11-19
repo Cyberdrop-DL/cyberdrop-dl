@@ -12,52 +12,70 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-IMG_SELECTOR = "div#container a > img"
-PRIMARY_URL = AbsoluteHttpURL("https://imx.to")
+class Selector:
+    GALLERY_TITLE = "div.title"
+    GALLERY_IMAGES = "div.tooltip a"
+    IMAGES = "div#container a > img"
 
 
 class ImxToCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Image": "/i/...", "Thumbnail": "/t/..."}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Image": (
+            "/i/...",
+            "/u/i/...",
+        ),
+        "Thumbnail": (
+            "/t/...",
+            "/u/t/",
+        ),
+        "Gallery": "/g/<gallery_id>",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imx.to")
     DOMAIN: ClassVar[str] = "imx.to"
 
     async def async_startup(self) -> None:
-        cookies = {"continue": 1}
-        self.update_cookies(cookies)
+        self.update_cookies({"continue": 1})
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "i" in scrape_item.url.parts:
-            return await self.image(scrape_item)
-        if "t" in scrape_item.url.parts:
-            return await self.thumbnail(scrape_item)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case ["g", gallery_id]:
+                return await self.gallery(scrape_item, gallery_id)
+            case ["i", _]:
+                return await self.image(scrape_item)
+            case _:
+                raise ValueError
+
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        match url.parts[1:]:
+            case ["u" | "i" | "t", _, _, *_]:
+                return cls.PRIMARY_URL / "i" / Path(url.name).stem
+            case _:
+                return url
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        data = {"imgContinue": "Continue+to+image+...+"}
-        soup = await self.request_soup(scrape_item.url, method="POST", data=data)
-        link_str: str = css.select_one_get_attr(soup, IMG_SELECTOR, "src")
-        link = self.parse_url(link_str)
-        filename, ext = self.get_filename_and_ext(link.name, assume_ext=".jpg")
-        await self.handle_file(link, scrape_item, filename, ext)
+        soup = await self.request_soup(
+            scrape_item.url,
+            method="POST",
+            data={"imgContinue": "Continue+to+image+...+"},
+        )
+        image = css.select_one(soup, Selector.IMAGES)
+        name = css.get_attr(image, "alt")
+        link = self.parse_url(css.get_attr(image, "src"))
+        filename, ext = self.get_filename_and_ext(name)
+        await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     @error_handling_wrapper
-    async def thumbnail(self, scrape_item: ScrapeItem) -> None:
-        link = self.thumbnail_to_img(scrape_item.url)
-        scrape_item.url = self.get_canonical_url(link)
-        filename, ext = self.get_filename_and_ext(link.name, assume_ext=".jpg")
-        await self.handle_file(link, scrape_item, filename, ext)
+    async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        name = css.select_one_get_text(soup, Selector.GALLERY_TITLE)
+        title = self.create_title(name, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-    def thumbnail_to_img(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        path = url.path.split("/t/")[-1]
-        return PRIMARY_URL / "u/i" / path
-
-    def get_canonical_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        return PRIMARY_URL / get_image_id(url)
-
-
-def get_image_id(url: AbsoluteHttpURL) -> str:
-    return Path(url.name).stem
+        results = await self.get_album_results(album_id)
+        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_IMAGES, results=results):
+            self.create_task(self.run(new_scrape_item))

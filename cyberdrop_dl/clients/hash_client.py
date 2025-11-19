@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 from send2trash import send2trash
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.data_structures.hash import Hashing
 from cyberdrop_dl.ui.prompts.basic_prompts import enter_to_continue
 from cyberdrop_dl.utils.logger import log
@@ -56,9 +57,6 @@ class HashClient:
     def dupe_cleanup_options(self) -> DupeCleanup:
         return self.manager.config.dupe_cleanup_options
 
-    async def startup(self) -> None:
-        pass
-
     async def hash_directory(self, path: Path) -> None:
         path = Path(path)
         with (
@@ -97,10 +95,13 @@ class HashClient:
         self, file: Path | str, original_filename: str | None = None, referer: URL | None = None
     ) -> str | None:
         file = Path(file)
-        if file.suffix in (".cdl_hls", ".cdl_hsl", ".part"):
+
+        if file.suffix in constants.TempExt:
             return
+
         if not await asyncio.to_thread(get_size_or_none, file):
             return
+
         hash = await self._update_db_and_retrive_hash_helper(file, original_filename, referer, hash_type=self.xxhash)
         if self.manager.config_manager.settings_data.dupe_cleanup_options.add_md5_hash:
             await self._update_db_and_retrive_hash_helper(file, original_filename, referer, hash_type=self.md5)

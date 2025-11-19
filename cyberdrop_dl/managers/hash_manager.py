@@ -1,54 +1,41 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final, Literal
 
-import aiofiles
+import xxhash
 
 from cyberdrop_dl.clients.hash_client import HashClient
-
-try:
-    from xxhash import xxh128 as xxhasher
-except ImportError:
-    xxhasher = None
-from hashlib import md5 as md5hasher
-from hashlib import sha256 as sha256hasher
 
 if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
 
+_HASHERS: Final = {
+    "md5": hashlib.md5,
+    "xxh128": xxhash.xxh128,
+    "sha256": hashlib.sha256,
+}
+_CHUNK_SIZE: Final = 1024 * 1024  # 1MB
+
 
 class HashManager:
     def __init__(self, manager: Manager) -> None:
-        self.xx_hasher = xxhasher
-        self.md5_hasher = md5hasher
-        self.sha_256_hasher = sha256hasher
-        self.hash_client = HashClient(manager)  # Initialize hash client in constructor
-        self.manager = manager
+        self._cwd: Path = Path.cwd()
+        self.hash_client: HashClient = HashClient(manager)
 
-    async def startup(self) -> None:
-        await self.hash_client.startup()
+    async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
+        file_path = self._cwd / filename
+        return await asyncio.to_thread(_compute_hash, file_path, hash_type)
 
-    async def hash_file(self, filename: Path | str, hash_type: str) -> str:
-        file_path = Path.cwd() / filename
-        async with aiofiles.open(file_path, "rb") as fp:
-            CHUNK_SIZE = 1024 * 1024  # 1MB
-            filedata = await fp.read(CHUNK_SIZE)
-            current_hasher = self._get_hasher(hash_type)  # Use the initialized hasher
-            while filedata:
-                current_hasher.update(filedata)
-                filedata = await fp.read(CHUNK_SIZE)
-            return current_hasher.hexdigest()
 
-    def _get_hasher(self, hash_type: str):
-        if hash_type == "xx128" and not self.xx_hasher:
-            raise ImportError("xxhash module is not installed")
-        assert self.xx_hasher
-        if hash_type == "xxh128":
-            return self.xx_hasher()
-        elif hash_type == "md5":
-            return self.md5_hasher()
-        elif hash_type == "sha256":
-            return self.sha_256_hasher()
-        else:
-            raise ValueError("Invalid hash type")
+def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> str:
+    with file.open("rb") as file_io:
+        hash = _HASHERS[algorithm]()
+        buffer = bytearray(_CHUNK_SIZE)  # Reusable buffer to reduce allocations
+        mem_view = memoryview(buffer)
+        while size := file_io.readinto(buffer):
+            hash.update(mem_view[:size])
+
+    return hash.hexdigest()

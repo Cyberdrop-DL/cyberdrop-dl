@@ -67,8 +67,7 @@ class ArchiveBateCrawler(MixDropCrawler):
         if "This video has been deleted" in soup.text:
             raise ScrapeError(410)
 
-        description = open_graph.get("description", soup)
-        assert description
+        description = open_graph.description(soup)
         date_str = get_text_between(description, "show on", " - ").strip()
         user_name = css.select_one_get_text(soup, _SELECTORS.USER_NAME)
         site_name = css.select_one_get_text(soup, _SELECTORS.SITE_NAME)

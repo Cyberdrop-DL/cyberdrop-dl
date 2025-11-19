@@ -3,16 +3,16 @@ from __future__ import annotations
 import asyncio
 import itertools
 from datetime import datetime
-from fractions import Fraction
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import imagesize
-from videoprops import get_audio_properties, get_video_properties
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.utils import strings
+from cyberdrop_dl.utils.ffmpeg import probe
 from cyberdrop_dl.utils.logger import log, log_with_color
 from cyberdrop_dl.utils.utilities import purge_dir_tree
 
@@ -111,8 +111,9 @@ class Sorter:
             for file in files:
                 ext = file.suffix.lower()
 
-                if ext in (".cdl_hls", ".cdl_hsl", ".part"):
+                if ext in constants.TempExt:
                     continue
+
                 if ext in FILE_FORMATS["Audio"]:
                     await self.sort_audio(file, folder_name)
                 elif ext in FILE_FORMATS["Images"]:
@@ -132,13 +133,16 @@ class Sorter:
         """Sorts an audio file into the sorted audio folder."""
         if not self.audio_format:
             return
+
         bitrate = duration = sample_rate = None
         try:
-            props: dict = get_audio_properties(str(file))
-            duration = int(float(props.get("duration", 0))) or None
-            bitrate = int(float(props.get("bit_rate", 0))) or None
-            sample_rate = int(float(props.get("sample_rate", 0))) or None
-        except (RuntimeError, CalledProcessError):
+            properties = await probe(file)
+            if audio := properties.audio:
+                duration = audio.duration
+                bitrate = audio.bitrate
+                sample_rate = audio.sample_rate
+
+        except (RuntimeError, CalledProcessError, OSError):
             log(f"Unable to get audio properties of '{file}'")
 
         if await self._process_file_move(
@@ -164,6 +168,7 @@ class Sorter:
             else:
                 # imagesize returns (-1, -1) for unsupported/corrupted images
                 width = height = resolution = None
+
         except (OSError, ValueError):
             log(f"Unable to get some image properties of '{file}'")
 
@@ -182,27 +187,20 @@ class Sorter:
         if not self.video_format:
             return
 
-        codec = duration = fps = height = resolution = width = None
+        codec = duration = framerate = height = resolution = width = None
 
         try:
-            props: dict = get_video_properties(str(file))
-            width = int(float(props.get("width", 0))) or None
-            height = int(float(props.get("height", 0))) or None
-            if width and height:
-                resolution = f"{width}x{height}"
+            properties = await probe(file)
+            if video := properties.video:
+                width = video.width
+                height = video.height
+                resolution = video.resolution
+                codec = video.codec_name
+                duration = video.duration
+                framerate = video.fps
 
-            codec: str | None = props.get("codec_name")
-            duration = int(float(props.get("duration", 0))) or None
-            fps = (
-                float(Fraction(props.get("avg_frame_rate", 0)))
-                if str(props.get("avg_frame_rate", 0)) not in {"0/0", "0"}
-                else None
-            )
-        except (RuntimeError, CalledProcessError):
+        except (RuntimeError, CalledProcessError, OSError):
             log(f"Unable to get some video properties of '{file}'")
-
-        if fps is not None:
-            fps = str(int(fps)) if fps.is_integer() else f"{fps:.2f}"
 
         if await self._process_file_move(
             file,
@@ -210,7 +208,7 @@ class Sorter:
             self.video_format,
             codec=codec,
             duration=duration,
-            fps=fps,
+            fps=framerate,
             height=height,
             resolution=resolution,
             width=width,
@@ -221,10 +219,11 @@ class Sorter:
         """Sorts an other file into the sorted other folder."""
         if not self.other_format:
             return
+
         if await self._process_file_move(file, base_name, self.other_format):
             self.manager.progress_manager.sort_progress.increment_other()
 
-    async def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs) -> bool:
+    async def _process_file_move(self, file: Path, base_name: str, format_str: str, **kwargs: Any) -> bool:
         file_date = await get_modified_date(file)
         file_date_us = file_date.strftime("%Y-%d-%m")
         file_date_iso = file_date.strftime("%Y-%m-%d")

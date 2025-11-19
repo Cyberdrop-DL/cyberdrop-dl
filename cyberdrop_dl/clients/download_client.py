@@ -4,15 +4,16 @@ import asyncio
 import contextlib
 import itertools
 import time
-import weakref
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import aiofiles
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.dates import parse_http_date
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import get_size_or_none
@@ -35,6 +36,7 @@ _CHROME_ANDROID_USER_AGENT: str = (
     "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.180 Mobile Safari/537.36"
 )
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
+_NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
 
 
 class DownloadClient:
@@ -44,19 +46,13 @@ class DownloadClient:
         self.manager = manager
         self.client_manager = client_manager
         self.download_speed_threshold = self.manager.config_manager.settings_data.runtime_options.slow_download_speed
-        self._null_context = contextlib.nullcontext()
-        self._server_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
-        self._use_server_locks: set[str] = set()
+        self._server_locks = WeakAsyncLocks[str]()
+        self.server_locked_domains: set[str] = set()
 
     def server_limiter(self, domain: str, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
-        if domain not in self._use_server_locks:
-            return self._null_context
+        if domain not in self.server_locked_domains:
+            return _NULL_CONTEXT
 
-        if server not in self._server_locks:
-            lock = asyncio.Lock()
-            self._server_locks[server] = lock
-
-        log_debug(f"Using lock for server '{server}'", 20)
         return self._server_locks[server]
 
     @contextlib.asynccontextmanager
@@ -97,7 +93,7 @@ class DownloadClient:
         if media_item.is_segment:
             media_item.partial_file = media_item.complete_file = download_dir / media_item.filename
         else:
-            media_item.partial_file = download_dir / f"{downloaded_filename}.part"
+            media_item.partial_file = download_dir / f"{downloaded_filename}.{constants.TempExt.PART}"
 
         resume_point = 0
         if media_item.partial_file and (size := await asyncio.to_thread(get_size_or_none, media_item.partial_file)):
@@ -135,7 +131,11 @@ class DownloadClient:
             if resp.status != HTTPStatus.PARTIAL_CONTENT:
                 await asyncio.to_thread(media_item.partial_file.unlink, missing_ok=True)
 
-            if not media_item.datetime and (last_modified := get_last_modified(resp.headers)):
+            if (
+                not media_item.is_segment
+                and not media_item.datetime
+                and (last_modified := get_last_modified(resp.headers))
+            ):
                 msg = f"Unable to parse upload date for {media_item.url}, using `Last-Modified` header as file datetime"
                 log(msg, 30)
                 media_item.datetime = last_modified
@@ -270,7 +270,7 @@ class DownloadClient:
         if downloaded:
             await asyncio.to_thread(media_item.partial_file.rename, media_item.complete_file)
             if not media_item.is_segment:
-                proceed = self.client_manager.check_file_duration(media_item)
+                proceed = await self.client_manager.check_file_duration(media_item)
                 await self.manager.db_manager.history_table.add_duration(domain, media_item)
                 if not proceed:
                     log(f"Download Skip {media_item.url} due to runtime restrictions", 10)
@@ -334,7 +334,8 @@ class DownloadClient:
     async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:
         """Complicated checker for if a file already exists, and was already downloaded."""
         media_item.complete_file = self.get_file_location(media_item)
-        media_item.partial_file = media_item.complete_file.with_suffix(media_item.complete_file.suffix + ".part")
+        part_suffix = media_item.complete_file.suffix + constants.TempExt.PART
+        media_item.partial_file = media_item.complete_file.with_suffix(part_suffix)
 
         expected_size = media_item.filesize
         proceed = True
@@ -423,7 +424,8 @@ class DownloadClient:
 
     async def iterate_filename(self, complete_file: Path, media_item: MediaItem) -> tuple[Path, Path]:
         """Iterates the filename until it is unique."""
-        partial_file = complete_file.with_suffix(complete_file.suffix + ".part")
+        part_suffix = complete_file.suffix + constants.TempExt.PART
+        partial_file = complete_file.with_suffix(part_suffix)
         for iteration in itertools.count(1):
             filename = f"{complete_file.stem} ({iteration}){complete_file.suffix}"
             temp_complete_file = media_item.download_folder / filename
@@ -433,7 +435,7 @@ class DownloadClient:
             ):
                 media_item.filename = filename
                 complete_file = media_item.download_folder / media_item.filename
-                partial_file = complete_file.with_suffix(complete_file.suffix + ".part")
+                partial_file = complete_file.with_suffix(part_suffix)
                 break
         return complete_file, partial_file
 
@@ -507,8 +509,9 @@ def _fallback_generator(media_item: MediaItem):
                 response = yield url
 
         else:
-            yield from fallbacks
+            for fall in fallbacks:  # noqa: UP028
+                yield fall
 
     gen = gen_fallback()
-    next(gen)  # Prime the generator, waiting for response
+    _ = next(gen)
     return gen
