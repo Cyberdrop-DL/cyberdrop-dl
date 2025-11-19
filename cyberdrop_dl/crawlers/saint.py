@@ -21,16 +21,19 @@ class Selector:
     EMBED_SRC = css.CssAttributeSelector("#main-video source", "src")
     DOWNLOAD_BTN = css.CssAttributeSelector("a:-soup-contains('Download Video')", "href")
     NOT_FOUND_IMAGE = "#video-container img[src*='assets/notfound.gif']"
+    ALBUMS = css.CssAttributeSelector(".list-group-item", "data-id")
+    NEXT_PAGE = "a.active + a"
 
 
 class SaintCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "saint2.su", "saint2.cr"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Album": "/a/...",
+        "Album": "/a/<album_id>",
         "Video": (
-            "/embed/...",
-            "/d/...",
+            "/embed/<id>",
+            "/d/<id>",
         ),
+        "Search": "library/search/<query>",
         "Direct links": (
             "/data/...",
             "/videos/...",
@@ -38,9 +41,12 @@ class SaintCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://saint2.su/")
     DOMAIN: ClassVar[str] = "saint"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case ["library", "search", query, *_]:
+                return await self.search(scrape_item, query)
             case ["a", album_id, *_]:
                 return await self.album(scrape_item, album_id)
             case ["embed" | "d", _, *_]:
@@ -49,6 +55,18 @@ class SaintCrawler(Crawler):
                 return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = self.create_title(f"{query} [search]")
+        scrape_item.setup_as_album(title)
+        origin = scrape_item.url.origin()
+        async for soup in self.web_pager(scrape_item.url):
+            for album_id in css.iget(soup, *Selector.ALBUMS):
+                album_url = origin / "a" / album_id
+                new_scrape_item = scrape_item.create_child(album_url)
+                self.create_task(self.run(new_scrape_item))
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
