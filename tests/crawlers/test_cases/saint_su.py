@@ -48,4 +48,5 @@ TEST_CASES = [
             }
         ],
     ),
+    ("https://saint2.su/library/search/mirror", [], 45),
 ]
