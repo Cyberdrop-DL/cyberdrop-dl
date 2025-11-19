@@ -27,7 +27,6 @@ class Selector:
 
 class SaintCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "saint2.su", "saint2.cr"
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "saint2.su", "saint2.cr"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/...",
         "Video": (
@@ -38,12 +37,7 @@ class SaintCrawler(Crawler):
             "/data/...",
             "/videos/...",
         ),
-        "Direct links": (
-            "/data/...",
-            "/videos/...",
-        ),
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://saint2.su/")
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://saint2.su/")
     DOMAIN: ClassVar[str] = "saint"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
