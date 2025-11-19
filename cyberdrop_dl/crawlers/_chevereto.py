@@ -142,8 +142,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
                     await self._unlock_password_protected_album(scrape_item)
                     return await self.album(scrape_item, album_id)
 
-                title = open_graph.get_title(soup) or open_graph.get("description", soup) or ""
-                assert title
+                title = open_graph.get_title(soup) or open_graph.description(soup)
                 title = self.create_title(title, album_id)
                 scrape_item.setup_as_album(title, album_id=album_id)
             self._process_page(scrape_item, soup, results)
@@ -173,14 +172,13 @@ class CheveretoCrawler(Crawler, is_generic=True):
             self.create_task(self.run(new_scrape_item))
 
     async def _unlock_password_protected_album(self, scrape_item: ScrapeItem) -> None:
-        password = scrape_item.pop_query("password")
-        if not password:
+        if not scrape_item.password:
             raise PasswordProtectedError
 
         soup = await self.request_soup(
             _sort_by_new(scrape_item.url / ""),
             method="POST",
-            data={"content-password": password},
+            data={"content-password": scrape_item.password},
         )
 
         if _is_password_protected(soup):
@@ -199,7 +197,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        link_str = open_graph.get("video", soup) or open_graph.get("image", soup)
+        link_str = open_graph.get_video(soup) or open_graph.get_image(soup)
         if not link_str or "loading.svg" in link_str:
             link_str = Selector.MAIN_IMAGE(soup)
 

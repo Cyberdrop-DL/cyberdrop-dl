@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from pathlib import Path
 
+    from pydantic import BaseModel
+
     def _scanstring(*args, **kwargs) -> tuple[str, int]: ...
 
     def _py_make_scanner(*args, **kwargs) -> tuple[Any, int]: ...
@@ -75,6 +77,8 @@ class LenientJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         if isinstance(o, dict):  # Handle subclasses of dict
             return dict(o)
+        if _is_pydantic_instance(o):
+            return o.model_dump()
         if isinstance(o, type):  # Do not serialize classes, only instances
             return super().default(o)
         return str(o)
@@ -136,6 +140,10 @@ def _is_namedtuple_instance(obj: object, /) -> TypeGuard[NamedTuple]:
 
 def _is_dataclass_instance(obj: object, /) -> TypeGuard[_DataclassInstance]:
     return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
+
+
+def _is_pydantic_instance(obj: object, /) -> TypeGuard[BaseModel]:
+    return hasattr(obj, "model_dump") and not isinstance(obj, type)
 
 
 def dumps(obj: object, /, *, sort_keys: bool = False, indent: int | None = None) -> Any:

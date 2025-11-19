@@ -13,12 +13,18 @@ from cyberdrop_dl.utils.utilities import parse_url
 if TYPE_CHECKING:
     import aiosqlite
 
+
 _MOCK_ROW = {
     "referer": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit",
     "download_path": "/cdl/downloads",
     "completed_at": None,
     "created_at": None,
 }
+
+
+@pytest.fixture
+def item() -> ScrapeItem:
+    return ScrapeItem(url=AbsoluteHttpURL("https://drive.google.com"))
 
 
 @pytest.fixture
@@ -39,7 +45,6 @@ def test_scrape_item_creation(row: aiosqlite.Row) -> None:
     assert item.url == AbsoluteHttpURL("https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit")
     assert item.retry_path == Path("/cdl/downloads")
     assert item.part_of_album is True
-    assert item.retry is True
     assert item.completed_at is None
     assert item.created_at is None
 
@@ -111,3 +116,30 @@ def test_create_db_path(url: str, expected: str) -> None:
     url_ = parse_url(url)
     path = MediaItem.create_db_path(url_, url_.host)
     assert path == expected
+
+
+class TestGetDownloadPath:
+    def test_loose_file(self, item: ScrapeItem) -> None:
+        assert not item.parent_title
+        assert not item.part_of_album
+        assert not item.retry_path
+        download_path = item.create_download_path("cyberdrop")
+        assert download_path == Path("Loose Files (cyberdrop)")
+
+    def test_loose_file_with_parent(self, item: ScrapeItem) -> None:
+        item.add_to_parent_title("a/sub/folder")
+        download_path = item.create_download_path("cyberdrop")
+        assert download_path == Path("a-sub-folder/Loose Files (cyberdrop)")
+
+    def test_album_file(self, item: ScrapeItem) -> None:
+        item.add_to_parent_title("a/sub/folder")
+        item.part_of_album = True
+        download_path = item.create_download_path("cyberdrop")
+        assert download_path == Path("a-sub-folder")
+
+    def test_retry_path(self, item: ScrapeItem) -> None:
+        item.add_to_parent_title("a/sub/folder")
+        item.part_of_album = True
+        item.retry_path = retry_path = Path("a/retry/path")
+        download_path = item.create_download_path("cyberdrop")
+        assert download_path == retry_path
