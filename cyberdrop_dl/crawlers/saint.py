@@ -28,11 +28,12 @@ class Selector:
 class SaintCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "saint2.su", "saint2.cr"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Album": "/a/...",
+        "Album": "/a/<album_id>",
         "Video": (
-            "/embed/...",
-            "/d/...",
+            "/embed/<id>",
+            "/d/<id>",
         ),
+        "Search": "library/search/<query>",
         "Direct links": (
             "/data/...",
             "/videos/...",
