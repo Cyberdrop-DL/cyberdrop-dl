@@ -27,7 +27,7 @@ from cyberdrop_dl.exceptions import (
     TooManyCrawlerErrors,
 )
 from cyberdrop_dl.utils import aio, ffmpeg
-from cyberdrop_dl.utils.logger import log
+from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 # Windows epoch is January 1, 1601. Unix epoch is January 1, 1970
@@ -407,8 +407,12 @@ class Downloader:
         if not media_item.is_segment:
             log(f"{self.log_prefix} starting: {media_item.url}", 20)
 
-        async with self._file_lock_vault.lock(media_item.filename):
-            return bool(await self.download(media_item))
+        async with self._file_lock_vault[media_item.filename]:
+            log_debug(f"Lock for {media_item.filename} acquired", 20)
+            try:
+                return bool(await self.download(media_item))
+            finally:
+                log_debug(f"Lock for {media_item.filename} released", 20)
 
     @error_handling_wrapper
     @retry

@@ -3,24 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-import builtins
-import contextlib
 import weakref
 from stat import S_ISREG
-from typing import TYPE_CHECKING, Final, Generic, ParamSpec, TypeVar, cast
-
-from cyberdrop_dl.utils.logger import log_debug
+from typing import TYPE_CHECKING, Final, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
     import pathlib
     from collections.abc import Awaitable, Sequence
 
-_P = ParamSpec("_P")
-_T = TypeVar("_T")
-_R = TypeVar("_R")
+    _T = TypeVar("_T")
+
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Sequence
+    from collections.abc import Awaitable, Sequence
 
 
 async def gather(coros: Sequence[Awaitable[_T]], batch_size: int = 10) -> list[_T]:
@@ -43,7 +38,7 @@ async def gather(coros: Sequence[Awaitable[_T]], batch_size: int = 10) -> list[_
             semaphore.release()
 
     async with asyncio.TaskGroup() as tg:
-        for index, coro in builtins.enumerate(coros):
+        for index, coro in enumerate(coros):
             await semaphore.acquire()
             tg.create_task(worker(index, coro))
 
@@ -101,11 +96,3 @@ class WeakAsyncLocks(Generic[_T]):
         if lock is None:
             self.__locks[key] = lock = asyncio.Lock()
         return lock
-
-    @contextlib.asynccontextmanager
-    async def lock(self, key: _T) -> AsyncGenerator[None]:
-        """Acquire a lock and log it"""
-        async with self[key]:
-            log_debug(f"Lock for {key!r} acquired", 20)
-            yield
-            log_debug(f"Lock for {key!r} released", 20)

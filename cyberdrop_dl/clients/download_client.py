@@ -53,7 +53,6 @@ class DownloadClient:
         if domain not in self.server_locked_domains:
             return _NULL_CONTEXT
 
-        log_debug(f"Using lock for server '{server}'", 20)
         return self._server_locks[server]
 
     @contextlib.asynccontextmanager
