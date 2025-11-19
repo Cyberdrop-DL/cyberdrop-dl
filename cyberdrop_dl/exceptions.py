@@ -157,15 +157,16 @@ class SkipDownloadError(CDLBaseError):
 class RestrictedFiletypeError(SkipDownloadError):
     def __init__(self, origin: MediaItem) -> None:
         """This error will be thrown when has a filetype not allowed by config."""
-        ui_failure = "Restricted Filetype"
-        super().__init__(ui_failure, origin=origin)
+        ui_failure = "Restricted File Ext"
+        message = f"File extension ({origin.ext}) ignored config options"
+        super().__init__(ui_failure, message=message, origin=origin)
 
 
 class DurationError(SkipDownloadError):
     def __init__(self, origin: MediaItem) -> None:
         """This error will be thrown when the file duration is not allowed by the config."""
         ui_failure = "Duration Not Allowed"
-        message = f"Duration ({origin.duration}s) out of config range"
+        message = f"File duration ({origin.duration}s) out of config range"
         super().__init__(ui_failure, message=message, origin=origin)
 
 
