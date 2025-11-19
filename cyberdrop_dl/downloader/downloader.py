@@ -312,7 +312,7 @@ class Downloader:
         await self.manager.storage_manager.check_free_space(media_item)
         if not self.manager.client_manager.check_allowed_filetype(media_item):
             raise RestrictedFiletypeError(origin=media_item)
-        if not await self.manager.client_manager.pre_check_duration(media_item):
+        if not await self.manager.client_manager.check_file_duration(media_item):
             raise DurationError(origin=media_item)
         if not self.manager.client_manager.check_allowed_date_range(media_item):
             raise RestrictedDateRangeError(origin=media_item)

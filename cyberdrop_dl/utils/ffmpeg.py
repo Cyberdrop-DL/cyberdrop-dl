@@ -24,6 +24,8 @@ from cyberdrop_dl.utils.utilities import get_valid_dict, is_absolute_http_url
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
 
+    from cyberdrop_dl.data_structures import AbsoluteHttpURL
+
     _CMD: TypeAlias = Sequence[str | Path]
 
 
@@ -101,10 +103,10 @@ async def probe(input: Path, /) -> FFprobeResult: ...
 
 
 @overload
-async def probe(input: URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
+async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
 
 
-async def probe(input: Path | URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
+async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
     assert _FFPROBE_AVAILABLE
     if isinstance(input, URL):
         assert is_absolute_http_url(input)

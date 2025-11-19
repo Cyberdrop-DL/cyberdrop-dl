@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.managers.manager import Manager
-    from cyberdrop_dl.utils.ffmpeg import FFprobeResult
 
 _curl_import_error = None
 try:
@@ -224,10 +223,6 @@ class ClientManager:
         if media_item.ext.lower() in constants.FILE_FORMATS["Audio"] and ignore_options.exclude_audio:
             return False
         return not (ignore_options.exclude_other and media_item.ext.lower() not in _VALID_EXTENSIONS)
-
-    async def pre_check_duration(self, media_item: MediaItem) -> bool:
-        """Checks if the download is above the maximum runtime."""
-        return await self.check_file_duration(media_item)
 
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
         """Checks if the file is published within the date range configured."""
@@ -457,12 +452,12 @@ class ClientManager:
                 return media_item.duration
 
             if media_item.downloaded:
-                probe_path = media_item.complete_file
-                probe_headers = None
+                properties = await probe(media_item.complete_file)
+
             else:
-                probe_path = media_item.url
-                probe_headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
-            properties: FFprobeResult = await probe(probe_path, headers=probe_headers)
+                headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
+                properties = await probe(media_item.url, headers=headers)
+
             if is_video and (video := properties.video):
                 return video.duration
             if is_audio and (audio := properties.audio):
@@ -476,6 +471,7 @@ class ClientManager:
         max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
         video_duration_limits = min_video_duration, max_video_duration
         audio_duration_limits = min_audio_duration, max_audio_duration
+
         if is_video and not any(video_duration_limits):
             return True
         if is_audio and not any(audio_duration_limits):
@@ -483,15 +479,19 @@ class ClientManager:
 
         duration: float | None = await get_duration()
         media_item.duration = duration
-        await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
+
         if duration is None:
             return True
 
-        max_video_duration = max_video_duration or float("inf")
-        max_audio_duration = max_audio_duration or float("inf")
+        await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
+
         if is_video:
-            return min_video_duration <= media_item.duration <= max_video_duration
-        return min_audio_duration <= media_item.duration <= max_audio_duration
+            max_video_duration = max_video_duration or float("inf")
+
+            return min_video_duration <= duration <= max_video_duration
+
+        max_audio_duration = max_audio_duration or float("inf")
+        return min_audio_duration <= duration <= max_audio_duration
 
     async def close(self) -> None:
         await self.flaresolverr.close()
