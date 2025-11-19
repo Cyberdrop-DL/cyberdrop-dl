@@ -13,6 +13,7 @@ async def test_ffprobe_video_url() -> None:
     assert output.audio
     assert output.audio.codec == "aac"
     assert output.audio.duration == 7.808
+    assert str(output.audio.duration) == "7.81"
     assert output.audio.sample_rate == 48000
 
     assert output.video
