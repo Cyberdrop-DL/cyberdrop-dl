@@ -26,11 +26,13 @@ class MyDesiCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "MyDesi"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.parts[1] == "search":
-            return await self.search(scrape_item)
-        if len(scrape_item.url.parts) == 2:
-            return await self.video(scrape_item)
-        raise ValueError
+        match scrape_item.parts[1:]:
+            case ["search",query, *_]:
+                return await self.search(scrape_item, query)
+            case [_]:
+                return await self.video(scrape_item)}
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
