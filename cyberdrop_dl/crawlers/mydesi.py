@@ -37,8 +37,6 @@ class MyDesiCrawler(Crawler):
                         init_page = 1
                 return await self.search(scrape_item, query, init_page)
 
-            case ["search", query, *_]:
-                return await self.search(scrape_item, query)
             case [_]:
                 return await self.video(scrape_item)
             case _:
