@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ssl
-import weakref
 from base64 import b64encode
 from collections import defaultdict
 from datetime import datetime
@@ -33,6 +32,7 @@ from cyberdrop_dl.exceptions import (
     TooManyCrawlerErrors,
 )
 from cyberdrop_dl.ui.prompts.user_prompts import get_cookies_from_browsers
+from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.cookie_management import read_netscape_files
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 
@@ -41,7 +41,7 @@ _VALID_EXTENSIONS = (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable, Mapping
     from http.cookies import BaseCookie
 
     from aiohttp_client_cache.response import CachedResponse
@@ -120,27 +120,6 @@ class CloudflareTurnstile:
     ALL_SELECTORS = ", ".join(SELECTORS)
 
 
-class FileLocksVault:
-    """Is this necessary? No. But I want it."""
-
-    def __init__(self) -> None:
-        self._locked_files: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
-
-    @contextlib.asynccontextmanager
-    async def get_lock(self, filename: str) -> AsyncGenerator:
-        """Get filelock for the provided filename. Creates one if none exists"""
-        log_debug(f"Checking lock for '{filename}'", 20)
-        if filename not in self._locked_files:
-            log_debug(f"Lock for '{filename}' does not exists", 20)
-            lock = asyncio.Lock()
-            self._locked_files[filename] = lock
-
-        async with self._locked_files[filename]:
-            log_debug(f"Lock for '{filename}' acquired", 20)
-            yield
-            log_debug(f"Lock for '{filename}' released", 20)
-
-
 class ClientManager:
     """Creates a 'client' that can be referenced by scraping or download sessions."""
 
@@ -166,7 +145,7 @@ class ClientManager:
         self.speed_limiter = DownloadSpeedLimiter(self.rate_limiting_options.download_speed_limit)
         self.download_client = DownloadClient(manager, self)
         self.flaresolverr = FlareSolverr(manager)
-        self.file_locks = FileLocksVault()
+        self.file_locks: WeakAsyncLocks[str] = WeakAsyncLocks()
         self._default_headers = {"user-agent": self.manager.global_config.general.user_agent}
         self.reddit_session: CachedSession
         self._session: CachedSession

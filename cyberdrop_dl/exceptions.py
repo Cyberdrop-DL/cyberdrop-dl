@@ -164,16 +164,6 @@ class DurationError(CDLBaseError):
         super().__init__(ui_failure, origin=origin)
 
 
-class RealDebridError(CDLBaseError):
-    """Base RealDebrid API error."""
-
-    def __init__(self, url: URL, code: int, message: str) -> None:
-        self.path = url.path
-        msg = message.capitalize()
-        ui_failure = f"{code} RealDebrid Error"
-        super().__init__(ui_failure, message=msg, status=code, origin=url)
-
-
 class ScrapeError(CDLBaseError):
     def __init__(
         self, status: str | int, message: str | None = None, origin: ScrapeItem | MediaItem | URL | None = None

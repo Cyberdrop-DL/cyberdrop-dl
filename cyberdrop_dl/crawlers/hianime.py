@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import weakref
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import bs4
@@ -12,6 +11,7 @@ from cyberdrop_dl.crawlers.megacloud import MegaCloudCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ class HiAnimeCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self._animes: dict[int, Anime] = {}
-        self._fetch_anime_locks: weakref.WeakValueDictionary[int, asyncio.Lock] = weakref.WeakValueDictionary()
+        self._anime_locks = WeakAsyncLocks[int]()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         episode = int(scrape_item.url.query.get("ep", 0)) or None
@@ -97,13 +97,10 @@ class HiAnimeCrawler(Crawler):
         if anime := self._animes.get(anime_id):
             return anime
 
-        if anime_id not in self._fetch_anime_locks:
-            lock = asyncio.Lock()
-            self._fetch_anime_locks[anime_id] = lock
-
-        async with self._fetch_anime_locks[anime_id]:
+        async with self._anime_locks[anime_id]:
             if anime := self._animes.get(anime_id):
                 return anime
+
             self._animes[anime_id] = anime = await self._request_anime_info(web_url, anime_id)
             return anime
 

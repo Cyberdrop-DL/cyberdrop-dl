@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import imagesize
 from videoprops import get_audio_properties, get_video_properties
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.utils import strings
 from cyberdrop_dl.utils.logger import log, log_with_color
@@ -111,8 +112,9 @@ class Sorter:
             for file in files:
                 ext = file.suffix.lower()
 
-                if ext in (".cdl_hls", ".cdl_hsl", ".part"):
+                if ext in constants.TempExt:
                     continue
+
                 if ext in FILE_FORMATS["Audio"]:
                     await self.sort_audio(file, folder_name)
                 elif ext in FILE_FORMATS["Images"]:

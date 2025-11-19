@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, NamedTuple, ParamSpec, TypeVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import CustomHTTPStatus
 from cyberdrop_dl.data_structures.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.exceptions import (
@@ -26,7 +27,7 @@ from cyberdrop_dl.exceptions import (
     TooManyCrawlerErrors,
 )
 from cyberdrop_dl.utils import aio, ffmpeg
-from cyberdrop_dl.utils.logger import log
+from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 # Windows epoch is January 1, 1601. Unix epoch is January 1, 1970
@@ -211,13 +212,16 @@ class Downloader:
     ) -> tuple[Path, Path | None, Path | None]:
         async def download(m3u8: M3U8):
             assert m3u8.media_type
-            download_folder = media_item.complete_file.with_suffix(".cdl_hls") / m3u8.media_type
+            if not m3u8.segments:
+                raise DownloadError(204, f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments")
+
+            download_folder = media_item.complete_file.with_suffix(constants.TempExt.HLS) / m3u8.media_type
             coros = self._prepare_hls_downloads(media_item, m3u8, download_folder)
             n_segmets = len(m3u8.segments)
             if n_segmets > 1:
                 suffix = f".{m3u8.media_type}.ts"
             else:
-                suffix = media_item.complete_file.suffix + Path(m3u8.segments[0].absolute_uri).suffix
+                suffix = media_item.complete_file.suffix + parse_url(m3u8.segments[0].absolute_uri).suffix
 
             output = media_item.complete_file.with_suffix(suffix)
             if await asyncio.to_thread(output.is_file):
@@ -266,7 +270,7 @@ class Downloader:
         def create_segments() -> Generator[HlsSegment]:
             for index, segment in enumerate(m3u8.segments, 1):
                 assert segment.uri
-                name = f"{index:0{padding}d}.cdl_hls"
+                name = f"{index:0{padding}d}{constants.TempExt.HLS}"
                 yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
 
         async def download_segment(segment: HlsSegment):
@@ -315,6 +319,9 @@ class Downloader:
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
         """Sets the file's datetime."""
+        if media_item.is_segment:
+            return
+
         if self.manager.config_manager.settings_data.download_options.disable_file_timestamps:
             return
         if not media_item.datetime:
@@ -402,9 +409,13 @@ class Downloader:
 
         if not media_item.is_segment:
             log(f"{self.log_prefix} starting: {media_item.url}", 20)
-        lock = self._file_lock_vault.get_lock(media_item.filename)
-        async with lock:
-            return bool(await self.download(media_item))
+
+        async with self._file_lock_vault[media_item.filename]:
+            log_debug(f"Lock for {media_item.filename} acquired", 20)
+            try:
+                return bool(await self.download(media_item))
+            finally:
+                log_debug(f"Lock for {media_item.filename} released", 20)
 
     @error_handling_wrapper
     @retry
