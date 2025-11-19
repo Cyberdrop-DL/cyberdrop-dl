@@ -5,6 +5,7 @@ import json
 from typing import TYPE_CHECKING, Any, NamedTuple, ParamSpec, TypeVar
 
 import bs4.css
+from bs4 import BeautifulSoup
 
 from cyberdrop_dl.exceptions import ScrapeError
 
@@ -163,6 +164,14 @@ def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
 def get_json_ld_value(soup: Tag, key: str) -> Any:
     ld_json = get_json_ld(soup, key)
     return ld_json[key]
+
+
+def unescape(html: str) -> str:
+    return make_soup(html).get_text()
+
+
+def make_soup(html: str) -> BeautifulSoup:
+    return BeautifulSoup(html, "html.parser")
 
 
 iframes = CssAttributeSelector("iframe", "src")

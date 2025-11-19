@@ -11,7 +11,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://postimages.org/")
+PRIMARY_URL = AbsoluteHttpURL("https://postimg.cc")
 DOWNLOAD_BUTTON_SELECTOR = "a[id=download]"
 API_ENTRYPOINT = AbsoluteHttpURL("https://postimg.cc/json")
 
@@ -25,6 +25,7 @@ class PostImgCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "postimg"
     FOLDER_DOMAIN: ClassVar[str] = "PostImg"
+    OLD_DOMAINS = ("postimg.org", "postimages.org")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "i.postimg.cc" in scrape_item.url.host:
