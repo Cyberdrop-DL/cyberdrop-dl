@@ -117,8 +117,8 @@ def parse_human_date(
     parser_kind: ParserKind | None = None,
     date_order: DateOrder | None = None,
 ) -> datetime.datetime | None:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "day of month without a year specified is ambiguious")
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
         parser = get_parser(parser_kind, date_order)
         if date_formats and (parsed_date := parser.parse_possible_incomplete_date(date_string, date_formats)):
             return parsed_date
