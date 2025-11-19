@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import itertools
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.data_structures import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -15,22 +14,23 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://lolpol.com")
-
-
 class MyDesiCrawler(Crawler):
-    SUPPORTED_DOMAINS = "fry99.com", "lolpol.com", "mydesi.net"
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Videos": "/title", "Search": "/search/"}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "fry99.com", "lolpol.com", "mydesi.net"
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Videos": "/title",
+        "Search": "/search/<query>",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lolpol.com")
     DOMAIN: ClassVar[str] = "mydesi.net"
     FOLDER_DOMAIN: ClassVar[str] = "MyDesi"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "a.page-link:-soup-contains(»)"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        match scrape_item.parts[1:]:
-            case ["search",query, *_]:
+        match scrape_item.url.parts[1:]:
+            case ["search", query, *_]:
                 return await self.search(scrape_item, query)
             case [_]:
-                return await self.video(scrape_item)}
+                return await self.video(scrape_item)
             case _:
                 raise ValueError
 
@@ -38,25 +38,23 @@ class MyDesiCrawler(Crawler):
     async def video(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
+
         soup = await self.request_soup(scrape_item.url)
         resolution, download_url = self.select_highest_quality_video(soup)
         filename, ext = self.get_filename_and_ext(download_url.name)
-        metadata = css.get_json_ld(soup)["subjectOf"]
+        metadata: dict[str, str] = css.get_json_ld(soup)["subjectOf"]
         upload_date = metadata.get("uploadDate", "")
-        title: str = metadata["name"]
+        title = metadata["name"]
         scrape_item.possible_datetime = self.parse_iso_date(upload_date)
         custom_filename = self.create_custom_filename(title, ext, resolution=resolution)
         return await self.handle_file(download_url, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, query: str, init_page: int = 1) -> None:
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
-        if len(scrape_item.url.parts) <= 4:
-            scrape_item.url = scrape_item.url / "page" / str(init_page)
 
-        for page in itertools.count(init_page):
-            soup = await self.request_soup(scrape_item.url.with_name(str(page)))
+        async for soup in self.web_pager(scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
                 self.create_task(self.run(new_scrape_item))
 
