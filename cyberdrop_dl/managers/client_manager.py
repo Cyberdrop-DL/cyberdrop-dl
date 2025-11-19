@@ -5,7 +5,6 @@ import contextlib
 import ssl
 from base64 import b64encode
 from collections import defaultdict
-from datetime import datetime
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal, Self, overload
 
@@ -226,14 +225,15 @@ class ClientManager:
 
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
         """Checks if the file was uploaded within the config date range"""
-        if not media_item.datetime:
+        datetime = media_item.datetime_obj()
+        if not datetime:
             return True
 
         ignore_options = self.manager.config_manager.settings_data.ignore_options
-        post_datetime = datetime.fromtimestamp(media_item.datetime)
-        if ignore_options.exclude_before and post_datetime < ignore_options.exclude_before:
+
+        if ignore_options.exclude_before and datetime < ignore_options.exclude_before:
             return False
-        if ignore_options.exclude_after and post_datetime > ignore_options.exclude_after:
+        if ignore_options.exclude_after and datetime > ignore_options.exclude_after:
             return False
         return True
 

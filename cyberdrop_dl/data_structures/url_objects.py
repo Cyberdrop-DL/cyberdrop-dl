@@ -200,6 +200,10 @@ class MediaItem:
 
         return url.path
 
+    def datetime_obj(self) -> datetime.datetime | None:
+        if self.datetime:
+            return datetime.datetime.fromtimestamp(self.datetime).astimezone(datetime.UTC)
+
     @staticmethod
     def from_item(
         origin: ScrapeItem | MediaItem,

@@ -173,7 +173,7 @@ class RestrictedDateRangeError(SkipDownloadError):
     def __init__(self, origin: MediaItem) -> None:
         """This error will be thrown when the publication date of the media item is not allowed by config."""
         ui_failure = "Restricted DateRange"
-        message = f"File upload date ({origin.datetime}s) out of config range"
+        message = f"File upload date ({origin.datetime_obj()}s) out of config range"
         super().__init__(ui_failure, message=message, origin=origin)
 
 
