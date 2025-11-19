@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
@@ -25,10 +26,17 @@ class MyDesiCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lolpol.com")
     DOMAIN: ClassVar[str] = "mydesi.net"
     FOLDER_DOMAIN: ClassVar[str] = "MyDesi"
-    NEXT_PAGE_SELECTOR: ClassVar[str] = "a.page-link:-soup-contains(»)"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case ["search", query, *rest]:
+                match rest:
+                    case ["page", init_page]:
+                        init_page = int(init_page)
+                    case _:
+                        init_page = 1
+                return await self.search(scrape_item, query, init_page)
+
             case ["search", query, *_]:
                 return await self.search(scrape_item, query)
             case [_]:
@@ -52,11 +60,13 @@ class MyDesiCrawler(Crawler):
         return await self.handle_file(link, scrape_item, title, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+    async def search(self, scrape_item: ScrapeItem, query: str, init_page: int = 1) -> None:
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
 
-        async for soup in self.web_pager(scrape_item.url):
+        base_url = scrape_item.url.origin() / "search" / query / "page"
+        for page in itertools.count(init_page):
+            soup = await self.request_soup(base_url / str(page))
             for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
                 self.create_task(self.run(new_scrape_item))
 
