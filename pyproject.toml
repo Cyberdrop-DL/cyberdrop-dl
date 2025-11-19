@@ -85,7 +85,7 @@ include = ["CHANGELOG.md"]
 packages = [{include = "cyberdrop_dl"}]
 requires-poetry = ">=2.2.0"
 
-[tool.pytest]
+[tool.pytest.ini_options]
 addopts = ["-s"]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
