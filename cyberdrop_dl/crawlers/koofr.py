@@ -28,9 +28,9 @@ class Node:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Folder:
+    id: str
     name: str
     file: Node
-    id: str
     password: str
     children: tuple[Node, ...] = ()
 
@@ -60,10 +60,10 @@ class KooFrCrawler(Crawler):
                 raise ValueError
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        async with self.request(url) as resp:
-            if password := url.query.get("password"):
-                return resp.url.update_query(password=password)
-            return resp.url
+        redirect = await super()._get_redirect_url(url)
+        if password := url.query.get("password"):
+            return redirect.update_query(password=password)
+        return redirect
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, content_id: str) -> None:
@@ -78,7 +78,7 @@ class KooFrCrawler(Crawler):
 
     @error_handling_wrapper
     async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder, path: str) -> None:
-        children = await self.api.get_children(folder, path)
+        children = await self.api.get_children(folder.id, path, folder.password)
         async with asyncio.TaskGroup() as tg:
             for node in children:
                 if node.type == "file":
@@ -124,8 +124,9 @@ class KooFrAPI:
         resp["password"] = password
         return Folder(id=content_id, **resp)
 
-    async def get_children(self, folder: Folder, path: str) -> list[Node]:
-        api_url = (_APP_LINKS / folder.id / "bundle").with_query(path=path, password=folder.password)
+    async def get_children(self, content_id: str, path: str, password: str | None) -> list[Node]:
+        password = password or ""
+        api_url = (_APP_LINKS / content_id / "bundle").with_query(path=path, password=password)
         nodes: list[dict[str, Any]] = (await self._crawler.request_json(api_url))["files"]
         base = path.removesuffix("/")
         return [Node(path=f"{base}/{node['name']}", **node) for node in nodes]
