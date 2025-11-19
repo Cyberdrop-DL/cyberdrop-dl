@@ -58,7 +58,7 @@ class SaintCrawler(Crawler):
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(f"{query} [search]")
-        scrape_item.setup_as_album(title, album_id=query)
+        scrape_item.setup_as_album(title)
         origin = scrape_item.url.origin()
         async for soup in self.web_pager(scrape_item.url):
             for album_id in css.iget(soup, *Selector.ALBUMS):
