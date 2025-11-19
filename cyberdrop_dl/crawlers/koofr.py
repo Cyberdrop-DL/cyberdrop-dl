@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import dataclasses
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import DownloadError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
@@ -88,9 +88,7 @@ class KooFrCrawler(Crawler):
                 url = scrape_item.url.update_query(path=node.path)
                 new_scrape_item = scrape_item.create_child(url)
                 new_scrape_item.add_to_parent_title(node.name)
-                tg.create_task(self._walk_folder_task(new_scrape_item, folder, node.path))
-
-    _walk_folder_task = auto_task_id(_walk_folder)
+                tg.create_task(self._walk_folder(new_scrape_item, folder, node.path))
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node) -> None:
