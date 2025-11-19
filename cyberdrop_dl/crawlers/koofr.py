@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, ClassVar, Literal
 
 from pydantic import dataclasses
@@ -15,21 +16,23 @@ _PRIMARY_URL = AbsoluteHttpURL("https://koofr.eu")
 _SHORT_LINK_CDN = AbsoluteHttpURL("https://k00.fr")
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Node:
     name: str
     type: Literal["file", "dir"]
     modified: int
-    hash: str  # md5
+    size: int
+    path: str = "/"
+    hash: str = ""  # md5
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Folder:
     name: str
     file: Node
-    root_id: str = ""
-    password: str = ""
-    children: list[Node] = dataclasses.Field(default_factory=list)
+    root_id: str
+    password: str
+    children: tuple[Node, ...] = ()
 
 
 class KooFrCrawler(Crawler):
@@ -74,29 +77,26 @@ class KooFrCrawler(Crawler):
         await self._walk_folder(scrape_item, folder, path)
 
     @error_handling_wrapper
-    async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder, path: str):
+    async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder, path: str) -> None:
         children = await self.api.get_children(folder, path)
-        for node in children:
-            if node.type == "file":
-                self.create_task(self._file(scrape_item, node))
+        async with asyncio.TaskGroup() as tg:
+            for node in children:
+                if node.type == "file":
+                    tg.create_task(self._file(scrape_item, node))
+                    continue
 
-            else:
-                new_path = f"{path}/{node.name}"
-                new_scrape_item = scrape_item.create_child(
-                    url=scrape_item.url.update_query(path=path),
-                    new_title_part=node.name,
-                )
-
-                self.create_task(self._walk_folder_task(new_scrape_item, folder, new_path))
-
-            scrape_item.add_children()
+                url = scrape_item.url.update_query(path=node.path)
+                new_scrape_item = scrape_item.create_child(url)
+                new_scrape_item.add_to_parent_title(node.name)
+                tg.create_task(self._walk_folder_task(new_scrape_item, folder, node.path))
 
     _walk_folder_task = auto_task_id(_walk_folder)
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node) -> None:
         content_id = scrape_item.url.name
-        link = (_APP_URL / "content/links" / content_id / "files/get" / file.name).with_query(scrape_item.url.query)
+        link = _APP_URL / "content/links" / content_id / "files/get" / file.name
+        link = link.with_query(scrape_item.url.query).update_query(path=file.path)
         if await self.check_complete_by_hash(link, "md5", file.hash):
             return
 
@@ -123,12 +123,10 @@ class KooFrAPI:
         if not resp.get("isOnline"):
             raise ScrapeError(404)
 
-        folder = Folder(**resp)
-        folder.password = password
-        folder.root_id = content_id
-        return folder
+        resp["password"] = password
+        return Folder(root_id=content_id, **resp)
 
     async def get_children(self, folder: Folder, path: str) -> list[Node]:
         api_url = (_APP_LINKS / folder.root_id / "bundle").with_query(path=path, password=folder.password)
-        nodes = (await self._crawler.request_json(api_url))["files"]
-        return [Node(**node) for node in nodes]
+        nodes: list[dict[str, Any]] = (await self._crawler.request_json(api_url))["files"]
+        return [Node(path=f"{path.removesuffix('/')}/{node['name']}", **node) for node in nodes]
