@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import Any, ClassVar, Literal
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from pydantic import dataclasses
+
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import DownloadError, PasswordProtectedError, ScrapeError
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, type_adapter
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 _APP_URL = AbsoluteHttpURL("https://app.koofr.net")
 _APP_LINKS = _APP_URL / "api/v2/public/links"
@@ -28,15 +29,11 @@ class Folder:
     file: Node
     root_id: str = ""
     password: str = ""
-    children: list[Node] = dataclasses.field(default_factory=list)
-
-
-_parse_folder = type_adapter(Folder)
-_parse_node = type_adapter(Node)
+    children: list[Node] = dataclasses.Field(default_factory=list)
 
 
 class KooFrCrawler(Crawler):
-    SUPPORTED_DOMAIN = "koofr.net", "koofr.eu", _SHORT_LINK_CDN.host
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "koofr.net", "koofr.eu", _SHORT_LINK_CDN.host
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File / Folder": (
             "/links/<content_id>",
@@ -69,7 +66,7 @@ class KooFrCrawler(Crawler):
     async def content(self, scrape_item: ScrapeItem, content_id: str) -> None:
         path = scrape_item.url.query.get("path") or "/"
         folder = await self.api.get_folder(content_id, path, scrape_item.password)
-        if not folder.file.type == "file":
+        if folder.file.type == "file":
             return await self._file(scrape_item, folder.file)
 
         title = self.create_title(folder.file.name, content_id)
@@ -82,12 +79,14 @@ class KooFrCrawler(Crawler):
         for node in children:
             if node.type == "file":
                 self.create_task(self._file(scrape_item, node))
-                continue
 
             else:
                 new_path = f"{path}/{node.name}"
-                new_scrape_item = scrape_item.create_child(scrape_item.url.update_query(path=path))
-                new_scrape_item.add_to_parent_title(node.name)
+                new_scrape_item = scrape_item.create_child(
+                    url=scrape_item.url.update_query(path=path),
+                    new_title_part=node.name,
+                )
+
                 self.create_task(self._walk_folder_task(new_scrape_item, folder, new_path))
 
             scrape_item.add_children()
@@ -102,7 +101,7 @@ class KooFrCrawler(Crawler):
             return
 
         filename, ext = self.get_filename_and_ext(file.name)
-        scrape_item.possible_datetime = file.modified
+        scrape_item.possible_datetime = file.modified // 1000
         await self.handle_file(link, scrape_item, file.name, ext, custom_filename=filename)
 
 
@@ -124,7 +123,7 @@ class KooFrAPI:
         if not resp.get("isOnline"):
             raise ScrapeError(404)
 
-        folder = _parse_folder(resp)
+        folder = Folder(**resp)
         folder.password = password
         folder.root_id = content_id
         return folder
@@ -132,4 +131,4 @@ class KooFrAPI:
     async def get_children(self, folder: Folder, path: str) -> list[Node]:
         api_url = (_APP_LINKS / folder.root_id / "bundle").with_query(path=path, password=folder.password)
         nodes = (await self._crawler.request_json(api_url))["files"]
-        return [_parse_node(node) for node in nodes]
+        return [Node(**node) for node in nodes]
