@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Selector:
     VIDEO_PLAYER = "video.video-js > source"
     TITLE = "h1.title-right"
-    NEXT_PAGE = "div#pagination > a:-soup-contains('Suivante »')"
+    NEXT_PAGE = "div#pagination > a:-soup-contains('»')"
     VIDEOS_THUMBS = "div.contents div.content a"
 
 
@@ -44,7 +44,9 @@ class LuxureTVCrawler(Crawler):
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
         title: str = ""
-        url = scrape_item.url.with_path(scrape_item.url.path + "/")
+        url = scrape_item.url
+        if url.name and not url.name.endswith(".html"):
+            url = url / ""
         async for soup in self.web_pager(url, cffi=True):
             if not title:
                 title = css.select_one_get_text(soup, Selector.TITLE)
