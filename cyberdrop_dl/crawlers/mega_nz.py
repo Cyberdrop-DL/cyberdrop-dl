@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.downloader import mega_nz as mega
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
@@ -29,6 +29,7 @@ class FileTuple(NamedTuple):
 
 
 class MegaNzCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
             "/file/<file_id>#<share_key>",
@@ -46,6 +47,7 @@ class MegaNzCrawler(Crawler):
     SKIP_PRE_CHECK: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
+    OLD_DOMAINS = ("mega.co.nz",)
 
     def __post_init__(self) -> None:
         self.downloader: mega.MegaDownloader

@@ -4,10 +4,14 @@ import re
 from fractions import Fraction
 from typing import TYPE_CHECKING, Final, NamedTuple
 
+from cyberdrop_dl.exceptions import ScrapeError
+
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     import yarl
+
+    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 
 
 VIDEO_CODECS = "avc1", "avc2", "avc3", "avc4", "av1", "hevc", "hev1", "hev2", "hvc1", "hvc2", "vp8", "vp9", "vp10"
@@ -62,7 +66,7 @@ class Resolution(NamedTuple):
         return Fraction(self.width, self.height)
 
     @staticmethod
-    def parse(url_number_or_string: yarl.URL | str | int, /) -> Resolution:
+    def parse(url_number_or_string: yarl.URL | str | int | None, /) -> Resolution:
         if url_number_or_string is None:
             return UNKNOWN_RESOLUTION
 
@@ -112,6 +116,28 @@ class Resolution(NamedTuple):
     def highest() -> Resolution:
         return HIGHEST_RESOLUTION
 
+    @staticmethod
+    def make_parser() -> Callable[[yarl.URL | str | int | None], Resolution]:
+        """Returns a callable wrapper around `Resolution.parse` that can return `Resolution.unknown()`
+
+        Raises `ScrapeError` if more that 1 unknown resolution is parsed"""
+
+        default_res: Resolution | None = None
+
+        def parse(quality: yarl.URL | str | int | None, /) -> Resolution:
+            nonlocal default_res
+            try:
+                return Resolution.parse(quality)
+            except ValueError as e:
+                if default_res is not None:
+                    msg = "Unable to select best quality. Resource has more that 1 unknown resolution"
+                    raise ScrapeError(422, msg) from e
+
+                default_res = Resolution.unknown()
+                return default_res
+
+        return parse
+
 
 UNKNOWN_RESOLUTION = Resolution.parse(0)
 HIGHEST_RESOLUTION = Resolution(9999, 9999)
@@ -133,3 +159,14 @@ COMMON_RESOLUTIONS: Final = tuple(
         (256, 144),
     )
 )
+
+
+class ISO639Subtitle(NamedTuple):
+    """`lang_code` MUST be a valid ISO639 code (ex: en, eng, fra)"""
+
+    url: AbsoluteHttpURL | str
+    lang_code: str
+    name: str | None = None
+
+
+Subtitle = ISO639Subtitle

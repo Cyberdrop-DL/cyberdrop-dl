@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import imagesize
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.utils import strings
 from cyberdrop_dl.utils.ffmpeg import probe
@@ -111,8 +112,9 @@ class Sorter:
             for file in files:
                 ext = file.suffix.lower()
 
-                if ext in (".cdl_hls", ".cdl_hsl", ".part"):
+                if ext in constants.TempExt:
                     continue
+
                 if ext in FILE_FORMATS["Audio"]:
                     await self.sort_audio(file, folder_name)
                 elif ext in FILE_FORMATS["Images"]:

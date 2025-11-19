@@ -60,6 +60,12 @@ class CustomHTTPStatus(IntEnum):
     DDOS_GUARD = 429
 
 
+class TempExt(StrEnum):
+    HLS = ".cdl_hls"
+    WRONG_CDL_HLS = ".cdl_hsl"  # used for a while in old versions, has a typo
+    PART = ".part"
+
+
 class BlockedDomains:
     partial_match = (
         "facebook",
@@ -184,6 +190,8 @@ FILE_FORMATS = {
         ".md",
         ".nfo",
         ".txt",
+        ".vtt",
+        ".sub",
     },
     "7z": {
         ".7z",

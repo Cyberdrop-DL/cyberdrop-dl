@@ -4,6 +4,7 @@ from __future__ import annotations
 from cyberdrop_dl import env
 
 from ._chevereto import CheveretoCrawler
+from .anontransfer import AnonTransferCrawler
 from .archivebate import ArchiveBateCrawler
 from .ashemaletube import AShemaleTubeCrawler
 from .beeg import BeegComCrawler
@@ -18,6 +19,7 @@ from .coomer import CoomerCrawler
 from .crawler import Crawler
 from .cyberdrop import CyberdropCrawler
 from .cyberfile import CyberfileCrawler
+from .desivideo import DesiVideoCrawler
 from .dirtyship import DirtyShipCrawler
 from .discourse import DISCOURSE_CRAWLERS, DiscourseCrawler
 from .doodstream import DoodStreamCrawler
@@ -33,6 +35,7 @@ from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
+from .fsiblog import FSIBlogCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
@@ -57,12 +60,14 @@ from .jpg5 import JPG5Crawler
 from .kemono import KemonoCrawler
 from .leakedzone import LeakedZoneCrawler
 from .luscious import LusciousCrawler
+from .masahub import MasahubCrawler
 from .mediafire import MediaFireCrawler
 from .mega_nz import MegaNzCrawler
 from .megacloud import MegaCloudCrawler
 from .missav import MissAVCrawler
 from .mixdrop import MixDropCrawler
 from .motherless import MotherlessCrawler
+from .mydesi import MyDesiCrawler
 from .nekohouse import NekohouseCrawler
 from .nhentai import NHentaiCrawler
 from .noodle_magazine import NoodleMagazineCrawler
@@ -81,6 +86,7 @@ from .pornhub import PornHubCrawler
 from .pornpics import PornPicsCrawler
 from .porntrex import PorntrexCrawler
 from .postimg import PostImgCrawler
+from .ranoz import RanozCrawler, RootzCrawler
 from .realbooru import RealBooruCrawler
 from .reddit import RedditCrawler
 from .redgifs import RedGifsCrawler
@@ -88,6 +94,7 @@ from .rule34vault import Rule34VaultCrawler
 from .rule34video import Rule34VideoCrawler
 from .rule34xxx import Rule34XXXCrawler
 from .rule34xyz import Rule34XYZCrawler
+from .rumble import RumbleCrawler
 from .safe_soul import SafeSoulCrawler
 from .saint import SaintCrawler
 from .scrolller import ScrolllerCrawler
@@ -96,10 +103,14 @@ from .sendvid import SendVidCrawler
 from .sex_dot_com import SexDotComCrawler
 from .spankbang import SpankBangCrawler
 from .streamable import StreamableCrawler
+from .streamtape import StreamtapeCrawler
 from .thisvid import ThisVidCrawler
 from .tiktok import TikTokCrawler
+from .tnaflix import TNAFlixCrawler
 from .tokyomotion import TokioMotionCrawler
 from .toonily import ToonilyCrawler
+from .tranny_one import TrannyOneCrawler
+from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
@@ -108,8 +119,10 @@ from .vipr_dot_im import ViprImCrawler
 from .voe_sx import VoeSxCrawler
 from .wetransfer import WeTransferCrawler
 from .wordpress import WP_CRAWLERS, WordPressHTMLCrawler, WordPressMediaCrawler
+from .xasiat import XasiatCrawler
 from .xbunkr import XBunkrCrawler
 from .xenforo import XF_CRAWLERS, SimpCityCrawler
+from .xgroovy import XGroovyCrawler
 from .xhamster import XhamsterCrawler
 from .xvideos import XVideosCrawler
 from .xxxbunker import XXXBunkerCrawler
@@ -122,7 +135,7 @@ ALL_CRAWLERS: set[type[Crawler]] = {
     crawler for name, crawler in globals().items() if name.endswith("Crawler") and crawler is not Crawler
 }
 ALL_CRAWLERS.update(WP_CRAWLERS, GENERIC_CRAWLERS, FORUM_CRAWLERS)
-DEBUG_CRAWLERS = {GirlsReleasedCrawler, SimpCityCrawler, BunkrAlbumsIOCrawler}
+DEBUG_CRAWLERS = {SimpCityCrawler}
 if env.ENABLE_DEBUG_CRAWLERS == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda":
     CRAWLERS = ALL_CRAWLERS
 else:

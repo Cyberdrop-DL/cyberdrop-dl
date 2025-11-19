@@ -7,6 +7,7 @@ import inspect
 import re
 import warnings
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -18,7 +19,7 @@ from yarl import URL
 
 from cyberdrop_dl import constants
 from cyberdrop_dl.clients.scraper_client import ScraperClient
-from cyberdrop_dl.data_structures.mediaprops import Resolution
+from cyberdrop_dl.data_structures.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, copy_signature
 from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -258,7 +259,7 @@ class Crawler(ABC):
             if self._DOWNLOAD_SLOTS:
                 self.manager.client_manager.download_slots[self.DOMAIN] = self._DOWNLOAD_SLOTS
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.manager.client_manager.download_client._use_server_locks.add(self.DOMAIN)
+                self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
             self.downloader = self._init_downloader()
             self._register_response_checks()
             await self.async_startup()
@@ -362,21 +363,32 @@ class Crawler(ABC):
             return False
         return primary_domain in other_domain and other_domain.count(".") > primary_domain.count(".")
 
-    # TODO: make this sync
+    @final
+    async def write_metadata(self, scrape_item: ScrapeItem, name: str, metadata: object) -> None:
+        """Write general metadata (not specific to a single file) to json output"""
+
+        filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
+        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        url = scrape_item.url.with_scheme("metadata")
+        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename)
+        media_item.metadata = metadata
+        await self.__write_to_jsonl(media_item)
+
     async def handle_file(
         self,
-        url: URL,
+        url: AbsoluteHttpURL,
         scrape_item: ScrapeItem,
         filename: str,
         ext: str | None = None,
         *,
         custom_filename: str | None = None,
-        debrid_link: URL | None = None,
+        debrid_link: AbsoluteHttpURL | None = None,
         m3u8: m3u8.RenditionGroup | None = None,
+        metadata: object = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
         if not ext:
-            _, ext = filename.rsplit(".", 1)
+            ext = Path(filename).suffix
         if custom_filename:
             original_filename, filename = filename, custom_filename
         elif self.DOMAIN in ["cyberdrop"]:
@@ -384,15 +396,13 @@ class Crawler(ABC):
         else:
             original_filename = filename
 
-        assert is_absolute_http_url(url)
-        if isinstance(debrid_link, URL):
-            assert is_absolute_http_url(debrid_link)
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
-
-        self.create_task(self.handle_media_item(media_item, m3u8))
+        if metadata is not None:
+            media_item.metadata = metadata
+        await self.handle_media_item(media_item, m3u8)
 
     @final
     async def _download(self, media_item: MediaItem, m3u8: m3u8.RenditionGroup | None) -> None:
@@ -403,9 +413,14 @@ class Crawler(ABC):
                 await self.downloader.run(media_item)
 
         finally:
-            if self.manager.config_manager.settings_data.files.dump_json:
-                data = [media_item.as_jsonable_dict()]
-                await self.manager.log_manager.write_jsonl(data)
+            await self.__write_to_jsonl(media_item)
+
+    async def __write_to_jsonl(self, media_item: MediaItem) -> None:
+        if not self.manager.config.files.dump_json:
+            return
+
+        data = [media_item.as_jsonable_dict()]
+        await self.manager.log_manager.write_jsonl(data)
 
     async def check_complete(self, url: AbsoluteHttpURL, referer: AbsoluteHttpURL) -> bool:
         """Checks if this URL has been download before.
@@ -849,6 +864,30 @@ class Crawler(ABC):
 
         if newest := max(get_morsels_by_name(), key=lambda x: int(x["max-age"] or 0), default=None):
             return newest.value
+
+    @final
+    def handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[ISO639Subtitle]) -> None:
+        counter = Counter()
+        video_stem = Path(video_filename).stem
+        for sub in subtitles:
+            link = self.parse_url(sub.url) if isinstance(sub.url, str) else sub.url
+            counter[sub.lang_code] += 1
+            if (count := counter[sub.lang_code]) > 1:
+                suffix = f"{sub.lang_code}.{count}{link.suffix}"
+            else:
+                suffix = f"{sub.lang_code}{link.suffix}"
+
+            sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
+            new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
+            self.create_task(
+                self.handle_file(
+                    link,
+                    new_scrape_item,
+                    sub.name or link.name,
+                    ext,
+                    custom_filename=sub_name,
+                )
+            )
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:

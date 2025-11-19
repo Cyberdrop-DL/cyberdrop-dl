@@ -35,4 +35,15 @@ TEST_CASES = [
         ],
         7,
     ),
+    # Direct image
+    (
+        "https://img0.pixhost.to/images/647/527555752_clips4sale-com-2023-09-29-angel-the-dreamgirl-her-horniness-and-lust-can.jpg",
+        [
+            {
+                "url": "https://img0.pixhost.to/images/647/527555752_clips4sale-com-2023-09-29-angel-the-dreamgirl-her-horniness-and-lust-can.jpg",
+                "filename": "527555752_clips4sale-com-2023-09-29-angel-the-dreamgirl-her-horniness-and-lust-can.jpg",
+                "referer": "https://img0.pixhost.to/images/647/527555752_clips4sale-com-2023-09-29-angel-the-dreamgirl-her-horniness-and-lust-can.jpg",
+            },
+        ],
+    ),
 ]

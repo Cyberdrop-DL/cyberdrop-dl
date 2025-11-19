@@ -5,12 +5,12 @@ import codecs
 import dataclasses
 import json
 import re
-from collections import Counter
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures import AbsoluteHttpURL
-from cyberdrop_dl.data_structures.mediaprops import Resolution
+from cyberdrop_dl.data_structures.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import m3u8, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
@@ -65,7 +65,7 @@ class VoeVideo:
     url: AbsoluteHttpURL
     resolution: Resolution | None
     hls_url: AbsoluteHttpURL | None
-    subtitles: tuple[VoeSubtitle, ...]
+    subtitles: tuple[Subtitle, ...]
 
 
 class VoeSxCrawler(Crawler):
@@ -137,7 +137,7 @@ class VoeSxCrawler(Crawler):
         self: Crawler, scrape_item: ScrapeItem, video: VoeVideo, m3u8: m3u8.RenditionGroup | None
     ) -> None:
         custom_filename = self.create_custom_filename(
-            video.title.removesuffix(video.url.suffix),
+            video.title,
             video.url.suffix,
             file_id=video.id,
             resolution=video.resolution,
@@ -153,18 +153,8 @@ class VoeSxCrawler(Crawler):
                 m3u8=m3u8,
             )
         )
-        video_stem = custom_filename.removesuffix(video.url.suffix)
-        for sub in video.subtitles:
-            sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{sub.suffix}")
-            self.create_task(
-                self.handle_file(
-                    sub.url,
-                    scrape_item,
-                    sub.label,
-                    ext,
-                    custom_filename=sub_name,
-                )
-            )
+
+        self.handle_subs(scrape_item, custom_filename, video.subtitles)
 
     redirect = auto_task_id(fetch)
 
@@ -234,32 +224,27 @@ def _extract_mp4_urls(
     for fallback in video_info.get("fallback", []):
         if fallback["type"] == "mp4":
             res = Resolution.parse(fallback["label"])
-            yield res, parse_url(fallback["file"], origin)
+            url = parse_url(fallback["file"], origin)
+            yield res, url
 
     if url := video_info.get("direct_access_url"):
-        yield Resolution.unknown(), parse_url(url, origin)
+        url = parse_url(url, origin)
+        yield Resolution.unknown(), url
 
 
-def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generator[VoeSubtitle]:
-    counter = Counter()
+def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generator[Subtitle]:
     for track in video_info.get("captions", []):
         if track["kind"] != "captions":
             continue
 
         url = parse_url(track["file"], origin)
         label: str = track["label"]
-        lang_code = _parse_lang_code(url.name.removesuffix(url.suffix), label)
-        counter[lang_code] += 1
-        if (count := counter[lang_code]) > 1:
-            suffix = f"{lang_code}.{count}{url.suffix}"
-        else:
-            suffix = f"{lang_code}{url.suffix}"
-
-        yield VoeSubtitle(label, lang_code, suffix, url)
+        lang_code = _parse_lang_code(url.name, label)
+        yield Subtitle(url, lang_code, label)
 
 
-def _parse_lang_code(stem: str, label: str) -> str:
-    code = stem.rpartition("_")[-1]
+def _parse_lang_code(name: str, label: str) -> str:
+    code = Path(name).stem.rpartition("_")[-1]
     if len(code) in (2, 3):
         return code
 

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.database import Database
 
 
-CURRENT_APP_SCHEMA_VERSION = "8.0.0"
+CURRENT_APP_SCHEMA_VERSION = "8.7.0"
 
 
 class SchemaVersionTable:
@@ -29,7 +29,7 @@ class SchemaVersionTable:
     async def get_version(self) -> Version | None:
         if not await self.__exists():
             return
-        query = "SELECT version FROM schema_version;"
+        query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
         cursor = await self.db_conn.execute(query)
         result = await cursor.fetchone()
         if result:

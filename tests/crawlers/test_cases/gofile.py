@@ -43,12 +43,22 @@ TEST_CASES = [
         "https://store6.gofile.io/download/69b4c1e4-a80a-45d5-ad76-061e48105bd0/MORE_IN90.mp4",
         [
             {
-                "url": "https://store3.gofile.io/download/web/69b4c1e4-a80a-45d5-ad76-061e48105bd0/MORE_IN90.mp4",
+                "url": "https://cold2.gofile.io/download/web/69b4c1e4-a80a-45d5-ad76-061e48105bd0/MORE_IN90.mp4",
                 "filename": "MORE_IN90.mp4",
                 "download_folder": r"re:01 \(GoFile\)",
                 "referer": "https://gofile.io/d/9d83784e-2be6-472c-909f-0377704cfde3#69b4c1e4-a80a-45d5-ad76-061e48105bd0",
                 "album_id": "9d83784e-2be6-472c-909f-0377704cfde3",
                 "datetime": 1701541586,
+            },
+        ],
+    ),
+    (
+        "https://gofile.io/d/3q10QE",
+        [
+            {
+                "url": "ANY",
+                "filename": "pornworld.25.09.30.angelica.heaven.4k.mp4",
+                "download_folder": r"re:Loose Files \(GoFile\)",
             },
         ],
     ),

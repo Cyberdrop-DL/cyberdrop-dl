@@ -5,19 +5,15 @@ import copy
 import datetime
 from dataclasses import asdict, dataclass, field
 from enum import IntEnum
-from functools import partialmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, ParamSpec, Self, TypeVar, overload
 
 import yarl
 
-from cyberdrop_dl.exceptions import MaxChildrenError
-
-P = ParamSpec("P")
-R = TypeVar("R")
-T = TypeVar("T")
-
 if TYPE_CHECKING:
+    _P = ParamSpec("_P")
+    _R = TypeVar("_R")
+    _T = TypeVar("_T")
     import functools
     import inspect
     from collections.abc import Callable
@@ -28,13 +24,13 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.managers.manager import Manager
 
-    def copy_signature(target: Callable[P, R]) -> Callable[[Callable[..., T]], Callable[P, T]]:
-        def decorator(func: Callable[..., T]) -> Callable[P, T]:
+    def copy_signature(target: Callable[_P, _R]) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
+        def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
             @functools.wraps(func)
-            def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 return func(*args, **kwargs)
 
-            wrapper.__signature__ = inspect.signature(target).replace(  # type: ignore
+            wrapper.__signature__ = inspect.signature(target).replace(  # pyright: ignore[reportAttributeAccessIssue]
                 return_annotation=inspect.signature(func).return_annotation
             )
             return wrapper
@@ -127,9 +123,6 @@ else:
         return call
 
 
-AnyURL = TypeVar("AnyURL", bound=yarl.URL | AbsoluteHttpURL)
-
-
 class ScrapeItemType(IntEnum):
     FORUM = 0
     FORUM_POST = 1
@@ -178,8 +171,12 @@ class MediaItem:
     downloaded: bool = field(default=False, compare=False)
 
     parent_media_item: MediaItem | None = field(default=None, compare=False)
-    db_path: str = field(init=False, repr=False)
+    db_path: str = field(init=False)
     _task_id: TaskID | None = field(default=None, compare=False)
+    metadata: object = field(init=False, default_factory=dict, compare=False)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(domain={self.domain!r}, url={self.url!r}, referer={self.referer!r}, filename={self.filename!r}"
 
     def __post_init__(self) -> None:
         self.db_path = self.create_db_path(self.url, self.domain)
@@ -188,6 +185,9 @@ class MediaItem:
     def create_db_path(url: yarl.URL, domain: str) -> str:
         """Gets the URL path to be put into the DB and checked from the DB."""
 
+        if url.scheme == "metadata":
+            return ""
+
         if domain:
             if "e-hentai" in domain:
                 return url.path.split("keystamp")[0][:-1]
@@ -195,7 +195,7 @@ class MediaItem:
             if "mediafire" in domain:
                 return url.name
 
-            if "mega.nz" in domain:
+            if "mega.nz" in domain or "transfer.it" in domain:
                 return url.path_qs if not (frag := url.fragment) else f"{url.path_qs}#{frag}"
 
         return url.path
@@ -271,7 +271,6 @@ class ScrapeItem:
     part_of_album: bool = False
     album_id: str | None = None
     possible_datetime: int | None = None
-    retry: bool = False
     retry_path: Path | None = None
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
@@ -282,13 +281,18 @@ class ScrapeItem:
     completed_at: int | None = field(default=None, init=False)
     created_at: int | None = field(default=None, init=False)
     children_limits: list[int] = field(default_factory=list, init=False)
+    password: str | None = field(default=None, init=False)
+
+    def __post_init__(self) -> None:
+        self.password = self.url.query.get("password")
 
     def add_to_parent_title(self, title: str) -> None:
         """Adds a title to the parent title."""
         from cyberdrop_dl.utils.utilities import sanitize_folder
 
-        if not title or self.retry:
+        if not title or self.retry_path:
             return
+
         title = sanitize_folder(title)
         if title.endswith(")") and " (" in title:
             for part in reversed(self.parent_title.split("/")):
@@ -321,6 +325,8 @@ class ScrapeItem:
     def add_children(self, number: int = 1) -> None:
         self.children += number
         if self.children_limit and self.children >= self.children_limit:
+            from cyberdrop_dl.exceptions import MaxChildrenError
+
             raise MaxChildrenError(origin=self)
 
     def reset(self, reset_parents: bool = False, reset_parent_title: bool = False) -> None:
@@ -354,7 +360,7 @@ class ScrapeItem:
         album_id: str | None = None,
         possible_datetime: int | None = None,
         add_parent: AbsoluteHttpURL | bool | None = None,
-    ) -> ScrapeItem:
+    ) -> Self:
         """Creates a scrape item."""
         from cyberdrop_dl.utils.utilities import is_absolute_http_url
 
@@ -372,11 +378,34 @@ class ScrapeItem:
         scrape_item.album_id = album_id or scrape_item.album_id
         return scrape_item
 
-    create_child = partialmethod(create_new, part_of_album=True, add_parent=True)
-    setup_as_album = partialmethod(setup_as, type=FILE_HOST_ALBUM)
-    setup_as_profile = partialmethod(setup_as, type=FILE_HOST_PROFILE)
-    setup_as_forum = partialmethod(setup_as, type=FORUM)
-    setup_as_post = partialmethod(setup_as, type=FORUM_POST)
+    def create_child(
+        self,
+        url: AbsoluteHttpURL,
+        *,
+        new_title_part: str = "",
+        album_id: str | None = None,
+        possible_datetime: int | None = None,
+    ) -> Self:
+        return self.create_new(
+            url,
+            part_of_album=True,
+            add_parent=True,
+            new_title_part=new_title_part,
+            album_id=album_id,
+            possible_datetime=possible_datetime,
+        )
+
+    def setup_as_album(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
+        return self.setup_as(title, type=FILE_HOST_ALBUM, album_id=album_id)
+
+    def setup_as_profile(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
+        return self.setup_as(title, type=FILE_HOST_PROFILE, album_id=album_id)
+
+    def setup_as_forum(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
+        return self.setup_as(title, type=FORUM, album_id=album_id)
+
+    def setup_as_post(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
+        return self.setup_as(title, type=FORUM_POST, album_id=album_id)
 
     @property
     def origin(self) -> AbsoluteHttpURL | None:
@@ -388,15 +417,18 @@ class ScrapeItem:
         if self.parents:
             return self.parents[-1]
 
+    def create_download_path(self, domain: str) -> Path:
+        if self.retry_path:
+            return self.retry_path
+        if self.parent_title and self.part_of_album:
+            return Path(self.parent_title)
+        if self.parent_title:
+            return Path(self.parent_title) / f"Loose Files ({domain})"
+        return Path(f"Loose Files ({domain})")
+
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""
         return copy.deepcopy(self)
-
-    def pop_query(self, name: str) -> str | None:
-        """Get the value of a query param and remove it from this item's URL"""
-        value = self.url.query.get(name)
-        self.url = self.url.without_query_params(name)
-        return value
 
 
 class QueryDatetimeRange(NamedTuple):
