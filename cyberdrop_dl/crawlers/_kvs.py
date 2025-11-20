@@ -131,7 +131,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         try:
             date_str = css.get_json_ld_date(soup)
             scrape_item.possible_datetime = self.parse_iso_date(date_str)
-        except (LookupError, ValueError):
+        except (LookupError, ValueError, css.SelectorError):
             date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
             scrape_item.possible_datetime = self.parse_date(date_str)
 
