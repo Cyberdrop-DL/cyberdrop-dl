@@ -298,9 +298,9 @@ media_duration_limits:
   --minimum-audio-duration MINIMUM_AUDIO_DURATION
 
 files:
-  -d DOWNLOAD_FOLDER, --download-folder DOWNLOAD_FOLDER
+  -d, --download-folder DOWNLOAD_FOLDER
   -j, --dump-json, --no-dump-json
-  -i INPUT_FILE, --input-file INPUT_FILE
+  -i, --input-file INPUT_FILE
   --save-pages-html, --no-save-pages-html
 
 ignore_options:
@@ -314,8 +314,8 @@ ignore_options:
   --only-hosts [ONLY_HOSTS ...]
   --skip-hosts [SKIP_HOSTS ...]
   --exclude-files-with-no-extension, --no-exclude-files-with-no-extension
-  --exclude-posts-before EXCLUDE_POSTS_BEFORE
-  --exclude-posts-after EXCLUDE_POSTS_AFTER
+  --exclude-before EXCLUDE_BEFORE
+  --exclude-after EXCLUDE_AFTER
 
 logs:
   --download-error-urls DOWNLOAD_ERROR_URLS
