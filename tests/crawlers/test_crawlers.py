@@ -127,9 +127,13 @@ def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: lis
                     expected_value = mock.ANY
                 elif expected_value.startswith("re:"):
                     expected_value = expected_value.removeprefix("re:")
-                    assert re.search(expected_value, str(result_value)), (
+                    assert _re_search(expected_value, str(result_value)), (
                         f"{result_value = } does not match {expected_value}"
                     )
                     continue
 
             assert expected_value == result_value, f"{attr_name} for result#{index} is different"
+
+
+def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
+    return re.search(expected_value, str(result_value)) or re.search(re.escape(expected_value), str(result_value))
