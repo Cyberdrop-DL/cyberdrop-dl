@@ -128,8 +128,13 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         video = extract_kvs_video(self, soup)
         filename, ext = self.get_filename_and_ext(video.url.name)
         custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
-        date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
-        scrape_item.possible_datetime = self.parse_date(date_str)
+        try:
+            date_str = css.get_json_ld_date(soup)
+            scrape_item.possible_datetime = self.parse_iso_date(date_str)
+        except (LookupError, ValueError):
+            date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
+            scrape_item.possible_datetime = self.parse_date(date_str)
+
         await self.handle_file(
             scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=video.url
         )
