@@ -33,7 +33,7 @@ class Selectors:
     FLASHVARS = "script:-soup-contains('video_title:')"
     USER_NAME = "div.headline > h2"
     ALBUM_NAME = "div.headline > h1"
-    ALBUM_PICTURES = "div.album-list > a"
+    ALBUM_PICTURES = "div.album-list > a, .images a"
     PICTURE = "div.photo-holder > img"
     PUBLIC_VIDEOS = "div#list_videos_public_videos_items"
     PRIVATE_VIDEOS = "div#list_videos_private_videos_items"
@@ -128,17 +128,24 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         video = extract_kvs_video(self, soup)
         filename, ext = self.get_filename_and_ext(video.url.name)
         custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
-        date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
-        scrape_item.possible_datetime = self.parse_date(date_str)
+        try:
+            date_str = css.get_json_ld_date(soup)
+            scrape_item.possible_datetime = self.parse_iso_date(date_str)
+        except (LookupError, ValueError, css.SelectorError):
+            date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
+            scrape_item.possible_datetime = self.parse_date(date_str)
+
         await self.handle_file(
             scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=video.url
         )
 
     @error_handling_wrapper
-    async def album(self, scrape_item: ScrapeItem) -> None:
+    async def album(self, scrape_item: ScrapeItem, album_id: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
-        js_text = css.select_one_get_text(soup, _SELECTORS.ALBUM_ID)
-        album_id = get_text_between(js_text, "params['album_id'] =", ";").strip()
+        if not album_id:
+            js_text = css.select_one_get_text(soup, _SELECTORS.ALBUM_ID)
+            album_id = get_text_between(js_text, "params['album_id'] =", ";")
+
         results = await self.get_album_results(album_id)
         title = css.select_one_get_text(soup, _SELECTORS.ALBUM_NAME)
         title = self.create_title(f"{title} [album]", album_id)
@@ -181,8 +188,9 @@ _find_flashvars = re.compile(r"(\w+):\s*'([^']*)'").findall
 
 def _parse_video_vars(video_vars: str) -> KVSVideo:
     flashvars: dict[str, str] = dict(_find_flashvars(video_vars))
-    url_keys = filter(_match_video_url_keys, flashvars.keys())
+    url_keys = list(filter(_match_video_url_keys, flashvars.keys()))
     license_token = _get_license_token(flashvars["license_code"])
+    parse_resolution = Resolution.make_parser()
 
     def get_formats():
         for key in url_keys:
@@ -190,7 +198,7 @@ def _parse_video_vars(video_vars: str) -> KVSVideo:
             if "/get_file/" not in url_str:
                 continue
             quality = flashvars.get(f"{key}_text")
-            resolution = Resolution.highest() if quality == "HQ" else Resolution.parse(quality)
+            resolution = Resolution.highest() if quality in ("HQ", "Best Quality") else parse_resolution(quality)
             url = _deobfuscate_url(url_str, license_token)
             yield resolution, url
 

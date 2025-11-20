@@ -150,28 +150,32 @@ class InsufficientFreeSpaceError(CDLBaseError):
         super().__init__(ui_failure, origin=origin)
 
 
-class RestrictedFiletypeError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
-        """This error will be thrown when has a filytpe not allowed by config."""
-        ui_failure = "Restricted Filetype"
-        super().__init__(ui_failure, origin=origin)
+class SkipDownloadError(CDLBaseError):
+    """Throw this when a download is not allowed by config options"""
 
 
-class DurationError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
-        """THis error will be thrown when the file duration is not allowed by the config."""
+class RestrictedFiletypeError(SkipDownloadError):
+    def __init__(self, origin: MediaItem) -> None:
+        """This error will be thrown when has a filetype not allowed by config."""
+        ui_failure = "Restricted File Ext"
+        message = f"File extension ({origin.ext}) ignored config options"
+        super().__init__(ui_failure, message=message, origin=origin)
+
+
+class DurationError(SkipDownloadError):
+    def __init__(self, origin: MediaItem) -> None:
+        """This error will be thrown when the file duration is not allowed by the config."""
         ui_failure = "Duration Not Allowed"
-        super().__init__(ui_failure, origin=origin)
+        message = f"File duration ({origin.duration}s) out of config range"
+        super().__init__(ui_failure, message=message, origin=origin)
 
 
-class RealDebridError(CDLBaseError):
-    """Base RealDebrid API error."""
-
-    def __init__(self, url: URL, code: int, message: str) -> None:
-        self.path = url.path
-        msg = message.capitalize()
-        ui_failure = f"{code} RealDebrid Error"
-        super().__init__(ui_failure, message=msg, status=code, origin=url)
+class RestrictedDateRangeError(SkipDownloadError):
+    def __init__(self, origin: MediaItem) -> None:
+        """This error will be thrown when the publication date of the media item is not allowed by config."""
+        ui_failure = "Restricted DateRange"
+        message = f"File upload date ({origin.datetime_obj()}s) out of config range"
+        super().__init__(ui_failure, message=message, origin=origin)
 
 
 class ScrapeError(CDLBaseError):
@@ -220,13 +224,6 @@ class InvalidYamlError(CDLBaseError):
         msg += f"\n\n{problem.capitalize()}"
         msg += f"\n\n{VALIDATION_ERROR_FOOTER}"
         super().__init__(ui_failure, message=msg, origin=file)
-
-
-class RestrictedDateRangeError(CDLBaseError):
-    def __init__(self, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
-        """This error will be thrown when the publication date of the media item is not allowed by config."""
-        ui_failure = "Restricted DateRange"
-        super().__init__(ui_failure, origin=origin)
 
 
 def create_error_msg(error: int | str) -> str:

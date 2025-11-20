@@ -97,18 +97,18 @@ You can supply hosts that you'd like the program to exclusively scrape/download 
 
 You can supply hosts that you'd like the program to skip, to not scrape/download from them. This setting accepts any domain, even if they are no supported.
 
-## `exclude_posts_before`
+## `exclude_before`
 
 | Type                 | Default | Additional Info                                                    |
 | -------------------- | ------- | ------------------------------------------------------------------ |
-| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, for example, `2021-12-23` |
 
-When a valid datetime value is provided, this excludes all posts published before that particular datetime.
+Do not download files uploaded before this date.
 
-## `exclude_posts_after`
+## `exclude_after`
 
 | Type                 | Default | Additional Info                                                    |
 | -------------------- | ------- | ------------------------------------------------------------------ |
-| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, for example, `2021-12-23` |
 
-When a valid datetime value is provided, this excludes all posts published after that particular datetime.
+Do not download files uploaded after this date.

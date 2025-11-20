@@ -1,6 +1,6 @@
 import itertools
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from logging import DEBUG
 from pathlib import Path
 
@@ -164,8 +164,8 @@ class IgnoreOptions(BaseModel):
     only_hosts: ListNonEmptyStr = []
     skip_hosts: ListNonEmptyStr = []
     exclude_files_with_no_extension: bool = True
-    exclude_posts_before: datetime | None = None
-    exclude_posts_after: datetime | None = None
+    exclude_before: date | None = None
+    exclude_after: date | None = None
 
     @field_validator("filename_regex_filter")
     @classmethod

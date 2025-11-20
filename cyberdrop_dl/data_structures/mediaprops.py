@@ -4,8 +4,10 @@ import re
 from fractions import Fraction
 from typing import TYPE_CHECKING, Final, NamedTuple
 
+from cyberdrop_dl.exceptions import ScrapeError
+
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     import yarl
 
@@ -113,6 +115,28 @@ class Resolution(NamedTuple):
     @staticmethod
     def highest() -> Resolution:
         return HIGHEST_RESOLUTION
+
+    @staticmethod
+    def make_parser() -> Callable[[yarl.URL | str | int | None], Resolution]:
+        """Returns a callable wrapper around `Resolution.parse` that can return `Resolution.unknown()`
+
+        Raises `ScrapeError` if more that 1 unknown resolution is parsed"""
+
+        default_res: Resolution | None = None
+
+        def parse(quality: yarl.URL | str | int | None, /) -> Resolution:
+            nonlocal default_res
+            try:
+                return Resolution.parse(quality)
+            except ValueError as e:
+                if default_res is not None:
+                    msg = "Unable to select best quality. Resource has more that 1 unknown resolution"
+                    raise ScrapeError(422, msg) from e
+
+                default_res = Resolution.unknown()
+                return default_res
+
+        return parse
 
 
 UNKNOWN_RESOLUTION = Resolution.parse(0)

@@ -24,6 +24,8 @@ from cyberdrop_dl.utils.utilities import get_valid_dict, is_absolute_http_url
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
 
+    from cyberdrop_dl.data_structures import AbsoluteHttpURL
+
     _CMD: TypeAlias = Sequence[str | Path]
 
 
@@ -58,7 +60,7 @@ def which_ffprobe() -> str | None:
     global _FFPROBE_AVAILABLE
     try:
         bin_path = shutil.which("ffprobe") or _builtin_ffprobe()
-        _FFPROBE_AVAILABLE = True
+        _FFPROBE_AVAILABLE = True  # pyright: ignore[reportConstantRedefinition]
         return bin_path
     except RuntimeError:
         return
@@ -101,10 +103,10 @@ async def probe(input: Path, /) -> FFprobeResult: ...
 
 
 @overload
-async def probe(input: URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
+async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
 
 
-async def probe(input: Path | URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
+async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
     assert _FFPROBE_AVAILABLE
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
@@ -187,9 +189,9 @@ class Duration(NamedTuple):
     seconds: float = 0
 
     @staticmethod
-    def parse(duration: float | str) -> float:
+    def parse(duration: float | str) -> TruncatedFloat:
         try:
-            return float(duration)
+            return TruncatedFloat(duration)
         except (ValueError, TypeError):
             pass
 
@@ -205,7 +207,7 @@ class Duration(NamedTuple):
         missing_parts = [0 for _ in range(3 - len(time_parts))]
         seconds = float(Fraction(time_parts.pop(-1)))
         int_parts = map(int, (days, *missing_parts, *time_parts))
-        return Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds()
+        return TruncatedFloat(Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds())
 
     def as_timedelta(self) -> timedelta:
         return timedelta(**self._asdict())
@@ -223,7 +225,7 @@ class FFprobeOutput(TypedDict, total=False):
 class Tags(CIMultiDictProxy[Any]): ...
 
 
-class FPS(float):
+class TruncatedFloat(float):
     def __str__(self) -> str:
         return str(int(self)) if self.is_integer() else f"{self:.2f}"
 
@@ -234,12 +236,8 @@ class Stream:
     codec_name: str
     codec_type: str
     bitrate: int | None
-    duration: float | None
+    duration: TruncatedFloat | None
     tags: Tags
-
-    @property
-    def length(self) -> float | None:
-        return self.duration
 
     @property
     def codec(self) -> str:
@@ -278,7 +276,7 @@ class AudioStream(Stream):
 class VideoStream(Stream):
     width: int | None
     height: int | None
-    fps: FPS | None
+    fps: TruncatedFloat | None
     resolution: str | None
     codec_type: Literal["video"] = "video"
 
@@ -291,7 +289,7 @@ class VideoStream(Stream):
             resolution: str | None = f"{width}x{height}"
 
         if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
-            fps: FPS | None = FPS(Fraction(avg_fps))
+            fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
         defaults = super(VideoStream, cls).validate(stream_info)
         return defaults | {"width": width, "height": height, "fps": fps, "resolution": resolution}

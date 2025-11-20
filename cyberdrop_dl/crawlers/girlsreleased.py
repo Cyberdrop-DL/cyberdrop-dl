@@ -1,45 +1,25 @@
 from __future__ import annotations
 
-import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar
+
+from pydantic import dataclasses
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, type_adapter
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-
-_PRIMARY_URL = AbsoluteHttpURL("https://www.girlsreleased.com")
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Set:
     id: str
-    date: int
-    images: list[list[str]]
+    date: int | None
+    name: str | None
     site: str
-    name: str | None = dataclasses.field(default=None)
-
-    @property
-    def url(self):
-        return _PRIMARY_URL / "set" / self.id
-
-    def parse_images(self) -> Generator[Image]:
-        for img_data in self.images:
-            yield Image(*img_data[3:6])
-
-
-class Image(NamedTuple):
-    url: str
-    thumbnail: str
-    name: str
-
-
-_parse_set = type_adapter(Set)
+    images: list[list[Any]]
 
 
 class GirlsReleasedCrawler(Crawler):
@@ -48,9 +28,10 @@ class GirlsReleasedCrawler(Crawler):
         "Set": "/set/<set_id>",
         "Site": "/site/<site>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.girlsreleased.com")
     DOMAIN: ClassVar[str] = "girlsreleased"
     FOLDER_DOMAIN: ClassVar[str] = "GirlsReleased"
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id} - {title}"
 
     @property
     def separate_posts(self) -> bool:
@@ -69,35 +50,33 @@ class GirlsReleasedCrawler(Crawler):
 
     @error_handling_wrapper
     async def set(self, scrape_item: ScrapeItem, set_id: str) -> None:
-        api_url = self.PRIMARY_URL / "api/0.1/set" / set_id
-        set_data = (await self.request_json(api_url))["set"]
-        self._handle_set(scrape_item, _parse_set(set_data))
+        api_url = self.PRIMARY_URL / "api/0.2/set" / set_id
+        set_ = Set(**(await self.request_json(api_url))["set"])
+        title = self.create_separate_post_title(set_.name, set_id, set_.date)
+        scrape_item.setup_as_album(title, album_id=set_id)
+        scrape_item.possible_datetime = set_.date
+        for image in set_.images:
+            url = self.parse_url(image[3])
+            new_scrape_item = scrape_item.create_child(url)
+            self.handle_external_links(new_scrape_item)
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def category(self, scrape_item: ScrapeItem, category: str, name: str) -> None:
-        base_api_url = self.PRIMARY_URL / "api/0.1/sets" / category / name / "page"
+        api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
         title = self.create_title(f"{name} [{category}]")
         scrape_item.setup_as_profile(title)
 
         for page in itertools.count(0):
-            api_url = base_api_url / str(page)
-            sets: list[dict[str, Any]] = (await self.request_json(api_url))["sets"]
+            api_url = api_base / str(page)
+            sets: list[list[int]] = (await self.request_json(api_url))["sets"]
 
-            for set_data in sets:
-                set_ = _parse_set(set_data)
-                new_scrape_item = scrape_item.create_child(set_.url)
-                self._handle_set(new_scrape_item, set_)
+            for set_ in sets:
+                set_id = set_[0]
+                url = self.PRIMARY_URL / "set" / str(set_id)
+                new_scrape_item = scrape_item.create_child(url)
+                self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
             if len(sets) < 80:
                 break
-
-    def _handle_set(self, scrape_item: ScrapeItem, set_: Set) -> None:
-        set_name = set_.name or set_.id
-        title = self.create_separate_post_title(set_name, set_.id, set_.date)
-        scrape_item.setup_as_album(title, album_id=set_.id)
-        scrape_item.possible_datetime = set_.date
-        for image in set_.parse_images():
-            new_scrape_item = scrape_item.create_child(self.parse_url(image.url))
-            self.handle_external_links(new_scrape_item)
-            scrape_item.add_children()

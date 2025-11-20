@@ -5,7 +5,6 @@ import contextlib
 import datetime
 import inspect
 import re
-import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field
@@ -257,7 +256,7 @@ class Crawler(ABC):
             if self._DOWNLOAD_SLOTS:
                 self.manager.client_manager.download_slots[self.DOMAIN] = self._DOWNLOAD_SLOTS
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.manager.client_manager.download_client._use_server_locks.add(self.DOMAIN)
+                self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
             self.downloader = self._init_downloader()
             self._register_response_checks()
             await self.async_startup()
@@ -361,17 +360,28 @@ class Crawler(ABC):
             return False
         return primary_domain in other_domain and other_domain.count(".") > primary_domain.count(".")
 
-    # TODO: make this sync
+    @final
+    async def write_metadata(self, scrape_item: ScrapeItem, name: str, metadata: object) -> None:
+        """Write general metadata (not specific to a single file) to json output"""
+
+        filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
+        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        url = scrape_item.url.with_scheme("metadata")
+        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename)
+        media_item.metadata = metadata
+        await self.__write_to_jsonl(media_item)
+
     async def handle_file(
         self,
-        url: URL,
+        url: AbsoluteHttpURL,
         scrape_item: ScrapeItem,
         filename: str,
         ext: str | None = None,
         *,
         custom_filename: str | None = None,
-        debrid_link: URL | None = None,
+        debrid_link: AbsoluteHttpURL | None = None,
         m3u8: m3u8.RenditionGroup | None = None,
+        metadata: object = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
         if not ext:
@@ -383,15 +393,13 @@ class Crawler(ABC):
         else:
             original_filename = filename
 
-        assert is_absolute_http_url(url)
-        if isinstance(debrid_link, URL):
-            assert is_absolute_http_url(debrid_link)
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
         )
-
-        self.create_task(self.handle_media_item(media_item, m3u8))
+        if metadata is not None:
+            media_item.metadata = metadata
+        await self.handle_media_item(media_item, m3u8)
 
     @final
     async def _download(self, media_item: MediaItem, m3u8: m3u8.RenditionGroup | None) -> None:
@@ -402,9 +410,14 @@ class Crawler(ABC):
                 await self.downloader.run(media_item)
 
         finally:
-            if self.manager.config_manager.settings_data.files.dump_json:
-                data = [media_item.as_jsonable_dict()]
-                await self.manager.log_manager.write_jsonl(data)
+            await self.__write_to_jsonl(media_item)
+
+    async def __write_to_jsonl(self, media_item: MediaItem) -> None:
+        if not self.manager.config.files.dump_json:
+            return
+
+        data = [media_item.as_jsonable_dict()]
+        await self.manager.log_manager.write_jsonl(data)
 
     async def check_complete(self, url: AbsoluteHttpURL, referer: AbsoluteHttpURL) -> bool:
         """Checks if this URL has been download before.
@@ -482,7 +495,7 @@ class Crawler(ABC):
 
     @final
     async def check_complete_by_hash(
-        self: Crawler, scrape_item: ScrapeItem | URL, hash_type: str, hash_value: str
+        self: Crawler, scrape_item: ScrapeItem | URL, hash_type: Literal["md5", "sha256"], hash_value: str
     ) -> bool:
         """Returns `True` if at least 1 file with this hash is recorded on the database"""
         downloaded = await self.manager.db_manager.hash_table.check_hash_exists(hash_type, hash_value)
@@ -490,8 +503,7 @@ class Crawler(ABC):
             url = scrape_item if isinstance(scrape_item, URL) else scrape_item.url
             log(f"Skipping {url} as its hash ({hash_type}:{hash_value}) has already been downloaded", 10)
             self.manager.progress_manager.download_progress.add_previously_completed()
-            return True
-        return False
+        return downloaded
 
     async def get_album_results(self, album_id: str) -> dict[str, int]:
         """Checks whether an album has completed given its domain and album id."""
@@ -699,27 +711,27 @@ class Crawler(ABC):
         if parsed_date := self._parse_date(date_or_datetime, None, iso=True):
             return to_timestamp(parsed_date)
 
-    @final
+    @classmethod
     def _parse_date(
-        self, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
+        cls, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
     ) -> datetime.datetime | None:
         assert not (iso and format), "Only `format` or `iso` can be used, not both"
-        msg = f"Date parsing for {self.DOMAIN} seems to be broken"
+        msg = f"Date parsing for {cls.DOMAIN} seems to be broken"
         if not date_or_datetime:
             log(f"{msg}: Unable to extract date", bug=True)
             return
+
         if format:
             assert not (format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S")), (
                 f"{msg} Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead"
             )
         try:
-            with warnings.catch_warnings(action="error"):
-                if iso:
-                    parsed_date = datetime.datetime.fromisoformat(date_or_datetime)
-                elif format:
-                    parsed_date = datetime.datetime.strptime(date_or_datetime, format)
-                else:
-                    parsed_date = parse_human_date(date_or_datetime)
+            if iso:
+                parsed_date = datetime.datetime.fromisoformat(date_or_datetime)
+            elif format:
+                parsed_date = datetime.datetime.strptime(date_or_datetime, format)
+            else:
+                parsed_date = parse_human_date(date_or_datetime)
 
             if parsed_date:
                 return parsed_date

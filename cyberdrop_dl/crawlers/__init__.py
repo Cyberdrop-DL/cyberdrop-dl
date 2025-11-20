@@ -35,6 +35,7 @@ from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
+from .fsiblog import FSIBlogCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
@@ -57,8 +58,10 @@ from .influencer_bitches import InfluencerBitchesCrawler
 from .invision import INVISION_CRAWLERS
 from .jpg5 import JPG5Crawler
 from .kemono import KemonoCrawler
+from .koofr import KooFrCrawler
 from .leakedzone import LeakedZoneCrawler
 from .luscious import LusciousCrawler
+from .luxuretv import LuxureTVCrawler
 from .masahub import MasahubCrawler
 from .mediafire import MediaFireCrawler
 from .mega_nz import MegaNzCrawler
@@ -66,6 +69,7 @@ from .megacloud import MegaCloudCrawler
 from .missav import MissAVCrawler
 from .mixdrop import MixDropCrawler
 from .motherless import MotherlessCrawler
+from .mydesi import MyDesiCrawler
 from .nekohouse import NekohouseCrawler
 from .nhentai import NHentaiCrawler
 from .noodle_magazine import NoodleMagazineCrawler
@@ -117,6 +121,7 @@ from .vipr_dot_im import ViprImCrawler
 from .voe_sx import VoeSxCrawler
 from .wetransfer import WeTransferCrawler
 from .wordpress import WP_CRAWLERS, WordPressHTMLCrawler, WordPressMediaCrawler
+from .xasiat import XasiatCrawler
 from .xbunkr import XBunkrCrawler
 from .xenforo import XF_CRAWLERS, SimpCityCrawler
 from .xgroovy import XGroovyCrawler
@@ -132,7 +137,7 @@ ALL_CRAWLERS: set[type[Crawler]] = {
     crawler for name, crawler in globals().items() if name.endswith("Crawler") and crawler is not Crawler
 }
 ALL_CRAWLERS.update(WP_CRAWLERS, GENERIC_CRAWLERS, FORUM_CRAWLERS)
-DEBUG_CRAWLERS = {GirlsReleasedCrawler, SimpCityCrawler, BunkrAlbumsIOCrawler}
+DEBUG_CRAWLERS = {SimpCityCrawler}
 if env.ENABLE_DEBUG_CRAWLERS == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda":
     CRAWLERS = ALL_CRAWLERS
 else:
