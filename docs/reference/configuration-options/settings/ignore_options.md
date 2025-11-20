@@ -101,7 +101,7 @@ You can supply hosts that you'd like the program to skip, to not scrape/download
 
 | Type                 | Default | Additional Info                                                    |
 | -------------------- | ------- | ------------------------------------------------------------------ |
-| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, for example, `2021-12-23` |
 
 Do not download files uploaded before this date.
 
@@ -109,6 +109,6 @@ Do not download files uploaded before this date.
 
 | Type                 | Default | Additional Info                                                    |
 | -------------------- | ------- | ------------------------------------------------------------------ |
-| `datetime` or `null` | `null`  | The `datetime` value should be in the `YYYY-MM-DD HH:MM:SS` format |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, for example, `2021-12-23` |
 
 Do not download files uploaded after this date.

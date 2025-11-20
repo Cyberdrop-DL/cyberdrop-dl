@@ -229,11 +229,12 @@ class ClientManager:
         if not datetime:
             return True
 
+        item_date = datetime.date()
         ignore_options = self.manager.config_manager.settings_data.ignore_options
 
-        if ignore_options.exclude_before and datetime < ignore_options.exclude_before:
+        if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
             return False
-        if ignore_options.exclude_after and datetime > ignore_options.exclude_after:
+        if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
             return False
         return True
 
