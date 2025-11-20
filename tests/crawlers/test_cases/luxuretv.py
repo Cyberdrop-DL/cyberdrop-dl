@@ -15,7 +15,12 @@ TEST_CASES = [
     # Search
     (
         "https://luxuretv.com/searchgate/videos/ruby-wren/",
-        [],
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:Ruby wren \[search\] \(LuxureTV\)",
+            }
+        ],
         3,
     ),
 ]

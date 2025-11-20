@@ -34,26 +34,25 @@ class LuxureTVCrawler(Crawler):
     _RATE_LIMIT = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "searchgate" in scrape_item.url.parts:
-            return await self.search(scrape_item)
-        elif "videos" in scrape_item.url.parts:
-            video_id = scrape_item.url.name.split("-")[-1].split(".")[0]
-            return await self.video(scrape_item, video_id)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case ["searchgate", "videos", query, *_]:
+                return await self.search(scrape_item, query)
+            case ["videos", slug, *_]:
+                video_id = slug.split("-")[-1].split(".")[0]
+                return await self.video(scrape_item, video_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = query.replace("-", " ").capitalize()
+        title = self.create_title(f"{title} [search]")
+        scrape_item.setup_as_album(title)
         url = scrape_item.url
         if url.name and not url.name.endswith(".html"):
             url = url / ""
-        async for soup in self.web_pager(url, cffi=True):
-            if not title:
-                title = css.select_one_get_text(soup, Selector.TITLE)
-                title = title.split(":")[-1].strip()
-                title = self.create_title(f"{title} - [search]")
-                scrape_item.setup_as_album(title)
 
+        async for soup in self.web_pager(url, cffi=True):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_THUMBS):
                 self.create_task(self.run(new_scrape_item))
 
