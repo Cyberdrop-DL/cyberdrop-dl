@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Check and skip media files duration before downloading the entire file
-- Update sites to their new domains (`postimages.org` -> `postimg.cc`, `cyberdrop.me`->`cyberdrop.cr`)
+- Update sites to their new domains (`postimages.org` -> `postimg.cc`, `cyberdrop.me` -> `cyberdrop.cr`)
 - `--delete-partial-files` will also delete partial HLS segments (`.cdl_hls`)
 - Skip free space check on file systems that do not support it (ex: `sshfs`). Check will also be skipped on any FUSE fs that reports `0B`. NOTE: Using these filesystems has a risk of getting downloads corrupted. On some filesystems like `gvfs`, HLS downloads will _always_ be corrupted
 
