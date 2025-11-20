@@ -203,7 +203,7 @@ class MediaItem:
     def datetime_obj(self) -> datetime.datetime | None:
         if self.datetime:
             assert isinstance(self.datetime, int), f"Invalid {self.datetime =!r} from {self.referer}"
-            return datetime.datetime.fromtimestamp(self.datetime).astimezone(datetime.UTC)
+            return datetime.datetime.fromtimestamp(self.datetime)
 
     @staticmethod
     def from_item(
