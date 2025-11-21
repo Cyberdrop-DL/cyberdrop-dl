@@ -7,11 +7,8 @@ from typing import TYPE_CHECKING
 
 from yarl import URL
 
-import cyberdrop_dl.constants as constants
-from cyberdrop_dl.constants import FILE_FORMATS
+from cyberdrop_dl import constants
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import NoExtensionError
-from cyberdrop_dl.utils.utilities import get_filename_and_ext
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -22,8 +19,6 @@ if TYPE_CHECKING:
 
 
 return_values: dict[AbsoluteHttpURL | str, tuple] = {}
-
-MEDIA_EXTENSIONS = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"] | FILE_FORMATS["Audio"]
 
 
 def is_valid_url(scrape_item: ScrapeItem) -> bool:
@@ -57,18 +52,6 @@ def is_outside_date_range(scrape_item: ScrapeItem, before: datetime.date | None,
 
 def is_in_domain_list(scrape_item: ScrapeItem, domain_list: Sequence[str]) -> bool:
     return any(domain in scrape_item.url.host for domain in domain_list)
-
-
-def has_valid_extension(url: URL, forum: bool = False) -> bool:
-    """Checks if the URL has a valid extension."""
-    try:
-        _, ext = get_filename_and_ext(url.name, forum=forum)
-    except NoExtensionError:
-        if not forum:
-            return has_valid_extension(url, forum=True)
-        return False
-    else:
-        return ext in MEDIA_EXTENSIONS
 
 
 cache_filter_functions = {}
