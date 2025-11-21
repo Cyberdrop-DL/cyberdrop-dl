@@ -42,11 +42,11 @@ class GirlsReleasedCrawler(Crawler):
             case ["set", set_id]:
                 return await self.set(scrape_item, set_id)
             case ["site" as category, name]:
-                return await self.category(scrape_item, category, name)
-            case ["site", domain, "model" as category, model_id, name]:
-                return await self.category(scrape_item, category, name, domain, model_id)
-            case ["model" as category, _, name]:
-                return await self.category(scrape_item, category, name)
+                return await self.site(scrape_item, category, name)
+            case ["site" as category, name, "model", model_id, _]:
+                return await self.site(scrape_item, category, name, model_id)
+            case ["model", model_id, name]:
+                return await self.model(scrape_item, model_id, name)
             case _:
                 raise ValueError
 
@@ -64,27 +64,31 @@ class GirlsReleasedCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def category(
+    async def model(self, scrape_item: ScrapeItem, model_id: str, name: str) -> None:
+        title = self.create_title(f"{name} [model]")
+        scrape_item.setup_as_profile(title)
+        api_base = self.PRIMARY_URL / "api/0.3/sets/model" / model_id / "page"
+        await self._pagination(scrape_item, api_base)
+
+    @error_handling_wrapper
+    async def site(
         self,
         scrape_item: ScrapeItem,
         category: str,
         name: str,
-        domain: str | None = None,
         model_id: str | None = None,
     ) -> None:
-        if not domain and not model_id:
-            api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
-        else:
-            api_base = self.PRIMARY_URL / "api/0.3/sets/site" / domain / "model" / model_id
-
         title = self.create_title(f"{name} [{category}]")
         scrape_item.setup_as_profile(title)
+        if model_id is None:
+            api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
+        else:
+            api_base = self.PRIMARY_URL / "api/0.3/sets/site" / name / "model" / model_id / "page"
+        await self._pagination(scrape_item, api_base)
 
+    async def _pagination(self, scrape_item, api_base):
         for page in itertools.count(0):
-            if not domain and not model_id:
-                api_url = api_base / str(page)
-            else:
-                api_url = api_base / "page" / str(page)
+            api_url = api_base / str(page)
             sets: list[list[int]] = (await self.request_json(api_url))["sets"]
 
             for set_ in sets:
