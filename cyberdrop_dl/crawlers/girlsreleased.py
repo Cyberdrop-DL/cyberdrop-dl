@@ -41,8 +41,10 @@ class GirlsReleasedCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["set", set_id]:
                 return await self.set(scrape_item, set_id)
-            case ["site" as category, name] | ["site", _, "model" as category, _, name]:
+            case ["site" as category, name]:
                 return await self.category(scrape_item, category, name)
+            case ["site", domain, "model" as category, model_id, name]:
+                return await self.category(scrape_item, category, name, domain, model_id)
             case ["model" as category, _, name]:
                 return await self.category(scrape_item, category, name)
             case _:
@@ -62,13 +64,26 @@ class GirlsReleasedCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def category(self, scrape_item: ScrapeItem, category: str, name: str) -> None:
-        api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
+    async def category(
+        self,
+        scrape_item: ScrapeItem,
+        category: str,
+        name: str,
+        domain: str | None = None,
+        model_id: str | None = None) -> None:
+        if not domain and not model_id:
+            api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
+        else:
+            api_base = self.PRIMARY_URL / "api/0.3/sets/site" / domain / "model" / model_id
+
         title = self.create_title(f"{name} [{category}]")
         scrape_item.setup_as_profile(title)
 
         for page in itertools.count(0):
-            api_url = api_base / str(page)
+            if not domain and not model_id:
+                api_url = api_base / str(page)
+            else:
+                api_url = api_base / "page" / str(page)
             sets: list[list[int]] = (await self.request_json(api_url))["sets"]
 
             for set_ in sets:
