@@ -70,7 +70,8 @@ class GirlsReleasedCrawler(Crawler):
         category: str,
         name: str,
         domain: str | None = None,
-        model_id: str | None = None) -> None:
+        model_id: str | None = None,
+    ) -> None:
         if not domain and not model_id:
             api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
         else:
