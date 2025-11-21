@@ -41,7 +41,7 @@ class GirlsReleasedCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["set", set_id]:
                 return await self.set(scrape_item, set_id)
-            case ["site" as category, name]:
+            case ["site" as category, name] | ["site", _, "model" as category, _, name]:
                 return await self.category(scrape_item, category, name)
             case ["model" as category, _, name]:
                 return await self.category(scrape_item, category, name)
