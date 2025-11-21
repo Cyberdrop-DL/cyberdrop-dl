@@ -23,8 +23,7 @@ from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem,
 from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.scraper import filters
-from cyberdrop_dl.utils import css, m3u8
-from cyberdrop_dl.utils.dates import TimeStamp, parse_date, to_timestamp
+from cyberdrop_dl.utils import css, dates, m3u8
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.strings import safe_format
 from cyberdrop_dl.utils.utilities import (
@@ -705,15 +704,15 @@ class Crawler(ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, format: str | None = None, /) -> TimeStamp | None:
+    def parse_date(cls, date_or_datetime: str, format: str | None = None, /) -> dates.TimeStamp | None:
         if parsed_date := cls._parse_date(date_or_datetime, format):
-            return to_timestamp(parsed_date)
+            return dates.to_timestamp(parsed_date)
 
     @final
     @classmethod
-    def parse_iso_date(cls, date_or_datetime: str, /) -> TimeStamp | None:
+    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp | None:
         if parsed_date := cls._parse_date(date_or_datetime, None, iso=True):
-            return to_timestamp(parsed_date)
+            return dates.to_timestamp(parsed_date)
 
     @final
     @classmethod
@@ -721,8 +720,8 @@ class Crawler(ABC):
         cls, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
     ) -> datetime.datetime | None:
         try:
-            return parse_date(date_or_datetime, format, iso=iso)
-        except Exception as e:
+            return dates.parse(date_or_datetime, format, iso=iso)
+        except ValueError as e:
             log(f"Date parsing for {cls.DOMAIN} seems to be broken: {e}", bug=True)
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
