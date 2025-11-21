@@ -18,22 +18,21 @@ class DirectHttpFile(Crawler, is_generic=True):
     DOMAIN: ClassVar[str] = "no_crawler"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        url = scrape_item.url
         try:
             filename, ext = get_filename_and_ext(scrape_item.url.name)
         except NoExtensionError:
             filename, ext = get_filename_and_ext(scrape_item.url.name, forum=True)
 
-        if ext in MEDIA_EXTENSIONS:
+        if ext not in MEDIA_EXTENSIONS:
             raise ValueError
 
         scrape_item.add_to_parent_title("Loose Files")
         scrape_item.part_of_album = True
         self.create_task(
             self.handle_file(
-                url,
+                scrape_item.url,
                 scrape_item,
-                url.name,
+                scrape_item.url.name,
                 ext,
                 custom_filename=filename,
             )
