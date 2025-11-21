@@ -159,7 +159,6 @@ def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
         ),
     ],
 )
-@pytest.mark.crawler_test_case
 async def test_direct_http_crawler(running_manager: Manager, url: str, filename: str) -> None:
     test_case = CrawlerTestCase(domain="no_crawler", input_url=url, results=[{"url": url, "filename": filename}])
 

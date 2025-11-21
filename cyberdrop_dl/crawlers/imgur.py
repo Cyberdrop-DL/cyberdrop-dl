@@ -54,7 +54,7 @@ class ImgurCrawler(Crawler):
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
             case [image_id]:
-                return await self.image(scrape_item, image_id)
+                return await self.image(scrape_item, image_id.rpartition(".")[-1])
             case _:
                 raise ValueError
 
@@ -81,25 +81,26 @@ class ImgurCrawler(Crawler):
         album: dict[str, Any] = await self._api_request("album", album_id)
         title = self.create_title(album.get("title") or album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
+        results = await self.get_album_results(album_id)
         for image in album["images"]:
             link = self.parse_url(image["link"])
-            new_scrape_item = scrape_item.create_child(link)
+            if self.check_album_results(link, results):
+                continue
+            web_url = self.PRIMARY_URL / image["id"]
+            new_scrape_item = scrape_item.create_child(web_url)
             self.create_task(self._image(new_scrape_item, image))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem, image_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item):
+            return
         image = await self._api_request("image", image_id)
         await self._image(scrape_item, image)
 
     @error_handling_wrapper
     async def _image(self, scrape_item: ScrapeItem, image: dict[str, Any]) -> None:
         scrape_item.possible_datetime = image["datetime"]
-        url = scrape_item.url
+        url = self.parse_url(image["link"])
         filename, ext = self.get_filename_and_ext(url.name)
-        if ext.lower() in (".gifv", ".mp4"):
-            url = url.with_suffix(".mp4")
-            filename, ext = self.get_filename_and_ext(url.name)
-            url = self.PRIMARY_URL / "download" / image["id"]
-
         await self.handle_file(url, scrape_item, filename, ext, metadata=image)
