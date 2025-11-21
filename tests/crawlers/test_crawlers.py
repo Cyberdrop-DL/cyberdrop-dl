@@ -11,8 +11,10 @@ import pytest
 from pydantic import TypeAdapter
 from typing_extensions import TypedDict
 
+from cyberdrop_dl.data_structures import AbsoluteHttpURL
 from cyberdrop_dl.data_structures.url_objects import MediaItem, ScrapeItem
 from cyberdrop_dl.scraper.scrape_mapper import ScrapeMapper
+from cyberdrop_dl.utils.utilities import parse_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
@@ -117,12 +119,13 @@ async def test_crawler(running_manager: Manager, crawler_test_case: CrawlerTestC
 
 def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: list[MediaItem]) -> None:
     expected_results = sorted(test_case.results, key=lambda x: x["url"])
+    origin = getattr(crawler, "PRIMARY_URL", AbsoluteHttpURL("https://google.com"))
     for index, (expected, media_item) in enumerate(zip(expected_results, results, strict=False), 1):
         for attr_name, expected_value in expected.items():
             result_value = getattr(media_item, attr_name)
             if isinstance(expected_value, str):
                 if expected_value.startswith("http"):
-                    expected_value = crawler.parse_url(expected_value)
+                    expected_value = crawler.parse_url(expected_value, origin)
                 elif expected_value == "ANY":
                     expected_value = mock.ANY
                 elif expected_value.startswith("re:"):
@@ -137,3 +140,37 @@ def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: lis
 
 def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
     return re.search(expected_value, str(result_value)) or re.search(re.escape(expected_value), str(result_value))
+
+
+@pytest.mark.parametrize(
+    "url, filename",
+    [
+        (
+            "https://techdigitalspace.com/wp-content/uploads/2025/11/Valve-Steam-Machine-2.jpg",
+            "Valve-Steam-Machine-2.jpg",
+        ),
+        (
+            "https://simpcity.su/attachments/273974549_106860831858568_7219174579013873561_n-jpg.40743",
+            "273974549_106860831858568_7219174579013873561_n.jpg",
+        ),
+        (
+            "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Android_14-Hero_image-P8P.width-1300.png",
+            "Android_14-Hero_image-P8P.width-1300.png",
+        ),
+    ],
+)
+@pytest.mark.crawler_test_case
+async def test_direct_http_crawler(running_manager: Manager, url: str, filename: str) -> None:
+    test_case = CrawlerTestCase(domain="no_crawler", input_url=url, results=[{"url": url, "filename": filename}])
+
+    with _crawler_mock() as func:
+        async with ScrapeMapper(running_manager) as scrape_mapper:
+            crawler = scrape_mapper.direct_crawler
+            await scrape_mapper.run()
+            item = ScrapeItem(url=parse_url(test_case.input_url))
+            await crawler.fetch(item)
+
+    results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
+
+    func.assert_awaited()
+    _validate_results(crawler, test_case, results)

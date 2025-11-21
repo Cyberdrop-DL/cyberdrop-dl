@@ -65,8 +65,13 @@ class MyDesiCrawler(Crawler):
         base_url = scrape_item.url.origin() / "search" / query / "page"
         for page in itertools.count(init_page):
             soup = await self.request_soup(base_url / str(page))
+            n_videos = 0
             for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.infos"):
+                n_videos += 1
                 self.create_task(self.run(new_scrape_item))
+
+            if n_videos < 38:
+                break
 
 
 def _parse_formats(soup: BeautifulSoup) -> Generator[tuple[Resolution, str]]:
