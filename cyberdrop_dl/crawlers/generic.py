@@ -71,6 +71,7 @@ class GenericCrawler(Crawler):
         if not ext:
             msg = f"Received '{content_type}', was expecting other"
             raise InvalidContentTypeError(message=msg)
+
         fullname = Path(filename).with_suffix(ext)
         filename, _ = self.get_filename_and_ext(fullname.name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext)

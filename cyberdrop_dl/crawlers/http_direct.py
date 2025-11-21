@@ -28,12 +28,10 @@ class DirectHttpFile(Crawler, is_generic=True):
 
         scrape_item.add_to_parent_title("Loose Files")
         scrape_item.part_of_album = True
-        self.create_task(
-            self.handle_file(
-                scrape_item.url,
-                scrape_item,
-                scrape_item.url.name,
-                ext,
-                custom_filename=filename,
-            )
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            scrape_item.url.name,
+            ext,
+            custom_filename=filename,
         )
