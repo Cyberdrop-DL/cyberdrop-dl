@@ -110,6 +110,30 @@ def remove_time_if_not_midnight(date: datetime.datetime) -> datetime.datetime:
     return date
 
 
+def parse_date(date_or_datetime: str, format: str | None = None, /, *, iso: bool = False) -> datetime.datetime | None:
+    if not date_or_datetime:
+        raise ValueError("Unable to extract date")
+
+    if iso:
+        return parse_iso_date(date_or_datetime)
+    elif format:
+        if format and (format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S")):
+            raise ValueError("Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead")
+        return datetime.datetime.strptime(date_or_datetime, format)
+    else:
+        return parse_human_date(date_or_datetime)
+
+
+def parse_http_date(date: str) -> int:
+    """parse rfc 2822 or an "HTTP-date" format as defined by RFC 9110"""
+    date_time = email.utils.parsedate_to_datetime(date)
+    return to_timestamp(ensure_tz(date_time))
+
+
+def parse_iso_date(date_or_datetime: str) -> datetime.datetime:
+    return datetime.datetime.fromisoformat(date_or_datetime)
+
+
 def parse_human_date(
     date_string: str,
     date_formats: list[str] | str | None = None,
@@ -119,19 +143,10 @@ def parse_human_date(
 ) -> datetime.datetime | None:
     with warnings.catch_warnings(record=True):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
-        parser = get_parser(parser_kind, date_order)
+        parser = _get_parser(parser_kind, date_order)
         if date_formats and (parsed_date := parser.parse_possible_incomplete_date(date_string, date_formats)):
             return parsed_date
         return parser.parse_human_date(date_string, date_formats)
-
-
-def to_timestamp(date: datetime.datetime) -> TimeStamp:
-    return TimeStamp(int(date.timestamp()))
-
-
-@lru_cache(maxsize=10)
-def get_parser(parser_kind: ParserKind | None = None, date_order: DateOrder | None = None) -> DateParser:
-    return DateParser(parser_kind, date_order)
 
 
 def parse_aware_iso_datetime(value: str) -> datetime.datetime | None:
@@ -142,16 +157,19 @@ def parse_aware_iso_datetime(value: str) -> datetime.datetime | None:
         return
 
 
+def to_timestamp(date: datetime.datetime) -> TimeStamp:
+    return TimeStamp(int(date.timestamp()))
+
+
+@lru_cache(maxsize=10)
+def _get_parser(parser_kind: ParserKind | None = None, date_order: DateOrder | None = None) -> DateParser:
+    return DateParser(parser_kind, date_order)
+
+
 def ensure_tz(date_time: datetime.datetime) -> datetime.datetime:
     if date_time.tzinfo is None:
         return date_time.replace(tzinfo=datetime.UTC)
     return date_time
-
-
-def parse_http_date(date: str) -> int:
-    """parse rfc 2822 or an "HTTP-date" format as defined by RFC 9110"""
-    date_time = email.utils.parsedate_to_datetime(date)
-    return to_timestamp(ensure_tz(date_time))
 
 
 if __name__ == "__main__":
