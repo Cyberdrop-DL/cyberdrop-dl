@@ -72,7 +72,11 @@ class GirlsReleasedCrawler(Crawler):
 
     @error_handling_wrapper
     async def site(
-        self, scrape_item: ScrapeItem, domain: str, model_id: str | None = None, model_name: str | None = None
+        self,
+        scrape_item: ScrapeItem,
+        domain: str,
+        model_id: str | None = None,
+        model_name: str | None = None,
     ) -> None:
         title = self.create_title(f"{domain} [site]")
         scrape_item.setup_as_profile(title)
