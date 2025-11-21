@@ -46,7 +46,7 @@ class ScrapeMapper:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
         self.existing_crawlers: dict[str, Crawler] = {}
-        self.no_crawler = DirectHttpFile(self.manager)
+        self.direct_crawler = DirectHttpFile(self.manager)
         self.jdownloader = JDownloader(self.manager)
         self.jdownloader_whitelist = self.manager.config_manager.settings_data.runtime_options.jdownloader_whitelist
         self.using_input_file = False
@@ -73,7 +73,6 @@ class ScrapeMapper:
         """Starts all scrapers."""
         self.existing_crawlers = get_crawlers_mapping(self.manager)
         self.fallback_generic = GenericCrawler(self.manager)
-
         generic_crawlers = create_generic_crawlers_by_config(self.global_settings.generic_crawlers_instances)
         for crawler in generic_crawlers:
             register_crawler(self.existing_crawlers, crawler(self.manager), from_user=True)
@@ -107,7 +106,7 @@ class ScrapeMapper:
         await self.manager.db_manager.history_table.update_previously_unsupported(self.existing_crawlers)
         self.jdownloader.connect()
         await self.start_real_debrid()
-        self.no_crawler.startup()
+        self.direct_crawler._init_downloader()
         async for item in self.get_input_items():
             self.manager.task_group.create_task(self.send_to_crawler(item))
 
@@ -233,7 +232,7 @@ class ScrapeMapper:
             return
 
         try:
-            await self.no_crawler.fetch(scrape_item)
+            await self.direct_crawler.fetch(scrape_item)
             return
 
         except (NoExtensionError, ValueError):
