@@ -79,10 +79,7 @@ class PorntrexCrawler(Crawler):
         scrape_item.setup_as_album(title)
 
         for _, link in self.iter_tags(soup, _SELECTORS.IMAGES):
-            filename, ext = self.get_filename_and_ext(link.name)
-            debrid_link = link / ""  # iter_tags always trims URLs
-            canonical_url = PRIMARY_URL / "albums" / album_id / filename
-            await self.handle_file(canonical_url, scrape_item, filename, ext, debrid_link=debrid_link)
+            await self.direct_file(scrape_item, link)
             scrape_item.add_children()
 
     @error_handling_wrapper
