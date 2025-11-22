@@ -39,7 +39,6 @@ class Args:
 
 _FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
 _FFPROBE_CALL_PREFIX = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-print_format", "json"
-_FFPROBE_AVAILABLE = False
 _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 
 
@@ -57,11 +56,8 @@ def which_ffmpeg() -> str | None:
 
 @functools.cache
 def which_ffprobe() -> str | None:
-    global _FFPROBE_AVAILABLE
     try:
-        bin_path = shutil.which("ffprobe") or _builtin_ffprobe()
-        _FFPROBE_AVAILABLE = True  # pyright: ignore[reportConstantRedefinition]
-        return bin_path
+        return shutil.which("ffprobe") or _builtin_ffprobe()
     except RuntimeError:
         return
 
@@ -107,7 +103,7 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert _FFPROBE_AVAILABLE
+    assert which_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 
