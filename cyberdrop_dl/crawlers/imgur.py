@@ -53,8 +53,8 @@ class ImgurCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
-            case [image_id]:
-                return await self.image(scrape_item, image_id.rpartition(".")[-1])
+            case [slug] if (image_id := slug.rpartition(".")[0]):
+                return await self.image(scrape_item, image_id)
             case _:
                 raise ValueError
 
@@ -79,7 +79,7 @@ class ImgurCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         album: dict[str, Any] = await self._api_request("album", album_id)
-        title = self.create_title(album.get("title") or album_id)
+        title = self.create_title(album.get("title") or album_id, album_id=album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         results = await self.get_album_results(album_id)
         for image in album["images"]:
