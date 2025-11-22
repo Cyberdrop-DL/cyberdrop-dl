@@ -245,14 +245,17 @@ def _setup_manager(args: Sequence[str] | None = None) -> Manager:
     return manager
 
 
+def _loop_factory() -> asyncio.AbstractEventLoop:
+    loop = asyncio.new_event_loop()
+    if sys.version_info > (3, 12):
+        loop.set_task_factory(asyncio.eager_task_factory)
+    return loop
+
+
 class Director:
     """Creates a manager and runs it"""
 
     def __init__(self, args: Sequence[str] | None = None) -> None:
-        self.loop = asyncio.new_event_loop()
-        if sys.version_info > (3, 12):
-            self.loop.set_task_factory(asyncio.eager_task_factory)
-        asyncio.set_event_loop(self.loop)
         self.manager = _setup_manager(args)
 
     def run(self) -> int:
@@ -267,8 +270,8 @@ class Director:
     def _run(self) -> int:
         exit_code = _C.ERROR
         with contextlib.suppress(Exception):
-            asyncio.run(self.async_run())
+            with asyncio.Runner(loop_factory=_loop_factory) as runner:
+                runner.run(self.async_run())
             exit_code = _C.OK
 
-        self.loop.close()
         return exit_code

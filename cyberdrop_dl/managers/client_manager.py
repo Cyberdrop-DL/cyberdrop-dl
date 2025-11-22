@@ -14,7 +14,6 @@ import truststore
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
-from curl_cffi.aio import AsyncCurl
 
 from cyberdrop_dl import constants, env
 from cyberdrop_dl.clients.download_client import DownloadClient
@@ -250,6 +249,7 @@ class ClientManager:
         # Calling code should have validated if curl is actually available
         import warnings
 
+        from curl_cffi.aio import AsyncCurl
         from curl_cffi.requests import AsyncSession
 
         class CurlSession(AsyncSession):
