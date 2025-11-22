@@ -53,7 +53,8 @@ class ImgurCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
-            case [slug] if (image_id := slug.rpartition(".")[0]):
+            case [slug]:
+                image_id = slug.partition(".")[0]
                 return await self.image(scrape_item, image_id)
             case _:
                 raise ValueError
