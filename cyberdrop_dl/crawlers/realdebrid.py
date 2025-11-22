@@ -86,7 +86,6 @@ class RealDebridCrawler(Crawler):
                 return await self.direct_file(scrape_item)
             raise ValueError
 
-        scrape_item.url = URLParser.reconstruct_original_url(scrape_item.url)
         if self.api.is_supported_folder(scrape_item.url):
             return await self.folder(scrape_item)
         await self.file(scrape_item)
@@ -95,13 +94,12 @@ class RealDebridCrawler(Crawler):
     async def _get_regexes(self, *_) -> None:
         if self.disabled:
             return
+
         with self.disable_on_error("Setup failed. Unable to get URL regex"):
             await self.api.startup()
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem) -> None:
-        log(f"Scraping folder with RealDebrid: {scrape_item.url}", 20)
-
         folder_id = URLParser.guess_folder_id(scrape_item.url)
         title = self.create_title(f"{folder_id} [{scrape_item.url.host}]", folder_id)
         scrape_item.setup_as_album(title, album_id=folder_id)
@@ -120,11 +118,10 @@ class RealDebridCrawler(Crawler):
         title = self.create_title(f"files [{url.host}]")
         scrape_item.setup_as_album(title)
         debrid_link = await self.api.unrestrict(url, scrape_item.password)
-        database_url = URLParser.flatten_url(url, url.host)
-        log(f"Real Debrid:\n  Original URL: {url}\n  Debrid URL: {debrid_link}", 10)
+        log(f"[{self.FOLDER_DOMAIN}]:\n  Original URL: {url}\n  Debrid URL: {debrid_link}", 10)
         filename, ext = self.get_filename_and_ext(debrid_link.name)
         await self.handle_file(
-            database_url,
+            url,
             scrape_item,
             debrid_link.name,
             ext,
@@ -206,26 +203,25 @@ class URLParser:
             or url.parts[1].count(".") == 0
             or cls.is_unrestricted_download(url)
         ):
-            parsed_url = url
+            return url
 
-        else:
-            parts_dict: dict[str, tuple[str, ...]] = dict.fromkeys(cls._DB_FLATTEN_URL_KEYS, ())
-            key = "parts"
-            original_host = url.parts[1]
-            for part in url.parts[2:]:
-                if part in cls._DB_FLATTEN_URL_KEYS[1:]:
-                    key = part
-                    continue
-                parts_dict[key] += (part,)
+        parts_dict: dict[str, tuple[str, ...]] = dict.fromkeys(cls._DB_FLATTEN_URL_KEYS, ())
+        key = "parts"
+        original_host = url.parts[1]
+        for part in url.parts[2:]:
+            if part in cls._DB_FLATTEN_URL_KEYS[1:]:
+                key = part
+                continue
+            parts_dict[key] += (part,)
 
-            path = "/".join(parts_dict["parts"])
-            parsed_url = AbsoluteHttpURL(f"https://{original_host}/{path}", encoded="%" in path)
-            query_iter = iter(parts_dict["query"])
-            if query := tuple(zip(query_iter, query_iter, strict=True)):
-                parsed_url = parsed_url.with_query(query)
-            if frag := next(iter(parts_dict["frag"]), None):
-                parsed_url = parsed_url.with_fragment(frag)
-        log(f"Real Debrid:\n Input URL: {url}\n Parsed URL: {parsed_url}")
+        path = "/".join(parts_dict["parts"])
+        parsed_url = AbsoluteHttpURL(f"https://{original_host}/{path}", encoded="%" in path)
+        query_iter = iter(parts_dict["query"])
+        if query := tuple(zip(query_iter, query_iter, strict=True)):
+            parsed_url = parsed_url.with_query(query)
+        if frag := next(iter(parts_dict["frag"]), None):
+            parsed_url = parsed_url.with_fragment(frag)
+
         return parsed_url
 
     @classmethod

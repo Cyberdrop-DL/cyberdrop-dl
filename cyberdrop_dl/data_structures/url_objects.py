@@ -189,6 +189,9 @@ class MediaItem:
             return ""
 
         if domain:
+            if "real-debrid" == domain:
+                return str(url)
+
             if "e-hentai" in domain:
                 return url.path.split("keystamp")[0][:-1]
 
