@@ -147,7 +147,7 @@ def page_title(soup: Tag, domain: str | None = None) -> str:
 
 
 def get_json_ld_date(soup: Tag) -> str:
-    return get_json_ld_value(soup, "uploadDate")
+    return get_json_ld(soup)["uploadDate"]
 
 
 def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
@@ -160,11 +160,6 @@ def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
         return ld_json[0]
 
     return ld_json
-
-
-def get_json_ld_value(soup: Tag, key: str) -> Any:
-    ld_json = get_json_ld(soup, key)
-    return ld_json[key]
 
 
 def unescape(html: str) -> str:
