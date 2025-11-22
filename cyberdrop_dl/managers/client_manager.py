@@ -252,18 +252,17 @@ class ClientManager:
         from curl_cffi.aio import AsyncCurl
         from curl_cffi.requests import AsyncSession
 
-        class CurlSession(AsyncSession):
-            @property
-            def acurl(self) -> AsyncCurl:
-                if self._acurl is None:
-                    with warnings.catch_warnings(record=True):
-                        warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
-                        self._acurl = AsyncCurl(loop=self.loop)
-                return self._acurl
+        loop = asyncio.get_running_loop()
+
+        with warnings.catch_warnings(record=True):
+            warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
+            acurl = AsyncCurl(loop=loop)
 
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
 
-        return CurlSession(
+        return AsyncSession(
+            loop=loop,
+            async_curl=acurl,
             headers=self._default_headers,
             impersonate="chrome",
             verify=bool(self.ssl_context),
