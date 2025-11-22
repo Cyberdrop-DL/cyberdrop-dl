@@ -25,4 +25,18 @@ TEST_CASES = [
         ],
         range(255, 300),
     ),
+    (
+        "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
+        [
+            {
+                "url": "ANY",
+                "debrid_link": "re:/get_image/",
+                "referer": "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
+                "download_folder": "re:Brandi Love SET 35 (Porntrex)",
+                "datetime": None,
+                "album_id": "57737",
+            },
+        ],
+        376,
+    ),
 ]

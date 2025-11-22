@@ -5,7 +5,7 @@ import importlib.util
 import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NamedTuple, NotRequired
+from typing import TYPE_CHECKING, NamedTuple, NotRequired
 from unittest import mock
 
 import pytest
@@ -30,7 +30,7 @@ class Result(TypedDict):
     # Simplified version of media_item
     url: str
     filename: NotRequired[str]
-    debrid_link: NotRequired[Literal["ANY"] | None]
+    debrid_link: NotRequired[str | None]
     original_filename: NotRequired[str]
     referer: NotRequired[str]
     album_id: NotRequired[str | None]
