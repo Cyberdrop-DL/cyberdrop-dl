@@ -14,6 +14,7 @@ import truststore
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
+from curl_cffi.aio import AsyncCurl
 
 from cyberdrop_dl import constants, env
 from cyberdrop_dl.clients.download_client import DownloadClient
@@ -253,16 +254,19 @@ class ClientManager:
 
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
 
-        warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
-        return AsyncSession(
-            headers=self._default_headers,
-            impersonate="chrome",
-            verify=bool(self.ssl_context),
-            proxy=proxy_or_none,
-            timeout=self.rate_limiting_options._curl_timeout,
-            max_redirects=constants.MAX_REDIRECTS,
-            cookies={cookie.key: cookie.value for cookie in self.cookies},
-        )
+        loop = asyncio.get_running_loop()
+        with warnings.catch_warnings(record=True):
+            warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
+            return AsyncSession(
+                async_curl=AsyncCurl(loop=loop),
+                headers=self._default_headers,
+                impersonate="chrome",
+                verify=bool(self.ssl_context),
+                proxy=proxy_or_none,
+                timeout=self.rate_limiting_options._curl_timeout,
+                max_redirects=constants.MAX_REDIRECTS,
+                cookies={cookie.key: cookie.value for cookie in self.cookies},
+            )
 
     def new_scrape_session(self) -> ClientSession:
         trace_configs = _create_request_log_hooks("scrape")
