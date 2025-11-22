@@ -252,21 +252,26 @@ class ClientManager:
 
         from curl_cffi.requests import AsyncSession
 
+        class CurlSession(AsyncSession):
+            @property
+            def acurl(self) -> AsyncCurl:
+                if self._acurl is None:
+                    with warnings.catch_warnings(record=True):
+                        warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
+                        self._acurl = AsyncCurl(loop=self.loop)
+                return self._acurl
+
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
 
-        loop = asyncio.get_running_loop()
-        with warnings.catch_warnings(record=True):
-            warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
-            return AsyncSession(
-                async_curl=AsyncCurl(loop=loop),
-                headers=self._default_headers,
-                impersonate="chrome",
-                verify=bool(self.ssl_context),
-                proxy=proxy_or_none,
-                timeout=self.rate_limiting_options._curl_timeout,
-                max_redirects=constants.MAX_REDIRECTS,
-                cookies={cookie.key: cookie.value for cookie in self.cookies},
-            )
+        return CurlSession(
+            headers=self._default_headers,
+            impersonate="chrome",
+            verify=bool(self.ssl_context),
+            proxy=proxy_or_none,
+            timeout=self.rate_limiting_options._curl_timeout,
+            max_redirects=constants.MAX_REDIRECTS,
+            cookies={cookie.key: cookie.value for cookie in self.cookies},
+        )
 
     def new_scrape_session(self) -> ClientSession:
         trace_configs = _create_request_log_hooks("scrape")
