@@ -106,7 +106,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             )
 
             if total_pages is None:
-                total_pages = int(css.select_one_get_attr(ajax_soup, Selector.FOLDER_TOTAL_PAGES, "value"))
+                total_pages = int(css.select(ajax_soup, Selector.FOLDER_TOTAL_PAGES, "value"))
 
             for file in ajax_soup.select(Selector.FILES):
                 file_url = self.parse_url(css.get_attr(file, "dtfullurl"))
@@ -137,7 +137,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
         content_id = int(
             get_text_between(
-                css.select_one_get_text(soup, Selector.FILE_INFO),
+                css.select_text(soup, Selector.FILE_INFO),
                 "showFileInformation(",
                 ");",
             )
@@ -153,7 +153,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             is_file=True,
         )
 
-        download_tag = soup.select_one(Selector.DROPDOWN_MENU) or css.select_one(soup, Selector.DOWNLOAD_BUTTON)
+        download_tag = soup.select_one(Selector.DROPDOWN_MENU) or css.select(soup, Selector.DOWNLOAD_BUTTON)
 
         # Manually parse link. Some URLs are invalid. ex: https://cyberfile.me/7cfu
         # For the download URL, the slug does not actually matter. It can be anything
@@ -162,11 +162,11 @@ class YetiShareCrawler(Crawler, is_abc=True):
         link = self.parse_url(raw_link).with_query(download_token=token)
 
         scrape_item.possible_datetime = self.parse_date(
-            css.select_one_get_text(soup, Selector.FILE_UPLOAD_DATE),
+            css.select_text(soup, Selector.FILE_UPLOAD_DATE),
             "%d/%m/%Y %H:%M:%S",
         )
 
-        filename = css.select_one_get_text(soup, Selector.FILE_NAME)
+        filename = css.select_text(soup, Selector.FILE_NAME)
         custom_filename, ext = self.get_filename_and_ext(filename)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
@@ -188,7 +188,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
         soup = await ajax_api_request()
         if soup.select_one(Selector.PASSWORD_PROTECTED):
-            node_id: str = data.get("nodeId") or css.select_one_get_attr(soup, Selector.FOLDER_ID, "value")
+            node_id: str = data.get("nodeId") or css.select(soup, Selector.FOLDER_ID, "value")
             await self._unlock_password_protected_folder(scrape_item, node_id)
             soup = await ajax_api_request()
 

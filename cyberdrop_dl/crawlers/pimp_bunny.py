@@ -93,7 +93,7 @@ class PimpBunnyCrawler(Crawler):
         query = _pagination_query(scrape_item.url)
         async for soup in self.web_pager(model_url.with_query(query)):
             if not name:
-                name = css.select_one_get_text(soup, Selector.MODEL_NAME)
+                name = css.select_text(soup, Selector.MODEL_NAME)
                 scrape_item.setup_as_profile(self.create_title(f"{name} [model]"))
 
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
@@ -111,7 +111,7 @@ class PimpBunnyCrawler(Crawler):
         query = _pagination_query(scrape_item.url)
         async for soup in self.web_pager(albums_url.with_query(query)):
             if not name:
-                name = css.select_one_get_text(soup, Selector.MODEL_NAME)
+                name = css.select_text(soup, Selector.MODEL_NAME)
                 if name not in scrape_item.parent_title:
                     scrape_item.setup_as_profile(self.create_title(f"{name} [model]"))
 
@@ -144,7 +144,7 @@ class PimpBunnyCrawler(Crawler):
         title: str = ""
         async for soup in self.web_pager(album_url):
             if not title:
-                title = css.select_one_get_text(soup, Selector.ALBUM_TITLE)
+                title = css.select_text(soup, Selector.ALBUM_TITLE)
                 scrape_item.setup_as_album(self.create_title(f"{title} [album]"))
 
             for _, image in self.iter_tags(soup, Selector.ITEM):

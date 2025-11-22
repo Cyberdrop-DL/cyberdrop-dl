@@ -54,11 +54,11 @@ class CyberdropCrawler(Crawler):
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         scrape_item.url = scrape_item.url.with_query("nojs")
         soup = await self.request_soup(scrape_item.url)
-        title = css.select_one_get_text(soup, Selector.ALBUM_TITLE)
+        title = css.select_text(soup, Selector.ALBUM_TITLE)
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        date_str = css.select_one_get_text(soup, Selector.ALBUM_DATE)
+        date_str = css.select_text(soup, Selector.ALBUM_DATE)
         scrape_item.possible_datetime = self.parse_date(date_str, "%d.%m.%Y")
 
         for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM_ITEM):

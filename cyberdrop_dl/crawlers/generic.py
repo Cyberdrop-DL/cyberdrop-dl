@@ -78,8 +78,8 @@ class GenericCrawler(Crawler):
 
     async def try_video_from_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         try:
-            title = css.select_one_get_text(soup, "title").rsplit(" - ", 1)[0].rsplit("|", 1)[0]
-            link_str: str = css.select_one_get_attr(soup, VIDEO_SELECTOR, "src")
+            title = css.select_text(soup, "title").rsplit(" - ", 1)[0].rsplit("|", 1)[0]
+            link_str: str = css.select(soup, VIDEO_SELECTOR, "src")
         except (AssertionError, AttributeError, KeyError):
             raise ScrapeError(422) from None
 

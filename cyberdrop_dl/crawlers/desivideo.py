@@ -44,7 +44,7 @@ class DesiVideoCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         video_url = self.parse_url(Selector.VIDEO_SRC(soup))
-        title = css.select_one_get_text(soup, Selector.TITLE)
+        title = css.select_text(soup, Selector.TITLE)
         _, ext = self.get_filename_and_ext(video_url.name)
         scrape_item.possible_datetime = self.parse_iso_date(css.get_json_ld_date(soup))
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)

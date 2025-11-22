@@ -75,7 +75,7 @@ class PorntrexCrawler(Crawler):
         if "This album is a private album" in soup.text:
             raise ScrapeError(401, "Private album")
 
-        title = css.select_one_get_text(soup, _SELECTORS.ALBUM_TITLE)
+        title = css.select_text(soup, _SELECTORS.ALBUM_TITLE)
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title)
 
@@ -110,13 +110,13 @@ class PorntrexCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
 
         if "models" in scrape_item.url.parts:
-            title: str = css.select_one_get_text(soup, _SELECTORS.MODEL_NAME).title()
+            title: str = css.select_text(soup, _SELECTORS.MODEL_NAME).title()
         elif "members" in scrape_item.url.parts:
-            title: str = css.select_one_get_text(soup, _SELECTORS.USER_NAME)
+            title: str = css.select_text(soup, _SELECTORS.USER_NAME)
         elif "latest-updates" in scrape_item.url.parts:
             title: str = "Latest Updates"
         else:
-            title = css.select_one_get_text(soup, _SELECTORS.TITLE)
+            title = css.select_text(soup, _SELECTORS.TITLE)
 
         for trash in TITLE_TRASH:
             title = title.replace(trash, "").strip()

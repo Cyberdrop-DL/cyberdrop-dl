@@ -35,7 +35,7 @@ class PlaylistInfo:
         playlist_id = url.parts[1].split("-")[0]
         name = url.parts[3]
         canonical_url = PRIMARY_URL / playlist_id / "playlist" / name
-        title = css.select_one_get_text(soup, "title").rsplit("Playlist -")[0].strip() if soup else ""
+        title = css.select_text(soup, "title").rsplit("Playlist -")[0].strip() if soup else ""
         return cls(playlist_id, canonical_url, title)
 
 
@@ -130,8 +130,8 @@ class SpankBangCrawler(Crawler):
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
-    title_tag = css.select_one(soup, "div#video h1")
-    stream_js_text = css.select_one_get_text(soup, JS_STREAM_DATA_SELECTOR)
+    title_tag = css.select(soup, "div#video h1")
+    stream_js_text = css.select_text(soup, JS_STREAM_DATA_SELECTOR)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
     del soup
     stream_data = json.load_js_obj(get_text_between(stream_js_text, "stream_data = ", ";"))

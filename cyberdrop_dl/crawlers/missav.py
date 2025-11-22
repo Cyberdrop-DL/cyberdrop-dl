@@ -82,7 +82,7 @@ class MissAVCrawler(Crawler):
 
 
 def _get_uuid(soup: BeautifulSoup) -> str:
-    js_text = css.select_one_get_text(soup, Selector.UUID)
+    js_text = css.select_text(soup, Selector.UUID)
     uuid_joined_parts = js_text.split("m3u8|", 1)[-1].split("|com|surrit", 1)[0]
     uuid_parts = reversed(uuid_joined_parts.split("|"))
     return "-".join(uuid_parts)

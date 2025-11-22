@@ -55,7 +55,7 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title:
-                title_tag = css.select_one(soup, Selector.TITLE)
+                title_tag = css.select(soup, Selector.TITLE)
                 css.decompose(title_tag, "span")
                 title = css.get_text(title_tag)
                 for trash in ("Videos for: ", "Tagged with "):

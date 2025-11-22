@@ -60,7 +60,7 @@ class NoodleMagazineCrawler(Crawler):
             soup = await self.request_soup(page_url, impersonate=True)
 
             if not title:
-                search_string: str = css.select_one_get_text(soup, SEARCH_STRING_SELECTOR)
+                search_string: str = css.select_text(soup, SEARCH_STRING_SELECTOR)
                 title = search_string.rsplit(" videos", 1)[0]
                 title = self.create_title(f"{title} [search]")
                 scrape_item.setup_as_album(title)
@@ -80,7 +80,7 @@ class NoodleMagazineCrawler(Crawler):
             return
         soup = await self.request_soup(scrape_item.url, impersonate=True)
 
-        metadata_text = css.select_one(soup, METADATA_SELECTOR).get_text()
+        metadata_text = css.select(soup, METADATA_SELECTOR).get_text()
         metadata = json.loads(metadata_text.strip())
         playlist = soup.select_one(PLAYLIST_SELECTOR)
         if not playlist:
@@ -88,7 +88,7 @@ class NoodleMagazineCrawler(Crawler):
 
         playlist_data = json.loads(get_text_between(playlist.text, "window.playlist = ", ";\nwindow.ads"))
         best_source = max(Source.new(source) for source in playlist_data["sources"])
-        title: str = css.select_one(soup, "title").get_text().split(" watch online")[0]
+        title: str = css.select(soup, "title").get_text().split(" watch online")[0]
 
         scrape_item.possible_datetime = self.parse_iso_date(metadata["uploadDate"])
         content_url = self.parse_url(metadata["contentUrl"])

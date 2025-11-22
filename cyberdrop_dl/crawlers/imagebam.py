@@ -75,7 +75,7 @@ class ImageBamCrawler(Crawler):
         if not soup:
             soup = await self.request_soup(scrape_item.url)
 
-        gallery_name = css.select_one_get_text(soup, Selectors.GALLERY_TITLE)
+        gallery_name = css.select_text(soup, Selectors.GALLERY_TITLE)
         gallery_id = scrape_item.url.name
         title = self.create_title(gallery_name, gallery_id)
         scrape_item.setup_as_album(title, album_id=gallery_id)
@@ -98,7 +98,7 @@ class ImageBamCrawler(Crawler):
 
             soup = await self.request_soup(scrape_item.url)
 
-        image_tag = css.select_one(soup, Selectors.IMAGE)
+        image_tag = css.select(soup, Selectors.IMAGE)
         if not scrape_item.album_id and (gallery_info := soup.select_one(Selectors.GALLERY_INFO)):
             gallery_id = self.parse_url(css.get_attr(gallery_info, "href")).name
             scrape_item.album_id = gallery_id

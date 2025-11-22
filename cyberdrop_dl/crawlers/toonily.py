@@ -39,7 +39,7 @@ class ToonilyCrawler(Crawler):
     async def series(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        title_tag = css.select_one(soup, Selector.SERIES_TITLE)
+        title_tag = css.select(soup, Selector.SERIES_TITLE)
         css.decompose(title_tag, "*")
         series_title = self.create_title(css.get_text(title_tag))
         scrape_item.setup_as_profile(series_title)
@@ -50,7 +50,7 @@ class ToonilyCrawler(Crawler):
     async def chapter(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        series_name, chapter_title = css.select_one_get_text(soup, Selector.CHAPTER_TITLE).split(" - ", 1)
+        series_name, chapter_title = css.select_text(soup, Selector.CHAPTER_TITLE).split(" - ", 1)
         if scrape_item.type != FILE_HOST_PROFILE:
             series_title = self.create_title(series_name)
             scrape_item.add_to_parent_title(series_title)

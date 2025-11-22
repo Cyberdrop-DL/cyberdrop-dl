@@ -85,7 +85,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             search_query = search_query or scrape_item.url.parts[2]
             title = f"{search_query} [search]"
         else:
-            common_title = css.select_one_get_text(soup, _SELECTORS.COMMON_VIDEOS_TITLE)
+            common_title = css.select_text(soup, _SELECTORS.COMMON_VIDEOS_TITLE)
             if common_title.startswith("New Videos Tagged"):
                 common_title = common_title.split("Showing")[0].split("Tagged with")[1].strip()
                 title = f"{common_title} [tag]"
@@ -101,7 +101,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     async def profile(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        user_name: str = css.select_one_get_text(soup, _SELECTORS.USER_NAME).split("'s Profile")[0].strip()
+        user_name: str = css.select_text(soup, _SELECTORS.USER_NAME).split("'s Profile")[0].strip()
         title = f"{user_name} [user]"
         title = self.create_title(title)
         scrape_item.setup_as_profile(title)
@@ -132,7 +132,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             date_str = css.get_json_ld_date(soup)
             scrape_item.possible_datetime = self.parse_iso_date(date_str)
         except (LookupError, ValueError, css.SelectorError):
-            date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
+            date_str = css.select_text(soup, _SELECTORS.DATE).split(":", 1)[-1].strip()
             scrape_item.possible_datetime = self.parse_date(date_str)
 
         await self.handle_file(
@@ -143,11 +143,11 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     async def album(self, scrape_item: ScrapeItem, album_id: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
         if not album_id:
-            js_text = css.select_one_get_text(soup, _SELECTORS.ALBUM_ID)
+            js_text = css.select_text(soup, _SELECTORS.ALBUM_ID)
             album_id = get_text_between(js_text, "params['album_id'] =", ";")
 
         results = await self.get_album_results(album_id)
-        title = css.select_one_get_text(soup, _SELECTORS.ALBUM_NAME)
+        title = css.select_text(soup, _SELECTORS.ALBUM_NAME)
         title = self.create_title(f"{title} [album]", album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.ALBUM_PICTURES, results=results):
@@ -159,7 +159,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        url = self.parse_url(css.select_one_get_attr(soup, _SELECTORS.PICTURE, "src"))
+        url = self.parse_url(css.select(soup, _SELECTORS.PICTURE, "src"))
         filename, ext = self.get_filename_and_ext(url.name)
         await self.handle_file(url, scrape_item, filename, ext)
 
@@ -168,7 +168,7 @@ def extract_kvs_video(cls: Crawler, soup: BeautifulSoup) -> KVSVideo:
     if soup.select_one(_SELECTORS.UNAUTHORIZED):
         raise ScrapeError(401, "Private video")
 
-    script = css.select_one_get_text(soup, _SELECTORS.FLASHVARS)
+    script = css.select_text(soup, _SELECTORS.FLASHVARS)
     video = _parse_video_vars(script)
     if not video.title:
         title = open_graph.get_title(soup) or css.page_title(soup)

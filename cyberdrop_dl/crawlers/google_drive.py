@@ -123,7 +123,7 @@ class GoogleDriveCrawler(Crawler):
         embeded_folder_url = (self.PRIMARY_URL / "embeddedfolderview").with_query(id=folder_id)
         soup = await self.request_soup(embeded_folder_url)
 
-        folder_name = css.select_one_get_text(soup, "title")
+        folder_name = css.select_text(soup, "title")
         title = self.create_title(folder_name, folder_id)
         scrape_item.setup_as_album(title, album_id=folder_id)
 

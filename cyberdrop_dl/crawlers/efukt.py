@@ -54,7 +54,7 @@ class EfuktCrawler(Crawler):
         homepage = is_homepage(scrape_item.url)
         async for soup in self.web_pager(scrape_item.url):
             if not homepage and not title:
-                title = css.select_one_get_text(soup, _SELECTORS.TITLE)
+                title = css.select_text(soup, _SELECTORS.TITLE)
                 scrape_item.setup_as_album(self.create_title(f"{title} [series]"))
 
             for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.VIDEO_THUMBS):
@@ -67,19 +67,19 @@ class EfuktCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        date_str = css.select_one_get_text(soup, _SELECTORS.DATE).split(" ", 1)[-1]
+        date_str = css.select_text(soup, _SELECTORS.DATE).split(" ", 1)[-1]
         datetime = self._parse_date(date_str, "%m/%d/%y")
         if not datetime:
             raise ScrapeError(422)
         scrape_item.possible_datetime = to_timestamp(datetime)
 
         if is_image_or_gif(scrape_item.url):
-            link = self.parse_url(css.select_one_get_attr(soup, _SELECTORS.IMAGE, "src"))
+            link = self.parse_url(css.select(soup, _SELECTORS.IMAGE, "src"))
         else:
-            link = self.parse_url(css.select_one_get_attr(soup, _SELECTORS.VIDEO, "src"))
+            link = self.parse_url(css.select(soup, _SELECTORS.VIDEO, "src"))
 
         item_id = scrape_item.url.query.get("id") or scrape_item.url.name.partition("_")[0]
-        title = Path(css.select_one_get_text(soup, _SELECTORS.TITLE)).as_posix().replace("/", "-")
+        title = Path(css.select_text(soup, _SELECTORS.TITLE)).as_posix().replace("/", "-")
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(f"{datetime.date().isoformat()} {title}", ext, file_id=item_id)
         # Video links expire, but the path is always the same, only query params change

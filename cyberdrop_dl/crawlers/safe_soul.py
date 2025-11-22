@@ -39,17 +39,17 @@ class SafeSoulCrawler(ChibiSafeCrawler):
         soup = await self.request_soup(scrape_item.url)
         album = Album(
             id=album_id,
-            name=css.select_one_get_text(soup, Selector.ALBUM_TITLE),
+            name=css.select_text(soup, Selector.ALBUM_TITLE),
             files=[_parse_file(tag) for tag in soup.select(Selector.FILE)],
         )
         return await self._handle_album(scrape_item, album)
 
 
 def _parse_file(file_tag: bs4.Tag) -> File:
-    timestamp = int(css.select_one_get_attr(file_tag, Selector.FILE_DATE, "data-value"))
+    timestamp = int(css.select(file_tag, Selector.FILE_DATE, "data-value"))
 
     return File(
-        name=css.select_one_get_text(file_tag, Selector.FILE_NAME),
-        url=css.select_one_get_attr(file_tag, Selector.FILE_URL, "href"),
+        name=css.select_text(file_tag, Selector.FILE_NAME),
+        url=css.select(file_tag, Selector.FILE_URL, "href"),
         createdAt=datetime.datetime.fromtimestamp(timestamp),
     )

@@ -120,7 +120,7 @@ class HiAnimeCrawler(Crawler):
 
         return Anime(
             id=anime_id,
-            name=css.select_one_get_text(anime_soup, Selector.ANIME_NAME),
+            name=css.select_text(anime_soup, Selector.ANIME_NAME),
             episodes=dict(_parse_episodes_resp(episodes_resp["html"])),
         )
 

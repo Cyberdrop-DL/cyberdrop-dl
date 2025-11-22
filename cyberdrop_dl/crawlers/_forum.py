@@ -80,11 +80,11 @@ class ForumPost:
     def new(article: Tag, selectors: PostSelectors) -> ForumPost:
         for trash in selectors.article_trash:
             css.decompose(article, trash)
-        content = css.select_one(article, selectors.content)
+        content = css.select(article, selectors.content)
         for trash in selectors.content_trash:
             css.decompose(article, trash)
         try:
-            date = datetime.datetime.fromisoformat(css.select_one_get_attr(article, *selectors.date))
+            date = datetime.datetime.fromisoformat(css.select(article, *selectors.date))
         except Exception:
             date = None
 
@@ -658,8 +658,8 @@ async def check_is_not_last_page(response: ClientResponse, selectors: MessageBoa
 
 def is_last_page(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> bool:
     try:
-        last_page = css.select_one_get_attr(soup, *selectors.last_page)
-        current_page = css.select_one_get_attr(soup, *selectors.current_page)
+        last_page = css.select(soup, *selectors.last_page)
+        current_page = css.select(soup, *selectors.current_page)
     except (AttributeError, IndexError, css.SelectorError):
         return True
     return current_page == last_page
@@ -667,7 +667,7 @@ def is_last_page(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> bool:
 
 def get_post_title(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> str:
     try:
-        title_block = css.select_one(soup, selectors.title.element)
+        title_block = css.select(soup, selectors.title.element)
         for trash in selectors.title_trash:
             css.decompose(title_block, trash)
     except (AttributeError, AssertionError, css.SelectorError) as e:

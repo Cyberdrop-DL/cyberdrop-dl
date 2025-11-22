@@ -84,11 +84,11 @@ class DoodStreamCrawler(Crawler):
 
 
 def _get_md5_path(soup: BeautifulSoup) -> str:
-    js_text = css.select_one_get_text(soup, _SELECTORS.MD5_JS)
+    js_text = css.select_text(soup, _SELECTORS.MD5_JS)
     return get_text_between(js_text, "/pass_md5/", "'")
 
 
 def _get_file_id(soup: BeautifulSoup) -> str:
-    js_text = css.select_one_get_text(soup, _SELECTORS.FILE_ID_JS)
+    js_text = css.select_text(soup, _SELECTORS.FILE_ID_JS)
     _, file_id, _ = js_text.split("'file_id'")[-1].split("'", 2)
     return file_id

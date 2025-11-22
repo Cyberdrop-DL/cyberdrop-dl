@@ -32,7 +32,7 @@ class XBunkrCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
 
         album_id = scrape_item.url.parts[2]
-        title = self.create_title(css.select_one_get_text(soup, TITLE_SELECTOR), album_id)
+        title = self.create_title(css.select_text(soup, TITLE_SELECTOR), album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         for _, link in self.iter_tags(soup, IMAGE_SELECTOR):

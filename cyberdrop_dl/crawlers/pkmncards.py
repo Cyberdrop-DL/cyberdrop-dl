@@ -137,7 +137,7 @@ class PkmncardsCrawler(Crawler):
         page_url = url.with_query(sort="date", ord="auto", display="images")
         async for soup in self.web_pager(page_url):
             for thumb in soup.select(_SELECTORS.CARD):
-                link_str = css.select_one_get_attr(thumb, "img", "src")
+                link_str = css.select(thumb, "img", "src")
                 card_page_url_str = css.get_attr(thumb, "href")
                 title = css.get_attr(thumb, "title")
                 card_page_url = self.parse_url(card_page_url_str)
@@ -151,9 +151,9 @@ class PkmncardsCrawler(Crawler):
     async def card(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        name = css.select_one_get_text(soup, _SELECTORS.CARD_NAME)
-        number = css.select_one_get_text(soup, _SELECTORS.CARD_NUMBER)
-        link_str: str = css.select_one_get_attr(soup, _SELECTORS.CARD_DOWNLOAD, "href")
+        name = css.select_text(soup, _SELECTORS.CARD_NAME)
+        number = css.select_text(soup, _SELECTORS.CARD_NUMBER)
+        link_str: str = css.select(soup, _SELECTORS.CARD_DOWNLOAD, "href")
         link = self.parse_url(link_str)
         card_set = create_set(soup)
         card = Card(name, number, card_set, link)
@@ -220,15 +220,15 @@ def create_set(soup: Tag) -> CardSet:
     tag = soup.select_one(_SELECTORS.SET_SERIES_CODE)
     # Some sets do not have series code
     set_series_code: str | None = tag.get_text(strip=True) if tag else None
-    set_info: dict[str, list[dict]] = json.loads(css.select_one(soup, _SELECTORS.SET_INFO).text)
+    set_info: dict[str, list[dict]] = json.loads(css.select(soup, _SELECTORS.SET_INFO).text)
     release_date: int | None = None
     for item in set_info["@graph"]:
         if iso_date := item.get("datePublished"):
             release_date = to_timestamp(datetime.fromisoformat(iso_date))
             break
 
-    set_abbr = css.select_one(soup, _SELECTORS.SET_ABBR).text
-    set_name = css.select_one(soup, _SELECTORS.SET_NAME).text
+    set_abbr = css.select(soup, _SELECTORS.SET_ABBR).text
+    set_name = css.select(soup, _SELECTORS.SET_NAME).text
 
     if not release_date:
         raise ScrapeError(422)

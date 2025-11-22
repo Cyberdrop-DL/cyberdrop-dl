@@ -69,9 +69,9 @@ class ArchiveBateCrawler(MixDropCrawler):
 
         description = open_graph.description(soup)
         date_str = get_text_between(description, "show on", " - ").strip()
-        user_name = css.select_one_get_text(soup, _SELECTORS.USER_NAME)
-        site_name = css.select_one_get_text(soup, _SELECTORS.SITE_NAME)
-        video_src = css.select_one_get_attr(soup, _SELECTORS.VIDEO, "src")
+        user_name = css.select_text(soup, _SELECTORS.USER_NAME)
+        site_name = css.select_text(soup, _SELECTORS.SITE_NAME)
+        video_src = css.select(soup, _SELECTORS.VIDEO, "src")
         title = self.create_title(f"{user_name} [{site_name}]")
         scrape_item.setup_as_profile(title)
         scrape_item.possible_datetime = self.parse_date(date_str)

@@ -67,7 +67,7 @@ class PostImgCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        link_str: str = css.select_one_get_attr(soup, DOWNLOAD_BUTTON_SELECTOR, "href")
+        link_str: str = css.select(soup, DOWNLOAD_BUTTON_SELECTOR, "href")
         link = self.parse_url(link_str).with_query(None)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)

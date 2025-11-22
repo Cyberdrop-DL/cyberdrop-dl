@@ -53,7 +53,7 @@ class MixDropCrawler(Crawler):
         scrape_item.url = embed_url
         soup = await self.request_soup(video_url)
 
-        title = css.select_one_get_text(soup, _SELECTOR.FILE_NAME)
+        title = css.select_text(soup, _SELECTOR.FILE_NAME)
 
         soup = await self.request_soup(embed_url)
 
@@ -65,7 +65,7 @@ class MixDropCrawler(Crawler):
     @staticmethod
     def create_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
         # Defined as a method to simplify subclasses calls
-        js_text = css.select_one_get_text(soup, _SELECTOR.JS)
+        js_text = css.select_text(soup, _SELECTOR.JS)
         file_id = get_text_between(js_text, "|v2||", "|")
         parts = get_text_between(js_text, "MDCore||", "|thumbs").split("|")
         secure_key = get_text_between(js_text, f"{file_id}|", "|")

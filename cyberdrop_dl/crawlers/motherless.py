@@ -146,7 +146,7 @@ class MotherlessCrawler(Crawler):
         media_info = self.process_media_soup(scrape_item, soup)
         link = self.parse_url(media_info.url)
         scrape_item.url = canonical_url
-        title = css.select_one_get_text(soup, ITEM_TITLE_SELECTOR)
+        title = css.select_text(soup, ITEM_TITLE_SELECTOR)
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(title, ext, file_id=media_id)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)

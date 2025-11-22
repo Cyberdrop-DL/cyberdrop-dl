@@ -56,14 +56,14 @@ class NHentaiCrawler(Crawler):
         async for soup in self.web_pager(scrape_item.url, cffi=True):
             if not title:
                 if collection_type == "favorites":
-                    title_tag = css.select_one(soup, Selector.FAVORITES_TITLE)
+                    title_tag = css.select(soup, Selector.FAVORITES_TITLE)
                     if soup.select_one(Selector.LOGIN_PAGE):
                         raise LoginError("No cookies provided to download favorites")
 
                     css.decompose(title_tag, "span")
 
                 else:
-                    title_tag = css.select_one(soup, Selector.COLLECTION_TITLE)
+                    title_tag = css.select(soup, Selector.COLLECTION_TITLE)
                     title = f" [{collection_type}]"
 
                 title = self.create_title(title_tag.get_text(strip=True) + title)

@@ -55,8 +55,8 @@ class EHentaiCrawler(Crawler):
         scrape_item.url = scrape_item.url.with_query(None)
         async for soup in self.web_pager(scrape_item.url):
             if not title:
-                title = self.create_title(css.select_one_get_text(soup, _SELECTORS.TITLE))
-                date_str: str = css.select_one_get_text(soup, _SELECTORS.DATE)
+                title = self.create_title(css.select_text(soup, _SELECTORS.TITLE))
+                date_str: str = css.select_text(soup, _SELECTORS.DATE)
                 title = self.create_title(title, gallery_id)
                 scrape_item.setup_as_album(title, album_id=gallery_id)
                 scrape_item.possible_datetime = self.parse_iso_date(date_str)
@@ -70,7 +70,7 @@ class EHentaiCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        link_str: str = css.select_one_get_attr(soup, _SELECTORS.IMAGE, "src")
+        link_str: str = css.select(soup, _SELECTORS.IMAGE, "src")
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(scrape_item.url.name, ext)

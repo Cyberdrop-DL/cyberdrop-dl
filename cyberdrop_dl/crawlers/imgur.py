@@ -42,7 +42,7 @@ class ImgurCrawler(Crawler):
         """Get public client id."""
         with self.disable_on_error("Unable to get client id"):
             soup = await self.request_soup(self.PRIMARY_URL)
-            js_src = css.select_one_get_attr(soup, "script[src*='/desktop-assets/js/main']", "src")
+            js_src = css.select(soup, "script[src*='/desktop-assets/js/main']", "src")
             js_text = await self.request_text(self.parse_url(js_src))
             self.client_id = get_text_between(js_text, 'apiClientId:"', '"')
 

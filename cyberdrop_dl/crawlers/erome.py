@@ -59,7 +59,7 @@ class EromeCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        title_portion = css.select_one_get_text(soup, "title").rsplit(" - Porn")[0].strip()
+        title_portion = css.select_text(soup, "title").rsplit(" - Porn")[0].strip()
         if not title_portion:
             title_portion = scrape_item.url.name
 

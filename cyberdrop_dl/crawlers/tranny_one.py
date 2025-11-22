@@ -59,7 +59,7 @@ class TrannyOneCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        title = css.select_one_get_text(soup, Selector.VIDEO_TITLE)
+        title = css.select_text(soup, Selector.VIDEO_TITLE)
         link = self.parse_url(Selector.VIDEO_SRC(soup))
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
@@ -86,7 +86,7 @@ class TrannyOneCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name = css.select_one_get_text(soup, Selector.ALBUM_TITLE)
+        name = css.select_text(soup, Selector.ALBUM_TITLE)
         scrape_item.setup_as_album(self.create_title(f"{name} [album]"), album_id=album_id)
         results = await self.get_album_results(album_id)
         for _, pic in self.iter_tags(soup, Selector.IMAGES, results=results):
@@ -95,7 +95,7 @@ class TrannyOneCrawler(Crawler):
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem, model_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name = css.select_one_get_text(soup, Selector.MODEL_NAME)
+        name = css.select_text(soup, Selector.MODEL_NAME)
         scrape_item.setup_as_profile(self.create_title(f"{name} [model]"))
 
         ajax_url = self.PRIMARY_URL.with_query(area="pornstarsViewer", ajax=1, id=model_id, tab="albums")

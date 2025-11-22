@@ -88,10 +88,10 @@ class TokioMotionCrawler(Crawler):
                 raise ScrapeError(401, "Private video")
             raise ScrapeError(422, "Couldn't find video source")
 
-        scrape_item.possible_datetime = self.parse_date(css.select_one_get_text(soup, _SELECTORS.VIDEO_DATE))
+        scrape_item.possible_datetime = self.parse_date(css.select_text(soup, _SELECTORS.VIDEO_DATE))
         link_str = css.get_attr(src, "src")
         link = self.parse_url(link_str)
-        title = css.select_one_get_text(soup, "title").rsplit(" - TOKYO Motion")[0].strip()
+        title = css.select_text(soup, "title").rsplit(" - TOKYO Motion")[0].strip()
         filename, ext = f"{video_id}.mp4", ".mp4"
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
@@ -202,7 +202,7 @@ class TokioMotionCrawler(Crawler):
         if "album" in scrape_item.url.parts and len(scrape_item.url.parts) > 3:
             return scrape_item.url.parts[3]
         soup = await self.request_soup(scrape_item.url)
-        return css.select_one_get_text(soup, _SELECTORS.ALBUM_TITLE)
+        return css.select_text(soup, _SELECTORS.ALBUM_TITLE)
 
     def add_user_title(self, scrape_item: ScrapeItem) -> None:
         try:

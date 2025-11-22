@@ -63,7 +63,7 @@ class ImxToCrawler(Crawler):
             method="POST",
             data={"imgContinue": "Continue+to+image+...+"},
         )
-        image = css.select_one(soup, Selector.IMAGES)
+        image = css.select(soup, Selector.IMAGES)
         name = css.get_attr(image, "alt")
         link = self.parse_url(css.get_attr(image, "src"))
         filename, ext = self.get_filename_and_ext(name)
@@ -72,7 +72,7 @@ class ImxToCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name = css.select_one_get_text(soup, Selector.GALLERY_TITLE)
+        name = css.select_text(soup, Selector.GALLERY_TITLE)
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
