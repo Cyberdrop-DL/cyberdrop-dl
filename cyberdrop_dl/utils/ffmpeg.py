@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import itertools
 import json
 import shutil
@@ -8,7 +9,6 @@ import subprocess
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from fractions import Fraction
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, TypeAlias, TypedDict, overload
 
@@ -50,12 +50,12 @@ def check_is_available() -> None:
         raise RuntimeError("ffprobe is not available")
 
 
-@lru_cache
+@functools.cache
 def which_ffmpeg() -> str | None:
     return shutil.which("ffmpeg")
 
 
-@lru_cache
+@functools.cache
 def which_ffprobe() -> str | None:
     global _FFPROBE_AVAILABLE
     try:
@@ -164,7 +164,7 @@ async def _merge(input_files: Sequence[Path], output_file: Path) -> SubProcessRe
     return await _run_command(command)
 
 
-@lru_cache
+@functools.cache
 def _get_bin_version(bin_path: str) -> str | None:
     try:
         cmd = bin_path, "-version"
