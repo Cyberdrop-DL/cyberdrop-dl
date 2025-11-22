@@ -51,12 +51,8 @@ class PorntrexCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
     DOMAIN: ClassVar[str] = "porntrex"
-    _RATE_LIMIT = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
-            scrape_item.url = scrape_item.url / ""
-
         if len(scrape_item.url.parts) >= 3:
             if "video" in scrape_item.url.parts:
                 return await self.video(scrape_item)
@@ -107,6 +103,9 @@ class PorntrexCrawler(Crawler):
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem) -> None:
+        if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
+            scrape_item.url = scrape_item.url / ""
+
         soup = await self.request_soup(scrape_item.url)
 
         if "models" in scrape_item.url.parts:
