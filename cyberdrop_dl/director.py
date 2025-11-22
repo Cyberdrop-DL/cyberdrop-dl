@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import os
 import signal
 import sys
 from datetime import datetime
@@ -260,8 +259,6 @@ class Director:
     """Creates a manager and runs it"""
 
     def __init__(self, args: Sequence[str] | None = None) -> None:
-        if os.name == "nt":
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
         self.loop = asyncio.new_event_loop()
         if sys.version_info > (3, 12):
             self.loop.set_task_factory(asyncio.eager_task_factory)
