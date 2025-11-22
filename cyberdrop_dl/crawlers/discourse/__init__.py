@@ -10,3 +10,5 @@ _DISCOURSES_SITES = ["https://forums.plex.tv"]
 
 
 DISCOURSE_CRAWLERS: set[type[DiscourseCrawler]] = create_crawlers(_DISCOURSES_SITES, DiscourseCrawler)
+
+__all__ = ["DISCOURSE_CRAWLERS", "DiscourseCrawler"]

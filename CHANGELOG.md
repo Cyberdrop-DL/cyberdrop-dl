@@ -22,6 +22,62 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.7.0] - 2025-11-21
+
+### Added
+
+- Transfer.it support
+- MasaHub.com support
+- Koofr.eu support
+- Desivideo.net support
+- Rumble.com support
+- Tnaflix support
+- Bunkr-albums.io support
+- Ranoz.gg support
+- Rootz.so support
+- FSIBlog.com support
+- Tranny.one supprt
+- Xgroovy support
+- Luxuretv support
+- Streamtape.com support
+- Anontransfer support
+- Xasiat support
+- GirlsReleased.com support
+- Support for albums (imx.to)
+- Support for search URLS (saint)
+- Support for direct images (pixhost)
+- Parse the embed URL of posts (Kemono/Coomer/Nekohouse)
+- New `--exclude-after` and `--exclude-before` options to filter file downloads by upload date
+- `--dump-json` output will now have a `metadata` field with site specific information (on some sites)
+
+### Changed
+
+- Check and skip media files duration before downloading the entire file
+- Update sites to their new domains (`postimages.org` -> `postimg.cc`, `cyberdrop.me` -> `cyberdrop.cr`)
+- `--delete-partial-files` will also delete partial HLS segments (`.cdl_hls`)
+- Skip free space check on file systems that do not support it (ex: `sshfs`). Check will also be skipped on any FUSE fs that reports `0B`. NOTE: Using these filesystems has a risk of getting downloads corrupted. On some filesystems like `gvfs`, HLS downloads will _always_ be corrupted
+
+### Deprecated
+
+- Running multiple configs on the same run or using `--config ALL` will be removed on the next major release
+- Reddit support will be removed on the next major release
+- The `--skip-referer-seen-before` option will be removed on the next major release
+- `apprise` will no longer be included by default. It will become an optional dependency
+- Next major release will not include any `ffprobe` binaries as they are several years out of date
+
+### Fixed
+
+- Upload date parsing (noodlemagazine)
+- Loose files getting downloaded into the root folder (gofile)
+- Downloads skipped by duration not being removed from the download queue
+- Handle redirects & direct link downloads (cyberdrop)
+- Handle not found & direct links (saint)
+- Video resolution parsing (Rule34Video)
+- Subtitles downloads
+- Invalid filename of HLS segments on Windows
+- Parsing of dates without a year
+- Best format selection of m3u8 streams with the same resolution but different bitrate
+
 ## [8.6.0] - 2025-10-28
 
 ### Added

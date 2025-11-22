@@ -65,7 +65,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, NotRequired, 
 
 import aiofiles
 import aiohttp
-from aiohttp import ClientTimeout
+from aiohttp import ClientSession, ClientTimeout
 from aiolimiter import AsyncLimiter
 from Crypto.Cipher import AES
 from Crypto.Math.Numbers import Integer
@@ -80,7 +80,6 @@ from cyberdrop_dl.utils.logger import log
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
 
-    from aiohttp_client_cache.session import CachedSession
     from yarl import URL
 
     from cyberdrop_dl.data_structures.url_objects import MediaItem
@@ -500,7 +499,7 @@ class MegaApi:
         self.shared_keys: SharedkeysDict
 
     @property
-    def session(self) -> CachedSession:
+    def session(self) -> ClientSession:
         return self.manager.client_manager._session
 
     async def request(self, data_input: list[AnyDict] | AnyDict, add_params: AnyDict | None = None) -> Any:
@@ -516,7 +515,7 @@ class MegaApi:
         else:
             data: list[AnyDict] = data_input
 
-        async with self._limiter, self.session.disabled():
+        async with self._limiter:
             response = await self.session.post(
                 self.entrypoint, params=params, json=data, timeout=self.timeout, headers=self.default_headers
             )
@@ -531,7 +530,7 @@ class MegaApi:
             log("[MegaNZ] Solving xhashcash login challenge, this could take a few seconds...")
             xhashcash_token = await generate_hashcash_token(xhashcash_challenge)
             headers = self.default_headers | {"X-Hashcash": xhashcash_token}
-            async with self._limiter, self.session.disabled():
+            async with self._limiter:
                 response = await self.session.post(
                     self.entrypoint, params=params, json=data, timeout=self.timeout, headers=headers
                 )

@@ -191,10 +191,6 @@ def _setup_debug_logger(manager: Manager) -> Path | None:
     queued_logger = QueuedLogger(manager, file_handler, "debug")
     debug_logger.addHandler(queued_logger.handler)
 
-    aiohttp_client_cache_logger = logging.getLogger("aiohttp_client_cache")
-    aiohttp_client_cache_logger.setLevel(log_level)
-    aiohttp_client_cache_logger.addHandler(queued_logger.handler)
-
     # aiosqlite_log = logging.getLogger("aiosqlite")
     # aiosqlite_log.setLevel(log_level)
     # aiosqlite_log.addHandler(file_handler_debug)

@@ -9,7 +9,7 @@ import platform
 import re
 import sys
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Generator, Mapping
 from functools import lru_cache, partial, wraps
 from pathlib import Path
 from stat import S_ISREG
@@ -314,21 +314,33 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         delete_empty_folders(manager)
 
 
+def _partial_files(dir: Path | str) -> Generator[Path]:
+    for entry in os.scandir(dir):
+        try:
+            if entry.is_dir(follow_symlinks=False):
+                yield from _partial_files(entry.path)
+                continue
+        except OSError:
+            pass
+
+        suffix = entry.name.rpartition(".")[-1]
+        if f".{suffix}" in constants.TempExt:
+            yield Path(entry.path)
+
+
 def delete_partial_files(manager: Manager) -> None:
     """Deletes partial download files recursively."""
     log_red("Deleting partial downloads...")
-    for file in manager.path_manager.download_folder.rglob("*"):
-        if file.suffix in constants.TempExt:
-            file.unlink(missing_ok=True)
+    for file in _partial_files(manager.path_manager.download_folder):
+        file.unlink(missing_ok=True)
 
 
 def check_for_partial_files(manager: Manager) -> None:
     """Checks if there are partial downloads in any subdirectory and logs if found."""
     log_yellow("Checking for partial downloads...")
-    for file in manager.path_manager.download_folder.rglob("*"):
-        if file.suffix in constants.TempExt:
-            log_yellow("There are partial downloads in the downloads folder")
-            return
+    has_partial_files = next(_partial_files(manager.path_manager.download_folder), None)
+    if has_partial_files:
+        log_yellow("There are partial downloads in the downloads folder")
 
 
 def delete_empty_folders(manager: Manager):

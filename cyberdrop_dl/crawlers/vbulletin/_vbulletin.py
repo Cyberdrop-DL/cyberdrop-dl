@@ -70,8 +70,6 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             login_url = self.PRIMARY_URL / "login.php"
             await self._login(login_url)
 
-        self.register_cache_filter(self.PRIMARY_URL, lambda _: True)
-
     async def check_login_with_request(self, *_) -> tuple[str, bool]:
         # TODO: Support login
         return "", False

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Self
 import aiohttp.multipart
 from aiohttp import ClientResponse
 from aiohttp.client_reqrep import ContentDisposition
-from aiohttp_client_cache.response import CachedResponse
 from bs4 import BeautifulSoup
 from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
@@ -39,14 +38,14 @@ class AbstractResponse:
     url: AbsoluteHttpURL
     location: AbsoluteHttpURL | None
 
-    _resp: ClientResponse | CachedResponse | CurlResponse | None = None
+    _resp: ClientResponse | CurlResponse | None = None
     _text: str = ""
     _cache: dict[str, Any] = dataclasses.field(init=False, default_factory=dict)
     _read_lock: asyncio.Lock = dataclasses.field(init=False, default_factory=asyncio.Lock)
 
     @classmethod
-    def from_resp(cls, response: ClientResponse | CachedResponse | CurlResponse) -> Self:
-        if isinstance(response, ClientResponse | CachedResponse):
+    def from_resp(cls, response: ClientResponse | CurlResponse) -> Self:
+        if isinstance(response, ClientResponse):
             status = response.status
             headers = response.headers
         else:
@@ -115,7 +114,7 @@ class AbstractResponse:
     async def read(self) -> bytes:
         assert self._resp is not None
         async with self._read_lock:
-            if isinstance(self._resp, ClientResponse | CachedResponse):
+            if isinstance(self._resp, ClientResponse):
                 return await self._resp.read()
             return await self._resp.acontent()
 
@@ -127,7 +126,7 @@ class AbstractResponse:
         async with self._read_lock:
             if self._text:
                 return self._text
-            if isinstance(self._resp, ClientResponse | CachedResponse):
+            if isinstance(self._resp, ClientResponse):
                 self._text = await self._resp.text(encoding)
             else:
                 if encoding:
@@ -137,7 +136,10 @@ class AbstractResponse:
 
     async def soup(self, encoding: str | None = None) -> BeautifulSoup:
         self._check_content_type("text", "html", expecting="HTML")
-        return BeautifulSoup(await self.text(encoding), "html.parser")
+        content = await self.text(encoding)
+        if not content:
+            raise ScrapeError(204, "Received empty html response")
+        return BeautifulSoup(content, "html.parser")
 
     async def json(self, encoding: str | None = None, content_type: str | bool = True) -> Any:
         if self.status == 204:

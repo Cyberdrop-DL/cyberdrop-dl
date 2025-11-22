@@ -24,7 +24,6 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper, remove_parts
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine, Generator
 
-    from aiohttp_client_cache.response import AnyResponse
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
@@ -223,14 +222,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         return self.manager.config.ignore_options.ignore_coomer_ads
 
     async def async_startup(self) -> None:
-        def check_kemono_page(response: AnyResponse) -> bool:
-            if any(x in response.url.parts for x in self.SERVICES):
-                return False
-            if "discord/channel" in response.url.path:
-                return False
-            return True
-
-        self.register_cache_filter(self.PRIMARY_URL, check_kemono_page)
         if getattr(self, "API_ENTRYPOINT", None):
             await self._get_usernames(self.API_ENTRYPOINT / "creators")
 
