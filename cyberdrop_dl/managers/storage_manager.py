@@ -217,7 +217,7 @@ class StorageManager:
             await asyncio.sleep(_CHECK_PERIOD)
 
 
-@functools.cache
+@functools.lru_cache
 def _get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
     # Cached for performance.
     # It's not an expensive operation nor IO blocking, but it's very common for multiple files to share the same download folder

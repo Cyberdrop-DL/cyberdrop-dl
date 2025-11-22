@@ -62,11 +62,13 @@ def which_ffprobe() -> str | None:
         return
 
 
+@functools.cache
 def get_ffmpeg_version() -> str | None:
     if bin_path := which_ffmpeg():
         return _get_bin_version(bin_path)
 
 
+@functools.cache
 def get_ffprobe_version() -> str | None:
     if bin_path := which_ffprobe():
         return _get_bin_version(bin_path)
@@ -160,7 +162,6 @@ async def _merge(input_files: Sequence[Path], output_file: Path) -> SubProcessRe
     return await _run_command(command)
 
 
-@functools.cache
 def _get_bin_version(bin_path: str) -> str | None:
     try:
         cmd = bin_path, "-version"

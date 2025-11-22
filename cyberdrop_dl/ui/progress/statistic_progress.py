@@ -168,7 +168,7 @@ class ScrapeStatsProgress(StatsProgress):
             self.unsupported_urls_skipped += 1
 
 
-@functools.cache
+@functools.lru_cache
 def get_pretty_failure(failure: str) -> str:
     with contextlib.suppress(KeyError):
         return FAILURE_OVERRIDES[failure]
