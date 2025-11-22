@@ -91,7 +91,7 @@ addopts = ["-s"]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 filterwarnings = [
-    "ignore:Proactor event loop does not implement add_reader:UserWarning"
+    "error"
 ]
 markers = [
     "crawler_test_case: tests that do full run with a crawler (making actual network requests)"
