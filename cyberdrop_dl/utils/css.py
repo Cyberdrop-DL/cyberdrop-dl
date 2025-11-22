@@ -58,8 +58,6 @@ def select_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str |
     return get_text(inner_tag, strip)
 
 
-# TODO: Rename this to just get_attr
-# get_attr_no_error should be get_attr_or_none. `or_none` implies no error
 def get_attr_or_none(tag: Tag, attribute: str) -> str | None:
     """Same as `tag.get(attribute)` but asserts the result is a single str"""
     attribute_ = attribute
@@ -75,13 +73,6 @@ def get_attr_or_none(tag: Tag, attribute: str) -> str | None:
     if isinstance(value, list):
         raise SelectorError(f"Expected a single value for {attribute = !r}, got multiple")
     return value
-
-
-def get_attr_no_error(tag: Tag, attribute: str) -> str | None:
-    try:
-        return get_attr_or_none(tag, attribute)
-    except Exception:
-        return
 
 
 def get_text(tag: Tag, strip: bool = True) -> str:

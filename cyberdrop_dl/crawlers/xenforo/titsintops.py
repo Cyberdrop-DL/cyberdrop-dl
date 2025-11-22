@@ -23,7 +23,7 @@ class TitsInTopsCrawler(XenforoCrawler):
         text = css.get_text(link_obj)
         if "view attachment" in text.lower():
             return True
-        title = css.get_attr_no_error(link_obj, "title")
+        title = css.get_attr_or_none(link_obj, "title")
         if title and "permanent link" in title.lower():
             return True
         return super().is_username_or_attachment(link_obj)
