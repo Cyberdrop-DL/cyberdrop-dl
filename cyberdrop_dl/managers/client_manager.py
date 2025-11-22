@@ -251,11 +251,12 @@ class ClientManager:
 
         from curl_cffi.aio import AsyncCurl
         from curl_cffi.requests import AsyncSession
+        from curl_cffi.utils import CurlCffiWarning
 
         loop = asyncio.get_running_loop()
 
-        with warnings.catch_warnings(record=True):
-            warnings.filterwarnings("ignore", message="Proactor event loop does not implement add_reader")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=CurlCffiWarning)
             acurl = AsyncCurl(loop=loop)
 
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
