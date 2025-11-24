@@ -651,6 +651,32 @@ class Crawler(ABC):
             yield thumb, new_scrape_item
             scrape_item.add_children()
 
+    @final
+    async def crawl_children(
+        self,
+        scrape_item: ScrapeItem,
+        selector: str,
+        /,
+        attribute: str = "href",
+        *,
+        results: dict[str, int] | None = None,
+        next_page_selector: str | None = None,
+        coro_factory: Callable[[ScrapeItem], Coroutine[Any, Any, Any]] | None = None,
+    ) -> None:
+        """Crawls children URLs and schedules scrape tasks for them.
+
+        Uses `self.web_pager` to iterate through pages and extracts child links based on `selector` and `attribute`. For
+        each extracted URL, a new `ScrapeItem` is created, and a task
+        (by default, `self.run`) is scheduled in the global task group to process it
+        """
+
+        if coro_factory is None:
+            coro_factory = self.run
+
+        async for soup in self.web_pager(scrape_item.url, next_page_selector):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, selector, attribute, results=results):
+                self.create_task(coro_factory(new_scrape_item))
+
     async def web_pager(
         self, url: AbsoluteHttpURL, next_page_selector: str | None = None, *, cffi: bool = False, **kwargs: Any
     ) -> AsyncGenerator[BeautifulSoup]:

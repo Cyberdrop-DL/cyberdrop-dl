@@ -22,7 +22,7 @@ class Selector:
 class EromeCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
-        "Profile": "/<>",
+        "Profile": "/<name>",
         "Search": "/search?q=<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.erome.com")
@@ -44,9 +44,13 @@ class EromeCrawler(Crawler):
     async def profile(self, scrape_item: ScrapeItem, name: str) -> None:
         title = self.create_title(name)
         scrape_item.setup_as_profile(title)
-        async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
-                self.create_task(self.run(new_scrape_item))
+        await self.crawl_children(scrape_item, Selector.ALBUM)
+
+    @error_handling_wrapper
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = self.create_title(f"{query} [search]")
+        scrape_item.setup_as_album(title)
+        await self.crawl_children(scrape_item, Selector.ALBUM)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
@@ -58,12 +62,3 @@ class EromeCrawler(Crawler):
         for _, link in self.iter_tags(soup, Selector.MEDIA, "src", results=results):
             self.create_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
-
-    @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
-        title = self.create_title(f"Search - {query}")
-        scrape_item.setup_as_album(title)
-
-        async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
-                self.create_task(self.run(new_scrape_item))
