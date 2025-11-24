@@ -60,7 +60,7 @@ class GirlsReleasedCrawler(Crawler):
         for image in set_.images:
             url = self.parse_url(image[3])
             new_scrape_item = scrape_item.create_child(url)
-            self.handle_external_links(new_scrape_item)
+            self.handle_external_links(new_scrape_item, reset=False)
             scrape_item.add_children()
 
     @error_handling_wrapper

@@ -7,12 +7,12 @@ TEST_CASES = [
                 "url": "re:imx.to",
                 "filename": "re:DSC_",
                 "download_folder": r"re:2025-11-19 - 152521 - Nike (GirlsReleased)",
-                "referer": "ANY",
+                "referer": "re:https://imx.to/i/",
                 "album_id": "152521",
                 "datetime": 1763542843,
             }
         ],
-        10,
+        64,
     ),
     (
         "https://girlsreleased.com/model/11975/Poppy",
