@@ -79,7 +79,7 @@ class PlaceHolderConfig:
 _placeholder_config = PlaceHolderConfig()
 
 
-class DbPathBuiler:
+class DBPathBuilder:
     @staticmethod
     def url(url: yarl.URL) -> str:
         return str(url.path)
@@ -127,7 +127,7 @@ class Crawler(ABC):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
 
-    create_db_path = staticmethod(DbPathBuiler.path)
+    create_db_path = staticmethod(DBPathBuilder.path)
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
