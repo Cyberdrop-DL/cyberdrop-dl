@@ -56,9 +56,33 @@ class EromeCrawler(Crawler):
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         results = await self.get_album_results(album_id)
         soup = await self.request_soup(scrape_item.url)
-        title = self.create_title(open_graph.title(soup), album_id)
+        name = open_graph.title(soup).removesuffix("- EroMe")
+        title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         for _, link in self.iter_tags(soup, Selector.MEDIA, "src", results=results):
             self.create_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
+
+
+class EromeFanCrawler(EromeCrawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Album": "/a/<album_id>",
+        "Profile": "/a/category/<name>",
+        "Search": "/search/<query>",
+    }
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://erome.fan")
+    DOMAIN: ClassVar[str] = "erome.fan"
+    FOLDER_DOMAIN: ClassVar[str] = "Erome.fan"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "a.next"
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["a", "category", name, *_]:
+                await self.profile(scrape_item, name)
+            case ["a", album_id, *_]:
+                return await self.album(scrape_item, album_id)
+            case ["search", query, *_]:
+                return await self.search(scrape_item, query)
+            case _:
+                raise ValueError

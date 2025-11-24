@@ -29,7 +29,7 @@ from .efukt import EfuktCrawler
 from .ehentai import EHentaiCrawler
 from .eightmuses import EightMusesCrawler
 from .eporner import EpornerCrawler
-from .erome import EromeCrawler
+from .erome import EromeCrawler, EromeFanCrawler
 from .fapello import FapelloCrawler
 from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
