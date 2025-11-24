@@ -82,7 +82,8 @@ _placeholder_config = PlaceHolderConfig()
 class DBPathBuilder:
     @staticmethod
     def url(url: yarl.URL) -> str:
-        return str(url.path)
+        return str(url)
+
 
     @staticmethod
     def name(url: yarl.URL) -> str:
