@@ -22,7 +22,7 @@ TEST_CASES = [
                 "download_folder": "re:Poppy [model] (GirlsReleased)/",
             }
         ],
-        10,
+        615,
     ),
     (
         "https://girlsreleased.com/site/modelsofboston.club/model/12022/Ashley",
@@ -32,6 +32,6 @@ TEST_CASES = [
                 "download_folder": "re:modelsofboston.club [site] (GirlsReleased)/Ashley [model]/",
             }
         ],
-        10,
+        108,
     ),
 ]
