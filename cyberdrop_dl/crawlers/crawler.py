@@ -7,6 +7,7 @@ import inspect
 import re
 from abc import ABC, abstractmethod
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -80,10 +81,6 @@ _placeholder_config = PlaceHolderConfig()
 
 class DbPathBuiler:
     @staticmethod
-    def path(url: yarl.URL) -> str:
-        return url.path
-
-    @staticmethod
     def url(url: yarl.URL) -> str:
         return str(url.path)
 
@@ -92,12 +89,16 @@ class DbPathBuiler:
         return url.name
 
     @staticmethod
-    def path_qs_frag(url: yarl.URL) -> str:
-        return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
+    def path(url: yarl.URL) -> str:
+        return url.path
 
     @staticmethod
     def path_qs(url: yarl.URL) -> str:
         return url.path_qs
+
+    @staticmethod
+    def path_qs_frag(url: yarl.URL) -> str:
+        return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
 
 
 class CrawlerInfo(NamedTuple):
@@ -126,7 +127,7 @@ class Crawler(ABC):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
 
-    create_db_path: Callable[[yarl.URL], str] = DbPathBuiler.path
+    create_db_path = staticmethod(DbPathBuiler.path)
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
@@ -448,7 +449,8 @@ class Crawler(ABC):
 
         This method is called automatically on a created media item,
         but Crawler code can use it to skip unnecessary requests"""
-        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, referer)
+        db_path = self.create_db_path(url)
+        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, referer, db_path)
         if check_complete:
             log(f"Skipping {url} as it has already been downloaded", 10)
             self.manager.progress_manager.download_progress.add_previously_completed()
@@ -558,7 +560,7 @@ class Crawler(ABC):
         """Checks whether an album has completed given its domain and album id."""
         if not album_results:
             return False
-        url_path = MediaItem.create_db_path(url, self.DOMAIN)
+        url_path = self.create_db_path(url)
         if url_path in album_results and album_results[url_path] != 0:
             log(f"Skipping {url} as it has already been downloaded")
             self.manager.progress_manager.download_progress.add_previously_completed()
