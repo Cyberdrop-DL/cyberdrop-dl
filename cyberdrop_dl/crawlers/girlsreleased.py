@@ -55,6 +55,7 @@ class GirlsReleasedCrawler(Crawler):
         api_url = self.PRIMARY_URL / "api/0.2/set" / set_id
         set_ = Set(**(await self.request_json(api_url))["set"])
         title = self.create_separate_post_title(set_.name, set_id, set_.date)
+        title = self.create_title(title, set_id)
         scrape_item.setup_as_album(title, album_id=set_id)
         scrape_item.possible_datetime = set_.date
         for image in set_.images:
