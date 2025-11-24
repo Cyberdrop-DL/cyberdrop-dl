@@ -178,6 +178,6 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
             item = ScrapeItem(url=parse_url(test_case.input_url))
             await crawler.fetch(item)
 
-    results: list[MediaItem] = [func.call_args_list[0][0]]
+    results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
     func.assert_awaited()
     _validate_results(crawler, test_case, results)
