@@ -180,6 +180,8 @@ class MediaItem:
 
     def __post_init__(self) -> None:
         self.db_path = self.create_db_path(self.url, self.domain)
+        if self.url.scheme == "metadata":
+            self.db_path = ""
 
     @staticmethod
     def create_db_path(url: yarl.URL, domain: str) -> str:

@@ -78,6 +78,28 @@ class PlaceHolderConfig:
 _placeholder_config = PlaceHolderConfig()
 
 
+class DbPathBuiler:
+    @staticmethod
+    def path(url: yarl.URL) -> str:
+        return url.path
+
+    @staticmethod
+    def url(url: yarl.URL) -> str:
+        return str(url.path)
+
+    @staticmethod
+    def name(url: yarl.URL) -> str:
+        return url.name
+
+    @staticmethod
+    def path_qs_frag(url: yarl.URL) -> str:
+        return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
+
+    @staticmethod
+    def path_qs(url: yarl.URL) -> str:
+        return url.path_qs
+
+
 class CrawlerInfo(NamedTuple):
     site: str
     primary_url: URL
@@ -103,6 +125,8 @@ class Crawler(ABC):
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+
+    create_db_path: Callable[[yarl.URL], str] = DbPathBuiler.path
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
