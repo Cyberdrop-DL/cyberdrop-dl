@@ -84,7 +84,6 @@ class DBPathBuilder:
     def url(url: yarl.URL) -> str:
         return str(url)
 
-
     @staticmethod
     def name(url: yarl.URL) -> str:
         return url.name
