@@ -101,8 +101,14 @@ def test_invalid_date_format(row) -> None:
             "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642?k=1&autoPlay=1&oa=0&asi=1",
             "/embed-2/v3/e-1/TZb4gRkOQ642",
         ),
-        ("https://www.mediafire.com/file/ctppmpm7giofsgv/ADOFAI.vpk", "ADOFAI.vpk"),
-        ("https://mega.nz/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F", "/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F"),
+        (
+            "https://www.mediafire.com/file/ctppmpm7giofsgv/ADOFAI.vpk",
+            "ADOFAI.vpk",
+        ),
+        (
+            "https://mega.nz/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F",
+            "/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F",
+        ),
         (
             "https://mega.nz/folder/oZZxyBrY#oU4jASLPpJVvqGHJIMRcgQ/file/IYZABDGY",
             "/folder/oZZxyBrY#oU4jASLPpJVvqGHJIMRcgQ/file/IYZABDGY",
@@ -110,6 +116,18 @@ def test_invalid_date_format(row) -> None:
         (
             "https://c.bunkr-cache.se/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
             "/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
+        ),
+        (
+            "https://e-hentai.network/h/1bb8b499a5a1a21f9e25e2c42513f310c20e83a9-115314-1280-720-wbp/keystamp=1763995200-3f6832af21;fileindex=169742365;xres=1280/1_2.webp",
+            "/h/1bb8b499a5a1a21f9e25e2c42513f310c20e83a9-115314-1280-720-wbp",
+        ),
+        (
+            "https://app.koofr.net/content/links/0a00467b-2901-4213-8d71-44fad80de82d/files/get/Cyberdrop-DL.v8.4.0.zip?path=/Cyberdrop-DL.v8.4.0.zip",
+            "/content/links/0a00467b-2901-4213-8d71-44fad80de82d/files/get/Cyberdrop-DL.v8.4.0.zip?path=/Cyberdrop-DL.v8.4.0.zip",
+        ),
+        (
+            "https://transfer.it/cs/g?x=yhWbjogXxRLL&n=qgxVBD5D&fn=start_linux.sh",
+            "/cs/g?x=yhWbjogXxRLL&n=qgxVBD5D&fn=start_linux.sh",
         ),
     ],
 )
