@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Selector:
     ALBUM = "a.album-link"
     IMAGES = ".media-group img.img-front"
-    VIDEOS = ".media-group video source"
+    VIDEOS = ".media-group .video video > source"
     MEDIA = f"{IMAGES}, {VIDEOS}"
     NEXT_PAGE = 'a[rel="next"]'
 
