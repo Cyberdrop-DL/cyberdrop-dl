@@ -107,6 +107,7 @@ from .spankbang import SpankBangCrawler
 from .streamable import StreamableCrawler
 from .streamtape import StreamtapeCrawler
 from .thisvid import ThisVidCrawler
+from .thothub import ThotHubCrawler
 from .tiktok import TikTokCrawler
 from .tnaflix import TNAFlixCrawler
 from .tokyomotion import TokioMotionCrawler
