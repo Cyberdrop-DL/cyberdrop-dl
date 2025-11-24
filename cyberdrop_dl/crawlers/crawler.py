@@ -616,10 +616,12 @@ class Crawler(ABC):
         If provided, it will be used as a filter, to only yield items that has not been downloaded before"""
         album_results = results or {}
 
+        seen: set[str] = set()
         for tag in css.iselect(soup, selector):
             link_str: str | None = css.get_attr_or_none(tag, attribute)
-            if not link_str:
+            if not link_str or link_str in seen:
                 continue
+            seen.add(link_str)
             link = self.parse_url(link_str)
             if self.check_album_results(link, album_results):
                 continue
