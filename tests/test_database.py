@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.scraper import scrape_mapper
 from cyberdrop_dl.scraper.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.utils.utilities import parse_url
 
@@ -29,7 +30,7 @@ def item() -> ScrapeItem:
 
 @pytest.fixture
 def row() -> aiosqlite.Row:
-    return cast("aiosqlite.Row", _MOCK_ROW.copy())
+    return cast("aiosqlite.Row", _MOCK_ROW.copy())  # pyright: ignore[reportInvalidCast]
 
 
 @pytest.fixture
@@ -113,8 +114,11 @@ def test_invalid_date_format(row) -> None:
     ],
 )
 def test_create_db_path(url: str, expected: str) -> None:
+    crawlers = scrape_mapper.get_crawlers_mapping()
     url_ = parse_url(url)
-    path = MediaItem.create_db_path(url_, url_.host)
+    crawler = scrape_mapper.match_url_to_crawler(crawlers, url_)
+    assert crawler
+    path = crawler.create_db_path(url_)
     assert path == expected
 
 
