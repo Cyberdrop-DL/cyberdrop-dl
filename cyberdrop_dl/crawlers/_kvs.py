@@ -142,7 +142,8 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str | None = None) -> None:
-        soup = await self.request_soup(scrape_item.url)
+        url = scrape_item.url if self.DEFAULT_TRIM_URLS else scrape_item.url / ""
+        soup = await self.request_soup(url)
         if not album_id:
             js_text = css.select_one_get_text(soup, _SELECTORS.ALBUM_ID)
             album_id = get_text_between(js_text, "params['album_id'] =", ";")
