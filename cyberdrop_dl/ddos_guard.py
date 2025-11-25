@@ -99,7 +99,7 @@ class Anubis(DDosGuard):
         import time
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
-        max_workers = (os.process_cpu_count() or 1) // 2
+        max_workers = (os.cpu_count() or 1) // 2
         start_time = time.monotonic()
 
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -114,7 +114,7 @@ class Anubis(DDosGuard):
                         nonce, hash = result
                         elapsed = time.monotonic() - start_time
                         executor.shutdown(wait=False, cancel_futures=True)
-                        return _AnubisSolution(id, nonce, hash, max_workers, difficulty, elapsed)
+                        return _AnubisSolution(id, nonce, hash, difficulty, max_workers, elapsed)
 
             except TimeoutError:
                 return None
@@ -132,8 +132,8 @@ class _AnubisSolution:
     id: str
     nonce: int
     hash: str
-    workers: int
     difficulty: int
+    workers: int = dataclasses.field(compare=False)
     total_time: float = dataclasses.field(compare=False)
 
     @property

@@ -59,7 +59,7 @@ def test_solve_anubis_challenge() -> None:
         hash="00000e426afc08534b13bb3f75bad02dc20d73d70674b9dc174416cc7d3685e6",
         workers=2,
         difficulty=5,
-        total_time=1.7779469499364495,
+        total_time=0,
     )
 
 
