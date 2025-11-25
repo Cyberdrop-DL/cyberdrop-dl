@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import itertools
 import json
 import shutil
@@ -8,7 +9,6 @@ import subprocess
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from fractions import Fraction
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, TypeAlias, TypedDict, overload
 
@@ -39,7 +39,6 @@ class Args:
 
 _FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
 _FFPROBE_CALL_PREFIX = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-print_format", "json"
-_FFPROBE_AVAILABLE = False
 _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 
 
@@ -50,27 +49,26 @@ def check_is_available() -> None:
         raise RuntimeError("ffprobe is not available")
 
 
-@lru_cache
+@functools.cache
 def which_ffmpeg() -> str | None:
     return shutil.which("ffmpeg")
 
 
-@lru_cache
+@functools.cache
 def which_ffprobe() -> str | None:
-    global _FFPROBE_AVAILABLE
     try:
-        bin_path = shutil.which("ffprobe") or _builtin_ffprobe()
-        _FFPROBE_AVAILABLE = True  # pyright: ignore[reportConstantRedefinition]
-        return bin_path
+        return shutil.which("ffprobe") or _builtin_ffprobe()
     except RuntimeError:
         return
 
 
+@functools.cache
 def get_ffmpeg_version() -> str | None:
     if bin_path := which_ffmpeg():
         return _get_bin_version(bin_path)
 
 
+@functools.cache
 def get_ffprobe_version() -> str | None:
     if bin_path := which_ffprobe():
         return _get_bin_version(bin_path)
@@ -107,7 +105,7 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert _FFPROBE_AVAILABLE
+    assert which_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 
@@ -164,7 +162,6 @@ async def _merge(input_files: Sequence[Path], output_file: Path) -> SubProcessRe
     return await _run_command(command)
 
 
-@lru_cache
 def _get_bin_version(bin_path: str) -> str | None:
     try:
         cmd = bin_path, "-version"

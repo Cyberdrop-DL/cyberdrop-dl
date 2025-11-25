@@ -27,6 +27,7 @@ class File:
 class TransferItAPI(mega.MegaApi):
     def __init__(self, manager: Manager) -> None:
         super().__init__(manager)
+        # TODO: Use an URL on the base API
         self.entrypoint = "https://bt7.api.mega.co.nz/cs"
         self._url = AbsoluteHttpURL(self.entrypoint)
         self.shared_keys: mega.SharedkeysDict = {}

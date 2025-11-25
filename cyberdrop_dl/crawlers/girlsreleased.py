@@ -41,10 +41,12 @@ class GirlsReleasedCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["set", set_id]:
                 return await self.set(scrape_item, set_id)
-            case ["site" as category, name]:
-                return await self.category(scrape_item, category, name)
-            case ["model" as category, _, name]:
-                return await self.category(scrape_item, category, name)
+            case ["site", domain]:
+                return await self.site(scrape_item, domain)
+            case ["site", domain, "model", model_id, model_name]:
+                return await self.site(scrape_item, domain, model_id, model_name)
+            case ["model", model_id, name]:
+                return await self.model(scrape_item, model_id, name)
             case _:
                 raise ValueError
 
@@ -53,22 +55,42 @@ class GirlsReleasedCrawler(Crawler):
         api_url = self.PRIMARY_URL / "api/0.2/set" / set_id
         set_ = Set(**(await self.request_json(api_url))["set"])
         title = self.create_separate_post_title(set_.name, set_id, set_.date)
+        title = self.create_title(title, set_id)
         scrape_item.setup_as_album(title, album_id=set_id)
         scrape_item.possible_datetime = set_.date
         for image in set_.images:
             url = self.parse_url(image[3])
             new_scrape_item = scrape_item.create_child(url)
-            self.handle_external_links(new_scrape_item)
+            self.handle_external_links(new_scrape_item, reset=False)
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def category(self, scrape_item: ScrapeItem, category: str, name: str) -> None:
-        api_base = self.PRIMARY_URL / "api/0.3/sets" / category / name / "page"
-        title = self.create_title(f"{name} [{category}]")
+    async def model(self, scrape_item: ScrapeItem, model_id: str, model_name: str) -> None:
+        title = self.create_title(f"{model_name} [model]")
         scrape_item.setup_as_profile(title)
+        api_base = self.PRIMARY_URL / "api/0.3/sets/model" / model_id
+        await self._pagination(scrape_item, api_base)
 
+    @error_handling_wrapper
+    async def site(
+        self,
+        scrape_item: ScrapeItem,
+        domain: str,
+        model_id: str | None = None,
+        model_name: str | None = None,
+    ) -> None:
+        title = self.create_title(f"{domain} [site]")
+        scrape_item.setup_as_profile(title)
+        api_base = self.PRIMARY_URL / "api/0.3/sets/site" / domain
+        if model_id and model_name:
+            api_base = api_base / "model" / model_id
+            scrape_item.add_to_parent_title(f"{model_name} [model]")
+
+        await self._pagination(scrape_item, api_base)
+
+    async def _pagination(self, scrape_item: ScrapeItem, api_base: AbsoluteHttpURL) -> None:
         for page in itertools.count(0):
-            api_url = api_base / str(page)
+            api_url = api_base / f"page/{page}"
             sets: list[list[int]] = (await self.request_json(api_url))["sets"]
 
             for set_ in sets:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from functools import lru_cache
+import functools
 from typing import NamedTuple
 
 from rich.console import Group
@@ -168,7 +168,7 @@ class ScrapeStatsProgress(StatsProgress):
             self.unsupported_urls_skipped += 1
 
 
-@lru_cache
+@functools.lru_cache
 def get_pretty_failure(failure: str) -> str:
     with contextlib.suppress(KeyError):
         return FAILURE_OVERRIDES[failure]

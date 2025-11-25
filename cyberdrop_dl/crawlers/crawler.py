@@ -22,8 +22,7 @@ from cyberdrop_dl.data_structures.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, copy_signature
 from cyberdrop_dl.downloader.downloader import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
-from cyberdrop_dl.utils import css, m3u8
-from cyberdrop_dl.utils.dates import TimeStamp, parse_human_date, to_timestamp
+from cyberdrop_dl.utils import css, dates, m3u8
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.strings import safe_format
 from cyberdrop_dl.utils.utilities import (
@@ -509,9 +508,10 @@ class Crawler(ABC):
         """Checks whether an album has completed given its domain and album id."""
         return await self.manager.db_manager.history_table.check_album(self.DOMAIN, album_id)
 
-    def handle_external_links(self, scrape_item: ScrapeItem) -> None:
+    def handle_external_links(self, scrape_item: ScrapeItem, reset: bool = True) -> None:
         """Maps external links to the scraper class."""
-        scrape_item.reset()
+        if reset:
+            scrape_item.reset()
         self.create_task(self.manager.scrape_mapper.filter_and_send_to_crawler(scrape_item))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -702,44 +702,26 @@ class Crawler(ABC):
         await self.handle_file(link, scrape_item, filename, ext)
 
     @final
-    def parse_date(self, date_or_datetime: str, format: str | None = None, /) -> TimeStamp | None:
-        if parsed_date := self._parse_date(date_or_datetime, format):
-            return to_timestamp(parsed_date)
+    @classmethod
+    def parse_date(cls, date_or_datetime: str, format: str | None = None, /) -> dates.TimeStamp | None:
+        if parsed_date := cls._parse_date(date_or_datetime, format):
+            return dates.to_timestamp(parsed_date)
 
     @final
-    def parse_iso_date(self, date_or_datetime: str, /) -> TimeStamp | None:
-        if parsed_date := self._parse_date(date_or_datetime, None, iso=True):
-            return to_timestamp(parsed_date)
+    @classmethod
+    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp | None:
+        if parsed_date := cls._parse_date(date_or_datetime, None, iso=True):
+            return dates.to_timestamp(parsed_date)
 
+    @final
     @classmethod
     def _parse_date(
         cls, date_or_datetime: str, format: str | None = None, /, *, iso: bool = False
     ) -> datetime.datetime | None:
-        assert not (iso and format), "Only `format` or `iso` can be used, not both"
-        msg = f"Date parsing for {cls.DOMAIN} seems to be broken"
-        if not date_or_datetime:
-            log(f"{msg}: Unable to extract date", bug=True)
-            return
-
-        if format:
-            assert not (format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S")), (
-                f"{msg} Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead"
-            )
         try:
-            if iso:
-                parsed_date = datetime.datetime.fromisoformat(date_or_datetime)
-            elif format:
-                parsed_date = datetime.datetime.strptime(date_or_datetime, format)
-            else:
-                parsed_date = parse_human_date(date_or_datetime)
-
-            if parsed_date:
-                return parsed_date
-
-        except Exception as e:
-            msg = f"{msg}. {date_or_datetime = } {iso = } {format = }: {e!r}"
-
-        log(msg, bug=True)
+            return dates.parse(date_or_datetime, format, iso=iso)
+        except ValueError as e:
+            log(f"Date parsing for {cls.DOMAIN} seems to be broken: {e}", bug=True)
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         async with self.request(url) as resp:

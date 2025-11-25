@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import functools
 import inspect
 import itertools
 import os
@@ -10,7 +11,7 @@ import re
 import sys
 import unicodedata
 from collections.abc import Generator, Mapping
-from functools import lru_cache, partial, wraps
+from functools import partial, wraps
 from pathlib import Path
 from stat import S_ISREG
 from typing import (
@@ -454,7 +455,7 @@ async def close_if_defined(obj: C) -> C:
     return constants.NOT_DEFINED
 
 
-@lru_cache
+@functools.cache
 def get_system_information() -> str:
     def get_common_name() -> str:
         system = platform.system()
