@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import hashlib
 import json
@@ -76,7 +77,7 @@ class CloudFlareTurnstile(DDosGuard):
 
 
 class Anubis(DDosGuard):
-    TITLES = "Making sure you're not a bot!"
+    TITLES = ("Making sure you're not a bot!",)
     CHALLENGE = "script#anubis_challenge:-soup-contains(algorithm)"
     SELECTOR = ", ".join(
         (
@@ -96,7 +97,11 @@ class Anubis(DDosGuard):
             )
 
     @classmethod
-    def solve(cls, id: str, challenge: str, difficulty: int, *, timeout: int | None = 30) -> _AnubisSolution | None:
+    async def solve(cls, id: str, challenge: str, difficulty: int) -> _AnubisSolution | None:
+        return await asyncio.to_thread(cls._solve, id, challenge, difficulty)
+
+    @classmethod
+    def _solve(cls, id: str, challenge: str, difficulty: int, *, timeout: int | None = 30) -> _AnubisSolution | None:
         import time
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
