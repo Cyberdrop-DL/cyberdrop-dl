@@ -15,11 +15,11 @@ def today_at_midnight() -> datetime.datetime:
 
 def test_parse_today_at_midnight() -> None:
     expected = today_at_midnight()
-    result = dates.parse_human_date("today at midnight")
+    result = dates.parse_human("today at midnight")
     assert expected == result
 
 
 def test_parse_date_with_no_year() -> None:
     expected = today_at_midnight().replace(month=10, day=14)
-    result = dates.parse_human_date("oct 14")
+    result = dates.parse_human("oct 14")
     assert expected == result

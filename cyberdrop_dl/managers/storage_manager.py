@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import itertools
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, NamedTuple
 
@@ -217,7 +217,7 @@ class StorageManager:
             await asyncio.sleep(_CHECK_PERIOD)
 
 
-@lru_cache
+@functools.lru_cache
 def _get_mount_point(folder: Path, all_mounts: tuple[Path, ...]) -> Path | None:
     # Cached for performance.
     # It's not an expensive operation nor IO blocking, but it's very common for multiple files to share the same download folder

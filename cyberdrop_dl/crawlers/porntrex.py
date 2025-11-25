@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-class Selectors:
+class Selector:
     VIDEO_JS = "div.video-holder script:-soup-contains('var flashvars')"
     NEXT_PAGE = "div#list_videos_videos_pagination li.next"
     USER_NAME = "div.user-name"
@@ -30,10 +30,7 @@ class Selectors:
     VIDEOS_OR_ALBUMS = f"{VIDEOS}, {ALBUMS}"
 
 
-COLLECTION_PARTS = "tags", "categories", "models", "playlists", "search", "members"
 TITLE_TRASH = "Free HD ", "Most Relevant ", "New ", "Videos", "Porn", "for:", "New Videos", "Tagged with"
-_SELECTORS = Selectors()
-
 PRIMARY_URL = AbsoluteHttpURL("https://www.porntrex.com")
 
 
@@ -49,52 +46,49 @@ class PorntrexCrawler(Crawler):
         "Search": "/search/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "porntrex"
-    _RATE_LIMIT = 3, 10
+    DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
             scrape_item.url = scrape_item.url / ""
 
-        if len(scrape_item.url.parts) >= 3:
-            if "video" in scrape_item.url.parts:
-                return await self.video(scrape_item)
-            if any(p in scrape_item.url.parts for p in COLLECTION_PARTS):
-                return await self.collection(scrape_item)
-            if "albums" in scrape_item.url.parts:
-                return await self.album(scrape_item)
-
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case ["video", video_id, *_]:
+                return await self.video(scrape_item, video_id)
+            case ["tags" | "categories" | "models" | "playlists" | "search" | "members" as type_, _, *_]:
+                return await self.collection(scrape_item, type_)
+            case ["albums", album_id, *_]:
+                return await self.album(scrape_item, album_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def album(self, scrape_item: ScrapeItem) -> None:
-        album_id = scrape_item.url.parts[2]
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        if "This album is a private album" in soup.text:
+        if "This album is a private album" in soup.get_text(strip=True):
             raise ScrapeError(401, "Private album")
 
-        title = css.select_one_get_text(soup, _SELECTORS.ALBUM_TITLE)
+        title = css.select_one_get_text(soup, Selector.ALBUM_TITLE)
         title = self.create_title(title, album_id)
-        scrape_item.setup_as_album(title)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-        for _, link in self.iter_tags(soup, _SELECTORS.IMAGES):
-            filename, ext = self.get_filename_and_ext(link.name)
-            debrid_link = link / ""  # iter_tags always trims URLs
-            canonical_url = PRIMARY_URL / "albums" / album_id / filename
-            await self.handle_file(canonical_url, scrape_item, filename, ext, debrid_link=debrid_link)
+        for _, link in self.iter_tags(soup, Selector.IMAGES):
+            await self.direct_file(scrape_item, link)
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
-        video_id = scrape_item.url.parts[2]
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        if not scrape_item.url.name:
+            scrape_item.url = scrape_item.url.parent
+
         canonical_url = PRIMARY_URL / "video" / video_id
         if await self.check_complete_from_referer(canonical_url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-
         video = extract_kvs_video(self, soup)
         link = video.url
         scrape_item.url = canonical_url
@@ -106,37 +100,31 @@ class PorntrexCrawler(Crawler):
         )
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem) -> None:
+    async def collection(self, scrape_item: ScrapeItem, collection_type: str) -> None:
         soup = await self.request_soup(scrape_item.url)
 
         if "models" in scrape_item.url.parts:
-            title: str = css.select_one_get_text(soup, _SELECTORS.MODEL_NAME).title()
+            title: str = css.select_one_get_text(soup, Selector.MODEL_NAME).title()
         elif "members" in scrape_item.url.parts:
-            title: str = css.select_one_get_text(soup, _SELECTORS.USER_NAME)
+            title: str = css.select_one_get_text(soup, Selector.USER_NAME)
         elif "latest-updates" in scrape_item.url.parts:
             title: str = "Latest Updates"
         else:
-            title = css.select_one_get_text(soup, _SELECTORS.TITLE)
+            title = css.select_one_get_text(soup, Selector.TITLE)
 
         for trash in TITLE_TRASH:
             title = title.replace(trash, "").strip()
 
-        if "categories" in scrape_item.url.parts:
-            collection_type = "category"
-        elif "members" in scrape_item.url.parts:
-            collection_type = "user"
-        else:
-            collection_type = next(p for p in COLLECTION_PARTS if p in scrape_item.url.parts).removesuffix("s")
-
+        collection_type = collection_type.removesuffix("s")
         title, *_ = title.split(",Page")
         title = self.create_title(f"{title} [{collection_type}]")
         scrape_item.setup_as_album(title)
-        if last_page_tag := soup.select(_SELECTORS.LAST_PAGE):
+        if last_page_tag := soup.select(Selector.LAST_PAGE):
             last_page = int(last_page_tag[-1].get_text(strip=True))
         else:
             last_page = 1
 
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.VIDEOS_OR_ALBUMS):
+        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
             self.create_task(self.run(new_scrape_item))
 
         await self.proccess_additional_pages(scrape_item, last_page)
@@ -149,7 +137,7 @@ class PorntrexCrawler(Crawler):
             albums_url = scrape_item.url / "albums"
             soup = await self.request_soup(albums_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.ALBUMS, new_title_part="albums"):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS, new_title_part="albums"):
                 self.create_task(self.run(new_scrape_item))
 
     async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:
@@ -189,5 +177,5 @@ class PorntrexCrawler(Crawler):
             page_url = page_url.update_query({from_param_name: page})
             soup = await self.request_soup(page_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.VIDEOS_OR_ALBUMS):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
                 self.create_task(self.run(new_scrape_item))
