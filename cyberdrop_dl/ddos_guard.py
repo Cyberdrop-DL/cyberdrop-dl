@@ -123,9 +123,11 @@ class Anubis(DDosGuard):
                     executor.shutdown(wait=False, cancel_futures=True)
                     return _AnubisSolution(challenge.id, nonce, hash, challenge.difficulty, max_workers, elapsed)
 
-            else:
-                elapsed = time.monotonic() - start_time
-                raise DDOSGuardError(f"Unable to solve challenge after {elapsed:0.2f} seconds: {challenge}")
+            except TimeoutError:
+                pass
+            
+            elapsed = time.monotonic() - start_time
+            raise DDOSGuardError(f"Unable to solve challenge after {elapsed:0.2f} seconds: {challenge}")
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
