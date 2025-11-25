@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import hashlib
 import json
@@ -17,7 +19,7 @@ class _Response(Protocol):
     async def text(self) -> str: ...
 
 
-async def check(content: _Response | str, /) -> BeautifulSoup | None:
+async def check(content: _Response | str, /) -> None:
     if isinstance(content, str):
         soup = BeautifulSoup(content, "html.parser")
 
@@ -71,6 +73,53 @@ class _CloudflareTurnstile(_DDosGuard):
     )
 
 
+class _Anubis(_DDosGuard):
+    TITLES = "Making sure you're not a bot!"
+    CHALLENGE = "script#anubis_challenge:-soup-contains(algorithm)"
+    SELECTOR = ", ".join(
+        (
+            CHALLENGE,
+            "p:-soup-contains-own(the administrator of this website has set up Anubis to protect the server against the scourge of AI)",
+        ),
+    )
+
+    @classmethod
+    def parse_challenge(cls, soup: BeautifulSoup) -> _AnubisChallenge | None:
+        if script := soup.select_one(cls.CHALLENGE):
+            anubis = json.loads(script.get_text(strip=True))
+            return _AnubisChallenge(
+                difficulty=anubis["rules"]["difficulty"],
+                data=anubis["challenge"]["randomData"],
+                id=anubis["challenge"]["id"],
+            )
+
+    @classmethod
+    def solve(cls, id: str, challenge: str, difficulty: int, *, timeout: int | None = 30) -> _AnubisSolution | None:
+        import os
+        import time
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+
+        max_workers = (os.process_cpu_count() or 1) // 2
+        start_time = time.monotonic()
+
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(_anubis_worker, idx, max_workers, challenge, difficulty) for idx in range(max_workers)
+            ]
+
+            try:
+                for future in as_completed(futures, timeout=timeout):
+                    result = future.result()
+                    if result is not None:
+                        nonce, hash = result
+                        elapsed = time.monotonic() - start_time
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return _AnubisSolution(id, nonce, hash, max_workers, difficulty, elapsed)
+
+            except TimeoutError:
+                return None
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class _AnubisChallenge:
     id: str
@@ -96,53 +145,6 @@ class _AnubisSolution:
             nonce=self.nonce,
             elapsedTime=int(self.total_time * 1000),
         )
-
-
-class _Anubis(_DDosGuard):
-    TITLES = "Making sure you're not a bot!"
-    CHALLENGE = "script#anubis_challenge:-soup-contains(algorithm)"
-    SELECTOR = ", ".join(
-        (
-            CHALLENGE,
-            "p:-soup-contains-own(the administrator of this website has set up Anubis to protect the server against the scourge of AI)",
-        ),
-    )
-
-    @classmethod
-    def parse_challenge(cls, soup: BeautifulSoup) -> _AnubisChallenge | None:
-        if script := soup.select_one(cls.CHALLENGE):
-            anubis = json.loads(script.get_text(strip=True))
-            return _AnubisChallenge(
-                difficulty=anubis["rules"]["difficulty"],
-                data=anubis["challenge"]["randomData"],
-                id=anubis["challenge"]["id"],
-            )
-
-    @classmethod
-    def solve(cls, id: str, challenge: str, difficulty: int, timeout: int | None = 30) -> _AnubisSolution | None:
-        import os
-        import time
-        from concurrent.futures import ProcessPoolExecutor, as_completed
-
-        max_workers = (os.process_cpu_count() or 1) // 2
-        start_time = time.monotonic()
-
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(_anubis_worker, idx, max_workers, challenge, difficulty) for idx in range(max_workers)
-            ]
-
-            try:
-                for future in as_completed(futures, timeout=timeout):
-                    result = future.result()
-                    if result is not None:
-                        nonce, hash = result
-                        elapsed = time.monotonic() - start_time
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        return _AnubisSolution(id, nonce, hash, max_workers, difficulty, elapsed)
-
-            except TimeoutError:
-                return None
 
 
 def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tuple[int, str] | None:

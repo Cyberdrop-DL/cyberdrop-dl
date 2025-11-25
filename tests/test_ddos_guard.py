@@ -1,9 +1,10 @@
+import pytest
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl import ddos_guard
+from cyberdrop_dl.exceptions import DDOSGuardError
 
-anubis_soup = BeautifulSoup(
-    """
+anubis_html = """
     <!doctype html>
     <html lang="en">
     <head>
@@ -30,9 +31,8 @@ anubis_soup = BeautifulSoup(
         </main>
     </body>
     </html>
-""",
-    "html.parser",
-)
+"""
+anubis_soup = BeautifulSoup(anubis_html, "html.parser")
 
 
 def test_anubis_detection() -> None:
@@ -61,3 +61,8 @@ def test_solve_anubis_challenge() -> None:
         difficulty=5,
         total_time=1.7779469499364495,
     )
+
+
+async def test_ddos_response_should_raise_ddos_guard_error() -> None:
+    with pytest.raises(DDOSGuardError):
+        await ddos_guard.check(anubis_html)
