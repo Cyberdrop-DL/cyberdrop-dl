@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import os
+import sys
 from typing import Protocol
 
 import yarl
@@ -95,11 +97,10 @@ class Anubis(DDosGuard):
 
     @classmethod
     def solve(cls, id: str, challenge: str, difficulty: int, *, timeout: int | None = 30) -> _AnubisSolution | None:
-        import os
         import time
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
-        max_workers = (os.cpu_count() or 1) // 2
+        max_workers = cpu_count() // 2
         start_time = time.monotonic()
 
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -155,3 +156,19 @@ def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tu
         if hash.startswith(target):
             return nonce, hash
         nonce += step
+
+
+if sys.platform not in ("win32", "darwin"):
+
+    def cpu_count() -> int:
+        # try to get actual physical cores available to us
+        try:
+            return len(os.sched_getaffinity(0))
+        except Exception:
+            return os.cpu_count() or 1
+
+
+else:
+
+    def cpu_count() -> int:
+        return os.cpu_count() or 1
