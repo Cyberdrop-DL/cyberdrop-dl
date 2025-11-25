@@ -97,33 +97,35 @@ class Anubis(DDosGuard):
             )
 
     @classmethod
-    async def solve(cls, id: str, challenge: str, difficulty: int) -> _AnubisSolution | None:
-        return await asyncio.to_thread(cls._solve, id, challenge, difficulty)
+    async def solve(cls, challenge: _AnubisChallenge) -> _AnubisSolution:
+        return await asyncio.to_thread(cls._solve, challenge)
 
     @classmethod
-    def _solve(cls, id: str, challenge: str, difficulty: int, *, timeout: int | None = 30) -> _AnubisSolution | None:
+    def _solve(cls, challenge: _AnubisChallenge, *, timeout: int | None = 30) -> _AnubisSolution:
+        import multiprocessing as mp
         import time
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
-        max_workers = cpu_count() // 2
+        max_workers = min(cpu_count() // 2, 1)
         start_time = time.monotonic()
 
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context("spawn")) as executor:
             futures = [
-                executor.submit(_anubis_worker, idx, max_workers, challenge, difficulty) for idx in range(max_workers)
+                executor.submit(_anubis_worker, idx, max_workers, challenge.data, challenge.difficulty)
+                for idx in range(max_workers)
             ]
 
-            try:
-                for future in as_completed(futures, timeout=timeout):
-                    result = future.result()
-                    if result is not None:
-                        nonce, hash = result
-                        elapsed = time.monotonic() - start_time
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        return _AnubisSolution(id, nonce, hash, difficulty, max_workers, elapsed)
+            for future in as_completed(futures, timeout=timeout):
+                result = future.result()
+                if result is not None:
+                    nonce, hash = result
+                    elapsed = time.monotonic() - start_time
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    return _AnubisSolution(challenge.id, nonce, hash, challenge.difficulty, max_workers, elapsed)
 
-            except TimeoutError:
-                return None
+            else:
+                elapsed = time.monotonic() - start_time
+                raise DDOSGuardError(f"Unable to solve challenge after {elapsed:0.2f} seconds: {challenge}")
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -145,7 +147,7 @@ class _AnubisSolution:
     @property
     def url(self) -> yarl.URL:
         # this URl is relative to the origin url
-        return yarl.URL("/anubis/api/pass-challenge").with_query(
+        return yarl.URL("/.within.website/x/cmd/anubis/api/pass-challenge").with_query(
             id=self.id,
             response=self.hash,
             nonce=self.nonce,
@@ -163,14 +165,10 @@ def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tu
         nonce += step
 
 
-if sys.platform not in ("win32", "darwin"):
+if sys.platform not in ("win32", "darwin") and hasattr(os, "sched_getaffinity"):
 
     def cpu_count() -> int:
-        # try to get actual physical cores available to us
-        try:
-            return len(os.sched_getaffinity(0))
-        except Exception:
-            return os.cpu_count() or 1
+        return len(os.sched_getaffinity(0))
 
 
 else:

@@ -50,9 +50,9 @@ def test_anubis_parse_challenge() -> None:
 
 
 async def test_solve_anubis_challenge() -> None:
-    anubis = ddos_guard.Anubis.parse_challenge(anubis_soup)
-    assert anubis
-    solution = await ddos_guard.Anubis.solve(anubis.id, anubis.data, anubis.difficulty)
+    challenge = ddos_guard.Anubis.parse_challenge(anubis_soup)
+    assert challenge
+    solution = await ddos_guard.Anubis.solve(challenge)
     assert solution == ddos_guard._AnubisSolution(
         id="019abb13-2859-7587-bec3-16e0a3f67ce9",
         nonce=1676094,
