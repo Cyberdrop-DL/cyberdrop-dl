@@ -32,12 +32,12 @@ async def check(content: _Response | str, /) -> None:
         except UnicodeDecodeError:
             return
 
-    for protection in (_DDosGuard, _CloudflareTurnstile, _Anubis):
+    for protection in (DDosGuard, CloudFlareTurnstile, Anubis):
         if protection.check(soup):
-            raise DDOSGuardError(f"{protection.__name__.removeprefix('_')} detected")
+            raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
 
 
-class _DDosGuard:
+class DDosGuard:
     TITLES = "Just a moment...", "DDoS-Guard"
     SELECTOR = ", ".join(
         (
@@ -61,7 +61,7 @@ class _DDosGuard:
         return bool(soup.select_one(cls.SELECTOR))
 
 
-class _CloudflareTurnstile(_DDosGuard):
+class CloudFlareTurnstile(DDosGuard):
     TITLES = "Simpcity Cuck Detection", "Attention Required! | Cloudflare", "Sentinel CAPTCHA"
     SELECTOR = ", ".join(
         (
@@ -73,7 +73,7 @@ class _CloudflareTurnstile(_DDosGuard):
     )
 
 
-class _Anubis(_DDosGuard):
+class Anubis(DDosGuard):
     TITLES = "Making sure you're not a bot!"
     CHALLENGE = "script#anubis_challenge:-soup-contains(algorithm)"
     SELECTOR = ", ".join(
