@@ -115,17 +115,18 @@ class Anubis(DDosGuard):
                 for idx in range(max_workers)
             ]
 
-            for future in as_completed(futures, timeout=timeout):
-                result = future.result()
-                if result is not None:
-                    nonce, hash = result
-                    elapsed = time.monotonic() - start_time
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    return _AnubisSolution(challenge.id, nonce, hash, challenge.difficulty, max_workers, elapsed)
+            try:
+                for future in as_completed(futures, timeout=timeout):
+                    result = future.result()
+                    if result is not None:
+                        nonce, hash = result
+                        elapsed = time.monotonic() - start_time
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return _AnubisSolution(challenge.id, nonce, hash, challenge.difficulty, max_workers, elapsed)
 
             except TimeoutError:
                 pass
-            
+
             elapsed = time.monotonic() - start_time
             raise DDOSGuardError(f"Unable to solve challenge after {elapsed:0.2f} seconds: {challenge}")
 
