@@ -7,6 +7,7 @@ import inspect
 import re
 from abc import ABC, abstractmethod
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -77,6 +78,28 @@ class PlaceHolderConfig:
 _placeholder_config = PlaceHolderConfig()
 
 
+class DBPathBuilder:
+    @staticmethod
+    def url(url: yarl.URL) -> str:
+        return str(url)
+
+    @staticmethod
+    def name(url: yarl.URL) -> str:
+        return url.name
+
+    @staticmethod
+    def path(url: yarl.URL) -> str:
+        return url.path
+
+    @staticmethod
+    def path_qs(url: yarl.URL) -> str:
+        return url.path_qs
+
+    @staticmethod
+    def path_qs_frag(url: yarl.URL) -> str:
+        return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
+
+
 class CrawlerInfo(NamedTuple):
     site: str
     primary_url: URL
@@ -102,6 +125,8 @@ class Crawler(ABC):
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+
+    create_db_path = staticmethod(DBPathBuilder.path)
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
@@ -423,7 +448,8 @@ class Crawler(ABC):
 
         This method is called automatically on a created media item,
         but Crawler code can use it to skip unnecessary requests"""
-        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, referer)
+        db_path = self.create_db_path(url)
+        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, referer, db_path)
         if check_complete:
             log(f"Skipping {url} as it has already been downloaded", 10)
             self.manager.progress_manager.download_progress.add_previously_completed()
@@ -534,7 +560,7 @@ class Crawler(ABC):
         """Checks whether an album has completed given its domain and album id."""
         if not album_results:
             return False
-        url_path = MediaItem.create_db_path(url, self.DOMAIN)
+        url_path = self.create_db_path(url)
         if url_path in album_results and album_results[url_path] != 0:
             log(f"Skipping {url} as it has already been downloaded")
             self.manager.progress_manager.download_progress.add_previously_completed()
@@ -616,10 +642,12 @@ class Crawler(ABC):
         If provided, it will be used as a filter, to only yield items that has not been downloaded before"""
         album_results = results or {}
 
+        seen: set[str] = set()
         for tag in css.iselect(soup, selector):
             link_str: str | None = css.get_attr_or_none(tag, attribute)
-            if not link_str:
+            if not link_str or link_str in seen:
                 continue
+            seen.add(link_str)
             link = self.parse_url(link_str)
             if self.check_album_results(link, album_results):
                 continue
@@ -650,6 +678,32 @@ class Crawler(ABC):
             new_scrape_item = scrape_item.create_child(link, **kwargs)
             yield thumb, new_scrape_item
             scrape_item.add_children()
+
+    @final
+    async def crawl_children(
+        self,
+        scrape_item: ScrapeItem,
+        selector: str,
+        /,
+        attribute: str = "href",
+        *,
+        results: dict[str, int] | None = None,
+        next_page_selector: str | None = None,
+        coro_factory: Callable[[ScrapeItem], Coroutine[Any, Any, Any]] | None = None,
+    ) -> None:
+        """Crawls children URLs and schedules scrape tasks for them.
+
+        Uses `self.web_pager` to iterate through pages and extracts child links based on `selector` and `attribute`. For
+        each extracted URL, a new `ScrapeItem` is created, and a task
+        (by default, `self.run`) is scheduled in the global task group to process it
+        """
+
+        if coro_factory is None:
+            coro_factory = self.run
+
+        async for soup in self.web_pager(scrape_item.url, next_page_selector):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, selector, attribute, results=results):
+                self.create_task(coro_factory(new_scrape_item))
 
     async def web_pager(
         self, url: AbsoluteHttpURL, next_page_selector: str | None = None, *, cffi: bool = False, **kwargs: Any

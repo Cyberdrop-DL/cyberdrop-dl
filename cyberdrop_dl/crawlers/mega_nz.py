@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, DBPathBuilder, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.downloader import mega_nz as mega
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
@@ -48,6 +48,7 @@ class MegaNzCrawler(Crawler):
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS = ("mega.co.nz",)
+    create_db_path = staticmethod(DBPathBuilder.path_qs_frag)
 
     def __post_init__(self) -> None:
         self.downloader: mega.MegaDownloader

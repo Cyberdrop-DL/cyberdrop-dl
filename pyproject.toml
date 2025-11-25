@@ -77,6 +77,7 @@ exclude_also = [
 
 [tool.coverage.run]
 omit = [
+    "cyberdrop_dl/crawlers/*",
     "tests/*"
 ]
 
@@ -87,10 +88,11 @@ requires-poetry = ">=2.2.0"
 
 [tool.pytest.ini_options]
 addopts = ["-s"]
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 asyncio_mode = "auto"
 filterwarnings = [
-    "ignore:Proactor event loop does not implement add_reader:UserWarning"
+    "error"
 ]
 markers = [
     "crawler_test_case: tests that do full run with a crawler (making actual network requests)"

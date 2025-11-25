@@ -179,29 +179,8 @@ class MediaItem:
         return f"{type(self).__name__}(domain={self.domain!r}, url={self.url!r}, referer={self.referer!r}, filename={self.filename!r}"
 
     def __post_init__(self) -> None:
-        self.db_path = self.create_db_path(self.url, self.domain)
-
-    @staticmethod
-    def create_db_path(url: yarl.URL, domain: str) -> str:
-        """Gets the URL path to be put into the DB and checked from the DB."""
-
-        if url.scheme == "metadata":
-            return ""
-
-        if domain:
-            if "real-debrid" == domain:
-                return str(url)
-
-            if "e-hentai" in domain:
-                return url.path.split("keystamp")[0][:-1]
-
-            if "mediafire" in domain:
-                return url.name
-
-            if domain in ("mega.nz", "transfer.it", "koofr"):
-                return url.path_qs if not (frag := url.fragment) else f"{url.path_qs}#{frag}"
-
-        return url.path
+        if self.url.scheme == "metadata":
+            self.db_path = ""
 
     def datetime_obj(self) -> datetime.datetime | None:
         if self.datetime:

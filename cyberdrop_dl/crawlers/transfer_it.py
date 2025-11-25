@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, DBPathBuilder, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.downloader import mega_nz as mega
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
@@ -72,6 +72,7 @@ class TransferItCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")
     DOMAIN: ClassVar[str] = "transfer.it"
+    create_db_path = staticmethod(DBPathBuilder.path_qs_frag)
 
     def __post_init__(self) -> None:
         self.api = TransferItAPI(self.manager)

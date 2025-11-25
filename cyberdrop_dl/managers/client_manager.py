@@ -247,10 +247,23 @@ class ClientManager:
 
     def new_curl_cffi_session(self) -> AsyncSession:
         # Calling code should have validated if curl is actually available
+        import warnings
+
+        from curl_cffi.aio import AsyncCurl
         from curl_cffi.requests import AsyncSession
+        from curl_cffi.utils import CurlCffiWarning
+
+        loop = asyncio.get_running_loop()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=CurlCffiWarning)
+            acurl = AsyncCurl(loop=loop)
 
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
+
         return AsyncSession(
+            loop=loop,
+            async_curl=acurl,
             headers=self._default_headers,
             impersonate="chrome",
             verify=bool(self.ssl_context),

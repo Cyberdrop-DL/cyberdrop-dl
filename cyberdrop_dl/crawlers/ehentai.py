@@ -8,6 +8,8 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
+    import yarl
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
@@ -33,6 +35,10 @@ class EHentaiCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
     DOMAIN: ClassVar[str] = "e-hentai"
     FOLDER_DOMAIN: ClassVar[str] = "E-Hentai"
+
+    @staticmethod
+    def create_db_path(url: yarl.URL) -> str:
+        return url.path.split("keystamp")[0][:-1]
 
     def __post_init__(self) -> None:
         self._warnings_set = False

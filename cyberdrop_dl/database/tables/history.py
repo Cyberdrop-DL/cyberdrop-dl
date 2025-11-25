@@ -3,7 +3,6 @@ from __future__ import annotations
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, cast
 
-from cyberdrop_dl.data_structures.url_objects import MediaItem
 from cyberdrop_dl.utils.utilities import log
 
 from .definitions import create_fixed_history, create_history
@@ -16,6 +15,7 @@ if TYPE_CHECKING:
     from yarl import URL
 
     from cyberdrop_dl.crawlers import Crawler
+    from cyberdrop_dl.data_structures.url_objects import MediaItem
     from cyberdrop_dl.database import Database
 
 
@@ -76,23 +76,21 @@ class HistoryTable:
         await self.db_conn.execute(query)
         await self.db_conn.commit()
 
-    async def check_complete(self, domain: str, url: URL, referer: URL) -> bool:
+    async def check_complete(self, domain: str, url: URL, referer: URL, db_path: str) -> bool:
         """Checks whether an individual file has completed given its domain and url path."""
         if self._database.ignore_history:
             return False
 
-        url_path = MediaItem.create_db_path(url, domain)
-
         async def select_referer_and_completed() -> tuple[str, bool]:
             query = "SELECT referer, completed FROM media WHERE domain = ? and url_path = ?"
-            cursor = await self.db_conn.execute(query, (domain, url_path))
+            cursor = await self.db_conn.execute(query, (domain, db_path))
             if row := await cursor.fetchone():
                 return row[0], row[1]
             return "", False
 
         async def update_referer() -> None:
             query = "UPDATE media SET referer = ? WHERE domain = ? and url_path = ?"
-            await self.db_conn.execute(query, (str(referer), domain, url_path))
+            await self.db_conn.execute(query, (str(referer), domain, db_path))
             await self.db_conn.commit()
 
         current_referer, completed = await select_referer_and_completed()
