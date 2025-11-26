@@ -286,7 +286,7 @@ class ProgramUI:
 
         lines = changelog.read_text(encoding="utf8").splitlines()
         # remove keep_a_changelog disclaimer
-        return "\n".join(lines[:4] + lines[6:])
+        return "\n".join(lines[:21] + lines[25:])
 
 
 def vacuum_database(db_path: Path) -> None:
