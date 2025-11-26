@@ -93,7 +93,7 @@ class DownloadClient:
         if media_item.is_segment:
             media_item.partial_file = media_item.complete_file = download_dir / media_item.filename
         else:
-            media_item.partial_file = download_dir / f"{downloaded_filename}.{constants.TempExt.PART}"
+            media_item.partial_file = download_dir / f"{downloaded_filename}{constants.TempExt.PART}"
 
         resume_point = 0
         if media_item.partial_file and (size := await asyncio.to_thread(get_size_or_none, media_item.partial_file)):
