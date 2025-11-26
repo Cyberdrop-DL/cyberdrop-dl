@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Final
 from aiohttp.resolver import AsyncResolver, ThreadedResolver
 from rich.text import Text
 
-from cyberdrop_dl.compat import Enum, IntEnum, StrEnum
+from cyberdrop_dl.compat import Enum, StrEnum
 
 if TYPE_CHECKING:
     from cyberdrop_dl.utils.logger import LogHandler
@@ -52,12 +52,6 @@ HTTP_REGEX_LINKS = re.compile(
     r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,12}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)"
 )
 console_handler: "LogHandler"
-
-
-class CustomHTTPStatus(IntEnum):
-    WEB_SERVER_IS_DOWN = 521
-    IM_A_TEAPOT = 418
-    DDOS_GUARD = 429
 
 
 class TempExt(StrEnum):

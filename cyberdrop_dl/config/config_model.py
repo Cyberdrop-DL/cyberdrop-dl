@@ -265,7 +265,7 @@ class BrowserCookies(BaseModel):
 
     @field_validator("sites", mode="before")
     @classmethod
-    def handle_list(cls, values: list) -> list:
+    def handle_list(cls, values: list[str]) -> list[str]:
         values = falsy_as(values, [])
         if values == ALL_SUPPORTED_SITES:
             return SUPPORTED_SITES_DOMAINS
@@ -274,7 +274,7 @@ class BrowserCookies(BaseModel):
         return values
 
     @field_serializer("sites", when_used="json-unless-none")
-    def use_placeholder(self, values: list) -> list:
+    def use_placeholder(self, values: list[str]) -> list[str]:
         if set(values) == set(SUPPORTED_SITES_DOMAINS):
             return ALL_SUPPORTED_SITES
         return values

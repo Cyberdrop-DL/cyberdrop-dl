@@ -8,14 +8,12 @@ import sys
 from dataclasses import field
 from datetime import datetime
 from functools import wraps
-from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple, ParamSpec, TypeVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import constants
-from cyberdrop_dl.constants import CustomHTTPStatus
 from cyberdrop_dl.data_structures.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.exceptions import (
     DownloadError,
@@ -482,16 +480,3 @@ class Downloader:
         self.manager.log_manager.write_download_error_log(media_item, error_log_msg.csv_log_msg)
         self.manager.progress_manager.download_stats_progress.add_failure(error_log_msg.ui_failure)
         self.manager.progress_manager.download_progress.add_failed()
-
-    @staticmethod
-    def is_failed(status: int):
-        """NO USED"""
-        SERVER_ERRORS = (HTTPStatus.SERVICE_UNAVAILABLE, HTTPStatus.BAD_GATEWAY, CustomHTTPStatus.WEB_SERVER_IS_DOWN)
-        return any(
-            (is_4xx_client_error(status) and status != HTTPStatus.TOO_MANY_REQUESTS, status in SERVER_ERRORS),
-        )
-
-
-def is_4xx_client_error(status_code: int) -> bool:
-    """Checks whether the HTTP status code is 4xx client error."""
-    return isinstance(status_code, str) or (HTTPStatus.BAD_REQUEST <= status_code < HTTPStatus.INTERNAL_SERVER_ERROR)
