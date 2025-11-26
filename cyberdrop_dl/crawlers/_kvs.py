@@ -124,8 +124,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        url = scrape_item.url if self.DEFAULT_TRIM_URLS else scrape_item.url / ""
-        soup = await self.request_soup(url)
+        soup = await self.request_soup(scrape_item.url)
         video = extract_kvs_video(self, soup)
         filename, ext = self.get_filename_and_ext(video.url.name)
         custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
@@ -142,8 +141,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str | None = None) -> None:
-        url = scrape_item.url if self.DEFAULT_TRIM_URLS else scrape_item.url / ""
-        soup = await self.request_soup(url)
+        soup = await self.request_soup(scrape_item.url)
         if not album_id:
             js_text = css.select_one_get_text(soup, _SELECTORS.ALBUM_ID)
             album_id = get_text_between(js_text, "params['album_id'] =", ";")
@@ -205,7 +203,7 @@ def _parse_video_vars(video_vars: str) -> KVSVideo:
             yield resolution, url
 
     resolution, url = max(get_formats())
-    return KVSVideo(flashvars["video_id"], flashvars.get("video_title"), url, resolution)
+    return KVSVideo(flashvars["video_id"], flashvars.get("video_title", ""), url, resolution)
 
 
 def _get_license_token(license_code: str) -> tuple[int, ...]:
