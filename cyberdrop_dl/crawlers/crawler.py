@@ -391,7 +391,14 @@ class Crawler(ABC):
         filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
         url = scrape_item.url.with_scheme("metadata")
-        media_item = MediaItem.from_item(scrape_item, url, self.DOMAIN, download_folder, filename)
+        media_item = MediaItem.from_item(
+            scrape_item,
+            url,
+            self.DOMAIN,
+            db_path="",
+            download_folder=download_folder,
+            filename=filename,
+        )
         media_item.metadata = metadata
         await self.__write_to_jsonl(media_item)
 
@@ -419,8 +426,16 @@ class Crawler(ABC):
 
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
-            scrape_item, url, self.DOMAIN, download_folder, filename, original_filename, debrid_link, ext=ext
+            scrape_item,
+            url,
+            self.DOMAIN,
+            filename=filename,
+            download_folder=download_folder,
+            db_path=self.create_db_path(url),
+            original_filename=original_filename,
+            ext=ext,
         )
+        media_item.debrid_link = debrid_link
         if metadata is not None:
             media_item.metadata = metadata
         await self.handle_media_item(media_item, m3u8)

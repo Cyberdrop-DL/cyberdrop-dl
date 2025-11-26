@@ -280,17 +280,13 @@ class Downloader:
             seg_media_item = MediaItem.from_item(
                 media_item,
                 segment.url,
-                domain=media_item.domain,
+                media_item.domain,
+                db_path=media_item.db_path,
                 download_folder=download_folder,
                 filename=segment.name,
                 ext=media_item.ext,
-                is_segment=True,
-                # add_to_database=False,
-                # quiet=True,
-                # reference=media_item,
-                # skip_hashing=True,
             )
-
+            seg_media_item.is_segment = True
             return SegmentDownloadResult(
                 seg_media_item,
                 await self.start_download(seg_media_item),

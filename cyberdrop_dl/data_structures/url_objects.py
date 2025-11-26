@@ -153,6 +153,8 @@ class MediaItem:
     download_filename: str | None = field(default=None)
     filesize: int | None = field(default=None, compare=False)
     ext: str
+    db_path: str
+
     debrid_link: AbsoluteHttpURL | None = field(default=None, compare=False)
     duration: float | None = field(default=None, compare=False)
     is_segment: bool = False
@@ -171,7 +173,6 @@ class MediaItem:
     downloaded: bool = field(default=False, compare=False)
 
     parent_media_item: MediaItem | None = field(default=None, compare=False)
-    db_path: str = field(init=False)
     _task_id: TaskID | None = field(default=None, compare=False)
     metadata: object = field(init=False, default_factory=dict, compare=False)
 
@@ -191,30 +192,25 @@ class MediaItem:
     def from_item(
         origin: ScrapeItem | MediaItem,
         url: AbsoluteHttpURL,
-        /,
         domain: str,
+        /,
+        *,
         download_folder: Path,
         filename: str,
+        db_path: str,
         original_filename: str | None = None,
-        debrid_link: AbsoluteHttpURL | None = None,
-        duration: float | None = None,
         ext: str = "",
-        is_segment: bool = False,
-        fallbacks: Callable[[aiohttp.ClientResponse, int], AbsoluteHttpURL] | list[AbsoluteHttpURL] | None = None,
     ) -> MediaItem:
         return MediaItem(
             url=url,
             domain=domain,
             download_folder=download_folder,
             filename=filename,
-            debrid_link=debrid_link,
-            duration=duration,
+            db_path=db_path,
             referer=origin.url,
             album_id=origin.album_id,
             ext=ext or Path(filename).suffix,
             original_filename=original_filename or filename,
-            is_segment=is_segment,
-            fallbacks=fallbacks,
             parents=origin.parents.copy(),
             datetime=origin.possible_datetime if isinstance(origin, ScrapeItem) else origin.datetime,
             parent_media_item=None if isinstance(origin, ScrapeItem) else origin,
@@ -268,6 +264,9 @@ class ScrapeItem:
     created_at: int | None = field(default=None, init=False)
     children_limits: list[int] = field(default_factory=list, init=False)
     password: str | None = field(default=None, init=False)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(url={self.url!r}, parent_title={self.parent_title!r}, possible_datetime={self.possible_datetime!r}"
 
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
