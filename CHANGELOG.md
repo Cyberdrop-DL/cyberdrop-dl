@@ -22,6 +22,25 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.8.0] - 2025-11-28
+
+### Added
+
+- Erome.fan support
+- Thothub support
+- Support for models filtered by site (girlsreleased)
+
+### Changed
+
+- Proving a client id is no longer required (Imgur)
+- URLs downloaded with RealDebrid will be saved as is to the DB. Existing DB entries will be ignored
+
+### Fixed
+
+- Individual videos download (Porntrex)
+- Random unrelated models being downloaded (girlsreleased)
+- Trailing dots on partial file names
+
 ## [8.7.0] - 2025-11-21
 
 ### Added
