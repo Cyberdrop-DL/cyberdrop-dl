@@ -107,10 +107,7 @@ class Hashing(StrEnum):
 
     @classmethod
     def _missing_(cls, value: object) -> "Hashing":
-        try:
-            return cls[str(value).upper()]
-        except KeyError as e:
-            raise e
+        return cls[str(value).upper()]
 
 
 class BROWSERS(StrEnum):
