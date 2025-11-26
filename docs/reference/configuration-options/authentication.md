@@ -59,32 +59,6 @@ You can get your API key here: [https://gofile.io/myProfile](https://gofile.io/m
 
 <details>
 
-<summary>Imgur</summary>
-
-In order to scrape images from Imgur, you'll need to create a client on Imgur's website.
-
-[https://api.imgur.com/oauth2/addclient](https://api.imgur.com/oauth2/addclient)
-
-Some examples of what to put in for what it asks for:
-
-> Application Name: `Cyberdrop-DL`
->
-> OAuth2 without a callback URL
->
-> Website: `https:/your_email.cyberdrop` (Any website will work, it doesn't need to actually exists)
->
-> Email: `your_email@domain.com`
->
-> Description: `Cyberdrop-DL client`
-
-After generating the client above, you will need to provide these values to Cyberdrop-DL:
-
-- `client_id`
-
-</details>
-
-<details>
-
 <summary>JDownloader</summary>
 
 Under JDownloader 2 settings -> MyJDownloader:
