@@ -7,8 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel, ByteSize, NonNegativeInt, PositiveInt, field_serializer, field_validator
 
 from cyberdrop_dl import constants
-from cyberdrop_dl.constants import BROWSERS, DEFAULT_APP_STORAGE, DEFAULT_DOWNLOAD_STORAGE
-from cyberdrop_dl.data_structures.hash import Hashing
+from cyberdrop_dl.constants import BROWSERS, DEFAULT_APP_STORAGE, DEFAULT_DOWNLOAD_STORAGE, Hashing
 from cyberdrop_dl.models import HttpAppriseURL
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,

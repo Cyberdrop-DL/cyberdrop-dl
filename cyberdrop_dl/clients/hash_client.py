@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Literal
 from send2trash import send2trash
 
 from cyberdrop_dl import constants
-from cyberdrop_dl.data_structures.hash import Hashing
+from cyberdrop_dl.constants import Hashing
 from cyberdrop_dl.ui.prompts.basic_prompts import enter_to_continue
 from cyberdrop_dl.utils.logger import log
 from cyberdrop_dl.utils.utilities import get_size_or_none
