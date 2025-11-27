@@ -38,10 +38,10 @@ With `--deep-scrape`, CDL will make `n` requests per album, where `n` is the tot
 | ------ | ------- |
 | `bool` | `false` |
 
-Files downloaded by CDL have a `.part` extension. CDL only changes the extension to the original one after a successful download.
+Files downloaded by CDL have a `.part` extension (`.cdl_hls` for HLS segments). CDL only changes the extension to the original one after a successful download.
 This allows CDL to resume downloads on subsequent runs.
 
-Setting this to `true` will delete any `.part` files in the download folder.
+Setting this to `true` will delete any `.part` and `.cdl_hls` files in the download folder.
 
 ## `ignore_history`
 
