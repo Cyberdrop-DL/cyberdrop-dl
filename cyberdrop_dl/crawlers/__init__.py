@@ -5,6 +5,7 @@ from cyberdrop_dl import env
 
 from ._chevereto import CheveretoCrawler
 from .anontransfer import AnonTransferCrawler
+from .anysex import AnySexCrawler
 from .archivebate import ArchiveBateCrawler
 from .ashemaletube import AShemaleTubeCrawler
 from .beeg import BeegComCrawler

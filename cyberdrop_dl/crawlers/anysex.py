@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar
+
+from cyberdrop_dl.crawlers._fluid_player import FluidPlayerCrawler
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
+
+if TYPE_CHECKING:
+    from cyberdrop_dl.crawlers.crawler import SupportedPaths
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+class Selector:
+    ALBUM_NAME = "h1.title"
+    SWIPE_WRAPPER = "div.swiper-wrapper div.swiper-slide a"
+    MAIN_IMAGE_HOLDER = "a#main_image_holder"
+
+
+class AnySexCrawler(FluidPlayerCrawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/video/<video_id>/...",
+        "Album": "/photos/<album_id>/...",
+    }
+    DOMAIN: ClassVar[str] = "anysex"
+    FOLDER_DOMAIN: ClassVar[str] = "AnySex"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://anysex.com")
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case [*_, "video", video_id, _]:
+                return await self.video(scrape_item, video_id)
+            case ["contents", *_]:
+                return await self.direct_file(scrape_item)
+            case [*_, "photos", album_id, _]:
+                return await self.album(scrape_item, album_id)
+            case _:
+                raise ValueError
+
+    @error_handling_wrapper
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        name = open_graph.title(soup)
+        title = self.create_title(f"{name} [album]")
+        scrape_item.setup_as_album(title, album_id=album_id)
+        if link := css.select_one_get_attr_or_none(soup, Selector.MAIN_IMAGE_HOLDER, "href"):
+            self.create_task(self.run(scrape_item.create_child(self.parse_url(link))))
+        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.SWIPE_WRAPPER):
+            self.create_task(self.run(new_scrape_item))
