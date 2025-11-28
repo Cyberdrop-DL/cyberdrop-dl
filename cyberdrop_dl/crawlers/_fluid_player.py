@@ -47,7 +47,8 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def collection(
-        self, scrape_item: ScrapeItem,
+        self,
+        scrape_item: ScrapeItem,
         collection_type: str,
         name: str | None = None,
         videos_selector: str | None = None,

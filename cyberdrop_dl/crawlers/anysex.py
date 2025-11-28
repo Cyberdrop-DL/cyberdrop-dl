@@ -11,11 +11,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
+
 class Selector:
     ALBUM_NAME = "h1.title"
     SWIPE_WRAPPER = "div.swiper-wrapper div.swiper-slide a"
     MAIN_IMAGE_HOLDER = "a#main_image_holder"
     SEARCH_VIDEOS = "div.list-videos a.popfire"
+
 
 class AnySexCrawler(FluidPlayerCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
