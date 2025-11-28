@@ -363,7 +363,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     def _register_attachments_servers(self, attachments: list[File]) -> None:
         for attach in attachments:
-            server = attach.get("server", None)
+            server = attach.get("server")
             if not server:
                 continue
 
