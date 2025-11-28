@@ -13,6 +13,19 @@ TEST_CASES = [
             }
         ],
     ),
+    # Video with unknown resolution
+    (
+        "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud/",
+        [
+            {
+                "url": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud",
+                "filename": "Amazing blond slut makes a horny dude to suck the dick of the other stud [89167].mp4",
+                "debrid_link": "ANY",
+                "referer": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud",
+                "datetime": 1381968000,
+            }
+        ],
+    ),
     # Album page link
     (
         "https://anysex.com/photos/156337/only-5-0-but-thick-and-curvy-in-all-the-right-places/",
