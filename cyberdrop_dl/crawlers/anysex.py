@@ -23,6 +23,7 @@ class AnySexCrawler(FluidPlayerCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/<video_id>/...",
         "Album": "/photos/<album_id>/...",
+        "Search": "/search/...",
     }
     DOMAIN: ClassVar[str] = "anysex"
     FOLDER_DOMAIN: ClassVar[str] = "AnySex"
