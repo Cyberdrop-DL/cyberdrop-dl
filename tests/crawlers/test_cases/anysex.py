@@ -39,4 +39,17 @@ TEST_CASES = [
         ],
         1,
     ),
+    # Search
+    (
+        "https://anysex.com/search/?q=helena-price",
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:helena\-price \[search\] \(AnySex\)",
+                "referer": "ANY",
+                "album_id": None,
+            }
+        ],
+        range(18, 30),
+    ),
 ]

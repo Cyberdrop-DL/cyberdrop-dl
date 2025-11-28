@@ -15,7 +15,7 @@ class Selector:
     ALBUM_NAME = "h1.title"
     SWIPE_WRAPPER = "div.swiper-wrapper div.swiper-slide a"
     MAIN_IMAGE_HOLDER = "a#main_image_holder"
-
+    SEARCH_VIDEOS = "div.list-videos a.popfire"
 
 class AnySexCrawler(FluidPlayerCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -34,6 +34,8 @@ class AnySexCrawler(FluidPlayerCrawler):
                 return await self.direct_file(scrape_item)
             case [*_, "photos", album_id, _]:
                 return await self.album(scrape_item, album_id)
+            case ["search" as type_, *_] if query := scrape_item.url.query.get("q"):
+                return await self.collection(scrape_item, type_, query, Selector.SEARCH_VIDEOS)
             case _:
                 raise ValueError
 
