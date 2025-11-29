@@ -361,7 +361,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     # ~~~~~~~~ INTERNAL METHODS, not expected to be overridden, but could be ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _register_attachments_servers(self, attachments: list[File]) -> None:
+    def _register_attachments_servers(self, attachments: list[dict[str, str]]) -> None:
         for attach in attachments:
             server = attach.get("server")
             if not server:
