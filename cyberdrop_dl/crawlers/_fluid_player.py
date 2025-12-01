@@ -65,6 +65,7 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
 
 def _get_best_format(soup: BeautifulSoup) -> Format:
     parse_resolution = Resolution.make_parser()
+
     def parse():
         for src in soup.select(Selector.VIDEO_SRC):
             url = css.get_attr(src, "src")
