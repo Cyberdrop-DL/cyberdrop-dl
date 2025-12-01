@@ -64,11 +64,12 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
 
 
 def _get_best_format(soup: BeautifulSoup) -> Format:
+    parse_resolution = Resolution.make_parser()
     def parse():
         for src in soup.select(Selector.VIDEO_SRC):
             url = css.get_attr(src, "src")
-            quality = css.get_attr_or_none(src, "title") or None
-            resolution = Resolution.parse(quality)
+            quality = css.get_attr_or_none(src, "title")
+            resolution = parse_resolution(quality)
             yield Format(resolution, url)
 
     return max(parse())

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers._fluid_player import FluidPlayerCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils import open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -45,10 +45,5 @@ class AnySexCrawler(FluidPlayerCrawler):
         name = open_graph.title(soup)
         title = self.create_title(f"{name} [album]")
         scrape_item.setup_as_album(title, album_id=album_id)
-        self.scrape_album_cover(scrape_item, soup)
         for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.IMAGES):
             self.create_task(self.run(new_scrape_item))
-
-    def scrape_album_cover(self, scrape_item, soup):
-        if link := css.select_one_get_attr_or_none(soup, Selector.IMAGES, "href"):
-            self.create_task(self.run(scrape_item.create_child(self.parse_url(link))))
