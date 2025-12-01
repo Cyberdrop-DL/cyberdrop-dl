@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 
 class Selector:
-    ALBUM_NAME = "h1.title"
     IMAGES = "a#main_image_holder, .swiper-wrapper .swiper-slide a"
 
 
@@ -46,7 +45,10 @@ class AnySexCrawler(FluidPlayerCrawler):
         name = open_graph.title(soup)
         title = self.create_title(f"{name} [album]")
         scrape_item.setup_as_album(title, album_id=album_id)
-        if link := css.select_one_get_attr_or_none(soup, Selector.IMAGES, "href"):
-            self.create_task(self.run(scrape_item.create_child(self.parse_url(link))))
+        self.scrape_album_cover(scrape_item, soup)
         for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.IMAGES):
             self.create_task(self.run(new_scrape_item))
+
+    def scrape_album_cover(self, scrape_item, soup):
+        if link := css.select_one_get_attr_or_none(soup, Selector.IMAGES, "href"):
+            self.create_task(self.run(scrape_item.create_child(self.parse_url(link))))
