@@ -32,7 +32,7 @@ class AnySexCrawler(FluidPlayerCrawler):
         match scrape_item.url.parts[1:]:
             case [*_, "video", video_id, _]:
                 return await self.video(scrape_item, video_id)
-            case ["contents", *_]:
+            case ["contents", _, *_]:
                 return await self.direct_file(scrape_item)
             case [*_, "photos", album_id, _]:
                 return await self.album(scrape_item, album_id)
