@@ -58,7 +58,7 @@ TEST_CASES = [
         [
             {
                 "url": "ANY",
-                "download_folder": r"re:helena\-price \[search\] \(AnySex\)",
+                "download_folder": r"re:helena price [search] (AnySex)",
                 "referer": "ANY",
                 "album_id": None,
             }

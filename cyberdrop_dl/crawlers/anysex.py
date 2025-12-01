@@ -35,6 +35,7 @@ class AnySexCrawler(FluidPlayerCrawler):
             case [*_, "photos", album_id, _]:
                 return await self.album(scrape_item, album_id)
             case ["search" as type_, *_] if query := scrape_item.url.query.get("q"):
+                query = query.replace("-", " ")
                 return await self.collection(scrape_item, type_, query)
             case _:
                 raise ValueError
