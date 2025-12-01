@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class Selector:
     VIDEO_SRC = ".gif-video, #main_video source"
     COLLECTION_TITLE = "h2.object-title"
-    SEARCH_VIDEOS = "div.list-videos a.popito"
+    SEARCH_VIDEOS = "div.list-videos div.item > a"
     NEXT_PAGE = "div.pagination-holder li.next > a"
 
 
@@ -51,7 +51,6 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
         scrape_item: ScrapeItem,
         collection_type: str,
         name: str | None = None,
-        videos_selector: str | None = None,
     ) -> None:
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
@@ -60,8 +59,7 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
                 title = self.create_title(f"{name} [{collection_type}]")
                 scrape_item.setup_as_album(title)
 
-            selector = videos_selector or Selector.SEARCH_VIDEOS
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, selector):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.SEARCH_VIDEOS):
                 self.create_task(self.run(new_scrape_item))
 
 
