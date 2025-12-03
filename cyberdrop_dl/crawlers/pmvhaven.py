@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.logger import log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
+class Selectors:
+    APP_JSON = "script#__NUXT_DATA__"
 
 API_ENTRYPOINT = AbsoluteHttpURL("https://pmvhaven.com/api/v2/")
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
@@ -38,7 +41,7 @@ class PMVHavenCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "video" in scrape_item.url.parts:
-            return await self.video_from_api(scrape_item)
+            return await self.video(scrape_item)
         if "star" in scrape_item.url.parts:
             return await self.model(scrape_item)
         if "tags" in scrape_item.url.parts:
@@ -148,17 +151,14 @@ class PMVHavenCrawler(Crawler):
         await self._generic_search_pager(scrape_item, add_data, tag_name, "tag")
 
     @error_handling_wrapper
-    async def video_from_api(self, scrape_item: ScrapeItem) -> None:
+    async def video(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        video_id: str = scrape_item.url.name.rsplit("_", 1)[-1]
-        add_data = {"video": video_id, "mode": "InitVideo", "view": True}
-        api_url = API_ENTRYPOINT / "videoInput"
-        json_resp: dict[str, Any] = await self.request_json(api_url, method="POST", data=add_data)
-        videos: list[dict[str, Any]] = json_resp.get("video", [])
-        video_info = videos[0] if videos else {}
-        await self.process_video_info(scrape_item, video_info)
+        soup = await self.request_soup(scrape_item.url)
+        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
+
+        await self.process_video_info(scrape_item, info_table)
 
     async def _generic_search_pager(self, scrape_item: ScrapeItem, add_data: dict, name: str, type: str = "") -> None:
         title: str = ""
@@ -174,19 +174,26 @@ class PMVHavenCrawler(Crawler):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @error_handling_wrapper
-    async def process_video_info(self, scrape_item: ScrapeItem, video_info: dict) -> None:
+    async def process_video_info(self, scrape_item: ScrapeItem, info_table: dict) -> None:
+        info_list = next((data for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None)
+        if not info_list:
+            raise ScrapeError(422, message="No video source found")
+        video_info = info_table[info_list["video"]]
+
         log_debug(json.dumps(video_info, indent=4))
-        link_str: str = video_info.get("url") or ""
+        link_str: str = info_table[video_info["videoUrl"]]
         if not link_str:
             raise ScrapeError(422, message="No video source found")
 
-        video_id: str = video_info["_id"]
-        resolution: str | None = video_info.get("height")
-        title: str = video_info.get("title") or video_info["uploadTitle"]
-        link_str: str = video_info["url"]
-        date = self.parse_date(video_info["isoDate"])
+        video_id: str = info_table[video_info["_id"]]
+        resolution: str | None = None
+        if height := video_info.get("height"):
+            resolution = info_table[height]
+        title_idx: int = video_info.get("title") or video_info["uploadTitle"]
+        title: str = info_table[title_idx]
+        link_str: str = info_table[video_info["videoUrl"]]
+        scrape_item.possible_datetime = self.parse_date(info_table[video_info["createdAt"]])
 
-        scrape_item.possible_datetime = date
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=resolution)
