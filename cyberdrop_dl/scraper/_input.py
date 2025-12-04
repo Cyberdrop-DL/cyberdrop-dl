@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
 async def read_urls_by_groups(
     file_or_folder: Path, /
-) -> AsyncGenerator[tuple[str | None, str | None, list[AbsoluteHttpURL]]]:
+) -> AsyncGenerator[tuple[list[str | None], list[AbsoluteHttpURL]]]:
     if await asyncio.to_thread(file_or_folder.is_dir):
         files = await asyncio.to_thread(lambda: list(file_or_folder.glob("*.txt")))
         single_file = False
 
     elif not await asyncio.to_thread(file_or_folder.is_file):
-        yield None, None, []
+        yield [None, None], []
         return
 
     else:
@@ -35,7 +35,7 @@ async def read_urls_by_groups(
         root = None if single_file else file.stem
         async for group, urls in _read_urls(file):
             if urls:
-                yield root, group, urls
+                yield [root, group], urls
 
 
 async def read_urls(file: Path, /) -> AsyncGenerator[AbsoluteHttpURL]:
