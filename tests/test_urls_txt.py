@@ -1,14 +1,13 @@
 import itertools
-import sys
+from collections.abc import Generator, Iterable
 from pathlib import Path
-
-import pytest
+from typing import TypeVar
 
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.scraper import _input
 from cyberdrop_dl.utils.utilities import parse_url
 
-pytestmark = pytest.mark.skipif(sys.version_info < (3, 12), reason="itertools.batched not supported in 3.11")
+_T = TypeVar("_T")
 
 URLS = [
     "https://github.com/jbsparrow/CyberDropDownloader",
@@ -17,8 +16,14 @@ URLS = [
 ]
 
 
+def _batched(iterable: Iterable[_T], n: int) -> Generator[tuple[_T, ...]]:
+    iterator = iter(iterable)
+    while batch := tuple(itertools.islice(iterator, n)):
+        yield batch
+
+
 def _make_groups(size: int = 1):
-    for idx, lines in enumerate(itertools.batched(URLS, size), 1):
+    for idx, lines in enumerate(_batched(URLS, size), 1):
         yield f"---group {idx}"
         yield from lines
 
