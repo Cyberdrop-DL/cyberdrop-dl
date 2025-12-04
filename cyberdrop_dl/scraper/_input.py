@@ -15,29 +15,29 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-async def read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, str | None, list[AbsoluteHttpURL]]]:
-    """Split URLs from input file by their groups."""
+async def read_urls(file_or_folder: Path, /) -> AsyncGenerator[tuple[str | None, str | None, list[AbsoluteHttpURL]]]:
+    """Read URLs from input by their groups."""
 
-    if await asyncio.to_thread(input_file.is_dir):
-        files = input_file.glob("*.txt")
+    if await asyncio.to_thread(file_or_folder.is_dir):
+        files = await asyncio.to_thread(lambda: list(file_or_folder.glob("*.txt")))
         single_file = False
 
-    elif not await asyncio.to_thread(input_file.is_file):
-        yield ("", [])
+    elif not await asyncio.to_thread(file_or_folder.is_file):
+        yield None, None, []
         return
 
     else:
-        files = [input_file]
+        files = [file_or_folder]
         single_file = True
 
-    for file in files:
+    for file in sorted(files, key=lambda x: str(x).casefold()):
         base_group = None if single_file else file.name
-        async for x, y in _parse_input_file(file):
-            yield base_group, x, y
+        async for file_group, urls in _read_urls(file):
+            yield base_group, file_group, urls
 
 
-async def _parse_input_file(input_file: Path) -> AsyncGenerator[tuple[str | None, list[AbsoluteHttpURL]]]:
-    """Split URLs from input file by their groups."""
+async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, list[AbsoluteHttpURL]]]:
+    """Read URLs from file (html or plain text), taking groups into account and ignoring comments"""
 
     block_quote = False
     current_group_name: str | None = None
@@ -65,7 +65,7 @@ def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
     if line.startswith("#"):
         return
 
-    http_urls = (x.group().replace(".md.", ".") for x in re.finditer(REGEX_LINKS, line))
+    http_urls = (url.group().replace(".md.", ".") for url in re.finditer(REGEX_LINKS, line))
     for link in http_urls:
         try:
             encoded = "%" in link

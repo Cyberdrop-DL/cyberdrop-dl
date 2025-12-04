@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Self
 
 from yarl import URL
 
-from cyberdrop_dl.constants import REGEX_LINKS, BlockedDomains
+from cyberdrop_dl.constants import BlockedDomains
 from cyberdrop_dl.crawlers import CRAWLERS
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import Crawler, create_crawlers
@@ -26,7 +25,7 @@ from cyberdrop_dl.utils.logger import log, log_spacer
 from cyberdrop_dl.utils.utilities import get_download_path, remove_trailing_slash
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator
     from types import TracebackType
 
     import aiosqlite
@@ -305,25 +304,6 @@ class ScrapeMapper:
             crawler.disabled = True
             _crawlers_disabled_at_runtime.add(domain)
             return crawler
-
-
-def regex_links(line: str) -> Generator[AbsoluteHttpURL]:
-    """Regex grab the links from the URLs.txt file.
-
-    This allows code blocks or full paragraphs to be copy and pasted into the URLs.txt.
-    """
-
-    line = line.strip()
-    if line.startswith("#"):
-        return
-
-    http_urls = (x.group().replace(".md.", ".") for x in re.finditer(REGEX_LINKS, line))
-    for link in http_urls:
-        try:
-            encoded = "%" in link
-            yield AbsoluteHttpURL(link, encoded=encoded)
-        except Exception as e:
-            log(f"Unable to parse URL from input file: {link} {e:!r}", 40)
 
 
 def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
