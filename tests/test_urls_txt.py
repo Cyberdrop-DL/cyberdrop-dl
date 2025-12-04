@@ -37,14 +37,26 @@ async def test_urls_txt_parsing(tmp_cwd: Path) -> None:
     input_file = tmp_cwd / "input.txt"
     input_file.write_text(NO_GROUPS)
     result = await _read_urls_by_group(input_file)
-    assert result == [([None, None], [url]) for url in YARL_URLS]
+    assert result == [
+        (
+            [None, None],
+            [url],
+        )
+        for url in YARL_URLS
+    ]
 
 
 async def test_urls_txt_groups(tmp_cwd: Path) -> None:
     input_file = tmp_cwd / "input.txt"
     input_file.write_text(GROUPS)
     result = await _read_urls_by_group(input_file)
-    assert result == [([None, f"group {idx}"], [url]) for idx, url in enumerate(YARL_URLS, 1)]
+    assert result == [
+        (
+            [None, f"group {idx}"],
+            [url],
+        )
+        for idx, url in enumerate(YARL_URLS, 1)
+    ]
 
 
 async def test_urls_txt_groups_2(tmp_cwd: Path) -> None:
@@ -65,8 +77,20 @@ async def test_urls_txt_folder(tmp_cwd: Path) -> None:
     (folder / "input2.txt").write_text(GROUPS)
     result = await _read_urls_by_group(folder)
 
-    expected_1 = [(["input1", None], [url]) for url in YARL_URLS]
-    expected_2 = [(["input2", f"group {idx}"], [url]) for idx, url in enumerate(YARL_URLS, 1)]
+    expected_1 = [
+        (
+            ["input1", None],
+            [url],
+        )
+        for url in YARL_URLS
+    ]
+    expected_2 = [
+        (
+            ["input2", f"group {idx}"],
+            [url],
+        )
+        for idx, url in enumerate(YARL_URLS, 1)
+    ]
     assert result == expected_1 + expected_2
 
 
