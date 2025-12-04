@@ -24,7 +24,6 @@ async def read_urls_by_groups(
         single_file = False
 
     elif not await asyncio.to_thread(file_or_folder.is_file):
-        yield (), ()
         return
 
     else:
@@ -50,14 +49,14 @@ async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, tu
     """Read URLs from file (html or plain text), taking groups into account and ignoring comments"""
 
     block_quote = False
-    current_group_name: str | None = None
+    current_group: str | None = None
     async with aiofiles.open(input_file, encoding="utf8") as f:
         async for line in f:
             if line.startswith(("---", "===")):  # New group begins here
-                current_group_name = line.replace("---", "").replace("===", "").strip()
+                current_group = line.replace("---", "").replace("===", "").strip()
 
-            if current_group_name:
-                yield current_group_name, tuple(_regex_links(line))
+            if current_group:
+                yield current_group, tuple(_regex_links(line))
                 continue
 
             block_quote = not block_quote if line == "#\n" else block_quote
