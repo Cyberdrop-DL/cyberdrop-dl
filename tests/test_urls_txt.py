@@ -1,9 +1,14 @@
 import itertools
+import sys
 from pathlib import Path
+
+import pytest
 
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.scraper import _input
 from cyberdrop_dl.utils.utilities import parse_url
+
+pytestmark = pytest.mark.skipif(sys.version_info < (3, 12), reason="itertools.batched not supported in 3.11")
 
 URLS = [
     "https://github.com/jbsparrow/CyberDropDownloader",
