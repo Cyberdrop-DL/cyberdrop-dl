@@ -34,7 +34,7 @@ GROUPED_BY_2 = "\n".join(_make_groups(2))
 YARL_URLS = list(map(parse_url, URLS))
 
 
-async def _read_urls_by_group(input_file: Path) -> list[tuple[list[str | None], list[AbsoluteHttpURL]]]:
+async def _read_urls_by_group(input_file: Path) -> list[tuple[tuple[str, ...], tuple[AbsoluteHttpURL, ...]]]:
     return [x async for x in _input.read_urls_by_groups(input_file)]
 
 
@@ -44,8 +44,8 @@ async def test_urls_txt_parsing(tmp_cwd: Path) -> None:
     result = await _read_urls_by_group(input_file)
     assert result == [
         (
-            [None, None],
-            [url],
+            (),
+            (url,),
         )
         for url in YARL_URLS
     ]
@@ -57,8 +57,8 @@ async def test_urls_txt_groups(tmp_cwd: Path) -> None:
     result = await _read_urls_by_group(input_file)
     assert result == [
         (
-            [None, f"group {idx}"],
-            [url],
+            (f"group {idx}",),
+            (url,),
         )
         for idx, url in enumerate(YARL_URLS, 1)
     ]
@@ -69,9 +69,9 @@ async def test_urls_txt_groups_2(tmp_cwd: Path) -> None:
     input_file.write_text(GROUPED_BY_2)
     result = await _read_urls_by_group(input_file)
     assert result == [
-        ([None, "group 1"], [YARL_URLS[0]]),
-        ([None, "group 1"], [YARL_URLS[1]]),
-        ([None, "group 2"], [YARL_URLS[2]]),
+        (("group 1",), (YARL_URLS[0],)),
+        (("group 1",), (YARL_URLS[1],)),
+        (("group 2",), (YARL_URLS[2],)),
     ]
 
 
@@ -84,15 +84,15 @@ async def test_urls_txt_folder(tmp_cwd: Path) -> None:
 
     expected_1 = [
         (
-            ["input1", None],
-            [url],
+            ("input1",),
+            (url,),
         )
         for url in YARL_URLS
     ]
     expected_2 = [
         (
-            ["input2", f"group {idx}"],
-            [url],
+            ("input2", f"group {idx}"),
+            (url,),
         )
         for idx, url in enumerate(YARL_URLS, 1)
     ]

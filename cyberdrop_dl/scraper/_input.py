@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
 async def read_urls_by_groups(
     file_or_folder: Path, /
-) -> AsyncGenerator[tuple[list[str | None], list[AbsoluteHttpURL]]]:
+) -> AsyncGenerator[tuple[tuple[str, ...], tuple[AbsoluteHttpURL, ...]]]:
     if await asyncio.to_thread(file_or_folder.is_dir):
         files = await asyncio.to_thread(lambda: list(file_or_folder.glob("*.txt")))
         single_file = False
 
     elif not await asyncio.to_thread(file_or_folder.is_file):
-        yield [None, None], []
+        yield (), ()
         return
 
     else:
@@ -35,7 +35,8 @@ async def read_urls_by_groups(
         root = None if single_file else file.stem
         async for group, urls in _read_urls(file):
             if urls:
-                yield [root, group], urls
+                groups = tuple(filter(None, (root, group)))
+                yield groups, urls
 
 
 async def read_urls(file: Path, /) -> AsyncGenerator[AbsoluteHttpURL]:
@@ -45,7 +46,7 @@ async def read_urls(file: Path, /) -> AsyncGenerator[AbsoluteHttpURL]:
             yield url
 
 
-async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, list[AbsoluteHttpURL]]]:
+async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, tuple[AbsoluteHttpURL, ...]]]:
     """Read URLs from file (html or plain text), taking groups into account and ignoring comments"""
 
     block_quote = False
@@ -56,12 +57,12 @@ async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, li
                 current_group_name = line.replace("---", "").replace("===", "").strip()
 
             if current_group_name:
-                yield current_group_name, list(_regex_links(line))
+                yield current_group_name, tuple(_regex_links(line))
                 continue
 
             block_quote = not block_quote if line == "#\n" else block_quote
             if not block_quote:
-                yield None, list(_regex_links(line))
+                yield None, tuple(_regex_links(line))
 
 
 def _regex_links(line: str, /) -> Generator[AbsoluteHttpURL]:

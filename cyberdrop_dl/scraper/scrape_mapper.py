@@ -147,10 +147,10 @@ class ScrapeMapper:
             async for groups, urls in _input.read_urls_by_groups(self.manager.path_manager.input_file):
                 for url in urls:
                     item = ScrapeItem(url=url)
+                    item.part_of_album = bool(groups)
                     for group in groups:
-                        if group:
-                            item.add_to_parent_title(group)
-                            item.part_of_album = True
+                        item.add_to_parent_title(group)
+
                     yield item
 
             return
