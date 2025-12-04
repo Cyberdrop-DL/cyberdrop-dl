@@ -31,9 +31,10 @@ async def read_urls(file_or_folder: Path, /) -> AsyncGenerator[tuple[str | None,
         single_file = True
 
     for file in sorted(files, key=lambda x: str(x).casefold()):
-        base_group = None if single_file else file.name
+        base_group = None if single_file else file.stem
         async for file_group, urls in _read_urls(file):
-            yield base_group, file_group, urls
+            if urls:
+                yield base_group, file_group, urls
 
 
 async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, list[AbsoluteHttpURL]]]:
@@ -55,7 +56,7 @@ async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, li
                 yield None, list(_regex_links(line))
 
 
-def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
+def _regex_links(line: str, /) -> Generator[AbsoluteHttpURL]:
     """Regex grab the links from the URLs.txt file.
 
     This allows code blocks or full paragraphs to be copy and pasted into the URLs.txt.
