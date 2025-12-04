@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Generator
 from typing import TYPE_CHECKING
 
 import aiofiles
@@ -15,7 +16,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-async def read_urls(file_or_folder: Path, /) -> AsyncGenerator[tuple[str | None, str | None, list[AbsoluteHttpURL]]]:
+async def read_urls_by_groups(
+    file_or_folder: Path, /
+) -> AsyncGenerator[tuple[str | None, str | None, list[AbsoluteHttpURL]]]:
     """Read URLs from input by their groups."""
 
     if await asyncio.to_thread(file_or_folder.is_dir):
@@ -35,6 +38,13 @@ async def read_urls(file_or_folder: Path, /) -> AsyncGenerator[tuple[str | None,
         async for file_group, urls in _read_urls(file):
             if urls:
                 yield base_group, file_group, urls
+
+
+async def read_urls(file: Path, /) -> AsyncGenerator[AbsoluteHttpURL]:
+    """Read URLs from a single fle, ignoring groups"""
+    async for _, urls in _read_urls(file):
+        for url in urls:
+            yield url
 
 
 async def _read_urls(input_file: Path, /) -> AsyncGenerator[tuple[str | None, list[AbsoluteHttpURL]]]:

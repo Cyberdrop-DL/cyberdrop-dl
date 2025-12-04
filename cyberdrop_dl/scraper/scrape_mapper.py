@@ -144,7 +144,7 @@ class ScrapeMapper:
 
         if not self.manager.parsed_args.cli_only_args.links:
             self.using_input_file = True
-            async for *groups, urls in _input.read_urls(self.manager.path_manager.input_file):
+            async for *groups, urls in _input.read_urls_by_groups(self.manager.path_manager.input_file):
                 for url in urls:
                     item = ScrapeItem(url=url)
                     for group in groups:
