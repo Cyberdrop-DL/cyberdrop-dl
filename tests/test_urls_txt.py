@@ -1,3 +1,4 @@
+import itertools
 from pathlib import Path
 
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -11,14 +12,15 @@ URLS = [
 ]
 
 
-def _make_groups():
-    for idx, line in enumerate(URLS, 1):
+def _make_groups(size: int = 1):
+    for idx, lines in enumerate(itertools.batched(URLS, size), 1):
         yield f"---group {idx}"
-        yield line
+        yield from lines
 
 
 NO_GROUPS = "\n".join(URLS)
 GROUPS = "\n".join(_make_groups())
+GROUPED_BY_2 = "\n".join(_make_groups(2))
 YARL_URLS = list(map(parse_url, URLS))
 
 
@@ -38,6 +40,17 @@ async def test_urls_txt_groups(tmp_cwd: Path) -> None:
     input_file.write_text(GROUPS)
     result = await _read_urls_by_group(input_file)
     assert result == [(None, f"group {idx}", [url]) for idx, url in enumerate(YARL_URLS, 1)]
+
+
+async def test_urls_txt_groups_2(tmp_cwd: Path) -> None:
+    input_file = tmp_cwd / "input.txt"
+    input_file.write_text(GROUPED_BY_2)
+    result = await _read_urls_by_group(input_file)
+    assert result == [
+        (None, "group 1", [YARL_URLS[0]]),
+        (None, "group 1", [YARL_URLS[1]]),
+        (None, "group 2", [YARL_URLS[2]]),
+    ]
 
 
 async def test_urls_txt_folder(tmp_cwd: Path) -> None:
