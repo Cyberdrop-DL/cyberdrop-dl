@@ -205,7 +205,7 @@ class Manager:
             f"System Info: {system_info}",
             f"Using Config: {self.config_manager.loaded_config}",
             f"Using Config File: {self.config_manager.settings}",
-            f"Using Input File: {self.path_manager.input_file}",
+            f"Using Input: {self.path_manager.input_file}",
             f"Using Download Folder: {self.path_manager.download_folder}",
             f"Using Database File: {self.path_manager.history_db}",
             f"Using CLI only options: {cli_only_args}",

@@ -109,7 +109,7 @@ class PathManager:
         self._delete_logs_and_folders(now)
         self._create_output_folders()
 
-        if not self.input_file.is_file():
+        if not self.input_file.exists():
             self.input_file.touch(exist_ok=True)
         self.history_db.touch(exist_ok=True)
 
