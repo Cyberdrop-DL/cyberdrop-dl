@@ -6,7 +6,6 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Self
 
-import aiofiles
 from yarl import URL
 
 from cyberdrop_dl.constants import REGEX_LINKS, BlockedDomains
@@ -20,6 +19,7 @@ from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
 from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler, WordPressMediaCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
+from cyberdrop_dl.scraper import _input
 from cyberdrop_dl.scraper.filters import is_in_domain_list, is_outside_date_range, is_valid_url
 from cyberdrop_dl.scraper.jdownloader import JDownloader
 from cyberdrop_dl.utils.logger import log, log_spacer
@@ -138,29 +138,6 @@ class ScrapeMapper:
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
-    async def parse_input_file_groups(self) -> AsyncGenerator[tuple[str, list[AbsoluteHttpURL]]]:
-        """Split URLs from input file by their groups."""
-        input_file = self.manager.path_manager.input_file
-        if not await asyncio.to_thread(input_file.is_file):
-            yield ("", [])
-            return
-
-        block_quote = False
-        current_group_name = ""
-        async with aiofiles.open(input_file, encoding="utf8") as f:
-            async for line in f:
-                if line.startswith(("---", "===")):  # New group begins here
-                    current_group_name = line.replace("---", "").replace("===", "").strip()
-
-                if current_group_name:
-                    self.groups.add(current_group_name)
-                    yield (current_group_name, list(regex_links(line)))
-                    continue
-
-                block_quote = not block_quote if line == "#\n" else block_quote
-                if not block_quote:
-                    yield ("", list(regex_links(line)))
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
 
     async def load_links(self) -> AsyncGenerator[ScrapeItem]:
@@ -168,14 +145,15 @@ class ScrapeMapper:
 
         if not self.manager.parsed_args.cli_only_args.links:
             self.using_input_file = True
-            async for group_name, urls in self.parse_input_file_groups():
+            async for *groups, urls in _input.read_urls(self.manager.path_manager.input_file):
                 for url in urls:
                     if not url:
                         continue
                     item = ScrapeItem(url=url)
-                    if group_name:
-                        item.add_to_parent_title(group_name)
-                        item.part_of_album = True
+                    item.part_of_album = bool(groups)
+                    for group in groups:
+                        if group:
+                            item.add_to_parent_title(group)
                     yield item
 
             return
