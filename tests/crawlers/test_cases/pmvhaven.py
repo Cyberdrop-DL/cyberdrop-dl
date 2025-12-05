@@ -27,4 +27,17 @@ TEST_CASES = [
         ],
         range(170, 200),
     ),
+    # Playlist
+    (
+        "https://pmvhaven.com/playlists/6932d1e5e234628c68d50b71",
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:10 GODDESS [playlist] (PMVHaven)",
+                "referer": "ANY",
+                "album_id": None,
+            }
+        ],
+        range(10, 20),
+    ),
 ]

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import itertools
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -12,8 +11,6 @@ from cyberdrop_dl.utils.logger import log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
@@ -23,19 +20,13 @@ class Selectors:
     USER_NAME = "div.user-profile-card h1"
     VIDEOS = "div.videos-grid-fixed a"
 
-API_ENTRYPOINT = AbsoluteHttpURL("https://pmvhaven.com/api/")
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
-CATEGORIES = "Hmv", "Pmv", "Hypno", "Tiktok", "KoreanBJ"
 
 
 class PMVHavenCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Category": "/category/...",
-        "Music": "/music/...",
-        "Playlist": "/playlist/...",
+        "Playlist": "/playlists/...",
         "Search results": "/search/...",
-        "Star": "/star/...",
-        "Tag": "/tags/...",
         "Users": "/profile/...",
         "Video": "/video/...",
     }
@@ -46,19 +37,11 @@ class PMVHavenCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "video" in scrape_item.url.parts:
             return await self.video(scrape_item)
-        if "star" in scrape_item.url.parts:
-            return await self.model(scrape_item)
-        if "tags" in scrape_item.url.parts:
-            return await self.tag(scrape_item)
-        if "music" in scrape_item.url.parts:
-            return await self.music(scrape_item)
         if "search" in scrape_item.url.parts:
             return await self.search(scrape_item)
-        if "category" in scrape_item.url.parts:
-            return await self.category(scrape_item)
         if "profile" in scrape_item.url.parts:
             return await self.profile(scrape_item)
-        if "playlist" in scrape_item.url.parts:
+        if "playlists" in scrape_item.url.parts:
             return await self.playlist(scrape_item)
         raise ValueError
 
@@ -72,40 +55,29 @@ class PMVHavenCrawler(Crawler):
 
         await self.process_video_list(scrape_item, soup)
 
-
     @error_handling_wrapper
-    async def playlist(self, scrape_item: ScrapeItem, add_suffix: bool = True) -> None:
-        ...
+    async def playlist(self, scrape_item: ScrapeItem) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
+        playlist_idx = next((data["playlist"] for data in info_table if isinstance(data, dict) and "playlist" in data), None)
+        playlist = info_table[playlist_idx]
+        playlist_name = info_table[playlist["name"]]
 
-    @error_handling_wrapper
-    async def model(self, scrape_item: ScrapeItem) -> None:
-        ...
+        title = f"{playlist_name} [playlist]"
+        title = self.create_title(title)
+        scrape_item.setup_as_album(title)
 
-    @error_handling_wrapper
-    async def creator(self, scrape_item: ScrapeItem) -> None:
-        ...
-
-    @error_handling_wrapper
-    async def music(self, scrape_item: ScrapeItem) -> None:
-        ...
+        await self.process_video_list(scrape_item, soup, info_table)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        tags = scrape_item.url.query.get("tags")
+        tags = scrape_item.url.query.get("tags") or scrape_item.url.query.get("musicSong")
         title = f"{tags} [search]"
         title = self.create_title(title)
         scrape_item.setup_as_album(title)
 
         await self.process_video_list(scrape_item, soup)
-
-    @error_handling_wrapper
-    async def category(self, scrape_item: ScrapeItem) -> None:
-        ...
-
-    @error_handling_wrapper
-    async def tag(self, scrape_item: ScrapeItem) -> None:
-        ...
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
@@ -121,8 +93,9 @@ class PMVHavenCrawler(Crawler):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @error_handling_wrapper
-    async def process_video_list(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
-        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
+    async def process_video_list(self, scrape_item: ScrapeItem, soup: BeautifulSoup, info_table: dict | None = None) -> None:
+        if not info_table:
+            info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
         video_info_list = [data for data in info_table if isinstance(data, dict) and "videoUrl" in data]
         for video_info in video_info_list:
             await self.process_video_info(scrape_item, info_table, video_info)
