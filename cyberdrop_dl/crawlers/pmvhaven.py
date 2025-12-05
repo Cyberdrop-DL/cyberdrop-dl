@@ -93,7 +93,12 @@ class PMVHavenCrawler(Crawler):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @error_handling_wrapper
-    async def process_video_list(self, scrape_item: ScrapeItem, soup: BeautifulSoup, info_table: dict | None = None) -> None:
+    async def process_video_list(
+        self,
+        scrape_item: ScrapeItem,
+        soup: BeautifulSoup,
+        info_table: dict | None = None,
+    ) -> None:
         if not info_table:
             info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
         video_info_list = [data for data in info_table if isinstance(data, dict) and "videoUrl" in data]
