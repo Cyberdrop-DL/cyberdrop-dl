@@ -1,5 +1,6 @@
 DOMAIN = "pmvhaven"
 TEST_CASES = [
+    # Video
     (
         "https://pmvhaven.com/video/real-hookers-pmv_69301129194866d69ec96b5d",
         [
@@ -12,5 +13,18 @@ TEST_CASES = [
                 "datetime": 1764757801,
             }
         ],
+    ),
+    # Profile
+    (
+        "https://pmvhaven.com/profile/68feea724e81de92343a01ef",
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:CheekyGooner [user] (PMVHaven)",
+                "referer": "ANY",
+                "album_id": None,
+            }
+        ],
+        range(170, 200),
     ),
 ]

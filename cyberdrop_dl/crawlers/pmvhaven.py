@@ -18,8 +18,10 @@ if TYPE_CHECKING:
 
 class Selectors:
     APP_JSON = "script#__NUXT_DATA__"
+    USER_NAME = "div.user-profile-card h1"
+    VIDEOS = "div.videos-grid-fixed a"
 
-API_ENTRYPOINT = AbsoluteHttpURL("https://pmvhaven.com/api/v2/")
+API_ENTRYPOINT = AbsoluteHttpURL("https://pmvhaven.com/api/")
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
 CATEGORIES = "Hmv", "Pmv", "Hypno", "Tiktok", "KoreanBJ"
 
@@ -60,39 +62,17 @@ class PMVHavenCrawler(Crawler):
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:
-        username = scrape_item.url.name
-        api_url = API_ENTRYPOINT / "profileInput"
+        soup = await self.request_soup(scrape_item.url)
+        username = css.select_text(soup, Selectors.USER_NAME)
         title = f"{username} [user]"
         title = self.create_title(title)
         scrape_item.setup_as_profile(title)
 
-        # Videos
-        add_data = {"mode": "GetMoreProfileVideos", "user": username}
-        async for json_resp in self.api_pager(api_url, add_data):
-            await self.iter_video_info(scrape_item, json_resp["data"], "Videos")
+        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
+        video_info_list = [data for data in info_table if isinstance(data, dict) and "videoUrl" in data]
+        for video_info in video_info_list:
+            await self.process_video_info(scrape_item, info_table, video_info)
 
-        # Favorites
-        add_data = {"mode": "GetMoreFavoritedVideos", "user": username, "search": None, "date": "Date", "sort": "Sort"}
-        async for json_resp in self.api_pager(api_url, add_data):
-            await self.iter_video_info(scrape_item, json_resp["data"], "Favorites")
-
-        # Playlist
-        # TODO: add pagination support for user playlists
-
-        json_resp: dict[str, Any] = await self.request_json(
-            api_url,
-            method="POST",
-            data=json.dumps({"profile": username, "mode": "GetUser"}),
-            headers={"Content-Type": "text/plain;charset=UTF-8"},
-        )
-
-        user_info: dict[str, dict] = json_resp["data"]
-        for playlist in user_info["playlists"]:
-            playlist_id = playlist["_id"]
-            link = PRIMARY_URL / "playlist" / playlist_id
-            new_scrape_item = scrape_item.create_child(link, new_title_part="Playlists")
-            self.create_task(self.playlist(new_scrape_item, add_suffix=False))
-            scrape_item.add_children()
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, add_suffix: bool = True) -> None:
@@ -157,8 +137,9 @@ class PMVHavenCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
+        video_info_idx = next((data["video"] for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None)
 
-        await self.process_video_info(scrape_item, info_table)
+        await self.process_video_info(scrape_item, info_table, info_table[video_info_idx])
 
     async def _generic_search_pager(self, scrape_item: ScrapeItem, add_data: dict, name: str, type: str = "") -> None:
         title: str = ""
@@ -174,12 +155,7 @@ class PMVHavenCrawler(Crawler):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @error_handling_wrapper
-    async def process_video_info(self, scrape_item: ScrapeItem, info_table: dict) -> None:
-        info_list = next((data for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None)
-        if not info_list:
-            raise ScrapeError(422, message="No video source found")
-        video_info = info_table[info_list["video"]]
-
+    async def process_video_info(self, scrape_item: ScrapeItem, info_table: dict, video_info: dict) -> None:
         log_debug(json.dumps(video_info, indent=4))
         link_str: str = info_table[video_info["videoUrl"]]
         if not link_str:
@@ -192,7 +168,7 @@ class PMVHavenCrawler(Crawler):
         title_idx: int = video_info.get("title") or video_info["uploadTitle"]
         title: str = info_table[title_idx]
         link_str: str = info_table[video_info["videoUrl"]]
-        scrape_item.possible_datetime = self.parse_date(info_table[video_info["createdAt"]])
+        scrape_item.possible_datetime = self.parse_date(info_table[video_info["uploadDate"]])
 
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
