@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 class Selectors:
     APP_JSON = "script#__NUXT_DATA__"
     USER_NAME = "div.user-profile-card h1"
-    VIDEOS = "div.videos-grid-fixed a"
 
 
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
