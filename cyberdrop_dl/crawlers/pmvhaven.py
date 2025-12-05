@@ -15,10 +15,12 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
+
 class Selectors:
     APP_JSON = "script#__NUXT_DATA__"
     USER_NAME = "div.user-profile-card h1"
     VIDEOS = "div.videos-grid-fixed a"
+
 
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
 
@@ -59,7 +61,9 @@ class PMVHavenCrawler(Crawler):
     async def playlist(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
         info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
-        playlist_idx = next((data["playlist"] for data in info_table if isinstance(data, dict) and "playlist" in data), None)
+        playlist_idx = next(
+            (data["playlist"] for data in info_table if isinstance(data, dict) and "playlist" in data), None
+        )
         playlist = info_table[playlist_idx]
         playlist_name = info_table[playlist["name"]]
 
@@ -86,7 +90,9 @@ class PMVHavenCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
-        video_info_idx = next((data["video"] for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None)
+        video_info_idx = next(
+            (data["video"] for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None
+        )
 
         await self.process_video_info(scrape_item, info_table, info_table[video_info_idx])
 
@@ -125,4 +131,3 @@ class PMVHavenCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=resolution)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
-
