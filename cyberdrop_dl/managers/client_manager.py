@@ -137,7 +137,6 @@ class ClientManager:
         self.download_client = DownloadClient(manager, self)
         self.flaresolverr = FlareSolverr(manager)
         self.file_locks: WeakAsyncLocks[str] = WeakAsyncLocks()
-        self._default_headers = {"user-agent": self.manager.global_config.general.user_agent}
         self.reddit_session: aiohttp.ClientSession
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
@@ -259,7 +258,6 @@ class ClientManager:
         return AsyncSession(
             loop=loop,
             async_curl=acurl,
-            headers=self._default_headers,
             impersonate="chrome",
             verify=bool(self.ssl_context),
             proxy=proxy_or_none,
@@ -281,7 +279,7 @@ class ClientManager:
     ) -> ClientSession:
         timeout = self.rate_limiting_options._aiohttp_timeout
         return ClientSession(
-            headers=self._default_headers,
+            headers={"user-agent": self.manager.global_config.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=timeout,

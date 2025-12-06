@@ -66,9 +66,12 @@ class ScraperClient:
         - Closes underliying response on exit.
         """
         self = cast("ScraperClient", self)
-        request_params["headers"] = self.client_manager._default_headers | (headers or {})
+        request_params["headers"] = headers = headers or {}
         request_params["data"] = data
         request_params["json"] = json
+
+        if not impersonate:
+            headers.setdefault("user-agent", self.client_manager.manager.global_config.general.user_agent)
 
         async with self.__request_context(url, method, request_params, impersonate, cache_disabled) as resp:
             exc = None
