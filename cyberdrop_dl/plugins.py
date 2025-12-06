@@ -48,7 +48,7 @@ def _get_plugins() -> Iterable[Plugin]:
 
 def load(manager: Manager) -> None:
     plugins = tuple(_get_plugins())
-    if len(plugins) and not env.NO_PLUGINS:
+    if len(plugins) and env.NO_PLUGINS:
         log(f"Found plugins installed but plugins are disabled. Ignored: {plugins}", 40)
         return
 
