@@ -197,7 +197,7 @@ def parse_nuxt_objs(nuxt_data: list[Any], *attributes: str) -> Generator[dict[st
 
 
 def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
-    def _resolve(value: Any) -> Any:
+    def hydrate(value: Any) -> Any:
         if isinstance(value, list):
             match value:
                 case ["BigInt", val]:
@@ -207,23 +207,23 @@ def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str
                 case ["Object" | "RegExp", val, *_]:
                     return val
                 case ["Set", *values]:
-                    return [_resolve(nuxt_data[idx]) for idx in values]
+                    return [hydrate(nuxt_data[idx]) for idx in values]
                 case ["Map", *values]:
                     return _parse_nuxt_obj(nuxt_data, dict(zip(*(iter(values),) * 2, strict=True)))
                 case ["ShallowRef" | "ShallowReactive" | "Ref" | "Reactive" | "NuxtError", idx]:
-                    return _resolve(nuxt_data[idx])
+                    return hydrate(nuxt_data[idx])
                 case [str(name), *rest]:
                     log_debug(f"Unable to parse custom object {name} {rest}", 30)
                     return None
                 case _:
-                    return [_resolve(nuxt_data[idx]) for idx in value]
+                    return [hydrate(nuxt_data[idx]) for idx in value]
 
         if isinstance(value, dict):
             return _parse_nuxt_obj(nuxt_data, value)
 
         return value
 
-    return {name: _resolve(nuxt_data[idx]) for name, idx in index_map.items()}
+    return {name: hydrate(nuxt_data[idx]) for name, idx in index_map.items()}
 
 
 def unescape(html: str) -> str:
