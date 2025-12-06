@@ -8,6 +8,7 @@ import bs4.css
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils.logger import log_debug
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -198,9 +199,28 @@ def parse_nuxt_objs(nuxt_data: list[Any], *attributes: str) -> Generator[dict[st
 def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
     def _resolve(value: Any) -> Any:
         if isinstance(value, list):
-            return [_resolve(nuxt_data[idx]) for idx in value]
+            match value:
+                case ["BigInt", val]:
+                    return int(val)
+                case ["Date", val]:
+                    return val
+                case ["Object" | "RegExp", val, *_]:
+                    return _resolve(val)
+                case ["Set", *values]:
+                    return [_resolve(nuxt_data[idx]) for idx in values]
+                case ["Map", *values]:
+                    return _parse_nuxt_obj(nuxt_data, dict(zip(*(iter(values),) * 2, strict=True)))
+                case ["ShallowRef" | "ShallowReactive" | "Ref" | "Reactive" | "NuxtError", idx]:
+                    return _resolve(nuxt_data[idx])
+                case [str(name), *rest]:
+                    log_debug(f"Unable to parse custom object {name} {rest}", 30)
+                    return None
+                case _:
+                    return [_resolve(nuxt_data[idx]) for idx in value]
+
         if isinstance(value, dict):
             return _parse_nuxt_obj(nuxt_data, value)
+
         return value
 
     return {name: _resolve(nuxt_data[idx]) for name, idx in index_map.items()}
