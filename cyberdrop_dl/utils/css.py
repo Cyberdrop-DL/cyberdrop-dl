@@ -209,7 +209,7 @@ def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str
                 case ["Set", *values]:
                     return [hydrate(nuxt_data[idx]) for idx in values]
                 case ["Map", *values]:
-                    return _parse_nuxt_obj(nuxt_data, dict(zip(*(iter(values),) * 2, strict=True)))
+                    return hydrate(dict(zip(*(iter(values),) * 2, strict=True)))
                 case ["ShallowRef" | "ShallowReactive" | "Ref" | "Reactive" | "NuxtError", idx]:
                     return hydrate(nuxt_data[idx])
                 case [str(name), *rest]:
