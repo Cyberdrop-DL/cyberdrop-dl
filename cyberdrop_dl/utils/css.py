@@ -205,7 +205,7 @@ def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str
                 case ["Date", val]:
                     return val
                 case ["Object" | "RegExp", val, *_]:
-                    return _resolve(val)
+                    return val
                 case ["Set", *values]:
                     return [_resolve(nuxt_data[idx]) for idx in values]
                 case ["Map", *values]:
