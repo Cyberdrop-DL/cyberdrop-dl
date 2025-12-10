@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css
-from cyberdrop_dl.utils.logger import log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup
+    from typing import Any
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
@@ -54,23 +51,21 @@ class PMVHavenCrawler(Crawler):
         title = self.create_title(title)
         scrape_item.setup_as_profile(title)
 
-        await self.process_video_list(scrape_item, soup)
+        nuxt_data = css.get_nuxt_data(soup)
+        await self.process_video_list(scrape_item, nuxt_data)
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
-        playlist_idx = next(
-            (data["playlist"] for data in info_table if isinstance(data, dict) and "playlist" in data), None
-        )
-        playlist = info_table[playlist_idx]
-        playlist_name = info_table[playlist["name"]]
+        nuxt_data = css.get_nuxt_data(soup)
+        playlist = css.parse_nuxt_obj(nuxt_data, "playlist")
+        playlist_name = playlist["name"]
 
         title = f"{playlist_name} [playlist]"
         title = self.create_title(title)
         scrape_item.setup_as_album(title)
 
-        await self.process_video_list(scrape_item, soup, info_table)
+        await self.process_video_list(scrape_item, nuxt_data)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem) -> None:
@@ -80,7 +75,8 @@ class PMVHavenCrawler(Crawler):
         title = self.create_title(title)
         scrape_item.setup_as_album(title)
 
-        await self.process_video_list(scrape_item, soup)
+        nuxt_data = css.get_nuxt_data(soup)
+        await self.process_video_list(scrape_item, nuxt_data)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
@@ -88,43 +84,26 @@ class PMVHavenCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
-        video_info_idx = next(
-            (data["video"] for data in info_table if isinstance(data, dict) and "uploaderVideosCount" in data), None
-        )
-
-        await self.process_video_info(scrape_item, info_table, info_table[video_info_idx])
+        nuxt_data = css.get_nuxt_data(soup)
+        video = css.parse_nuxt_obj(nuxt_data, "video", "uploaderVideosCount")
+        await self.process_video_info(scrape_item, video)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @error_handling_wrapper
-    async def process_video_list(
-        self,
-        scrape_item: ScrapeItem,
-        soup: BeautifulSoup,
-        info_table: dict | None = None,
-    ) -> None:
-        if not info_table:
-            info_table = json.loads(css.select_text(soup, Selectors.APP_JSON))
-        video_info_list = [data for data in info_table if isinstance(data, dict) and "videoUrl" in data]
-        for video_info in video_info_list:
-            await self.process_video_info(scrape_item, info_table, video_info)
+    async def process_video_list(self, scrape_item: ScrapeItem, nuxt_data: list[Any]) -> None:
+        for video_info in css.parse_nuxt_objs(nuxt_data, "videoUrl"):
+            await self.process_video_info(scrape_item, video_info)
+
 
     @error_handling_wrapper
-    async def process_video_info(self, scrape_item: ScrapeItem, info_table: dict, video_info: dict) -> None:
-        log_debug(json.dumps(video_info, indent=4))
-        link_str: str = info_table[video_info["videoUrl"]]
-        if not link_str:
-            raise ScrapeError(422, message="No video source found")
-
-        video_id: str = info_table[video_info["_id"]]
-        resolution: str | None = None
-        if height := video_info.get("height"):
-            resolution = info_table[height]
-        title_idx: int = video_info.get("title") or video_info["uploadTitle"]
-        title: str = info_table[title_idx]
-        link_str: str = info_table[video_info["videoUrl"]]
-        scrape_item.possible_datetime = self.parse_date(info_table[video_info["uploadDate"]])
+    async def process_video_info(self, scrape_item: ScrapeItem, video_info: dict[str, Any]) -> None:
+        link_str: str = video_info["videoUrl"]
+        video_id: str = video_info["_id"]
+        resolution = video_info["height"]
+        title = video_info.get("title") or video_info["uploadTitle"]
+        link_str: str = video_info["videoUrl"]
+        scrape_item.possible_datetime = self.parse_date(video_info["uploadDate"])
 
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
