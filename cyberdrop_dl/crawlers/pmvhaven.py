@@ -37,7 +37,7 @@ class PMVHavenCrawler(Crawler):
             return await self.video(scrape_item)
         if "search" in scrape_item.url.parts:
             return await self.search(scrape_item)
-        if "profile" in scrape_item.url.parts:
+        if any(u in scrape_item.url.parts for u in ("users", "profile")):
             return await self.profile(scrape_item)
         if "playlists" in scrape_item.url.parts:
             return await self.playlist(scrape_item)

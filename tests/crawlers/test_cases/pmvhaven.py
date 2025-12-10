@@ -27,6 +27,19 @@ TEST_CASES = [
         ],
         range(170, 200),
     ),
+    # Users
+    (
+        "https://pmvhaven.com/users/68feea8c4e81de92343a1fd7",
+        [
+            {
+                "url": "ANY",
+                "download_folder": r"re:arthurcclarke [user] (PMVHaven)",
+                "referer": "ANY",
+                "album_id": None,
+            }
+        ],
+        range(8, 20),
+    ),
     # Playlist
     (
         "https://pmvhaven.com/playlists/6932d1e5e234628c68d50b71",
