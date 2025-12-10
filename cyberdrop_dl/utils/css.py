@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any, NamedTuple, ParamSpec, TypeVar, overload
 
 import bs4.css
 from bs4 import BeautifulSoup
-from bs4.element import Tag
 
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils.logger import log_debug
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-    from bs4 import Tag
+    from bs4.element import Tag
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
@@ -160,6 +160,68 @@ def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
         return ld_json[0]
 
     return ld_json
+
+
+def get_nuxt_data(soup: Tag) -> list[Any]:
+    return json.loads(select_text(soup, "script#__NUXT_DATA__"))
+
+
+def parse_nuxt_obj(nuxt_data: list[Any], *attributes: str) -> dict[str, Any]:
+    """Parses a single object from a NUXT rich JSON payload response (__NUXT_DATA__)
+
+    It iterates over each object until it finds an object with the desired attributes"""
+    if obj := next(parse_nuxt_objs(nuxt_data, *attributes), None):
+        return obj
+    raise SelectorError(f"Unable to find object with {attributes = } in NUXT_DATA")
+
+
+def parse_nuxt_objs(nuxt_data: list[Any], *attributes: str) -> Generator[dict[str, Any]]:
+    """
+    Iterates over each object from a NUXT rich JSON payload response (__NUXT_DATA__)
+
+    It bypasses the devalue parsing logic by ignoring objects without the desired attributes
+
+    https://github.com/nuxt/nuxt/discussions/20879
+    """
+    assert attributes
+    first_key = attributes[0]
+    objects = (obj for obj in nuxt_data if isinstance(obj, dict) and all(key in obj for key in attributes))
+    for obj in objects:
+        try:
+            index: int = obj[first_key]
+            index_map: dict[str, int] = nuxt_data[index]
+        except LookupError:
+            index_map = obj
+
+        yield _parse_nuxt_obj(nuxt_data, index_map)
+
+
+def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
+    def hydrate(value: Any) -> Any:
+        if isinstance(value, list):
+            match value:
+                case ["BigInt", val]:
+                    return int(val)
+                case ["Date" | "Object" | "RegExp", val, *_]:
+                    return val
+                case ["Set", *values]:
+                    return [hydrate(nuxt_data[idx]) for idx in values]
+                case ["Map", *values]:
+                    return hydrate(dict(zip(*(iter(values),) * 2, strict=True)))
+                case ["ShallowRef" | "ShallowReactive" | "Ref" | "Reactive" | "NuxtError", idx]:
+                    return hydrate(nuxt_data[idx])
+                case [str(name), *rest]:
+                    log_debug(f"Unable to parse custom object {name} {rest}", 30)
+                    return None
+                case _:
+                    return [hydrate(nuxt_data[idx]) for idx in value]
+
+        if isinstance(value, dict):
+            return _parse_nuxt_obj(nuxt_data, value)
+
+        return value
+
+    return {name: hydrate(nuxt_data[idx]) for name, idx in index_map.items()}
 
 
 def unescape(html: str) -> str:
