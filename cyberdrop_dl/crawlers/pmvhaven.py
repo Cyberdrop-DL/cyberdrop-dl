@@ -95,7 +95,6 @@ class PMVHavenCrawler(Crawler):
         for video_info in css.parse_nuxt_objs(nuxt_data, "videoUrl"):
             await self.process_video_info(scrape_item, video_info)
 
-
     @error_handling_wrapper
     async def process_video_info(self, scrape_item: ScrapeItem, video_info: dict[str, Any]) -> None:
         link_str: str = video_info["videoUrl"]
