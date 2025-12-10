@@ -24,7 +24,10 @@ class PMVHavenCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Playlist": "/playlists/...",
         "Search results": "/search/...",
-        "Users": "/profile/...",
+        "Users": (
+            "/profile/...",
+            "/users/...",
+        ),
         "Video": "/video/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
