@@ -202,9 +202,7 @@ def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str
             match value:
                 case ["BigInt", val]:
                     return int(val)
-                case ["Date", val]:
-                    return val
-                case ["Object" | "RegExp", val, *_]:
+                case ["Date" | "Object" | "RegExp", val, *_]:
                     return val
                 case ["Set", *values]:
                     return [hydrate(nuxt_data[idx]) for idx in values]
