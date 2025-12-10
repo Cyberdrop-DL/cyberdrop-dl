@@ -190,7 +190,8 @@ def parse_nuxt_objs(nuxt_data: list[Any], *attributes: str) -> Generator[dict[st
         try:
             index: int = obj[first_key]
             index_map: dict[str, int] = nuxt_data[index]
-        except LookupError:
+            assert isinstance(index_map, dict)
+        except (LookupError, AssertionError):
             index_map = obj
 
         yield _parse_nuxt_obj(nuxt_data, index_map)
