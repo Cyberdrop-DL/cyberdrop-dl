@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decode new URL format (xhamster)
 - Update crawler to new site design (PMVHaven)
 - Impersonation always using the same user agent
+- Send token in headers (GoFile) 
 
 ## [8.8.0] - 2025-11-28
 
