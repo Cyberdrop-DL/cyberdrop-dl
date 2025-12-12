@@ -20,7 +20,7 @@ PRIMARY_URL = AbsoluteHttpURL("https://pornzog.com")
 
 class PornZogCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video":  "/video/...",
+        "Video": "/video/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "pornzog"
