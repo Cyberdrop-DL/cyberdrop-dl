@@ -48,7 +48,6 @@ class TXXXCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            # https://vxxx.com/video-1673601
             case [video_path] if video_path.startswith("video-"):
                 video_id = video_path.split("-")[1]
                 return await self.video(scrape_item, video_id)
