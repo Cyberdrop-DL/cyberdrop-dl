@@ -68,7 +68,9 @@ class TXXXCrawler(Crawler):
         scrape_item.possible_datetime = self.parse_iso_date(video_info["post_date"])
 
         decoded_url = _decode_base64(video["video_url"])
-        link = self.parse_url(f"https://{scrape_item.url.host}{decoded_url}", trim=False)
+        link = self.parse_url(decoded_url, trim=False)
+        if not decoded_url.startswith("https"):
+            link = link.with_host(scrape_item.url.host)
 
         filename, ext = self.get_filename_and_ext(link.parts[-2])
         custom_filename = self.create_custom_filename(video_info["title"], ext, file_id=video_id)

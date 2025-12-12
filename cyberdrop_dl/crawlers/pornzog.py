@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import base64
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-
-# from cyberdrop_dl.crawlers.txxx import TXXXCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
@@ -23,7 +20,6 @@ PRIMARY_URL = AbsoluteHttpURL("https://pornzog.com")
 
 
 class PornZogCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("pornzog.com",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video":  "/video/...",
     }
