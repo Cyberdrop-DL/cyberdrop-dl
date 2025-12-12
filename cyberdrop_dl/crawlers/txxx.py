@@ -34,6 +34,7 @@ class TXXXCrawler(Crawler):
         "vxxx.com",
         "voyeurhit.com",
         "voyeurhit.tube",
+        "xmilf.com",
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
