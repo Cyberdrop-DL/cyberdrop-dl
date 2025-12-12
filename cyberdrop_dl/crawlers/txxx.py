@@ -12,10 +12,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-class Selectors:
-    EMBED_IFRAME = "div.fluid-width-video-wrapper > iframe"
-
-
 PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
 
 
@@ -56,7 +52,7 @@ class TXXXCrawler(Crawler):
             case [video_path] if video_path.startswith("video-"):
                 video_id = video_path.split("-")[1]
                 return await self.video(scrape_item, video_id)
-            case ["video" | "videos", video_id, _]:
+            case ["video" | "videos" | "embed", video_id, *_]:
                 return await self.video(scrape_item, video_id)
             case _:
                 raise ValueError

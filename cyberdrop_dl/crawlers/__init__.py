@@ -88,6 +88,7 @@ from .pmvhaven import PMVHavenCrawler
 from .pornhub import PornHubCrawler
 from .pornpics import PornPicsCrawler
 from .porntrex import PorntrexCrawler
+from .pornzog import PornZogCrawler
 from .postimg import PostImgCrawler
 from .ranoz import RanozCrawler, RootzCrawler
 from .realbooru import RealBooruCrawler
