@@ -17,6 +17,7 @@ PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
 
 class TXXXCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "fuxxx.com",
         "hclips.com",
         "hdzog.com",
         "hdzog.tube",
