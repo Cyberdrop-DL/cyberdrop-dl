@@ -140,6 +140,7 @@ from .xbunkr import XBunkrCrawler
 from .xenforo import XF_CRAWLERS, SimpCityCrawler
 from .xgroovy import XGroovyCrawler
 from .xhamster import XhamsterCrawler
+from .xmilf import XMilfCrawler
 from .xvideos import XVideosCrawler
 from .xxxbunker import XXXBunkerCrawler
 from .yandex_disk import YandexDiskCrawler

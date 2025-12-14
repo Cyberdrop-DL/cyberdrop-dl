@@ -11,22 +11,6 @@ if TYPE_CHECKING:
 
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
-    # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-    #     "voyeurhit.com",
-    #     "voyeurhit.tube",
-    #     "xmilf.com",
-    # )
-    # SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-    #     "Video": (
-    #         "/video/...",
-    #         "/videos/...",
-    #         "/video-...",
-    #     ),
-    # }
-    # PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    # DOMAIN: ClassVar[str] = "txxx"
-    # FOLDER_DOMAIN: ClassVar[str] = "TXXX"
-
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
