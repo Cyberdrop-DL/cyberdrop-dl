@@ -10,13 +10,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-class FuXXXCrawler(TubeCorporateCrawler):
+class HClipsCrawler(TubeCorporateCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/...",
     }
-    DOMAIN: ClassVar[str] = "fuxxx"
-    FOLDER_DOMAIN: ClassVar[str] = "FuXXX"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fuxxx.com")
+    DOMAIN: ClassVar[str] = "hclips"
+    FOLDER_DOMAIN: ClassVar[str] = "HClips"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hclips.com")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
