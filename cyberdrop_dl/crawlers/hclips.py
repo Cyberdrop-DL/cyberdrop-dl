@@ -23,7 +23,7 @@ class HClipsCrawler(TubeCorporateCrawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["videos", video_id, _]:
+            case ["videos" | "embed", video_id, *_]:
                 return await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
