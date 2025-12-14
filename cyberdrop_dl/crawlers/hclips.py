@@ -6,11 +6,14 @@ from cyberdrop_dl.crawlers._tubecorporate import TubeCorporateCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.crawlers.crawler import SupportedPaths
+    from cyberdrop_dl.crawlers.crawler import SupportedDomains, SupportedPaths
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
 class HClipsCrawler(TubeCorporateCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "privatehomeclips.com",
+    )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/...",
     }
