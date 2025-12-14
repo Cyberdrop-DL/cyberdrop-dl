@@ -11,9 +11,7 @@ if TYPE_CHECKING:
 
 
 class HClipsCrawler(TubeCorporateCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-        "privatehomeclips.com",
-    )
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("privatehomeclips.com",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/...",
     }
