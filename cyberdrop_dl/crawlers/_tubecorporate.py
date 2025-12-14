@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
     # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-    #     "tubepornclassic.com",
     #     "txxx.com",
     #     "txxx.tube",
     #     "upornia.com",
