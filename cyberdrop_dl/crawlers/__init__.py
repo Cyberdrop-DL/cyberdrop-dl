@@ -60,6 +60,7 @@ from .imgur import ImgurCrawler
 from .imx_to import ImxToCrawler
 from .incestflix import IncestflixCrawler
 from .influencer_bitches import InfluencerBitchesCrawler
+from .inporn import InPornCrawler
 from .invision import INVISION_CRAWLERS
 from .jpg5 import JPG5Crawler
 from .kemono import KemonoCrawler
