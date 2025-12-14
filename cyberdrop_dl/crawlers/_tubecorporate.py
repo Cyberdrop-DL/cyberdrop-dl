@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
     # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-    #     "vxxx.com",
     #     "voyeurhit.com",
     #     "voyeurhit.tube",
     #     "xmilf.com",
@@ -27,16 +26,6 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
     # PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     # DOMAIN: ClassVar[str] = "txxx"
     # FOLDER_DOMAIN: ClassVar[str] = "TXXX"
-
-    # async def fetch(self, scrape_item: ScrapeItem) -> None:
-    #     match scrape_item.url.parts[1:]:
-    #         case [video_path] if video_path.startswith("video-"):
-    #             video_id = video_path.split("-")[1]
-    #             return await self.video(scrape_item, video_id)
-    #         case ["video" | "videos" | "embed", video_id, *_]:
-    #             return await self.video(scrape_item, video_id)
-    #         case _:
-    #             raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
