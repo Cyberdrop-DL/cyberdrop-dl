@@ -126,6 +126,7 @@ from .tubepornclassic import TubePornClassicCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler
+from .upornia import UPorniaCrawler
 from .vbulletin import VBULLETIN_CRAWLERS
 from .vipr_dot_im import ViprImCrawler
 from .voe_sx import VoeSxCrawler
