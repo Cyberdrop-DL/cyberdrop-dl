@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import base64
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.crawlers.crawler import SupportedDomains
-    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+    from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
 # PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
@@ -17,9 +15,6 @@ if TYPE_CHECKING:
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
     # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-    #     "hclips.com",
-    #     "hdzog.com",
-    #     "hdzog.tube",
     #     "hotmovs.com",
     #     "hotmovs.tube",
     #     "inporn.com",

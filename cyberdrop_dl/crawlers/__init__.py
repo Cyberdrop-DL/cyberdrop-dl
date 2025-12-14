@@ -43,6 +43,7 @@ from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
 from .google_drive import GoogleDriveCrawler
 from .hclips import HClipsCrawler
+from .hdzog import HDZogCrawler
 from .hianime import HiAnimeCrawler
 from .hitomi_la import HitomiLaCrawler
 from .hotleak_vip import HotLeakVipCrawler
