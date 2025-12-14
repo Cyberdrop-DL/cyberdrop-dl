@@ -122,6 +122,7 @@ from .toonily import ToonilyCrawler
 from .tranny_one import TrannyOneCrawler
 from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
+from .tubepornclassic import TubePornClassicCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .vbulletin import VBULLETIN_CRAWLERS
