@@ -12,51 +12,50 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
+# PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
 
 
-class TXXXCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-        "fuxxx.com",
-        "hclips.com",
-        "hdzog.com",
-        "hdzog.tube",
-        "hotmovs.com",
-        "hotmovs.tube",
-        "inporn.com",
-        "privatehomeclips.com",
-        "tubepornclassic.com",
-        "txxx.com",
-        "txxx.tube",
-        "upornia.com",
-        "upornia.tube",
-        "vjav.com",
-        "vjav.tube",
-        "vxxx.com",
-        "voyeurhit.com",
-        "voyeurhit.tube",
-        "xmilf.com",
-    )
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": (
-            "/video/...",
-            "/videos/...",
-            "/video-...",
-        ),
-    }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    DOMAIN: ClassVar[str] = "txxx"
-    FOLDER_DOMAIN: ClassVar[str] = "TXXX"
+class TubeCorporateCrawler(Crawler, is_abc=True):
+    # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+    #     "hclips.com",
+    #     "hdzog.com",
+    #     "hdzog.tube",
+    #     "hotmovs.com",
+    #     "hotmovs.tube",
+    #     "inporn.com",
+    #     "privatehomeclips.com",
+    #     "tubepornclassic.com",
+    #     "txxx.com",
+    #     "txxx.tube",
+    #     "upornia.com",
+    #     "upornia.tube",
+    #     "vjav.com",
+    #     "vjav.tube",
+    #     "vxxx.com",
+    #     "voyeurhit.com",
+    #     "voyeurhit.tube",
+    #     "xmilf.com",
+    # )
+    # SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+    #     "Video": (
+    #         "/video/...",
+    #         "/videos/...",
+    #         "/video-...",
+    #     ),
+    # }
+    # PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    # DOMAIN: ClassVar[str] = "txxx"
+    # FOLDER_DOMAIN: ClassVar[str] = "TXXX"
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
-        match scrape_item.url.parts[1:]:
-            case [video_path] if video_path.startswith("video-"):
-                video_id = video_path.split("-")[1]
-                return await self.video(scrape_item, video_id)
-            case ["video" | "videos" | "embed", video_id, *_]:
-                return await self.video(scrape_item, video_id)
-            case _:
-                raise ValueError
+    # async def fetch(self, scrape_item: ScrapeItem) -> None:
+    #     match scrape_item.url.parts[1:]:
+    #         case [video_path] if video_path.startswith("video-"):
+    #             video_id = video_path.split("-")[1]
+    #             return await self.video(scrape_item, video_id)
+    #         case ["video" | "videos" | "embed", video_id, *_]:
+    #             return await self.video(scrape_item, video_id)
+    #         case _:
+    #             raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
