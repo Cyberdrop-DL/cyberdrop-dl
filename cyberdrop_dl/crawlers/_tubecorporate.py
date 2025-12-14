@@ -10,13 +10,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
-# PRIMARY_URL = AbsoluteHttpURL("https://txxx.com")
-
-
 class TubeCorporateCrawler(Crawler, is_abc=True):
     # SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-    #     "upornia.com",
-    #     "upornia.tube",
     #     "vjav.com",
     #     "vjav.tube",
     #     "vxxx.com",

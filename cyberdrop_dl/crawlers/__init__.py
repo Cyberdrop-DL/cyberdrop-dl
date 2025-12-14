@@ -129,6 +129,7 @@ from .txxx import TXXXCrawler
 from .upornia import UPorniaCrawler
 from .vbulletin import VBULLETIN_CRAWLERS
 from .vipr_dot_im import ViprImCrawler
+from .vjav import VJavCrawler
 from .voe_sx import VoeSxCrawler
 from .wetransfer import WeTransferCrawler
 from .wordpress import WP_CRAWLERS, WordPressHTMLCrawler, WordPressMediaCrawler
