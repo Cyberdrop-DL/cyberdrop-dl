@@ -4,6 +4,7 @@ import base64
 from typing import TYPE_CHECKING
 
 from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
             return
 
         api_url = self._get_api_url(scrape_item, video_id)
-        video = _get_default_video(await self.request_json(api_url))
+        video = _choose_best_format(await self.request_json(api_url))
         video_info = await self._get_video_info(scrape_item, video_id)
         scrape_item.possible_datetime = self.parse_iso_date(video_info["post_date"])
 
@@ -54,10 +55,9 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
         return scrape_item.url.with_path("api/videofile.php").with_query(query)
 
 
-def _get_default_video(formats: list[dict[str, str]]) -> dict[str, str]:
-    for fmt in formats:
-        if fmt.get("is_default") == 1:
-            return fmt
+def _choose_best_format(formats: list[dict[str, str]]) -> dict[str, str]:
+    if len(formats) > 1:
+        raise ScrapeError(422, "More than one format found")
     return formats[0]
 
 
