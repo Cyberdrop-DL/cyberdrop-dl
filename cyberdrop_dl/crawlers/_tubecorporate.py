@@ -42,7 +42,7 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
 
     async def _get_video_info(self, scrape_item: ScrapeItem, video_id: str) -> dict[str, str]:
         json_url = self._get_json_url(scrape_item, video_id)
-        video_info: dict[str, dict[str,str]] = await self.request_json(json_url)
+        video_info: dict[str, dict[str, str]] = await self.request_json(json_url)
         return video_info["video"]
 
     def _get_json_url(self, scrape_item: ScrapeItem, video_id: str) -> AbsoluteHttpURL:
