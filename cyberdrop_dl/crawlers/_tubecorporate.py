@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
+    def __init_subclass__(cls, **kwargs) -> None:
+        cls.SUPPORTED_DOMAINS = cls.PRIMARY_URL.host, cls.PRIMARY_URL.host.replace(".com", ".tube")
+        super().__init_subclass__(**kwargs)
+
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
@@ -22,11 +26,9 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
         scrape_item.possible_datetime = self.parse_iso_date(video_info["post_date"])
 
         decoded_url = _decode_base64(video["video_url"])
-        link = self.parse_url(decoded_url, trim=False)
-        if not decoded_url.startswith("https"):
-            link = link.with_host(scrape_item.url.host)
+        link = self.parse_url(decoded_url, relative_to=scrape_item.url.origin(), trim=False)
 
-        filename, ext = self.get_filename_and_ext(link.parts[-2])
+        filename, ext = self.get_filename_and_ext(video_id + ".mp4")
         custom_filename = self.create_custom_filename(video_info["title"], ext, file_id=video_id)
         return await self.handle_file(
             scrape_item.url,
@@ -35,11 +37,12 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
             ext,
             custom_filename=custom_filename,
             debrid_link=link,
+            metadata=video_info,
         )
 
     async def _get_video_info(self, scrape_item: ScrapeItem, video_id: str) -> dict[str, str]:
         json_url = self._get_json_url(scrape_item, video_id)
-        video_info: dict[str, str] = await self.request_json(json_url)
+        video_info: dict[str, dict[str,str]] = await self.request_json(json_url)
         return video_info["video"]
 
     def _get_json_url(self, scrape_item: ScrapeItem, video_id: str) -> AbsoluteHttpURL:
@@ -53,7 +56,7 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
 
 def _get_default_video(formats: list[dict[str, str]]) -> dict[str, str]:
     for fmt in formats:
-        if fmt.get("default") == "1":
+        if fmt.get("is_default") == 1:
             return fmt
     return formats[0]
 
