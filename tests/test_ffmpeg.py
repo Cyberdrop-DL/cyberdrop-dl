@@ -27,3 +27,25 @@ async def test_ffprobe_video_url() -> None:
     assert tags["language"] == "und"
     assert tags["handler_name"] == "VideoHandler"
     assert tags["encoder"] == "AVC Coding"
+
+
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        (
+            "00:08:37.503000000",
+            (0, 0, 8, 37.503),
+        ),
+        (
+            "02:03:57.3455",
+            (0, 2, 3, 57.3455),
+        ),
+        (
+            "04:02:03:57.3455",
+            (4, 2, 3, 57.3455),
+        ),
+    ],
+)
+def test_duration_parse(input: str, expected: tuple[int, int, int, float]) -> None:
+    duration = ffmpeg.Duration.parse(input)
+    assert duration == ffmpeg.Duration(*expected)

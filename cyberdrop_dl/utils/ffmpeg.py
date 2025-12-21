@@ -4,6 +4,7 @@ import asyncio
 import functools
 import itertools
 import json
+import re
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -105,7 +106,9 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert which_ffprobe()
+    if not which_ffprobe():
+        raise RuntimeError("ffprobe is not installed")
+
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 
@@ -177,6 +180,17 @@ def _get_bin_version(bin_path: str) -> str | None:
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ FFprobe ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+_DURATION_RE = re.compile(
+    r"^"
+    r"(?P<sign>-?)"
+    r"(?P<days>\d+[:.])?"
+    r"(?P<hours>\d{1,2}):"
+    r"(?P<minutes>\d{2}):"
+    r"(?P<seconds>\d{2})"
+    r"(?P<fraction>[.,]\d{1,20})?"
+    r"$"
+)
+
 
 class Duration(NamedTuple):
     # "00:03:48.250000000"
@@ -186,28 +200,42 @@ class Duration(NamedTuple):
     seconds: float = 0
 
     @staticmethod
-    def parse(duration: float | str) -> TruncatedFloat:
+    def parse(timespan: float | str) -> Duration:
         try:
-            return TruncatedFloat(duration)
+            td = timedelta(seconds=float(timespan))
         except (ValueError, TypeError):
             pass
-
-        assert isinstance(duration, str)
-        days, _, other_parts = duration.partition(" ")
-        if other_parts:
-            days = "".join(char for char in days if char.isdigit())
         else:
-            other_parts = days
+            return Duration.from_timedelta(td)
 
-        days = days or "0"
-        time_parts = other_parts.split(":")
-        missing_parts = [0 for _ in range(3 - len(time_parts))]
-        seconds = float(Fraction(time_parts.pop(-1)))
-        int_parts = map(int, (days, *missing_parts, *time_parts))
-        return TruncatedFloat(Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds())
+        assert isinstance(timespan, str)
+        match = _DURATION_RE.match(timespan)
+        if not match:
+            raise ValueError(f"Invalid duration {timespan}")
+
+        groups = match.groupdict()
+        sign = -1 if groups["sign"] == "-" else 1
+
+        return Duration(
+            days=sign * int((groups["days"] or "0").rstrip(":.")),
+            hours=sign * int(groups["hours"]),
+            minutes=sign * int(groups["minutes"]),
+            seconds=sign * int(groups["seconds"]) + float(groups["fraction"] or 0.0),
+        )
+
+    @staticmethod
+    def from_timedelta(td: timedelta) -> Duration:
+        total_seconds = int(td.total_seconds())
+        days, rem = divmod(total_seconds, 86400)
+        hours, rem = divmod(rem, 3600)
+        minutes, seconds = divmod(rem, 60)
+        return Duration(days, hours, minutes, seconds)
 
     def as_timedelta(self) -> timedelta:
         return timedelta(**self._asdict())
+
+    def __float__(self) -> TruncatedFloat:
+        return TruncatedFloat(self.as_timedelta().total_seconds())
 
 
 class StreamDict(TypedDict, total=False):
@@ -246,7 +274,12 @@ class Stream:
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         duration: float | str | None = stream_info.get("duration") or tags.get("duration")
         bitrate = int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None
-        duration = Duration.parse(duration) if duration else None
+        if duration:
+            try:
+                duration = float(Duration.parse(duration))
+            except ValueError:
+                pass
+
         return info | {"tags": tags, "duration": duration, "bitrate": bitrate}
 
     @classmethod
