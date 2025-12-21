@@ -220,7 +220,7 @@ class Duration(NamedTuple):
             days=sign * int((groups["days"] or "0").rstrip(":.")),
             hours=sign * int(groups["hours"]),
             minutes=sign * int(groups["minutes"]),
-            seconds=sign * int(groups["seconds"]) + float(groups["fraction"] or 0.0),
+            seconds=sign * (int(groups["seconds"]) + float(groups["fraction"] or 0.0)),
         )
 
     @staticmethod
