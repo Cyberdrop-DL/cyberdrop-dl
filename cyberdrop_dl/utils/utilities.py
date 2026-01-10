@@ -316,17 +316,20 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
 
 
 def _partial_files(dir: Path | str) -> Generator[Path]:
-    for entry in os.scandir(dir):
-        try:
-            if entry.is_dir(follow_symlinks=False):
-                yield from _partial_files(entry.path)
-                continue
-        except OSError:
-            pass
+    try:
+        for entry in os.scandir(dir):
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    yield from _partial_files(entry.path)
+                    continue
+            except OSError:
+                pass
 
-        suffix = entry.name.rpartition(".")[-1]
-        if f".{suffix}" in constants.TempExt:
-            yield Path(entry.path)
+            suffix = entry.name.rpartition(".")[-1]
+            if f".{suffix}" in constants.TempExt:
+                yield Path(entry.path)
+    except OSError:
+        return
 
 
 def delete_partial_files(manager: Manager) -> None:

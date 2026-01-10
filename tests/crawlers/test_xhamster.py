@@ -1,6 +1,6 @@
 import pytest
 
-from cyberdrop_dl.crawlers.xhamster import _decode_hex_url
+from cyberdrop_dl.crawlers.xhamster import _decode_hex_url, _decrypt_url
 
 
 @pytest.mark.parametrize(
@@ -46,4 +46,22 @@ from cyberdrop_dl.crawlers.xhamster import _decode_hex_url
 )
 def test_decode_hex_url(raw_url: str, expected_output: str) -> None:
     result = _decode_hex_url(raw_url)
+    assert result == expected_output
+
+
+@pytest.mark.parametrize(
+    "raw_url, expected_output",
+    [
+        (
+            "https://video-nss-h.xhcdn.com/064a9271b60d1cb32250a4924d927a9877dde301c6e57479148e493e62,1765044000/media=hls4/multi=256x144:144p,426x240:240p,854x480:480p,1280x720:720p,1920x1080:1080p/028/229/323/_TPL_.h264.mp4.m3u8",
+            "https://video-nss-h.xhcdn.com/whbA7bSVStNwMAGR0FLRXQ==,1765044000/media=hls4/multi=256x144:144p,426x240:240p,854x480:480p,1280x720:720p,1920x1080:1080p/028/229/323/_TPL_.h264.mp4.m3u8",
+        ),
+        (
+            "051e2cfbfd5cca82bd301b716943c9450b62bff13c1f6d26be15dccce34d519a4cb0cd2be88874ff1b027fed601033440f8bebc4ae99b404a9c2d47ec2d13ef4de47257bff8f007ba24350e33b24bfff6c92cd0cb1db63b5b6ea5df26f4574ace4e81799bee282fbfcec78c5a5276050545446a1ddfd791e97144583b187405ac2c9e3433e528c343b015248e1f492c1666262e8e68b002c1bf2c0498b57ec17bbc469250a98577d13d3f08c28be2e2498b5d7c2525bc2b58062cbf28e5b6d3b6dc81d488c9cec649b845d",
+            "https://video-cf-a.xhcdn.com/ZkCq1RTUhoKb4%2BqgcEkQ6m7bqkxMui3N%2FDOMGFwMjyI%3D/87/1760554800/media=hls4/multi=256x144:144p:,426x240:240p:,854x480:480p:,1280x720:720p:/016/033/213/_TPL_.av1.mp4.m3u8",
+        ),
+    ],
+)
+def test_decrypt_url(raw_url: str, expected_output: str) -> None:
+    result = _decrypt_url(raw_url)
     assert result == expected_output

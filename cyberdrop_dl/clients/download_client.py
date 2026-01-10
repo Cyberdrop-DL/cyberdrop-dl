@@ -62,7 +62,10 @@ class DownloadClient:
             yield
 
     def _get_download_headers(self, domain: str, referer: AbsoluteHttpURL) -> dict[str, str]:
-        download_headers = self.client_manager._default_headers | {"Referer": str(referer)}
+        download_headers = {
+            "User-Agent": self.manager.global_config.general.user_agent,
+            "Referer": str(referer),
+        }
         auth_data = self.manager.config_manager.authentication_data
         if domain == "pixeldrain" and auth_data.pixeldrain.api_key:
             download_headers["Authorization"] = self.manager.client_manager.basic_auth(
