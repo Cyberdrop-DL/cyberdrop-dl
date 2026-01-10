@@ -19,7 +19,7 @@ class ToonilyCrawler(Crawler):
     # TODO: Make this a general crawler for any site that uses wordpress madara
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Serie": "/serie/<name>",
-        "Charpter": "/serie/<name>/chapter-<chapter-id>",
+        "Chapter": "/serie/<name>/chapter-<chapter-id>",
     }
     PRIMARY_URL = AbsoluteHttpURL("https://toonily.com")
     DOMAIN = "toonily"
@@ -37,7 +37,7 @@ class ToonilyCrawler(Crawler):
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
+        soup = await self.request_soup(scrape_item.url, impersonate=True)
 
         title_tag = css.select(soup, Selector.SERIES_TITLE)
         css.decompose(title_tag, "*")
@@ -48,7 +48,7 @@ class ToonilyCrawler(Crawler):
 
     @error_handling_wrapper
     async def chapter(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
+        soup = await self.request_soup(scrape_item.url, impersonate=True)
 
         series_name, chapter_title = css.select_text(soup, Selector.CHAPTER_TITLE).split(" - ", 1)
         if scrape_item.type != FILE_HOST_PROFILE:
@@ -59,7 +59,6 @@ class ToonilyCrawler(Crawler):
         iso_date = css.get_json_ld(soup)["@graph"][0]["datePublished"]
         scrape_item.possible_datetime = self.parse_iso_date(iso_date)
 
-        for _, link in self.iter_tags(soup, Selector.IMAGE, "data-src"):
-            filename, ext = self.get_filename_and_ext(link.name)
-            self.create_task(self.handle_file(link, scrape_item, filename, ext))
+        for _, link in self.iter_tags(soup, Selector.IMAGE, "src"):
+            self.create_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
