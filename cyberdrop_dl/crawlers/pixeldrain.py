@@ -41,7 +41,7 @@ class Folder(BaseModel):
 
 
 class Node(BaseModel):
-    id: str
+    id: str | None = None
     type: Literal["file", "dir"]
     path: str
     name: str
@@ -182,6 +182,7 @@ class PixelDrainCrawler(Crawler):
         fs = await request_fs(path)
         base_node = fs.path[fs.base_index]
         root = fs.path[0]
+        assert root.id
         title = self.create_title(root.name, root.id)
         scrape_item.setup_as_album(title, album_id=root.id)
 
@@ -267,6 +268,7 @@ class PixelDrainCrawler(Crawler):
 
     @error_handling_wrapper
     async def _text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
+        assert file.id
         scrape_item.setup_as_album(self.create_title(file.name, file.id))
         api_url = scrape_item.url.origin() / "api/file" / file.id
         text = await self._api_request(api_url)
