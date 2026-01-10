@@ -22,6 +22,13 @@ _R = TypeVar("_R", bound=datetime.datetime | None)
 _DEFAULT_PARSERS: list[ParserKind] = ["relative-time", "custom-formats", "absolute-time", "no-spaces-time"]
 _DEFAULT_DATE_ORDER = "MDY"
 
+try:
+    from tzlocal import get_localzone
+
+    _TIMEZONE = get_localzone()
+except (ImportError, LookupError):
+    _TIMEZONE = None
+
 
 def _coerce_to_list(value: _S | set[_S] | list[_S] | tuple[_S, ...] | None) -> list[_S]:
     if value is None:
@@ -96,6 +103,8 @@ class DateParser(dateparser.date.DateDataParser):
     ) -> datetime.datetime | None:
         """Adds current year to the date if it is missing from it"""
         date_formats = _coerce_to_list(date_formats)
+        if _TIMEZONE is None:
+            return datetime.datetime.strptime(date_string, date_formats[0])
         date_data = dateparser.date.parse_with_formats(date_string, date_formats, self._settings)
         return date_data.date_obj
 
@@ -156,12 +165,12 @@ def parse(date_or_datetime: str, format: str | None = None, /, *, iso: bool = Fa
 
     if iso:
         return parse_iso(date_or_datetime)
-    elif format:
-        if format and (format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S")):
+    if format:
+        if format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S"):
             raise ValueError("Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead")
         return _get_parser().parse_possible_incomplete_date(date_or_datetime, format)
-    else:
-        return parse_human(date_or_datetime)
+
+    return parse_human(date_or_datetime)
 
 
 def parse_aware_iso_datetime(value: str) -> datetime.datetime | None:
