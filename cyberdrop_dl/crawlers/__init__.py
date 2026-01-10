@@ -123,6 +123,7 @@ from .tranny_one import TrannyOneCrawler
 from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
 from .tubepornclassic import TubePornClassicCrawler
+from .turbovid import TurboVidCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler
