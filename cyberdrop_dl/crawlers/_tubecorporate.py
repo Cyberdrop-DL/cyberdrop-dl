@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import base64
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
@@ -12,9 +12,27 @@ if TYPE_CHECKING:
 
 
 class TubeCorporateCrawler(Crawler, is_abc=True):
-    def __init_subclass__(cls, **kwargs) -> None:
-        cls.SUPPORTED_DOMAINS = cls.PRIMARY_URL.host, cls.PRIMARY_URL.host.replace(".com", ".tube")
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": (
+            "/videos/<video_id>/...",
+            "/embed/<video_id>/...",
+        )
+    }
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        domains = cls.PRIMARY_URL.host, *cls.SUPPORTED_DOMAINS
+        domains = *domains, *(d.replace(".com", ".tube") for d in domains)
+        old_domains = *cls.OLD_DOMAINS, *(d.replace(".com", ".tube") for d in cls.OLD_DOMAINS)
+        cls.SUPPORTED_DOMAINS = tuple(sorted(set(domains)))
+        cls.OLD_DOMAINS = tuple(sorted(set(old_domains)))
         super().__init_subclass__(**kwargs)
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["videos" | "embed", video_id, *_]:
+                return await self.video(scrape_item, video_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -28,9 +46,9 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
 
         decoded_url = _decode_base64(video["video_url"])
         link = self.parse_url(decoded_url, relative_to=scrape_item.url.origin(), trim=False)
-
         filename, ext = self.get_filename_and_ext(video_id + ".mp4")
         custom_filename = self.create_custom_filename(video_info["title"], ext, file_id=video_id)
+
         return await self.handle_file(
             scrape_item.url,
             scrape_item,

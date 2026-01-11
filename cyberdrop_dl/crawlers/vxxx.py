@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class VXXXCrawler(TubeCorporateCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": "/video-...",
+        "Video": "/video-<video-id>",
     }
     DOMAIN: ClassVar[str] = "vxxx"
     FOLDER_DOMAIN: ClassVar[str] = "VXXX"
