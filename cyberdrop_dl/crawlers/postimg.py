@@ -51,8 +51,8 @@ class PostImgCrawler(Crawler):
                 scrape_item.setup_as_album(title, album_id=album_id)
 
             for image in json_resp["images"]:
-                link = self.parse_url(image[4])
-                filename, ext = self.get_filename_and_ext(image[2])
+                link = self.parse_url(image[6])
+                filename, ext = self.get_filename_and_ext(link.name)
                 new_scrape_item = scrape_item.create_child(link)
                 await self.handle_file(link, new_scrape_item, filename, ext)
                 scrape_item.add_children()
