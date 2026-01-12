@@ -42,6 +42,7 @@ from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
 from .google_drive import GoogleDriveCrawler
+from .google_photos import GooglePhotosCrawler
 from .hclips import HClipsCrawler
 from .hdzog import HDZogCrawler
 from .hianime import HiAnimeCrawler
