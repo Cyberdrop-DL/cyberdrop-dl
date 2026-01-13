@@ -56,7 +56,7 @@ class BandcampCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        album = _get_attr_data(soup, "tralbum")
+        album = _get_data_attr(soup, "tralbum")
         album_title: str = album["current"]["title"]
         scrape_item.setup_as_album(self.create_title(album_title))
         origin = scrape_item.url.origin()
@@ -71,11 +71,11 @@ class BandcampCrawler(Crawler):
     @error_handling_wrapper
     async def song(self, scrape_item: ScrapeItem, fallback_track_info: dict[str, Any] | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
-        album = _get_attr_data(soup, "tralbum")
+        album = _get_data_attr(soup, "tralbum")
         track: dict[str, Any] = (album["trackinfo"][0] if album.get("trackinfo") else fallback_track_info) or {}
         current: dict[str, Any] = album["current"]
 
-        track["free_download"] = album["freeDownloadPage"]
+        track["free_download"] = album.get("freeDownloadPage")
         track["publish_date"] = current["publish_date"]
         track["artist"] = artist = current.get("artist") or album["artist"]
         track["title"] = (current.get("title") or track["title"]).removeprefix(f"{artist} - ")
@@ -86,11 +86,10 @@ class BandcampCrawler(Crawler):
 
     async def _track(self, scrape_item: ScrapeItem, track: dict[str, Any]) -> None:
         scrape_item.possible_datetime = dates.parse_http(track["publish_date"])
-        best_format = await self._get_best_format(track.pop("free_download", None), track["file"])
+        best_format = await self._get_best_format(track.pop("free_download"), track["file"])
         full_name = f"{track['artist']} - {track['title']}{best_format.ext}"
         filename, ext = self.get_filename_and_ext(full_name)
         db_url = scrape_item.url.with_query(None).with_fragment(best_format.name)
-
         await self.handle_file(
             db_url,
             scrape_item,
@@ -114,7 +113,7 @@ class BandcampCrawler(Crawler):
 
     def _parse_formats(self, file_info: dict[str, str]) -> Generator[Format]:
         for name, format_url in file_info.items():
-            codec, _ = name.split("-", 1)
+            codec = name.partition("-")[0]
             yield Format(
                 url=self.parse_url(format_url),
                 ext=f".{codec}",
@@ -124,7 +123,7 @@ class BandcampCrawler(Crawler):
 
     async def _get_free_download(self, free_download_url: AbsoluteHttpURL) -> Format:
         soup = await self.request_soup(free_download_url)
-        blob = _get_attr_data(soup, "blob")
+        blob = _get_data_attr(soup, "blob")
         downloads: dict[str, dict[str, str]] = blob["download_items"][0]["downloads"]
 
         name = max(downloads, key=lambda x: _score(x))
@@ -156,6 +155,6 @@ def _score(name: str) -> int:
     return max(scores())
 
 
-def _get_attr_data(soup: BeautifulSoup, name: str) -> dict[str, Any]:
+def _get_data_attr(soup: BeautifulSoup, name: str) -> dict[str, Any]:
     attr_name = f"data-{name}"
     return json.loads(css.select(soup, f"[{attr_name}]", attr_name))
