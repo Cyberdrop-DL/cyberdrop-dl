@@ -16,8 +16,6 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from bs4 import BeautifulSoup
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 SUPPORTED_FORMATS = "mp3-320", "aac-hi", "mp3", "flac", "vorbis", "wav", "alas", "aiff"  # Ordered by preference
@@ -55,8 +53,7 @@ class BandcampCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        album = _get_data_attr(soup, "tralbum")
+        album = await self._get_page_info(scrape_item.url)
         album_title: str = album["current"]["title"]
         scrape_item.setup_as_album(self.create_title(album_title))
         origin = scrape_item.url.origin()
@@ -70,8 +67,7 @@ class BandcampCrawler(Crawler):
 
     @error_handling_wrapper
     async def song(self, scrape_item: ScrapeItem, fallback_track_info: dict[str, Any] | None = None) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        album = _get_data_attr(soup, "tralbum")
+        album = await self._get_page_info(scrape_item.url)
         track: dict[str, Any] = (album["trackinfo"][0] if album.get("trackinfo") else fallback_track_info) or {}
         current: dict[str, Any] = album["current"]
 
@@ -100,6 +96,11 @@ class BandcampCrawler(Crawler):
             metadata=track,
         )
 
+    async def _get_page_info(self, url: AbsoluteHttpURL, name: str = "tralbum") -> dict[str, Any]:
+        soup = await self.request_soup(url)
+        attr_name = f"data-{name}"
+        return json.loads(css.select(soup, f"[{attr_name}]", attr_name))
+
     async def _get_best_format(self, free_download: str | None, file_info: dict[str, str] | None) -> Format:
         if free_download:
             free_download_url = self.parse_url(free_download)
@@ -122,8 +123,7 @@ class BandcampCrawler(Crawler):
             )
 
     async def _get_free_download(self, free_download_url: AbsoluteHttpURL) -> Format:
-        soup = await self.request_soup(free_download_url)
-        blob = _get_data_attr(soup, "blob")
+        blob = await self._get_page_info(free_download_url, "blob")
         downloads: dict[str, dict[str, str]] = blob["download_items"][0]["downloads"]
 
         name = max(downloads, key=lambda x: _score(x))
@@ -153,8 +153,3 @@ def _score(name: str) -> int:
         yield -1
 
     return max(scores())
-
-
-def _get_data_attr(soup: BeautifulSoup, name: str) -> dict[str, Any]:
-    attr_name = f"data-{name}"
-    return json.loads(css.select(soup, f"[{attr_name}]", attr_name))
