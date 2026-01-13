@@ -7,8 +7,9 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import env
-from cyberdrop_dl.crawlers.crawler import Crawler, DBPathBuilder, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, DBPathBuilder, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css, dates
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
@@ -47,23 +48,46 @@ class BandcampCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["track", _, *_]:
                 return await self.song(scrape_item)
+            case ["album", _, *_]:
+                return await self.album(scrape_item)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def song(self, scrape_item: ScrapeItem) -> None:
+    async def album(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        tralbum = _get_attr_data(soup, "tralbum")
+        album = _get_attr_data(soup, "tralbum")
+        album_title: str = album["current"]["title"]
+        scrape_item.setup_as_album(self.create_title(album_title))
+        origin = scrape_item.url.origin()
 
-        track: dict[str, Any] = tralbum["trackinfo"][0]
-        current: dict[str, Any] = tralbum["current"]
-        artist: str = current.get("artist") or tralbum["artist"]
-        track_name: str = (current.get("title") or track["title"]).removeprefix(f"{artist} - ")
+        for track in album["trackinfo"]:
+            if track.get("duration"):
+                web_url = self.parse_url(track["title_link"], origin)
+                new_scrape_item = scrape_item.create_child(web_url)
+                self.create_task(self._song_task(new_scrape_item, track))
+                scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def song(self, scrape_item: ScrapeItem, fallback_track_info: dict[str, Any] | None = None) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        album = _get_attr_data(soup, "tralbum")
+        track: dict[str, Any] = (album["trackinfo"][0] if album.get("trackinfo") else fallback_track_info) or {}
+        current: dict[str, Any] = album["current"]
+
+        track["free_download"] = album["freeDownloadPage"]
+        track["publish_date"] = current["publish_date"]
+        track["artist"] = artist = current.get("artist") or album["artist"]
+        track["title"] = (current.get("title") or track["title"]).removeprefix(f"{artist} - ")
         assert artist
+        await self._track(scrape_item, track)
 
-        scrape_item.possible_datetime = dates.parse_http(current.get("publish_date") or tralbum["album_publish_date"])
-        best_format = await self._get_best_format(tralbum["freeDownloadPage"], track["file"])
-        full_name = f"{artist} - {track_name}{best_format.ext}"
+    _song_task = auto_task_id(song)
+
+    async def _track(self, scrape_item: ScrapeItem, track: dict[str, Any]) -> None:
+        scrape_item.possible_datetime = dates.parse_http(track["publish_date"])
+        best_format = await self._get_best_format(track.pop("free_download", None), track["file"])
+        full_name = f"{track['artist']} - {track['title']}{best_format.ext}"
         filename, ext = self.get_filename_and_ext(full_name)
         db_url = scrape_item.url.with_query(None).with_fragment(best_format.name)
 
@@ -74,12 +98,17 @@ class BandcampCrawler(Crawler):
             ext,
             debrid_link=best_format.url,
             custom_filename=filename,
+            metadata=track,
         )
 
-    async def _get_best_format(self, free_download: str | None, file_info: dict[str, str]) -> Format:
+    async def _get_best_format(self, free_download: str | None, file_info: dict[str, str] | None) -> Format:
         if free_download:
             free_download_url = self.parse_url(free_download)
-            return await self._get_free_download(free_download_url)
+            if free_download_url.query.get("type") == "track":
+                return await self._get_free_download(free_download_url)
+
+        if not file_info:
+            raise ScrapeError(402, "No streaming or download formats available (purchase only)")
 
         return max(self._parse_formats(file_info), key=lambda x: _score(x.codec))
 
