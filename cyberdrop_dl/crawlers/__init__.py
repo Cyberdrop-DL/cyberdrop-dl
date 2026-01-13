@@ -8,6 +8,7 @@ from .anontransfer import AnonTransferCrawler
 from .anysex import AnySexCrawler
 from .archivebate import ArchiveBateCrawler
 from .ashemaletube import AShemaleTubeCrawler
+from .bandcamp import BandcampCrawler
 from .beeg import BeegComCrawler
 from .box_dot_com import BoxDotComCrawler
 from .bunkrr import BunkrrCrawler
