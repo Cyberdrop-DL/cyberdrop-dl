@@ -4,7 +4,9 @@ Packages need to specify an entrypoint in their metadata as "cyberdrop_dl_plugin
 
 The entrypoint will be executed after CDL's startup but before the scrape process begins.
 
-If the entrypoint returns anything other than `None`, it should be a callable that takes an instance of `Manager`
+The entrypoint must be a callable that takes an instance of `Manager`
+
+Example plugin: https://github.com/NTFSvolume/cdl-dynamic-crawlers
 
 NOTE: Since this works with packages' metadata, only valid packages published to pypi can be used as plugins and they need to be installed on the same env as CDL
 
@@ -52,7 +54,5 @@ def load(manager: Manager) -> None:
             log(f"Found plugins installed but plugins are disabled. Ignored: {tuple(_get_plugins())}", 40)
             return
 
-        result = plugin.entrypoint.load()
-        if callable(result):
-            result(manager)
-        log(f"Loaded plugin {plugin}", 20)
+        plugin.entrypoint.load()(manager)
+        log(f"Loaded {plugin}", 20)
