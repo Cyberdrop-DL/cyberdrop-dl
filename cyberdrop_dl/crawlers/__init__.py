@@ -37,6 +37,7 @@ from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
 from .fsiblog import FSIBlogCrawler
+from .fucking_fast import FuckingFastCrawler
 from .fuxxx import FuXXXCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
