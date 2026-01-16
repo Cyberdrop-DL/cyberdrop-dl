@@ -32,6 +32,7 @@ class Format:
 
 class BandcampCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Album": "/album/<slug>",
         "Song": "/track/<slug>",
         "**NOTE**": (
             f"You can set 'CDL_BANDCAMP_FORMATS' env var to a comma separated list of formats to download (Ordered by preference)"
