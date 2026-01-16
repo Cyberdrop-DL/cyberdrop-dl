@@ -51,10 +51,8 @@ class PostImgCrawler(Crawler):
                 scrape_item.setup_as_album(title, album_id=album_id)
 
             for image in json_resp["images"]:
-                link = self.parse_url(image[4])
-                filename, ext = self.get_filename_and_ext(image[2])
-                new_scrape_item = scrape_item.create_child(link)
-                await self.handle_file(link, new_scrape_item, filename, ext)
+                link = self.PRIMARY_URL / image[0]
+                self.create_task(self.run(scrape_item.create_child(link)))
                 scrape_item.add_children()
 
             if not json_resp["has_page_next"]:
