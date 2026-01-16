@@ -17,7 +17,7 @@ from cyberdrop_dl.utils.logger import log, log_debug
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from psutil._common import sdiskpart
+    from psutil._ntuples import sdiskpart
 
     from cyberdrop_dl.data_structures.url_objects import MediaItem
     from cyberdrop_dl.managers.manager import Manager
