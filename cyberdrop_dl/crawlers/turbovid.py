@@ -30,6 +30,7 @@ class TurboVidCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbovid.cr")
     DOMAIN: ClassVar[str] = "turbovid.cr"
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr",)
     FOLDER_DOMAIN: ClassVar[str] = "TurboVid"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
@@ -59,7 +60,6 @@ class TurboVidCrawler(Crawler):
         async for soup in self.web_pager(scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
                 self.create_task(self.run(new_scrape_item))
-                scrape_item.add_children()
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
