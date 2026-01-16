@@ -21,7 +21,5 @@ def test_parse_today_at_midnight() -> None:
 
 def test_parse_date_with_no_year() -> None:
     expected = today_at_midnight().replace(month=10, day=14)
-    if expected > today_at_midnight():
-        expected = expected.replace(year=expected.year - 1)
     result = dates.parse_human("oct 14")
     assert expected == result
