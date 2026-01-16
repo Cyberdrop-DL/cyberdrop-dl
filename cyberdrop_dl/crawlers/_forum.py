@@ -30,7 +30,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_betwee
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Sequence
 
-    from aiohttp_client_cache.response import AnyResponse
+    from aiohttp import ClientResponse
 
     from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 
@@ -80,11 +80,11 @@ class ForumPost:
     def new(article: Tag, selectors: PostSelectors) -> ForumPost:
         for trash in selectors.article_trash:
             css.decompose(article, trash)
-        content = css.select_one(article, selectors.content)
+        content = css.select(article, selectors.content)
         for trash in selectors.content_trash:
             css.decompose(article, trash)
         try:
-            date = datetime.datetime.fromisoformat(css.select_one_get_attr(article, *selectors.date))
+            date = datetime.datetime.fromisoformat(css.select(article, *selectors.date))
         except Exception:
             date = None
 
@@ -390,14 +390,6 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     def __post_init__(self) -> None:
         self.scraped_threads = set()
 
-    @final
-    async def async_startup(self) -> None:
-        await super().async_startup()
-        self.register_cache_filter(self.PRIMARY_URL, self.check_is_not_last_page)
-
-    async def check_is_not_last_page(self, response: AnyResponse) -> bool:
-        return await check_is_not_last_page(response, self.SELECTORS)
-
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
         return False
@@ -659,15 +651,15 @@ def get_thread_page_and_post(
     return page_number, post_id
 
 
-async def check_is_not_last_page(response: AnyResponse, selectors: MessageBoardSelectors) -> bool:
+async def check_is_not_last_page(response: ClientResponse, selectors: MessageBoardSelectors) -> bool:
     soup = BeautifulSoup(await response.text(), "html.parser")
     return not is_last_page(soup, selectors)
 
 
 def is_last_page(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> bool:
     try:
-        last_page = css.select_one_get_attr(soup, *selectors.last_page)
-        current_page = css.select_one_get_attr(soup, *selectors.current_page)
+        last_page = css.select(soup, *selectors.last_page)
+        current_page = css.select(soup, *selectors.current_page)
     except (AttributeError, IndexError, css.SelectorError):
         return True
     return current_page == last_page
@@ -675,7 +667,7 @@ def is_last_page(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> bool:
 
 def get_post_title(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> str:
     try:
-        title_block = css.select_one(soup, selectors.title.element)
+        title_block = css.select(soup, selectors.title.element)
         for trash in selectors.title_trash:
             css.decompose(title_block, trash)
     except (AttributeError, AssertionError, css.SelectorError) as e:

@@ -78,7 +78,7 @@ class BoxDotComCrawler(Crawler):
         if "file or folder link has been removed" in soup.text:
             raise ScrapeError(410)
 
-        js_text: str = css.select_one_get_text(soup, JS_SELECTOR)
+        js_text: str = css.select_text(soup, JS_SELECTOR)
         data = js_text.removesuffix(";").partition("=")[-1]
         if not data:
             raise ScrapeError(422)

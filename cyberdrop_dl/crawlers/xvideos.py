@@ -118,7 +118,7 @@ class XVideosCrawler(Crawler):
 
         title = css.page_title(soup, self.DOMAIN)
         scrape_item.possible_datetime = self.parse_iso_date(css.get_json_ld_date(soup))
-        script = css.select_one_get_text(soup, Selectors.HLS_VIDEO_JS)
+        script = css.select_text(soup, Selectors.HLS_VIDEO_JS)
         m3u8_url = self.parse_url(get_text_between(script, "setVideoHLS('", "')"))
         m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_url)
         custom_filename = self.create_custom_filename(title, ".mp4", file_id=encoded_id, resolution=info.resolution)
@@ -133,7 +133,7 @@ class XVideosCrawler(Crawler):
             scrape_item.url = await self._get_redirect_url(scrape_item.url)
 
         soup = await self._get_soup(scrape_item.url)
-        script = css.select_one_get_text(soup, Selectors.ACCOUNT_INFO_JS)
+        script = css.select_text(soup, Selectors.ACCOUNT_INFO_JS)
         display_name = get_text_between(script, '"display":"', '",')
         scrape_item.setup_as_profile(self.create_title(f"{display_name} [{name}]"))
 
@@ -171,7 +171,7 @@ class XVideosCrawler(Crawler):
         results = await self.get_album_results(album_id)
         async for soup in self.web_pager(scrape_item.url, relative_to=scrape_item.url.origin()):
             if not title:
-                title_tag = css.select_one(soup, Selectors.GALLERY_TITLE)
+                title_tag = css.select(soup, Selectors.GALLERY_TITLE)
                 for tag in title_tag.select("*"):
                     tag.decompose()
                 title = self.create_title(css.get_text(title_tag).split(">", 1)[-1].strip(), album_id)

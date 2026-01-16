@@ -56,9 +56,9 @@ class XXXBunkerCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         _check_video_is_available(soup)
         title = open_graph.title(soup)
-        iframe_url = self.parse_url(css.select_one_get_attr(soup, Selector.VIDEO_IFRAME, "data-src"))
+        iframe_url = self.parse_url(css.select(soup, Selector.VIDEO_IFRAME, "data-src"))
         iframe_soup = await self.request_soup(iframe_url)
-        src = self.parse_url(css.select_one_get_attr(iframe_soup, "source", "src"))
+        src = self.parse_url(css.select(iframe_soup, "source", "src"))
         video_id = iframe_url.name
         custom_filename = self.create_custom_filename(title, ".mp4", file_id=video_id)
         await self.handle_file(

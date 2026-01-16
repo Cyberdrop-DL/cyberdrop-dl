@@ -168,7 +168,7 @@ class YandexDiskCrawler(Crawler):
 
 
 def get_item_info(soup: BeautifulSoup) -> dict:
-    js_text: str = css.select_one_get_text(soup, JS_SELECTOR)
+    js_text: str = css.select_text(soup, JS_SELECTOR)
     info_json: dict[str, AnyDict] = json.loads(js_text)
     info_json = {k: v for k, v in info_json.items() if k in KEYS_TO_KEEP}
     env: dict[str, str] = info_json["environment"]

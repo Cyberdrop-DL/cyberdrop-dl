@@ -97,10 +97,10 @@ class AlbumItem:
 
     @staticmethod
     def from_tag(tag: Tag) -> AlbumItem:
-        name = css.select_one_get_text(tag, _SELECTORS.ITEM_NAME)
-        thumbnail: str = css.select_one_get_attr(tag, _SELECTORS.THUMBNAIL, "src")
-        date_str = css.select_one_get_text(tag, _SELECTORS.ITEM_DATE)
-        path_qs: str = css.select_one_get_attr(tag, "a", "href")
+        name = css.select_text(tag, _SELECTORS.ITEM_NAME)
+        thumbnail: str = css.select(tag, _SELECTORS.THUMBNAIL, "src")
+        date_str = css.select_text(tag, _SELECTORS.ITEM_DATE)
+        path_qs: str = css.select(tag, "a", "href")
         return AlbumItem(name, thumbnail, date_str, path_qs)
 
     @property
@@ -248,7 +248,7 @@ class BunkrrCrawler(Crawler):
     @error_handling_wrapper
     async def reinforced_file(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        title = css.select_one_get_text(soup, "h1")
+        title = css.select_text(soup, "h1")
         link = await self.get_download_url_from_api(scrape_item.url)
         if not link:
             raise ScrapeError(422)

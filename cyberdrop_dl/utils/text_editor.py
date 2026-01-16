@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import functools
 import os
 import platform
 import shutil
 import subprocess
-from functools import lru_cache
 from pathlib import Path
 
 import rich
@@ -48,14 +48,14 @@ def open_in_text_editor(file_path: Path) -> bool | None:
     subprocess.call(cmd, stderr=subprocess.DEVNULL)
 
 
-@lru_cache
+@functools.cache
 def _find_text_editor() -> str | None:
     for editor in _TEXT_EDITORS:
         if bin_path := shutil.which(editor):
             return bin_path
 
 
-@lru_cache
+@functools.lru_cache
 def _xdg_set_default_if_none(file: Path) -> bool:
     """
     Ensures a file's MIME type has a default XDG app, falling back to whatever app is currently set for 'text/plain'

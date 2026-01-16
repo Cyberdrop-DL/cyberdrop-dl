@@ -3,37 +3,28 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ssl
-import weakref
 from base64 import b64encode
 from collections import defaultdict
-from datetime import datetime
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Self, overload
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 import aiohttp
 import certifi
 import truststore
 from aiohttp import ClientResponse, ClientSession
-from aiohttp_client_cache.response import CachedResponse
-from aiohttp_client_cache.session import CachedSession
 from aiolimiter import AsyncLimiter
-from bs4 import BeautifulSoup
-from videoprops import get_audio_properties, get_video_properties
 
-from cyberdrop_dl import constants, env
+from cyberdrop_dl import constants, ddos_guard, env
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverr
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.clients.scraper_client import ScraperClient
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem
-from cyberdrop_dl.exceptions import (
-    DDOSGuardError,
-    DownloadError,
-    ScrapeError,
-    TooManyCrawlerErrors,
-)
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
 from cyberdrop_dl.ui.prompts.user_prompts import get_cookies_from_browsers
+from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.cookie_management import read_netscape_files
+from cyberdrop_dl.utils.ffmpeg import probe
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 
 _VALID_EXTENSIONS = (
@@ -41,10 +32,10 @@ _VALID_EXTENSIONS = (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable, Mapping
     from http.cookies import BaseCookie
 
-    from aiohttp_client_cache.response import CachedResponse
+    from bs4 import BeautifulSoup
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
 
@@ -120,27 +111,6 @@ class CloudflareTurnstile:
     ALL_SELECTORS = ", ".join(SELECTORS)
 
 
-class FileLocksVault:
-    """Is this necessary? No. But I want it."""
-
-    def __init__(self) -> None:
-        self._locked_files: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
-
-    @contextlib.asynccontextmanager
-    async def get_lock(self, filename: str) -> AsyncGenerator:
-        """Get filelock for the provided filename. Creates one if none exists"""
-        log_debug(f"Checking lock for '{filename}'", 20)
-        if filename not in self._locked_files:
-            log_debug(f"Lock for '{filename}' does not exists", 20)
-            lock = asyncio.Lock()
-            self._locked_files[filename] = lock
-
-        async with self._locked_files[filename]:
-            log_debug(f"Lock for '{filename}' acquired", 20)
-            yield
-            log_debug(f"Lock for '{filename}' released", 20)
-
-
 class ClientManager:
     """Creates a 'client' that can be referenced by scraping or download sessions."""
 
@@ -166,10 +136,9 @@ class ClientManager:
         self.speed_limiter = DownloadSpeedLimiter(self.rate_limiting_options.download_speed_limit)
         self.download_client = DownloadClient(manager, self)
         self.flaresolverr = FlareSolverr(manager)
-        self.file_locks = FileLocksVault()
-        self._default_headers = {"user-agent": self.manager.global_config.general.user_agent}
-        self.reddit_session: CachedSession
-        self._session: CachedSession
+        self.file_locks: WeakAsyncLocks[str] = WeakAsyncLocks()
+        self.reddit_session: aiohttp.ClientSession
+        self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
         self._json_response_checks: dict[str, Callable[[Any], None]] = {}
@@ -210,9 +179,7 @@ class ClientManager:
         return min(instances, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
 
     @staticmethod
-    def cache_control(session: CachedSession, disabled: bool = False):
-        if constants.DISABLE_CACHE or disabled:
-            return session.disabled()
+    def cache_control(session: ClientSession, disabled: bool = False):
         return _null_context
 
     @staticmethod
@@ -245,23 +212,18 @@ class ClientManager:
             return False
         return not (ignore_options.exclude_other and media_item.ext.lower() not in _VALID_EXTENSIONS)
 
-    def pre_check_duration(self, media_item: MediaItem) -> bool:
-        """Checks if the download is above the maximum runtime."""
-        if not media_item.duration:
-            return True
-
-        return self.check_file_duration(media_item)
-
     def check_allowed_date_range(self, media_item: MediaItem) -> bool:
-        """Checks if the file is published within the date range configured."""
-        if not media_item.datetime:
+        """Checks if the file was uploaded within the config date range"""
+        datetime = media_item.datetime_obj()
+        if not datetime:
             return True
 
+        item_date = datetime.date()
         ignore_options = self.manager.config_manager.settings_data.ignore_options
-        post_datetime = datetime.fromtimestamp(media_item.datetime)
-        if ignore_options.exclude_posts_before and post_datetime < ignore_options.exclude_posts_before:
+
+        if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
             return False
-        if ignore_options.exclude_posts_after and post_datetime > ignore_options.exclude_posts_after:
+        if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
             return False
         return True
 
@@ -279,11 +241,23 @@ class ClientManager:
 
     def new_curl_cffi_session(self) -> AsyncSession:
         # Calling code should have validated if curl is actually available
+        import warnings
+
+        from curl_cffi.aio import AsyncCurl
         from curl_cffi.requests import AsyncSession
+        from curl_cffi.utils import CurlCffiWarning
+
+        loop = asyncio.get_running_loop()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=CurlCffiWarning)
+            acurl = AsyncCurl(loop=loop)
 
         proxy_or_none = str(proxy) if (proxy := self.manager.global_config.general.proxy) else None
+
         return AsyncSession(
-            headers=self._default_headers,
+            loop=loop,
+            async_curl=acurl,
             impersonate="chrome",
             verify=bool(self.ssl_context),
             proxy=proxy_or_none,
@@ -292,7 +266,7 @@ class ClientManager:
             cookies={cookie.key: cookie.value for cookie in self.cookies},
         )
 
-    def new_scrape_session(self) -> CachedSession:
+    def new_scrape_session(self) -> ClientSession:
         trace_configs = _create_request_log_hooks("scrape")
         return self._new_session(cached=True, trace_configs=trace_configs)
 
@@ -300,29 +274,12 @@ class ClientManager:
         trace_configs = _create_request_log_hooks("download")
         return self._new_session(cached=False, trace_configs=trace_configs)
 
-    @overload
-    def _new_session(
-        self, cached: Literal[True], trace_configs: list[aiohttp.TraceConfig] | None = None
-    ) -> CachedSession: ...
-
-    @overload
-    def _new_session(
-        self, cached: Literal[False] = False, trace_configs: list[aiohttp.TraceConfig] | None = None
-    ) -> ClientSession: ...
-
     def _new_session(
         self, cached: bool = False, trace_configs: list[aiohttp.TraceConfig] | None = None
-    ) -> CachedSession | ClientSession:
-        if cached:
-            timeout = self.rate_limiting_options._aiohttp_timeout
-            session_cls = CachedSession
-            kwargs: dict[str, Any] = {"cache": self.manager.cache_manager.request_cache}
-        else:
-            timeout = self.rate_limiting_options._aiohttp_timeout
-            session_cls = ClientSession
-            kwargs = {}
-        return session_cls(
-            headers=self._default_headers,
+    ) -> ClientSession:
+        timeout = self.rate_limiting_options._aiohttp_timeout
+        return ClientSession(
+            headers={"user-agent": self.manager.global_config.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=timeout,
@@ -330,7 +287,6 @@ class ClientManager:
             proxy=self.manager.global_config.general.proxy,
             connector=self._new_tcp_connector(),
             requote_redirect_url=False,
-            **kwargs,
         )
 
     def _new_tcp_connector(self) -> aiohttp.TCPConnector:
@@ -386,7 +342,7 @@ class ClientManager:
 
     async def check_http_status(
         self,
-        response: ClientResponse | CachedResponse | CurlResponse | AbstractResponse,
+        response: ClientResponse | CurlResponse | AbstractResponse,
         download: bool = False,
     ) -> BeautifulSoup | None:
         """Checks the HTTP status code and raises an exception if it's not acceptable.
@@ -403,26 +359,14 @@ class ClientManager:
                 message = _DOWNLOAD_ERROR_ETAGS[e_tag]
                 raise DownloadError(HTTPStatus.NOT_FOUND, message=message)
 
-        async def check_ddos_guard() -> BeautifulSoup | None:
-            if "html" not in response.content_type:
-                return
-            try:
-                soup = BeautifulSoup(await response.text(), "html.parser")
-            except UnicodeDecodeError:
-                return
-            else:
-                if self.check_ddos_guard(soup) or self.check_cloudflare(soup):
-                    raise DDOSGuardError
-                return soup
-
         check_etag()
         if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
             # Check DDosGuard even on successful pages
-            # await check_ddos_guard()
             return
 
         await self._check_json(response)
-        await check_ddos_guard()
+
+        await ddos_guard.check(response)
         raise DownloadError(status=response.status, message=message)
 
     async def _check_json(self, response: AbstractResponse) -> None:
@@ -449,23 +393,7 @@ class ClientManager:
         if content_length == "73003" and content_type == "video/mp4":
             raise DownloadError(410)  # Placeholder video with text "Video removed" (efukt)
 
-    @staticmethod
-    def check_ddos_guard(soup: BeautifulSoup) -> bool:
-        if (title := soup.select_one("title")) and (title_str := title.string):
-            if any(title.casefold() == title_str.casefold() for title in DDosGuard.TITLES):
-                return True
-
-        return bool(soup.select_one(DDosGuard.ALL_SELECTORS))
-
-    @staticmethod
-    def check_cloudflare(soup: BeautifulSoup) -> bool:
-        if (title := soup.select_one("title")) and (title_str := title.string):
-            if any(title.casefold() == title_str.casefold() for title in CloudflareTurnstile.TITLES):
-                return True
-
-        return bool(soup.select_one(CloudflareTurnstile.ALL_SELECTORS))
-
-    def check_file_duration(self, media_item: MediaItem) -> bool:
+    async def check_file_duration(self, media_item: MediaItem) -> bool:
         """Checks the file runtime against the config runtime limits."""
         if media_item.is_segment:
             return True
@@ -475,16 +403,6 @@ class ClientManager:
         if not (is_video or is_audio):
             return True
 
-        def get_duration() -> float | None:
-            if media_item.duration:
-                return media_item.duration
-            props: dict = {}
-            if is_video:
-                props: dict = get_video_properties(str(media_item.complete_file))
-            elif is_audio:
-                props: dict = get_audio_properties(str(media_item.complete_file))
-            return float(props.get("duration", 0)) or None
-
         duration_limits = self.manager.config.media_duration_limits
         min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
         max_video_duration: float = duration_limits.maximum_video_duration.total_seconds()
@@ -492,21 +410,44 @@ class ClientManager:
         max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
         video_duration_limits = min_video_duration, max_video_duration
         audio_duration_limits = min_audio_duration, max_audio_duration
+
         if is_video and not any(video_duration_limits):
             return True
         if is_audio and not any(audio_duration_limits):
             return True
 
-        duration: float = get_duration()  # type: ignore
+        async def get_duration() -> float | None:
+            if media_item.duration:
+                return media_item.duration
+
+            if media_item.downloaded:
+                properties = await probe(media_item.complete_file)
+
+            else:
+                headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
+                properties = await probe(media_item.url, headers=headers)
+
+            if is_video and (video := properties.video):
+                return video.duration
+            if is_audio and (audio := properties.audio):
+                return audio.duration
+            return None
+
+        duration: float | None = await get_duration()
         media_item.duration = duration
+
         if duration is None:
             return True
 
-        max_video_duration = max_video_duration or float("inf")
-        max_audio_duration = max_audio_duration or float("inf")
+        await self.manager.db_manager.history_table.add_duration(media_item.domain, media_item)
+
         if is_video:
-            return min_video_duration <= media_item.duration <= max_video_duration
-        return min_audio_duration <= media_item.duration <= max_audio_duration
+            max_video_duration = max_video_duration or float("inf")
+
+            return min_video_duration <= duration <= max_video_duration
+
+        max_audio_duration = max_audio_duration or float("inf")
+        return min_audio_duration <= duration <= max_audio_duration
 
     async def close(self) -> None:
         await self.flaresolverr.close()

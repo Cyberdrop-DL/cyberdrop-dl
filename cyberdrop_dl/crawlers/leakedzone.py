@@ -75,14 +75,14 @@ class LeakedZoneCrawler(Crawler):
 
     @classmethod
     def get_encoded_video_url(cls, soup: BeautifulSoup) -> str:
-        js_text = css.select_one_get_text(soup, _SELECTORS.JW_PLAYER)
+        js_text = css.select_text(soup, _SELECTORS.JW_PLAYER)
         return get_text_between(js_text, 'file: f("', '"),')
 
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        model_name: str = css.select_one_get_text(soup, _SELECTORS.MODEL_NAME_FROM_PROFILE)
+        model_name: str = css.select_text(soup, _SELECTORS.MODEL_NAME_FROM_PROFILE)
         scrape_item.setup_as_profile(self.create_title(model_name))
         headers = {"X-Requested-With": "XMLHttpRequest"}
         for page in itertools.count(1):
@@ -109,7 +109,7 @@ class LeakedZoneCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        model_name = css.select_one_get_text(soup, _SELECTORS.MODEL_NAME)
+        model_name = css.select_text(soup, _SELECTORS.MODEL_NAME)
         scrape_item.setup_as_album(self.create_title(model_name))
         encoded_url = self.get_encoded_video_url(soup)
         post = Post(video_id, PostType.VIDEO, stream_url_play=encoded_url)

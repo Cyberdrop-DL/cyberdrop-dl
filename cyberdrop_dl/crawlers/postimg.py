@@ -11,7 +11,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://postimages.org/")
+PRIMARY_URL = AbsoluteHttpURL("https://postimg.cc")
 DOWNLOAD_BUTTON_SELECTOR = "a[id=download]"
 API_ENTRYPOINT = AbsoluteHttpURL("https://postimg.cc/json")
 
@@ -25,6 +25,7 @@ class PostImgCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     DOMAIN: ClassVar[str] = "postimg"
     FOLDER_DOMAIN: ClassVar[str] = "PostImg"
+    OLD_DOMAINS = ("postimg.org", "postimages.org")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "i.postimg.cc" in scrape_item.url.host:
@@ -50,10 +51,8 @@ class PostImgCrawler(Crawler):
                 scrape_item.setup_as_album(title, album_id=album_id)
 
             for image in json_resp["images"]:
-                link = self.parse_url(image[4])
-                filename, ext = self.get_filename_and_ext(image[2])
-                new_scrape_item = scrape_item.create_child(link)
-                await self.handle_file(link, new_scrape_item, filename, ext)
+                link = self.PRIMARY_URL / image[0]
+                self.create_task(self.run(scrape_item.create_child(link)))
                 scrape_item.add_children()
 
             if not json_resp["has_page_next"]:
@@ -66,7 +65,7 @@ class PostImgCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        link_str: str = css.select_one_get_attr(soup, DOWNLOAD_BUTTON_SELECTOR, "href")
+        link_str: str = css.select(soup, DOWNLOAD_BUTTON_SELECTOR, "href")
         link = self.parse_url(link_str).with_query(None)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)

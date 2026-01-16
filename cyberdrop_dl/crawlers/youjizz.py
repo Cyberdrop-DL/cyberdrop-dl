@@ -76,12 +76,12 @@ class YouJizzCrawler(Crawler):
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
-    js_text = css.select_one_get_text(soup, JS_SELECTOR)
+    js_text = css.select_text(soup, JS_SELECTOR)
     encodings_text = get_text_between(js_text, "var dataEncodings =", "var encodings").strip().removesuffix(";")
     data_encodings = json.loads(encodings_text)
     return Video(
         title=open_graph.title(soup),
-        date=css.select_one_get_text(soup, DATE_SELECTOR),
+        date=css.select_text(soup, DATE_SELECTOR),
         best_src=_get_best_src(data_encodings),
     )
 

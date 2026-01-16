@@ -10,20 +10,19 @@ import aiofiles
 from yarl import URL
 
 from cyberdrop_dl.constants import REGEX_LINKS, BlockedDomains
-from cyberdrop_dl.crawlers import CRAWLERS
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import Crawler, create_crawlers
 from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
 from cyberdrop_dl.crawlers.generic import GenericCrawler
+from cyberdrop_dl.crawlers.http_direct import DirectHttpFile
 from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
 from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler, WordPressMediaCrawler
-from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
-from cyberdrop_dl.downloader.downloader import Downloader
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
-from cyberdrop_dl.scraper.filters import has_valid_extension, is_in_domain_list, is_outside_date_range, is_valid_url
+from cyberdrop_dl.scraper.filters import is_in_domain_list, is_outside_date_range, is_valid_url
 from cyberdrop_dl.scraper.jdownloader import JDownloader
 from cyberdrop_dl.utils.logger import log, log_spacer
-from cyberdrop_dl.utils.utilities import get_download_path, get_filename_and_ext, remove_trailing_slash
+from cyberdrop_dl.utils.utilities import get_download_path, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -46,7 +45,7 @@ class ScrapeMapper:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
         self.existing_crawlers: dict[str, Crawler] = {}
-        self.no_crawler_downloader = Downloader(self.manager, "no_crawler")
+        self.direct_crawler = DirectHttpFile(self.manager)
         self.jdownloader = JDownloader(self.manager)
         self.jdownloader_whitelist = self.manager.config_manager.settings_data.runtime_options.jdownloader_whitelist
         self.using_input_file = False
@@ -71,13 +70,15 @@ class ScrapeMapper:
 
     def start_scrapers(self) -> None:
         """Starts all scrapers."""
+        from cyberdrop_dl import plugins
+
         self.existing_crawlers = get_crawlers_mapping(self.manager)
         self.fallback_generic = GenericCrawler(self.manager)
-
         generic_crawlers = create_generic_crawlers_by_config(self.global_settings.generic_crawlers_instances)
         for crawler in generic_crawlers:
             register_crawler(self.existing_crawlers, crawler(self.manager), from_user=True)
         disable_crawlers_by_config(self.existing_crawlers, self.global_settings.general.disable_crawlers)
+        plugins.load(self.manager)
 
     async def start_real_debrid(self) -> None:
         """Starts RealDebrid."""
@@ -107,7 +108,7 @@ class ScrapeMapper:
         await self.manager.db_manager.history_table.update_previously_unsupported(self.existing_crawlers)
         self.jdownloader.connect()
         await self.start_real_debrid()
-        self.no_crawler_downloader.startup()
+        self.direct_crawler._init_downloader()
         async for item in self.get_input_items():
             self.manager.task_group.create_task(self.send_to_crawler(item))
 
@@ -182,7 +183,7 @@ class ScrapeMapper:
             return
 
         for url in self.manager.parsed_args.cli_only_args.links:
-            yield ScrapeItem(url=url)  # type: ignore
+            yield ScrapeItem(url=url)
 
     async def load_failed_links(self) -> AsyncGenerator[ScrapeItem]:
         """Loads failed links from database."""
@@ -227,26 +228,17 @@ class ScrapeMapper:
             self.manager.task_group.create_task(crawler_match.run(scrape_item))
             return
 
-        if not self.real_debrid.disabled and self.real_debrid.is_supported(scrape_item.url):
+        if not self.real_debrid.disabled and self.real_debrid.api.is_supported(scrape_item.url):
             log(f"Using RealDebrid for unsupported URL: {scrape_item.url}", 10)
             self.manager.task_group.create_task(self.real_debrid.run(scrape_item))
             return
 
-        if has_valid_extension(scrape_item.url):
-            if await self.skip_no_crawler_by_config(scrape_item):
-                return
-
-            scrape_item.add_to_parent_title("Loose Files")
-            scrape_item.part_of_album = True
-            domain = "no_crawler"
-            download_folder = get_download_path(self.manager, scrape_item, domain)
-            try:
-                filename, _ = get_filename_and_ext(scrape_item.url.name)
-            except NoExtensionError:
-                filename, _ = get_filename_and_ext(scrape_item.url.name, forum=True)
-            media_item = MediaItem.from_item(scrape_item, scrape_item.url, domain, download_folder, filename)
-            self.manager.task_group.create_task(self.no_crawler_downloader.run(media_item))
+        try:
+            await self.direct_crawler.fetch(scrape_item)
             return
+
+        except (NoExtensionError, ValueError):
+            pass
 
         if self.jdownloader.enabled and jdownloader_whitelisted:
             log(f"Sending unsupported URL to JDownloader: {scrape_item.url}", 20)
@@ -316,29 +308,6 @@ class ScrapeMapper:
 
         return True
 
-    async def skip_no_crawler_by_config(self, scrape_item: ScrapeItem) -> bool:
-        check_complete = await self.manager.db_manager.history_table.check_complete(
-            "no_crawler",
-            scrape_item.url,
-            scrape_item.url,
-        )
-        if check_complete:
-            log(f"Skipping {scrape_item.url} as it has already been downloaded", 10)
-            self.manager.progress_manager.download_progress.add_previously_completed()
-            return True
-
-        posible_referer = scrape_item.parents[-1] if scrape_item.parents else scrape_item.url
-        check_referer = False
-        if self.manager.config_manager.settings_data.download_options.skip_referer_seen_before:
-            check_referer = await self.manager.db_manager.temp_referer_table.check_referer(posible_referer)
-
-        if check_referer:
-            log(f"Skipping {scrape_item.url} as referer has been seen before", 10)
-            self.manager.progress_manager.download_progress.add_skipped()
-            return True
-
-        return False
-
     def disable_crawler(self, domain: str) -> Crawler | None:
         """Disables a crawler at runtime, after the scrape mapper is already running.
 
@@ -384,7 +353,7 @@ def regex_links(line: str) -> Generator[AbsoluteHttpURL]:
 def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
     referer: str = row["referer"]
     url = AbsoluteHttpURL(referer, encoded="%" in referer)
-    item = ScrapeItem(url=url, retry_path=Path(row["download_path"]), part_of_album=True, retry=True)
+    item = ScrapeItem(url=url, retry_path=Path(row["download_path"]), part_of_album=True)
     if completed_at := row["completed_at"]:
         item.completed_at = int(datetime.fromisoformat(completed_at).timestamp())
     if created_at := row["created_at"]:
@@ -399,6 +368,7 @@ def get_crawlers_mapping(manager: Manager | None = None, include_generics: bool 
 
     If manager is `None`, the `MOCK_MANAGER` will be used, which means the crawlers won't be able to actually run"""
 
+    from cyberdrop_dl.crawlers import CRAWLERS
     from cyberdrop_dl.managers.mock_manager import MOCK_MANAGER
 
     manager_ = manager or MOCK_MANAGER

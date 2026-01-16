@@ -156,7 +156,7 @@ class AShemaleTubeCrawler(Crawler):
         if image := img_tag.select_one("img"):
             link_str: str = css.get_attr(image, "src")
         else:
-            style: str = css.select_one_get_attr(img_tag, "a", "style")
+            style: str = css.select(img_tag, "a", "style")
             link_str = get_text_between(style, "url('", "');")
         url = self.parse_url(link_str).with_query(None)
         filename, ext = self.get_filename_and_ext(url.name)
@@ -174,7 +174,7 @@ class AShemaleTubeCrawler(Crawler):
 
         if soup.select_one(_SELECTORS.LOGIN_REQUIRED):
             raise ScrapeError(401)
-        js_text = css.select_one_get_text(soup, _SELECTORS.JS_PLAYER)
+        js_text = css.select_text(soup, _SELECTORS.JS_PLAYER)
         best_format = parse_player_info(js_text)
         m3u8 = debrid_link = None
         if best_format.hls:
@@ -186,7 +186,7 @@ class AShemaleTubeCrawler(Crawler):
             json_data = json.loads(css.get_text(video_object))
             scrape_item.possible_datetime = self.parse_iso_date(json_data.get("uploadDate", ""))
 
-        title = css.select_one_get_text(soup, "title").split("- aShemaletube.com")[0].strip()
+        title = css.select_text(soup, "title").split("- aShemaletube.com")[0].strip()
         scrape_item.url = canonical_url
         filename, ext = self.get_filename_and_ext(best_format.url.name, assume_ext=".mp4")
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=best_format.resolution)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import itertools
 import json
 import shutil
@@ -8,7 +9,6 @@ import subprocess
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from fractions import Fraction
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, TypeAlias, TypedDict, overload
 
@@ -24,6 +24,8 @@ from cyberdrop_dl.utils.utilities import get_valid_dict, is_absolute_http_url
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
 
+    from cyberdrop_dl.data_structures import AbsoluteHttpURL
+
     _CMD: TypeAlias = Sequence[str | Path]
 
 
@@ -37,7 +39,6 @@ class Args:
 
 _FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
 _FFPROBE_CALL_PREFIX = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-print_format", "json"
-_FFPROBE_AVAILABLE = False
 _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 
 
@@ -48,27 +49,26 @@ def check_is_available() -> None:
         raise RuntimeError("ffprobe is not available")
 
 
-@lru_cache
+@functools.cache
 def which_ffmpeg() -> str | None:
     return shutil.which("ffmpeg")
 
 
-@lru_cache
+@functools.cache
 def which_ffprobe() -> str | None:
-    global _FFPROBE_AVAILABLE
     try:
-        bin_path = shutil.which("ffprobe") or _builtin_ffprobe()
-        _FFPROBE_AVAILABLE = True
-        return bin_path
+        return shutil.which("ffprobe") or _builtin_ffprobe()
     except RuntimeError:
         return
 
 
+@functools.cache
 def get_ffmpeg_version() -> str | None:
     if bin_path := which_ffmpeg():
         return _get_bin_version(bin_path)
 
 
+@functools.cache
 def get_ffprobe_version() -> str | None:
     if bin_path := which_ffprobe():
         return _get_bin_version(bin_path)
@@ -101,11 +101,11 @@ async def probe(input: Path, /) -> FFprobeResult: ...
 
 
 @overload
-async def probe(input: URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
+async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
 
 
-async def probe(input: Path | URL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert _FFPROBE_AVAILABLE
+async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
+    assert which_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 
@@ -162,7 +162,6 @@ async def _merge(input_files: Sequence[Path], output_file: Path) -> SubProcessRe
     return await _run_command(command)
 
 
-@lru_cache
 def _get_bin_version(bin_path: str) -> str | None:
     try:
         cmd = bin_path, "-version"
@@ -187,9 +186,9 @@ class Duration(NamedTuple):
     seconds: float = 0
 
     @staticmethod
-    def parse(duration: float | str) -> float:
+    def parse(duration: float | str) -> TruncatedFloat:
         try:
-            return float(duration)
+            return TruncatedFloat(duration)
         except (ValueError, TypeError):
             pass
 
@@ -205,7 +204,7 @@ class Duration(NamedTuple):
         missing_parts = [0 for _ in range(3 - len(time_parts))]
         seconds = float(Fraction(time_parts.pop(-1)))
         int_parts = map(int, (days, *missing_parts, *time_parts))
-        return Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds()
+        return TruncatedFloat(Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds())
 
     def as_timedelta(self) -> timedelta:
         return timedelta(**self._asdict())
@@ -223,7 +222,7 @@ class FFprobeOutput(TypedDict, total=False):
 class Tags(CIMultiDictProxy[Any]): ...
 
 
-class FPS(float):
+class TruncatedFloat(float):
     def __str__(self) -> str:
         return str(int(self)) if self.is_integer() else f"{self:.2f}"
 
@@ -234,12 +233,8 @@ class Stream:
     codec_name: str
     codec_type: str
     bitrate: int | None
-    duration: float | None
+    duration: TruncatedFloat | None
     tags: Tags
-
-    @property
-    def length(self) -> float | None:
-        return self.duration
 
     @property
     def codec(self) -> str:
@@ -278,7 +273,7 @@ class AudioStream(Stream):
 class VideoStream(Stream):
     width: int | None
     height: int | None
-    fps: FPS | None
+    fps: TruncatedFloat | None
     resolution: str | None
     codec_type: Literal["video"] = "video"
 
@@ -291,7 +286,7 @@ class VideoStream(Stream):
             resolution: str | None = f"{width}x{height}"
 
         if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
-            fps: FPS | None = FPS(Fraction(avg_fps))
+            fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
         defaults = super(VideoStream, cls).validate(stream_info)
         return defaults | {"width": width, "height": height, "fps": fps, "resolution": resolution}

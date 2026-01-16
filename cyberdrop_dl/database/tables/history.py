@@ -3,7 +3,6 @@ from __future__ import annotations
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, cast
 
-from cyberdrop_dl.data_structures.url_objects import MediaItem
 from cyberdrop_dl.utils.utilities import log
 
 from .definitions import create_fixed_history, create_history
@@ -16,6 +15,7 @@ if TYPE_CHECKING:
     from yarl import URL
 
     from cyberdrop_dl.crawlers import Crawler
+    from cyberdrop_dl.data_structures.url_objects import MediaItem
     from cyberdrop_dl.database import Database
 
 
@@ -32,10 +32,11 @@ class HistoryTable:
 
     async def startup(self) -> None:
         """Startup process for the HistoryTable."""
-        from cyberdrop_dl.crawlers import jpg5, redgifs
+        from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs
 
         await self.db_conn.create_function("FIX_REDGIFS_REFERER", 1, redgifs.fix_db_referer, deterministic=True)
         await self.db_conn.create_function("FIX_JPG5_REFERER", 1, jpg5.fix_db_referer, deterministic=True)
+        await self.db_conn.create_function("FIX_CYBERDROP_REFERER", 1, cyberdrop.fix_db_referer, deterministic=True)
         await self.db_conn.execute(create_history)
         await self.db_conn.commit()
         await self.fix_primary_keys()
@@ -64,6 +65,7 @@ class HistoryTable:
             "UPDATE OR REPLACE media SET domain = 'nudostar.tv' WHERE domain = 'nudostartv';"
             "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
             "UPDATE OR REPLACE media SET referer = FIX_JPG5_REFERER(referer) WHERE domain = 'jpg5.su';"
+            "UPDATE OR REPLACE media SET referer = FIX_CYBERDROP_REFERER(referer) WHERE domain = 'cyberdrop';"
         )
 
         await self.db_conn.executescript(updates)
@@ -74,23 +76,21 @@ class HistoryTable:
         await self.db_conn.execute(query)
         await self.db_conn.commit()
 
-    async def check_complete(self, domain: str, url: URL, referer: URL) -> bool:
+    async def check_complete(self, domain: str, url: URL, referer: URL, db_path: str) -> bool:
         """Checks whether an individual file has completed given its domain and url path."""
         if self._database.ignore_history:
             return False
 
-        url_path = MediaItem.create_db_path(url, domain)
-
         async def select_referer_and_completed() -> tuple[str, bool]:
             query = "SELECT referer, completed FROM media WHERE domain = ? and url_path = ?"
-            cursor = await self.db_conn.execute(query, (domain, url_path))
+            cursor = await self.db_conn.execute(query, (domain, db_path))
             if row := await cursor.fetchone():
                 return row[0], row[1]
             return "", False
 
         async def update_referer() -> None:
             query = "UPDATE media SET referer = ? WHERE domain = ? and url_path = ?"
-            await self.db_conn.execute(query, (str(referer), domain, url_path))
+            await self.db_conn.execute(query, (str(referer), domain, db_path))
             await self.db_conn.commit()
 
         current_referer, completed = await select_referer_and_completed()

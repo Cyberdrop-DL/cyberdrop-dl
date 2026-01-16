@@ -171,7 +171,7 @@ class PornHubCrawler(Crawler):
 
     async def _get_profile_title(self, url: AbsoluteHttpURL) -> str:
         soup = await self.request_soup(url)
-        return css.select_one_get_text(soup, _SELECTORS.PROFILE_NAME, decompose="span")
+        return css.select_text(soup, _SELECTORS.PROFILE_NAME, decompose="span")
 
     @error_handling_wrapper
     async def iter_profile_pages(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, selector: str) -> None:
@@ -182,7 +182,7 @@ class PornHubCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        album_name = css.select_one_get_text(soup, _SELECTORS.ALBUM_TITLE)
+        album_name = css.select_text(soup, _SELECTORS.ALBUM_TITLE)
         scrape_item.setup_as_album(self.create_title(album_name, album_id), album_id=album_id)
 
         api_url = self.PRIMARY_URL / "api/v1/album" / album_id / "show_album_json"
@@ -202,9 +202,9 @@ class PornHubCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        link_str: str = css.select_one_get_attr(soup, _SELECTORS.PHOTO, "src")
+        link_str: str = css.select(soup, _SELECTORS.PHOTO, "src")
         link = self.parse_url(link_str)
-        album_tag = css.select_one(soup, _SELECTORS.ALBUM_FROM_PHOTO)
+        album_tag = css.select(soup, _SELECTORS.ALBUM_FROM_PHOTO)
         album_name = css.get_text(album_tag)
         album_link_str: str = css.get_attr(album_tag, "href")
         album_id: str = album_link_str.split("/")[-1]
@@ -216,7 +216,7 @@ class PornHubCrawler(Crawler):
     async def gif(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
         attributes = "data-mp4", "data-fallback", "data-webm"
-        gif_tag = css.select_one(soup, _SELECTORS.GIF)
+        gif_tag = css.select(soup, _SELECTORS.GIF)
         link_str = next(value for attr in attributes if (value := css.get_attr_or_none(gif_tag, attr)))
         link = self.parse_url(link_str)
         await self._process_photo(scrape_item, link)
@@ -240,7 +240,7 @@ class PornHubCrawler(Crawler):
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
         results = await self.get_album_results(playlist_id)
         soup = await self.request_soup(scrape_item.url)
-        title: str = css.select_one_get_text(soup, _SELECTORS.PLAYLIST_TITLE)
+        title: str = css.select_text(soup, _SELECTORS.PLAYLIST_TITLE)
         title = self.create_title(title, playlist_id)
         scrape_item.setup_as_album(f"{title} [playlist]", album_id=playlist_id)
         for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.PLAYLIST_VIDEOS, results=results):
@@ -256,7 +256,7 @@ class PornHubCrawler(Crawler):
 
         soup = await self.request_soup(page_url, cache_disabled=True)
         _check_video_is_available(soup)
-        title = css.select_one_get_text(soup, _SELECTORS.TITLE)
+        title = css.select_text(soup, _SELECTORS.TITLE)
         formats = [Format.new(media) for media in get_media_list(soup)]
         best_hls = max(f for f in formats if f.format == "hls")
         debrid_link = m3u8 = best_format = None
@@ -303,12 +303,12 @@ class PornHubCrawler(Crawler):
 
 
 def get_upload_date_str(soup: BeautifulSoup) -> str:
-    date_text = css.select_one_get_text(soup, _SELECTORS.DATE)
+    date_text = css.select_text(soup, _SELECTORS.DATE)
     return get_text_between(date_text, 'uploadDate": "', '",')
 
 
 def get_media_list(soup: BeautifulSoup) -> list[Media]:
-    flashvars: str = css.select_one(soup, _SELECTORS.JS_VIDEO_INFO).text
+    flashvars: str = css.select(soup, _SELECTORS.JS_VIDEO_INFO).text
     media_text = get_text_between(flashvars, '"mediaDefinitions":', '"isVertical"').strip().removesuffix(",")
     return json.loads(media_text)
 

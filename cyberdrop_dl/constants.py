@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Final
 from aiohttp.resolver import AsyncResolver, ThreadedResolver
 from rich.text import Text
 
-from cyberdrop_dl.compat import Enum, IntEnum, StrEnum
+from cyberdrop_dl.compat import Enum, StrEnum
 
 if TYPE_CHECKING:
     from cyberdrop_dl.utils.logger import LogHandler
@@ -54,10 +54,10 @@ HTTP_REGEX_LINKS = re.compile(
 console_handler: "LogHandler"
 
 
-class CustomHTTPStatus(IntEnum):
-    WEB_SERVER_IS_DOWN = 521
-    IM_A_TEAPOT = 418
-    DDOS_GUARD = 429
+class TempExt(StrEnum):
+    HLS = ".cdl_hls"
+    WRONG_CDL_HLS = ".cdl_hsl"  # used for a while in old versions, has a typo
+    PART = ".part"
 
 
 class BlockedDomains:
@@ -101,10 +101,7 @@ class Hashing(StrEnum):
 
     @classmethod
     def _missing_(cls, value: object) -> "Hashing":
-        try:
-            return cls[str(value).upper()]
-        except KeyError as e:
-            raise e
+        return cls[str(value).upper()]
 
 
 class BROWSERS(StrEnum):
@@ -184,6 +181,8 @@ FILE_FORMATS = {
         ".md",
         ".nfo",
         ".txt",
+        ".vtt",
+        ".sub",
     },
     "7z": {
         ".7z",

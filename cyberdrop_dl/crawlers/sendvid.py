@@ -38,9 +38,9 @@ class SendVidCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        title = css.select_one_get_text(soup, TITLE_SELECTOR)
+        title = css.select_text(soup, TITLE_SELECTOR)
         try:
-            link_str: str = css.select_one_get_attr(soup, VIDEO_SRC_SELECTOR, "src")
+            link_str: str = css.select(soup, VIDEO_SRC_SELECTOR, "src")
         except AssertionError:
             raise ScrapeError(422, "Couldn't find video source") from None
         link = self.parse_url(link_str)

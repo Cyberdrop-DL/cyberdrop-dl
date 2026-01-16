@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar
+
+from cyberdrop_dl.crawlers._tubecorporate import TubeCorporateCrawler
+from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
+
+if TYPE_CHECKING:
+    from cyberdrop_dl.crawlers.crawler import SupportedDomains, SupportedPaths
+    from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+
+class VJavCrawler(TubeCorporateCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "vjav.com",
+        "vjav.tube",
+    )
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/videos/...",
+    }
+    DOMAIN: ClassVar[str] = "vjav"
+    FOLDER_DOMAIN: ClassVar[str] = "VJav"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vjav.com")
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["videos", video_id, _]:
+                return await self.video(scrape_item, video_id)
+            case _:
+                raise ValueError

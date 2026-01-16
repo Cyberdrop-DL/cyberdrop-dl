@@ -62,4 +62,21 @@ TEST_CASES = [
         ],
         41,
     ),
+    (
+        "https://kemono.cr/patreon/user/47101380/post/128071303",
+        [
+            {
+                "url": "https://kemono.cr/data/83/66/8366796e0d9fadd5e22ae8f8ea32d1b539d54e25e9da19f906fa36d1cf973cc2.jpg?f=461372899.jpg",
+                "filename": "461372899.jpg",
+                "referer": "https://kemono.cr/patreon/user/47101380/post/128071303",
+                "download_folder": r"re:Emma_Ruby \(Kemono\)",
+            },
+            {
+                "url": "re:pcloud",
+                "filename": "ASMR ~ Girl Next Door ~ Patreon EXCLUSIVE.mp4",
+                "download_folder": r"re:Emma_Ruby \(Kemono\)/Loose Files \(pCloud\)",
+                "referer": "https://u.pcloud.link/publink/show?code=XZDlYb5ZlyjdRy0vl0bJWMbT2L2cp5RbUCFX",
+            },
+        ],
+    ),
 ]

@@ -48,7 +48,7 @@ class EightMusesCrawler(Crawler):
         for tile in soup.select(TILE_SELECTOR):
             tile_link = self.parse_url(css.get_attr(tile, "href"))
             tile_title: str = css.get_attr_or_none(tile, "title") or ""
-            image = css.select_one(tile, IMAGE_SELECTOR)
+            image = css.select(tile, IMAGE_SELECTOR)
             is_new_album = image["itemtype"] == "https://schema.org/ImageGallery"
             new_album_id = f"{scrape_item.album_id}/{tile_title.replace(' ', '-')}"
             new_scrape_item = scrape_item.create_child(tile_link, new_title_part=tile_title, album_id=new_album_id)
@@ -56,7 +56,7 @@ class EightMusesCrawler(Crawler):
                 await self.album(new_scrape_item)
                 continue
 
-            image_link_str: str = css.select_one_get_attr(image, "img", "data-src").replace("/th/", "/fm/")
+            image_link_str: str = css.select(image, "img", "data-src").replace("/th/", "/fm/")
             image_link = self.parse_url(image_link_str)
             if not self.check_album_results(image_link, results):
                 filename, ext = self.get_filename_and_ext(f"{tile_title}.jpg")

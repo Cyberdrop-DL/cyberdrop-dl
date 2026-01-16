@@ -43,8 +43,8 @@ class IncestflixCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
         soup = await self.request_soup(scrape_item.url)
-        title: str = css.select_one_get_text(soup, _SELECTORS.TITLE)
-        link_str = css.select_one_get_attr(soup, _SELECTORS.VIDEO, "src")
+        title: str = css.select_text(soup, _SELECTORS.TITLE)
+        link_str = css.select(soup, _SELECTORS.VIDEO, "src")
         url = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(f"{title}.mp4")
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=url)
@@ -54,7 +54,7 @@ class IncestflixCrawler(Crawler):
         title_created: bool = False
         async for soup in self.web_pager(scrape_item.url):
             if not title_created:
-                title = self.create_title(css.select_one(soup, _SELECTORS.TAG_TITLE).get_text(strip=True))
+                title = self.create_title(css.select(soup, _SELECTORS.TAG_TITLE).get_text(strip=True))
                 scrape_item.setup_as_album(title)
                 title_created = True
             for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.VIDEO_THUMBS):

@@ -55,7 +55,7 @@ class Rule34VaultCrawler(Crawler):
             if not title:
                 if is_playlist:
                     album_id = scrape_item.url.parts[-1]
-                    title_str: str = css.select_one_get_text(soup, _SELECTORS.TITLE)
+                    title_str: str = css.select_text(soup, _SELECTORS.TITLE)
                     title = self.create_title(title_str, album_id)
                     scrape_item.setup_as_album(title, album_id=album_id)
                 else:

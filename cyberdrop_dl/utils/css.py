@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import functools
 import json
-from typing import TYPE_CHECKING, Any, NamedTuple, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, ParamSpec, TypeVar, overload
 
 import bs4.css
+from bs4 import BeautifulSoup
 
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils.logger import log_debug
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-    from bs4 import Tag
+    from bs4.element import Tag
 
-P = ParamSpec("P")
-R = TypeVar("R")
+    _P = ParamSpec("_P")
+    _R = TypeVar("_R")
 
 
 class SelectorError(ScrapeError):
@@ -27,12 +29,12 @@ class CssAttributeSelector(NamedTuple):
     attribute: str = ""
 
     def __call__(self, soup: Tag) -> str:
-        return select_one_get_attr(soup, self.element, self.attribute)
+        return select(soup, self.element, self.attribute)
 
 
-def not_none(func: Callable[P, R | None]) -> Callable[P, R]:
+def not_none(func: Callable[_P, _R | None]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         result = func(*args, **kwargs)
         if result is None:
             raise SelectorError
@@ -42,22 +44,20 @@ def not_none(func: Callable[P, R | None]) -> Callable[P, R]:
 
 
 @not_none
-def select_one(tag: Tag, selector: str) -> Tag | None:
+def _select_one(tag: Tag, selector: str) -> Tag | None:
     """Same as `tag.select_one` but asserts the result is not `None`"""
     return tag.select_one(selector)
 
 
-def select_one_get_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str | None = None) -> str:
+def select_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str | None = None) -> str:
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
-    inner_tag = select_one(tag, selector)
+    inner_tag = select(tag, selector)
     if decompose:
         for trash in iselect(inner_tag, decompose):
             trash.decompose()
     return get_text(inner_tag, strip)
 
 
-# TODO: Rename this to just get_attr
-# get_attr_no_error should be get_attr_or_none. `or_none` implies no error
 def get_attr_or_none(tag: Tag, attribute: str) -> str | None:
     """Same as `tag.get(attribute)` but asserts the result is a single str"""
     attribute_ = attribute
@@ -75,13 +75,6 @@ def get_attr_or_none(tag: Tag, attribute: str) -> str | None:
     return value
 
 
-def get_attr_no_error(tag: Tag, attribute: str) -> str | None:
-    try:
-        return get_attr_or_none(tag, attribute)
-    except Exception:
-        return
-
-
 def get_text(tag: Tag, strip: bool = True) -> str:
     return tag.get_text(strip=strip)
 
@@ -92,9 +85,18 @@ def get_attr(tag: Tag, attribute: str) -> str | None:
     return get_attr_or_none(tag, attribute)
 
 
-def select_one_get_attr(tag: Tag, selector: str, attribute: str) -> str:
-    """Same as `tag.select_one(selector)[attribute]` but asserts the result is not `None` and is a single string"""
-    inner_tag = select_one(tag, selector)
+@overload
+def select(tag: Tag, selector: str) -> Tag: ...
+
+
+@overload
+def select(tag: Tag, selector: str, attribute: str) -> str: ...
+
+
+def select(tag: Tag, selector: str, attribute: str | None = None) -> Tag | str:
+    inner_tag = _select_one(tag, selector)
+    if not attribute:
+        return inner_tag
     return get_attr(inner_tag, attribute)
 
 
@@ -138,14 +140,14 @@ def sanitize_page_title(title: str, domain: str) -> str:
 
 
 def page_title(soup: Tag, domain: str | None = None) -> str:
-    title = select_one_get_text(soup, "title")
+    title = select_text(soup, "title")
     if domain:
         return sanitize_page_title(title, domain)
     return title
 
 
 def get_json_ld_date(soup: Tag) -> str:
-    return get_json_ld_value(soup, "uploadDate")
+    return get_json_ld(soup)["uploadDate"]
 
 
 def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
@@ -153,16 +155,82 @@ def get_json_ld(soup: Tag, /, contains: str | None = None) -> dict[str, Any]:
     if contains:
         selector += f":-soup-contains('{contains}')"
 
-    ld_json = json.loads(select_one_get_text(soup, selector)) or {}
+    ld_json = json.loads(select_text(soup, selector)) or {}
     if isinstance(ld_json, list):
         return ld_json[0]
 
     return ld_json
 
 
-def get_json_ld_value(soup: Tag, key: str) -> Any:
-    ld_json = get_json_ld(soup, key)
-    return ld_json[key]
+def get_nuxt_data(soup: Tag) -> list[Any]:
+    return json.loads(select_text(soup, "script#__NUXT_DATA__"))
+
+
+def parse_nuxt_obj(nuxt_data: list[Any], *attributes: str) -> dict[str, Any]:
+    """Parses a single object from a NUXT rich JSON payload response (__NUXT_DATA__)
+
+    It iterates over each object until it finds an object with the desired attributes"""
+    if obj := next(parse_nuxt_objs(nuxt_data, *attributes), None):
+        return obj
+    raise SelectorError(f"Unable to find object with {attributes = } in NUXT_DATA")
+
+
+def parse_nuxt_objs(nuxt_data: list[Any], *attributes: str) -> Generator[dict[str, Any]]:
+    """
+    Iterates over each object from a NUXT rich JSON payload response (__NUXT_DATA__)
+
+    It bypasses the devalue parsing logic by ignoring objects without the desired attributes
+
+    https://github.com/nuxt/nuxt/discussions/20879
+    """
+    assert attributes
+    first_key = attributes[0]
+    objects = (obj for obj in nuxt_data if isinstance(obj, dict) and all(key in obj for key in attributes))
+    for obj in objects:
+        try:
+            index: int = obj[first_key]
+            index_map: dict[str, int] = nuxt_data[index]
+            assert isinstance(index_map, dict)
+        except (LookupError, AssertionError):
+            index_map = obj
+
+        yield _parse_nuxt_obj(nuxt_data, index_map)
+
+
+def _parse_nuxt_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
+    def hydrate(value: Any) -> Any:
+        if isinstance(value, list):
+            match value:
+                case ["BigInt", val]:
+                    return int(val)
+                case ["Date" | "Object" | "RegExp", val, *_]:
+                    return val
+                case ["Set", *values]:
+                    return [hydrate(nuxt_data[idx]) for idx in values]
+                case ["Map", *values]:
+                    return hydrate(dict(zip(*(iter(values),) * 2, strict=True)))
+                case ["ShallowRef" | "ShallowReactive" | "Ref" | "Reactive" | "NuxtError", idx]:
+                    return hydrate(nuxt_data[idx])
+                case [str(name), *rest]:
+                    log_debug(f"Unable to parse custom object {name} {rest}", 30)
+                    return None
+                case _:
+                    return [hydrate(nuxt_data[idx]) for idx in value]
+
+        if isinstance(value, dict):
+            return _parse_nuxt_obj(nuxt_data, value)
+
+        return value
+
+    return {name: hydrate(nuxt_data[idx]) for name, idx in index_map.items()}
+
+
+def unescape(html: str) -> str:
+    return make_soup(html).get_text()
+
+
+def make_soup(html: str) -> BeautifulSoup:
+    return BeautifulSoup(html, "html.parser")
 
 
 iframes = CssAttributeSelector("iframe", "src")

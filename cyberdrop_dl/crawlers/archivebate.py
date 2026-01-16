@@ -56,7 +56,8 @@ class ArchiveBateCrawler(MixDropCrawler):
 
         url = scrape_item.url
         # Can't use check_complete_by_referer. We need the mixdrop url for that
-        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, url)
+        db_path = self.create_db_path(url)
+        check_complete = await self.manager.db_manager.history_table.check_complete(self.DOMAIN, url, url, db_path)
         if check_complete:
             self.log(f"Skipping {scrape_item.url} as it has already been downloaded", 10)
             self.manager.progress_manager.download_progress.add_previously_completed()
@@ -67,12 +68,11 @@ class ArchiveBateCrawler(MixDropCrawler):
         if "This video has been deleted" in soup.text:
             raise ScrapeError(410)
 
-        description = open_graph.get("description", soup)
-        assert description
+        description = open_graph.description(soup)
         date_str = get_text_between(description, "show on", " - ").strip()
-        user_name = css.select_one_get_text(soup, _SELECTORS.USER_NAME)
-        site_name = css.select_one_get_text(soup, _SELECTORS.SITE_NAME)
-        video_src = css.select_one_get_attr(soup, _SELECTORS.VIDEO, "src")
+        user_name = css.select_text(soup, _SELECTORS.USER_NAME)
+        site_name = css.select_text(soup, _SELECTORS.SITE_NAME)
+        video_src = css.select(soup, _SELECTORS.VIDEO, "src")
         title = self.create_title(f"{user_name} [{site_name}]")
         scrape_item.setup_as_profile(title)
         scrape_item.possible_datetime = self.parse_date(date_str)

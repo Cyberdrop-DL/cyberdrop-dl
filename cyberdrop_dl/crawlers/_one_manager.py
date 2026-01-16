@@ -62,21 +62,21 @@ class OneManagerCrawler(Crawler, is_abc=True):
             pass
 
         # href are not actual links, they only have the name of the new part
-        table = css.select_one(soup, _SELECTORS.TABLE)
+        table = css.select(soup, _SELECTORS.TABLE)
         for file in css.iselect(table, _SELECTORS.FILE):
             await self.process_file(scrape_item, file)
             scrape_item.add_children()
 
         for folder in css.iselect(table, _SELECTORS.FOLDER):
-            link = scrape_item.url / css.select_one_get_attr(folder, _SELECTORS.FOLDER_LINK, "href")
+            link = scrape_item.url / css.select(folder, _SELECTORS.FOLDER_LINK, "href")
             new_scrape_item = scrape_item.create_child(link, new_title_part=link.name)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def process_file(self, scrape_item: ScrapeItem, file: Tag) -> None:
-        datetime = self.parse_date(css.select_one_get_text(file, _SELECTORS.DATE))
-        link = scrape_item.url / css.select_one_get_attr(file, _SELECTORS.FILE_LINK, "href")
+        datetime = self.parse_date(css.select_text(file, _SELECTORS.DATE))
+        link = scrape_item.url / css.select(file, _SELECTORS.FILE_LINK, "href")
         await self._process_file(scrape_item, link, datetime)
 
     async def _process_file(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL, datetime: int | None = None) -> None:

@@ -124,7 +124,7 @@ class EpornerCrawler(Crawler):
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title and not from_profile:
-                title = css.select_one_get_text(soup, "title")
+                title = css.select_text(soup, "title")
                 title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
                 for trash in title_trash:
                     title = title.rsplit(trash)[0].strip()
@@ -139,7 +139,7 @@ class EpornerCrawler(Crawler):
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title:
-                title = css.select_one_get_text(soup, _SELECTORS.GALLERY_TITLE)
+                title = css.select_text(soup, _SELECTORS.GALLERY_TITLE)
                 title = self.create_title(title)
                 scrape_item.setup_as_album(title)
 
@@ -160,7 +160,7 @@ class EpornerCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
 
         scrape_item.url = canonical_url
-        link_str = css.select_one_get_attr(soup, _SELECTORS.PHOTO, "href")
+        link_str = css.select(soup, _SELECTORS.PHOTO, "href")
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)
@@ -193,7 +193,7 @@ class EpornerCrawler(Crawler):
 
 
 def _get_available_sources(soup: BeautifulSoup) -> list[VideoSource]:
-    downloads = css.select_one(soup, _SELECTORS.DOWNLOADS)
+    downloads = css.select(soup, _SELECTORS.DOWNLOADS)
     formats = downloads.select(_SELECTORS.H264)
     if ALLOW_AV1:
         formats.extend(downloads.select(_SELECTORS.AV1))
@@ -206,7 +206,7 @@ def _get_best_src(soup: BeautifulSoup) -> VideoSource:
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
-    ld_json = css.select_one_get_text(soup, _SELECTORS.DATE_JS)
+    ld_json = css.select_text(soup, _SELECTORS.DATE_JS)
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/jbsparrow/CyberDropDownloader/issues/1211
     return Video(

@@ -24,6 +24,6 @@ class HotLeakVipCrawler(LeakedZoneCrawler):
 
     @classmethod
     def get_encoded_video_url(cls, soup: BeautifulSoup) -> str:
-        video_info_text = css.select_one_get_attr(soup, LIGHT_GALLERY_ITEM_SELECTOR, "data-video")
+        video_info_text = css.select(soup, LIGHT_GALLERY_ITEM_SELECTOR, "data-video")
         video_data: dict[str, Any] = json.loads(video_info_text)
         return video_data["source"][0]["src"]

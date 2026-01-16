@@ -41,13 +41,13 @@ class FapelloCrawler(Crawler):
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title:
-                title = self.create_title(css.select_one_get_text(soup, TITLE_SELECTOR))
+                title = self.create_title(css.select_text(soup, TITLE_SELECTOR))
                 scrape_item.setup_as_album(title)
 
             for post in soup.select(CONTENT_SELECTOR):
                 link_str: str = css.get_attr(post, "href")
                 if "javascript" in link_str:
-                    link_str = css.select_one_get_attr(post, "iframe", "src")
+                    link_str = css.select(post, "iframe", "src")
 
                 link = self.parse_url(link_str)
                 new_scrape_item = scrape_item.create_child(link)
@@ -58,7 +58,7 @@ class FapelloCrawler(Crawler):
     async def post(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        content = css.select_one(soup, POST_CONTENT_SELECTOR)
+        content = css.select(soup, POST_CONTENT_SELECTOR)
         for _, link in self.iter_tags(content, "img, source"):
             filename, ext = self.get_filename_and_ext(link.name)
             await self.handle_file(link, scrape_item, filename, ext)

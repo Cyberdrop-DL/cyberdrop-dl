@@ -21,6 +21,5 @@ def test_startup(tmp_cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.
 
 
 def test_async_startup(tmp_cwd: Path, caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(10)
     run(("--download",))
     assert "Finished downloading. Enjoy :)" in caplog.text

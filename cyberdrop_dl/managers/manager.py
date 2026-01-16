@@ -60,9 +60,7 @@ class Manager:
         self._made_portable: bool = False
 
         self.task_group: TaskGroup = field(init=False)
-        self.task_list: list = []
         self.scrape_mapper: ScrapeMapper = field(init=False)
-        self.current_task: asyncio.Task = field(init=False)
 
         self.vi_mode: bool = False
         self.start_time: float = perf_counter()
@@ -85,13 +83,6 @@ class Manager:
     @property
     def global_config(self):
         return self.config_manager.global_settings_data
-
-    def shutdown(self, from_user: bool = False):
-        """ "Shut everything down (something failed or the user used ctrl + q)"""
-        if from_user:
-            log("Received keyboard interrupt, shutting down...", 30)
-        self.states.SHUTTING_DOWN.set()
-        self.current_task.cancel()
 
     def startup(self) -> None:
         """Startup process for the manager."""
@@ -165,7 +156,6 @@ class Manager:
         transfer_v5_db_to_v6(self.path_manager.history_db)
         if not isinstance(self.hash_manager, HashManager):
             self.hash_manager = HashManager(self)
-            await self.hash_manager.startup()
         if not isinstance(self.live_manager, LiveManager):
             self.live_manager = LiveManager(self)
         if not isinstance(self.progress_manager, ProgressManager):

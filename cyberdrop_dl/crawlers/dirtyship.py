@@ -111,7 +111,7 @@ class DirtyShipCrawler(Crawler):
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title:
-                title: str = css.select_one_get_text(soup, "title")
+                title: str = css.select_text(soup, "title")
                 title = title.split("Archives - DirtyShip")[0]
                 title = self.create_title(title)
                 scrape_item.setup_as_album(title)
@@ -123,7 +123,7 @@ class DirtyShipCrawler(Crawler):
     async def video(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        title: str = css.select_one_get_text(soup, "title")
+        title: str = css.select_text(soup, "title")
         title = title.split(" - DirtyShip")[0]
         videos = soup.select(_SELECTORS.VIDEO)
 

@@ -24,5 +24,3 @@ There are three type of config files: config settings, global settings and authe
 {% endhint %}
 
 Each config setting will be setup by default to have a separate `URLs.txt` files and separate log files.
-
-You can run all of the configs sequentially by selecting `ALL` from the UI or using `--config ALL`.

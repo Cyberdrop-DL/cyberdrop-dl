@@ -8,9 +8,9 @@ from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
-from bs4 import BeautifulSoup
 from multidict import CIMultiDict, CIMultiDictProxy
 
+from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.compat import StrEnum
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError
@@ -112,10 +112,10 @@ class FlareSolverr:
             raise invalid_response_error
 
         self.manager.client_manager.cookies.update_cookies(resp.solution.cookies)
-        self._check_user_agent(resp.solution)
+        await self._check_user_agent(resp.solution)
         return resp.solution
 
-    def _check_user_agent(self, solution: FlareSolverrSolution) -> None:
+    async def _check_user_agent(self, solution: FlareSolverrSolution) -> None:
         cdl_user_agent = self.manager.global_config.general.user_agent
         mismatch_ua_msg = (
             "Config user_agent and flaresolverr user_agent do not match:"
@@ -123,10 +123,11 @@ class FlareSolverr:
             f"\n  Flaresolverr: '{solution.user_agent}'"
         )
 
-        soup = BeautifulSoup(solution.content, "html.parser")
-        if self.manager.client_manager.check_ddos_guard(soup) or self.manager.client_manager.check_cloudflare(soup):
+        try:
+            await ddos_guard.check(solution.content)
+        except DDOSGuardError:
             if solution.user_agent != cdl_user_agent:
-                raise DDOSGuardError(mismatch_ua_msg)
+                raise DDOSGuardError(mismatch_ua_msg) from None
 
         if solution.user_agent != cdl_user_agent:
             msg = f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid"

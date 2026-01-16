@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, ClassVar, ParamSpec, TypeVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import InvalidContentTypeError, NoExtensionError, ScrapeError
-from cyberdrop_dl.scraper.filters import has_valid_extension
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.logger import log
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_filename_and_ext
@@ -72,14 +71,15 @@ class GenericCrawler(Crawler):
         if not ext:
             msg = f"Received '{content_type}', was expecting other"
             raise InvalidContentTypeError(message=msg)
+
         fullname = Path(filename).with_suffix(ext)
         filename, _ = self.get_filename_and_ext(fullname.name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext)
 
     async def try_video_from_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         try:
-            title = css.select_one_get_text(soup, "title").rsplit(" - ", 1)[0].rsplit("|", 1)[0]
-            link_str: str = css.select_one_get_attr(soup, VIDEO_SELECTOR, "src")
+            title = css.select_text(soup, "title").rsplit(" - ", 1)[0].rsplit("|", 1)[0]
+            link_str: str = css.select(soup, VIDEO_SELECTOR, "src")
         except (AssertionError, AttributeError, KeyError):
             raise ScrapeError(422) from None
 
@@ -109,13 +109,10 @@ def get_ext_from_content_type(content_type: str) -> str | None:
 
 
 def get_name_and_ext_from_url(url: AbsoluteHttpURL) -> tuple[str, str | None]:
-    if not has_valid_extension(url):
-        return url.name, None
     try:
-        filename, ext = get_filename_and_ext(url.name)
+        return get_filename_and_ext(url.name)
     except NoExtensionError:
-        filename, ext = get_filename_and_ext(url.name, forum=True)
-    return filename, ext
+        return url.name, None
 
 
 CONTENT_TYPE_TO_EXTENSION = {

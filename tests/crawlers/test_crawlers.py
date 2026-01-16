@@ -3,16 +3,19 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NamedTuple, NotRequired
+from typing import TYPE_CHECKING, NamedTuple, NotRequired
 from unittest import mock
 
 import pytest
 from pydantic import TypeAdapter
 from typing_extensions import TypedDict
 
+from cyberdrop_dl.data_structures import AbsoluteHttpURL
 from cyberdrop_dl.data_structures.url_objects import MediaItem, ScrapeItem
 from cyberdrop_dl.scraper.scrape_mapper import ScrapeMapper
+from cyberdrop_dl.utils.utilities import parse_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
@@ -27,7 +30,7 @@ class Result(TypedDict):
     # Simplified version of media_item
     url: str
     filename: NotRequired[str]
-    debrid_link: NotRequired[Literal["ANY"] | None]
+    debrid_link: NotRequired[str | None]
     original_filename: NotRequired[str]
     referer: NotRequired[str]
     album_id: NotRequired[str | None]
@@ -49,7 +52,7 @@ class CrawlerTestCase(NamedTuple):
     input_url: str
     results: list[Result]
     # TODO: deprecated total, move to config
-    total: int | None = None
+    total: Sequence[int] | int | None = None
     config: Config = _default_config
 
 
@@ -77,7 +80,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     _load_test_data()
     if "crawler_test_case" in metafunc.fixturenames:
         valid_domains = sorted(_TEST_DATA)
-        domains_to_tests: list[str] = metafunc.config.test_crawlers_domains  # type: ignore
+        domains_to_tests: list[str] = getattr(metafunc.config, "test_crawlers_domains", [])
         for domain in domains_to_tests:
             assert domain in valid_domains, f"{domain = } is not a valid or has not tests defined"
 
@@ -109,27 +112,72 @@ async def test_crawler(running_manager: Manager, crawler_test_case: CrawlerTestC
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
     total = test_case.total or len(test_case.results)
-    assert total == len(results)
+    _assert_n_results(test_case, len(results))
     if total:
         func.assert_awaited()
         _validate_results(crawler, test_case, results)
 
 
+def _assert_n_results(test_case: CrawlerTestCase, n_results: int) -> None:
+    total = test_case.total or len(test_case.results)
+    if isinstance(total, Sequence):
+        assert n_results in total
+    else:
+        assert total == n_results
+
+
 def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: list[MediaItem]) -> None:
     expected_results = sorted(test_case.results, key=lambda x: x["url"])
+    origin = getattr(crawler, "PRIMARY_URL", AbsoluteHttpURL("https://google.com"))
     for index, (expected, media_item) in enumerate(zip(expected_results, results, strict=False), 1):
         for attr_name, expected_value in expected.items():
             result_value = getattr(media_item, attr_name)
             if isinstance(expected_value, str):
                 if expected_value.startswith("http"):
-                    expected_value = crawler.parse_url(expected_value)
+                    expected_value = crawler.parse_url(expected_value, origin)
                 elif expected_value == "ANY":
                     expected_value = mock.ANY
                 elif expected_value.startswith("re:"):
                     expected_value = expected_value.removeprefix("re:")
-                    assert re.search(expected_value, str(result_value)), (
+                    assert _re_search(expected_value, str(result_value)), (
                         f"{result_value = } does not match {expected_value}"
                     )
                     continue
 
             assert expected_value == result_value, f"{attr_name} for result#{index} is different"
+
+
+def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
+    return re.search(expected_value, str(result_value)) or re.search(re.escape(expected_value), str(result_value))
+
+
+@pytest.mark.parametrize(
+    "url, filename",
+    [
+        (
+            "https://techdigitalspace.com/wp-content/uploads/2025/11/Valve-Steam-Machine-2.jpg",
+            "Valve-Steam-Machine-2.jpg",
+        ),
+        (
+            "https://simpcity.su/attachments/273974549_106860831858568_7219174579013873561_n-jpg.40743",
+            "273974549_106860831858568_7219174579013873561_n.jpg",
+        ),
+        (
+            "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Android_14-Hero_image-P8P.width-1300.png",
+            "Android_14-Hero_image-P8P.width-1300.png",
+        ),
+    ],
+)
+async def test_direct_http_crawler(running_manager: Manager, url: str, filename: str) -> None:
+    test_case = CrawlerTestCase(domain="no_crawler", input_url=url, results=[{"url": url, "filename": filename}])
+
+    with _crawler_mock() as func:
+        async with ScrapeMapper(running_manager) as scrape_mapper:
+            crawler = scrape_mapper.direct_crawler
+            await scrape_mapper.run()
+            item = ScrapeItem(url=parse_url(test_case.input_url))
+            await crawler.fetch(item)
+
+    results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
+    func.assert_awaited()
+    _validate_results(crawler, test_case, results)

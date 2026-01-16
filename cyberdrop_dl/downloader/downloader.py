@@ -8,13 +8,12 @@ import sys
 from dataclasses import field
 from datetime import datetime
 from functools import wraps
-from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple, ParamSpec, TypeVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
-from cyberdrop_dl.constants import CustomHTTPStatus
+from cyberdrop_dl import constants
 from cyberdrop_dl.data_structures.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.exceptions import (
     DownloadError,
@@ -23,10 +22,11 @@ from cyberdrop_dl.exceptions import (
     InvalidContentTypeError,
     RestrictedDateRangeError,
     RestrictedFiletypeError,
+    SkipDownloadError,
     TooManyCrawlerErrors,
 )
 from cyberdrop_dl.utils import aio, ffmpeg
-from cyberdrop_dl.utils.logger import log
+from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 # Windows epoch is January 1, 1601. Unix epoch is January 1, 1970
@@ -211,13 +211,16 @@ class Downloader:
     ) -> tuple[Path, Path | None, Path | None]:
         async def download(m3u8: M3U8):
             assert m3u8.media_type
-            download_folder = media_item.complete_file.with_suffix(".cdl_hls") / m3u8.media_type
+            if not m3u8.segments:
+                raise DownloadError(204, f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments")
+
+            download_folder = media_item.complete_file.with_suffix(constants.TempExt.HLS) / m3u8.media_type
             coros = self._prepare_hls_downloads(media_item, m3u8, download_folder)
             n_segmets = len(m3u8.segments)
             if n_segmets > 1:
                 suffix = f".{m3u8.media_type}.ts"
             else:
-                suffix = media_item.complete_file.suffix + Path(m3u8.segments[0].absolute_uri).suffix
+                suffix = media_item.complete_file.suffix + parse_url(m3u8.segments[0].absolute_uri).suffix
 
             output = media_item.complete_file.with_suffix(suffix)
             if await asyncio.to_thread(output.is_file):
@@ -266,7 +269,7 @@ class Downloader:
         def create_segments() -> Generator[HlsSegment]:
             for index, segment in enumerate(m3u8.segments, 1):
                 assert segment.uri
-                name = f"{index:0{padding}d}.cdl_hls"
+                name = f"{index:0{padding}d}{constants.TempExt.HLS}"
                 yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
 
         async def download_segment(segment: HlsSegment):
@@ -275,17 +278,13 @@ class Downloader:
             seg_media_item = MediaItem.from_item(
                 media_item,
                 segment.url,
-                domain=media_item.domain,
+                media_item.domain,
+                db_path=media_item.db_path,
                 download_folder=download_folder,
                 filename=segment.name,
                 ext=media_item.ext,
-                is_segment=True,
-                # add_to_database=False,
-                # quiet=True,
-                # reference=media_item,
-                # skip_hashing=True,
             )
-
+            seg_media_item.is_segment = True
             return SegmentDownloadResult(
                 seg_media_item,
                 await self.start_download(seg_media_item),
@@ -308,13 +307,16 @@ class Downloader:
         await self.manager.storage_manager.check_free_space(media_item)
         if not self.manager.client_manager.check_allowed_filetype(media_item):
             raise RestrictedFiletypeError(origin=media_item)
-        if not self.manager.client_manager.pre_check_duration(media_item):
+        if not await self.manager.client_manager.check_file_duration(media_item):
             raise DurationError(origin=media_item)
         if not self.manager.client_manager.check_allowed_date_range(media_item):
             raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
         """Sets the file's datetime."""
+        if media_item.is_segment:
+            return
+
         if self.manager.config_manager.settings_data.download_options.disable_file_timestamps:
             return
         if not media_item.datetime:
@@ -402,9 +404,13 @@ class Downloader:
 
         if not media_item.is_segment:
             log(f"{self.log_prefix} starting: {media_item.url}", 20)
-        lock = self._file_lock_vault.get_lock(media_item.filename)
-        async with lock:
-            return bool(await self.download(media_item))
+
+        async with self._file_lock_vault[media_item.filename]:
+            log_debug(f"Lock for {media_item.filename} acquired", 20)
+            try:
+                return bool(await self.download(media_item))
+            finally:
+                log_debug(f"Lock for {media_item.filename} released", 20)
 
     @error_handling_wrapper
     @retry
@@ -425,25 +431,15 @@ class Downloader:
                 await asyncio.to_thread(Path.chmod, media_item.complete_file, 0o666)
                 if not media_item.is_segment:
                     await self.set_file_datetime(media_item, media_item.complete_file)
-                    self.attempt_task_removal(media_item)
                     self.manager.progress_manager.download_progress.add_completed()
                     log(f"Download finished: {media_item.url}", 20)
+            self.attempt_task_removal(media_item)
             return downloaded
 
-        except RestrictedFiletypeError:
+        except SkipDownloadError as e:
             if not media_item.is_segment:
-                log(f"Download skip {media_item.url} due to ignore_extension config ({media_item.ext})", 10)
+                log(f"Download skip {media_item.url}: {e}", 10)
                 self.manager.progress_manager.download_progress.add_skipped()
-                self.attempt_task_removal(media_item)
-
-        except RestrictedDateRangeError:
-            timestamp_str = (
-                datetime.fromtimestamp(media_item.datetime).strftime("%Y-%m-%d %H:%M:%S")
-                if media_item.datetime
-                else "Unknown date"
-            )
-            log(f"Download skip {media_item.url} due to exclude_posts_date config ({timestamp_str})", 10)
-            self.manager.progress_manager.download_progress.add_skipped()
             self.attempt_task_removal(media_item)
 
         except (DownloadError, ClientResponseError, InvalidContentTypeError):
@@ -480,16 +476,3 @@ class Downloader:
         self.manager.log_manager.write_download_error_log(media_item, error_log_msg.csv_log_msg)
         self.manager.progress_manager.download_stats_progress.add_failure(error_log_msg.ui_failure)
         self.manager.progress_manager.download_progress.add_failed()
-
-    @staticmethod
-    def is_failed(status: int):
-        """NO USED"""
-        SERVER_ERRORS = (HTTPStatus.SERVICE_UNAVAILABLE, HTTPStatus.BAD_GATEWAY, CustomHTTPStatus.WEB_SERVER_IS_DOWN)
-        return any(
-            (is_4xx_client_error(status) and status != HTTPStatus.TOO_MANY_REQUESTS, status in SERVER_ERRORS),
-        )
-
-
-def is_4xx_client_error(status_code: int) -> bool:
-    """Checks whether the HTTP status code is 4xx client error."""
-    return isinstance(status_code, str) or (HTTPStatus.BAD_REQUEST <= status_code < HTTPStatus.INTERNAL_SERVER_ERROR)

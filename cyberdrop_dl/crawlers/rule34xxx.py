@@ -57,9 +57,9 @@ class Rule34XXXCrawler(Crawler):
     async def file(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        date_str = css.select_one_get_text(soup, _SELECTORS.DATE).removeprefix("Posted: ")
+        date_str = css.select_text(soup, _SELECTORS.DATE).removeprefix("Posted: ")
         scrape_item.possible_datetime = self.parse_date(date_str)
-        link_str = css.select_one_get_attr(soup, _SELECTORS.IMAGE_OR_VIDEO, "src")
+        link_str = css.select(soup, _SELECTORS.IMAGE_OR_VIDEO, "src")
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)
