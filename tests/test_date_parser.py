@@ -20,6 +20,6 @@ def test_parse_today_at_midnight() -> None:
 
 
 def test_parse_date_with_no_year() -> None:
-    expected = today_at_midnight().replace(month=10, day=14)
-    result = dates.parse_human("oct 14")
+    expected = today_at_midnight().replace(month=1, day=1)
+    result = dates.parse_human("jan 1")
     assert expected == result
