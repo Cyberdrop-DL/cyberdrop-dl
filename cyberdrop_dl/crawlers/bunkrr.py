@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 _DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://apidl.bunkr.ru/api/_001_v2")
 _STREAMING_API_ENTRYPOINT = AbsoluteHttpURL("https://bunkr.site/api/vs")
 _PRIMARY_URL = AbsoluteHttpURL("https://bunkr.site")
-_REINFORCED_URL_BASE = AbsoluteHttpURL("https://get.bunkr.su")
+_REINFORCED_URL_BASE = AbsoluteHttpURL("https://get.bunkrr.su")
 
 
 class Selector:
