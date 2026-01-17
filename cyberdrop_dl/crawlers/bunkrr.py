@@ -103,14 +103,11 @@ class File:
 
     def src(self) -> AbsoluteHttpURL:
         src_str = self.thumbnail.replace("/thumbs/", "/")
-        src = parse_url(src_str).with_suffix(self.suffix).with_query(None)
+        ext = Path(self.name).suffix
+        src = parse_url(src_str).with_suffix(ext).with_query(None)
         if src.suffix.lower() not in FILE_FORMATS["Images"]:
-            return src.with_host(src.host.replace("i-", ""))
-        return src
-
-    @property
-    def suffix(self) -> str:
-        return Path(self.name).suffix
+            src = src.with_host(src.host.replace("i-", ""))
+        return _override_cdn(src)
 
 
 class BunkrrCrawler(Crawler):
@@ -137,8 +134,8 @@ class BunkrrCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["file", id_] if scrape_item.url.host == _REINFORCED_URL_BASE.host:
-                return await self.reinforced_file(scrape_item, id_)
+            case ["file", file_id] if scrape_item.url.host == _REINFORCED_URL_BASE.host:
+                return await self.reinforced_file(scrape_item, file_id)
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
             case ["v", _]:
@@ -152,9 +149,7 @@ class BunkrrCrawler(Crawler):
                 if self.is_subdomain(scrape_item.url):
                     return await self.handle_direct_link(scrape_item, scrape_item.url)
 
-                await self.file(scrape_item)
-            case _:
-                raise ValueError
+        raise ValueError
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
@@ -201,19 +196,19 @@ class BunkrrCrawler(Crawler):
             file_id = self.parse_url(dl_link).name
             link = await self._request_download(file_id)
 
-        title = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
-        await self.handle_direct_link(scrape_item, link, fallback_filename=title)
+        name = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
+        await self.handle_direct_link(scrape_item, link, name)
 
     @error_handling_wrapper
-    async def reinforced_file(self, scrape_item: ScrapeItem, id_: str) -> None:
+    async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        title = css.select_text(soup, "h1")
-        link = await self._request_download(file_id=id_)
-        await self.handle_direct_link(scrape_item, link, fallback_filename=title)
+        name = css.select_text(soup, "h1")
+        link = await self._request_download(file_id=file_id)
+        await self.handle_direct_link(scrape_item, link, name)
 
     @error_handling_wrapper
     async def handle_direct_link(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, fallback_filename: str = ""
+        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, fallback_filename: str | None = None
     ) -> None:
         link = url
         name = link.query.get("n") or fallback_filename or link.name
@@ -283,3 +278,9 @@ def _is_stream_redirect(url: AbsoluteHttpURL) -> bool:
     if not prefix and number.isdigit():
         return True
     return any(part in url.host for part in ("cdn12", "cdn-")) or url.host == "cdn.bunkr.ru"
+
+
+def _override_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if "milkshake" in url.host:
+        return url.with_host("mlk-bk.cdn.gigachad-cdn.ru")
+    return url

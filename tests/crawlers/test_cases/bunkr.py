@@ -17,8 +17,7 @@ TEST_CASES = [
         "https://bunkr.cr/a/5aZU25Cb",
         [
             {
-                # "url": "https://mlk-bk.cdn.gigachad-cdn.ru/01101506-9a96-4379-a226-c27f128923f6.jpg?n=xl_g_elin_maddie150.jpg",
-                "url": "https://i-milkshake.bunkr.ru/01101506-9a96-4379-a226-c27f128923f6.jpg?n=xl_g_elin_maddie150.jpg",
+                "url": "https://mlk-bk.cdn.gigachad-cdn.ru/01101506-9a96-4379-a226-c27f128923f6.jpg?n=xl_g_elin_maddie150.jpg",
                 "filename": "xl_g_elin_maddie150.jpg",
                 "original_filename": "xl_g_elin_maddie150.jpg",
                 "referer": "https://bunkr.site/f/1EhT44cSv6Dlq",
