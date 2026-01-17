@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-SUPPORTED_FORMATS = "mp3-320", "aac-hi", "mp3", "flac", "vorbis", "wav", "alas", "aiff"  # Ordered by preference
+SUPPORTED_FORMATS = "mp3-320", "mp3", "aac-hi", "wav", "flac", "vorbis", "aiff", "alas"  # Ordered by preference
 USE_FORMATS = tuple(dict.fromkeys((env.BANDCAMP_FORMATS).split(","))) if env.BANDCAMP_FORMATS else SUPPORTED_FORMATS
 
 
