@@ -185,17 +185,13 @@ class BunkrrCrawler(Crawler):
         if self.check_album_results(link, results):
             return
 
-        if not link.query.get("n"):
-            link = link.update_query(n=file.name)
-
-        filename, ext = self.get_filename_and_ext(link.query["n"], assume_ext=".mp4")
-        await self.handle_file(link, scrape_item, link.name, ext, custom_filename=filename)
+        await self.handle_direct_link(scrape_item, link, file.name)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
         link: AbsoluteHttpURL | None = None
-        database_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
-        if await self.check_complete_from_referer(database_url):
+        db_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
+        if await self.check_complete_from_referer(db_url):
             return
 
         soup = await self.request_soup_lenient(scrape_item.url)
@@ -204,12 +200,12 @@ class BunkrrCrawler(Crawler):
         if image := soup.select_one(Selector.IMAGE_PREVIEW):
             link = self.parse_url(css.get_attr(image, "src"))
 
-        # Try to get downloadd URL from streaming API. Should work for most files, even none video files
+        # Try to get download URL from streaming API. Should work for most files, even none video files
         if not link:
-            slug = (_get_js_slug(soup) or scrape_item.url.name).encode().decode("unicode-escape")
-            base = self.known_good_url or scrape_item.url.origin()
-            slug_url = base / "f" / slug
-            link = await self._request_download(slug_url, slug=slug)
+            try:
+                link = await self._request_download(slug=slug)
+            except Exception:
+                pass
 
         # Fallback for everything else, try to get the download URL.
         # `handle_direct_link` will make the final request to the API
@@ -227,7 +223,7 @@ class BunkrrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, id_: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, "h1")
-        link = await self._request_download(scrape_item.url, id_=id_)
+        link = await self._request_download(id_=id_)
         await self.handle_direct_link(scrape_item, link, fallback_filename=title)
 
     @error_handling_wrapper
@@ -246,7 +242,7 @@ class BunkrrCrawler(Crawler):
             scrape_item.url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
-    async def _request_download(self, url: AbsoluteHttpURL, *, id_: str = "", slug: str = "") -> AbsoluteHttpURL:
+    async def _request_download(self, *, id_: str = "", slug: str = "") -> AbsoluteHttpURL:
         """Gets the download link for a given URL
 
         1. Reinforced URL (get.bunkr.su/file/<file_id>). or
@@ -257,18 +253,18 @@ class BunkrrCrawler(Crawler):
             api_url = _DOWNLOAD_API_ENTRYPOINT
 
         else:
-            payload = {"slug": slug}
+            payload = {"slug": slug.encode().decode("unicode-escape")}
             api_url = _STREAMING_API_ENTRYPOINT
             if self.known_good_url:
                 api_url = _STREAMING_API_ENTRYPOINT.with_host(self.known_good_url.host)
 
-        json_resp: dict[str, Any] = await self.request_json(
+        resp: dict[str, Any] = await self.request_json(
             api_url,
             "POST",
             json=payload,
-            headers={"Referer": str(url)},
+            headers={"Referer": str(_REINFORCED_URL_BASE)},
         )
-        return self.parse_url(ApiResponse(**json_resp).decrypt())
+        return self.parse_url(ApiResponse(**resp).decrypt())
 
     async def _try_request_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup | None:
         try:
