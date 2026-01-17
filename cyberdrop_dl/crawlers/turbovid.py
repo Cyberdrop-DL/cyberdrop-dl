@@ -8,8 +8,6 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from yarl import URL
-
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 
@@ -84,13 +82,6 @@ class TurboVidCrawler(Crawler):
         sign_url = (self.PRIMARY_URL / "api/sign").with_query(v=file_id)
         link = self.parse_url((await self.request_json(sign_url))["url"])
         await self.direct_file(scrape_item, link)
-
-    async def check_complete_from_referer(self, scrape_item: ScrapeItem | URL, any_crawler: bool = False) -> bool:
-        downloaded = await super().check_complete_from_referer(scrape_item)
-        if not downloaded:
-            saint_url = scrape_item.url.with_host("saint2.cr")
-            downloaded = await super().check_complete_from_referer(saint_url)
-        return downloaded
 
 
 def fix_db_referer(referer: str) -> str:
