@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import itertools
-from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from aiohttp import ClientConnectorError
 
@@ -13,7 +13,7 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPa
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.utils import aio, css, open_graph
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between, parse_url, xor_decrypt
+from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url, xor_decrypt
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -31,14 +31,13 @@ _REINFORCED_URL_BASE = AbsoluteHttpURL("https://get.bunkrr.su")
 
 
 class Selector:
-    ALBUM_ITEM = "div[class*='relative group/item theItem']"
-    ITEM_NAME = "p[class*='theName']"
-    ITEM_DATE = 'span[class*="theDate"]'
+    ALBUM_ITEM = "div.theItem"
+    FILE_NAME = "p.theName"
+    FILE_DATE = "span.theDate"
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
-    THUMBNAIL = 'img[alt="image"]'
+    FILE_THUMBNAIL = 'img[alt="image"]'
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
     VIDEO = "video > source"
-    JS_SLUG = "script:-soup-contains('jsSlug')"
     NEXT_PAGE = "nav.pagination a[href]:-soup-contains('»')"
 
 
@@ -47,7 +46,8 @@ HOST_OPTIONS: set[str] = {"bunkr.site", "bunkr.cr", "bunkr.ph"}
 known_bad_hosts: set[str] = set()
 
 
-class ApiResponse(NamedTuple):
+@dataclasses.dataclass(slots=True, frozen=True)
+class ApiResponse:
     encrypted: bool
     timestamp: int
     url: str
@@ -62,7 +62,7 @@ class ApiResponse(NamedTuple):
         return xor_decrypt(encrypted_url, secret_key.encode())
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class File:
     name: str
     thumbnail: str
@@ -70,17 +70,18 @@ class File:
     path_qs: str
 
     @staticmethod
-    def from_tag(tag: Tag) -> File:
-        name = css.select_text(tag, Selector.ITEM_NAME)
-        thumbnail: str = css.select(tag, Selector.THUMBNAIL, "src")
-        date_str = css.select_text(tag, Selector.ITEM_DATE)
-        path_qs: str = css.select(tag, "a", "href")
-        return File(name, thumbnail, date_str, path_qs)
+    def parse(tag: Tag) -> File:
+        return File(
+            name=css.select_text(tag, Selector.FILE_NAME),
+            thumbnail=css.select(tag, Selector.FILE_THUMBNAIL, "src"),
+            date=css.select_text(tag, Selector.FILE_DATE),
+            path_qs=css.select(tag, "a", "href"),
+        )
 
     @property
     def src(self) -> AbsoluteHttpURL:
         src_str = self.thumbnail.replace("/thumbs/", "/")
-        src = parse_url(src_str, relative_to=_PRIMARY_URL).with_suffix(self.suffix).with_query(None)
+        src = parse_url(src_str).with_suffix(self.suffix).with_query(None)
         if src.suffix.lower() not in FILE_FORMATS["Images"]:
             return src.with_host(src.host.replace("i-", ""))
         return src
@@ -139,6 +140,7 @@ class BunkrrCrawler(Crawler):
         results = await self.get_album_results(album_id)
         seen: set[str] = set()
         stuck_in_a_loop_msg = f"Found duplicate URLs processing {scrape_item.url}. Aborting to prevent infinite loop"
+
         async for soup in self.web_pager(scrape_item.url):
             if not title:
                 name = css.page_title(soup, "bunkr")
@@ -146,7 +148,7 @@ class BunkrrCrawler(Crawler):
                 scrape_item.setup_as_album(title, album_id=album_id)
 
             for tag in soup.select(Selector.ALBUM_ITEM):
-                file = File.from_tag(tag)
+                file = File.parse(tag)
                 if file.path_qs in seen:
                     self.log(stuck_in_a_loop_msg, 40, bug=True)
                     return
@@ -207,10 +209,9 @@ class BunkrrCrawler(Crawler):
             except Exception:
                 pass
 
-        # Fallback for everything else, try to get the download URL.
-        # `handle_direct_link` will make the final request to the API
         if not link and (dl_button := soup.select_one(Selector.DOWNLOAD_BUTTON)):
-            link = self.parse_url(css.get_attr(dl_button, "href"))
+            id_ = self.parse_url(css.get_attr(dl_button, "href")).name
+            link = await self._request_download(id_=id_)
 
         # Everything failed, abort
         if not link:
@@ -313,8 +314,3 @@ def _is_stream_redirect(url: AbsoluteHttpURL) -> bool:
     if not prefix and number.isdigit():
         return True
     return any(part in url.host for part in ("cdn12", "cdn-")) or url.host == "cdn.bunkr.ru"
-
-
-def _get_js_slug(soup: BeautifulSoup) -> str | None:
-    if info_js := soup.select_one(Selector.JS_SLUG):
-        return get_text_between(info_js.get_text(), "jsSlug = '", "';")
