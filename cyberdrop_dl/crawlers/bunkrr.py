@@ -37,6 +37,7 @@ class Selector:
 
 VIDEO_AND_IMAGE_EXTS: set[str] = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"]
 HOST_OPTIONS: set[str] = {"bunkr.site", "bunkr.cr", "bunkr.ph"}
+DEEP_SCRAPE_CDNS: set[str] = {"pizza", "wiener"}  # CDNs under maintanance, ignore them and try to get a cached URL
 FILE_KEYS = "id", "name", "original", "slug", "type", "extension", "size", "timestamp", "thumbnail", "cdnEndpoint"
 known_bad_hosts: set[str] = set()
 
@@ -161,7 +162,12 @@ class BunkrrCrawler(Crawler):
     async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, int]) -> None:
         src = file.src()
         scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
-        if src.suffix.lower() not in VIDEO_AND_IMAGE_EXTS or "no-image" in src.name or self.deep_scrape:
+        if (
+            src.suffix.lower() not in VIDEO_AND_IMAGE_EXTS
+            or "no-image" in src.name
+            or self.deep_scrape
+            or any(cdn in src.host for cdn in DEEP_SCRAPE_CDNS)
+        ):
             self.create_task(self.run(scrape_item))
             return
 
