@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import base64
 import dataclasses
-import itertools
+import json
+import re
+from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -16,9 +18,9 @@ from cyberdrop_dl.utils import aio, css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url, xor_decrypt
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import Callable, Generator
 
-    from bs4 import BeautifulSoup, Tag
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
     from cyberdrop_dl.utils.aio import WeakAsyncLocks
@@ -35,6 +37,8 @@ class Selector:
     FILE_THUMBNAIL = 'img[alt="image"]'
 
     ALBUM_ITEM = "div.theItem"
+    ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
+
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
     VIDEO = "video > source"
@@ -44,6 +48,34 @@ class Selector:
 VIDEO_AND_IMAGE_EXTS: set[str] = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"]
 HOST_OPTIONS: set[str] = {"bunkr.site", "bunkr.cr", "bunkr.ph"}
 known_bad_hosts: set[str] = set()
+FILE_KEYS = "id", "name", "original", "slug", "type", "extension", "size", "timestamp", "thumbnail", "cdnEndpoint"
+
+
+def _make_album_parser(keys: tuple[str, ...]) -> Callable[[BeautifulSoup], Generator[File]]:
+    translation_map = {f"{key}: ": f'"{key}": ' for key in keys}
+    pattern = re.compile("|".join(sorted(translation_map, key=len, reverse=True)))
+
+    def decode(text: str) -> Generator[File]:
+        content = (
+            pattern.sub(lambda m: translation_map[m.group(0)], text)
+            .encode("raw_unicode_escape")
+            .decode("unicode-escape")
+        )
+
+        for file in json.loads(content):
+            yield File(
+                name=file.get("original") or file["name"],
+                slug=file["slug"],
+                thumbnail=file["thumbnail"],
+                date=file["timestamp"],
+            )
+
+    def parse(soup: BeautifulSoup) -> Generator[File]:
+        album_js = css.select_text(soup, Selector.ALBUM_FILES)
+        items = album_js[album_js.find("=") + 1 : album_js.rfind("];") + 1]
+        return decode(items)
+
+    return parse
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -67,18 +99,8 @@ class File:
     name: str
     thumbnail: str
     date: str
-    path_qs: str
+    slug: str
 
-    @staticmethod
-    def parse(tag: Tag) -> File:
-        return File(
-            name=css.select_text(tag, Selector.FILE_NAME),
-            thumbnail=css.select(tag, Selector.FILE_THUMBNAIL, "src"),
-            date=css.select_text(tag, Selector.FILE_DATE),
-            path_qs=css.select(tag, "a", "href"),
-        )
-
-    @property
     def src(self) -> AbsoluteHttpURL:
         src_str = self.thumbnail.replace("/thumbs/", "/")
         src = parse_url(src_str).with_suffix(self.suffix).with_query(None)
@@ -111,6 +133,7 @@ class BunkrrCrawler(Crawler):
     def __post_init__(self) -> None:
         self.switch_host_locks: WeakAsyncLocks[str] = aio.WeakAsyncLocks[str]()
         self.known_good_url: AbsoluteHttpURL | None = None
+        self._parse_album_files = _make_album_parser(FILE_KEYS)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -135,50 +158,24 @@ class BunkrrCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        title: str = ""
+        soup = await self._request_soup_lenient(scrape_item.url.with_query(advanced=1))
+        name = css.page_title(soup, "bunkr")
+        title = self.create_title(name, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
+
+        origin = scrape_item.url.origin()
         results = await self.get_album_results(album_id)
-        seen: set[str] = set()
-        stuck_in_a_loop_msg = f"Found duplicate URLs processing {scrape_item.url}. Aborting to prevent infinite loop"
-
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                name = css.page_title(soup, "bunkr")
-                title = self.create_title(name, album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
-
-            for tag in soup.select(Selector.ALBUM_ITEM):
-                file = File.parse(tag)
-                if file.path_qs in seen:
-                    self.log(stuck_in_a_loop_msg, 40, bug=True)
-                    return
-
-                seen.add(file.path_qs)
-                link = self.parse_url(file.path_qs, relative_to=scrape_item.url.origin())
-                new_scrape_item = scrape_item.create_child(link)
-                new_scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
-                self.create_task(self._album_file(new_scrape_item, file, results))
-                scrape_item.add_children()
-
-    async def web_pager(
-        self,
-        url: AbsoluteHttpURL,
-        next_page_selector: str | None = None,
-        *,
-        cffi: bool = False,
-        **kwargs: Any,
-    ) -> AsyncGenerator[BeautifulSoup]:
-        init_page = int(url.query.get("page") or 1)
-        for page in itertools.count(init_page):
-            soup = await self._request_soup_lenient(url.with_query(page=page))
-            yield soup
-            has_next_page = soup.select_one(Selector.NEXT_PAGE)
-            if not has_next_page:
-                break
+        for file in self._parse_album_files(soup):
+            web_url = origin / "f" / file.slug
+            new_scrape_item = scrape_item.create_child(web_url)
+            self.create_task(self._album_file(new_scrape_item, file, results))
+            scrape_item.add_children()
 
     @auto_task_id
     @error_handling_wrapper
     async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, int]) -> None:
-        link = file.src
+        link = file.src()
+        scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
         if link.suffix.lower() not in VIDEO_AND_IMAGE_EXTS or "no-image" in link.name or self.deep_scrape:
             self.create_task(self.run(scrape_item))
             return
@@ -249,6 +246,8 @@ class BunkrrCrawler(Crawler):
         else:
             if not self.known_good_url:
                 self.known_good_url = resp.url.origin()
+            if url.query.get("advanced") and url.query != resp.url.query:
+                soup = await self.request_soup(resp.url.with_query(url.query))
             return soup
 
     async def _request_soup_lenient(self, url: AbsoluteHttpURL) -> BeautifulSoup:
