@@ -1,6 +1,5 @@
 DOMAIN = "fuckingfast.co"
 TEST_CASES = [
-    # Video page link
     (
         "https://fuckingfast.co/auo9lgho1u8d/",
         [
