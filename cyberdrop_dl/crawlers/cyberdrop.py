@@ -73,7 +73,13 @@ class CyberdropCrawler(Crawler):
         info, auth = await asyncio.gather(
             self.request_json(_API_ENTRYPOINT / "file" / "info" / file_id),
             self.request_json(_API_ENTRYPOINT / "file" / "auth" / file_id),
+            return_exceptions=True,
         )
+        if isinstance(info, BaseException):
+            raise info
+
+        if isinstance(auth, BaseException):
+            raise auth
 
         name: str = info["name"]
         filename, ext = self.get_filename_and_ext(name)
