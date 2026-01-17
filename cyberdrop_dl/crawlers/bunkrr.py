@@ -30,11 +30,12 @@ _REINFORCED_URL_BASE = AbsoluteHttpURL("https://get.bunkrr.su")
 
 
 class Selector:
-    ALBUM_ITEM = "div.theItem"
     FILE_NAME = "p.theName"
     FILE_DATE = "span.theDate"
-    DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     FILE_THUMBNAIL = 'img[alt="image"]'
+
+    ALBUM_ITEM = "div.theItem"
+    DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
     VIDEO = "video > source"
     NEXT_PAGE = "nav.pagination a[href]:-soup-contains('»')"
@@ -218,16 +219,14 @@ class BunkrrCrawler(Crawler):
     async def handle_direct_link(
         self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, fallback_filename: str = ""
     ) -> None:
-        """Handles direct links (CDNs URLs) before sending them to the downloader.
-
-        `fallback_filename` will only be used if the link has no `n` query parameter"""
-
         link = url
         name = link.query.get("n") or fallback_filename or link.name
         link = link.update_query(n=name)
         filename, ext = self.get_filename_and_ext(name, assume_ext=".mp4")
         if not self.is_subdomain(scrape_item.url):
             scrape_item.url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
+        elif link.host == scrape_item.url.host:
+            scrape_item.url = _REINFORCED_URL_BASE
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     async def _request_download(self, file_id: str) -> AbsoluteHttpURL:

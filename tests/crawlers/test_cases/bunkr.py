@@ -85,4 +85,34 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://bunkr.sk/f/summertimejames-pics--VocHZQ0K.rar",
+        [
+            {
+                "url": "https://kebab.bunkr.ru/summertimejames-pics--VocHZQ0K.rar?n=summertimejames(pics).rar",
+                "filename": "summertimejames(pics).rar",
+                "referer": "https://bunkr.site/f/summertimejames-pics--VocHZQ0K.rar",
+            }
+        ],
+    ),
+    (
+        "https://kebab.bunkr.ru/summertimejames-pics--VocHZQ0K.rar",
+        [
+            {
+                "url": "https://kebab.bunkr.ru/summertimejames-pics--VocHZQ0K.rar?n=summertimejames-pics--VocHZQ0K.rar",
+                "filename": "summertimejames-pics--VocHZQ0K.rar",
+                "referer": "https://get.bunkrr.su",
+            }
+        ],
+    ),
+    (
+        "https://burger.bunkr.ru/9861917.mp4-PTaiPNai-CaBcktkP.mp4",
+        [
+            {
+                "url": "https://burger.bunkr.ru/9861917.mp4-PTaiPNai-CaBcktkP.mp4?n=9861917.mp4-PTaiPNai-CaBcktkP.mp4",
+                "filename": "9861917.mp4-PTaiPNai-CaBcktkP.mp4",
+                "referer": "https://get.bunkrr.su",
+            }
+        ],
+    ),
 ]
