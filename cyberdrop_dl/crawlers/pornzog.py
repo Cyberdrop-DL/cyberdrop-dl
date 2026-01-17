@@ -39,4 +39,4 @@ class PornZogCrawler(Crawler):
         iframe = css.select(soup, Selectors.EMBED_IFRAME)
         external_url = self.parse_url(css.get_attr(iframe, "src"))
         new_scrape_item = scrape_item.create_child(external_url)
-        return await self.handle_external_links(new_scrape_item)
+        return self.handle_external_links(new_scrape_item)

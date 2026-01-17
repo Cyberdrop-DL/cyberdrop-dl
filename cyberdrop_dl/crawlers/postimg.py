@@ -50,10 +50,8 @@ class PostImgCrawler(Crawler):
             )
 
             for image in resp["images"]:
-                link = self.parse_url(image[6])
-                filename, ext = self.get_filename_and_ext(image[2] + link.suffix)
-                new_scrape_item = scrape_item.create_child(link)
-                await self.handle_file(link, new_scrape_item, filename, ext)
+                link = self.PRIMARY_URL / image[0]
+                self.create_task(self.run(scrape_item.create_child(link)))
                 scrape_item.add_children()
 
             if not resp["has_page_next"]:

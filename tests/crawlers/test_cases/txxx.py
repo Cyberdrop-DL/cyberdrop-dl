@@ -12,4 +12,15 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://videotxxx.com/embed/8983936?promo=23760&source=",
+        [
+            {
+                "url": "https://txxx.com/embed/8983936?promo=23760&source=",
+                "filename": "charlotteharper pussy banged [8983936].mp4",
+                "referer": "https://txxx.com/embed/8983936?promo=23760&source=",
+                "debrid_link": "re:/get_file/",
+            }
+        ],
+    ),
 ]

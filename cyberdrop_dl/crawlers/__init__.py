@@ -37,11 +37,13 @@ from .files_vc import FilesVcCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
 from .fsiblog import FSIBlogCrawler
+from .fucking_fast import FuckingFastCrawler
 from .fuxxx import FuXXXCrawler
 from .generic import GenericCrawler
 from .girlsreleased import GirlsReleasedCrawler
 from .gofile import GoFileCrawler
 from .google_drive import GoogleDriveCrawler
+from .google_photos import GooglePhotosCrawler
 from .hclips import HClipsCrawler
 from .hdzog import HDZogCrawler
 from .hianime import HiAnimeCrawler
@@ -123,6 +125,7 @@ from .tranny_one import TrannyOneCrawler
 from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
 from .tubepornclassic import TubePornClassicCrawler
+from .turbovid import TurboVidCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler

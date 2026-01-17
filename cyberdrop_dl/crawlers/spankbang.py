@@ -34,7 +34,7 @@ class PlaylistInfo:
     def from_url(cls, url: AbsoluteHttpURL, soup: BeautifulSoup | None = None) -> PlaylistInfo:
         playlist_id = url.parts[1].split("-")[0]
         name = url.parts[3]
-        canonical_url = PRIMARY_URL / playlist_id / "playlist" / name
+        canonical_url = url.origin() / playlist_id / "playlist" / name
         title = css.select_text(soup, "title").rsplit("Playlist -")[0].strip() if soup else ""
         return cls(playlist_id, canonical_url, title)
 
@@ -114,13 +114,14 @@ class SpankBangCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
         was_removed = soup.select_one(VIDEO_REMOVED_SELECTOR)
-        if was_removed or "This video is no longer available" in soup.text:
+        if was_removed or "This video is no longer available" in soup.get_text():
             raise ScrapeError(410)
 
         video = _parse_video(soup)
         canonical_url = PRIMARY_URL / video.id / "video"
         if await self.check_complete_from_referer(canonical_url):
             return
+
         scrape_item.url = canonical_url
         resolution, link_str = video.best_format
         link = self.parse_url(link_str)
@@ -133,7 +134,6 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     title_tag = css.select(soup, "div#video h1")
     stream_js_text = css.select_text(soup, JS_STREAM_DATA_SELECTOR)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
-    del soup
     stream_data = json.load_js_obj(get_text_between(stream_js_text, "stream_data = ", ";"))
     return Video(
         id=video_id,
