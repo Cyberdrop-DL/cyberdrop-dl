@@ -30,7 +30,7 @@ class TurboVidCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbovid.cr")
     DOMAIN: ClassVar[str] = "turbovid.cr"
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr",)
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr", "saint.to", "saint2.su", "saint2.cr")
     FOLDER_DOMAIN: ClassVar[str] = "TurboVid"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
@@ -49,7 +49,6 @@ class TurboVidCrawler(Crawler):
 
     def __post_init__(self) -> None:
         # Re-define instances as saint crawler to share DB entries
-        # TODO: delete saint crawler when turbovid is out of beta
         # TODO: rename old saint DB entries to turbovid
         self.DOMAIN = "saint"
 
