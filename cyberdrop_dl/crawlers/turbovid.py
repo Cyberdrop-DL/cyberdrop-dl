@@ -29,7 +29,7 @@ class TurboVidCrawler(Crawler):
         "Direct links": "/data/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbovid.cr")
-    DOMAIN: ClassVar[str] = "turbovid.cr"
+    DOMAIN: ClassVar[str] = "turbovid"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr", "saint.to", "saint2.su", "saint2.cr")
     FOLDER_DOMAIN: ClassVar[str] = "TurboVid"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
@@ -46,11 +46,6 @@ class TurboVidCrawler(Crawler):
                 return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
-
-    def __post_init__(self) -> None:
-        # Re-define instances as saint crawler to share DB entries
-        # TODO: rename old saint DB entries to turbovid
-        self.DOMAIN = "saint"
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
@@ -96,3 +91,8 @@ class TurboVidCrawler(Crawler):
             saint_url = scrape_item.url.with_host("saint2.cr")
             downloaded = await super().check_complete_from_referer(saint_url)
         return downloaded
+
+
+def fix_db_referer(referer: str) -> str:
+    url = AbsoluteHttpURL(referer.replace("/embed/", "/d/"))
+    return str(TurboVidCrawler.transform_url(url))
