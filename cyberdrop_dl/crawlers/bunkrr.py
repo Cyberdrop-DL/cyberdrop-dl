@@ -169,20 +169,19 @@ class BunkrrCrawler(Crawler):
     @auto_task_id
     @error_handling_wrapper
     async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, int]) -> None:
-        link = file.src()
+        src = file.src()
         scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
-        if link.suffix.lower() not in VIDEO_AND_IMAGE_EXTS or "no-image" in link.name or self.deep_scrape:
+        if src.suffix.lower() not in VIDEO_AND_IMAGE_EXTS or "no-image" in src.name or self.deep_scrape:
             self.create_task(self.run(scrape_item))
             return
 
-        if self.check_album_results(link, results):
+        if self.check_album_results(src, results):
             return
 
-        await self.handle_direct_link(scrape_item, link, file.name)
+        await self.handle_direct_link(scrape_item, src, file.name)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        link: AbsoluteHttpURL | None = None
         db_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
         if await self.check_complete_from_referer(db_url):
             return
@@ -203,14 +202,13 @@ class BunkrrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         name = css.select_text(soup, "h1")
-        link = await self._request_download(file_id=file_id)
+        link = await self._request_download(file_id)
         await self.handle_direct_link(scrape_item, link, name)
 
     @error_handling_wrapper
     async def handle_direct_link(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, fallback_filename: str | None = None
+        self, scrape_item: ScrapeItem, link: AbsoluteHttpURL, fallback_filename: str | None = None
     ) -> None:
-        link = url
         name = link.query.get("n") or fallback_filename or link.name
         link = link.update_query(n=name)
         filename, ext = self.get_filename_and_ext(name, assume_ext=".mp4")
