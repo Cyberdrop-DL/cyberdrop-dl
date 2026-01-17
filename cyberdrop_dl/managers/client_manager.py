@@ -472,7 +472,7 @@ async def _test_async_resolver(loop: asyncio.AbstractEventLoop | None = None) ->
     import aiodns
 
     async with aiodns.DNSResolver(loop=loop, timeout=5.0) as resolver:
-        _ = await resolver.query("github.com", "A")
+        _ = await resolver.query_dns("github.com", "A")
 
 
 def _create_request_log_hooks(client_type: Literal["scrape", "download"]) -> list[aiohttp.TraceConfig]:

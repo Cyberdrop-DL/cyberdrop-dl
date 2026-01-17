@@ -2,9 +2,9 @@
 name = "cyberdrop-dl-patched"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 dependencies = [
-    "aiodns >=3.6.1",
+    "aiodns >=4.0.0",
     "aiofiles >=25.1.0",
-    "aiohttp[speedups] >=3.13.2",
+    "aiohttp[speedups] >=3.13.3",
     "aiolimiter >=1.2.1",
     "aiosqlite==0.17.0",
     "apprise >=1.9.6",
