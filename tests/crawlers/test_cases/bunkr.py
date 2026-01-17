@@ -1,4 +1,4 @@
-DOMAIN = "bunkrr"
+DOMAIN = "bunkr"
 TEST_CASES = [
     (
         "https://bunkr.pk/f/k3B4hDIRexYfV",

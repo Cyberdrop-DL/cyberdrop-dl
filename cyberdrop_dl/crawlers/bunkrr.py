@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from aiohttp import ClientConnectorError
 
 from cyberdrop_dl.constants import FILE_FORMATS
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError
 from cyberdrop_dl.utils import aio, css, open_graph
@@ -92,7 +92,6 @@ class File:
 
 
 class BunkrrCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "bunkr", "bunkrr"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Video": "/v/<slug>",
@@ -105,7 +104,7 @@ class BunkrrCrawler(Crawler):
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.site")
     DATABASE_PRIMARY_HOST: ClassVar[str] = PRIMARY_URL.host
-    DOMAIN: ClassVar[str] = "bunkrr"
+    DOMAIN: ClassVar[str] = "bunkr"
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 5, 1
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
 

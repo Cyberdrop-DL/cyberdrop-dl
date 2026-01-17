@@ -61,6 +61,7 @@ class HistoryTable:
 
     async def run_updates(self) -> None:
         updates = (
+            "UPDATE OR REPLACE media SET domain = 'bunkr' WHERE domain = 'bunkrr';"
             "UPDATE OR REPLACE media SET domain = 'jpg5.su' WHERE domain = 'sharex';"
             "UPDATE OR REPLACE media SET domain = 'nudostar.tv' WHERE domain = 'nudostartv';"
             "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
