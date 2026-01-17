@@ -75,4 +75,14 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://cdn9.bunkr.ru/24578-hd-kEMMY0JH.mp4",
+        [
+            {
+                "url": r"re:24578-hd-kEMMY0JH.mp4",
+                "filename": "24578-hd.mp4",
+                "referer": "https://bunkr.site/f/24578-hd-kEMMY0JH.mp4",
+            }
+        ],
+    ),
 ]

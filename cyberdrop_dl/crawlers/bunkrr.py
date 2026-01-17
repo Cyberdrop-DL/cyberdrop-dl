@@ -11,7 +11,7 @@ from aiohttp import ClientConnectorError
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
+from cyberdrop_dl.exceptions import DDOSGuardError
 from cyberdrop_dl.utils import aio, css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url, xor_decrypt
 
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 
 _DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://apidl.bunkr.ru/api/_001_v2")
-_STREAMING_API_ENTRYPOINT = AbsoluteHttpURL("https://bunkr.site/api/vs")
 _PRIMARY_URL = AbsoluteHttpURL("https://bunkr.site")
 _REINFORCED_URL_BASE = AbsoluteHttpURL("https://get.bunkrr.su")
 
@@ -52,7 +51,7 @@ class ApiResponse:
     timestamp: int
     url: str
 
-    def decrypt(self: ApiResponse) -> str:
+    def decrypt(self) -> str:
         if not self.encrypted:
             return self.url
 
@@ -121,16 +120,16 @@ class BunkrrCrawler(Crawler):
                 return await self.album(scrape_item, album_id)
             case ["v", _]:
                 return await self.follow_redirect(scrape_item)
-            case ["f", slug]:
-                return await self.file(scrape_item, slug)
-            case [slug]:
+            case ["f", _]:
+                return await self.file(scrape_item)
+            case [_]:
                 if _is_stream_redirect(scrape_item.url):
                     return await self.follow_redirect(scrape_item)
 
                 if self.is_subdomain(scrape_item.url):
                     return await self.handle_direct_link(scrape_item, scrape_item.url)
 
-                await self.file(scrape_item, slug)
+                await self.file(scrape_item)
             case _:
                 raise ValueError
 
@@ -170,7 +169,7 @@ class BunkrrCrawler(Crawler):
     ) -> AsyncGenerator[BeautifulSoup]:
         init_page = int(url.query.get("page") or 1)
         for page in itertools.count(init_page):
-            soup = await self.request_soup_lenient(url.with_query(page=page))
+            soup = await self._request_soup_lenient(url.with_query(page=page))
             yield soup
             has_next_page = soup.select_one(Selector.NEXT_PAGE)
             if not has_next_page:
@@ -190,32 +189,20 @@ class BunkrrCrawler(Crawler):
         await self.handle_direct_link(scrape_item, link, file.name)
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
+    async def file(self, scrape_item: ScrapeItem) -> None:
         link: AbsoluteHttpURL | None = None
         db_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
         if await self.check_complete_from_referer(db_url):
             return
 
-        soup = await self.request_soup_lenient(scrape_item.url)
-
-        # Try image first to not make any additional request
+        soup = await self._request_soup_lenient(scrape_item.url)
         if image := soup.select_one(Selector.IMAGE_PREVIEW):
             link = self.parse_url(css.get_attr(image, "src"))
 
-        # Try to get download URL from streaming API. Should work for most files, even none video files
-        if not link:
-            try:
-                link = await self._request_download(slug=slug)
-            except Exception:
-                pass
-
-        if not link and (dl_button := soup.select_one(Selector.DOWNLOAD_BUTTON)):
-            id_ = self.parse_url(css.get_attr(dl_button, "href")).name
-            link = await self._request_download(id_=id_)
-
-        # Everything failed, abort
-        if not link:
-            raise ScrapeError(422, "Could not find source")
+        else:
+            dl_link = css.select(soup, Selector.DOWNLOAD_BUTTON, "href")
+            file_id = self.parse_url(dl_link).name
+            link = await self._request_download(file_id)
 
         title = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
         await self.handle_direct_link(scrape_item, link, fallback_filename=title)
@@ -224,7 +211,7 @@ class BunkrrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, id_: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, "h1")
-        link = await self._request_download(id_=id_)
+        link = await self._request_download(file_id=id_)
         await self.handle_direct_link(scrape_item, link, fallback_filename=title)
 
     @error_handling_wrapper
@@ -243,26 +230,11 @@ class BunkrrCrawler(Crawler):
             scrape_item.url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
-    async def _request_download(self, *, id_: str = "", slug: str = "") -> AbsoluteHttpURL:
-        """Gets the download link for a given URL
-
-        1. Reinforced URL (get.bunkr.su/file/<file_id>). or
-        2. Streaming URL (bunkr.site/f/<file_slug>)"""
-
-        if id_:
-            payload = {"id": id_}
-            api_url = _DOWNLOAD_API_ENTRYPOINT
-
-        else:
-            payload = {"slug": slug.encode().decode("unicode-escape")}
-            api_url = _STREAMING_API_ENTRYPOINT
-            if self.known_good_url:
-                api_url = _STREAMING_API_ENTRYPOINT.with_host(self.known_good_url.host)
-
+    async def _request_download(self, file_id: str) -> AbsoluteHttpURL:
         resp: dict[str, Any] = await self.request_json(
-            api_url,
+            _DOWNLOAD_API_ENTRYPOINT,
             "POST",
-            json=payload,
+            json={"id": file_id},
             headers={"Referer": str(_REINFORCED_URL_BASE)},
         )
         return self.parse_url(ApiResponse(**resp).decrypt())
@@ -281,7 +253,7 @@ class BunkrrCrawler(Crawler):
                 self.known_good_url = resp.url.origin()
             return soup
 
-    async def request_soup_lenient(self, url: AbsoluteHttpURL) -> BeautifulSoup:
+    async def _request_soup_lenient(self, url: AbsoluteHttpURL) -> BeautifulSoup:
         """Request soup with re-trying logic to use multiple hosts.
 
         We retry with a new host until we find one that's not DNS blocked nor DDoS-Guard protected
