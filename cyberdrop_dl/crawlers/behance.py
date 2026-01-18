@@ -38,7 +38,18 @@ class BehanceCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str, gallery_name: str) -> None:
-        pass  # Implementation of gallery fetching logic goes here
+        title = self.create_title(gallery_name, gallery_id)
+        scrape_item.setup_as_album(title)
+
+        soup = await self.request_soup(scrape_item.url)
+        modules = soup.select("a.ImageElement-root-kir")
+        for module in modules:
+            module_link = css.get_attr(module, "href")
+            img_link = css.select_one_get_attr_or_none(module, "img.ImageElement-image-SRv", "srcset")
+            if not module_link or not img_link:
+                continue
+            new_scrape_item = scrape_item.create_child(self.parse_url(module_link))
+            self.create_task(self.direct_file(new_scrape_item, self.parse_url(img_link)))
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
