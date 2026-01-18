@@ -93,12 +93,6 @@ class CheveretoCrawler(Crawler, is_generic=True):
         return url.with_name(new_name)
 
     @classmethod
-    def _match_img(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL | None:
-        match url.parts[1:]:
-            case ["img" | "image" as part, image_slug, *_]:
-                return url.origin() / part / _id(image_slug)
-
-    @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         match url.parts[1:]:
@@ -158,7 +152,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
     def _process_page(
         self, scrape_item: ScrapeItem, soup: BeautifulSoup, results: dict[str, int] | None = None
     ) -> None:
-        for web_url, src_url in self._get_image_urls_from_data_object(soup):
+        for web_url, src_url in self._get_album_files(soup):
             if results and self.check_album_results(web_url, results):
                 continue
             new_scrape_item = scrape_item.create_child(web_url)
@@ -207,9 +201,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
             link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
         return super().parse_url(link_str, relative_to, trim=trim)
 
-    def _get_image_urls_from_data_object(
-        self, soup: BeautifulSoup
-    ) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
+    def _get_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
         for item in soup.select(".list-item[data-object]"):
             web_url = self.parse_url(css.select(item, "a.image-container", "href"))
             encoded_data = css.get_attr(item, "data-object")
