@@ -24,7 +24,7 @@ class NsfwXXXCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nsfw.xxx")
     DOMAIN: ClassVar[str] = "nsfw.xxx"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
-    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id} - {title}"
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title} [{id}]"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -32,6 +32,8 @@ class NsfwXXXCrawler(Crawler):
                 return await self.post(scrape_item, post_id)
             case ["user", user]:
                 return await self.user(scrape_item, user)
+            case ["r", subreddit]:
+                return await self.subreddit(scrape_item, subreddit)
             case _:
                 raise ValueError
 
@@ -40,8 +42,23 @@ class NsfwXXXCrawler(Crawler):
         return True
 
     @error_handling_wrapper
+    async def subreddit(self, scrape_item: ScrapeItem, subreddit: str) -> None:
+        api_url = self.PRIMARY_URL / "api/v1/source/r" / subreddit
+        title: str = ""
+
+        async for data in self._api_pager(api_url):
+            if not title:
+                name: str = data["source"]["name"].removeprefix("/r/")
+                title = self.create_title(name)
+                scrape_item.setup_as_forum(title)
+
+            for post in data["posts"]:
+                self.create_task(self._post(scrape_item.copy(), post))
+                scrape_item.add_children()
+
+    @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
-        api_url = (self.PRIMARY_URL / "api/v1/user" / username).with_query(_BASE_QUERY).update_query(_TYPES_QUERY)
+        api_url = self.PRIMARY_URL / "api/v1/user" / username
         title: str = ""
 
         async for data in self._api_pager(api_url):
@@ -54,7 +71,8 @@ class NsfwXXXCrawler(Crawler):
                 self.create_task(self._post(scrape_item.copy(), post))
                 scrape_item.add_children()
 
-    async def _api_pager(self, api_url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
+    async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
+        api_url = url.with_query(_BASE_QUERY).update_query(_TYPES_QUERY)
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
@@ -83,14 +101,14 @@ class NsfwXXXCrawler(Crawler):
         scrape_item.setup_as_album(title)
 
         if type_ == "gallery":
-            urls = data["urls"]
+            files = data["urls"]
         elif type_ == "video":
-            urls = [data["videos"]["mp4"]]
+            files = [data["videos"]["mp4"]]
         elif type_ == "image":
-            urls: list[str] = [data["url"]]
+            files: list[str] = [data["url"]]
         else:
             raise ScrapeError(422, f"Unknown post type = {type_}")
 
-        for url in urls:
+        for url in files:
             src = self.parse_url(url)
             await self.direct_file(scrape_item, src)
