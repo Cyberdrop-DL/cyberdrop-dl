@@ -20,11 +20,14 @@ class NsfwXXXCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": "/post/<id>",
         "User": "/user/<username>",
+        "Subreddit": "/r/<subreddit>",
+        "Category": "/category/<name>",
+        "Search": "/search?q=<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nsfw.xxx")
     DOMAIN: ClassVar[str] = "nsfw.xxx"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
-    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title} [{id}]"
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m} - {title} [{id}]"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -34,6 +37,10 @@ class NsfwXXXCrawler(Crawler):
                 return await self.user(scrape_item, user)
             case ["r", subreddit]:
                 return await self.subreddit(scrape_item, subreddit)
+            case ["category", name]:
+                return await self.category(scrape_item, name)
+            case ["search"] if query := scrape_item.url.query.get("q"):
+                return await self.search(scrape_item, query)
             case _:
                 raise ValueError
 
@@ -41,16 +48,28 @@ class NsfwXXXCrawler(Crawler):
     def separate_posts(self) -> bool:
         return True
 
-    @error_handling_wrapper
     async def subreddit(self, scrape_item: ScrapeItem, subreddit: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/source/r" / subreddit
-        title: str = ""
+        await self._collection(scrape_item, "source", api_url)
 
+    async def category(self, scrape_item: ScrapeItem, name: str) -> None:
+        api_url = self.PRIMARY_URL / "api/v1/category" / name
+        await self._collection(scrape_item, name, api_url)
+
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        api_url = (self.PRIMARY_URL / "api/v1/search").with_query(q=query)
+        await self._collection(scrape_item, "search", api_url, query)
+
+    @error_handling_wrapper
+    async def _collection(
+        self, scrape_item: ScrapeItem, type_: str, api_url: AbsoluteHttpURL, name: str | None = None
+    ) -> None:
+        title: str = ""
         async for data in self._api_pager(api_url):
             if not title:
-                name: str = data["source"]["name"].removeprefix("/r/")
-                title = self.create_title(name)
-                scrape_item.setup_as_forum(title)
+                name: str = name or data[type_]["name"].removeprefix("/r/")
+                title = name if type_ == "source" else f"{name} [{type_}]"
+                scrape_item.setup_as_forum(self.create_title(title))
 
             for post in data["posts"]:
                 self.create_task(self._post(scrape_item.copy(), post))
@@ -72,7 +91,7 @@ class NsfwXXXCrawler(Crawler):
                 scrape_item.add_children()
 
     async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
-        api_url = url.with_query(_BASE_QUERY).update_query(_TYPES_QUERY)
+        api_url = url.update_query(_BASE_QUERY).update_query(_TYPES_QUERY)
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
@@ -98,7 +117,7 @@ class NsfwXXXCrawler(Crawler):
         scrape_item.url = self.PRIMARY_URL / "post" / post_id
         scrape_item.possible_datetime = date = self.parse_date(post["publishedAt"])
         title = self.create_separate_post_title(content["title"], post_id, date)
-        scrape_item.setup_as_album(title)
+        scrape_item.setup_as_album(self.create_title(title))
 
         if type_ == "gallery":
             files = data["urls"]
