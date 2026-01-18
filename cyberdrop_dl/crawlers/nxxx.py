@@ -29,6 +29,10 @@ class NsfwXXXCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m} - {title} [{id}]"
 
+    @property
+    def separate_posts(self) -> bool:
+        return True
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["post", post_id]:
@@ -44,54 +48,38 @@ class NsfwXXXCrawler(Crawler):
             case _:
                 raise ValueError
 
-    @property
-    def separate_posts(self) -> bool:
-        return True
-
     async def subreddit(self, scrape_item: ScrapeItem, subreddit: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/source/r" / subreddit
-        await self._collection(scrape_item, "source", api_url)
+        await self._collection(scrape_item, api_url)
 
     async def category(self, scrape_item: ScrapeItem, name: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/category" / name
-        await self._collection(scrape_item, name, api_url)
+        await self._collection(scrape_item, api_url)
 
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         api_url = (self.PRIMARY_URL / "api/v1/search").with_query(q=query)
-        await self._collection(scrape_item, "search", api_url, query)
+        await self._collection(scrape_item, api_url, query)
+
+    async def user(self, scrape_item: ScrapeItem, username: str) -> None:
+        api_url = self.PRIMARY_URL / "api/v1/user" / username
+        await self._collection(scrape_item, api_url, f"@{username}")
 
     @error_handling_wrapper
-    async def _collection(
-        self, scrape_item: ScrapeItem, type_: str, api_url: AbsoluteHttpURL, name: str | None = None
-    ) -> None:
+    async def _collection(self, scrape_item: ScrapeItem, api_url: AbsoluteHttpURL, name: str | None = None) -> None:
         title: str = ""
+        type_ = api_url.parts[3]
         async for data in self._api_pager(api_url):
             if not title:
                 name: str = name or data[type_]["name"].removeprefix("/r/")
                 title = name if type_ == "source" else f"{name} [{type_}]"
-                scrape_item.setup_as_forum(self.create_title(title))
-
-            for post in data["posts"]:
-                self.create_task(self._post(scrape_item.copy(), post))
-                scrape_item.add_children()
-
-    @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem, username: str) -> None:
-        api_url = self.PRIMARY_URL / "api/v1/user" / username
-        title: str = ""
-
-        async for data in self._api_pager(api_url):
-            if not title:
-                name: str = data["user"]["name"]
-                title = self.create_title(f"{name} (@{username})")
-                scrape_item.setup_as_profile(title)
+                scrape_item.setup_as_profile(self.create_title(title))
 
             for post in data["posts"]:
                 self.create_task(self._post(scrape_item.copy(), post))
                 scrape_item.add_children()
 
     async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
-        api_url = url.update_query(_BASE_QUERY).update_query(_TYPES_QUERY)
+        api_url = url.update_query(_TYPES_QUERY).update_query(_BASE_QUERY)
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
