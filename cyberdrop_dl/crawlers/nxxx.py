@@ -4,11 +4,13 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import open_graph
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+_BASE_QUERY = "nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
 
 
 class NsfwXXXCrawler(Crawler):
@@ -19,6 +21,7 @@ class NsfwXXXCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nsfw.xxx")
     DOMAIN: ClassVar[str] = "nsfw.xxx"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id} - {title}"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -29,10 +32,16 @@ class NsfwXXXCrawler(Crawler):
             case _:
                 raise ValueError
 
+    @property
+    def separate_posts(self) -> bool:
+        return True
+
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
-        api_url = (self.PRIMARY_URL / "api/v1/user" / username).with_query(
-            "types[]=image&types[]=video&types[]=gallery&nsfw[]=0&nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
+        api_url = (
+            (self.PRIMARY_URL / "api/v1/user" / username)
+            .with_query(_BASE_QUERY)
+            .update_query("types[]=image&types[]=video&types[]=gallery")
         )
         title: str = ""
         while True:
@@ -44,7 +53,7 @@ class NsfwXXXCrawler(Crawler):
                 scrape_item.setup_as_profile(title)
 
             for post in data["posts"]:
-                self.create_task(self._api_post(scrape_item.copy(), post))
+                self.create_task(self._post(scrape_item.copy(), post))
                 scrape_item.add_children()
 
             next: str | None = resp["meta"].get("nextPage")
@@ -54,24 +63,32 @@ class NsfwXXXCrawler(Crawler):
             api_url = self.parse_url(next)
 
     @error_handling_wrapper
-    async def _api_post(self, scrape_item: ScrapeItem, post: dict[str, Any]):
-        content: dict[str, Any] = post["content"]
-        post_id: str = str(content["id"])
-        title: str = content["title"]
-        post_data: dict[str, Any] = post["data"]
-        scrape_item.url = self.PRIMARY_URL / "post" / post_id
-        url = post_data["videos"]["mp4"] if content["type"] == "video" else post_data["url"]
-        src = self.parse_url(url)
-        filename = self.create_custom_filename(title, src.suffix, file_id=post_id)
-        await self.handle_file(src, scrape_item, src.name, src.suffix, custom_filename=filename)
+    async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
+        api_url = (self.PRIMARY_URL / "api/v1/post" / post_id).with_query(_BASE_QUERY)
+        post = (await self.request_json(api_url))["data"]["post"]
+        await self._post(scrape_item, post)
 
     @error_handling_wrapper
-    async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
-            return
+    async def _post(self, scrape_item: ScrapeItem, post: dict[str, Any]) -> None:
+        content: dict[str, Any] = post["content"]
+        post_id: str = str(content["id"])
+        data: dict[str, Any] = post["data"]
+        type_: str = content["type"]
 
-        soup = await self.request_soup(scrape_item.url)
-        og = open_graph.parse(soup)
-        src = self.parse_url(og.video or og.image)
-        filename = self.create_custom_filename(og.title, src.suffix, file_id=post_id)
-        await self.handle_file(src, scrape_item, src.name, src.suffix, custom_filename=filename)
+        scrape_item.url = self.PRIMARY_URL / "post" / post_id
+        scrape_item.possible_datetime = date = self.parse_date(post["publishedAt"])
+        title = self.create_separate_post_title(content["title"], post_id, date)
+        scrape_item.setup_as_album(title)
+
+        if type_ == "gallery":
+            urls = data["urls"]
+        elif type_ == "video":
+            urls = [data["videos"]["mp4"]]
+        elif type_ == "image":
+            urls: list[str] = [data["url"]]
+        else:
+            raise ScrapeError(422, f"Unknown post type = {type_}")
+
+        for url in urls:
+            src = self.parse_url(url)
+            await self.direct_file(scrape_item, src)
