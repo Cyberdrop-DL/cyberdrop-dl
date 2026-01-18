@@ -8,9 +8,12 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
 _BASE_QUERY = "nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
+_TYPES_QUERY = "types[]=image&types[]=video&types[]=gallery"
 
 
 class NsfwXXXCrawler(Crawler):
@@ -38,15 +41,10 @@ class NsfwXXXCrawler(Crawler):
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
-        api_url = (
-            (self.PRIMARY_URL / "api/v1/user" / username)
-            .with_query(_BASE_QUERY)
-            .update_query("types[]=image&types[]=video&types[]=gallery")
-        )
+        api_url = (self.PRIMARY_URL / "api/v1/user" / username).with_query(_BASE_QUERY).update_query(_TYPES_QUERY)
         title: str = ""
-        while True:
-            resp = await self.request_json(api_url)
-            data = resp["data"]
+
+        async for data in self._api_pager(api_url):
             if not title:
                 name: str = data["user"]["name"]
                 title = self.create_title(f"{name} (@{username})")
@@ -56,6 +54,10 @@ class NsfwXXXCrawler(Crawler):
                 self.create_task(self._post(scrape_item.copy(), post))
                 scrape_item.add_children()
 
+    async def _api_pager(self, api_url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
+        while True:
+            resp = await self.request_json(api_url)
+            yield resp["data"]
             next: str | None = resp["meta"].get("nextPage")
             if not next:
                 break
