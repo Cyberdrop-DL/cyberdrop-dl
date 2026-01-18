@@ -11,6 +11,8 @@ from cyberdrop_dl.utils import css, json, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, xor_decrypt
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -156,31 +158,12 @@ class CheveretoCrawler(Crawler, is_generic=True):
     def _process_page(
         self, scrape_item: ScrapeItem, soup: BeautifulSoup, results: dict[str, int] | None = None
     ) -> None:
-        # Scrape high-quality image urls from data-object if available
-        image_urls = self._get_image_urls_from_data_config(soup)
-        if len(image_urls) > 0:
-            for image_url in image_urls:
-                if results and self.check_album_results(image_url, results):
-                    continue
-                new_scrape_item = scrape_item.create_child(image_url)
-                self.create_task(self.direct_file(new_scrape_item, image_url))
-            return
-
-        for thumb, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
-            if image_url := self._match_img(new_scrape_item.url):
-                new_scrape_item.url = image_url
-
-                if thumb:
-                    # for images, we can download the file from the thumbnail, skipping an additional request per img
-                    # cons: we won't get the upload date
-                    source = self._thumbnail_to_src(thumb)
-                    if results and self.check_album_results(source, results):
-                        continue
-
-                    self.create_task(self.direct_file(new_scrape_item, source))
-                    continue
-
-            self.create_task(self.run(new_scrape_item))
+        for web_url, src_url in self._get_image_urls_from_data_object(soup):
+            if results and self.check_album_results(web_url, results):
+                continue
+            new_scrape_item = scrape_item.create_child(web_url)
+            self.create_task(self.direct_file(new_scrape_item, src_url))
+            scrape_item.add_children()
 
     async def _unlock_password_protected_album(self, scrape_item: ScrapeItem) -> None:
         if not scrape_item.password:
@@ -224,20 +207,15 @@ class CheveretoCrawler(Crawler, is_generic=True):
             link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
         return super().parse_url(link_str, relative_to, trim=trim)
 
-    def _get_image_urls_from_data_config(self, soup: BeautifulSoup) -> list[AbsoluteHttpURL]:
-        image_urls: list[AbsoluteHttpURL] = []
-        album_images = soup.select("div[data-object]")
-        for image_data in album_images:
-            encoded_data = css.get_attr(image_data, "data-object")
-            if not encoded_data:
-                continue
-            # Decode URL-encoded JSON string
+    def _get_image_urls_from_data_object(
+        self, soup: BeautifulSoup
+    ) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
+        for item in soup.select(".list-item[data-object]"):
+            web_url = self.parse_url(css.select(item, "a.image-container", "href"))
+            encoded_data = css.get_attr(item, "data-object")
             data = json.loads(urllib.parse.unquote(encoded_data))
-            if not data:
-                continue
-            image_url = self.parse_url(data["image"]["url"])
-            image_urls.append(image_url)
-        return image_urls
+            src_url = self.parse_url(data["image"]["url"])
+            yield web_url, src_url
 
 
 def _is_password_protected(soup: BeautifulSoup) -> bool:
