@@ -78,7 +78,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
             case ["images", _, *_]:
                 return await self.direct_file(scrape_item)
             case [_, "albums"]:
-                return await self.profile(scrape_item)
+                return await self.profile(scrape_item, albums=True)
             case [_]:
                 return await self.profile(scrape_item)
             case _:
@@ -104,12 +104,19 @@ class CheveretoCrawler(Crawler, is_generic=True):
                 return url
 
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem) -> None:
+    async def profile(self, scrape_item: ScrapeItem, *, albums: bool = False) -> None:
         title: str = ""
         async for soup in self.web_pager(_sort_by_new(scrape_item.url), trim=False):
             if not title:
                 title = self.create_title(open_graph.title(soup))
                 scrape_item.setup_as_profile(title)
+
+            if albums:
+                for _, sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
+                    self.create_task(self.run(sub_album))
+
+                return
+
             self._process_page(scrape_item, soup)
 
     async def _get_final_album_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -152,9 +159,11 @@ class CheveretoCrawler(Crawler, is_generic=True):
     def _process_page(
         self, scrape_item: ScrapeItem, soup: BeautifulSoup, results: dict[str, int] | None = None
     ) -> None:
+        results = results or {}
         for web_url, src_url in self._get_album_files(soup):
-            if results and self.check_album_results(web_url, results):
+            if self.check_album_results(web_url, results):
                 continue
+
             new_scrape_item = scrape_item.create_child(web_url)
             self.create_task(self.direct_file(new_scrape_item, src_url))
             scrape_item.add_children()
@@ -207,7 +216,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
             encoded_data = css.get_attr(item, "data-object")
             data = json.loads(urllib.parse.unquote(encoded_data))
             src_url = self.parse_url(data["image"]["url"])
-            yield web_url, src_url
+            yield self.transform_url(web_url), src_url
 
 
 def _is_password_protected(soup: BeautifulSoup) -> bool:
