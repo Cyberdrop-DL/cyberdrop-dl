@@ -1,22 +1,158 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
     from cyberdrop_dl.utils.m3u8 import M3U8
 
 
 _GQL_ENDPOINT = AbsoluteHttpURL("https://gql.twitch.tv/gql")
+_CLIPS_URL = AbsoluteHttpURL("https://clips.twitch.tv")
 _M3U8_BASE = AbsoluteHttpURL("https://usher.ttvnw.net")
+
+
+class TwitchCrawler(Crawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "VOD": (
+            "/video/<vod_id>",
+            "?video=<vod_id>",
+            "/<user>/v/<vod_id>",
+            "/videos/<vod_id>",
+        ),
+        "Collection": "/collections/<collection_id>",
+        "Clip": (
+            "/<user>/clip/<slug>",
+            "/embed?clip=<slug>",
+            "https://clips.twitch.tv/<slug>",
+        ),
+    }
+
+    DOMAIN: ClassVar[str] = "twitch"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.twitch.tv")
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["videos", video_id]:
+                return await self.vod(scrape_item, video_id)
+            case ["collections", collection_id]:
+                return await self.collection(scrape_item, collection_id)
+            case [_, "clip", slug]:
+                await self.clip(scrape_item, slug)
+            case [slug] if "clips." in scrape_item.url.host:
+                await self.clip(scrape_item, slug)
+            case ["embed"] if slug := scrape_item.url.query.get("clip"):
+                await self.clip(scrape_item, slug)
+            case _:
+                raise ValueError
+
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        new_url = super().transform_url(url)
+        if video_id := cls._get_video_id(new_url):
+            return cls.PRIMARY_URL / "videos" / video_id
+        return new_url
+
+    @classmethod
+    def _get_video_id(cls, url: AbsoluteHttpURL) -> str | None:
+        match url.parts[1:]:
+            case [_, "v", video_id] | ["video", video_id]:
+                return video_id
+            case [] if video_id := url.query.get("video", "").removeprefix("v"):
+                return video_id
+            case _:
+                return None
+
+    async def async_startup(self) -> None:
+        self.api = TwitchAPI(self)
+
+    async def _get_m3u8(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        headers: dict[str, str] | None = None,
+        media_type: Literal["video", "audio", "subtitles"] | None = None,
+    ) -> m3u8.M3U8:
+        m3u8_obj = await super()._get_m3u8(url, headers=headers, media_type=media_type)
+        if hidden_media := _get_hidden_media(m3u8_obj):
+            _parse_hidden_media(m3u8_obj, hidden_media)
+        return m3u8_obj
+
+    @error_handling_wrapper
+    async def vod(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        scrape_item.url = scrape_item.url.with_query(None)
+        if await self.check_complete_from_referer(scrape_item):
+            return
+
+        video = await self.api.video(video_id)
+        date: str | None = video.get("publishedAt")
+        if not date:
+            raise ScrapeError(422, "Lives are not supported")
+
+        scrape_item.possible_datetime = self.parse_iso_date(date)
+        title = video.get("title") or "video"
+        token, signature = await self.api.access_token(video_id)
+        m3u8_url = (_M3U8_BASE / f"vod/{video_id}.m3u8").with_query(
+            allow_source="true",
+            allow_spectre="true",
+            allow_audio_only="false",
+            include_unavailable="true",
+            platform="web",
+            player="twitchweb",
+            playlist_include_framerate="true",
+            sig=signature,
+            supported_codecs="av1,h265,h264",
+            token=token,
+        )
+
+        m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_url)
+        filename = self.create_custom_filename(
+            title, ".mp4", file_id=video_id, resolution=info.resolution, video_codec=info.codecs.video
+        )
+        await self.handle_file(scrape_item.url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
+
+    @error_handling_wrapper
+    async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
+        collection = await self.api.collection(collection_id)
+        title = self.create_title(collection["title"], collection_id)
+        scrape_item.setup_as_album(title)
+
+        for edge in collection["items"]["edges"]:
+            web_url = self.PRIMARY_URL / "videos" / edge["node"]["id"]
+            self.create_task(self.run(scrape_item.create_child(web_url)))
+            scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def clip(self, scrape_item: ScrapeItem, slug: str) -> None:
+        scrape_item.url = _CLIPS_URL / slug
+        if await self.check_complete_from_referer(scrape_item):
+            return
+
+        clip = await self.api.clip(slug)
+        if not clip:
+            raise ScrapeError(404)
+
+        title: str = clip.get("title") or "clip"
+        scrape_item.possible_datetime = self.parse_iso_date(clip["createdAt"])
+        token, signature = clip["playbackAccessToken"]["value"], clip["playbackAccessToken"]["signature"]
+        assets, _assets_portrait = clip["assets"]
+
+        best = max(ClipFormat.parse(assets))
+        filename = self.create_custom_filename(title, ".mp4", file_id=slug, resolution=best.resolution)
+        source = best.url.update_query(token=token, sig=signature)
+        await self.handle_file(source, scrape_item, title, custom_filename=filename)
 
 
 class TwitchAPI:
@@ -80,6 +216,16 @@ class TwitchAPI:
         )
         return resp["data"]["collection"]
 
+    async def clip(self, slug: str) -> dict[str, Any]:
+        resp = await self._request(
+            "ShareClipRenderStatus",
+            {
+                "slug": slug,
+            },
+            "1844261bb449fa51e6167040311da4a7a5f1c34fe71c71a3e0c4f551bc30c698",
+        )
+        return resp["data"]["clip"]
+
     async def access_token(self, video_id: str) -> tuple[str, str]:
         resp = await self._request(
             "PlaybackAccessToken",
@@ -97,139 +243,57 @@ class TwitchAPI:
         return token["value"], token["signature"]
 
 
-class TwitchCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "VOD": (
-            "/video/<vod_id>",
-            "?video=<vod_id>",
-            "/v/<vod_id>",
-            "/videos/<vod_id>",
-        ),
-        "Collection": "/collections/<collection_id>",
-    }
-
-    DOMAIN: ClassVar[str] = "twitch"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.twitch.tv")
-
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
-        match scrape_item.url.parts[1:]:
-            case ["videos", video_id]:
-                return await self.vod(scrape_item, video_id)
-            case ["collections", collection_id]:
-                return await self.collection(scrape_item, collection_id)
-            case _:
-                raise ValueError
-
-    @classmethod
-    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        new_url = super().transform_url(url)
-        if video_id := cls._get_video_id(new_url):
-            return cls.PRIMARY_URL / "videos" / video_id
-        return new_url
-
-    @classmethod
-    def _get_video_id(cls, url: AbsoluteHttpURL) -> str | None:
-        match url.parts[1:]:
-            case [_, "v", video_id] | ["video", video_id]:
-                return video_id
-            case [] if video_id := url.query.get("video", "").removeprefix("v"):
-                return video_id
-            case _:
-                return None
-
-    async def async_startup(self) -> None:
-        self.api = TwitchAPI(self)
-
-    async def _get_m3u8(
-        self,
-        url: AbsoluteHttpURL,
-        /,
-        headers: dict[str, str] | None = None,
-        media_type: Literal["video", "audio", "subtitles"] | None = None,
-    ) -> m3u8.M3U8:
-        m3u8_obj = await super()._get_m3u8(url, headers=headers, media_type=media_type)
-        if hidden_media := self._get_hidden_media(m3u8_obj):
-            self._parse_hidden_media(m3u8_obj, hidden_media)
-        return m3u8_obj
+@dataclasses.dataclass(slots=True, order=True, frozen=True)
+class ClipFormat:
+    resolution: Resolution
+    fps: float
+    aspect_ratio: float
+    url: AbsoluteHttpURL
 
     @staticmethod
-    def _get_hidden_media(m3u8: M3U8) -> list[dict[str, Any]] | None:
-        for data in m3u8.data.get("session_data", ()):
-            if data.get("data_id") == "com.amazon.ivs.unavailable-media":
-                return json.loads(base64.b64decode(data["value"]))
-
-    @staticmethod
-    def _parse_hidden_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
-        first_rendition = parse_url(m3u8.playlists[0].absolute_uri)
-        base_url, filename = first_rendition.parent.parent, first_rendition.name
-
-        for media in hidden_media:
-            if not media["RESOLUTION"]:
-                continue
-
-            m3u8.data["playlists"].append(
-                {
-                    "uri": str(base_url / media["GROUP-ID"] / filename),
-                    "stream_info": {
-                        "bandwidth": media["BANDWIDTH"],
-                        "codecs": media["CODECS"],
-                        "resolution": media["RESOLUTION"],
-                        "video": media["GROUP-ID"],
-                        "frame_rate": media["FRAME-RATE"],
-                    },
-                }
+    def parse(assets: dict[str, Any]) -> Generator[ClipFormat]:
+        for fmt in assets["videoQualities"]:
+            yield ClipFormat(
+                url=parse_url(fmt["sourceURL"]),
+                fps=fmt["frameRate"],
+                resolution=Resolution.parse(fmt["quality"]),
+                aspect_ratio=assets["aspectRatio"],
             )
-            m3u8.data["media"].append(
-                {
-                    "type": "VIDEO",
-                    "group_id": media["GROUP-ID"],
-                    "name": media["NAME"],
-                    "autoselect": "YES",
-                    "default": "YES",
-                }
-            )
-        m3u8._initialize_attributes()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
 
-    @error_handling_wrapper
-    async def vod(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        scrape_item.url = scrape_item.url.with_query(None)
-        if await self.check_complete_from_referer(scrape_item):
-            return
 
-        video = await self.api.video(video_id)
-        date: str | None = video.get("publishedAt")
-        if not date:
-            raise ScrapeError(422, "Lives are not supported")
+def _get_hidden_media(m3u8: M3U8) -> list[dict[str, Any]] | None:
+    for data in m3u8.data.get("session_data", ()):
+        if data.get("data_id") == "com.amazon.ivs.unavailable-media":
+            return json.loads(base64.b64decode(data["value"]))
 
-        scrape_item.possible_datetime = self.parse_iso_date(date)
-        title = video.get("title") or "video"
-        token, signature = await self.api.access_token(video_id)
-        m3u8_url = (_M3U8_BASE / f"vod/{video_id}.m3u8").with_query(
-            allow_source="true",
-            allow_spectre="true",
-            allow_audio_only="false",
-            include_unavailable="true",
-            platform="web",
-            player="twitchweb",
-            playlist_include_framerate="true",
-            sig=signature,
-            supported_codecs="av1,h265,h264",
-            token=token,
+
+def _parse_hidden_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
+    first_rendition = parse_url(m3u8.playlists[0].absolute_uri)
+    base_url, filename = first_rendition.parent.parent, first_rendition.name
+
+    for media in hidden_media:
+        if not media["RESOLUTION"]:
+            continue
+
+        m3u8.data["playlists"].append(
+            {
+                "uri": str(base_url / media["GROUP-ID"] / filename),
+                "stream_info": {
+                    "bandwidth": media["BANDWIDTH"],
+                    "codecs": media["CODECS"],
+                    "resolution": media["RESOLUTION"],
+                    "video": media["GROUP-ID"],
+                    "frame_rate": media["FRAME-RATE"],
+                },
+            }
         )
-
-        m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_url)
-        filename = self.create_custom_filename(
-            title, ".mp4", file_id=video_id, resolution=info.resolution, video_codec=info.codecs.video
+        m3u8.data["media"].append(
+            {
+                "type": "VIDEO",
+                "group_id": media["GROUP-ID"],
+                "name": media["NAME"],
+                "autoselect": "YES",
+                "default": "YES",
+            }
         )
-        await self.handle_file(scrape_item.url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
-
-    @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
-        collection = await self.api.collection(collection_id)
-        title = self.create_title(collection["title"], collection_id)
-        scrape_item.setup_as_album(title)
-
-        for edge in collection["items"]["edges"]:
-            web_url = self.PRIMARY_URL / "videos" / edge["node"]["id"]
-            self.create_task(self.run(scrape_item.create_child(web_url)))
-            scrape_item.add_children()
+    m3u8._initialize_attributes()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
