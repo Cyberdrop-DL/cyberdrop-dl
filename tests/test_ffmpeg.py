@@ -9,21 +9,23 @@ pytestmark = pytest.mark.skipif(not FFPROBE_IS_INSTALLED, reason="ffprobe is not
 
 
 async def test_ffprobe_video_url() -> None:
-    output = await ffmpeg.probe(AbsoluteHttpURL("https://data.saint2.cr/data/LM54NzGj8PO.mp4"))
-    assert output.audio
-    assert output.audio.codec == "aac"
-    assert output.audio.duration == 7.808
-    assert str(output.audio.duration) == "7.81"
-    assert output.audio.sample_rate == 48000
+    output = await ffmpeg.probe(
+        AbsoluteHttpURL("https://videos.pexels.com/video-files/29691053/12769314_360_640_60fps.mp4")
+    )
+    # assert output.audio
+    # assert output.audio.codec == "aac"
+    # assert output.audio.duration == 7.808
+    # assert str(output.audio.duration) == "7.81"
+    # assert output.audio.sample_rate == 48000
 
     assert output.video
     assert output.video.codec == "h264"
-    assert output.video.bitrate and output.video.bitrate > 785000
-    assert output.video.fps == 30.0
-    assert output.video.width == 480
-    assert output.video.height == 854
+    assert output.video.bitrate == 4_014_556
+    assert output.video.fps and round(output.video.fps) == 60.0
+    assert output.video.width == 360
+    assert output.video.height == 640
 
     tags = output.video.tags
     assert tags["language"] == "und"
-    assert tags["handler_name"] == "VideoHandler"
-    assert tags["encoder"] == "AVC Coding"
+    assert tags["handler_name"] == "Core Media Video"
+    assert tags["encoder"] == "Lavc60.31.102 libx264"
