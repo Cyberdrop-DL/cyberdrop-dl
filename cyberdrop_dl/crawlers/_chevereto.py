@@ -10,7 +10,7 @@ from cyberdrop_dl.utils import css, json, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import AsyncGenerator, Generator
 
     from bs4 import BeautifulSoup
 
@@ -99,10 +99,26 @@ class CheveretoCrawler(Crawler, is_generic=True):
             case _:
                 return url
 
+    async def _get_final_album_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        if "category" in url.parts:
+            return url
+
+        # We need the full URL (aka "/<name>.<id>") to fetch sub albums
+        while "." not in (url.name or url.parent.name):
+            url = await self._get_redirect_url(url)
+
+        return url
+
+    async def web_pager(
+        self, url: AbsoluteHttpURL, next_page_selector: str | None = None, *, cffi: bool = False, **kwargs: Any
+    ) -> AsyncGenerator[BeautifulSoup]:
+        async for soup in super().web_pager(_sort_by_new(url), next_page_selector, cffi=cffi, trim=False, **kwargs):
+            yield soup
+
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem, *, albums: bool = False) -> None:
         title: str = ""
-        async for soup in self.web_pager(_sort_by_new(scrape_item.url), trim=False):
+        async for soup in self.web_pager(scrape_item.url):
             if not title:
                 title = self.create_title(open_graph.title(soup))
                 scrape_item.setup_as_profile(title)
@@ -113,46 +129,33 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
                 return
 
-            self._process_page(scrape_item, soup)
-
-    async def _get_final_album_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        if "category" in url.parts:
-            return url
-
-        # We need the full URL (aka "/<name>.<id>") to fetch sub albums
-        if "." not in url.name:
-            url = await self._get_redirect_url(url)
-
-        # The first redirect may have only added a trailing slash, try again
-        if not url.name and "." not in url.parts[-2]:
-            url = await self._get_redirect_url(url)
-
-        return url
+            self._iter_album_files(scrape_item, soup)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        results = await self.get_album_results(album_id)
+        results: dict[str, int] = {}
         title: str = ""
 
         scrape_item.url = await self._get_final_album_url(scrape_item.url)
 
-        async for soup in self.web_pager(_sort_by_new(scrape_item.url), trim=False):
+        async for soup in self.web_pager(scrape_item.url):
             if not title:
-                if _is_password_protected(soup):
-                    await self._unlock_password_protected_album(scrape_item)
+                if soup.select_one("form"):
+                    await self._unlock_pw_protected_album(scrape_item, soup)
                     return await self.album(scrape_item, album_id)
 
+                results = await self.get_album_results(album_id)
                 title = open_graph.get_title(soup) or open_graph.description(soup)
                 title = self.create_title(title, album_id)
                 scrape_item.setup_as_album(title, album_id=album_id)
-            self._process_page(scrape_item, soup, results)
 
-        sub_album_url = scrape_item.url / "sub"
-        async for soup in self.web_pager(_sort_by_new(sub_album_url), trim=False):
+            self._iter_album_files(scrape_item, soup, results)
+
+        async for soup in self.web_pager(scrape_item.url / "sub"):
             for _, sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
                 self.create_task(self.run(sub_album))
 
-    def _process_page(
+    def _iter_album_files(
         self, scrape_item: ScrapeItem, soup: BeautifulSoup, results: dict[str, int] | None = None
     ) -> None:
         results = results or {}
@@ -164,17 +167,20 @@ class CheveretoCrawler(Crawler, is_generic=True):
             self.create_task(self.direct_file(new_scrape_item, src_url))
             scrape_item.add_children()
 
-    async def _unlock_password_protected_album(self, scrape_item: ScrapeItem) -> None:
+    async def _unlock_pw_protected_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         if not scrape_item.password:
             raise PasswordProtectedError
 
         soup = await self.request_soup(
             _sort_by_new(scrape_item.url / ""),
             method="POST",
-            data={"content-password": scrape_item.password},
+            data={
+                "auth_token": css.select(soup, "[name=auth_token]", "value"),
+                "content-password": scrape_item.password,
+            },
         )
 
-        if _is_password_protected(soup):
+        if soup.select_one("form"):
             raise PasswordProtectedError(message="Wrong password")
 
     @error_handling_wrapper
@@ -205,10 +211,6 @@ class CheveretoCrawler(Crawler, is_generic=True):
             data = json.loads(urllib.parse.unquote(encoded_data))
             src_url = self.parse_url(data["image"]["url"])
             yield self.transform_url(web_url), src_url
-
-
-def _is_password_protected(soup: BeautifulSoup) -> bool:
-    return "This content is password protected" in soup.text
 
 
 def _id(slug: str) -> str:
