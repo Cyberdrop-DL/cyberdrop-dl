@@ -22,6 +22,31 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.10.0] - 2026-01-26
+
+### Added
+
+- Google photos support
+- Turbovid support
+- Fuckingfast support
+- Bandcamp support
+- Support for tube-corporate sites (fuxxx, hclips, hdzog, hotmovs, inporn, pornzog, tubepornclassic, txxx, upornia, vjav, voyeurhit, vxxx, xmilf)
+
+### Changed
+
+- Get deterministic errors for deleted files (Cyberdrop)
+
+### Fixed
+
+- Ignore errors while deleting partial files
+- Ignore unknown timezones while parsing dates
+- Use the same origin as input URL for playlists (spankbang)
+- Filesystem downloads (PixelDrain)
+- Gallery downloads (PostImg)
+- Low resolution images being downloaded (PostImg)
+- Use original filename for photos (PostImg)
+- Password protected albums (Chevereto)
+
 ## [8.9.0] - 2025-12-11
 
 ### Added
@@ -38,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decode new URL format (xhamster)
 - Update crawler to new site design (PMVHaven)
 - Impersonation always using the same user agent
-- Send token in headers (GoFile) 
+- Send token in headers (GoFile)
 
 ## [8.8.0] - 2025-11-28
 
