@@ -11,10 +11,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
+
 class Selectors:
     ALBUM = "div.swiper-slide > a, a#main_image_holder"
 
+
 _SELECTORS = Selectors()
+
 
 class XGroovyCrawler(FluidPlayerCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -78,4 +81,3 @@ class XGroovyCrawler(FluidPlayerCrawler):
             link = self.parse_url(css.get_attr(url, "href"))
             filename, ext = self.get_filename_and_ext(link.name)
             await self.handle_file(link, scrape_item, filename, ext)
-
