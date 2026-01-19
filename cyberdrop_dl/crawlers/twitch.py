@@ -92,7 +92,7 @@ class TwitchCrawler(Crawler):
 
         scrape_item.possible_datetime = self.parse_iso_date(date)
         title = video.get("title") or "video"
-        token, signature = await self.api.access_token(video_id)
+        access_token = await self.api.access_token(video_id)
         m3u8_url = (_M3U8_BASE / f"vod/{video_id}.m3u8").with_query(
             allow_source="true",
             allow_spectre="true",
@@ -101,9 +101,9 @@ class TwitchCrawler(Crawler):
             platform="web",
             player="twitchweb",
             playlist_include_framerate="true",
-            sig=signature,
+            sig=access_token["signature"],
             supported_codecs="av1,h265,h264",
-            token=token,
+            token=access_token["value"],
         )
 
         m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_url)
@@ -135,12 +135,12 @@ class TwitchCrawler(Crawler):
 
         title: str = clip.get("title") or "clip"
         scrape_item.possible_datetime = self.parse_iso_date(clip["createdAt"])
-        token, signature = clip["playbackAccessToken"]["value"], clip["playbackAccessToken"]["signature"]
+        access_token: dict[str, str] = clip["playbackAccessToken"]
         assets, _assets_portrait = clip["assets"]
 
         best = max(ClipFormat.parse(assets))
         filename = self.create_custom_filename(title, ".mp4", file_id=slug, resolution=best.resolution)
-        source = best.url.update_query(token=token, sig=signature)
+        source = best.url.update_query(token=access_token["value"], sig=access_token["signature"])
         await self.handle_file(source, scrape_item, title, custom_filename=filename)
 
 
@@ -215,7 +215,7 @@ class TwitchAPI:
         )
         return resp["data"]["clip"]
 
-    async def access_token(self, video_id: str) -> tuple[str, str]:
+    async def access_token(self, video_id: str) -> dict[str, str]:
         resp = await self._request(
             "PlaybackAccessToken",
             {
@@ -228,8 +228,7 @@ class TwitchAPI:
             },
             "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
         )
-        token = resp["data"]["videoPlaybackAccessToken"]
-        return token["value"], token["signature"]
+        return resp["data"]["videoPlaybackAccessToken"]
 
 
 @dataclasses.dataclass(slots=True, order=True, frozen=True)
