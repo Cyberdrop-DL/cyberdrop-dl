@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import base64
 import urllib.parse
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.utils import css, json, open_graph
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, xor_decrypt
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -27,9 +26,6 @@ class Selector:
     DATE_ALBUM_ITEM = f"{ITEM_DESCRIPTION}:-soup-contains('Added to') span"
     DATE = css.CssAttributeSelector(f"{DATE_SINGLE_ITEM}, {DATE_ALBUM_ITEM}", "title")
     MAIN_IMAGE = css.CssAttributeSelector("div#image-viewer img", "src")
-
-
-_DECRYPTION_KEY = b"seltilovessimpcity@simpcityhatesscrapers"
 
 
 class CheveretoCrawler(Crawler, is_generic=True):
@@ -56,13 +52,13 @@ class CheveretoCrawler(Crawler, is_generic=True):
         ),
         "Direct links": "",
     }
-    NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
     CHEVERETO_SUPPORTS_VIDEO: ClassVar[bool] = True
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         if not cls.CHEVERETO_SUPPORTS_VIDEO:
-            cls.SUPPORTED_PATHS = paths = cls.SUPPORTED_PATHS.copy()  # type: ignore[reportIncompatibleVariableOverride]
+            cls.SUPPORTED_PATHS = paths = cls.SUPPORTED_PATHS.copy()  # type: ignore[reportIncompatibleVariableOverride]  # pyright: ignore[reportConstantRedefinition]
             _ = paths.pop("Video", None)
         super().__init_subclass__(**kwargs)
 
@@ -201,14 +197,6 @@ class CheveretoCrawler(Crawler, is_generic=True):
         source = self.parse_url(link_str)
         scrape_item.possible_datetime = self.parse_iso_date(Selector.DATE(soup))
         await self.direct_file(scrape_item, source)
-
-    def parse_url(
-        self, link_str: str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
-    ) -> AbsoluteHttpURL:
-        if not link_str.startswith("https") and not link_str.startswith("/"):
-            encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
-            link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
-        return super().parse_url(link_str, relative_to, trim=trim)
 
     def _get_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
         for item in soup.select(".list-item[data-object]"):
