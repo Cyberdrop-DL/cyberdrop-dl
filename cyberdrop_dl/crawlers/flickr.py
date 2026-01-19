@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
@@ -46,14 +47,10 @@ class FlickrCrawler(Crawler):
 
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: dict[str, Any]) -> None:
-        name, photo_id = photo["title"], photo["id"]
         scrape_item.possible_datetime = int(photo.get("dateuploaded") or photo["dateupload"])
-        if original := photo.get("url_o"):
-            source = self.parse_url(original)
-        else:
-            source = await self.api.photo_source(photo_id)
-
-        filename = self.create_custom_filename(name, source.suffix, file_id=photo_id)
+        name: str = photo["title"]["_content"] or photo["media"]
+        source = await self._get_source(photo)
+        filename = self.create_custom_filename(name, source.suffix, file_id=photo["id"])
         await self.handle_file(
             source,
             scrape_item,
@@ -63,12 +60,19 @@ class FlickrCrawler(Crawler):
             metadata=photo,
         )
 
+    async def _get_source(self, photo: dict[str, Any]) -> AbsoluteHttpURL:
+        if original := photo.get("url_o"):
+            return self.parse_url(original)
+        if photo["media"] == "video":
+            return await self.api.video_source(photo["id"], photo["secret"])
+        return await self.api.photo_source(photo["id"])
+
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
         title: str = ""
         async for page in self.api.photoset(photoset_id):
             if not title:
-                name: str = page["title"]
+                name: str = page["title"]["_content"]
                 title = self.create_title(name, photoset_id)
                 scrape_item.setup_as_album(title, album_id=photoset_id)
 
@@ -95,19 +99,7 @@ class FlickrAPI:
         if params:
             api_url = api_url.update_query(params)
 
-        resp = await self._crawler.request_json(api_url)
-        self._flatten(resp)
-        return resp
-
-    @classmethod
-    def _flatten(cls, data: dict[str, Any]) -> None:
-        for name, inner in data.items():
-            if not isinstance(inner, dict):
-                continue
-            if set(inner) == {"_content"}:
-                data[name] = inner["_content"]
-            else:
-                cls._flatten(inner)
+        return await self._crawler.request_json(api_url)
 
     async def photo(self, photo_id: str) -> dict[str, Any]:
         return (
@@ -127,6 +119,16 @@ class FlickrAPI:
         best = sizes[-1]["source"]
         return self._crawler.parse_url(best)
 
+    async def video_source(self, video_id: str, secret: str) -> AbsoluteHttpURL:
+        resp = await self._request(
+            "video.getStreamInfo",
+            photo_id=video_id,
+            secret=secret,
+        )
+        streams: dict[str, str] = {s["type"]: s["_content"] for s in resp["streams"]["stream"]}
+        best = max(streams, key=_get_stream_res)
+        return self._crawler.parse_url(streams[best])
+
     async def photoset(self, photoset_id: str) -> AsyncGenerator[dict[str, Any]]:
         async for page in self._pager("photosets.getPhotos", "photoset", photoset_id=photoset_id):
             yield page
@@ -142,3 +144,12 @@ class FlickrAPI:
                 break
 
             params["page"] += 1
+
+
+def _get_stream_res(name: str) -> Resolution:
+    if name == "orig":
+        return Resolution.highest()
+    try:
+        return Resolution.parse(name)
+    except ValueError:
+        return Resolution.unknown()
