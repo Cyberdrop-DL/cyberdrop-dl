@@ -45,6 +45,8 @@ class TwitchCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case [_, "v", video_id] | ["video", video_id]:
+                return await self.vod(scrape_item, video_id)
             case ["videos", video_id]:
                 return await self.vod(scrape_item, video_id)
             case ["collections", collection_id]:
@@ -53,27 +55,13 @@ class TwitchCrawler(Crawler):
                 await self.clip(scrape_item, slug)
             case [slug] if "clips." in scrape_item.url.host:
                 await self.clip(scrape_item, slug)
-            case ["embed"] if slug := scrape_item.url.query.get("clip"):
-                await self.clip(scrape_item, slug)
             case _:
+                if video_id := scrape_item.url.query.get("video"):
+                    return await self.vod(scrape_item, video_id)
+                if slug := scrape_item.url.query.get("clip"):
+                    return await self.clip(scrape_item, slug)
+
                 raise ValueError
-
-    @classmethod
-    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        new_url = super().transform_url(url)
-        if video_id := cls._get_video_id(new_url):
-            return cls.PRIMARY_URL / "videos" / video_id
-        return new_url
-
-    @classmethod
-    def _get_video_id(cls, url: AbsoluteHttpURL) -> str | None:
-        match url.parts[1:]:
-            case [_, "v", video_id] | ["video", video_id]:
-                return video_id
-            case [] if video_id := url.query.get("video", "").removeprefix("v"):
-                return video_id
-            case _:
-                return None
 
     async def async_startup(self) -> None:
         self.api = TwitchAPI(self)
@@ -92,7 +80,8 @@ class TwitchCrawler(Crawler):
 
     @error_handling_wrapper
     async def vod(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        scrape_item.url = scrape_item.url.with_query(None)
+        video_id = video_id.removesuffix("video_id")
+        scrape_item.url = self.PRIMARY_URL / "videos" / video_id
         if await self.check_complete_from_referer(scrape_item):
             return
 
