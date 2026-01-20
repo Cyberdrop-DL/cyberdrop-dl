@@ -45,9 +45,9 @@ class TwitchCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_, "v", video_id] | ["video", video_id]:
+            case [_, "v", video_id]:
                 return await self.vod(scrape_item, video_id)
-            case ["videos", video_id]:
+            case ["video" | "videos", video_id]:
                 return await self.vod(scrape_item, video_id)
             case ["collections", collection_id]:
                 return await self.collection(scrape_item, collection_id)
@@ -63,7 +63,7 @@ class TwitchCrawler(Crawler):
 
                 raise ValueError
 
-    async def async_startup(self) -> None:
+    def __post_init__(self) -> None:
         self.api = TwitchAPI(self)
 
     async def _get_m3u8(
@@ -74,13 +74,18 @@ class TwitchCrawler(Crawler):
         media_type: Literal["video", "audio", "subtitles"] | None = None,
     ) -> m3u8.M3U8:
         m3u8_obj = await super()._get_m3u8(url, headers=headers, media_type=media_type)
-        if hidden_media := _get_hidden_media(m3u8_obj):
-            _parse_hidden_media(m3u8_obj, hidden_media)
+
+        for data in m3u8_obj.data.get("session_data", ()):
+            if data.get("data_id") == "com.amazon.ivs.unavailable-media":
+                hidden_media = json.loads(base64.b64decode(data["value"]))
+                _parse_hidden_media(m3u8_obj, hidden_media)
+                break
+
         return m3u8_obj
 
     @error_handling_wrapper
     async def vod(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        video_id = video_id.removesuffix("video_id")
+        video_id = video_id.removeprefix("v")
         scrape_item.url = self.PRIMARY_URL / "videos" / video_id
         if await self.check_complete_from_referer(scrape_item):
             return
@@ -110,7 +115,7 @@ class TwitchCrawler(Crawler):
         filename = self.create_custom_filename(
             title, ".mp4", file_id=video_id, resolution=info.resolution, video_codec=info.codecs.video
         )
-        await self.handle_file(scrape_item.url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
+        await self.handle_file(m3u8_url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
@@ -247,12 +252,6 @@ class ClipFormat:
                 resolution=Resolution.parse(fmt["quality"]),
                 aspect_ratio=assets["aspectRatio"],
             )
-
-
-def _get_hidden_media(m3u8: M3U8) -> list[dict[str, Any]] | None:
-    for data in m3u8.data.get("session_data", ()):
-        if data.get("data_id") == "com.amazon.ivs.unavailable-media":
-            return json.loads(base64.b64decode(data["value"]))
 
 
 def _parse_hidden_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
