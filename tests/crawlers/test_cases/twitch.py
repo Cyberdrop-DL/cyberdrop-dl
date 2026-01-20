@@ -60,4 +60,28 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://clips.twitch.tv/LitigiousNaiveReubenUWot-E0uuswUYOhs9htgV",
+        [
+            {
+                "url": "ANY",
+                "filename": "IM GUNNA MAKE IT... [LitigiousNaiveReubenUWot-E0uuswUYOhs9htgV][60fps][1440p].mp4",
+                "debrid_link": None,
+                "original_filename": "IM GUNNA MAKE IT...",
+                "referer": "https://clips.twitch.tv/LitigiousNaiveReubenUWot-E0uuswUYOhs9htgV",
+                "album_id": None,
+                "datetime": 1767765454,
+                "download_folder": "re:Loose Files (Twitch)",
+            }
+        ],
+    ),
+    (  # Unavailable media (4K)
+        "https://www.twitch.tv/videos/2662839277",
+        [
+            {
+                "url": "ANY",
+                "filename": "Hanging out! [2662839277][avc1][60fps][4K].mp4",
+            }
+        ],
+    ),
 ]

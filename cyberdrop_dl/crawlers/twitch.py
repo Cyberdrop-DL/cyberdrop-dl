@@ -82,7 +82,7 @@ class TwitchCrawler(Crawler):
         for data in m3u8_obj.data.get("session_data", ()):
             if data.get("data_id") == "com.amazon.ivs.unavailable-media":
                 unavailable_media = json.loads(base64.b64decode(data["value"]))
-                _parse_unavaiable_media(m3u8_obj, unavailable_media)
+                _parse_unavailable_media(m3u8_obj, unavailable_media)
                 break
 
         return m3u8_obj
@@ -270,7 +270,7 @@ class ClipFormat:
             )
 
 
-def _parse_unavaiable_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
+def _parse_unavailable_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
     first_rendition = parse_url(m3u8.playlists[0].absolute_uri)
     base_url, filename = first_rendition.parent.parent, first_rendition.name
 
