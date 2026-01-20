@@ -106,7 +106,7 @@ class Anubis(DDosGuard):
         import time
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
-        max_workers = min(cpu_count() // 2, 1)
+        max_workers = max(cpu_count() // 2, 1)
         start_time = time.monotonic()
 
         with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context("spawn")) as executor:

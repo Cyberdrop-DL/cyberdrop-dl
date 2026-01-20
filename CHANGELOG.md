@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use original filename for photos (PostImg)
 - Password protected albums (Chevereto)
 
-## [8.9.0] - 2025-12-11
+## [8.9.0] - 2025-12-18
 
 ### Added
 
@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Impersonation always using the same user agent
 - Send token in headers (GoFile)
 
-## [8.8.0] - 2025-11-28
+## [8.8.0] - 2025-12-03
 
 ### Added
 

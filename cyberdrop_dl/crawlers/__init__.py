@@ -82,6 +82,7 @@ from .mydesi import MyDesiCrawler
 from .nekohouse import NekohouseCrawler
 from .nhentai import NHentaiCrawler
 from .noodle_magazine import NoodleMagazineCrawler
+from .nsfw_xxx import NsfwXXXCrawler
 from .nudostartv import NudoStarTVCrawler
 from .odnoklassniki import OdnoklassnikiCrawler
 from .omegascans import OmegaScansCrawler
@@ -126,6 +127,7 @@ from .transfer_it import TransferItCrawler
 from .transflix import TransflixCrawler
 from .tubepornclassic import TubePornClassicCrawler
 from .turbovid import TurboVidCrawler
+from .twitch import TwitchCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler
