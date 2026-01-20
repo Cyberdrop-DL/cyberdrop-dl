@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-_BASE_QUERY = "nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
+_BASE_QUERY = "nsfw[]=0&nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
 _TYPES_QUERY = "types[]=image&types[]=video&types[]=gallery"
 
 
@@ -75,11 +75,13 @@ class NsfwXXXCrawler(Crawler):
                 scrape_item.setup_as_profile(self.create_title(title))
 
             for post in data["posts"]:
-                self.create_task(self._post(scrape_item.copy(), post))
+                web_url = self.PRIMARY_URL / "post" / str(post["content"]["id"])
+                new_scrape_item = scrape_item.create_child(web_url)
+                self.create_task(self._post(new_scrape_item, post))
                 scrape_item.add_children()
 
     async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
-        api_url = url.update_query(_TYPES_QUERY).update_query(_BASE_QUERY)
+        api_url = url.update_query(page=1).update_query(_TYPES_QUERY).update_query(_BASE_QUERY)
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
@@ -98,13 +100,11 @@ class NsfwXXXCrawler(Crawler):
     @error_handling_wrapper
     async def _post(self, scrape_item: ScrapeItem, post: dict[str, Any]) -> None:
         content: dict[str, Any] = post["content"]
-        post_id: str = str(content["id"])
         data: dict[str, Any] = post["data"]
         type_: str = content["type"]
 
-        scrape_item.url = self.PRIMARY_URL / "post" / post_id
         scrape_item.possible_datetime = date = self.parse_date(post["publishedAt"])
-        title = self.create_separate_post_title(content["title"], post_id, date)
+        title = self.create_separate_post_title(content["title"], str(content["id"]), date)
         scrape_item.setup_as_album(self.create_title(title))
 
         if type_ == "gallery":
