@@ -131,7 +131,7 @@ class TwitchCrawler(Crawler):
     async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
         collection = await self.api.collection(collection_id)
         title = self.create_title(collection["title"], collection_id)
-        scrape_item.setup_as_album(title)
+        scrape_item.setup_as_album(title, album_id=collection_id)
 
         for edge in collection["items"]["edges"]:
             web_url = self.PRIMARY_URL / "videos" / edge["node"]["id"]
