@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Turbovid support
 - Fuckingfast support
 - Bandcamp support
+- Twitch.tv support
+- Nsfw.xxx support
 - Support for tube-corporate sites (fuxxx, hclips, hdzog, hotmovs, inporn, pornzog, tubepornclassic, txxx, upornia, vjav, voyeurhit, vxxx, xmilf)
 
 ### Changed
@@ -46,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Low resolution images being downloaded (PostImg)
 - Use original filename for photos (PostImg)
 - Password protected albums (Chevereto)
+- Always use impersonation (Toonily)
+- HLS downloads ignoring config for concurrent max downloads
+- Incorrect URL as first parent for files in `--json` output
+- Files being re-downloaded if their source uses a new CDN (Bunkr)
 
 ## [8.9.0] - 2025-12-18
 
