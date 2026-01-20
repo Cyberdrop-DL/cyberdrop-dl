@@ -143,9 +143,8 @@ class TwitchCrawler(Crawler):
         title: str = clip.get("title") or "clip"
         scrape_item.possible_datetime = self.parse_iso_date(clip["createdAt"])
         access_token: dict[str, str] = clip["playbackAccessToken"]
-        assets, _assets_portrait = clip["assets"]
 
-        best = max(ClipFormat.parse(assets))
+        best = max(ClipFormat.parse(clip["assets"][0]))
         filename = self.create_custom_filename(title, ".mp4", file_id=slug, resolution=best.resolution)
         source = best.url.update_query(token=access_token["value"], sig=access_token["signature"])
         await self.handle_file(source, scrape_item, title, custom_filename=filename)
