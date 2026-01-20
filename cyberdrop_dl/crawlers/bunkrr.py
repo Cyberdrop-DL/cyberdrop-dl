@@ -160,6 +160,10 @@ class BunkrrCrawler(Crawler):
     @auto_task_id
     @error_handling_wrapper
     async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, int]) -> None:
+        db_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
+        if await self.check_complete_from_referer(db_url):
+            return
+
         src = file.src()
         scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
         if (
