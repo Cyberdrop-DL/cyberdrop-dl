@@ -351,13 +351,16 @@ class ScrapeItem:
 
         scrape_item = self.copy()
         assert is_absolute_http_url(url)
-        scrape_item.url = url
+
         if add_parent:
             new_parent = add_parent if isinstance(add_parent, AbsoluteHttpURL) else self.url
             assert is_absolute_http_url(new_parent)
             scrape_item.parents.append(new_parent)
+
         if new_title_part:
             scrape_item.add_to_parent_title(new_title_part)
+
+        scrape_item.url = url
         scrape_item.part_of_album = part_of_album or scrape_item.part_of_album
         scrape_item.possible_datetime = possible_datetime or scrape_item.possible_datetime
         scrape_item.album_id = album_id or scrape_item.album_id
