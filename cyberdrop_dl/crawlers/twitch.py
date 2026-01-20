@@ -202,7 +202,7 @@ class TwitchAPI:
 
     async def _request(self, name: str, variables: dict[str, Any], hash: str) -> dict[str, Any]:
         """Simplified version to make a single query request"""
-        query = self._prepate_query(name, variables, hash)
+        query = self._prepare_query(name, variables, hash)
         return (await self._request_many([query]))[0]
 
     async def video(self, video_id: str) -> dict[str, Any]:
