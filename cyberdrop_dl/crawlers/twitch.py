@@ -75,10 +75,12 @@ class TwitchCrawler(Crawler):
     ) -> m3u8.M3U8:
         m3u8_obj = await super()._get_m3u8(url, headers=headers, media_type=media_type)
 
+        # Some formats are "hidden" unless the user is logged in (1080p+ resolutions)
+        # We can extract and parse them manually, bypasing the logging requirement
         for data in m3u8_obj.data.get("session_data", ()):
             if data.get("data_id") == "com.amazon.ivs.unavailable-media":
-                hidden_media = json.loads(base64.b64decode(data["value"]))
-                _parse_hidden_media(m3u8_obj, hidden_media)
+                unavailable_media = json.loads(base64.b64decode(data["value"]))
+                _parse_unavaiable_media(m3u8_obj, unavailable_media)
                 break
 
         return m3u8_obj
@@ -254,7 +256,7 @@ class ClipFormat:
             )
 
 
-def _parse_hidden_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
+def _parse_unavaiable_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
     first_rendition = parse_url(m3u8.playlists[0].absolute_uri)
     base_url, filename = first_rendition.parent.parent, first_rendition.name
 
