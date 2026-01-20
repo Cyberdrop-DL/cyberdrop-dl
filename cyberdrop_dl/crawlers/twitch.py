@@ -116,8 +116,14 @@ class TwitchCrawler(Crawler):
         )
 
         m3u8, info = await self.get_m3u8_from_playlist_url(m3u8_url)
+        fps = info.stream_info.frame_rate
         filename = self.create_custom_filename(
-            title, ".mp4", file_id=video_id, resolution=info.resolution, video_codec=info.codecs.video
+            title,
+            ".mp4",
+            file_id=video_id,
+            resolution=info.resolution,
+            video_codec=info.codecs.video,
+            audio_codec=f"{round(fps)}fps" if fps and fps > 45 else None,
         )
         await self.handle_file(m3u8_url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
 
@@ -146,8 +152,15 @@ class TwitchCrawler(Crawler):
         scrape_item.possible_datetime = self.parse_iso_date(clip["createdAt"])
         access_token: dict[str, str] = clip["playbackAccessToken"]
 
-        best = max(ClipFormat.parse(clip["assets"][0]))
-        filename = self.create_custom_filename(title, ".mp4", file_id=slug, resolution=best.resolution)
+        f = list(ClipFormat.parse(clip["assets"][0]))
+        best = max(f)
+        filename = self.create_custom_filename(
+            title,
+            ".mp4",
+            file_id=slug,
+            resolution=best.resolution,
+            audio_codec=f"{round(best.fps)}fps" if best.fps > 45 else None,
+        )
         source = best.url.update_query(token=access_token["value"], sig=access_token["signature"])
         await self.handle_file(source, scrape_item, title, custom_filename=filename)
 

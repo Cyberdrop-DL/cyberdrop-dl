@@ -45,4 +45,19 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://www.twitch.tv/videos/1744169736",
+        [
+            {
+                "url": "re:https://usher.ttvnw.net/vod/1744169736.m3u8",
+                "filename": "who asked [1744169736][avc1][1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "who asked",
+                "referer": "https://www.twitch.tv/videos/1744169736",
+                "album_id": None,
+                "datetime": 1676928416,
+                "download_folder": "re:Loose Files (Twitch)",
+            }
+        ],
+    ),
 ]
