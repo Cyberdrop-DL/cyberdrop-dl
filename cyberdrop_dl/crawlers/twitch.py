@@ -177,7 +177,7 @@ class TwitchAPI:
         self._crawler = crawler
 
     @classmethod
-    def _prepate_query(cls, name: str, variables: dict[str, Any], hash: str) -> dict[str, Any]:
+    def _prepare_query(cls, name: str, variables: dict[str, Any], hash: str) -> dict[str, Any]:
         return {
             "operationName": name,
             "variables": variables,
