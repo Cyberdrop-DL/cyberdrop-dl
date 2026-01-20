@@ -51,7 +51,9 @@ class TwitchCrawler(Crawler):
                 return await self.vod(scrape_item, video_id)
             case ["collections", collection_id]:
                 return await self.collection(scrape_item, collection_id)
-            case [_, "clip", slug]:
+            case [*_, "clip", slug]:
+                await self.clip(scrape_item, slug)
+            case ["embed"] if slug := scrape_item.url.query.get("clip"):
                 await self.clip(scrape_item, slug)
             case [slug] if "clips." in scrape_item.url.host:
                 await self.clip(scrape_item, slug)
