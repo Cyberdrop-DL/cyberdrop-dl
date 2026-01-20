@@ -152,8 +152,7 @@ class TwitchCrawler(Crawler):
         scrape_item.possible_datetime = self.parse_iso_date(clip["createdAt"])
         access_token: dict[str, str] = clip["playbackAccessToken"]
 
-        f = list(ClipFormat.parse(clip["assets"][0]))
-        best = max(f)
+        best = max(ClipFormat.parse(clip["assets"][0]))
         filename = self.create_custom_filename(
             title,
             ".mp4",
