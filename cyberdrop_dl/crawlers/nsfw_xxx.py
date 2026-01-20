@@ -105,7 +105,7 @@ class NsfwXXXCrawler(Crawler):
 
         scrape_item.possible_datetime = date = self.parse_date(post["publishedAt"])
         title = self.create_separate_post_title(content["title"], str(content["id"]), date)
-        scrape_item.setup_as_album(self.create_title(title))
+        scrape_item.setup_as_album(self.create_title(title), album_id=str(content["id"]))
 
         if type_ == "gallery":
             files = data["urls"]
