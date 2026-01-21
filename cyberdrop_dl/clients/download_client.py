@@ -171,20 +171,34 @@ class DownloadClient:
             return resp
         return resp.content
 
+    @contextlib.asynccontextmanager
+    async def __request_context(self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]):
+        if domain in ():
+            resp = await self.client_manager._curl_session.get(str(url), stream=True, headers=headers)
+            try:
+                yield AbstractResponse.from_resp(resp)
+            finally:
+                await resp.aclose()
+            return
+
+        async with self.client_manager._download_session.get(url, headers=headers) as resp:
+            yield resp
+
     async def _request_download(
         self,
         media_item: MediaItem,
         download_headers: dict[str, str],
-        process_response: Callable[[aiohttp.ClientResponse], Coroutine[None, None, bool]],
+        process_response: Callable[[aiohttp.ClientResponse | AbstractResponse], Coroutine[None, None, bool]],
     ) -> bool:
         download_url = media_item.debrid_link or media_item.url
         await self.manager.states.RUNNING.wait()
         fallback_url_generator = _fallback_generator(media_item)
         fallback_count = 0
+
         while True:
             resp = None
             try:
-                async with self.client_manager._download_session.get(download_url, headers=download_headers) as resp:
+                async with self.__request_context(download_url, media_item.domain, download_headers) as resp:
                     return await process_response(resp)
             except (DownloadError, DDOSGuardError):
                 if resp is None:
