@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import aiofiles
 
 from cyberdrop_dl import constants
+from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
@@ -105,58 +106,70 @@ class DownloadClient:
 
         await asyncio.sleep(self.manager.config_manager.global_settings_data.rate_limiting_options.total_delay)
 
-        async def process_response(resp: aiohttp.ClientResponse) -> bool:
-            if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
-                await asyncio.to_thread(media_item.partial_file.unlink)
-
-            await self.client_manager.check_http_status(resp, download=True)
-
-            if not media_item.is_segment:
-                _ = get_content_type(media_item.ext, resp.headers)
-
-            media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
-            if not media_item.complete_file:
-                proceed, skip = await self.get_final_file_info(media_item, domain)
-                self.client_manager.check_content_length(resp.headers)
-                if skip:
-                    self.manager.progress_manager.download_progress.add_skipped()
-                    return False
-                if not proceed:
-                    if media_item.is_segment:
-                        return True
-                    log(f"Skipping {media_item.url} as it has already been downloaded", 10)
-                    self.manager.progress_manager.download_progress.add_previously_completed(False)
-                    await self.process_completed(media_item, domain)
-                    await self.handle_media_item_completion(media_item, downloaded=False)
-
-                    return False
-
-            if resp.status != HTTPStatus.PARTIAL_CONTENT:
-                await asyncio.to_thread(media_item.partial_file.unlink, missing_ok=True)
-
-            if (
-                not media_item.is_segment
-                and not media_item.datetime
-                and (last_modified := get_last_modified(resp.headers))
-            ):
-                msg = f"Unable to parse upload date for {media_item.url}, using `Last-Modified` header as file datetime"
-                log(msg, 30)
-                media_item.datetime = last_modified
-
-            task_id = media_item.task_id
-            if task_id is None:
-                size = (media_item.filesize + resume_point) if media_item.filesize is not None else None
-                task_id = self.manager.progress_manager.file_progress.add_task(
-                    domain=domain, filename=media_item.filename, expected_size=size
-                )
-                media_item.set_task_id(task_id)
-
-            self.manager.progress_manager.file_progress.advance_file(task_id, resume_point)
-
-            await self._append_content(media_item, resp.content)
-            return True
+        def process_response(resp: aiohttp.ClientResponse | AbstractResponse):
+            return self._process_response(media_item, domain, resume_point, resp)
 
         return await self._request_download(media_item, download_headers, process_response)
+
+    async def _process_response(
+        self,
+        media_item: MediaItem,
+        domain: str,
+        resume_point: int,
+        resp: aiohttp.ClientResponse | AbstractResponse,
+    ) -> bool:
+        if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
+            await asyncio.to_thread(media_item.partial_file.unlink)
+
+        await self.client_manager.check_http_status(resp, download=True)
+
+        if not media_item.is_segment:
+            _ = get_content_type(media_item.ext, resp.headers)
+
+        media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
+        if not media_item.complete_file:
+            proceed, skip = await self.get_final_file_info(media_item, domain)
+            self.client_manager.check_content_length(resp.headers)
+            if skip:
+                self.manager.progress_manager.download_progress.add_skipped()
+                return False
+            if not proceed:
+                if media_item.is_segment:
+                    return True
+                log(f"Skipping {media_item.url} as it has already been downloaded", 10)
+                self.manager.progress_manager.download_progress.add_previously_completed(False)
+                await self.process_completed(media_item, domain)
+                await self.handle_media_item_completion(media_item, downloaded=False)
+
+                return False
+
+        if resp.status != HTTPStatus.PARTIAL_CONTENT:
+            await asyncio.to_thread(media_item.partial_file.unlink, missing_ok=True)
+
+        if not media_item.is_segment and not media_item.datetime and (last_modified := get_last_modified(resp.headers)):
+            msg = f"Unable to parse upload date for {media_item.url}, using `Last-Modified` header as file datetime"
+            log(msg, 30)
+            media_item.datetime = last_modified
+
+        task_id = media_item.task_id
+        if task_id is None:
+            size = (media_item.filesize + resume_point) if media_item.filesize is not None else None
+            task_id = self.manager.progress_manager.file_progress.add_task(
+                domain=domain, filename=media_item.filename, expected_size=size
+            )
+            media_item.set_task_id(task_id)
+
+        self.manager.progress_manager.file_progress.advance_file(task_id, resume_point)
+
+        await self._append_content(media_item, self._get_resp_reader(resp))
+        return True
+
+    def _get_resp_reader(
+        self, resp: aiohttp.ClientResponse | AbstractResponse
+    ) -> AbstractResponse | aiohttp.StreamReader:
+        if isinstance(resp, AbstractResponse):
+            return resp
+        return resp.content
 
     async def _request_download(
         self,
@@ -195,7 +208,7 @@ class DownloadClient:
                     continue
                 raise
 
-    async def _append_content(self, media_item: MediaItem, content: aiohttp.StreamReader) -> None:
+    async def _append_content(self, media_item: MediaItem, content: aiohttp.StreamReader | AbstractResponse) -> None:
         """Appends content to a file."""
 
         assert media_item.task_id is not None
@@ -214,7 +227,7 @@ class DownloadClient:
                 self.manager.progress_manager.file_progress.advance_file(media_item.task_id, chunk_size)
                 check_download_speed()
 
-        self._post_download_check(media_item, content)
+        self._post_download_check(media_item)
 
     def _pre_download_check(self, media_item: MediaItem) -> Coroutine[Any, Any, None]:
         def prepare() -> None:
@@ -224,8 +237,8 @@ class DownloadClient:
 
         return asyncio.to_thread(prepare)
 
-    def _post_download_check(self, media_item: MediaItem, content: aiohttp.StreamReader) -> None:
-        if not content.total_bytes and not media_item.partial_file.stat().st_size:
+    def _post_download_check(self, media_item: MediaItem, *_) -> None:
+        if not media_item.partial_file.stat().st_size:
             media_item.partial_file.unlink()
             raise DownloadError(status=HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
 
