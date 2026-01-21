@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers._fluid_player import FluidPlayerCrawler
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils import open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -72,9 +73,10 @@ class XGroovyCrawler(FluidPlayerCrawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        title = self.create_title(open_graph.get_title(soup), album_id)
+        if not (title := open_graph.get_title(soup)):
+            raise ScrapeError(401)
+        title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
-        for url in css.iselect(soup, _SELECTORS.ALBUM):
-            link = self.parse_url(css.get_attr(url, "href"))
-            filename, ext = self.get_filename_and_ext(link.name)
-            await self.handle_file(link, scrape_item, filename, ext)
+        for _, url in self.iter_tags(soup, _SELECTORS.ALBUM):
+            await self.direct_file(scrape_item, url)
+            scrape_item.add_children()
