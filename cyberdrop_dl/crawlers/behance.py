@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import re
 import uuid
 from typing import ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, json
+from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils import json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
-IMAGE_SELECTOR = "img.ImageModuleContent-mainImage-IG1"
+SCRIPT_SELECTOR = "script#beconfig-store_state"
 BCP_VALUE = str(uuid.uuid4())
 GRAPHQL_URL = AbsoluteHttpURL("https://www.behance.net/v3/graphql/")
 GRAPHQL_QUERIES = {
@@ -54,31 +56,35 @@ class BehanceCrawler(Crawler):
         scrape_item.setup_as_album(title)
 
         soup = await self.request_soup(scrape_item.url)
-        modules = soup.select("a.ImageElement-root-kir")
-        for module in modules:
-            module_link = css.get_attr(module, "href")
-            img_link = css.select_one_get_attr_or_none(module, "img.ImageElement-image-SRv", "srcset")
-            if not module_link or not img_link:
-                continue
-            if results and self.check_album_results(self.parse_url(module_link), results):
-                continue
-            new_scrape_item = scrape_item.create_child(self.parse_url(module_link))
-            self.create_task(self.direct_file(new_scrape_item, self.parse_url(img_link)))
-            scrape_item.add_children()
+        gallery_data = soup.select_one(SCRIPT_SELECTOR)
+        if not gallery_data:
+            return
+        gallery_data = json.loads(gallery_data.string or "{}")
+        if not gallery_data:
+            return
+        if gallery_data["project"]["project"]["matureAccess"] != "allowed":
+            raise ScrapeError(401, "This gallery contains mature content and need an account to access.")
 
-        # Add Grid Images those do not have module links
-        grid_images = soup.select("picture[data-ut='project-module-picture']")
-        for image in grid_images:
-            img_link = css.select_one_get_attr_or_none(
-                image, "source[data-ut='project-module-source-original']", "srcset"
-            )
-            if not img_link:
-                continue
-            if results and self.check_album_results(self.parse_url(img_link), results):
-                continue
-            new_scrape_item = scrape_item.create_child(self.parse_url(img_link))
-            self.create_task(self.direct_file(new_scrape_item))
-            scrape_item.add_children()
+        for module in gallery_data["project"]["project"]["allModules"]:
+            if module["__typename"] == "ImageModule":
+                module_url = scrape_item.url / "modules" / str(module["id"])
+                src_url = module["imageSizes"]["allAvailable"][0]["url"]
+                src_url = re.sub(r"/project_modules/([^/]+)/", "/project_modules/source/", src_url)
+
+                if results and self.check_album_results(module_url, results):
+                    continue
+                new_scrape_item = scrape_item.create_child(module_url)
+                self.create_task(self.direct_file(new_scrape_item, self.parse_url(src_url)))
+                scrape_item.add_children()
+
+            if module["__typename"] == "MediaCollectionModule":
+                for component in module["components"]:
+                    src_url = self._replace_src_url(component["imageSizes"]["allAvailable"][0]["url"])
+                    if results and self.check_album_results(src_url, results):
+                        continue
+                    new_scrape_item = scrape_item.create_child(src_url)
+                    self.create_task(self.direct_file(new_scrape_item))
+                    scrape_item.add_children()
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
@@ -86,9 +92,15 @@ class BehanceCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        link_str: str = css.select(soup, IMAGE_SELECTOR, "src")
-        link = self.parse_url(link_str).with_query(None)
-        await self.direct_file(scrape_item, link)
+        module_data = soup.select_one(SCRIPT_SELECTOR)
+        if not module_data:
+            return
+        module_data = json.loads(module_data.string or "{}")
+        if not module_data or not module_data["projectModule"]["projectModule"]:
+            return
+
+        src_url = self._replace_src_url(module_data["projectModule"]["projectModule"]["imageSizes"]["size_disp"]["url"])
+        await self.direct_file(scrape_item, src_url)
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem, user_name: str) -> None:
@@ -124,3 +136,6 @@ class BehanceCrawler(Crawler):
                 new_scrape_item = scrape_item.create_child(project_url)
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
+
+    def _replace_src_url(self, url: str) -> AbsoluteHttpURL:
+        return self.parse_url(re.sub(r"/project_modules/([^/]+)/", "/project_modules/source/", url))
