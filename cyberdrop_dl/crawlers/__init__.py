@@ -137,6 +137,7 @@ from .vipr_dot_im import ViprImCrawler
 from .vjav import VJavCrawler
 from .voe_sx import VoeSxCrawler
 from .voyeurhit import VoyeurHitCrawler
+from .vsco import VSCOCrawler
 from .vxxx import VXXXCrawler
 from .wetransfer import WeTransferCrawler
 from .wordpress import WP_CRAWLERS, WordPressHTMLCrawler, WordPressMediaCrawler
