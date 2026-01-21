@@ -71,9 +71,6 @@ class XGroovyCrawler(FluidPlayerCrawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
-            return
-
         soup = await self.request_soup(scrape_item.url)
         title = self.create_title(open_graph.get_title(soup), album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
