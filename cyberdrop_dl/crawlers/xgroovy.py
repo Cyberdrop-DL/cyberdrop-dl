@@ -74,7 +74,7 @@ class XGroovyCrawler(FluidPlayerCrawler):
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         if not (title := open_graph.get_title(soup)):
-            raise ScrapeError(401)
+            raise ScrapeError(401, "Could not find album title")
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         for _, url in self.iter_tags(soup, _SELECTORS.ALBUM):
