@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+import uuid
 from typing import ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 IMAGE_SELECTOR = "img.ImageModuleContent-mainImage-IG1"
+BCP_VALUE = str(uuid.uuid4())
+GRAPHQL_URL = AbsoluteHttpURL("https://www.behance.net/v3/graphql/")
+GRAPHQL_QUERIES = {
+    "GetProfileProjects": "query GetProfileProjects($username: String, $after: String) {\n    user(username: $username) {\n      profileProjects(first: 20, after: $after) {\n        pageInfo {\n          endCursor\n          hasNextPage\n        }\n        nodes {\n          __typename\n          adminFlags {\n            mature_lock\n            privacy_lock\n            dmca_lock\n            flagged_lock\n            privacy_violation_lock\n            trademark_lock\n            spam_lock\n            eu_ip_lock\n          }\n          \n          hasMatureContent\n          id\n          isBoosted\n          isFeatured\n          isHiddenFromWorkTab\n          isMatureReviewSubmitted\n          isMonaReported\n          isOwner\n          isFounder\n          isPinnedToSubscriptionOverview\n          isPrivate\n          matureAccess\n          modifiedOn\n          name\n          owners {\n            ...OwnerFields\n          }\n          premium\n          publishedOn\n          privacyLevel\n          profileSectionId\n          slug\n          url\n        }\n      }\n    }\n  }\n  \n  fragment OwnerFields on User {\n    displayName\n    id\n    isFollowing\n    isProfileOwner\n    location\n    locationUrl\n    url\n    username\n  }",
+}
+GRAPHQL_HEADERS = {
+    "Content-Type": "application/json",
+    "X-BCP": BCP_VALUE,
+    "X-Requested-With": "XMLHttpRequest",
+}
 
 
 class BehanceCrawler(Crawler):
@@ -84,11 +95,32 @@ class BehanceCrawler(Crawler):
         title = self.create_title(user_name)
         scrape_item.setup_as_profile(title)
 
-        soup = await self.request_soup(scrape_item.url)
-        galleries = soup.select("a.ProjectCoverNeue-coverLink-U39")
-        for gallery in galleries:
-            gallery_link = css.get_attr(gallery, "href")
-            if not gallery_link:
-                continue
-            new_scrape_item = scrape_item.create_child(self.parse_url(gallery_link))
-            self.create_task(self.run(new_scrape_item))
+        pagination_cursor = None
+        hasNextPage = True
+        request_body = {
+            "query": GRAPHQL_QUERIES["GetProfileProjects"],
+            "variables": {"username": user_name, "after": pagination_cursor},
+        }
+
+        self.update_cookies({"bcp": BCP_VALUE})
+
+        while hasNextPage:
+            response = await self.request_json(
+                GRAPHQL_URL,
+                method="POST",
+                data=json.dumps(request_body),
+                headers=GRAPHQL_HEADERS,
+            )
+            profile_projects = response["data"]["user"]["profileProjects"]
+            # Set up for next page if any
+            pagination_cursor = profile_projects["pageInfo"]["endCursor"]
+            hasNextPage = profile_projects["pageInfo"]["hasNextPage"]
+            request_body["variables"]["after"] = pagination_cursor
+
+            for project in profile_projects["nodes"]:
+                if project["isPrivate"]:
+                    continue
+                project_url = self.parse_url(project["url"])
+                new_scrape_item = scrape_item.create_child(project_url)
+                self.create_task(self.run(new_scrape_item))
+                scrape_item.add_children()
