@@ -4,8 +4,9 @@ import asyncio
 import contextlib
 import itertools
 import time
+from collections.abc import Generator
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 
@@ -14,13 +15,13 @@ from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
-from cyberdrop_dl.utils import dates
+from cyberdrop_dl.utils import aio, dates
 from cyberdrop_dl.utils.aio import WeakAsyncLocks
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.utilities import get_size_or_none
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Generator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Coroutine, Generator, Mapping
     from pathlib import Path
     from typing import Any
 
@@ -38,6 +39,7 @@ _CHROME_ANDROID_USER_AGENT: str = (
 )
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 _NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
+_USER_IMPERSONATION: set[str] = set()
 
 
 class DownloadClient:
@@ -172,8 +174,10 @@ class DownloadClient:
         return resp.content
 
     @contextlib.asynccontextmanager
-    async def __request_context(self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]):
-        if domain in ():
+    async def __request_context(
+        self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
+    ) -> AsyncGenerator[AbstractResponse | aiohttp.ClientResponse]:
+        if domain in _USER_IMPERSONATION:
             resp = await self.client_manager._curl_session.get(str(url), stream=True, headers=headers)
             try:
                 yield AbstractResponse.from_resp(resp)
@@ -241,7 +245,7 @@ class DownloadClient:
                 self.manager.progress_manager.file_progress.advance_file(media_item.task_id, chunk_size)
                 check_download_speed()
 
-        self._post_download_check(media_item)
+        await self._post_download_check(media_item)
 
     def _pre_download_check(self, media_item: MediaItem) -> Coroutine[Any, Any, None]:
         def prepare() -> None:
@@ -251,10 +255,10 @@ class DownloadClient:
 
         return asyncio.to_thread(prepare)
 
-    def _post_download_check(self, media_item: MediaItem, *_) -> None:
-        if not media_item.partial_file.stat().st_size:
-            media_item.partial_file.unlink()
-            raise DownloadError(status=HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
+    async def _post_download_check(self, media_item: MediaItem, *_) -> None:
+        if not await aio.get_size(media_item.partial_file):
+            await aio.unlink(media_item.partial_file, missing_ok=True)
+            raise DownloadError(HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
 
     def make_free_space_checker(self, media_item: MediaItem) -> Callable[[], Coroutine[Any, Any, None]]:
         current_chunk = 0
