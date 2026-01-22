@@ -75,10 +75,7 @@ async def _run_manager(manager: Manager) -> None:
     manager.log_manager.startup()
     debug_log_file_path = _setup_debug_logger(manager)
     start_time = manager.start_time
-    config = manager.config_manager.loaded_config
-    _setup_main_logger(manager, config)
-    config.pop(0)
-
+    _setup_main_logger(manager)
     log(f"Using Debug Log: {debug_log_file_path}", 10)
     log("Starting Async Processes...", 10)
     await manager.async_startup()
@@ -90,13 +87,12 @@ async def _run_manager(manager: Manager) -> None:
 
     manager.progress_manager.print_stats(start_time)
 
-    if not config or manager.states.SHUTTING_DOWN.is_set():
-        log_spacer(20)
-        log("Checking for Updates...", 20)
-        check_latest_pypi()
-        log_spacer(20)
-        log("Closing Program...", 20)
-        log_with_color("Finished downloading. Enjoy :)", "green", 20, show_in_stats=False)
+    log_spacer(20)
+    log("Checking for Updates...", 20)
+    check_latest_pypi()
+    log_spacer(20)
+    log("Closing Program...", 20)
+    log_with_color("Finished downloading. Enjoy :)", "green", 20, show_in_stats=False)
 
     await send_webhook_message(manager)
     await send_apprise_notifications(manager)
@@ -173,7 +169,7 @@ def _setup_debug_logger(manager: Manager) -> Path | None:
     return debug_log_file_path.resolve()
 
 
-def _setup_main_logger(manager: Manager, *_) -> None:
+def _setup_main_logger(manager: Manager) -> None:
     logger = logging.getLogger("cyberdrop_dl")
     file_io = manager.path_manager.main_log.open("w", encoding="utf8")
     settings_data = manager.config_manager.settings_data
