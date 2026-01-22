@@ -21,7 +21,7 @@ class Database:
 
     async def startup(self) -> None:
         """Startup process for the DBManager."""
-        self._db_conn = await aiosqlite.connect(self._db_path)
+        self._db_conn = await aiosqlite.connect(self._db_path, timeout=20)
         self._db_conn.row_factory = aiosqlite.Row
         self.history_table = HistoryTable(self)
         self.hash_table = HashTable(self)
