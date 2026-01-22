@@ -97,25 +97,6 @@ You can get your API key here (you must be logged in): [https://real-debrid.com/
 
 <details>
 
-<summary>Reddit</summary>
-
-In order to scrape files from Reddit, you'll need to create an app on reddit's website (it's free): [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
-
-Select `script` as the app type. Any name can be used. For the redirect URI you can use any website, even a fake one like `http://your_username.cyberdrop-dl`. Click `create app` to get your credentials.
-
-![reddit_personal_script_setup_1](../../assets/reddit_personal_script_setup_1.png)
-![reddit_personal_script_setup_2](../../assets/reddit_personal_script_setup_2.png)
-
-After generating the app, you need to provide Cyberdrop-DL these values:
-
-- `personal_use_script`
-
-- `secret`
-
-</details>
-
-<details>
-
 <summary>Mega.nz</summary>
 
 If you have premium or want to download files/folders only shared with you, provide CDL these values:

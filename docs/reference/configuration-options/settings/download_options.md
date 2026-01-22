@@ -158,7 +158,6 @@ This option only works with sites that have 'posts':
 
 - `Forums`
 - `Discourse`
-- `reddit`
 - `Tiktok`
 - `Coomer`, `Kemono` and `Nekohouse`.
 
@@ -186,11 +185,10 @@ Unique Path Flags:
 > `title`: post title. This is a `string`
 
 {% hint style="warning" %}
-Not all sites support all possible flags. Ex: Posts from reddit only support the `title` flag
+Not all sites support all possible flags.
 
 If you use a format with a field that the site does not support, CDL will replace it with `UNKNOWN_<FIELD_NAME>`
 
-ex: using the format `reddit post #{id}` will result in `reddit post #UNKNOWN_ID`
 {% endhint %}
 
 Setting it to `{default}` will use the default format, which is different for each crawler:
