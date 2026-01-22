@@ -2,19 +2,34 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import json
+from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 SCRIPT_SELECTOR = "script#beconfig-store_state"
 BCP_VALUE = str(uuid.uuid4())
 GRAPHQL_URL = AbsoluteHttpURL("https://www.behance.net/v3/graphql/")
 GRAPHQL_QUERIES = {
-    "GetProfileProjects": "query GetProfileProjects($username: String, $after: String) {\n    user(username: $username) {\n      profileProjects(first: 20, after: $after) {\n        pageInfo {\n          endCursor\n          hasNextPage\n        }\n        nodes {\n          __typename\n          adminFlags {\n            mature_lock\n            privacy_lock\n            dmca_lock\n            flagged_lock\n            privacy_violation_lock\n            trademark_lock\n            spam_lock\n            eu_ip_lock\n          }\n          \n          hasMatureContent\n          id\n          isBoosted\n          isFeatured\n          isHiddenFromWorkTab\n          isMatureReviewSubmitted\n          isMonaReported\n          isOwner\n          isFounder\n          isPinnedToSubscriptionOverview\n          isPrivate\n          matureAccess\n          modifiedOn\n          name\n          owners {\n            ...OwnerFields\n          }\n          premium\n          publishedOn\n          privacyLevel\n          profileSectionId\n          slug\n          url\n        }\n      }\n    }\n  }\n  \n  fragment OwnerFields on User {\n    displayName\n    id\n    isFollowing\n    isProfileOwner\n    location\n    locationUrl\n    url\n    username\n  }",
+    "GetProfileProjects": """
+        query GetProfileProjects($username: String, $after: String) {
+            user(username: $username) {
+                profileProjects(first: 20, after: $after) {
+                    pageInfo {
+                        endCursor
+                        hasNextPage
+                    }
+                    nodes {
+                        isPrivate
+                        url
+                    }
+                }
+            }
+        }
+    """,
 }
 GRAPHQL_HEADERS = {
     "Content-Type": "application/json",
@@ -37,74 +52,53 @@ class BehanceCrawler(Crawler):
         if token := self.manager.config_manager.authentication_data.behance.access_token:
             self.update_cookies({"iat0": token})
 
-    async def async_startup(self) -> None:
-        # Load initial cookies by requesting the primary URL
-        await self.request_soup(self.PRIMARY_URL, impersonate=True)
-        self.update_cookies({"originalReferrer": "", "ilo0": "true", "ilo1": "true"})
+    @error_handling_wrapper
+    async def _load_initial_cookies(self, url) -> None:
+        await self.request_soup(url, impersonate=True)
+        self.update_cookies({"originalReferrer": "", "ilo0": "true", "ilo1": "true", "bcp": BCP_VALUE})
         self._check_access_token()
+
+    async def async_startup(self) -> None:
+        await self._load_initial_cookies(self.PRIMARY_URL)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["gallery", gallery_id, gallery_name, "modules", _]:
+            case ["gallery", gallery_id, _, "modules", _]:
                 return await self.image(scrape_item)
-            case ["gallery", gallery_id, gallery_name]:
-                return await self.gallery(scrape_item, gallery_id, gallery_name)
+            case ["gallery", gallery_id, _]:
+                return await self.gallery(scrape_item, gallery_id)
             case [user_name]:
                 return await self.profile(scrape_item, user_name)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def gallery(self, scrape_item: ScrapeItem, gallery_id: str, gallery_name: str) -> None:
+    async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
         results = await self.get_album_results(gallery_id)
-        title = self.create_title(gallery_name, gallery_id)
-        scrape_item.setup_as_album(title)
 
         soup = await self.request_soup(scrape_item.url)
-        gallery_data = soup.select_one(SCRIPT_SELECTOR)
-        if not gallery_data:
-            return
-        gallery_data = json.loads(gallery_data.string or "{}")
-        if not gallery_data:
-            return
-        if gallery_data["project"]["project"]["matureAccess"] != "allowed":
+        gallery_data = css.select_text(soup, SCRIPT_SELECTOR)
+        gallery_data = json.loads(gallery_data)["project"]["project"]
+        if gallery_data["matureAccess"] != "allowed":
             raise ScrapeError(401, "This gallery contains mature content and need an access_token to access.")
 
-        for module in gallery_data["project"]["project"]["allModules"]:
+        title = self.create_title(gallery_data["name"], gallery_id)
+        scrape_item.setup_as_album(title, album_id=gallery_id)
+
+        for module in gallery_data["allModules"]:
             if module["__typename"] == "ImageModule":
-                module_url = scrape_item.url / "modules" / str(module["id"])
-                src_url = module["imageSizes"]["allAvailable"][0]["url"]
-                src_url = re.sub(r"/project_modules/([^/]+)/", "/project_modules/source/", src_url)
-
-                if results and self.check_album_results(module_url, results):
-                    continue
-                new_scrape_item = scrape_item.create_child(module_url)
-                self.create_task(self.direct_file(new_scrape_item, self.parse_url(src_url)))
-                scrape_item.add_children()
-
-            if module["__typename"] == "MediaCollectionModule":
-                for component in module["components"]:
-                    src_url = self._replace_src_url(component["imageSizes"]["allAvailable"][0]["url"])
-                    if results and self.check_album_results(src_url, results):
-                        continue
-                    new_scrape_item = scrape_item.create_child(src_url)
-                    self.create_task(self.direct_file(new_scrape_item))
-                    scrape_item.add_children()
+                self._process_image_module(scrape_item, module, results)
+            elif module["__typename"] == "MediaCollectionModule":
+                self._process_media_collection(scrape_item, module, results)
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
-
         soup = await self.request_soup(scrape_item.url)
-        module_data = soup.select_one(SCRIPT_SELECTOR)
-        if not module_data:
-            return
-        module_data = json.loads(module_data.string or "{}")
-        if not module_data or not module_data["projectModule"]["projectModule"]:
-            return
-
-        src_url = self._replace_src_url(module_data["projectModule"]["projectModule"]["imageSizes"]["size_disp"]["url"])
+        module_data = css.select_text(soup, SCRIPT_SELECTOR)
+        module_data = json.loads(module_data)["projectModule"]["projectModule"]
+        src_url = self._replace_src_url(module_data["imageSizes"]["size_disp"]["url"])
         await self.direct_file(scrape_item, src_url)
 
     @error_handling_wrapper
@@ -118,14 +112,11 @@ class BehanceCrawler(Crawler):
             "query": GRAPHQL_QUERIES["GetProfileProjects"],
             "variables": {"username": user_name, "after": pagination_cursor},
         }
-
-        self.update_cookies({"bcp": BCP_VALUE})
-
         while hasNextPage:
             response = await self.request_json(
                 GRAPHQL_URL,
                 method="POST",
-                data=json.dumps(request_body),
+                json=request_body,
                 headers=GRAPHQL_HEADERS,
             )
             profile_projects = response["data"]["user"]["profileProjects"]
@@ -144,3 +135,23 @@ class BehanceCrawler(Crawler):
 
     def _replace_src_url(self, url: str) -> AbsoluteHttpURL:
         return self.parse_url(re.sub(r"/project_modules/([^/]+)/", "/project_modules/source/", url))
+
+    def _process_media_collection(
+        self, scrape_item: ScrapeItem, module: dict[str, Any], results: dict[str, int]
+    ) -> None:
+        for component in module["components"]:
+            src_url = self._replace_src_url(component["imageSizes"]["allAvailable"][0]["url"])
+            if results and self.check_album_results(src_url, results):
+                continue
+            new_scrape_item = scrape_item.create_child(src_url)
+            self.create_task(self.direct_file(new_scrape_item))
+            scrape_item.add_children()
+
+    def _process_image_module(self, scrape_item: ScrapeItem, module: dict[str, Any], results: dict[str, int]) -> None:
+        module_url = scrape_item.url / "modules" / str(module["id"])
+        src_url = self._replace_src_url(module["imageSizes"]["allAvailable"][0]["url"])
+        if results and self.check_album_results(module_url, results):
+            return
+        new_scrape_item = scrape_item.create_child(module_url)
+        self.create_task(self.direct_file(new_scrape_item, src_url))
+        scrape_item.add_children()
