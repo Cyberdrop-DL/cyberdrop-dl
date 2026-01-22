@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bandcamp support
 - Twitch.tv support
 - Nsfw.xxx support
+- Support for albums (xgroovy)
 - Support for tube-corporate sites (fuxxx, hclips, hdzog, hotmovs, inporn, pornzog, tubepornclassic, txxx, upornia, vjav, voyeurhit, vxxx, xmilf)
 
 ### Changed
