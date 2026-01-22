@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -26,7 +27,6 @@ from cyberdrop_dl.utils.utilities import get_download_path, remove_trailing_slas
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
-    from types import TracebackType
 
     import aiosqlite
 
@@ -85,22 +85,18 @@ class ScrapeMapper:
         self.existing_crawlers["real-debrid"] = self.real_debrid = real = RealDebridCrawler(self.manager)
         await real.startup()
 
-    async def __aenter__(self) -> Self:
-        self.manager.scrape_mapper = self
-        await self.manager.client_manager.load_cookie_files()
-        await self.manager.client_manager.__aenter__()
-        self.manager.task_group = asyncio.TaskGroup()
-        await self.manager.task_group.__aenter__()
-        return self
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def managed(cls, manager: Manager) -> AsyncGenerator[Self]:
+        """Creates a new scrape mapper that auto closses http session on exit"""
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        await self.manager.task_group.__aexit__(exc_type, exc_val, exc_tb)
-        await self.manager.client_manager.__aexit__(exc_type, exc_val, exc_tb)
+        self = cls(manager)
+        await self.manager.client_manager.load_cookie_files()
+
+        async with self.manager.client_manager, asyncio.TaskGroup() as tg:
+            self.manager.scrape_mapper = self
+            self.manager.task_group = tg
+            yield self
 
     async def run(self) -> None:
         """Starts the orchestra."""

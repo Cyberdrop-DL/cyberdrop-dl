@@ -99,7 +99,7 @@ async def test_crawler(running_manager: Manager, crawler_test_case: CrawlerTestC
         pytest.skip(skip) if isinstance(skip, str) else pytest.skip()
 
     with _crawler_mock() as func:
-        async with ScrapeMapper(running_manager) as scrape_mapper:
+        async with ScrapeMapper.managed(running_manager) as scrape_mapper:
             await scrape_mapper.run()
             crawler = next(
                 (crawler for crawler in scrape_mapper.existing_crawlers.values() if crawler.DOMAIN == test_case.domain),
@@ -172,7 +172,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
     test_case = CrawlerTestCase(domain="no_crawler", input_url=url, results=[{"url": url, "filename": filename}])
 
     with _crawler_mock() as func:
-        async with ScrapeMapper(running_manager) as scrape_mapper:
+        async with ScrapeMapper.managed(running_manager) as scrape_mapper:
             crawler = scrape_mapper.direct_crawler
             await scrape_mapper.run()
             item = ScrapeItem(url=parse_url(test_case.input_url))
