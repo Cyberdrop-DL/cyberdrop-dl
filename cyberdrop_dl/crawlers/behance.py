@@ -33,10 +33,15 @@ class BehanceCrawler(Crawler):
     DOMAIN: ClassVar[str] = "behance.net"
     FOLDER_DOMAIN: ClassVar[str] = "Behance"
 
+    def _check_access_token(self) -> None:
+        if token := self.manager.config_manager.authentication_data.behance.access_token:
+            self.update_cookies({"iat0": token})
+
     async def async_startup(self) -> None:
         # Load initial cookies by requesting the primary URL
         await self.request_soup(self.PRIMARY_URL, impersonate=True)
         self.update_cookies({"originalReferrer": "", "ilo0": "true", "ilo1": "true"})
+        self._check_access_token()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -63,7 +68,7 @@ class BehanceCrawler(Crawler):
         if not gallery_data:
             return
         if gallery_data["project"]["project"]["matureAccess"] != "allowed":
-            raise ScrapeError(401, "This gallery contains mature content and need an account to access.")
+            raise ScrapeError(401, "This gallery contains mature content and need an access_token to access.")
 
         for module in gallery_data["project"]["project"]["allModules"]:
             if module["__typename"] == "ImageModule":

@@ -5,6 +5,10 @@ from cyberdrop_dl.models import AliasModel
 from ._common import ConfigModel, Field
 
 
+class BehanceAuth(AliasModel):
+    access_token: str = Field("", "behance_access_token")
+
+
 class CoomerAuth(BaseModel):
     session: str = ""
 
@@ -46,6 +50,7 @@ class RealDebridAuth(AliasModel):
 
 
 class AuthSettings(ConfigModel):
+    behance: BehanceAuth = Field(BehanceAuth(), "Behance")
     coomer: CoomerAuth = Field(CoomerAuth(), "Coomer")
     gofile: GoFileAuth = Field(GoFileAuth(), "GoFile")
     imgur: ImgurAuth = Field(ImgurAuth(), "Imgur")
