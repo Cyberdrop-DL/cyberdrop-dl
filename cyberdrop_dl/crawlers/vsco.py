@@ -77,8 +77,16 @@ class VSCOCrawler(Crawler):
     async def _image(self, scrape_item: ScrapeItem, img: dict[str, Any]) -> None:
         scrape_item.url = self.parse_url(img["permalink"])
         src_url = self.parse_url("https://" + img["responsive_url"])
-        filename, ext = self.get_filename_and_ext(src_url.name)
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=src_url, metadata=img)
+        filename = self.create_custom_filename(img["_id"], src_url.suffix)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            src_url.name,
+            src_url.suffix,
+            debrid_link=src_url,
+            custom_filename=filename,
+            metadata=img,
+        )
 
     async def _video(self, scrape_item: ScrapeItem, video: dict[str, Any]) -> None:
         scrape_item.url = self.PRIMARY_URL / video["domain"] / "video" / video["_id"]
