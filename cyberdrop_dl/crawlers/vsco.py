@@ -63,7 +63,9 @@ class VSCOCrawler(Crawler):
             for media in state["media"]:
                 file = media[media["type"]]
                 file["type"] = media["type"]
-                self.create_task(self._file(scrape_item.copy(), file))
+                # The file method will override with the proper URL
+                new_item = scrape_item.create_child(scrape_item.url)
+                self.create_task(self._file(new_item, file))
                 scrape_item.add_children()
 
     @error_handling_wrapper
