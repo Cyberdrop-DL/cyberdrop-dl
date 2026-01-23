@@ -71,6 +71,7 @@ class VSCOCrawler(Crawler):
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: dict[str, Any]) -> None:
         file = {to_snake(key): value for key, value in file.items()}
+        file["id"] = file.get("id") or file["_id"]
         scrape_item.possible_datetime = (file.get("upload_date") or file["created_date"]) // 1000
         if file["type"] == "image":
             return await self._image(scrape_item, file)
@@ -79,7 +80,7 @@ class VSCOCrawler(Crawler):
     async def _image(self, scrape_item: ScrapeItem, img: dict[str, Any]) -> None:
         scrape_item.url = self.parse_url(img["permalink"])
         src_url = self.parse_url("https://" + img["responsive_url"])
-        filename = self.create_custom_filename(img["_id"], src_url.suffix)
+        filename = self.create_custom_filename(img["id"], src_url.suffix)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
@@ -91,7 +92,7 @@ class VSCOCrawler(Crawler):
         )
 
     async def _video(self, scrape_item: ScrapeItem, video: dict[str, Any]) -> None:
-        scrape_item.url = self.PRIMARY_URL / video["domain"] / "video" / video["_id"]
+        scrape_item.url = self.PRIMARY_URL / scrape_item.url.parts[1] / "video" / video["id"]
         url = self.parse_url(video["playback_url"])
         m3u8 = res = None
         ext = url.suffix
@@ -103,8 +104,8 @@ class VSCOCrawler(Crawler):
             m3u8, info = await self.get_m3u8_from_playlist_url(url)
             res = info.resolution
 
-        name, ext = self.get_filename_and_ext(video["_id"] + ext)
-        filename = self.create_custom_filename(video["_id"], ext, resolution=res)
+        name, ext = self.get_filename_and_ext(video["id"] + ext)
+        filename = self.create_custom_filename(video["id"], ext, resolution=res)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
