@@ -12,11 +12,11 @@ from cyberdrop_dl.managers.config_manager import ConfigManager
 from cyberdrop_dl.managers.manager import Manager
 from cyberdrop_dl.managers.path_manager import PathManager
 from cyberdrop_dl.utils import apprise
-from tests.fake_classes.managers import FakeCacheManager
+from tests.fake_classes.managers import FakeCache
 
 TEST_FILES_PATH = Path(__file__).parent / "test_files/apprise"
 FAKE_MANAGER = Manager()
-FAKE_MANAGER.cache_manager = FakeCacheManager(FAKE_MANAGER)
+FAKE_MANAGER.cache_manager = FakeCache(FAKE_MANAGER)
 FAKE_MANAGER.config_manager = ConfigManager(FAKE_MANAGER)
 
 URL_FAIL = "mailto://test_user:test_email@gmail.com"

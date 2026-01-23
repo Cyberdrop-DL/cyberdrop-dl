@@ -1,9 +1,9 @@
 from typing import Literal
 
-from cyberdrop_dl.managers.cache_manager import Cache
+from cyberdrop_dl.cache import Cache
 
 
-class FakeCacheManager(Cache):
+class FakeCache(Cache):
     def get(self, _: str) -> Literal[True]:
         return True
 
