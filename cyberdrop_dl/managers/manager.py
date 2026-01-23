@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 from pydantic import BaseModel
 
 from cyberdrop_dl import __version__, constants
+from cyberdrop_dl.cache import Cache
 from cyberdrop_dl.database import Database
-from cyberdrop_dl.managers.cache_manager import Cache
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.config_manager import ConfigManager
 from cyberdrop_dl.managers.hash_manager import HashManager
