@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from cyberdrop_dl import __version__, constants
 from cyberdrop_dl.database import Database
-from cyberdrop_dl.database.transfer import transfer_v5_db_to_v6
 from cyberdrop_dl.managers.cache_manager import CacheManager
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.config_manager import ConfigManager
@@ -150,7 +149,7 @@ class Manager:
                 self.config.runtime_options.ignore_history,
             )
             await self.db_manager.startup()
-        transfer_v5_db_to_v6(self.path_manager.history_db)
+
         if not isinstance(self.hash_manager, HashManager):
             self.hash_manager = HashManager(self)
         if not isinstance(self.live_manager, LiveManager):
