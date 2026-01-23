@@ -1,4 +1,4 @@
-create_history = """CREATE TABLE IF NOT EXISTS media_copy (
+create_history = """CREATE TABLE IF NOT EXISTS media (
   domain TEXT,
   url_path TEXT,
   referer TEXT,
@@ -10,9 +10,7 @@ create_history = """CREATE TABLE IF NOT EXISTS media_copy (
   duration FLOAT,
   completed INTEGER NOT NULL,
   created_at TIMESTAMP,
-  completed_at TIMESTAMP
-  file_size INT,
-  duration FLOAT,
+  completed_at TIMESTAMP,
   PRIMARY KEY (domain, url_path, original_filename)
 );"""
 
