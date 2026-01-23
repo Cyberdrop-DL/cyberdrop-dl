@@ -108,7 +108,7 @@ def switch_default_config() -> str:
 
 def activate_config(manager: Manager, config) -> str:
     """Asks the user if they want to activate the provided config"""
-    if manager.config_manager.get_loaded_config() == config:
+    if manager.config_manager.loaded_config == config:
         return
     return basic_prompts.ask_toggle(message=f"Do also want to activate the {config} config?")
 

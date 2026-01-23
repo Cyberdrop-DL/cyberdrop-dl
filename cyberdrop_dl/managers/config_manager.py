@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from dataclasses import field
 from time import sleep
 from typing import TYPE_CHECKING, Any
@@ -31,7 +30,8 @@ class ConfigManager:
 
         config_folder = self.manager.path_manager.config_folder
 
-        self._loaded_config: str = self.manager.parsed_args.cli_only_args.config or self.get_loaded_config()
+        self._loaded_config: str = self.manager.parsed_args.cli_only_args.config or self.get_default_config()
+
         self.settings: Path = config_folder / self.loaded_config / "settings.yaml"
         self.global_settings: Path = config_folder / "global_settings.yaml"
         self.authentication_settings: Path = config_folder / "authentication.yaml"
@@ -47,9 +47,6 @@ class ConfigManager:
     @property
     def loaded_config(self) -> str:
         return self._loaded_config
-
-    def get_loaded_config(self):
-        return self.loaded_config or self.get_default_config()
 
     def get_default_config(self) -> str:
         return self.manager.cache_manager.get("default_config") or "Default"
@@ -74,10 +71,10 @@ class ConfigManager:
     def _load_authentication_config(self) -> None:
         """Verifies the authentication config file and creates it if it doesn't exist."""
 
-        posible_fields = self._get_model_fields(AuthSettings(), exclude_unset=False)
         if self.authentication_settings.is_file():
             self.authentication_data = AuthSettings.model_validate(yaml.load(self.authentication_settings))
             set_fields = self._get_model_fields(self.authentication_data)
+            posible_fields = self._get_model_fields(AuthSettings(), exclude_unset=False)
             if posible_fields == set_fields:
                 return
 
@@ -88,7 +85,7 @@ class ConfigManager:
 
     def _load_settings_config(self) -> None:
         """Verifies the settings config file and creates it if it doesn't exist."""
-        posible_fields = self._get_model_fields(ConfigSettings(), exclude_unset=False)
+
         if self.manager.parsed_args.cli_only_args.config_file:
             self.settings = self.manager.parsed_args.cli_only_args.config_file
             self._loaded_config = "CLI-Arg Specified"
@@ -98,6 +95,7 @@ class ConfigManager:
             set_fields = self._get_model_fields(self.settings_data)
             self.deep_scrape = self.settings_data.runtime_options.deep_scrape
             self.settings_data.runtime_options.deep_scrape = False
+            posible_fields = self._get_model_fields(ConfigSettings(), exclude_unset=False)
             if posible_fields == set_fields:
                 return
         else:
@@ -117,10 +115,10 @@ class ConfigManager:
     def _load_global_settings_config(self) -> None:
         """Verifies the global settings config file and creates it if it doesn't exist."""
 
-        posible_fields = self._get_model_fields(GlobalSettings(), exclude_unset=False)
         if self.global_settings.is_file():
             self.global_settings_data = GlobalSettings.model_validate(yaml.load(self.global_settings))
             set_fields = self._get_model_fields(self.global_settings_data)
+            posible_fields = self._get_model_fields(GlobalSettings(), exclude_unset=False)
             if posible_fields == set_fields:
                 return
 
@@ -141,26 +139,7 @@ class ConfigManager:
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
-    def get_configs(self) -> list[str]:
-        """Returns a list of all the configs."""
-        return sorted(config.name for config in self.manager.path_manager.config_folder.iterdir() if config.is_dir())
-
-    def change_default_config(self, config_name: str) -> None:
-        """Changes the default config."""
-        self.manager.cache_manager.save("default_config", config_name)
-
-    def delete_config(self, config_name: str) -> None:
-        """Deletes a config."""
-        configs = self.get_configs()
-        configs.remove(config_name)
-
-        if self.manager.cache_manager.get("default_config") == config_name:
-            self.manager.cache_manager.save("default_config", configs[0])
-
-        config = self.manager.path_manager.config_folder / config_name
-        shutil.rmtree(config)
-
-    def change_config(self, config_name: str) -> None:
+    def reload_config(self, config_name: str) -> None:
         """Changes the config."""
         self._loaded_config = config_name
 

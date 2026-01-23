@@ -72,7 +72,6 @@ class ProgramUI:
             3: self._scan_and_create_hashes,
             4: self._sort_files,
             5: self._edit_urls,
-            6: self._change_config,
             7: self._manage_configs,
             8: self._check_updates,
             9: self._view_changelog,
@@ -109,14 +108,6 @@ class ProgramUI:
         check_latest_pypi(logging="CONSOLE")
         enter_to_continue()
 
-    def _change_config(self) -> None:
-        configs = self.manager.config_manager.get_configs()
-        selected_config = user_prompts.select_config(configs)
-        self.manager.config_manager.change_config(selected_config)
-        if user_prompts.switch_default_config_to(self.manager, selected_config):
-            self.manager.config_manager.change_default_config(selected_config)
-        self.manager.config_manager.change_config(selected_config)
-
     def _view_changelog(self) -> None:
         clear_term()
         changelog_content = self._get_changelog()
@@ -128,9 +119,6 @@ class ProgramUI:
     @repeat_until_done
     def _manage_configs(self) -> Choice | None:
         options_map = {
-            1: self._change_default_config,
-            2: self._create_new_config,
-            3: self._delete_config,
             4: self._edit_config,
             5: self._edit_auth_config,
             6: self._edit_global_config,
@@ -178,44 +166,8 @@ class ProgramUI:
         config_file = self.manager.config_manager.settings
         self._open_in_text_editor(config_file)
 
-    def _create_new_config(self) -> None:
-        config_name = user_prompts.create_new_config(self.manager)
-        if not config_name:
-            return
-        if user_prompts.switch_default_config_to(self.manager, config_name):
-            self.manager.config_manager.change_default_config(config_name)
-        self.manager.config_manager.change_config(config_name)
-        config_file = self.manager.config_manager.settings
-        self._open_in_text_editor(config_file)
-
     def _edit_urls(self) -> None:
         self._open_in_text_editor(self.manager.path_manager.input_file, reload_config=False)
-
-    def _change_default_config(self) -> None:
-        configs = self.manager.config_manager.get_configs()
-        selected_config = user_prompts.select_config(configs)
-        self.manager.config_manager.change_default_config(selected_config)
-        if user_prompts.activate_config(self.manager, selected_config) is not None:
-            self.manager.config_manager.change_config(selected_config)
-
-    def _delete_config(self) -> None:
-        configs = self.manager.config_manager.get_configs()
-        if len(configs) == 1:
-            self.print_error("There is only one config")
-            return
-
-        selected_config = user_prompts.select_config(configs)
-        if selected_config == self.manager.config_manager.loaded_config:
-            self.print_error("You cannot delete the currently active config")
-            return
-
-        if self.manager.cache_manager.get("default_config") == selected_config:
-            self.print_error("You cannot delete the default config")
-            return
-
-        self.manager.config_manager.delete_config(selected_config)
-        if user_prompts.switch_default_config():
-            self._change_default_config()
 
     def _edit_auto_cookies_extration(self) -> None:
         user_prompts.auto_cookie_extraction(self.manager)
@@ -237,7 +189,7 @@ class ProgramUI:
             return
         if reload_config:
             console.print("Revalidating config, please wait..")
-            self.manager.config_manager.change_config(self.manager.config_manager.loaded_config)
+            self.manager.config_manager.reload_config(self.manager.config_manager.loaded_config)
 
     def _process_answer(self, answer: Any, options_map: dict) -> Choice | None:
         """Checks prompt answer and executes corresponding function."""
