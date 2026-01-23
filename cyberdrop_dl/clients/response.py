@@ -18,6 +18,8 @@ from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.utils.utilities import parse_url
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.clients.flaresolverr import FlareSolverrSolution
@@ -159,6 +161,13 @@ class AbstractResponse:
         if not any(type_ in self.content_type for type_ in content_types):
             msg = f"Received {self.content_type}, was expecting {expecting}"
             raise InvalidContentTypeError(message=msg)
+
+    def iter_chunked(self, size: int) -> AsyncIterator[bytes]:
+        assert self._resp
+        if isinstance(self._resp, ClientResponse):
+            return self._resp.content.iter_chunked(size)
+        # Curl does not support size. We get chunks as they come
+        return self._resp.aiter_content()
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} [{self.status}] ({self.url})>"

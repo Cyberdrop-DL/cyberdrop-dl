@@ -490,14 +490,6 @@ class Crawler(ABC):
 
     @final
     async def check_skip_by_config(self, media_item: MediaItem) -> bool:
-        if (
-            self.manager.config.download_options.skip_referer_seen_before
-            and await self.manager.db_manager.temp_referer_table.check_referer(media_item.referer)
-        ):
-            log(f"Download skip {media_item.url} as referer has been seen before", 10)
-            return True
-
-        assert media_item.url.host
         media_host = media_item.url.host
 
         if (hosts := self.manager.config.ignore_options.skip_hosts) and any(host in media_host for host in hosts):

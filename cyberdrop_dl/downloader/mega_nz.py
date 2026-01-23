@@ -844,12 +844,13 @@ class MegaDownloadClient(DownloadClient):
                 chunk = chunk_decryptor.decrypt(raw_chunk)
                 await check_free_space()
                 chunk_size = len(chunk)
+
                 await self.client_manager.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 self.manager.progress_manager.file_progress.advance_file(media_item.task_id, chunk_size)
                 check_download_speed()
 
-        self._post_download_check(media_item, content)
+        await self._post_download_check(media_item)
         chunk_decryptor.check_mac_integrity()
 
     def _pre_download_check(self, media_item: MediaItem) -> Coroutine[Any, Any, None]:

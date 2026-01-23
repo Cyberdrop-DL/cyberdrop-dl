@@ -158,7 +158,6 @@ This option only works with sites that have 'posts':
 
 - `Forums`
 - `Discourse`
-- `reddit`
 - `Tiktok`
 - `Coomer`, `Kemono` and `Nekohouse`.
 
@@ -186,11 +185,10 @@ Unique Path Flags:
 > `title`: post title. This is a `string`
 
 {% hint style="warning" %}
-Not all sites support all possible flags. Ex: Posts from reddit only support the `title` flag
+Not all sites support all possible flags.
 
 If you use a format with a field that the site does not support, CDL will replace it with `UNKNOWN_<FIELD_NAME>`
 
-ex: using the format `reddit post #{id}` will result in `reddit post #UNKNOWN_ID`
 {% endhint %}
 
 Setting it to `{default}` will use the default format, which is different for each crawler:
@@ -221,14 +219,6 @@ You can use any valid format string supported by python, with the following rest
 | `bool` | `false` |
 
 Setting this to `true` will skip the download process for every file and mark them as downloaded in the database.
-
-## `skip_referer_seen_before`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Setting this to `true` will skip downloading files from any referer that have been scraped before. The file (s) will always be skipped, regardless of whether the referer was successfully scraped or not
 
 ## `maximum_thread_depth`
 

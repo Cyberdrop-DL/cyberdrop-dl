@@ -52,7 +52,6 @@ class DownloadOptions(BaseModel):
     separate_posts_format: NonEmptyStr = "{default}"
     separate_posts: bool = False
     skip_download_mark_completed: bool = False
-    skip_referer_seen_before: bool = False
     maximum_thread_depth: NonNegativeInt = 0
     maximum_thread_folder_depth: NonNegativeInt | None = None
 
