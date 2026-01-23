@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import Field, field
+from dataclasses import field
 from time import perf_counter
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 
@@ -86,14 +86,10 @@ class Manager:
     def startup(self) -> None:
         """Startup process for the manager."""
 
-        if isinstance(self.parsed_args, Field):
-            self.parsed_args = parse_args(self.args)
-
+        self.parsed_args = parse_args(self.args)
         self.path_manager = PathManager(self)
-        self.path_manager.pre_startup()
         self.cache_manager = Cache(self.path_manager.cache_folder / "cache.yaml")
         self.config_manager = ConfigManager(self)
-        self.config_manager.startup()
 
         self.args_consolidation()
         self.vi_mode = self.config_manager.global_settings_data.ui_options.vi_mode

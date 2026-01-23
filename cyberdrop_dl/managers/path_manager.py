@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import Field, field
+from dataclasses import field
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -23,9 +23,6 @@ class PathManager:
         self.scan_folder: Path | None = field(init=False)
 
         self.log_folder: Path = field(init=False)
-
-        self.cache_folder: Path = field(init=False)
-        self.config_folder: Path = field(init=False)
 
         self.input_file: Path = field(init=False)
         self.history_db: Path = field(init=False)
@@ -50,7 +47,16 @@ class PathManager:
             "download_error_urls",
             "scrape_error_urls",
         ]
-        self._appdata: Path = field(init=False)
+        self._appdata: Path | None = None
+        self.cache_folder: Path = self.appdata / "Cache"
+        self.config_folder: Path = self.appdata / "Configs"
+        self.cookies_dir: Path = self.appdata / "Cookies"
+        self.cache_db = self.cache_folder / "request_cache.db"
+
+        self.cache_folder.mkdir(parents=True, exist_ok=True)
+        self.config_folder.mkdir(parents=True, exist_ok=True)
+        self.cookies_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_db.touch(exist_ok=True)
 
     @property
     def cwd(self) -> Path:
@@ -61,7 +67,7 @@ class PathManager:
 
     @property
     def appdata(self) -> Path:
-        if isinstance(self._appdata, Field):
+        if self._appdata is None:
             if self.manager.parsed_args.cli_only_args.appdata_folder:
                 path = self.manager.parsed_args.cli_only_args.appdata_folder / "AppData"
                 self._appdata = self.cwd / path
@@ -69,17 +75,6 @@ class PathManager:
                 self._appdata = self.cwd / "AppData"
 
         return self._appdata
-
-    def pre_startup(self) -> None:
-        self.cache_folder = self.appdata / "Cache"
-        self.config_folder = self.appdata / "Configs"
-        self.cookies_dir = self.appdata / "Cookies"
-        self.cache_db = self.cache_folder / "request_cache.db"
-
-        self.cache_folder.mkdir(parents=True, exist_ok=True)
-        self.config_folder.mkdir(parents=True, exist_ok=True)
-        self.cookies_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_db.touch(exist_ok=True)
 
     def startup(self) -> None:
         """Startup process for the Directory Manager."""
