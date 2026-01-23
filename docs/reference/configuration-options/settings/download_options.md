@@ -222,14 +222,6 @@ You can use any valid format string supported by python, with the following rest
 
 Setting this to `true` will skip the download process for every file and mark them as downloaded in the database.
 
-## `skip_referer_seen_before`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Setting this to `true` will skip downloading files from any referer that have been scraped before. The file (s) will always be skipped, regardless of whether the referer was successfully scraped or not
-
 ## `maximum_thread_depth`
 
 | Type             | Default |
