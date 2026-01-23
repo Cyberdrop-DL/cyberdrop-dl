@@ -28,11 +28,6 @@ class KemonoAuth(AliasModel):
     session: str = ""
 
 
-class RedditAuth(AliasModel):
-    personal_use_script: str = Field("", "reddit_personal_use_script")
-    secret: str = Field("", "reddit_secret")
-
-
 class GoFileAuth(AliasModel):
     api_key: str = Field("", "gofile_api_key")
 
@@ -54,4 +49,3 @@ class AuthSettings(ConfigModel):
     meganz: MegaNzAuth = Field(MegaNzAuth(), "MegaNz")
     pixeldrain: PixeldrainAuth = Field(PixeldrainAuth(), "PixelDrain")
     realdebrid: RealDebridAuth = Field(RealDebridAuth(), "RealDebrid")
-    reddit: RedditAuth = Field(RedditAuth(), "Reddit")

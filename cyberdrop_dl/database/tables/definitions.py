@@ -14,8 +14,6 @@ create_history = """CREATE TABLE IF NOT EXISTS media (
   PRIMARY KEY (domain, url_path, original_filename)
 );"""
 
-create_temp_referer = """CREATE TABLE IF NOT EXISTS temp_referer (referer TEXT);"""
-
 create_schema_version = """
 CREATE TABLE IF NOT EXISTS schema_version (
     version VARCHAR(50) NOT NULL PRIMARY KEY,

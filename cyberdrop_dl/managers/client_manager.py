@@ -137,7 +137,7 @@ class ClientManager:
         self.download_client = DownloadClient(manager, self)
         self.flaresolverr = FlareSolverr(manager)
         self.file_locks: WeakAsyncLocks[str] = WeakAsyncLocks()
-        self.reddit_session: aiohttp.ClientSession
+
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
@@ -145,7 +145,6 @@ class ClientManager:
 
     def _startup(self) -> None:
         self._session = self.new_scrape_session()
-        self.reddit_session = self.new_scrape_session()
         self._download_session = self.new_download_session()
         if _curl_import_error is not None:
             return
@@ -158,7 +157,6 @@ class ClientManager:
 
     async def __aexit__(self, *args) -> None:
         await self._session.close()
-        await self.reddit_session.close()
         await self._download_session.close()
         if _curl_import_error is not None:
             return
