@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 from cyberdrop_dl.utils.utilities import log
 
-from .definitions import create_fixed_history, create_history
+from .definitions import create_history
 
 if TYPE_CHECKING:
     import datetime
@@ -40,8 +40,6 @@ class HistoryTable:
         await self.db_conn.create_function("FIX_TURBOVID_REFERER", 1, turbovid.fix_db_referer, deterministic=True)
         await self.db_conn.execute(create_history)
         await self.db_conn.commit()
-        await self.fix_primary_keys()
-        await self.add_columns_media()
         await self.run_updates()
 
     async def update_previously_unsupported(self, crawlers: dict[str, Crawler]) -> None:
@@ -300,45 +298,7 @@ class HistoryTable:
         except Exception as e:
             log(f"Error getting bunkr failed via hash: {e}", 40, exc_info=e)
 
-    async def fix_primary_keys(self) -> None:
-        domain_column, *_ = await self._get_media_table_columns()
-        domain_is_primary_key: bool = domain_column["pk"] != 0
-        if domain_is_primary_key:
-            return
-
-        await self.db_conn.execute(create_fixed_history)
-        await self.db_conn.commit()
-        script = """
-        INSERT INTO media_copy (domain, url_path, referer, download_path,
-        download_filename, original_filename, completed)
-        SELECT * FROM media GROUP BY domain, url_path, original_filename;
-        DROP TABLE media;
-        ALTER TABLE media_copy RENAME TO media;
-        """
-        await self.db_conn.executescript(script)
-        await self.db_conn.commit()
-
     async def _get_media_table_columns(self) -> list[Row]:
         query = "pragma table_info(media)"
         cursor = await self.db_conn.execute(query)
         return cast("list[Row]", await cursor.fetchall())
-
-    async def add_columns_media(self) -> None:
-        columns = await self._get_media_table_columns()
-        current_column_names: tuple[str, ...] = tuple(col["name"] for col in columns)
-        new_columns = (
-            ("album_id", "TEXT"),
-            ("created_at", "TIMESTAMP"),
-            ("completed_at", "TIMESTAMP"),
-            ("file_size", "INT"),
-            ("duration", "FLOAT"),
-        )
-
-        script = ""
-        for name, type_ in new_columns:
-            if name not in current_column_names:
-                script += f"ALTER TABLE media ADD COLUMN {name} {type_};"
-
-        if script:
-            await self.db_conn.executescript(script)
-            await self.db_conn.commit()
