@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, Type
 import aiofiles
 import aiofiles.os
 from multidict import CIMultiDict, CIMultiDictProxy
-from videoprops import which_ffprobe as _builtin_ffprobe
 from yarl import URL
 
 from cyberdrop_dl.utils.logger import log_debug
@@ -56,10 +55,7 @@ def which_ffmpeg() -> str | None:
 
 @functools.cache
 def which_ffprobe() -> str | None:
-    try:
-        return shutil.which("ffprobe") or _builtin_ffprobe()
-    except RuntimeError:
-        return
+    return shutil.which("ffprobe")
 
 
 @functools.cache
