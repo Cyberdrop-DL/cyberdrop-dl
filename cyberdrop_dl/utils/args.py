@@ -120,13 +120,9 @@ class CommandLineOnlyArgs(BaseModel):
     def fullscreen_ui(self) -> bool:
         return self.ui == UIOptions.FULLSCREEN
 
-    @property
-    def multiconfig(self) -> bool:
-        return bool(self.config) and self.config.casefold() == "all"
-
     @computed_field
     def __computed__(self) -> dict:
-        return {"retry_any": self.retry_any, "fullscreen_ui": self.fullscreen_ui, "multiconfig": self.multiconfig}
+        return {"retry_any": self.retry_any, "fullscreen_ui": self.fullscreen_ui}
 
     @model_validator(mode="after")
     def mutually_exclusive(self) -> Self:

@@ -101,7 +101,6 @@ from .pornzog import PornZogCrawler
 from .postimg import PostImgCrawler
 from .ranoz import RanozCrawler, RootzCrawler
 from .realbooru import RealBooruCrawler
-from .reddit import RedditCrawler
 from .redgifs import RedGifsCrawler
 from .rule34vault import Rule34VaultCrawler
 from .rule34video import Rule34VideoCrawler

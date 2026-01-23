@@ -11,24 +11,18 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import apprise
 import rich
 from pydantic import ValidationError
 from rich.text import Text
 
 from cyberdrop_dl import constants
+from cyberdrop_dl.dependencies import apprise
 from cyberdrop_dl.models import AppriseURLModel
 from cyberdrop_dl.utils.logger import log, log_debug, log_spacer
 from cyberdrop_dl.utils.yaml import handle_validation_error
 
 if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
-
-DEFAULT_APPRISE_MESSAGE: dict[str, Any] = {
-    "body": "Finished downloading. Enjoy :)",
-    "title": "Cyberdrop-DL",
-    "body_format": apprise.NotifyFormat.TEXT,
-}
 
 
 @dataclass
@@ -42,7 +36,7 @@ class AppriseURL:
         return f"{','.join(tags)}{'=' if tags else ''}{self.url}"
 
 
-OS_URLS = ["windows://", "macosx://", "dbus://", "qt://", "glib://", "kde://"]
+_OS_URLS = ["windows://", "macosx://", "dbus://", "qt://", "glib://", "kde://"]
 
 
 class LogLevel(IntEnum):
@@ -54,7 +48,7 @@ class LogLevel(IntEnum):
     CRITICAL = 50
 
 
-LOG_LEVEL_NAMES = [x.name for x in LogLevel]
+_LOG_LEVEL_NAMES = [x.name for x in LogLevel]
 
 
 @dataclass
@@ -74,6 +68,7 @@ def get_apprise_urls(*, file: Path | None = None, urls: list[str] | None = None)
     Returns:
         list[AppriseURL] | None: A list of processed Apprise URLs, or None if no valid URLs are found.
     """
+
     if not (urls or file):
         raise ValueError("Neither url of file were supplied")
     if urls and file:
@@ -87,9 +82,11 @@ def get_apprise_urls(*, file: Path | None = None, urls: list[str] | None = None)
 
     if not urls:
         return []
+    if apprise is None:
+        log("Found apprise URLs for notifications but apprise is not installed. Ignoring", 30)
+        return []
     try:
         return _simplify_urls([AppriseURLModel.model_validate({"url": url}) for url in set(urls)])
-        AppriseURLModel.model_construct()
 
     except ValidationError as e:
         handle_validation_error(e, title="Apprise", file=file)
@@ -101,7 +98,7 @@ def _simplify_urls(apprise_urls: list[AppriseURLModel]) -> list[AppriseURL]:
     valid_tags = {"no_logs", "attach_logs", "simplified"}
 
     def use_simplified(url: str) -> bool:
-        special_urls = OS_URLS
+        special_urls = _OS_URLS
         return any(key in url.casefold() for key in special_urls)
 
     for apprise_url in apprise_urls:
@@ -161,7 +158,7 @@ def _parse_apprise_logs(apprise_logs: str) -> list[LogLine]:
     parsed_lines: list[LogLine] = []
     for line in lines:
         log_level = line[0:8].strip()
-        if log_level and log_level not in LOG_LEVEL_NAMES:  # pragma: no cover
+        if log_level and log_level not in _LOG_LEVEL_NAMES:  # pragma: no cover
             current_line.msg += f"\n{line}"
             continue
 
@@ -226,7 +223,11 @@ async def send_apprise_notifications(manager: Manager) -> tuple[constants.Notifi
 
         def prepare_notifications():
             for tag, extras in notifications_to_send.items():
-                msg = DEFAULT_APPRISE_MESSAGE | extras
+                msg = {
+                    "body": "Finished downloading. Enjoy :)",
+                    "title": "Cyberdrop-DL",
+                    "body_format": apprise.NotifyFormat.TEXT,
+                } | extras
                 yield notify(tag, msg)
 
         results = dict(await asyncio.gather(*prepare_notifications()))

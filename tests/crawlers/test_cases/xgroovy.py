@@ -52,4 +52,42 @@ TEST_CASES = [
         ],
         1,
     ),
+    # Image
+    (
+        "https://xgroovy.com/photos/1082475/hope-you-like-them-perky-and-natural/",
+        [
+            {
+                "url": "https://photos.xgroovy.com/contents/albums/sources/1082000/1082475/1496153.jpg",
+                "download_folder": r"re:Hope you like them perky and natural \(XGroovy\)",
+                "referer": "https://xgroovy.com/photos/1082475/hope-you-like-them-perky-and-natural",
+                "filename": "1496153.jpg",
+                "album_id": "1082475",
+            }
+        ],
+    ),
+    # Album
+    (
+        "https://xgroovy.com/photos/1081573/without-piercing-this-view-is-more-appetizing/",
+        [
+            {
+                "url": "re:https://photos.xgroovy.com/contents/albums/sources/1081000/1081573/",
+                "download_folder": r"re:Without piercing, this view is more appetizing \(XGroovy\)",
+                "referer": "re:https://xgroovy.com/photos/1081573/without-piercing-this-view-is-more-appetizing",
+                "album_id": "1081573",
+            },
+        ],
+        12,
+    ),
+    # Direct File
+    (
+        "https://photos.xgroovy.com/contents/albums/sources/1081000/1081200/1493360.jpg",
+        [
+            {
+                "url": "https://photos.xgroovy.com/contents/albums/sources/1081000/1081200/1493360.jpg",
+                "download_folder": r"re:Loose Files \(XGroovy\)",
+                "referer": "https://photos.xgroovy.com/contents/albums/sources/1081000/1081200/1493360.jpg",
+                "filename": "1493360.jpg",
+            }
+        ],
+    ),
 ]

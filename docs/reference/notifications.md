@@ -21,6 +21,16 @@ Optionally, you can add the tag `attach_logs=` as a prefix to your webhook url. 
 
 Cyberdrop-DL uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
 
+{% hint style="info" %}
+`apprise` is an an optional dependency; It's not installed by default with CDL. To install `cyberdrop-dl` with `apprise`, especify it as an extra while installing cyberdrop:
+ex:
+
+```shell
+uv tool install cyberdrop-dl-patched[apprise]
+```
+
+{% endhint %}
+
 ### How to setup Apprise
 
 To send notifications via Apprise, you need to create an `apprise.txt` file inside `AppData/Configs/<config_name>`, where `<config_name>` if the config you want to use. The file must contain a list of URLs and they must be in the format of one of the supported apprise services.
