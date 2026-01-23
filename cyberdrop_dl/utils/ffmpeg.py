@@ -44,6 +44,10 @@ _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 def check_is_available() -> None:
     if not get_ffmpeg_version():
         raise RuntimeError("ffmpeg is not available")
+    _check_ffprobe()
+
+
+def _check_ffprobe():
     if not get_ffprobe_version():
         raise RuntimeError("ffprobe is not available")
 
@@ -101,7 +105,7 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert which_ffprobe()
+    _check_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 

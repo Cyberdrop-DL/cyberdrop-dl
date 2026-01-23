@@ -142,8 +142,8 @@ class Sorter:
                 bitrate = audio.bitrate
                 sample_rate = audio.sample_rate
 
-        except (RuntimeError, CalledProcessError, OSError):
-            log(f"Unable to get audio properties of '{file}'")
+        except (RuntimeError, CalledProcessError, OSError) as e:
+            log(f"Unable to get audio properties of '{file}'", 40, exc_info=e)
 
         if await self._process_file_move(
             file,
@@ -199,8 +199,8 @@ class Sorter:
                 duration = video.duration
                 framerate = video.fps
 
-        except (RuntimeError, CalledProcessError, OSError):
-            log(f"Unable to get some video properties of '{file}'")
+        except (RuntimeError, CalledProcessError, OSError) as e:
+            log(f"Unable to get some video properties of '{file}'", 40, exc_info=e)
 
         if await self._process_file_move(
             file,
