@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import field
 from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl import __version__ as current_version
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 class CacheManager:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.cache_file: Path = field(init=False)
+        self.cache_file: Path
         self._cache: dict[str, Any] = {}
 
     def startup(self, cache_file: Path) -> None:
@@ -31,19 +30,6 @@ class CacheManager:
     def load(self) -> None:
         """Loads the cache file into memory."""
         self._cache = yaml.load(self.cache_file)
-
-    def load_request_cache(self) -> None:
-        from cyberdrop_dl.supported_domains import SUPPORTED_FORUMS, SUPPORTED_WEBSITES
-
-        rate_limiting_options = self.manager.config_manager.global_settings_data.rate_limiting_options
-        urls_expire_after = {
-            "*.simpcity.su": rate_limiting_options.file_host_cache_expire_after,
-        }
-        for host in SUPPORTED_WEBSITES.values():
-            match_host = f"*.{host}" if "." in host else f"*.{host}.*"
-            urls_expire_after[match_host] = rate_limiting_options.file_host_cache_expire_after
-        for forum in SUPPORTED_FORUMS.values():
-            urls_expire_after[forum] = rate_limiting_options.forum_cache_expire_after
 
     def get(self, key: str) -> Any:
         """Returns the value of a key in the cache."""

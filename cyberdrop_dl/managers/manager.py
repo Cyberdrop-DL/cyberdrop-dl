@@ -69,6 +69,7 @@ class Manager:
         self.states: AsyncioEvents
 
         constants.console_handler = LogHandler(level=constants.CONSOLE_LEVEL)
+        self._db_connected: bool = False
 
     @property
     def config(self):
@@ -95,31 +96,11 @@ class Manager:
         self.config_manager.startup()
 
         self.args_consolidation()
-        self.cache_manager.load_request_cache()
         self.vi_mode = self.config_manager.global_settings_data.ui_options.vi_mode
 
         self.path_manager.startup()
         self.log_manager = LogManager(self)
-        self.adjust_for_simpcity()
         self.set_constants()
-
-    def adjust_for_simpcity(self) -> None:
-        """Adjusts settings for SimpCity update."""
-        simp_settings_adjusted = self.cache_manager.get("simp_settings_adjusted")
-        if not simp_settings_adjusted:
-            for config in self.config_manager.get_configs():
-                if config != self.config_manager.loaded_config:
-                    self.config_manager.change_config(config)
-                self.config_manager.settings_data.runtime_options.update_last_forum_post = True
-                self.config_manager.write_updated_settings_config()
-
-            rate_limit_options = self.config_manager.global_settings_data.rate_limiting_options
-            if rate_limit_options.download_attempts >= 10:
-                rate_limit_options.download_attempts = 5
-            if rate_limit_options.max_simultaneous_downloads_per_domain > 15:
-                rate_limit_options.max_simultaneous_downloads_per_domain = 5
-            self.config_manager.write_updated_global_settings_config()
-        self.cache_manager.save("simp_settings_adjusted", True)
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
@@ -143,20 +124,16 @@ class Manager:
         constants.MAX_NAME_LENGTHS["FOLDER"] = self.config_manager.global_settings_data.general.max_folder_name_length
 
     async def async_db_hash_startup(self) -> None:
-        if not isinstance(self.db_manager, Database):
-            self.db_manager = Database(
-                self.path_manager.history_db,
-                self.config.runtime_options.ignore_history,
-            )
-            await self.db_manager.startup()
+        if self._db_connected:
+            return
 
-        if not isinstance(self.hash_manager, HashManager):
-            self.hash_manager = HashManager(self)
-        if not isinstance(self.live_manager, LiveManager):
-            self.live_manager = LiveManager(self)
-        if not isinstance(self.progress_manager, ProgressManager):
-            self.progress_manager = ProgressManager(self)
-            self.progress_manager.startup()
+        self.db_manager = Database(self.path_manager.history_db, self.config.runtime_options.ignore_history)
+        await self.db_manager.startup()
+        self.hash_manager = HashManager(self)
+        self.live_manager = LiveManager(self)
+        self.progress_manager = ProgressManager(self)
+        self.progress_manager.startup()
+        self._db_connected = True
 
     def process_additive_args(self) -> None:
         cli_general_options = self.parsed_args.global_settings.general
@@ -218,6 +195,7 @@ class Manager:
         self.db_manager = await close_if_defined(self.db_manager)
         self.hash_manager = constants.NOT_DEFINED
         self.progress_manager.hash_progress.reset()
+        self._db_connected = False
 
     async def close(self) -> None:
         """Closes the manager."""
