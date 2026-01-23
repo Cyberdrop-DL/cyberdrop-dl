@@ -39,7 +39,7 @@ _CHROME_ANDROID_USER_AGENT: str = (
 )
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 _NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
-_USER_IMPERSONATION: set[str] = set()
+_USE_IMPERSONATION: set[str] = {"vsco"}
 
 
 class DownloadClient:
@@ -177,7 +177,7 @@ class DownloadClient:
     async def __request_context(
         self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
     ) -> AsyncGenerator[AbstractResponse | aiohttp.ClientResponse]:
-        if domain in _USER_IMPERSONATION:
+        if domain in _USE_IMPERSONATION:
             resp = await self.client_manager._curl_session.get(str(url), stream=True, headers=headers)
             try:
                 yield AbstractResponse.from_resp(resp)
