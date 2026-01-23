@@ -114,4 +114,19 @@ TEST_CASES = [
             },
         ],
     ),
+    (
+        "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
+        [
+            {
+                "url": "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
+                "filename": "6b31aa8f-de5d-452b-baf2-81d2b080997a [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "6b31aa8f-de5d-452b-baf2-81d2b080997a.mp4",
+                "referer": "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
+                "album_id": None,
+                "datetime": 1768819516,
+                "download_folder": "re:philippswildlife (VSCO)",
+            }
+        ],
+    ),
 ]
