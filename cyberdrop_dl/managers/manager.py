@@ -65,7 +65,6 @@ class Manager:
         self.vi_mode: bool = False
         self.start_time: float = perf_counter()
         self.downloaded_data: int = 0
-        self.multiconfig: bool = False
         self.loggers: dict[str, QueuedLogger] = {}
         self.args = args
         self.states: AsyncioEvents
@@ -103,8 +102,6 @@ class Manager:
         self.path_manager.startup()
         self.log_manager = LogManager(self)
         self.adjust_for_simpcity()
-        if self.config_manager.loaded_config.casefold() == "all" or self.parsed_args.cli_only_args.multiconfig:
-            self.multiconfig = True
         self.set_constants()
 
     def adjust_for_simpcity(self) -> None:
@@ -139,7 +136,7 @@ class Manager:
             self.storage_manager = StorageManager(self)
 
         elif self.states.RUNNING.is_set():
-            await self.storage_manager.reset()  # Reset total downloaded data if running multiple configs
+            await self.storage_manager.reset()
 
         await self.async_db_hash_startup()
 
@@ -236,14 +233,6 @@ class Manager:
         while self.loggers:
             _, queued_logger = self.loggers.popitem()
             queued_logger.stop()
-
-    def validate_all_configs(self) -> None:
-        all_configs = self.config_manager.get_configs()
-        all_configs.sort()
-        if not all_configs:
-            return
-        for config in all_configs:
-            self.config_manager.change_config(config)
 
     def set_constants(self) -> None:
         """

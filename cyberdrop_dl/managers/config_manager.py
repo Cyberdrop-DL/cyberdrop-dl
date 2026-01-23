@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class ConfigManager:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.loaded_config: str = None  # type: ignore
+        self.loaded_config: str = ""
 
         self.authentication_settings: Path = field(init=False)
         self.settings: Path = field(init=False)
@@ -35,14 +35,11 @@ class ConfigManager:
         self.authentication_data: AuthSettings = field(init=False)
         self.settings_data: ConfigSettings = field(init=False)
         self.global_settings_data: GlobalSettings = field(init=False)
+        self.pydantic_config: str | None = None
 
     def startup(self) -> None:
         """Startup process for the config manager."""
-        self.loaded_config = self.get_loaded_config()
-        cli_config = self.manager.parsed_args.cli_only_args.config
-        if cli_config and cli_config.casefold() != "all":
-            self.loaded_config = cli_config
-
+        self.loaded_config = self.manager.parsed_args.cli_only_args.config or self.get_loaded_config()
         self.settings = self.manager.path_manager.config_folder / self.loaded_config / "settings.yaml"
         self.global_settings = self.manager.path_manager.config_folder / "global_settings.yaml"
         self.authentication_settings = self.manager.path_manager.config_folder / "authentication.yaml"
@@ -56,13 +53,10 @@ class ConfigManager:
         self.load_configs()
 
     def get_loaded_config(self):
-        loaded_config = self.loaded_config or self.get_default_config()
-        if not loaded_config or loaded_config.casefold() == "all":
-            loaded_config = "Default"
-        return loaded_config
+        return self.loaded_config or self.get_default_config()
 
-    def get_default_config(self):
-        return self.manager.cache_manager.get("default_config")
+    def get_default_config(self) -> str:
+        return self.manager.cache_manager.get("default_config") or "Default"
 
     def load_configs(self) -> None:
         """Loads all the configs."""

@@ -8,7 +8,6 @@ from datetime import datetime
 from enum import IntEnum
 from functools import wraps
 from pathlib import Path
-from time import perf_counter
 from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from pydantic import ValidationError
@@ -25,7 +24,6 @@ from cyberdrop_dl.utils.logger import (
     log,
     log_spacer,
     log_with_color,
-    startup_logger,
 )
 from cyberdrop_dl.utils.sorting import Sorter
 from cyberdrop_dl.utils.updates import check_latest_pypi
@@ -76,42 +74,28 @@ async def _run_manager(manager: Manager) -> None:
     manager.path_manager.startup()
     manager.log_manager.startup()
     debug_log_file_path = _setup_debug_logger(manager)
-
-    if manager.multiconfig:
-        configs_to_run = manager.config_manager.get_configs()
-    else:
-        configs_to_run = [manager.config_manager.loaded_config]
-
     start_time = manager.start_time
-    while configs_to_run:
-        current_config = configs_to_run[0]
-        _setup_main_logger(manager, current_config)
-        configs_to_run.pop(0)
+    _setup_main_logger(manager)
+    log(f"Using Debug Log: {debug_log_file_path}", 10)
+    log("Starting Async Processes...", 10)
+    await manager.async_startup()
+    log_spacer(10)
 
-        log(f"Using Debug Log: {debug_log_file_path}", 10)
-        log("Starting Async Processes...", 10)
-        await manager.async_startup()
-        log_spacer(10)
+    log("Starting CDL...\n", 20)
 
-        log("Starting CDL...\n", 20)
+    await _scheduler(manager)
 
-        await _scheduler(manager)
+    manager.progress_manager.print_stats(start_time)
 
-        manager.progress_manager.print_stats(start_time)
+    log_spacer(20)
+    log("Checking for Updates...", 20)
+    check_latest_pypi()
+    log_spacer(20)
+    log("Closing Program...", 20)
+    log_with_color("Finished downloading. Enjoy :)", "green", 20, show_in_stats=False)
 
-        if not configs_to_run or manager.states.SHUTTING_DOWN.is_set():
-            log_spacer(20)
-            log("Checking for Updates...", 20)
-            check_latest_pypi()
-            log_spacer(20)
-            log("Closing Program...", 20)
-            log_with_color("Finished downloading. Enjoy :)", "green", 20, show_in_stats=False)
-
-        await send_webhook_message(manager)
-        await send_apprise_notifications(manager)
-        start_time = perf_counter()
-        if manager.states.SHUTTING_DOWN.is_set():
-            return
+    await send_webhook_message(manager)
+    await send_apprise_notifications(manager)
 
 
 async def _scheduler(manager: Manager) -> None:
@@ -128,8 +112,6 @@ async def _scheduler(manager: Manager) -> None:
 
 async def _runtime(manager: Manager) -> None:
     """Main runtime loop for the program, this will run until all scraping and downloading is complete."""
-    if manager.multiconfig and manager.config_manager.settings_data.sorting.sort_downloads:
-        return
 
     manager.states.RUNNING.set()
     with manager.live_manager.get_main_live(stop=True):
@@ -142,9 +124,9 @@ async def _post_runtime(manager: Manager) -> None:
     log_spacer(20, log_to_console=False)
     msg = f"Running Post-Download Processes For Config: {manager.config_manager.loaded_config}"
     log_with_color(msg, "green", 20)
-    # checking and removing dupes
-    if not (manager.multiconfig and manager.config_manager.settings_data.sorting.sort_downloads):
-        await manager.hash_manager.hash_client.cleanup_dupes_after_download()
+
+    await manager.hash_manager.hash_client.cleanup_dupes_after_download()
+
     if manager.config_manager.settings_data.sorting.sort_downloads and not manager.parsed_args.cli_only_args.retry_any:
         sorter = Sorter(manager)
         await sorter.run()
@@ -187,20 +169,9 @@ def _setup_debug_logger(manager: Manager) -> Path | None:
     return debug_log_file_path.resolve()
 
 
-def _setup_main_logger(manager: Manager, config_name: str) -> None:
+def _setup_main_logger(manager: Manager) -> None:
     logger = logging.getLogger("cyberdrop_dl")
-    queued_logger = manager.loggers.pop("main", None)
-    if manager.multiconfig and queued_logger:
-        log(f"Picking new config: '{config_name}' ...", 20)
-        try:
-            manager.config_manager.change_config(config_name)
-            log(f"Changed config to '{config_name}'...", 20)
-        finally:
-            logger.removeHandler(queued_logger.handler)
-            queued_logger.stop()
-
     file_io = manager.path_manager.main_log.open("w", encoding="utf8")
-
     settings_data = manager.config_manager.settings_data
     log_level = settings_data.runtime_options.log_level
     logger.setLevel(log_level)
@@ -225,9 +196,6 @@ def _setup_manager(args: Sequence[str] | None = None) -> Manager:
     manager = Manager(args)
     try:
         manager.startup()
-        if manager.parsed_args.cli_only_args.multiconfig:
-            startup_logger.info("validating all configs, please wait...")
-            manager.validate_all_configs()
 
         if not manager.parsed_args.cli_only_args.download:
             ProgramUI(manager)
