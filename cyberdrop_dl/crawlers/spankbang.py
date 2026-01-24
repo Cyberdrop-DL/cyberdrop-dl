@@ -73,7 +73,7 @@ class SpankBangCrawler(Crawler):
         origin = scrape_item.url.origin()
         title: str = ""
 
-        async for soup in self.web_pager(scrape_item.url, cffi=True, origin=origin):
+        async for soup in self.web_pager(scrape_item.url, cffi=True, relative_to=origin):
             if not title:
                 name = css.select_text(soup, Selector.PLAYLIST_TITLE)
                 scrape_item.url = origin / playlist_id / "playlist" / name
@@ -86,12 +86,22 @@ class SpankBangCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        canonical_url = scrape_item.url.origin() / video_id / "video"
-        scrape_item.url = canonical_url.with_host(self.PRIMARY_URL.host)
-        if await self.check_complete_from_referer(canonical_url):
+        # old referer logic. video_id may be canonical (unique per video) or relative (different on each playlist)
+        relative_url = self.PRIMARY_URL / video_id / "video"
+        if await self.check_complete_from_referer(relative_url):
             return
 
-        soup = await self.request_soup(canonical_url, impersonate=True)
+        await self._video_with_redirect(scrape_item)
+
+    async def _video_with_redirect(self, scrape_item: ScrapeItem) -> None:
+        async with self.request(scrape_item.url, impersonate=True) as resp:
+            assert "video" in resp.url.parts
+            scrape_item.url = resp.url.with_host(self.PRIMARY_URL.host)
+            if await self.check_complete_from_referer(scrape_item):
+                return
+
+            soup = await resp.soup()
+
         if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
             raise ScrapeError(410)
 
