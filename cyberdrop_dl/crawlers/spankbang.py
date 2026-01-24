@@ -19,9 +19,13 @@ if TYPE_CHECKING:
 PRIMARY_URL = AbsoluteHttpURL("https://spankbang.com/")
 DEFAULT_QUALITY = "main"
 RESOLUTIONS = ["4k", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p"]  # best to worst
-VIDEO_REMOVED_SELECTOR = "[id='video_removed'], [class*='video_removed']"
-VIDEOS_SELECTOR = "div.video-list > div.video-item > a"
-JS_STREAM_DATA_SELECTOR = "main.main-container > script:-soup-contains('var stream_data')"
+
+
+class Selector:
+    VIDEO_REMOVED = "#video_removed, #video_removed"
+    VIDEOS = ".video-list > .video-item > a"
+    STREAM_DATA = ".main-container > script:-soup-contains('var stream_data')"
+    PLAYLIST_TITLE = "[data-testid=playlist-title]"
 
 
 class Format(NamedTuple):
@@ -74,14 +78,14 @@ class SpankBangCrawler(Crawler):
             soup = await self.request_soup(page_url, impersonate=True)
 
             if not title:
-                name = css.select_text(soup, "[data-testid=playlist-title]")
+                name = css.select_text(soup, Selector.PLAYLIST_TITLE)
                 scrape_item.url = scrape_item.url.origin() / playlist_id / "playlist" / name
                 title = self.create_title(name, playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
             n_videos = 0
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, VIDEOS_SELECTOR):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 n_videos += 1
                 self.create_task(self.run(new_scrape_item))
 
@@ -97,8 +101,7 @@ class SpankBangCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
-        was_removed = soup.select_one(VIDEO_REMOVED_SELECTOR)
-        if was_removed or "This video is no longer available" in soup.get_text():
+        if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
             raise ScrapeError(410)
 
         video = _parse_video(soup)
@@ -116,7 +119,7 @@ class SpankBangCrawler(Crawler):
 
 def _parse_video(soup: BeautifulSoup) -> Video:
     title_tag = css.select(soup, "div#video h1")
-    stream_js_text = css.select_text(soup, JS_STREAM_DATA_SELECTOR)
+    stream_js_text = css.select_text(soup, Selector.STREAM_DATA)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
     stream_data = json.load_js_obj(get_text_between(stream_js_text, "stream_data = ", ";"))
     return Video(
