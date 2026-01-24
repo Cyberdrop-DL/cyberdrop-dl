@@ -42,12 +42,12 @@ class Video:
 
 class SpankBangCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Playlist": "/playlist/<playlist-id>",
+        "Playlist": "/<playlist_id>/playlist/...",
         "Video": (
-            "/video/<video_id>",
-            "/embed/<video_id>",
+            "/<video_id>/video",
+            "/<video_id>/embed",
             "/play/<video_id>",
-            "/playlist/<playlist-id>-<video_id>",
+            "<playlist_id>-<video_id>/playlist/...",
         ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
