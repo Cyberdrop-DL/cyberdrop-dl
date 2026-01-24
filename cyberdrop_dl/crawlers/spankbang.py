@@ -1,24 +1,22 @@
 from __future__ import annotations
 
+import dataclasses
 import itertools
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-
-
-PRIMARY_URL = AbsoluteHttpURL("https://spankbang.com/")
-DEFAULT_QUALITY = "main"
-RESOLUTIONS = ["4k", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p"]  # best to worst
 
 
 class Selector:
@@ -28,16 +26,12 @@ class Selector:
     PLAYLIST_TITLE = "[data-testid=playlist-title]"
 
 
-class Format(NamedTuple):
-    resolution: str
-    link_str: str
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Video:
     id: str
     title: str
-    best_format: Format
+    resolution: Resolution
+    best_mp4: str
 
 
 class SpankBangCrawler(Crawler):
@@ -50,7 +44,7 @@ class SpankBangCrawler(Crawler):
             "<playlist_id>-<video_id>/playlist/...",
         ),
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://spankbang.com")
     DOMAIN: ClassVar[str] = "spankbang"
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
 
@@ -106,10 +100,9 @@ class SpankBangCrawler(Crawler):
             raise ScrapeError(410)
 
         video = _parse_video(soup)
-        resolution, link_str = video.best_format
-        link = self.parse_url(link_str)
+        link = self.parse_url(video.best_mp4)
         filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=resolution)
+        custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
 
@@ -117,17 +110,25 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     title_tag = css.select(soup, "div#video h1")
     stream_js_text = css.select_text(soup, Selector.STREAM_DATA)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
-    stream_data = json.load_js_obj(get_text_between(stream_js_text, "stream_data = ", ";"))
+    stream_data = get_text_between(stream_js_text, "stream_data = ", ";")
+    res, url = max(_parse_formats(stream_data))
     return Video(
         id=video_id,
         title=css.get_attr_or_none(title_tag, "title") or css.get_text(title_tag),
-        best_format=_get_best_quality(stream_data),
+        resolution=res,
+        best_mp4=url,
     )
 
 
-def _get_best_quality(stream_data: dict[str, list[str]]) -> Format:
-    """Returns name and URL of the best available quality."""
-    for res in RESOLUTIONS:
-        if value := stream_data.get(res):
-            return Format(res, value[-1])
-    raise ScrapeError(422, message="Unable to get download link")
+def _parse_formats(stream_data: str) -> Generator[tuple[Resolution, str]]:
+    formats: dict[str, list[str]] = json.load_js_obj(stream_data)
+    for name, options in formats.items():
+        if not options or "m3u8" in name:
+            continue
+
+        try:
+            resolution = Resolution.parse(name)
+        except ValueError:
+            continue
+
+        yield resolution, options[-1]
