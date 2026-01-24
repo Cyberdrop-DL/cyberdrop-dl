@@ -74,8 +74,9 @@ class SpankBangCrawler(Crawler):
             soup = await self.request_soup(page_url, impersonate=True)
 
             if not title:
-                name = css.select_text(soup, "title").rsplit("Playlist -")[0].strip()
+                name = css.select_text(soup, "[data-testid=playlist-title]")
                 scrape_item.url = scrape_item.url.origin() / playlist_id / "playlist" / name
+                title = self.create_title(name, playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
             n_videos = 0
