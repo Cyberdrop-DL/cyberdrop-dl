@@ -96,20 +96,16 @@ class SpankBangCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        scrape_item.url = canonical_url = PRIMARY_URL / video_id / "video"
+        canonical_url = scrape_item.url.origin() / video_id / "video"
+        scrape_item.url = canonical_url.with_host(self.PRIMARY_URL.host)
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        soup = await self.request_soup(scrape_item.url, impersonate=True)
+        soup = await self.request_soup(canonical_url, impersonate=True)
         if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
             raise ScrapeError(410)
 
         video = _parse_video(soup)
-        canonical_url = PRIMARY_URL / video.id / "video"
-        if await self.check_complete_from_referer(canonical_url):
-            return
-
-        scrape_item.url = canonical_url
         resolution, link_str = video.best_format
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
