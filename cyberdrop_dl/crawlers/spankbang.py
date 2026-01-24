@@ -87,15 +87,17 @@ class SpankBangCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         # old referer logic. video_id may be canonical (unique per video) or relative (different on each playlist)
-        relative_url = self.PRIMARY_URL / video_id / "video"
-        if await self.check_complete_from_referer(relative_url):
+        old_db_url = self.PRIMARY_URL / video_id / "video"
+        if await self.check_complete_from_referer(old_db_url):
             return
 
         await self._video_with_redirect(scrape_item)
 
     async def _video_with_redirect(self, scrape_item: ScrapeItem) -> None:
         async with self.request(scrape_item.url, impersonate=True) as resp:
-            assert "video" in resp.url.parts
+            if "video" not in resp.url.parts:
+                raise ScrapeError(404)
+
             scrape_item.url = resp.url.with_host(self.PRIMARY_URL.host)
             if await self.check_complete_from_referer(scrape_item):
                 return
