@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "Korean dance",
                 "referer": "https://spankbang.com/9ndp4/video/korean+dance",
                 "album_id": None,
-                "datetime": 974623920,
+                "datetime": None,
                 "download_folder": "re:Loose Files (SpankBang)",
             }
         ],

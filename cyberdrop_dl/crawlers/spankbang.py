@@ -38,6 +38,7 @@ class Video:
     title: str
     resolution: Resolution
     best_mp4: str
+    stream_key: str
 
 
 class SpankBangCrawler(Crawler):
@@ -106,14 +107,15 @@ class SpankBangCrawler(Crawler):
         if await self.check_complete_from_referer(old_db_url):
             return
 
+        scrape_item.url = scrape_item.url.with_host(self.PRIMARY_URL.host)
         async with self.request(scrape_item.url, impersonate=True) as resp:
+            if await self.check_complete_from_referer(resp.url):
+                return
+
             if "video" not in resp.url.parts:
                 raise ScrapeError(404)
 
-            scrape_item.url = resp.url.with_host(self.PRIMARY_URL.host)
-            if await self.check_complete_from_referer(scrape_item):
-                return
-
+            scrape_item.url = resp.url
             video = _parse_video(await resp.soup())
 
         link = self.parse_url(video.best_mp4)
@@ -151,9 +153,12 @@ class SpankBangCrawler(Crawler):
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
+    # The title of the video is localized
+    # soup should be from the main english site
     if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
         raise ScrapeError(410)
 
+    stream_key = css.select(soup, "[data-streamkey]", "data-streamkey")
     title_tag = css.select(soup, "div#video h1")
     stream_js_text = css.select_text(soup, Selector.STREAM_DATA)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
@@ -164,6 +169,7 @@ def _parse_video(soup: BeautifulSoup) -> Video:
         title=css.get_attr_or_none(title_tag, "title") or css.get_text(title_tag),
         resolution=res,
         best_mp4=url,
+        stream_key=stream_key,
     )
 
 
