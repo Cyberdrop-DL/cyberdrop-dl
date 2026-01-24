@@ -127,6 +127,7 @@ from .transflix import TransflixCrawler
 from .tubepornclassic import TubePornClassicCrawler
 from .turbovid import TurboVidCrawler
 from .twitch import TwitchCrawler
+from .twitter import TwitterCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler

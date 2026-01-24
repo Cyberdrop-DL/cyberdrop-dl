@@ -63,7 +63,7 @@ class TempExt(StrEnum):
 class BlockedDomains:
     partial_match = (
         "facebook",
-        "twitter.com",
+        # "twitter.com",
         "instagram",
         "fbcdn",
         "gfycat",
@@ -77,9 +77,9 @@ class BlockedDomains:
         "beacons.page",
         "beacons.ai",
         "allmylinks.com",
-        ".x.com",
+        # ".x.com",
     )
-    exact_match = ("x.com",)
+    exact_match = ()
 
 
 DEFAULT_APP_STORAGE = Path("./AppData")
