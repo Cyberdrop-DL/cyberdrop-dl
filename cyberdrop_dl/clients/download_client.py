@@ -39,7 +39,7 @@ _CHROME_ANDROID_USER_AGENT: str = (
 )
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 _NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
-_USER_IMPERSONATION: set[str] = set()
+_USER_IMPERSONATION: set[str] = {"celebforum"}
 
 
 class DownloadClient:

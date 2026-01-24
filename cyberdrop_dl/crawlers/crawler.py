@@ -125,13 +125,20 @@ class Crawler(ABC):
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+    _IMPERSONATE: ClassVar[str | bool | None] = None
 
     create_db_path = staticmethod(DBPathBuilder.path)
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
-    async def request(self, *args, **kwargs) -> AsyncGenerator[AbstractResponse]:
-        async with self.client._limiter(self.DOMAIN), self.client._request(*args, **kwargs) as resp:
+    async def request(self, *args, impersonate: str | bool | None = None, **kwargs) -> AsyncGenerator[AbstractResponse]:
+        if impersonate is None:
+            impersonate = self._IMPERSONATE
+
+        async with (
+            self.client._limiter(self.DOMAIN),
+            self.client._request(*args, impersonate=impersonate, **kwargs) as resp,
+        ):
             yield resp
 
     @copy_signature(ScraperClient._request)
