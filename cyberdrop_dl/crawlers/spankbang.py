@@ -55,7 +55,7 @@ class SpankBangCrawler(Crawler):
         ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://spankbang.com")
-    OLD_DOMAIND: ClassVar[tuple[str, ...]] = ("m.spankbang.com",)
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("m.spankbang.com",)
     DOMAIN: ClassVar[str] = "spankbang"
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
     NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
