@@ -37,6 +37,10 @@ class Video:
 class SpankBangCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Playlist": "/<playlist_id>/playlist/...",
+        "Profile": (
+            "/profile/<user>",
+            "/profile/<user>/videos",
+        ),
         "Video": (
             "/<video_id>/video",
             "/<video_id>/embed",
@@ -65,8 +69,19 @@ class SpankBangCrawler(Crawler):
                 return await self.playlist(scrape_item, playlist_id)
             case [video_id, "video" | "embed" | "play", *_]:
                 return await self.video(scrape_item, video_id)
+            case ["profile", user, "videos"]:
+                return await self.profile(scrape_item, user)
             case _:
                 raise ValueError
+
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["profile", _]:
+                return url / "videos"
+            case _:
+                return url
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
@@ -80,6 +95,16 @@ class SpankBangCrawler(Crawler):
                 title = self.create_title(name, playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
+            for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
+                new_item.url = new_item.url.with_host(origin.host)
+                self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def profile(self, scrape_item: ScrapeItem, user: str) -> None:
+        origin = scrape_item.url.origin()
+        scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
+
+        async for soup in self.web_pager(scrape_item.url, cffi=True, relative_to=origin):
             for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 new_item.url = new_item.url.with_host(origin.host)
                 self.create_task(self.run(new_item))
@@ -109,9 +134,9 @@ class SpankBangCrawler(Crawler):
 
         video = _parse_video(soup)
         link = self.parse_url(video.best_mp4)
-        filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        _, ext = self.get_filename_and_ext(link.name)
+        filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
+        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename)
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
