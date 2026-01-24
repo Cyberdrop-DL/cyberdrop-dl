@@ -19,7 +19,10 @@ class ImgurCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Gallery": "/gallery/<slug>-<album_id>",
-        "Image": "/<image_id>",
+        "Image": (
+            "/<image_id>",
+            "/download/<image_id>",
+        ),
         "Direct links": f"{_IMAGE_CDN}/<image_id>.<ext>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imgur.com/")
@@ -65,6 +68,8 @@ class ImgurCrawler(Crawler):
             case ["gallery", slug]:
                 album_id = slug.rpartition("-")[-1]
                 return cls.PRIMARY_URL / "a" / album_id
+            case ["download", image_id]:
+                return cls.PRIMARY_URL / image_id
             case _:
                 return url
 
