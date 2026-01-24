@@ -24,21 +24,6 @@ VIDEOS_SELECTOR = "div.video-list > div.video-item > a"
 JS_STREAM_DATA_SELECTOR = "main.main-container > script:-soup-contains('var stream_data')"
 
 
-@dataclass(frozen=True)
-class PlaylistInfo:
-    id_: str
-    url: AbsoluteHttpURL
-    title: str = ""
-
-    @classmethod
-    def from_url(cls, url: AbsoluteHttpURL, soup: BeautifulSoup | None = None) -> PlaylistInfo:
-        playlist_id = url.parts[1].split("-")[0]
-        name = url.parts[3]
-        canonical_url = url.origin() / playlist_id / "playlist" / name
-        title = css.select_text(soup, "title").rsplit("Playlist -")[0].strip() if soup else ""
-        return cls(playlist_id, canonical_url, title)
-
-
 class Format(NamedTuple):
     resolution: str
     link_str: str
@@ -69,48 +54,46 @@ class SpankBangCrawler(Crawler):
         self.update_cookies({"country": "US", "age_pass": 1})
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if _is_playlist(scrape_item.url):
-            return await self.playlist(scrape_item)
-        if any(p in scrape_item.url.parts for p in ("video", "play", "embed", "playlist")):
-            return await self.video(scrape_item)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case [id_, "playlist", _]:
+                playlist_id, _, video_id = id_.partition("-")
+                if video_id:
+                    return await self.video(scrape_item, video_id)
+                return await self.playlist(scrape_item, playlist_id)
+            case [video_id, "video" | "embed" | "play", *_]:
+                return await self.video(scrape_item, video_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def playlist(self, scrape_item: ScrapeItem) -> None:
-        # Get basic playlist info from the URL
-        playlist = PlaylistInfo.from_url(scrape_item.url)
-        scrape_item.url = playlist.url
-        results = await self.get_album_results(playlist.id_)
+    async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
         page_url = scrape_item.url
         title: str = ""
 
         for page in itertools.count(1):
             soup = await self.request_soup(page_url, impersonate=True)
 
-            # Get full playlist info + title from the soup
-            playlist = PlaylistInfo.from_url(page_url, soup)
             if not title:
-                title = self.create_title(playlist.title, playlist.id_)
-                scrape_item.setup_as_album(title, album_id=playlist.id_)
+                name = css.select_text(soup, "title").rsplit("Playlist -")[0].strip()
+                scrape_item.url = scrape_item.url.origin() / playlist_id / "playlist" / name
+                scrape_item.setup_as_album(title, album_id=playlist_id)
 
             n_videos = 0
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, VIDEOS_SELECTOR, results=results):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, VIDEOS_SELECTOR):
                 n_videos += 1
                 self.create_task(self.run(new_scrape_item))
 
             if n_videos < 100:
                 break
 
-            page_url = playlist.url / f"{page + 1}"
+            page_url = scrape_item.url / f"{page + 1}"
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
-        if "playlist" not in scrape_item.url.parts:
-            video_id = scrape_item.url.parts[1]
-            canonical_url = PRIMARY_URL / video_id / "video"
-            if await self.check_complete_from_referer(canonical_url):
-                return
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        scrape_item.url = canonical_url = PRIMARY_URL / video_id / "video"
+        if await self.check_complete_from_referer(canonical_url):
+            return
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
         was_removed = soup.select_one(VIDEO_REMOVED_SELECTOR)
@@ -148,7 +131,3 @@ def _get_best_quality(stream_data: dict[str, list[str]]) -> Format:
         if value := stream_data.get(res):
             return Format(res, value[-1])
     raise ScrapeError(422, message="Unable to get download link")
-
-
-def _is_playlist(url: AbsoluteHttpURL) -> bool:
-    return "playlist" in url.parts and "-" not in url.parts[1]
