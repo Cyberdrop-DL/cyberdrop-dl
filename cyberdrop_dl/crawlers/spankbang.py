@@ -24,6 +24,7 @@ class Selector:
     STREAM_DATA = ".main-container > script:-soup-contains('var stream_data')"
     PLAYLIST_TITLE = "[data-testid=playlist-title]"
     NEXT_PAGE = ".pagination li.next > a[href]"
+    SEARCH_RESULTS = "[data-testid=search-result] [data-testid=video-item] > a[href]"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -71,6 +72,8 @@ class SpankBangCrawler(Crawler):
                 return await self.video(scrape_item, video_id)
             case ["profile", user, "videos"]:
                 return await self.profile(scrape_item, user)
+            case ["s", query, *_]:
+                return await self.search(scrape_item, query)
             case _:
                 raise ValueError
 
@@ -100,6 +103,16 @@ class SpankBangCrawler(Crawler):
                 self.create_task(self.run(new_item))
 
     @error_handling_wrapper
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        origin = scrape_item.url.origin()
+        scrape_item.setup_as_profile(self.create_title(f"{query} [search]"))
+
+        async for soup in self.web_pager(scrape_item.url, cffi=True, relative_to=origin):
+            for _, new_item in self.iter_children(scrape_item, soup, Selector.SEARCH_RESULTS):
+                new_item.url = new_item.url.with_host(origin.host)
+                self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem, user: str) -> None:
         origin = scrape_item.url.origin()
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
@@ -116,9 +129,6 @@ class SpankBangCrawler(Crawler):
         if await self.check_complete_from_referer(old_db_url):
             return
 
-        await self._video_with_redirect(scrape_item)
-
-    async def _video_with_redirect(self, scrape_item: ScrapeItem) -> None:
         async with self.request(scrape_item.url, impersonate=True) as resp:
             if "video" not in resp.url.parts:
                 raise ScrapeError(404)
@@ -127,12 +137,8 @@ class SpankBangCrawler(Crawler):
             if await self.check_complete_from_referer(scrape_item):
                 return
 
-            soup = await resp.soup()
+            video = _parse_video(await resp.soup())
 
-        if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
-            raise ScrapeError(410)
-
-        video = _parse_video(soup)
         link = self.parse_url(video.best_mp4)
         _, ext = self.get_filename_and_ext(link.name)
         filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
@@ -140,6 +146,9 @@ class SpankBangCrawler(Crawler):
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
+    if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
+        raise ScrapeError(410)
+
     title_tag = css.select(soup, "div#video h1")
     stream_js_text = css.select_text(soup, Selector.STREAM_DATA)
     video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
