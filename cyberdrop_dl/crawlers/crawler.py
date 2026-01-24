@@ -7,7 +7,6 @@ import inspect
 import re
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -27,6 +26,7 @@ from cyberdrop_dl.utils import css, dates, m3u8
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.strings import safe_format
 from cyberdrop_dl.utils.utilities import (
+    error_handling_context,
     error_handling_wrapper,
     get_download_path,
     get_filename_and_ext,
@@ -738,6 +738,7 @@ class Crawler(ABC):
         :param cffi: If `True`, uses `curl_cffi` to get the soup for each page. Otherwise, `aiohttp` will be used
         :param **kwargs: Will be forwarded to `self.parse_url` to parse each new page"""
 
+        kwargs.setdefault("relative_to", url.origin())
         page_url = url
         if callable(selector):
             get_next_page = selector
@@ -761,6 +762,13 @@ class Crawler(ABC):
         link = url or scrape_item.url
         filename, ext = self.get_filename_and_ext(link.name or link.parent.name, assume_ext=assume_ext)
         await self.handle_file(link, scrape_item, filename, ext)
+
+    @final
+    @contextlib.asynccontextmanager
+    async def new_task_group(self, scrape_item: ScrapeItem) -> AsyncGenerator[asyncio.TaskGroup]:
+        async with asyncio.TaskGroup() as tg:
+            with error_handling_context(self, scrape_item):
+                yield tg
 
     @final
     @classmethod

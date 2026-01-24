@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.mediaprops import Resolution
@@ -11,7 +11,7 @@ from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import Generator
 
     from bs4 import BeautifulSoup
 
@@ -93,13 +93,6 @@ class SpankBangCrawler(Crawler):
             case _:
                 return url
 
-    async def web_pager(
-        self, url: AbsoluteHttpURL, next_page_selector: str | None = None, *, cffi: bool = False, **kwargs: Any
-    ) -> AsyncGenerator[BeautifulSoup]:
-        kwargs.setdefault("origin", url.origin())
-        async for soup in super()._web_pager(url, next_page_selector, cffi=True, **kwargs):
-            yield soup
-
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         # old referer logic. video_id may be canonical (unique per video) or relative (different on each playlist)
@@ -134,22 +127,23 @@ class SpankBangCrawler(Crawler):
                 title = self.create_title(name, playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
-            self._iter_videos(scrape_item, soup)
+            await self._iter_videos(scrape_item, soup)
 
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         scrape_item.setup_as_album(self.create_title(f"{query} [search]"))
         async for soup in self.web_pager(scrape_item.url):
-            self._iter_videos(scrape_item, soup)
+            await self._iter_videos(scrape_item, soup)
 
     async def profile(self, scrape_item: ScrapeItem, user: str) -> None:
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
         async for soup in self.web_pager(scrape_item.url):
-            self._iter_videos(scrape_item, soup)
+            await self._iter_videos(scrape_item, soup)
 
-    def _iter_videos(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
-        for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-            new_item.url = new_item.url.with_host(scrape_item.url.host)
-            self.create_task(self.run(new_item))
+    async def _iter_videos(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
+        async with self.new_task_group(scrape_item) as tg:
+            for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
+                new_item.url = new_item.url.with_host(scrape_item.url.host)
+                tg.create_task(self.run(new_item))
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
