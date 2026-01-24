@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -24,6 +23,7 @@ class Selector:
     VIDEOS = ".video-list > .video-item > a"
     STREAM_DATA = ".main-container > script:-soup-contains('var stream_data')"
     PLAYLIST_TITLE = "[data-testid=playlist-title]"
+    NEXT_PAGE = ".pagination li.next > a[href]"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -45,8 +45,11 @@ class SpankBangCrawler(Crawler):
         ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://spankbang.com")
+    OLD_DOMAIND: ClassVar[tuple[str, ...]] = ("m.spankbang.com",)
     DOMAIN: ClassVar[str] = "spankbang"
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
+    _IMPERSONATE = True
+    NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
 
     async def async_startup(self) -> None:
         self.update_cookies({"country": "US", "age_pass": 1})
@@ -58,6 +61,8 @@ class SpankBangCrawler(Crawler):
                 if video_id:
                     return await self.video(scrape_item, video_id)
                 return await self.playlist(scrape_item, playlist_id)
+            case [playlist_id, "playlist", _, _page]:
+                return await self.playlist(scrape_item, playlist_id)
             case [video_id, "video" | "embed" | "play", *_]:
                 return await self.video(scrape_item, video_id)
             case _:
@@ -65,30 +70,19 @@ class SpankBangCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-        page_url = scrape_item.url
         origin = scrape_item.url.origin()
         title: str = ""
 
-        for page in itertools.count(1):
-            soup = await self.request_soup(page_url, impersonate=True)
-
+        async for soup in self.web_pager(scrape_item.url, cffi=True, origin=origin):
             if not title:
                 name = css.select_text(soup, Selector.PLAYLIST_TITLE)
                 scrape_item.url = origin / playlist_id / "playlist" / name
                 title = self.create_title(name, playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
-            n_videos = 0
-
             for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 new_item.url = new_item.url.with_host(origin.host)
-                n_videos += 1
                 self.create_task(self.run(new_item))
-
-            if n_videos < 100:
-                break
-
-            page_url = scrape_item.url / f"{page + 1}"
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
