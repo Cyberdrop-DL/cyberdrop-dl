@@ -37,7 +37,16 @@ class Args:
 
 
 _FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
-_FFPROBE_CALL_PREFIX = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-print_format", "json"
+_FFPROBE_CALL_PREFIX = (
+    "ffprobe",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-show_streams",
+    "-show_format",
+    "-print_format",
+    "json",
+)
 _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 
 
@@ -211,9 +220,8 @@ class Stream:
     def validate(cls, stream_info: StreamDict) -> dict[str, Any]:
         info = get_valid_dict(cls, stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
-        duration: float | str | None = stream_info.get("duration") or tags.get("duration")
         bitrate = int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None
-        if duration := stream_info.get("duration") or tags.get("duration"):
+        if duration := stream_info.get("duration") or tags.get("duration") or None:
             try:
                 duration = TruncatedFloat(duration)
             except (ValueError, TypeError):
@@ -264,10 +272,37 @@ class VideoStream(Stream):
         return defaults | {"width": width, "height": height, "fps": fps, "resolution": resolution}
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Format:
+    size: int | None
+    bitrate: int | None
+    duration: TruncatedFloat | None
+    tags: Tags
+
+    @classmethod
+    def from_dict(cls, format_info: dict[str, Any]) -> Self:
+        tags = Tags(CIMultiDict(format_info.get("tags", {})))
+        bitrate = int(format_info.get("bitrate") or format_info.get("bit_rate") or 0) or None
+        if duration := format_info.get("duration") or tags.get("duration") or None:
+            try:
+                duration = TruncatedFloat(duration)
+            except (ValueError, TypeError):
+                pass
+
+        if size := format_info.get("size") or None:
+            try:
+                size = int(float(size))
+            except (ValueError, TypeError):
+                pass
+
+        return cls(size=size, tags=tags, duration=duration, bitrate=bitrate)
+
+
 @dataclass(frozen=True, slots=True)
 class FFprobeResult:
     ffprobe_output: FFprobeOutput
     streams: tuple[Stream, ...]
+    format: Format
 
     @staticmethod
     def from_output(ffprobe_output: FFprobeOutput) -> FFprobeResult:
@@ -278,7 +313,11 @@ class FFprobeResult:
                 elif stream["codec_type"] == "audio":
                     yield AudioStream.from_dict(stream)
 
-        return FFprobeResult(ffprobe_output, tuple(streams()))
+        return FFprobeResult(
+            ffprobe_output,
+            streams=tuple(streams()),
+            format=Format.from_dict(ffprobe_output.get("format", {})),
+        )
 
     def video_streams(self) -> Generator[VideoStream]:
         for stream in self.streams:
