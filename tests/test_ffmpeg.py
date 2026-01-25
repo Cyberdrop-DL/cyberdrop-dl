@@ -12,13 +12,10 @@ async def test_ffprobe_video_url() -> None:
     output = await ffmpeg.probe(
         AbsoluteHttpURL("https://videos.pexels.com/video-files/29691053/12769314_360_640_60fps.mp4")
     )
-    # assert output.audio
-    # assert output.audio.codec == "aac"
-    # assert output.audio.duration == 7.808
-    # assert str(output.audio.duration) == "7.81"
-    # assert output.audio.sample_rate == 48000
 
     assert output.video
+    assert output.video.duration == 10.5105
+    assert str(output.video.duration) == "10.51"
     assert output.video.codec == "h264"
     assert output.video.bitrate == 4_014_556
     assert output.video.fps and round(output.video.fps) == 60.0
