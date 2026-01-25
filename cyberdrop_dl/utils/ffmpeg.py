@@ -203,7 +203,8 @@ def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
         except Exception:
             return None
 
-    return TruncatedFloat(seconds)
+    if seconds > 0:
+        return TruncatedFloat(seconds)
 
 
 class StreamDict(TypedDict, total=False):
