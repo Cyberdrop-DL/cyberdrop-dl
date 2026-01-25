@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
+
+ALLOW_AV1 = True
 
 
 class Selector:
@@ -46,21 +49,26 @@ class Video:
     best_src: VideoSource
 
 
+class Codec(IntEnum):
+    H264 = 0
+    AV1 = 1 if ALLOW_AV1 else -1
+
+
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
 class VideoSource:
     resolution: Resolution
-    codec: str  # h264 > av1
+    codec: Codec
     size: str
     url: str
 
-    @classmethod
-    def parse(cls, tag: Tag) -> VideoSource:
+    @staticmethod
+    def parse(tag: Tag) -> VideoSource:
         link_str: str = css.get_attr(tag, "href")
         name = tag.get_text(strip=True).removeprefix("Download")
         details = name.split("(", 1)[1].removesuffix(")").split(",")
         res, codec, size = [d.strip() for d in details]
-        codec = codec.lower()
-        return cls(Resolution.parse(res), codec, size, link_str)
+        codec = Codec[codec.upper()]
+        return VideoSource(Resolution.parse(res), codec, size, link_str)
 
 
 class EpornerCrawler(Crawler):
@@ -191,7 +199,7 @@ class EpornerCrawler(Crawler):
             ext,
             file_id=video_id,
             resolution=video.best_src.resolution,
-            video_codec=video.best_src.codec,
+            video_codec=video.best_src.codec.name.lower(),
         )
         await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename)
 
@@ -201,7 +209,7 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/jbsparrow/CyberDropDownloader/issues/1211
 
-    formats = [VideoSource.parse(tag) for tag in css.select(soup, Selector.FORMATS)]
+    formats = [VideoSource.parse(tag) for tag in soup.select(Selector.FORMATS)]
 
     return Video(
         title=get_text_between(ld_json, 'name": "', '",'),
