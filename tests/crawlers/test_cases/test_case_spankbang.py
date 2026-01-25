@@ -35,4 +35,24 @@ TEST_CASES = [
             }
         ],
     ),
+    (
+        "https://spankbang.com/a0cyk-rb6ofs/playlist/korbj",
+        [
+            {
+                "url": "re:/1/6/16207384-4k.mp4",
+                "original_filename": "Korean dance",
+                "referer": "https://spankbang.com/9ndp4/video/korean+dance",
+            }
+        ],
+    ),
+    (
+        "https://de.spankbang.com/a0cyk/playlist/korbj",
+        [
+            {
+                "url": "ANY",
+                "download_folder": "re:Korbj [playlist] (SpankBang)",
+            }
+        ],
+        range(180, 220),
+    ),
 ]

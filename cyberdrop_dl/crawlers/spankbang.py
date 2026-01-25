@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.exceptions import ScrapeError
@@ -11,7 +11,7 @@ from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import AsyncGenerator, Generator
 
     from bs4 import BeautifulSoup
 
@@ -61,6 +61,7 @@ class SpankBangCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
     NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
     _IMPERSONATE: ClassVar[str | bool | None] = True
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 5
 
     async def async_startup(self) -> None:
         self.update_cookies({"country": "US", "age_pass": 1})
@@ -86,12 +87,18 @@ class SpankBangCrawler(Crawler):
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = super().transform_url(url)
+        url = super().transform_url(url).with_host(cls.PRIMARY_URL.host)
         match url.parts[1:]:
             case ["profile", _]:
                 return url / "videos"
             case _:
                 return url
+
+    async def web_pager(
+        self, url: AbsoluteHttpURL, next_page_selector: str | None = None, *, cffi: bool = False, **kwargs: Any
+    ) -> AsyncGenerator[BeautifulSoup]:
+        async for soup in super()._web_pager(url, next_page_selector, cffi=True, **kwargs):
+            yield soup
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -100,7 +107,6 @@ class SpankBangCrawler(Crawler):
         if await self.check_complete_from_referer(old_db_url):
             return
 
-        scrape_item.url = scrape_item.url.with_host(self.PRIMARY_URL.host)
         async with self.request(scrape_item.url, impersonate=True) as resp:
             if await self.check_complete_from_referer(resp.url):
                 return
@@ -123,8 +129,10 @@ class SpankBangCrawler(Crawler):
         async for soup in self.web_pager(scrape_item.url):
             if not title:
                 name = css.select_text(soup, Selector.PLAYLIST_TITLE)
-                scrape_item.url = scrape_item.url.origin() / playlist_id / "playlist" / name
-                title = self.create_title(name, playlist_id)
+                if (trash := name.casefold().rfind(" playlist")) != -1:
+                    name = name[:trash].strip()
+
+                title = self.create_title(f"{name} [playlist]", playlist_id)
                 scrape_item.setup_as_album(title, album_id=playlist_id)
 
             await self._iter_videos(scrape_item, soup)
