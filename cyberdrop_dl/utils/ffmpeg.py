@@ -200,7 +200,7 @@ def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
             seconds = float(seconds)
             for idx, value in enumerate(reversed(rest), 1):
                 seconds += int(value) * 60**idx
-        except (ValueError, TypeError):
+        except Exception:
             return None
 
     return TruncatedFloat(seconds)
@@ -237,7 +237,7 @@ class Stream:
         info = get_valid_dict(cls, stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         return info | {
-            "codec": info["codec_name"],
+            "codec": stream_info.get("codec_name"),
             "duration": _parse_duration(stream_info.get("duration") or tags.get("duration")),
             "bitrate": int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None,
             "tags": tags,
