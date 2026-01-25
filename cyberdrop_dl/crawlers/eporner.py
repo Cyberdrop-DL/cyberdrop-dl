@@ -88,7 +88,7 @@ class EpornerCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [slug, _, *_] if slug.startswith("video-"):
+            case [slug, *_] if slug.startswith("video-"):
                 video_id = slug.removeprefix("video-")
                 return await self.video(scrape_item, video_id)
             case ["hd-porn" | "embed", video_id, *_]:
