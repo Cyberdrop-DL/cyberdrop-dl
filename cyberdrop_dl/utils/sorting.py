@@ -136,9 +136,9 @@ class Sorter:
 
         bitrate = duration = sample_rate = None
         try:
-            properties = await probe(file)
-            if audio := properties.audio:
-                duration = audio.duration
+            probe_output = await probe(file)
+            if audio := probe_output.audio:
+                duration = audio.duration or probe_output.format.duration
                 bitrate = audio.bitrate
                 sample_rate = audio.sample_rate
 
@@ -190,13 +190,13 @@ class Sorter:
         codec = duration = framerate = height = resolution = width = None
 
         try:
-            properties = await probe(file)
-            if video := properties.video:
+            probe_output = await probe(file)
+            if video := probe_output.video:
                 width = video.width
                 height = video.height
                 resolution = video.resolution
                 codec = video.codec_name
-                duration = video.duration
+                duration = video.duration or probe_output.format.duration
                 framerate = video.fps
 
         except (RuntimeError, CalledProcessError, OSError):
