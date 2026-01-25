@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, Type
 
 import aiofiles
 import aiofiles.os
-from multidict import CIMultiDict, CIMultiDictProxy
 from videoprops import which_ffprobe as _builtin_ffprobe
 from yarl import URL
 
@@ -195,9 +194,6 @@ class FFprobeOutput(TypedDict, total=False):
     streams: Required[list[StreamDict]]
 
 
-class Tags(CIMultiDictProxy[Any]): ...
-
-
 class TruncatedFloat(float):
     def __str__(self) -> str:
         return str(int(self)) if self.is_integer() else f"{self:.2f}"
@@ -210,7 +206,6 @@ class Stream:
     codec_type: str
     bitrate: int | None
     duration: TruncatedFloat | None
-    tags: Tags
 
     @property
     def codec(self) -> str:
@@ -219,22 +214,21 @@ class Stream:
     @classmethod
     def validate(cls, stream_info: StreamDict) -> dict[str, Any]:
         info = get_valid_dict(cls, stream_info)
-        tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         bitrate = int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None
-        if duration := stream_info.get("duration") or tags.get("duration") or None:
+        if duration := stream_info.get("duration") or None:
             try:
                 duration = TruncatedFloat(duration)
             except (ValueError, TypeError):
                 pass
 
-        return info | {"tags": tags, "duration": duration, "bitrate": bitrate}
+        return info | {"duration": duration, "bitrate": bitrate}
 
     @classmethod
     def from_dict(cls, stream_info: StreamDict) -> Self:
         return cls(**cls.validate(stream_info))
 
     def as_jsonable_dict(self) -> dict[str, Any]:
-        return asdict(self) | {"tags": dict(self.tags)}
+        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -277,25 +271,18 @@ class Format:
     size: int | None
     bitrate: int | None
     duration: TruncatedFloat | None
-    tags: Tags
 
     @classmethod
     def from_dict(cls, format_info: dict[str, Any]) -> Self:
-        tags = Tags(CIMultiDict(format_info.get("tags", {})))
         bitrate = int(format_info.get("bitrate") or format_info.get("bit_rate") or 0) or None
-        if duration := format_info.get("duration") or tags.get("duration") or None:
+        if duration := format_info.get("duration") or None:
             try:
                 duration = TruncatedFloat(duration)
             except (ValueError, TypeError):
                 pass
 
-        if size := format_info.get("size") or None:
-            try:
-                size = int(float(size))
-            except (ValueError, TypeError):
-                pass
-
-        return cls(size=size, tags=tags, duration=duration, bitrate=bitrate)
+        size = int(float(format_info.get("size") or 0)) or None
+        return cls(size=size, duration=duration, bitrate=bitrate)
 
 
 @dataclass(frozen=True, slots=True)
