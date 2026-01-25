@@ -56,10 +56,9 @@ class SpankBangCrawler(Crawler):
         ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://spankbang.com")
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("m.spankbang.com",)
     DOMAIN: ClassVar[str] = "spankbang"
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
-    NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _IMPERSONATE: ClassVar[str | bool | None] = True
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 5
 
@@ -68,12 +67,6 @@ class SpankBangCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [id_, "playlist", _]:
-                playlist_id, _, video_id = id_.partition("-")
-                if video_id:
-                    return await self.video(scrape_item, video_id)
-                return await self.playlist(scrape_item, playlist_id)
-
             case [playlist_id, "playlist", _, _page]:
                 return await self.playlist(scrape_item, playlist_id)
             case [video_id, "video" | "embed" | "play", *_]:
@@ -82,6 +75,11 @@ class SpankBangCrawler(Crawler):
                 return await self.profile(scrape_item, user)
             case ["s", query, *_]:
                 return await self.search(scrape_item, query)
+            case [id_, "playlist", _]:
+                playlist_id, _, video_id = id_.partition("-")
+                if video_id:
+                    return await self.video(scrape_item, video_id)
+                return await self.playlist(scrape_item, playlist_id)
             case _:
                 raise ValueError
 
@@ -150,7 +148,6 @@ class SpankBangCrawler(Crawler):
     async def _iter_videos(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         async with self.new_task_group(scrape_item) as tg:
             for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                new_item.url = new_item.url.with_host(scrape_item.url.host)
                 tg.create_task(self.run(new_item))
 
 
@@ -160,18 +157,16 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
         raise ScrapeError(410)
 
-    stream_key = css.select(soup, "[data-streamkey]", "data-streamkey")
     title_tag = css.select(soup, "div#video h1")
     stream_js_text = css.select_text(soup, Selector.STREAM_DATA)
-    video_id = get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'")
     stream_data = get_text_between(stream_js_text, "stream_data = ", ";")
     res, url = max(_parse_formats(stream_data))
     return Video(
-        id=video_id,
+        id=get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'"),
         title=css.get_attr_or_none(title_tag, "title") or css.get_text(title_tag),
         resolution=res,
         best_mp4=url,
-        stream_key=stream_key,
+        stream_key=css.select(soup, "[data-streamkey]", "data-streamkey"),
     )
 
 
