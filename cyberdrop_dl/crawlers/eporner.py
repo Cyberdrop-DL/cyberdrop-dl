@@ -82,17 +82,22 @@ class EpornerCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if _get_video_id(scrape_item.url):
-            return await self.video(scrape_item)
-        if any(p in scrape_item.url.parts for p in ("cat", "channel", "search", "pornstar")):
-            return await self.playlist(scrape_item)
-        if "gallery" in scrape_item.url.parts:
-            return await self.gallery(scrape_item)
-        if "profile" in scrape_item.url.parts:
-            return await self.profile(scrape_item)
-        if "photo" in scrape_item.url.parts:
-            return await self.photo(scrape_item)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case [slug, _, *_] if slug.startswith("video-"):
+                video_id = slug.removeprefix("video-")
+                return await self.video(scrape_item, video_id)
+            case ["hd-porn" | "embed", video_id, *_]:
+                return await self.video(scrape_item, video_id)
+            case ["cat" | "channel" | "search" | "pornstar", *_]:
+                return await self.playlist(scrape_item)
+            case ["gallery", *_]:
+                return await self.gallery(scrape_item)
+            case ["profile", *_]:
+                return await self.profile(scrape_item)
+            case ["photo", *_]:
+                return await self.photo(scrape_item)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:
@@ -166,15 +171,14 @@ class EpornerCrawler(Crawler):
         await self.handle_file(link, scrape_item, filename, ext)
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
-        video_id = _get_video_id(scrape_item.url)
-        canonical_url = PRIMARY_URL / f"video-{video_id}"
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        canonical_url = self.PRIMARY_URL / f"video-{video_id}"
         if await self.check_complete_from_referer(canonical_url):
             return
 
         soup = await self.request_soup(scrape_item.url)
 
-        soup_str = soup.text
+        soup_str = soup.get_text()
         if "File has been removed due to copyright owner request" in soup_str:
             raise ScrapeError(451)
         if "Video has been deleted" in soup_str:
@@ -214,11 +218,3 @@ def _parse_video(soup: BeautifulSoup) -> Video:
         date=get_text_between(ld_json, 'uploadDate": "', '"'),
         best_src=_get_best_src(soup),
     )
-
-
-def _get_video_id(url: AbsoluteHttpURL) -> str:
-    if "video-" in url.parts[1]:
-        return url.parts[1].rsplit("-", 1)[1]
-    if any(p in url.parts for p in ("hd-porn", "embed")) and len(url.parts) > 2:
-        return url.parts[2]
-    return ""
