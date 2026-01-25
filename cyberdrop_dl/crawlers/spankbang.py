@@ -115,6 +115,10 @@ class SpankBangCrawler(Crawler):
             scrape_item.url = resp.url
             video = _parse_video(await resp.soup())
 
+        old_db_url2 = self.PRIMARY_URL / video.id / "video"
+        if await self.check_complete_from_referer(old_db_url2):
+            return
+
         link = self.parse_url(video.best_mp4)
         _, ext = self.get_filename_and_ext(link.name)
         filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
