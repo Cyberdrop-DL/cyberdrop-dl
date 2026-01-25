@@ -32,13 +32,14 @@ class Selector:
     )
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class Video:
     id: str
+    stream_id: str
+    stream_key: str
     title: str
     resolution: Resolution
-    best_mp4: str
-    stream_key: str
+    url: str
 
 
 class SpankBangCrawler(Crawler):
@@ -113,16 +114,17 @@ class SpankBangCrawler(Crawler):
                 raise ScrapeError(404)
 
             scrape_item.url = resp.url
-            video = _parse_video(await resp.soup())
+            video_id = resp.url.parts[1]
+            video = _parse_video(await resp.soup(), video_id)
 
-        old_db_url2 = self.PRIMARY_URL / video.id / "video"
-        if await self.check_complete_from_referer(old_db_url2):
+        old_db_url2 = self.PRIMARY_URL / video.stream_id / "video"
+        if old_db_url2 != old_db_url and await self.check_complete_from_referer(old_db_url2):
             return
 
-        link = self.parse_url(video.best_mp4)
+        link = self.parse_url(video.url)
         _, ext = self.get_filename_and_ext(link.name)
         filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
-        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename)
+        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, metadata=video)
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
@@ -155,7 +157,7 @@ class SpankBangCrawler(Crawler):
                 tg.create_task(self.run(new_item))
 
 
-def _parse_video(soup: BeautifulSoup) -> Video:
+def _parse_video(soup: BeautifulSoup, display_id: str) -> Video:
     # The title of the video is localized
     # soup should be from the main english site
     if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
@@ -166,11 +168,12 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     stream_data = get_text_between(stream_js_text, "stream_data = ", ";")
     res, url = max(_parse_formats(stream_data))
     return Video(
-        id=get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'"),
-        title=css.get_attr_or_none(title_tag, "title") or css.get_text(title_tag),
+        id=display_id,
         resolution=res,
-        best_mp4=url,
+        url=url,
+        stream_id=get_text_between(stream_js_text, "ana_video_id = ", ";").strip("'"),
         stream_key=css.select(soup, "[data-streamkey]", "data-streamkey"),
+        title=css.get_attr_or_none(title_tag, "title") or css.get_text(title_tag),
     )
 
 
