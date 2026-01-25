@@ -425,11 +425,7 @@ class ClientManager:
                 headers = self.download_client._get_download_headers(media_item.domain, media_item.referer)
                 properties = await probe(media_item.url, headers=headers)
 
-            if is_video and (video := properties.video):
-                return video.duration
-            if is_audio and (audio := properties.audio):
-                return audio.duration
-            return None
+            return properties.format.duration
 
         duration: float | None = await get_duration()
         media_item.duration = duration

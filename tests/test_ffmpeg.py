@@ -22,6 +22,10 @@ async def test_ffprobe_video_url() -> None:
     assert output.video.width == 360
     assert output.video.height == 640
 
+    assert output.format.bitrate == 4_019_301
+    assert output.format.duration == 10.5105
+    assert output.format.size == 5_280_609
+
     tags = output.video.tags
     assert tags["language"] == "und"
     assert tags["handler_name"] == "Core Media Video"
