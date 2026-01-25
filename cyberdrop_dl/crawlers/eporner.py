@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import env
 from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures import Resolution
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-
-ALLOW_AV1 = True
 
 
 class Selector:
@@ -51,7 +50,7 @@ class Video:
 
 class Codec(IntEnum):
     H264 = 0
-    AV1 = 1 if ALLOW_AV1 else -1
+    AV1 = -1 if env.EPORNER_PREFER_H264 else 1
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
