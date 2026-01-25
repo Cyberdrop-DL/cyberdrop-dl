@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures import Resolution
@@ -11,31 +11,28 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://www.eporner.com/")
-
 
 class Selector:
-    DOWNLOADS = "div#hd-porn-dload > div.dloaddivcol"
+    _DOWNLOADS = "div#hd-porn-dload > div.dloaddivcol"
+    _H264 = "span.download-h264 > a"
+    _AV1 = "span.download-av1 > a"
+    FORMATS = f"{_DOWNLOADS} {_H264},{_DOWNLOADS} {_AV1}"
+
     PHOTO = "div#gridphoto > a.photohref"
     VIDEO = "div[id^='vf'] div.mbcontent a"
     NEXT_PAGE = "div.numlist2 a.nmnext"
-    H264 = "span.download-h264 > a"
-    AV1 = "span.download-av1 > a"
-    FORMATS = f"{H264}, {AV1}"
+
     PROFILE_GALLERY = "div[id^='pf'] a"
     PROFILE_PLAYLIST = "div.streameventsday.showAll > div#pl > a"
     DATE_JS = "main script:-soup-contains('uploadDate')"
     GALLERY_TITLE = "div#galleryheader > h1"
 
 
-ALLOW_AV1 = True
-PROFILE_URL_PARTS = {
+_PROFILE_URL_PARTS = {
     "pics": ("uploaded-pics", Selector.PROFILE_GALLERY),
     "videos": ("uploaded-videos", Selector.VIDEO),
     "playlists": ("playlists", Selector.PROFILE_PLAYLIST),
@@ -50,7 +47,7 @@ class Video:
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
-class VideoSource(NamedTuple):
+class VideoSource:
     resolution: Resolution
     codec: str  # h264 > av1
     size: str
@@ -77,7 +74,7 @@ class EpornerCrawler(Crawler):
         "Photo": "/photo/...",
         "Gallery": "/gallery/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.eporner.com/")
     DOMAIN: ClassVar[str] = "eporner"
     FOLDER_DOMAIN: ClassVar[str] = "ePorner"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
@@ -93,17 +90,16 @@ class EpornerCrawler(Crawler):
                 return await self.playlist(scrape_item)
             case ["gallery", *_]:
                 return await self.gallery(scrape_item)
-            case ["profile", *_]:
-                return await self.profile(scrape_item)
+            case ["profile", username, *_]:
+                return await self.profile(scrape_item, username)
             case ["photo", photo_id, *_]:
                 return await self.photo(scrape_item, photo_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem) -> None:
-        username = scrape_item.url.parts[2]
-        canonical_url = PRIMARY_URL / "profile" / username
+    async def profile(self, scrape_item: ScrapeItem, username: str) -> None:
+        canonical_url = self.PRIMARY_URL / "profile" / username
         if canonical_url in scrape_item.parents and "playlist" in scrape_item.url.parts:
             await self.playlist(scrape_item, from_profile=True)
 
@@ -111,13 +107,13 @@ class EpornerCrawler(Crawler):
         scrape_item.setup_as_profile(title)
 
         parts_to_scrape = {}
-        for name, parts in PROFILE_URL_PARTS.items():
+        for name, parts in _PROFILE_URL_PARTS.items():
             if any(p in scrape_item.url.parts for p in (name, parts[0])):
                 parts_to_scrape = {name: parts}
                 break
 
         scrape_item.url = canonical_url
-        parts_to_scrape = parts_to_scrape or PROFILE_URL_PARTS
+        parts_to_scrape = parts_to_scrape or _PROFILE_URL_PARTS
         for name, parts in parts_to_scrape.items():
             part, selector = parts
             url = canonical_url / part
@@ -158,7 +154,7 @@ class EpornerCrawler(Crawler):
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
-        canonical_url = PRIMARY_URL / "photo" / photo_id
+        canonical_url = self.PRIMARY_URL / "photo" / photo_id
         if await self.check_complete_from_referer(canonical_url):
             return
 
@@ -188,18 +184,16 @@ class EpornerCrawler(Crawler):
         # TODO: Force utf8 for soup
         video = _parse_video(soup)
         link = self.parse_url(video.best_src.url)
-        scrape_item.possible_datetime = self.parse_date(video.date)
-        filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(
-            video.title, ext, file_id=video_id, resolution=video.best_src.resolution
+        scrape_item.possible_datetime = self.parse_iso_date(video.date)
+        _, ext = self.get_filename_and_ext(link.name)
+        filename = self.create_custom_filename(
+            video.title,
+            ext,
+            file_id=video_id,
+            resolution=video.best_src.resolution,
+            video_codec=video.best_src.codec,
         )
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
-
-
-def _parse_formats(soup: BeautifulSoup) -> Generator[VideoSource]:
-    downloads = css.select(soup, Selector.DOWNLOADS)
-    for tag in downloads.select(Selector.FORMATS):
-        yield VideoSource.parse(tag)
+        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename)
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
@@ -207,8 +201,10 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/jbsparrow/CyberDropDownloader/issues/1211
 
+    formats = [VideoSource.parse(tag) for tag in css.select(soup, Selector.FORMATS)]
+
     return Video(
         title=get_text_between(ld_json, 'name": "', '",'),
         date=get_text_between(ld_json, 'uploadDate": "', '"'),
-        best_src=max(_parse_formats(soup)),
+        best_src=max(formats),
     )
