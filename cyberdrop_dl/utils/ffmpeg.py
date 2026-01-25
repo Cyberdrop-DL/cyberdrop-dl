@@ -185,6 +185,26 @@ def _get_bin_version(bin_path: str) -> str | None:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ FFprobe ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
+    if not duration:
+        return None
+
+    if isinstance(duration, (float, int)):
+        seconds = duration
+
+    else:
+        try:
+            *rest, seconds = duration.strip().split(":")
+
+            seconds = float(seconds)
+            for idx, value in enumerate(reversed(rest), 1):
+                seconds += int(value) * 60**idx
+        except (ValueError, TypeError):
+            return None
+
+    return TruncatedFloat(seconds)
+
+
 class StreamDict(TypedDict, total=False):
     index: Required[int]
     codec_type: Required[Literal["video", "audio", "subtitle"]]
@@ -214,14 +234,10 @@ class Stream:
     @classmethod
     def validate(cls, stream_info: StreamDict) -> dict[str, Any]:
         info = get_valid_dict(cls, stream_info)
-        bitrate = int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None
-        if duration := stream_info.get("duration") or None:
-            try:
-                duration = TruncatedFloat(duration)
-            except (ValueError, TypeError):
-                pass
-
-        return info | {"duration": duration, "bitrate": bitrate}
+        return info | {
+            "duration": _parse_duration(stream_info.get("duration")),
+            "bitrate": int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None,
+        }
 
     @classmethod
     def from_dict(cls, stream_info: StreamDict) -> Self:
@@ -274,15 +290,11 @@ class Format:
 
     @classmethod
     def from_dict(cls, format_info: dict[str, Any]) -> Self:
-        bitrate = int(format_info.get("bitrate") or format_info.get("bit_rate") or 0) or None
-        if duration := format_info.get("duration") or None:
-            try:
-                duration = TruncatedFloat(duration)
-            except (ValueError, TypeError):
-                pass
-
-        size = int(float(format_info.get("size") or 0)) or None
-        return cls(size=size, duration=duration, bitrate=bitrate)
+        return cls(
+            size=int(float(format_info.get("size") or 0)) or None,
+            duration=_parse_duration(format_info.get("duration")),
+            bitrate=int(format_info.get("bitrate") or format_info.get("bit_rate") or 0) or None,
+        )
 
 
 @dataclass(frozen=True, slots=True)

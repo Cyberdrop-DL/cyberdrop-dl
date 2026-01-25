@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 from cyberdrop_dl.data_structures import AbsoluteHttpURL
@@ -25,3 +27,31 @@ async def test_ffprobe_video_url() -> None:
     assert output.format.bitrate == 4_019_301
     assert output.format.duration == 10.5105
     assert output.format.size == 5_280_609
+
+
+@pytest.mark.parametrize(
+    "input, hours, minutes, seconds",
+    [
+        # zero
+        ("0", 0, 0, 0.0),
+        ("0:00", 0, 0, 0.0),
+        ("00:00:00", 0, 0, 0.0),
+        # numbers
+        (42.5, 0, 0, 42.5),
+        (123, 0, 0, 123.0),
+        # minutes:seconds
+        ("3:30", 0, 3, 30.0),
+        ("10:07.25", 0, 10, 7.25),
+        ("00:00:30.000000000", 0, 0, 30),
+        # hours:minutes:seconds
+        ("00:08:37.503", 0, 8, 37.503),
+        ("1:23:45.6", 1, 23, 45.6),
+        ("99:59:59.999", 99, 59, 59.999),
+        # 60+ seconds
+        ("0:0:120.5", 0, 2, 0.5),
+    ],
+)
+def test_parse_duration(input: str, hours: float, minutes: float, seconds: float) -> None:
+    output = ffmpeg._parse_duration(input)
+    expected = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()
+    assert output == expected
