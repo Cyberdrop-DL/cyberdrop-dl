@@ -226,21 +226,18 @@ class TruncatedFloat(float):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Stream:
     index: int
-    codec_name: str
+    codec: str
     codec_type: str
     bitrate: int | None
     duration: TruncatedFloat | None
     tags: Tags
-
-    @property
-    def codec(self) -> str:
-        return self.codec_name
 
     @classmethod
     def validate(cls, stream_info: StreamDict) -> dict[str, Any]:
         info = get_valid_dict(cls, stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         return info | {
+            "codec": info["codec_name"],
             "duration": _parse_duration(stream_info.get("duration") or tags.get("duration")),
             "bitrate": int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None,
             "tags": tags,

@@ -195,7 +195,7 @@ class Sorter:
                 width = video.width
                 height = video.height
                 resolution = video.resolution
-                codec = video.codec_name
+                codec = video.codec
                 duration = video.duration or probe_output.format.duration
                 framerate = video.fps
 
