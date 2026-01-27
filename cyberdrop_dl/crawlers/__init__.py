@@ -16,6 +16,7 @@ from .bunkrr_albums_io import BunkrAlbumsIOCrawler
 from .buzzheavier import BuzzHeavierCrawler
 from .camwhores_dot_tv import CamwhoresTVCrawler
 from .catbox import CatboxCrawler
+from .cloud_mail_ru import CloudMailRuCrawler
 from .cloudflare_stream import CloudflareStreamCrawler
 from .coomer import CoomerCrawler
 from .crawler import Crawler
