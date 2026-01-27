@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class CloudMailRuCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Public files": "/public/<web_path>"}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Public files / folders": "/public/<web_path>"}
     DOMAIN: ClassVar[str] = "cloud.mail.ru"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cloud.mail.ru")
@@ -25,7 +25,18 @@ class CloudMailRuCrawler(Crawler):
             case _:
                 raise ValueError
 
-    async def _get_dl_link(self, path: str) -> AbsoluteHttpURL:
+    async def _request_info(self, path: str) -> dict[str, Any]:
+        api_url = (self.PRIMARY_URL / "api/v4/public/list").with_query(
+            weblink=path,
+            sort="name",
+            order="asc",
+            offset=0,
+            limit=500,
+            version=4,
+        )
+        return await self.request_json(api_url)
+
+    async def _get_dl_server(self, path: str) -> AbsoluteHttpURL:
         web_url = self.PRIMARY_URL / "public" / path
         html = await self.request_text(
             web_url,
@@ -35,42 +46,48 @@ class CloudMailRuCrawler(Crawler):
         return self.parse_url(json.loads(data + "}")["url"])
 
     async def public(self, scrape_item: ScrapeItem, path: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        node = await self._request_info(path)
+        is_file = node["type"] == "file"
+
+        if is_file and await self.check_complete_from_referer(scrape_item):
             return
 
-        api_url = (self.PRIMARY_URL / "api/v4/public/list").with_query(
-            weblink=path,
-            sort="name",
-            order="asc",
-            offset=0,
-            limit=500,
-            version=4,
-        )
-        node = await self.request_json(api_url)
-        node["_weblink_get"] = await self._get_dl_link(path)
-        if node["type"] == "file":
+        node["_dl_server"] = await self._get_dl_server(path)
+        if is_file:
             return await self._file(scrape_item, node)
 
-        await self._folder(scrape_item, node)
+        title = self.create_title(node["name"])
+        scrape_item.setup_as_album(title, album_id=node["weblink"])
+        await self._walk_folder(scrape_item, node)
 
-    async def _folder(self, scrape_item: ScrapeItem, folder: dict[str, Any]) -> None:
-        title = self.create_title(folder["name"])
-        scrape_item.setup_as_album(title, album_id=folder["weblink"])
+    async def _walk_folder(self, scrape_item: ScrapeItem, root: dict[str, Any]) -> None:
+        folder = root
+        subfolders: list[str] = []
 
-        for file in folder["list"]:
-            web_url = self.PRIMARY_URL / "public" / file["weblink"]
-            new_item = scrape_item.create_child(web_url)
-            file["_weblink_get"] = folder["_weblink_get"]
+        while True:
+            for node in folder["list"]:
+                if node["type"] == "file":
+                    web_url = self.PRIMARY_URL / "public" / node["weblink"]
+                    new_item = scrape_item.create_child(web_url)
+                    node["_dl_server"] = root["_dl_server"]
+                    self.create_task(self._file(new_item, node))
+                    scrape_item.add_children()
 
-            for part in file["weblink"].split("/")[2:-1]:
-                new_item.add_to_parent_title(part)
+                elif (node["count"]["files"] + node["count"]["folders"]) > 0:
+                    subfolders.append(node["weblink"])
 
-            self.create_task(self._file(new_item, file))
-            scrape_item.add_children()
+            try:
+                path = subfolders.pop()
+                folder = await self._request_info(path)
+            except IndexError:
+                break
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: dict[str, Any]) -> None:
-        dl_link = file["_weblink_get"] / file["weblink"]
+        for part in file["weblink"].split("/")[2:-1]:
+            scrape_item.add_to_parent_title(part)
+
+        dl_link = file["_dl_server"] / file["weblink"]
         filename, ext = self.get_filename_and_ext(file["name"])
         scrape_item.possible_datetime = file["mtime"]
         await self.handle_file(
