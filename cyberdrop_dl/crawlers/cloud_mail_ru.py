@@ -15,7 +15,6 @@ class CloudMailRuCrawler(Crawler):
     DOMAIN: ClassVar[str] = "cloud.mail.ru"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cloud.mail.ru")
-    SKIP_PRE_CHECK: ClassVar[bool] = True
 
     dispacher_server: AbsoluteHttpURL
 
@@ -26,9 +25,21 @@ class CloudMailRuCrawler(Crawler):
             case _:
                 raise ValueError
 
+    async def async_startup(self) -> None:
+        await self._get_dispacher_server(self.PRIMARY_URL)
+
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         return super().transform_url(url).with_query(None)
+
+    @error_handling_wrapper
+    async def _get_dispacher_server(self, _) -> None:
+        with self.disable_on_error("Unable to get download server url (weblink_get)"):
+            expires_after = 86_400  # 24hrs
+            # v4 requires auth, v3 does not
+            api_url = (self.PRIMARY_URL / "api/v3/dispatcher").with_query(api=3, _=expires_after)
+            resp = await self.request_json(api_url)
+            self.dispacher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
 
     async def _request_info(self, path: str) -> dict[str, Any]:
         api_url = (self.PRIMARY_URL / "api/v4/public/list").with_query(
@@ -40,18 +51,6 @@ class CloudMailRuCrawler(Crawler):
             version=4,
         )
         return await self.request_json(api_url)
-
-    async def async_startup(self) -> None:
-        await self._get_dispacher_server(self.PRIMARY_URL)
-
-    @error_handling_wrapper
-    async def _get_dispacher_server(self, _) -> None:
-        with self.disable_on_error("Unable to get download server url (weblink_get)"):
-            expires_after = 86_400  # 24hrs
-            # v4 requires auth, v3 does not
-            api_url = (self.PRIMARY_URL / "api/v3/dispatcher").with_query(api=3, _=expires_after)
-            resp = await self.request_json(api_url)
-            self.dispacher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
 
     @error_handling_wrapper
     async def public(self, scrape_item: ScrapeItem, path: str) -> None:
