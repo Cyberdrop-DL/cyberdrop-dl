@@ -46,13 +46,10 @@ class TwitterCrawler(Crawler):
         await self.write_metadata(scrape_item, tweet["id"], tweet)
 
         for media in tweet["media"]["all"]:
-            source = self.parse_url(_best_source(media))
+            if media["type"] == "video":
+                media = max(media["formats"], key=lambda f: f.get("bitrate", 0))
+
+            source = self.parse_url(media["url"])
             new_item = scrape_item.create_child(source)
             self.handle_external_links(new_item, reset=False)
             scrape_item.add_children()
-
-
-def _best_source(media: dict[str, Any]) -> str:
-    if media["type"] == "video":
-        media = max(media["formats"], key=lambda f: f.get("bitrate", 0))
-    return media["url"]
