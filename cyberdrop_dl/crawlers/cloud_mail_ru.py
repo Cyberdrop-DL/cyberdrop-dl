@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils.utilities import error_handling_wrapper, get_text_between
+from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
@@ -17,6 +16,8 @@ class CloudMailRuCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cloud.mail.ru")
     SKIP_PRE_CHECK: ClassVar[bool] = True
+
+    dispacher_server: AbsoluteHttpURL
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -40,15 +41,19 @@ class CloudMailRuCrawler(Crawler):
         )
         return await self.request_json(api_url)
 
-    async def _get_dl_server(self, path: str) -> AbsoluteHttpURL:
-        web_url = self.PRIMARY_URL / "public" / path
-        html = await self.request_text(
-            web_url,
-            max_field_size=15_000,  # They send a really long header value for "Content-Security-Policy-Report-Only"
-        )
-        data = get_text_between(html, '"weblink_get":', "},")
-        return self.parse_url(json.loads(data + "}")["url"])
+    async def async_startup(self) -> None:
+        await self._get_dispacher_server(self.PRIMARY_URL)
 
+    @error_handling_wrapper
+    async def _get_dispacher_server(self, _) -> None:
+        with self.disable_on_error("Unable to get download server url (weblink_get)"):
+            expires_after = 86_400  # 24hrs
+            # v4 requires auth, v3 does not
+            api_url = (self.PRIMARY_URL / "api/v3/dispatcher").with_query(api=3, _=expires_after)
+            resp = await self.request_json(api_url)
+            self.dispacher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
+
+    @error_handling_wrapper
     async def public(self, scrape_item: ScrapeItem, path: str) -> None:
         node = await self._request_info(path)
         is_file = node["type"] == "file"
@@ -56,7 +61,6 @@ class CloudMailRuCrawler(Crawler):
         if is_file and await self.check_complete_from_referer(scrape_item):
             return
 
-        node["_dl_server"] = await self._get_dl_server(path)
         if is_file:
             return await self._file(scrape_item, node)
 
@@ -73,7 +77,6 @@ class CloudMailRuCrawler(Crawler):
                 if node["type"] == "file":
                     web_url = self.PRIMARY_URL / "public" / node["weblink"]
                     new_item = scrape_item.create_child(web_url)
-                    node["_dl_server"] = root["_dl_server"]
                     self.create_task(self._file(new_item, node))
                     scrape_item.add_children()
 
@@ -91,7 +94,7 @@ class CloudMailRuCrawler(Crawler):
         for part in file["weblink"].split("/")[2:-1]:
             scrape_item.add_to_parent_title(part)
 
-        dl_link = file["_dl_server"] / file["weblink"]
+        dl_link = self.dispacher_server / file["weblink"]
         filename, ext = self.get_filename_and_ext(file["name"])
         scrape_item.possible_datetime = file["mtime"]
         await self.handle_file(
