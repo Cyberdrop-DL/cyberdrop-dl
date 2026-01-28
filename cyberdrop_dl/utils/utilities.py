@@ -211,7 +211,7 @@ def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | No
     filename_as_path = Path(clean_filename)
     ext = ext = filename_as_path.suffix or (mimetypes.guess_extension(mime_type) if mime_type else None)
     if not ext:
-        raise NoExtensionError
+        raise NoExtensionError(filename)
 
     filename_as_path = filename_as_path.with_suffix(ext)
 
@@ -220,11 +220,14 @@ def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | No
         name, ext = filename_as_path.name.rsplit("-", 1)
         ext = ext.rsplit(".")[0]
         ext_w_dot = f".{ext}".lower()
+        full_name = f"{name}.{ext}"
         if ext_w_dot not in constants.MEDIA_EXTENSIONS:
-            raise InvalidExtensionError
-        filename_as_path = Path(f"{name}.{ext}")
+            raise InvalidExtensionError(full_name)
+
+        filename_as_path = Path(full_name)
+
     if len(filename_as_path.suffix) > 5:
-        raise InvalidExtensionError
+        raise InvalidExtensionError(str(filename_as_path))
 
     filename_as_path = filename_as_path.with_suffix(filename_as_path.suffix.lower())
     filename_as_str = truncate_str(filename_as_path.stem.removesuffix(".")) + filename_as_path.suffix
