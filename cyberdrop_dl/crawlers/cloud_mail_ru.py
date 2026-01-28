@@ -55,12 +55,10 @@ class CloudMailRuCrawler(Crawler):
     @error_handling_wrapper
     async def public(self, scrape_item: ScrapeItem, path: str) -> None:
         node = await self._request_info(path)
-        is_file = node["type"] == "file"
+        if node["type"] == "file":
+            if await self.check_complete_from_referer(scrape_item):
+                return
 
-        if is_file and await self.check_complete_from_referer(scrape_item):
-            return
-
-        if is_file:
             return await self._file(scrape_item, node)
 
         title = self.create_title(node["name"])
