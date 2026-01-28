@@ -35,9 +35,8 @@ class CloudMailRuCrawler(Crawler):
     @error_handling_wrapper
     async def _get_dispacher_server(self, _) -> None:
         with self.disable_on_error("Unable to get download server url (weblink_get)"):
-            expires_after = 86_400  # 24hrs
             # v4 requires auth, v3 does not
-            api_url = (self.PRIMARY_URL / "api/v3/dispatcher").with_query(api=3, _=expires_after)
+            api_url = self.PRIMARY_URL / "api/v3/dispatcher"
             resp = await self.request_json(api_url)
             self.dispatcher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
 
