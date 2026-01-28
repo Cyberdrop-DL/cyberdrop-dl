@@ -209,13 +209,13 @@ def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | No
     """Returns the filename and extension of a given file, throws `NoExtensionError` if there is no extension."""
     clean_filename = Path(filename).as_posix().replace("/", "-")  # remove OS separators
     filename_as_path = Path(clean_filename)
-    ext = ext = filename_as_path.suffix or (mimetypes.guess_extension(mime_type) if mime_type else None)
+    ext = filename_as_path.suffix or (mimetypes.guess_extension(mime_type) if mime_type else None)
     if not ext:
         raise NoExtensionError(filename)
 
     filename_as_path = filename_as_path.with_suffix(ext)
 
-    ext_no_dot = filename_as_path.suffix.split(".")[1]
+    ext_no_dot = filename_as_path.suffix.split(".", 1)[-1]
     if ext_no_dot.isdigit() and forum and "-" in filename:
         name, ext = filename_as_path.name.rsplit("-", 1)
         ext = ext.rsplit(".")[0]
@@ -230,7 +230,7 @@ def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | No
         raise InvalidExtensionError(str(filename_as_path))
 
     filename_as_path = filename_as_path.with_suffix(filename_as_path.suffix.lower())
-    filename_as_str = truncate_str(filename_as_path.stem.removesuffix(".")) + filename_as_path.suffix
+    filename_as_str = truncate_str(filename_as_path.stem) + filename_as_path.suffix
     filename_as_path = Path(sanitize_filename(filename_as_str))
     filename_as_path = Path(filename_as_path.stem.strip() + filename_as_path.suffix)
     return filename_as_path.name, filename_as_path.suffix
