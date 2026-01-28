@@ -5,6 +5,7 @@ import dataclasses
 import functools
 import inspect
 import itertools
+import mimetypes
 import os
 import platform
 import re
@@ -204,12 +205,16 @@ def truncate_str(text: str, max_length: int = 0) -> str:
     return text.strip()
 
 
-def get_filename_and_ext(filename: str, forum: bool = False) -> tuple[str, str]:
+def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | None = None) -> tuple[str, str]:
     """Returns the filename and extension of a given file, throws `NoExtensionError` if there is no extension."""
     clean_filename = Path(filename).as_posix().replace("/", "-")  # remove OS separators
     filename_as_path = Path(clean_filename)
-    if not filename_as_path.suffix:
+    ext = ext = filename_as_path.suffix or (mimetypes.guess_extension(mime_type) if mime_type else None)
+    if not ext:
         raise NoExtensionError
+
+    filename_as_path = filename_as_path.with_suffix(ext)
+
     ext_no_dot = filename_as_path.suffix.split(".")[1]
     if ext_no_dot.isdigit() and forum and "-" in filename:
         name, ext = filename_as_path.name.rsplit("-", 1)

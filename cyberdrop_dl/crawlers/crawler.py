@@ -550,17 +550,17 @@ class Crawler(ABC):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def get_filename_and_ext(
-        self, filename: str, forum: bool = False, assume_ext: str | None = None
+        self, filename: str, forum: bool = False, assume_ext: str | None = ".mp4", *, mime_type: str | None = None
     ) -> tuple[str, str]:
         """Wrapper around `utils.get_filename_and_ext`.
         Calls it as is.
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, forum)
+            return get_filename_and_ext(filename, forum, mime_type)
         except NoExtensionError:
-            if assume_ext and self.allow_no_extension:
-                return get_filename_and_ext(filename + assume_ext, forum)
+            if self.allow_no_extension and assume_ext:
+                return get_filename_and_ext(filename + assume_ext, forum, mime_type)
             raise
 
     def check_album_results(self, url: URL, album_results: dict[str, Any]) -> bool:
