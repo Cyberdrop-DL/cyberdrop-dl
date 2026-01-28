@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import mimetypes
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import BaseModel
 
@@ -73,7 +73,16 @@ class FileSystem(BaseModel):
 
 
 class PixelDrainCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "pixeldrain.net", "pixeldrain.com", "pixeldra.in", *_BYPASS_HOSTS
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "pixeldrain.com",
+        "pixeldrain.net",
+        "pixeldra.in",
+        "pixeldrain.nl",
+        "pixeldrain.biz",
+        "pixeldrain.tech",
+        "pixeldrain.dev",
+        *_BYPASS_HOSTS,
+    )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
             "/u/<file_id>",
@@ -105,7 +114,7 @@ class PixelDrainCrawler(Crawler):
             )
 
     @classmethod
-    def _json_response_check(cls, json_resp: dict) -> None:
+    def _json_response_check(cls, json_resp: dict[str, Any]) -> None:
         # TODO: pass the resp obj to the json check functions
         return
         if not json_resp["success"]:
