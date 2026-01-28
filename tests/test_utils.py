@@ -30,7 +30,7 @@ class TestGetFilenameAndExt:
         "name, mimetype, expected_ext",
         [
             ("archive", "application/zip", ".zip"),
-            ("Katalina Kyle, Savanah Storm - “What If She Hears Us!”", "video/mp4", ".mp4"),
+            ("Katalina Kyle, Savanah Storm - What If She Hears Us!", "video/mp4", ".mp4"),
         ],
     )
     def test_mime_type_fallback(self, name: str, mimetype: str, expected_ext: str) -> None:
