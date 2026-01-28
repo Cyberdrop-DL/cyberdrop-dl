@@ -25,6 +25,10 @@ class CloudMailRuCrawler(Crawler):
             case _:
                 raise ValueError
 
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        return super().transform_url(url).with_query(None)
+
     async def _request_info(self, path: str) -> dict[str, Any]:
         api_url = (self.PRIMARY_URL / "api/v4/public/list").with_query(
             weblink=path,
