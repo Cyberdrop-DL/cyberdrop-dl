@@ -16,7 +16,7 @@ class CloudMailRuCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cloud.mail.ru")
 
-    dispacher_server: AbsoluteHttpURL
+    dispatcher_server: AbsoluteHttpURL
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -39,7 +39,7 @@ class CloudMailRuCrawler(Crawler):
             # v4 requires auth, v3 does not
             api_url = (self.PRIMARY_URL / "api/v3/dispatcher").with_query(api=3, _=expires_after)
             resp = await self.request_json(api_url)
-            self.dispacher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
+            self.dispatcher_server = self.parse_url(resp["body"]["weblink_get"][0]["url"])
 
     async def _request_info(self, path: str) -> dict[str, Any]:
         api_url = (self.PRIMARY_URL / "api/v4/public/list").with_query(
@@ -93,7 +93,7 @@ class CloudMailRuCrawler(Crawler):
         for part in file["weblink"].split("/")[2:-1]:
             scrape_item.add_to_parent_title(part)
 
-        dl_link = self.dispacher_server / file["weblink"]
+        dl_link = self.dispatcher_server / file["weblink"]
         filename, ext = self.get_filename_and_ext(file["name"])
         scrape_item.possible_datetime = file["mtime"]
         await self.handle_file(
