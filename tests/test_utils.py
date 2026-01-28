@@ -41,6 +41,11 @@ class TestGetFilenameAndExt:
         "name, expected_name, expected_ext",
         [
             ("Vídeo de verificación [uvfdtpm4c2a]/video.MP4", "Vídeo de verificación [uvfdtpm4c2a]-video.mp4", ".mp4"),
+            (
+                "Katalina Kyle, Savanah Storm - “What If She Hears Us! 🍕”.mp4",
+                "Katalina Kyle, Savanah Storm - “What If She Hears Us! 🍕”.mp4",
+                ".mp4",
+            ),
         ],
     )
     def test_complex_name(self, name: str, expected_name: str, expected_ext: str) -> None:
