@@ -335,7 +335,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         self.update_cookies({"session": ""})
 
         for item in resp:
-            url = self.PRIMARY_URL / item["service"] / "user" / (item.get("user") or ["name"])
+            url = self.PRIMARY_URL / item["service"] / "user" / (item.get("user") or item["name"])
             if type_ == "post":
                 url = url / "post" / item["id"]
 
