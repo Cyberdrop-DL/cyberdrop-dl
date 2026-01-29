@@ -35,7 +35,6 @@ class CyberdropCrawler(Crawler):
     DOMAIN: ClassVar[str] = "cyberdrop"
     OLD_DOMAINS = ("cyberdrop.me", "cyberdrop.to")
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 5, 1
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
