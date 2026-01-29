@@ -1186,17 +1186,6 @@ files = [
 ]
 
 [[package]]
-name = "get-video-properties"
-version = "0.1.1"
-description = "Get video properties"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "get_video_properties-0.1.1-py3-none-any.whl", hash = "sha256:04d4f478a5211917e2a7e87ddfcb1c17734cddf8374494c3993bf825b7ad4192"},
-]
-
-[[package]]
 name = "identify"
 version = "2.6.16"
 description = "File identification library for Python"
@@ -3067,4 +3056,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "3e29a6a0f9cea39203d65bca7ebafff49758de494c8fa3d59386b1f3513e645e"
+content-hash = "c5ccc6e30d6b7c1e170ee8308b41c269468660badcc4dc49630c291495a62721"

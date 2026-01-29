@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, Type
 import aiofiles
 import aiofiles.os
 from multidict import CIMultiDict, CIMultiDictProxy
-from videoprops import which_ffprobe as _builtin_ffprobe
 from yarl import URL
 
 from cyberdrop_dl.utils.logger import log_debug
@@ -45,6 +44,10 @@ _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 def check_is_available() -> None:
     if not get_ffmpeg_version():
         raise RuntimeError("ffmpeg is not available")
+    _check_ffprobe()
+
+
+def _check_ffprobe():
     if not get_ffprobe_version():
         raise RuntimeError("ffprobe is not available")
 
@@ -56,10 +59,7 @@ def which_ffmpeg() -> str | None:
 
 @functools.cache
 def which_ffprobe() -> str | None:
-    try:
-        return shutil.which("ffprobe") or _builtin_ffprobe()
-    except RuntimeError:
-        return
+    return shutil.which("ffprobe")
 
 
 @functools.cache
@@ -105,7 +105,7 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert which_ffprobe()
+    _check_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 

@@ -53,4 +53,16 @@ TEST_CASES = [
             {"url": "https://i.imgur.com/7Em9NEr.jpeg"},
         ],
     ),
+    (
+        "https://imgur.com/download/rKn1KVv",
+        [
+            {
+                "url": "https://i.imgur.com/rKn1KVv.mp4",
+                "referer": "https://imgur.com/rKn1KVv",
+                "download_folder": "re:Loose Files (Imgur)",
+                "filename": "rKn1KVv.mp4",
+                "album_id": None,
+            }
+        ],
+    ),
 ]

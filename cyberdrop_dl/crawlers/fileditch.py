@@ -11,7 +11,7 @@ from cyberdrop_dl.utils.utilities import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
 
-DOWNLOAD_SELECTOR = "a[class*='btn-download']"
+DOWNLOAD_SELECTOR = 'a.btn[href*="md5="]'
 HOMEPAGE_CATCHALL_FILE = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 PRIMARY_URL = AbsoluteHttpURL("https://fileditchfiles.me/")
