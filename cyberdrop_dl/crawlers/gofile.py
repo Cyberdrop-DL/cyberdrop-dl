@@ -208,10 +208,9 @@ class GoFileCrawler(Crawler):
         if file.get("isFrozen"):
             self.log(f"{link} is marked as frozen, download may fail", 30)
 
-        name = file["name"]
-        filename, ext = self.get_filename_and_ext(name, assume_ext=".mp4")
+        filename, ext = self.get_filename_and_ext(file["name"], mime_type=file.get("mimetype"))
         scrape_item.possible_datetime = file["createTime"]
-        await self.handle_file(link, scrape_item, name, ext, custom_filename=filename, metadata=file)
+        await self.handle_file(link, scrape_item, file["name"], ext, custom_filename=filename, metadata=file)
 
     @error_handling_wrapper
     async def _get_credentials(self, _) -> None:

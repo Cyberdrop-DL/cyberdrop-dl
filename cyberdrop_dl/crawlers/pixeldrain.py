@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import mimetypes
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from pydantic import BaseModel
@@ -10,7 +9,6 @@ from pydantic import BaseModel
 from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import NoExtensionError
 from cyberdrop_dl.utils.utilities import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -254,15 +252,7 @@ class PixelDrainCrawler(Crawler):
         if "text/plain" in file.mime_type:
             return await self._text(scrape_item, file)
 
-        try:
-            filename, ext = self.get_filename_and_ext(file.name)
-        except NoExtensionError:
-            ext = mimetypes.guess_extension(file.mime_type)
-            if not ext:
-                raise
-
-            filename, ext = self.get_filename_and_ext(f"{file.name}{ext}")
-
+        filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.possible_datetime = self.parse_iso_date(file.date_upload)
         await self.handle_file(link, scrape_item, file.name, ext, debrid_link=debrid_link, custom_filename=filename)
 
