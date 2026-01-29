@@ -127,6 +127,7 @@ from .transflix import TransflixCrawler
 from .tubepornclassic import TubePornClassicCrawler
 from .turbovid import TurboVidCrawler
 from .twitch import TwitchCrawler
+from .twitter import TwitterCrawler
 from .twitter_images import TwimgCrawler
 from .twpornstars import TwPornstarsCrawler
 from .txxx import TXXXCrawler
@@ -156,7 +157,7 @@ ALL_CRAWLERS: set[type[Crawler]] = {
     crawler for name, crawler in globals().items() if name.endswith("Crawler") and crawler is not Crawler
 }
 ALL_CRAWLERS.update(WP_CRAWLERS, GENERIC_CRAWLERS, FORUM_CRAWLERS)
-DEBUG_CRAWLERS = {SimpCityCrawler}
+DEBUG_CRAWLERS = {SimpCityCrawler, TwitterCrawler}
 if env.ENABLE_DEBUG_CRAWLERS == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda":
     CRAWLERS = ALL_CRAWLERS
 else:
