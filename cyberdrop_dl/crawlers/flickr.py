@@ -27,7 +27,8 @@ class FlickrCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["photos", _, "albums", photoset_id, *_]:
                 return await self.photoset(scrape_item, photoset_id)
-            case ["photos", _, photo_id, *_]:
+            case ["photos", user, photo_id, *_]:
+                scrape_item.url = scrape_item.url.origin() / "photos" / user / photo_id
                 return await self.photo(scrape_item, photo_id)
             case _:
                 raise ValueError

@@ -1,0 +1,18 @@
+DOMAIN = "flickr"
+TEST_CASES = [
+    (
+        "https://www.flickr.com/photos/jillblack33/42279501790/in/photolist-27q6uTq-64djfR-bFAauM-79mSQe-294ixC3-s1Ltu4-MaSsV-4CUE8Q-4Rkr8R-QtkbP-aD588-2wyM-2mB9CCC-6AS9fc-7gdV1m-5TjWGC-5TfCwR-3y72Tr-48JHn-nemFJ-9dCzq1-MU2AYb-ctYWi",
+        [
+            {
+                "url": "https://live.staticflickr.com/1779/42279501790_b008687536_o.png",
+                "filename": "LONE SURVIVOR [42279501790].png",
+                "debrid_link": None,
+                "original_filename": "LONE SURVIVOR",
+                "referer": "https://www.flickr.com/photos/jillblack33/42279501790",
+                "album_id": None,
+                "datetime": 1534502481,
+                "download_folder": "re:Loose Files (Flickr)",
+            }
+        ],
+    )
+]
