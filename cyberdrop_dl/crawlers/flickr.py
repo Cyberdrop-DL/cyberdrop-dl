@@ -25,29 +25,32 @@ class FlickrCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["photos", _, "albums", photoset_id, *_]:
-                return await self.photoset(scrape_item, photoset_id)
+            case ["photos", user, "albums", photoset_id, *_]:
+                return await self.photoset(scrape_item, user, photoset_id)
             case ["photos", user, photo_id, *_]:
-                scrape_item.url = scrape_item.url.origin() / "photos" / user / photo_id
+                scrape_item.url = self.PRIMARY_URL / "photos" / user / photo_id
                 return await self.photo(scrape_item, photo_id)
             case _:
                 raise ValueError
 
     async def async_startup(self) -> None:
         self.api: FlickrAPI = FlickrAPI(self)
-        await self.api.get_api_key()
+        await self.api.get_site_key()
 
     @error_handling_wrapper
-    async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
+    async def photoset(self, scrape_item: ScrapeItem, user: str, photoset_id: str) -> None:
         title: str = ""
-        async for page in self.api.photoset(photoset_id):
+        async for data in self.api.photoset(photoset_id):
+            photos: list[dict[str, Any]] = data.pop("photo")
+
             if not title:
-                name: str = page["title"]["_content"]
+                name: str = data["title"]
                 title = self.create_title(name, photoset_id)
                 scrape_item.setup_as_album(title, album_id=photoset_id)
+                await self.write_metadata(scrape_item, photoset_id, data)
 
-            for photo in page["photo"]:
-                web_url = scrape_item.url / photo["id"]
+            for photo in photos:
+                web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
                 new_scrape_item = scrape_item.create_child(web_url)
                 self.create_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
@@ -62,7 +65,7 @@ class FlickrCrawler(Crawler):
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: dict[str, Any]) -> None:
         scrape_item.possible_datetime = int(photo.get("dateuploaded") or photo["dateupload"])
-        name: str = photo["title"]["_content"] or photo["media"]
+        name: str = photo["title"] or photo["media"]
         source = await self._get_source(photo)
         filename = self.create_custom_filename(name, source.suffix, file_id=photo["id"])
         await self.handle_file(
@@ -92,7 +95,7 @@ class FlickrAPI:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(api_key={self.api_key!r})"
 
-    async def get_api_key(self) -> None:
+    async def get_site_key(self) -> None:
         prints = self._crawler.PRIMARY_URL / "prints"
         with (
             error_handling_context(self._crawler, prints),
