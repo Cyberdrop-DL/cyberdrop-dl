@@ -16,6 +16,21 @@ TEST_CASES = [
         ],
     ),
     (
+        "https://www.flickr.com/photos/soniaadammurray/52448052841",
+        [
+            {
+                "url": "re:https://live.staticflickr.com/video/52448052841/e96cd3ae34/1080p.mp4",
+                "filename": "Happy Birthday, to My Wonderful, Husband, Gerry [52448052841].mp4",
+                "debrid_link": None,
+                "original_filename": "Happy Birthday, to My Wonderful, Husband, Gerry",
+                "referer": "https://www.flickr.com/photos/soniaadammurray/52448052841",
+                "album_id": None,
+                "datetime": 1666536987,
+                "download_folder": "re:Loose Files (Flickr)",
+            }
+        ],
+    ),
+    (
         "https://www.flickr.com/photos/bour3/albums/72157641382742025",
         [
             {
