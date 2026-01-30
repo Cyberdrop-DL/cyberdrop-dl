@@ -32,9 +32,9 @@ class FlickrCrawler(Crawler):
             case _:
                 raise ValueError
 
-    async def async_starup(self) -> None:
+    async def async_startup(self) -> None:
         self.api: FlickrAPI = FlickrAPI(self)
-        await error_handling_wrapper(self.api.get_api_key)(self.PRIMARY_URL)
+        await self.api.get_api_key()
 
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
@@ -117,21 +117,12 @@ class FlickrAPI:
         return resp["photo"]
 
     async def photo_source(self, photo_id: str) -> AbsoluteHttpURL:
-        sizes: list[dict[str, str]] = (
-            await self._request(
-                "photos.getSizes",
-                photo_id=photo_id,
-            )
-        )["sizes"]["size"]
-        best = sizes[-1]["source"]
-        return self._crawler.parse_url(best)
+        resp = await self._request("photos.getSizes", photo_id=photo_id)
+        best_src = resp["sizes"]["size"][-1]["source"]
+        return self._crawler.parse_url(best_src)
 
     async def video_source(self, video_id: str, secret: str) -> AbsoluteHttpURL:
-        resp = await self._request(
-            "video.getStreamInfo",
-            photo_id=video_id,
-            secret=secret,
-        )
+        resp = await self._request("video.getStreamInfo", photo_id=video_id, secret=secret)
 
         def parse_resolution(stream_name: str) -> Resolution:
             if stream_name == "orig":
