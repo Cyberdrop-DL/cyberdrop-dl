@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.database import Database
 
 
-CURRENT_APP_SCHEMA_VERSION = "8.7.0"
+CURRENT_APP_SCHEMA_VERSION = "8.10.0"
 
 
 class SchemaVersionTable:

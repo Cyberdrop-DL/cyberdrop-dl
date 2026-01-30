@@ -1,4 +1,4 @@
-"""Loads external packages dinamically from their metadata
+"""Loads external packages dynamically from their metadata
 
 Packages need to specify an entrypoint in their metadata as "cyberdrop_dl_plugins".
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import mimetypes
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -88,10 +87,8 @@ class GooglePhotosCrawler(Crawler):
         scrape_item.possible_datetime = image.date
 
         async with self.request(link) as resp:
-            ext = mimetypes.guess_extension(resp.content_type)
+            filename, ext = self.get_filename_and_ext(image.id, mime_type=resp.content_type)
 
-        assert ext
-        filename, ext = self.get_filename_and_ext(image.id + ext)
         custom_filename = f"{str(idx).zfill(3)} - {filename}"
         await self.handle_file(
             scrape_item.url,

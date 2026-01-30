@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Final
 from aiohttp.resolver import AsyncResolver, ThreadedResolver
 from rich.text import Text
 
+from cyberdrop_dl import env
 from cyberdrop_dl.compat import Enum, StrEnum
 
 if TYPE_CHECKING:
@@ -63,7 +64,6 @@ class TempExt(StrEnum):
 class BlockedDomains:
     partial_match = (
         "facebook",
-        "twitter.com",
         "instagram",
         "fbcdn",
         "gfycat",
@@ -77,9 +77,13 @@ class BlockedDomains:
         "beacons.page",
         "beacons.ai",
         "allmylinks.com",
-        ".x.com",
     )
-    exact_match = ("x.com",)
+
+    exact_match = ()
+
+    if not env.ENABLE_TWITTER:
+        partial_match = *partial_match, "twitter.com", ".x.com"
+        exact_match = *exact_match, "x.com"
 
 
 DEFAULT_APP_STORAGE = Path("./AppData")

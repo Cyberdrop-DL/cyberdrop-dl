@@ -5,6 +5,7 @@ import dataclasses
 import functools
 import inspect
 import itertools
+import mimetypes
 import os
 import platform
 import re
@@ -204,25 +205,32 @@ def truncate_str(text: str, max_length: int = 0) -> str:
     return text.strip()
 
 
-def get_filename_and_ext(filename: str, forum: bool = False) -> tuple[str, str]:
+def get_filename_and_ext(filename: str, forum: bool = False, mime_type: str | None = None) -> tuple[str, str]:
     """Returns the filename and extension of a given file, throws `NoExtensionError` if there is no extension."""
     clean_filename = Path(filename).as_posix().replace("/", "-")  # remove OS separators
     filename_as_path = Path(clean_filename)
-    if not filename_as_path.suffix:
-        raise NoExtensionError
-    ext_no_dot = filename_as_path.suffix.split(".")[1]
+    ext = filename_as_path.suffix or (mimetypes.guess_extension(mime_type) if mime_type else None)
+    if not ext:
+        raise NoExtensionError(filename)
+
+    filename_as_path = filename_as_path.with_suffix(ext)
+
+    ext_no_dot = filename_as_path.suffix.split(".", 1)[-1]
     if ext_no_dot.isdigit() and forum and "-" in filename:
         name, ext = filename_as_path.name.rsplit("-", 1)
         ext = ext.rsplit(".")[0]
         ext_w_dot = f".{ext}".lower()
+        full_name = f"{name}.{ext}"
         if ext_w_dot not in constants.MEDIA_EXTENSIONS:
-            raise InvalidExtensionError
-        filename_as_path = Path(f"{name}.{ext}")
+            raise InvalidExtensionError(full_name)
+
+        filename_as_path = Path(full_name)
+
     if len(filename_as_path.suffix) > 5:
-        raise InvalidExtensionError
+        raise InvalidExtensionError(str(filename_as_path))
 
     filename_as_path = filename_as_path.with_suffix(filename_as_path.suffix.lower())
-    filename_as_str = truncate_str(filename_as_path.stem.removesuffix(".")) + filename_as_path.suffix
+    filename_as_str = truncate_str(filename_as_path.stem) + filename_as_path.suffix
     filename_as_path = Path(sanitize_filename(filename_as_str))
     filename_as_path = Path(filename_as_path.stem.strip() + filename_as_path.suffix)
     return filename_as_path.name, filename_as_path.suffix

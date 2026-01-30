@@ -68,7 +68,7 @@ This option has no effect unless you run CDL with `--retry-all`
 | ----- | ------- |
 | `str` | `None`  |
 
-Name of config to load. Use `ALL` to run all configs sequentially
+Name of config to load.
 
 ### `config-file`
 

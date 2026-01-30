@@ -1,22 +1,27 @@
 from __future__ import annotations
 
-from typing import Final
+import base64
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils.utilities import error_handling_wrapper
+from cyberdrop_dl.utils.utilities import error_handling_wrapper, xor_decrypt
 
 from ._chevereto import CheveretoCrawler
 
-CDN: Final = "selti-delivery.ru"
+if TYPE_CHECKING:
+    from cyberdrop_dl.crawlers.crawler import RateLimit, SupportedDomains
+
+_CDN: Final = "selti-delivery.ru"
+_DECRYPTION_KEY: Final = b"seltilovessimpcity@simpcityhatesscrapers"
 
 
 class JPG5Crawler(CheveretoCrawler):
-    SUPPORTED_DOMAINS = "selti-delivery.ru", "jpg7.cr", "jpg6.su"
-    DOMAIN = "jpg5.su"
-    FOLDER_DOMAIN = "JPG5"
-    PRIMARY_URL = AbsoluteHttpURL("https://jpg6.su")
-    CHEVERETO_SUPPORTS_VIDEO = False
-    OLD_DOMAINS = (
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "selti-delivery.ru", "jpg7.cr", "jpg6.su"
+    DOMAIN: ClassVar[str] = "jpg5.su"
+    FOLDER_DOMAIN: ClassVar[str] = "JPG5"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://jpg6.su")
+    CHEVERETO_SUPPORTS_VIDEO: ClassVar[bool] = False
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
         "host.church",
         "jpg.homes",
         "jpg.church",
@@ -31,7 +36,7 @@ class JPG5Crawler(CheveretoCrawler):
         "jpg5.su",
     )
 
-    _RATE_LIMIT = 2, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -47,11 +52,19 @@ class JPG5Crawler(CheveretoCrawler):
     ) -> None:
         link = url or scrape_item.url
 
-        if self.is_subdomain(link) and not link.host.endswith(CDN):
+        if self.is_subdomain(link) and not link.host.endswith(_CDN):
             server, *_ = link.host.rsplit(".", 2)
-            link = link.with_host(f"{server}.{CDN}")
+            link = link.with_host(f"{server}.{_CDN}")
 
         await super().direct_file(scrape_item, link, assume_ext)
+
+    def parse_url(
+        self, link_str: str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
+    ) -> AbsoluteHttpURL:
+        if not link_str.startswith("https") and not link_str.startswith("/"):
+            encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
+            link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
+        return super().parse_url(link_str, relative_to, trim=trim)
 
 
 def fix_db_referer(referer: str) -> str:

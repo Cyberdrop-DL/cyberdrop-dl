@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import shutil
 import subprocess
@@ -152,42 +153,61 @@ class Downloader:
         self.manager.progress_manager.download_progress.update_queued(queued_files)
         self.manager.progress_manager.download_progress.update_total(increase_total)
 
+    @contextlib.asynccontextmanager
+    async def _download_context(self, media_item: MediaItem):
+        await self.manager.states.RUNNING.wait()
+        media_item.current_attempt = 0
+        await self.client.mark_incomplete(media_item, self.domain)
+        if media_item.is_segment:
+            yield
+            return
+
+        self.waiting_items += 1
+        self.update_queued_files()
+
+        server = (media_item.debrid_link or media_item.url).host
+        server_limit, domain_limit, global_limit = (
+            self.client.server_limiter(media_item.domain, server),
+            self._semaphore,
+            self.manager.client_manager.global_download_slots,
+        )
+
+        async with server_limit, domain_limit, global_limit:
+            await self.manager.states.RUNNING.wait()
+            self.processed_items.add(media_item.db_path)
+            self.update_queued_files(increase_total=False)
+            self.waiting_items -= 1
+            yield
+
     async def run(self, media_item: MediaItem) -> bool:
         """Runs the download loop."""
 
         if media_item.url.path in self.processed_items and not self._ignore_history:
             return False
 
-        await self.manager.states.RUNNING.wait()
-        self.waiting_items += 1
-        media_item.current_attempt = 0
-        await self.client.mark_incomplete(media_item, self.domain)
-        if not media_item.is_segment:
-            self.update_queued_files()
-        server = (media_item.debrid_link or media_item.url).host
-        async with self.client.server_limiter(media_item.domain, server), self._semaphore:
-            await self.manager.states.RUNNING.wait()
-            self.waiting_items -= 1
-            self.processed_items.add(media_item.db_path)
-            self.update_queued_files(increase_total=False)
-            async with self.manager.client_manager.global_download_slots:
-                return await self.start_download(media_item)
+        async with self._download_context(media_item):
+            return await self.start_download(media_item)
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: RenditionGroup) -> None:
-        await self.client.mark_incomplete(media_item, self.domain)
+        if media_item.url.path in self.processed_items and not self._ignore_history:
+            return
+
         try:
             ffmpeg.check_is_available()
         except RuntimeError as e:
             msg = f"{e} - ffmpeg and ffprobe are required for HLS downloads"
             raise DownloadError("FFmpeg Error", msg, media_item) from None
 
+        async with self._download_context(media_item):
+            await self._start_hls_download(media_item, m3u8_group)
+
+    async def _start_hls_download(self, media_item: MediaItem, m3u8_group: RenditionGroup) -> None:
         media_item.complete_file = media_item.download_folder / media_item.filename
         # TODO: register database duration from m3u8 info
         # TODO: compute approx size for UI from the m3u8 info
         media_item.download_filename = media_item.complete_file.name
         await self.manager.db_manager.history_table.add_download_filename(self.domain, media_item)
-        self.update_queued_files()
         task_id = self.manager.progress_manager.file_progress.add_task(domain=self.domain, filename=media_item.filename)
         media_item.set_task_id(task_id)
         video, audio, _subs = await self._download_rendition_group(media_item, m3u8_group)

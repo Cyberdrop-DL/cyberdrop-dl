@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 
-from .tables import HashTable, HistoryTable, SchemaVersionTable, TempRefererTable
+from .tables import HashTable, HistoryTable, SchemaVersionTable
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,26 +17,22 @@ class Database:
         self.ignore_history = ignore_history
         self.history_table: HistoryTable
         self.hash_table: HashTable
-        self.temp_referer_table: TempRefererTable
 
     async def startup(self) -> None:
         """Startup process for the DBManager."""
-        self._db_conn = await aiosqlite.connect(self._db_path)
+        self._db_conn = await aiosqlite.connect(self._db_path, timeout=20)
         self._db_conn.row_factory = aiosqlite.Row
         self.history_table = HistoryTable(self)
         self.hash_table = HashTable(self)
-        self.temp_referer_table = TempRefererTable(self)
         self._schema_versions = SchemaVersionTable(self)
 
         await self._pre_allocate()
         await self.history_table.startup()
         await self.hash_table.startup()
-        await self.temp_referer_table.startup()
         await self._schema_versions.startup()
 
     async def close(self) -> None:
         """Close the DBManager."""
-        await self.temp_referer_table.sql_drop_temp_referers()
         await self._db_conn.close()
 
     async def _pre_allocate(self) -> None:

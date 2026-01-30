@@ -7,7 +7,6 @@ import json
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
-from datetime import timedelta
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, TypeAlias, TypedDict, overload
@@ -15,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Required, Self, Type
 import aiofiles
 import aiofiles.os
 from multidict import CIMultiDict, CIMultiDictProxy
-from videoprops import which_ffprobe as _builtin_ffprobe
 from yarl import URL
 
 from cyberdrop_dl.utils.logger import log_debug
@@ -38,13 +36,26 @@ class Args:
 
 
 _FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
-_FFPROBE_CALL_PREFIX = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-print_format", "json"
+_FFPROBE_CALL_PREFIX = (
+    "ffprobe",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-show_streams",
+    "-show_format",
+    "-print_format",
+    "json",
+)
 _EMPTY_FFPROBE_OUTPUT: FFprobeOutput = {"streams": []}
 
 
 def check_is_available() -> None:
     if not get_ffmpeg_version():
         raise RuntimeError("ffmpeg is not available")
+    _check_ffprobe()
+
+
+def _check_ffprobe():
     if not get_ffprobe_version():
         raise RuntimeError("ffprobe is not available")
 
@@ -56,10 +67,7 @@ def which_ffmpeg() -> str | None:
 
 @functools.cache
 def which_ffprobe() -> str | None:
-    try:
-        return shutil.which("ffprobe") or _builtin_ffprobe()
-    except RuntimeError:
-        return
+    return shutil.which("ffprobe")
 
 
 @functools.cache
@@ -105,7 +113,7 @@ async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None 
 
 
 async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    assert which_ffprobe()
+    _check_ffprobe()
     if isinstance(input, URL):
         assert is_absolute_http_url(input)
 
@@ -178,36 +186,25 @@ def _get_bin_version(bin_path: str) -> str | None:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ FFprobe ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class Duration(NamedTuple):
-    # "00:03:48.250000000"
-    days: int = 0
-    hours: int = 0
-    minutes: int = 0
-    seconds: float = 0
+def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
+    if not duration:
+        return None
 
-    @staticmethod
-    def parse(duration: float | str) -> TruncatedFloat:
+    if isinstance(duration, (float, int)):
+        seconds = duration
+
+    else:
         try:
-            return TruncatedFloat(duration)
-        except (ValueError, TypeError):
-            pass
+            *rest, seconds = duration.strip().split(":")
 
-        assert isinstance(duration, str)
-        days, _, other_parts = duration.partition(" ")
-        if other_parts:
-            days = "".join(char for char in days if char.isdigit())
-        else:
-            other_parts = days
+            seconds = float(seconds)
+            for idx, value in enumerate(reversed(rest), 1):
+                seconds += int(value) * 60**idx
+        except Exception:
+            return None
 
-        days = days or "0"
-        time_parts = other_parts.split(":")
-        missing_parts = [0 for _ in range(3 - len(time_parts))]
-        seconds = float(Fraction(time_parts.pop(-1)))
-        int_parts = map(int, (days, *missing_parts, *time_parts))
-        return TruncatedFloat(Duration(*int_parts, seconds=seconds).as_timedelta().total_seconds())
-
-    def as_timedelta(self) -> timedelta:
-        return timedelta(**self._asdict())
+    if seconds > 0:
+        return TruncatedFloat(seconds)
 
 
 class StreamDict(TypedDict, total=False):
@@ -230,24 +227,22 @@ class TruncatedFloat(float):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Stream:
     index: int
-    codec_name: str
+    codec: str
     codec_type: str
     bitrate: int | None
     duration: TruncatedFloat | None
     tags: Tags
 
-    @property
-    def codec(self) -> str:
-        return self.codec_name
-
     @classmethod
     def validate(cls, stream_info: StreamDict) -> dict[str, Any]:
         info = get_valid_dict(cls, stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
-        duration: float | str | None = stream_info.get("duration") or tags.get("duration")
-        bitrate = int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None
-        duration = Duration.parse(duration) if duration else None
-        return info | {"tags": tags, "duration": duration, "bitrate": bitrate}
+        return info | {
+            "codec": stream_info.get("codec_name"),
+            "duration": _parse_duration(stream_info.get("duration") or tags.get("duration")),
+            "bitrate": int(stream_info.get("bitrate") or stream_info.get("bit_rate") or 0) or None,
+            "tags": tags,
+        }
 
     @classmethod
     def from_dict(cls, stream_info: StreamDict) -> Self:
@@ -292,10 +287,30 @@ class VideoStream(Stream):
         return defaults | {"width": width, "height": height, "fps": fps, "resolution": resolution}
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Format:
+    size: int | None
+    bitrate: int | None
+    duration: TruncatedFloat | None
+    tags: Tags
+
+    @classmethod
+    def from_dict(cls, format_info: dict[str, Any]) -> Self:
+        tags = Tags(CIMultiDict(format_info.get("tags", {})))
+
+        return cls(
+            size=int(float(format_info.get("size") or 0)) or None,
+            duration=_parse_duration(format_info.get("duration") or tags.get("duration")),
+            bitrate=int(format_info.get("bitrate") or format_info.get("bit_rate") or 0) or None,
+            tags=tags,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class FFprobeResult:
     ffprobe_output: FFprobeOutput
     streams: tuple[Stream, ...]
+    format: Format
 
     @staticmethod
     def from_output(ffprobe_output: FFprobeOutput) -> FFprobeResult:
@@ -306,7 +321,11 @@ class FFprobeResult:
                 elif stream["codec_type"] == "audio":
                     yield AudioStream.from_dict(stream)
 
-        return FFprobeResult(ffprobe_output, tuple(streams()))
+        return FFprobeResult(
+            ffprobe_output,
+            streams=tuple(streams()),
+            format=Format.from_dict(ffprobe_output.get("format", {})),
+        )
 
     def video_streams(self) -> Generator[VideoStream]:
         for stream in self.streams:

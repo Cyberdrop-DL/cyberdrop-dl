@@ -7,7 +7,6 @@ import inspect
 import re
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from pathlib import Path
@@ -27,6 +26,7 @@ from cyberdrop_dl.utils import css, dates, m3u8
 from cyberdrop_dl.utils.logger import log, log_debug
 from cyberdrop_dl.utils.strings import safe_format
 from cyberdrop_dl.utils.utilities import (
+    error_handling_context,
     error_handling_wrapper,
     get_download_path,
     get_filename_and_ext,
@@ -125,13 +125,20 @@ class Crawler(ABC):
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+    _IMPERSONATE: ClassVar[str | bool | None] = None
 
     create_db_path = staticmethod(DBPathBuilder.path)
 
     @copy_signature(ScraperClient._request)
     @contextlib.asynccontextmanager
-    async def request(self, *args, **kwargs) -> AsyncGenerator[AbstractResponse]:
-        async with self.client._limiter(self.DOMAIN), self.client._request(*args, **kwargs) as resp:
+    async def request(self, *args, impersonate: str | bool | None = None, **kwargs) -> AsyncGenerator[AbstractResponse]:
+        if impersonate is None:
+            impersonate = self._IMPERSONATE
+
+        async with (
+            self.client._limiter(self.DOMAIN),
+            self.client._request(*args, impersonate=impersonate, **kwargs) as resp,
+        ):
             yield resp
 
     @copy_signature(ScraperClient._request)
@@ -490,14 +497,6 @@ class Crawler(ABC):
 
     @final
     async def check_skip_by_config(self, media_item: MediaItem) -> bool:
-        if (
-            self.manager.config.download_options.skip_referer_seen_before
-            and await self.manager.db_manager.temp_referer_table.check_referer(media_item.referer)
-        ):
-            log(f"Download skip {media_item.url} as referer has been seen before", 10)
-            return True
-
-        assert media_item.url.host
         media_host = media_item.url.host
 
         if (hosts := self.manager.config.ignore_options.skip_hosts) and any(host in media_host for host in hosts):
@@ -558,17 +557,17 @@ class Crawler(ABC):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def get_filename_and_ext(
-        self, filename: str, forum: bool = False, assume_ext: str | None = None
+        self, filename: str, forum: bool = False, assume_ext: str | None = ".mp4", *, mime_type: str | None = None
     ) -> tuple[str, str]:
         """Wrapper around `utils.get_filename_and_ext`.
         Calls it as is.
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, forum)
+            return get_filename_and_ext(filename, forum, mime_type)
         except NoExtensionError:
-            if assume_ext and self.allow_no_extension:
-                return get_filename_and_ext(filename + assume_ext, forum)
+            if self.allow_no_extension and assume_ext:
+                return get_filename_and_ext(filename + assume_ext, forum, mime_type)
             raise
 
     def check_album_results(self, url: URL, album_results: dict[str, Any]) -> bool:
@@ -746,6 +745,7 @@ class Crawler(ABC):
         :param cffi: If `True`, uses `curl_cffi` to get the soup for each page. Otherwise, `aiohttp` will be used
         :param **kwargs: Will be forwarded to `self.parse_url` to parse each new page"""
 
+        kwargs.setdefault("relative_to", url.origin())
         page_url = url
         if callable(selector):
             get_next_page = selector
@@ -769,6 +769,13 @@ class Crawler(ABC):
         link = url or scrape_item.url
         filename, ext = self.get_filename_and_ext(link.name or link.parent.name, assume_ext=assume_ext)
         await self.handle_file(link, scrape_item, filename, ext)
+
+    @final
+    @contextlib.asynccontextmanager
+    async def new_task_group(self, scrape_item: ScrapeItem) -> AsyncGenerator[asyncio.TaskGroup]:
+        async with asyncio.TaskGroup() as tg:
+            with error_handling_context(self, scrape_item):
+                yield tg
 
     @final
     @classmethod
