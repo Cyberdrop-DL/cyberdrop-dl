@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -11,9 +12,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.data_structures.url_objects import ScrapeItem
-
-
-_API_ENDPOINT = AbsoluteHttpURL("https://api.flickr.com/services/rest")
 
 
 class FlickrCrawler(Crawler):
@@ -34,8 +32,23 @@ class FlickrCrawler(Crawler):
             case _:
                 raise ValueError
 
-    async def async_startup(self) -> None:
-        self.api = FlickrAPI(self)
+    def __post_init__(self) -> None:
+        self.api: FlickrAPI = FlickrAPI(self)
+
+    @error_handling_wrapper
+    async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
+        title: str = ""
+        async for page in self.api.photoset(photoset_id):
+            if not title:
+                name: str = page["title"]["_content"]
+                title = self.create_title(name, photoset_id)
+                scrape_item.setup_as_album(title, album_id=photoset_id)
+
+            for photo in page["photo"]:
+                web_url = scrape_item.url / photo["id"]
+                new_scrape_item = scrape_item.create_child(web_url)
+                self.create_task(self._photo(new_scrape_item, photo))
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
@@ -67,30 +80,16 @@ class FlickrCrawler(Crawler):
             return await self.api.video_source(photo["id"], photo["secret"])
         return await self.api.photo_source(photo["id"])
 
-    @error_handling_wrapper
-    async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
-        title: str = ""
-        async for page in self.api.photoset(photoset_id):
-            if not title:
-                name: str = page["title"]["_content"]
-                title = self.create_title(name, photoset_id)
-                scrape_item.setup_as_album(title, album_id=photoset_id)
-
-            for photo in page["photo"]:
-                web_url = scrape_item.url / photo["id"]
-                new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._photo(new_scrape_item, photo))
-                scrape_item.add_children()
-
 
 class FlickrAPI:
+    API_ENDPOINT = AbsoluteHttpURL("https://api.flickr.com/services/rest")
     API_KEY = "6cf8d4d0f4c6fe9e2c57e510920d810b"
 
     def __init__(self, crawler: Crawler) -> None:
         self._crawler = crawler
 
     async def _request(self, method: str, **params: Any) -> dict[str, Any]:
-        api_url = _API_ENDPOINT.with_query(
+        api_url = self.API_ENDPOINT.with_query(
             method="flickr." + method,
             format="json",
             nojsoncallback=1,
@@ -125,31 +124,29 @@ class FlickrAPI:
             photo_id=video_id,
             secret=secret,
         )
+
+        def parse_resolution(stream_name: str) -> Resolution:
+            if stream_name == "orig":
+                return Resolution.highest()
+            try:
+                return Resolution.parse(stream_name)
+            except ValueError:
+                return Resolution.unknown()
+
         streams: dict[str, str] = {s["type"]: s["_content"] for s in resp["streams"]["stream"]}
-        best = max(streams, key=_get_stream_res)
-        return self._crawler.parse_url(streams[best])
+        best_src = max(streams, key=parse_resolution)
+        return self._crawler.parse_url(streams[best_src])
 
     async def photoset(self, photoset_id: str) -> AsyncGenerator[dict[str, Any]]:
-        async for page in self._pager("photosets.getPhotos", "photoset", photoset_id=photoset_id):
-            yield page
-
-    async def _pager(self, method: str, name: str = "photos", **params: Any) -> AsyncGenerator[dict[str, Any]]:
-        params["page"] = 1
-        params["extras"] = "date_upload,media,url_o"
-
-        while True:
-            data = (await self._request(method, **params))[name]
+        for page in itertools.count(1):
+            data = (
+                await self._request(
+                    "photosets.getPhotos",
+                    photoset_id=photoset_id,
+                    page=page,
+                    extras="date_upload,media,url_o",
+                )
+            )["photoset"]
             yield data
-            if params["page"] >= data["pages"]:
+            if page >= data["pages"]:
                 break
-
-            params["page"] += 1
-
-
-def _get_stream_res(name: str) -> Resolution:
-    if name == "orig":
-        return Resolution.highest()
-    try:
-        return Resolution.parse(name)
-    except ValueError:
-        return Resolution.unknown()
