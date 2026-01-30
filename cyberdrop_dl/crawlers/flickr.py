@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils.utilities import error_handling_wrapper
+from cyberdrop_dl.utils.utilities import error_handling_context, error_handling_wrapper, get_text_between
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -32,8 +32,9 @@ class FlickrCrawler(Crawler):
             case _:
                 raise ValueError
 
-    def __post_init__(self) -> None:
+    async def async_starup(self) -> None:
         self.api: FlickrAPI = FlickrAPI(self)
+        await error_handling_wrapper(self.api.get_api_key)(self.PRIMARY_URL)
 
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, photoset_id: str) -> None:
@@ -50,7 +51,6 @@ class FlickrCrawler(Crawler):
                 self.create_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
-    @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
@@ -83,17 +83,29 @@ class FlickrCrawler(Crawler):
 
 class FlickrAPI:
     API_ENDPOINT = AbsoluteHttpURL("https://api.flickr.com/services/rest")
-    API_KEY = "6cf8d4d0f4c6fe9e2c57e510920d810b"
 
     def __init__(self, crawler: Crawler) -> None:
         self._crawler = crawler
+        self.api_key: str = ""
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(api_key={self.api_key!r})"
+
+    async def get_api_key(self) -> None:
+        prints = self._crawler.PRIMARY_URL / "prints"
+        with (
+            error_handling_context(self._crawler, prints),
+            self._crawler.disable_on_error("Unable to get public API key"),
+        ):
+            text = await self._crawler.request_text(prints)
+            self.api_key = get_text_between(text, 'flickr.api.site_key = "', '"')
 
     async def _request(self, method: str, **params: Any) -> dict[str, Any]:
         api_url = self.API_ENDPOINT.with_query(
             method="flickr." + method,
             format="json",
             nojsoncallback=1,
-            api_key=self.API_KEY,
+            api_key=self.api_key,
         )
         if params:
             api_url = api_url.update_query(params)
@@ -101,12 +113,8 @@ class FlickrAPI:
         return await self._crawler.request_json(api_url)
 
     async def photo(self, photo_id: str) -> dict[str, Any]:
-        return (
-            await self._request(
-                "photos.getInfo",
-                photo_id=photo_id,
-            )
-        )["photo"]
+        resp = await self._request("photos.getInfo", photo_id=photo_id)
+        return resp["photo"]
 
     async def photo_source(self, photo_id: str) -> AbsoluteHttpURL:
         sizes: list[dict[str, str]] = (
