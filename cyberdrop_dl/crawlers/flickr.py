@@ -44,8 +44,11 @@ class FlickrCrawler(Crawler):
             photos: list[dict[str, Any]] = data.pop("photo")
 
             if not title:
-                name: str = data["title"]
-                title = self.create_title(name, photoset_id)
+                name = data["title"]
+                title = self.create_title(
+                    name["_content"] if isinstance(name, dict) else name,
+                    photoset_id,
+                )
                 scrape_item.setup_as_album(title, album_id=photoset_id)
                 await self.write_metadata(scrape_item, photoset_id, data)
 
@@ -65,7 +68,8 @@ class FlickrCrawler(Crawler):
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: dict[str, Any]) -> None:
         scrape_item.possible_datetime = int(photo.get("dateuploaded") or photo["dateupload"])
-        name: str = photo["title"] or photo["media"]
+        title = photo["title"]
+        name: str = (title["_content"] if isinstance(title, dict) else title) or photo["media"]
         source = await self._get_source(photo)
         filename = self.create_custom_filename(name, source.suffix, file_id=photo["id"])
         await self.handle_file(

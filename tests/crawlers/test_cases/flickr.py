@@ -14,5 +14,15 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (Flickr)",
             }
         ],
-    )
+    ),
+    (
+        "https://www.flickr.com/photos/bour3/albums/72157641382742025",
+        [
+            {
+                "url": "re:https://live.staticflickr.com/",
+                "download_folder": "re:lotus flower pop-up card with led (Flickr)",
+            },
+        ],
+        30,
+    ),
 ]
