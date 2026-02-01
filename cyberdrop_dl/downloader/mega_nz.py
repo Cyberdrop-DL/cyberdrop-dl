@@ -835,7 +835,7 @@ class MegaDownloadClient(DownloadClient):
         await check_free_space()
         await self._pre_download_check(media_item)
 
-        crypto_data = self.decrypt_mapping[media_item.url]
+        crypto_data = self.decrypt_mapping.pop(media_item.url)
         chunk_decryptor = MegaDecryptor(crypto_data)
 
         async with aiofiles.open(media_item.partial_file, mode="ab") as f:
