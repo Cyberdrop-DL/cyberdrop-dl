@@ -824,6 +824,7 @@ class MegaDownloadClient(DownloadClient):
     def __init__(self, manager: Manager) -> None:
         super().__init__(manager, manager.client_manager)
         self.decrypt_mapping: dict[URL, DecryptData] = {}
+        self._supports_ranges = False
 
     async def _append_content(self, media_item: MediaItem, content: aiohttp.StreamReader) -> None:
         """Appends content to a file."""

@@ -51,6 +51,7 @@ class DownloadClient:
         self.download_speed_threshold = self.manager.config_manager.settings_data.runtime_options.slow_download_speed
         self._server_locks = WeakAsyncLocks[str]()
         self.server_locked_domains: set[str] = set()
+        self._supports_ranges: bool = True
 
     def server_limiter(self, domain: str, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
         if domain not in self.server_locked_domains:
@@ -102,7 +103,11 @@ class DownloadClient:
             media_item.partial_file = download_dir / f"{downloaded_filename}{constants.TempExt.PART}"
 
         resume_point = 0
-        if media_item.partial_file and (size := await asyncio.to_thread(get_size_or_none, media_item.partial_file)):
+        if (
+            self._supports_ranges
+            and media_item.partial_file
+            and (size := await asyncio.to_thread(get_size_or_none, media_item.partial_file))
+        ):
             resume_point = size
             download_headers["Range"] = f"bytes={size}-"
 
