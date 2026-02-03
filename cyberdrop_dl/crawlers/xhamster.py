@@ -5,8 +5,9 @@ import codecs
 import dataclasses
 import itertools
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 
 _PRIMARY_URL = AbsoluteHttpURL("https://xhamster.com/")
 _ALLOW_AV1 = False
-_ALLOW_HLS = False
 _DECRYPTION_KEY = b"xh7999"
 
 
@@ -218,7 +218,7 @@ class XhamsterCrawler(Crawler):
             video.title,
             ".mp4",
             file_id=video.id,
-            video_codec=video.best_mp4.codec,
+            video_codec=video.best_mp4.codec.name.lower(),
             resolution=video.best_mp4.resolution,
         )
         await self.handle_file(
@@ -236,9 +236,16 @@ class XhamsterCrawler(Crawler):
         return json.loads(initials)
 
 
-class Format(NamedTuple):
+class Codec(IntEnum):
+    H265 = 1
+    H264 = 2
+    AV1 = 3 if _ALLOW_AV1 else 0
+
+
+@dataclasses.dataclass(frozen=True, order=True, slots=True)
+class Format:
     resolution: Resolution
-    codec: str  #  h264 > av1
+    codec: Codec
     url: AbsoluteHttpURL
 
 
@@ -260,11 +267,7 @@ def _parse_video(initials: dict[str, Any]) -> Video:
     sources = itertools.chain(_parse_http_sources(initials), _parse_xplayer_sources(initials))
 
     for src in sources:
-        if src.codec == "av1" and not _ALLOW_AV1:
-            continue
         if src.url.suffix == ".m3u8":
-            if not _ALLOW_HLS:
-                continue
             hls_sources.append(src)
         else:
             mp4_sources.append(src)
@@ -296,11 +299,11 @@ def _parse_http_sources(initials: dict[str, Any]) -> Iterable[Format]:
 
             seen_urls.add(url)
             resolution = Resolution.parse(quality)
-            yield Format(resolution, codec, url)
+            yield Format(resolution, Codec[codec.upper()], url)
 
 
 def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
-    xplayer_sources: dict[str, Any] = initials.get("xplayerSettings", {}).get("sources", {})
+    xplayer_sources: dict[str, Any] = initials.get("xplayerSettings2", {}).get("sources", {})
     if not xplayer_sources:
         return
 
@@ -322,7 +325,7 @@ def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
             else:
                 res = format_dict.get("quality") or format_dict["label"]
 
-            yield Format(Resolution.parse(res), codec, url)
+            yield Format(Resolution.parse(res), Codec[codec.upper()], url)
 
     hls_sources: dict[str, dict[str, str]] = xplayer_sources.get("hls", {})
     for codec, format_dict in hls_sources.items():
