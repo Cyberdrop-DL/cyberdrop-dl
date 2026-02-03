@@ -304,14 +304,14 @@ def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
             res = Resolution.parse(quality)
             yield Format(res, Codec[codec.upper()], url)
 
-    hls_sources: dict[str, dict[str, str]] = xplayer_sources.get("hls", {})
-    for codec, format_dict in hls_sources.items():
-        yield from parse_format(format_dict, codec)
-
     standard_sources: dict[str, list[dict[str, Any]]] = xplayer_sources.get("standard", {})
     for codec, formats_list in standard_sources.items():
         for format_dict in formats_list:
             yield from parse_format(format_dict, codec)
+
+    hls_sources: dict[str, dict[str, str]] = xplayer_sources.get("hls", {})
+    for codec, format_dict in hls_sources.items():
+        yield from parse_format(format_dict, codec)
 
 
 def _ensure_signed_32int(int32: int) -> int:
