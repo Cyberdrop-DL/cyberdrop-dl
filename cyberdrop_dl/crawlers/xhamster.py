@@ -222,7 +222,7 @@ class XhamsterCrawler(Crawler):
             resolution=video.best_mp4.resolution,
         )
         await self.handle_file(
-            video.url,
+            scrape_item.url,
             scrape_item,
             filename=video.id + ".mp4",
             custom_filename=custom_filename,
@@ -247,13 +247,12 @@ class Video:
     id: str
     title: str
     created: int
-    url: AbsoluteHttpURL
     best_hls: Format | None
     best_mp4: Format
 
 
 def _parse_video(initials: dict[str, Any]) -> Video:
-    video: dict[str, Any] = initials["videoModel"]
+    video: dict[str, Any] = initials["videoPageComponent"]["videoInfo"]["videoInfo"]
 
     hls_sources: list[Format] = []
     mp4_sources: list[Format] = []
@@ -271,10 +270,9 @@ def _parse_video(initials: dict[str, Any]) -> Video:
             mp4_sources.append(src)
 
     return Video(
-        id=video["idHashSlug"],
+        id=video["videoIdHashSlug"],
         title=video["title"],
-        created=video["created"],
-        url=_parse_url(video["pageURL"]),
+        created=video["addTime"],
         best_hls=max(hls_sources, default=None),
         best_mp4=max(mp4_sources),
     )
@@ -309,7 +307,7 @@ def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
     seen_urls: set[AbsoluteHttpURL] = set()
 
     def parse_format(format_dict: dict[str, str], codec: str):
-        for key in ("url", "fallback"):
+        for key in ("url",):
             url = format_dict.get(key)
             if not url:
                 continue
