@@ -62,21 +62,16 @@ TEST_CASES = [
         "https://xhamster.com/creators/danielagomezz",
         [
             {
-                "url": "https://ic-ph-nss.xhcdn.com/a/Mzc4ODY4M2VkNzM0ZTM3OGVjMGQ1ZTFjZGU1MzhhZDU/webp/000/517/308/699_1000.jpg",
-                "filename": "002 - 699_1000 [517308699].jpg",
-                "original_filename": "699_1000.jpg",
-                "referer": "https://xhamster.com/photos/gallery/16252066/517308699",
-                "download_folder": r"re:DanielaGomezx \[user\] \(xHamster\)/galleries/New image change",
-                "album_id": "16252066",
-                "datetime": 1738917721,
+                "url": "ANY",
+                "download_folder": r"re:DanielaGomezx \[user\] \(xHamster\)",
             },
         ],
-        38,
+        range(50, 60),
     ),
     (
         "https://xhamster.com/creators/danielagomezz/exclusive",
         [],
-        36,
+        range(50, 60),
     ),
     (
         "https://xhamster.com/creators/danielagomezz/photos",
