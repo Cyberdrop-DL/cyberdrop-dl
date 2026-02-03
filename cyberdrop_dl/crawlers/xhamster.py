@@ -259,7 +259,7 @@ class Video:
 
 
 def _parse_video(initials: dict[str, Any]) -> Video:
-    video: dict[str, Any] = initials["videoPageComponent"]["videoInfo"]["videoInfo"]
+    video: dict[str, Any] = initials.get("videoModel") or initials["videoPageComponent"]["videoInfo"]["videoInfo"]
 
     hls_sources: list[Format] = []
     mp4_sources: list[Format] = []
@@ -271,9 +271,9 @@ def _parse_video(initials: dict[str, Any]) -> Video:
             mp4_sources.append(src)
 
     return Video(
-        id=video["videoIdHashSlug"],
+        id=video.get("idHashSlug") or video["videoIdHashSlug"],
         title=video["title"],
-        created=video["addTime"],
+        created=video.get("created") or video["addTime"],
         best_hls=max(hls_sources, default=None),
         best_mp4=max(mp4_sources),
     )
