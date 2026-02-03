@@ -26,7 +26,7 @@ _DECRYPTION_KEY = b"xh7999"
 
 class Selector:
     VIDEO = "a.video-thumb__image-container"
-    GALLERY = "a.gallery-thumb__link"
+    GALLERY = "[data-gallery-id] > a[href]"
     NEXT_PAGE = "a[data-page='next']"
 
 
@@ -133,29 +133,25 @@ class XhamsterCrawler(Crawler):
         if is_creator:
             info: dict[str, Any] = initials["infoComponent"]["displayUserModel"]
             web_page_url = self.parse_url(info["pageURL"])
-            has_videos = bool(initials["infoComponent"].get("pornstarTop", {}).get("videoCount", 0))
-            has_galleries = bool(initials.get("galleriesComponent", {}).get("galleriesTotal", 0))
 
         else:
             info = initials["displayUserModel"]
             web_page_url = canonical_url
-            has_videos = bool(initials["counters"]["videos"])
-            has_galleries = bool(initials["counters"]["galleries"])
 
         # every creator is an user, but not every user is a creator
         # the creator's name and the user_name are different for the same account
         # we will ignore the creator's name and always use the user_name
 
-        creator_name: str | None = info.get("pageTitle")  # noqa: F841
+        _creator_name: str | None = info.get("pageTitle")
         user_name: str = info.get("displayName") or info["name"]
         title = self.create_title(f"{user_name} [user]")
         scrape_item.setup_as_profile(title)
 
-        if has_videos and download_videos:
+        if download_videos:
             videos_url = web_page_url / "videos"
             await self._iter_profile_pages(scrape_item, videos_url, Selector.VIDEO, "videos")
 
-        if has_galleries and download_photos:
+        if download_photos:
             gallerys_url = web_page_url / "photos"
             await self._iter_profile_pages(scrape_item, gallerys_url, Selector.GALLERY, "galleries")
 
@@ -180,7 +176,7 @@ class XhamsterCrawler(Crawler):
         results = await self.get_album_results(gallery_id)
         n_pages: int = page_details["paginationProps"]["lastPageNumber"]
         index: int = 0
-        images: list[dict[str, Any]] = initials["photosGalleryModel"]["photos"]
+        images: list[dict[str, Any]] = gallery["photos"]
 
         for next_page in itertools.count(2):
             for img in images:
