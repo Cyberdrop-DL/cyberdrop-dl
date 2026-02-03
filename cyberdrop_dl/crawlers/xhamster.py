@@ -237,8 +237,8 @@ class XhamsterCrawler(Crawler):
 
 
 class Codec(IntEnum):
-    H265 = 1
-    H264 = 2
+    H264 = 1
+    H265 = 2
     AV1 = 3 if _ALLOW_AV1 else 0
 
 
@@ -302,6 +302,10 @@ def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
 
             seen_urls.add(url)
             res = Resolution.parse(quality)
+            if res == Resolution.unknown() and (multi := next((p for p in url.parts if p.startswith("multi=")), None)):
+                best = next(reversed(multi.split(",")))
+                res = Resolution.parse(best.partition(":")[0])
+
             yield Format(res, Codec[codec.upper()], url)
 
     standard_sources: dict[str, list[dict[str, Any]]] = xplayer_sources.get("standard", {})
