@@ -264,9 +264,7 @@ def _parse_video(initials: dict[str, Any]) -> Video:
     hls_sources: list[Format] = []
     mp4_sources: list[Format] = []
 
-    sources = itertools.chain(_parse_http_sources(initials), _parse_xplayer_sources(initials))
-
-    for src in sources:
+    for src in _parse_xplayer_sources(initials):
         if src.url.suffix == ".m3u8":
             hls_sources.append(src)
         else:
@@ -279,27 +277,6 @@ def _parse_video(initials: dict[str, Any]) -> Video:
         best_hls=max(hls_sources, default=None),
         best_mp4=max(mp4_sources),
     )
-
-
-def _parse_http_sources(initials: dict[str, Any]) -> Iterable[Format]:
-    seen_urls: set[AbsoluteHttpURL] = set()
-
-    http_sources: dict[str, dict[str, str]] = initials["videoModel"].get("sources") or {}
-    if not http_sources:
-        return
-
-    for codec, formats_dict in http_sources.items():
-        for quality, url in formats_dict.items():
-            if codec == "download":
-                continue
-
-            url = _parse_url(url)
-            if url in seen_urls:
-                continue
-
-            seen_urls.add(url)
-            resolution = Resolution.parse(quality)
-            yield Format(resolution, Codec[codec.upper()], url)
 
 
 def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
@@ -315,17 +292,17 @@ def _parse_xplayer_sources(initials: dict[str, Any]) -> Iterable[Format]:
             if not url:
                 continue
 
+            quality = format_dict.get("quality") or format_dict.get("label")
+            if quality == "auto":
+                quality = None
+
             url = _parse_url(url)
             if url in seen_urls:
                 continue
 
             seen_urls.add(url)
-            if url.suffix == ".m3u8":
-                res = 0
-            else:
-                res = format_dict.get("quality") or format_dict["label"]
-
-            yield Format(Resolution.parse(res), Codec[codec.upper()], url)
+            res = Resolution.parse(quality)
+            yield Format(res, Codec[codec.upper()], url)
 
     hls_sources: dict[str, dict[str, str]] = xplayer_sources.get("hls", {})
     for codec, format_dict in hls_sources.items():
