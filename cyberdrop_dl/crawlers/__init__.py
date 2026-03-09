@@ -36,6 +36,7 @@ from .erome import EromeCrawler, EromeFanCrawler
 from .fapello import FapelloCrawler
 from .fileditch import FileditchCrawler
 from .files_vc import FilesVcCrawler
+from .filesterme import FilesterMeCrawler
 from .flickr import FlickrCrawler
 from .flugel_anime import FlugelAnimeCrawler
 from .fourchan import FourChanCrawler
