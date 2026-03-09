@@ -30,15 +30,15 @@ class FilesterMeCrawler(Crawler):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
-            return
         soup = await self.request_soup(scrape_item.url, impersonate=True)
         file_name = open_graph.get_title(soup)
         token = await self._get_download_token(slug)
         cdn = self._choose_cdn()
         final_url = AbsoluteHttpURL(f"{cdn}{token}?download=true")
         filename, ext = self.get_filename_and_ext(file_name)
-        await self.handle_file(final_url, scrape_item, filename, ext)
+        await self.handle_file(
+            scrape_item.url, scrape_item, filename, ext, debrid_link=final_url
+        )
 
     def _choose_cdn(self) -> str:
         CDNS = [
