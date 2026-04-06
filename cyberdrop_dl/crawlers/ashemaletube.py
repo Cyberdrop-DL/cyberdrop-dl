@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.data_structures.mediaprops import Resolution
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css
@@ -175,12 +176,7 @@ class AShemaleTubeCrawler(Crawler):
         if soup.select_one(_SELECTORS.LOGIN_REQUIRED):
             raise ScrapeError(401)
         js_text = css.select_text(soup, _SELECTORS.JS_PLAYER)
-        best_format = parse_player_info(js_text)
-        m3u8 = debrid_link = None
-        if best_format.hls:
-            m3u8 = await self.get_m3u8_from_index_url(best_format.url)
-        else:
-            debrid_link = best_format.url
+        best_format, m3u8 = await parse_player_info(self, js_text)
 
         if video_object := soup.select_one(_SELECTORS.VIDEO_PROPS_JS):
             json_data = json.loads(css.get_text(video_object))
@@ -198,14 +194,17 @@ class AShemaleTubeCrawler(Crawler):
             ext,
             custom_filename=custom_filename,
             m3u8=m3u8,
-            debrid_link=debrid_link,
         )
 
 
-def parse_player_info(script_text: str) -> Format:
-    def get_resolution(video) -> int:
-        return int(video["desc"].rstrip("p"))
+async def parse_player_info(crawler: Crawler, script_text: str) -> tuple[Format, object]:
+    sources = get_text_between(script_text, "sources: ", "aspectRatio").strip().strip(",")
+    sources_data = json.loads(sources)
 
-    sources = get_text_between(script_text, "var sources = ", "var multiSource =").strip().strip(";")
-    video_data = max(json.loads(sources), key=get_resolution)
-    return Format(video_data["desc"], AbsoluteHttpURL(video_data["src"]), video_data["hls"])
+    hls_url = sources_data["hlsAuto"]
+    url = AbsoluteHttpURL(hls_url)
+
+    m3u8_group, playlist_info = await crawler.get_m3u8_from_playlist_url(url)
+    resolution = playlist_info.resolution.name
+
+    return Format(resolution, url, True), m3u8_group
