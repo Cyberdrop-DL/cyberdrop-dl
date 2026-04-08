@@ -270,10 +270,13 @@ class ClientManager:
 
     def new_download_session(self) -> ClientSession:
         trace_configs = _create_request_log_hooks("download")
-        return self._new_session(cached=False, trace_configs=trace_configs)
+        return self._new_session(cached=False, trace_configs=trace_configs, requote_redirect_url=True)
 
     def _new_session(
-        self, cached: bool = False, trace_configs: list[aiohttp.TraceConfig] | None = None
+        self,
+        cached: bool = False,
+        trace_configs: list[aiohttp.TraceConfig] | None = None,
+        requote_redirect_url: bool = False,
     ) -> ClientSession:
         timeout = self.rate_limiting_options._aiohttp_timeout
         return ClientSession(
@@ -284,7 +287,7 @@ class ClientManager:
             trace_configs=trace_configs,
             proxy=self.manager.global_config.general.proxy,
             connector=self._new_tcp_connector(),
-            requote_redirect_url=False,
+            requote_redirect_url=requote_redirect_url,
         )
 
     def _new_tcp_connector(self) -> aiohttp.TCPConnector:
