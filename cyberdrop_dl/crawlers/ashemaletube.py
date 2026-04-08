@@ -161,8 +161,7 @@ class AShemaleTubeCrawler(Crawler):
             link_str = get_text_between(style, "url('", "');")
         url = self.parse_url(link_str).with_query(None)
         filename, ext = self.get_filename_and_ext(url.name)
-        custom_filename = self.create_custom_filename(filename, ext, file_id=css.get_attr(img_tag, "data-image-id"))
-        await self.handle_file(url, scrape_item, filename, ext, custom_filename=custom_filename)
+        await self.handle_file(url, scrape_item, filename, ext)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
