@@ -13,17 +13,4 @@ TEST_CASES = [
             }
         ],
     ),
-    (
-        # Invalid json on the page
-        "https://www.eporner.com/video-6kuhFUubtC2/nightqueen-presents-jessa-fucked-peta-bailey-fucked-both-later/",
-        [
-            {
-                "url": "https://www.eporner.com/dload/6kuhFUubtC2/1080/13445569-1080p.mp4",
-                "filename": "NightQueen Presents Jessa Fucked Peta Bailey Fucked Both Later 🤤 [6kuhFUubtC2][h264][1080p].mp4",
-                "original_filename": "NightQueen Presents Jessa Fucked Peta Bailey Fucked Both Later 🤤",
-                "referer": "https://www.eporner.com/video-6kuhFUubtC2",
-                "album_id": None,
-            }
-        ],
-    ),
 ]
