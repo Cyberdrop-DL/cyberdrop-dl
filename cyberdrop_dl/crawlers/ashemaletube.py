@@ -175,7 +175,7 @@ class AShemaleTubeCrawler(Crawler):
         if soup.select_one(_SELECTORS.LOGIN_REQUIRED):
             raise ScrapeError(401)
         js_text = css.select_text(soup, _SELECTORS.JS_PLAYER)
-        best_format, m3u8 = await parse_player_info(self, js_text)
+        best_format, m3u8 = await self.parse_player_info(js_text)
 
         if video_object := soup.select_one(_SELECTORS.VIDEO_PROPS_JS):
             json_data = json.loads(css.get_text(video_object))
@@ -195,15 +195,12 @@ class AShemaleTubeCrawler(Crawler):
             m3u8=m3u8,
         )
 
+    async def parse_player_info(self, script_text: str) -> tuple[Format, object]:
+        sources = get_text_between(script_text, "sources: ", "aspectRatio").strip().strip(",")
+        sources_data = json.loads(sources)
+        url = AbsoluteHttpURL(sources_data["hlsAuto"])
 
-async def parse_player_info(crawler: Crawler, script_text: str) -> tuple[Format, object]:
-    sources = get_text_between(script_text, "sources: ", "aspectRatio").strip().strip(",")
-    sources_data = json.loads(sources)
+        m3u8_group, playlist_info = await self.get_m3u8_from_playlist_url(url)
+        resolution = playlist_info.resolution.name
 
-    hls_url = sources_data["hlsAuto"]
-    url = AbsoluteHttpURL(hls_url)
-
-    m3u8_group, playlist_info = await crawler.get_m3u8_from_playlist_url(url)
-    resolution = playlist_info.resolution.name
-
-    return Format(resolution, url, True), m3u8_group
+        return Format(resolution, url, True), m3u8_group
