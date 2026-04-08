@@ -160,8 +160,7 @@ class AShemaleTubeCrawler(Crawler):
             link_str = get_text_between(style, "url('", "');")
         url = self.parse_url(link_str).with_query(None)
         filename, ext = self.get_filename_and_ext(url.name)
-        custom_filename = self.create_custom_filename(filename, ext, file_id=css.get_attr(img_tag, "data-image-id"))
-        await self.handle_file(url, scrape_item, filename, ext, custom_filename=custom_filename)
+        await self.handle_file(url, scrape_item, filename, ext)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
@@ -175,12 +174,7 @@ class AShemaleTubeCrawler(Crawler):
         if soup.select_one(_SELECTORS.LOGIN_REQUIRED):
             raise ScrapeError(401)
         js_text = css.select_text(soup, _SELECTORS.JS_PLAYER)
-        best_format = parse_player_info(js_text)
-        m3u8 = debrid_link = None
-        if best_format.hls:
-            m3u8 = await self.get_m3u8_from_index_url(best_format.url)
-        else:
-            debrid_link = best_format.url
+        best_format, m3u8 = await self.parse_player_info(js_text)
 
         if video_object := soup.select_one(_SELECTORS.VIDEO_PROPS_JS):
             json_data = json.loads(css.get_text(video_object))
@@ -198,14 +192,14 @@ class AShemaleTubeCrawler(Crawler):
             ext,
             custom_filename=custom_filename,
             m3u8=m3u8,
-            debrid_link=debrid_link,
         )
 
+    async def parse_player_info(self, script_text: str) -> tuple[Format, object]:
+        sources = get_text_between(script_text, "sources: ", "aspectRatio").strip().strip(",")
+        sources_data = json.loads(sources)
+        url = AbsoluteHttpURL(sources_data["hlsAuto"])
 
-def parse_player_info(script_text: str) -> Format:
-    def get_resolution(video) -> int:
-        return int(video["desc"].rstrip("p"))
+        m3u8_group, playlist_info = await self.get_m3u8_from_playlist_url(url)
+        resolution = playlist_info.resolution.name
 
-    sources = get_text_between(script_text, "var sources = ", "var multiSource =").strip().strip(";")
-    video_data = max(json.loads(sources), key=get_resolution)
-    return Format(video_data["desc"], AbsoluteHttpURL(video_data["src"]), video_data["hls"])
+        return Format(resolution, url, True), m3u8_group

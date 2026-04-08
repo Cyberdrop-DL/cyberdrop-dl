@@ -17,7 +17,7 @@ TEST_CASES = [
         [
             {
                 "url": "https://cc.ashemaletube.com/images/2025-09/b8/68b658b8f35c3/68b658b8f35c3-full-0.jpg",
-                "filename": "68b658b8f35c3-full-0.jpg [11374066].jpg",
+                "filename": "68b658b8f35c3-full-0.jpg",
                 "referer": "https://www.ashemaletube.com/pics/265074/jjk-black-uniform/1",
                 "album_id": None,
             }
