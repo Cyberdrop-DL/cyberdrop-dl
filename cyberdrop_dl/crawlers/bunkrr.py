@@ -13,7 +13,7 @@ from aiohttp import ClientConnectorError
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.utils import aio, css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url, xor_decrypt
 
@@ -32,6 +32,7 @@ _REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
 
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
+    ALBUM_PAGE_LINKS = "a[href*='page=']"
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
     RELATED_ALBUM = ".files-album a[href]"
@@ -81,8 +82,40 @@ def _get_download_button_details(
 
     href = css.get_attr_or_none(button, "href")
     if not href:
-        raise ValueError("Bunkr download button is missing href")
+        raise ScrapeError(422, "Bunkr download button is missing href")
     return None, parse_url(href, relative_to)
+
+
+def _album_page_url(url: AbsoluteHttpURL, page: int) -> AbsoluteHttpURL:
+    url = url.without_query_params("advanced", "page").update_query(advanced=1)
+    if page > 1:
+        return url.update_query(page=page)
+    return url
+
+
+def _get_album_last_page(
+    soup: BeautifulSoup,
+    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
+    relative_to: AbsoluteHttpURL,
+) -> int | None:
+    last_page = None
+    for page_link in css.iselect(soup, Selector.ALBUM_PAGE_LINKS):
+        href = css.get_attr_or_none(page_link, "href")
+        if not href:
+            continue
+
+        page_url = parse_url(href, relative_to)
+        if page_url.parts[1:3] != relative_to.parts[1:3]:
+            continue
+
+        page = page_url.query.get("page")
+        try:
+            page_num = int(page) if page else 1
+        except ValueError:
+            continue
+
+        last_page = max(last_page or page_num, page_num)
+    return last_page
 
 
 def _get_related_album_url(
@@ -183,18 +216,51 @@ class BunkrrCrawler(Crawler):
         await self._album(scrape_item, album_id)
 
     async def _album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup = await self._request_soup_lenient(scrape_item.url.with_query(advanced=1))
+        soup = await self._request_soup_lenient(_album_page_url(scrape_item.url, 1))
         name = open_graph.title(soup)
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         origin = scrape_item.url.origin()
         results = await self.get_album_results(album_id)
-        for file in self._parse_album_files(soup):
-            web_url = origin / "f" / file.slug
-            new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._album_file(new_scrape_item, file, results))
-            scrape_item.add_children()
+        seen_slugs: set[str] = set()
+        last_page = _get_album_last_page(soup, self.parse_url, scrape_item.url)
+        page = 1
+
+        while True:
+            found_new_file = False
+            try:
+                page_files = self._parse_album_files(soup)
+            except ScrapeError:
+                if page == 1 or last_page is not None:
+                    raise
+                break
+
+            for file in page_files:
+                if file.slug in seen_slugs:
+                    continue
+
+                seen_slugs.add(file.slug)
+                found_new_file = True
+                web_url = origin / "f" / file.slug
+                new_scrape_item = scrape_item.create_child(web_url)
+                self.create_task(self._album_file(new_scrape_item, file, results))
+                scrape_item.add_children()
+
+            if not found_new_file or (last_page is not None and page >= last_page):
+                break
+
+            page += 1
+            page_url = _album_page_url(scrape_item.url, page)
+            try:
+                soup = await self._request_soup_lenient(page_url)
+            except ScrapeError:
+                if last_page is not None:
+                    raise
+                break
+
+            if page_last_page := _get_album_last_page(soup, self.parse_url, page_url):
+                last_page = max(last_page or page_last_page, page_last_page)
 
     @auto_task_id
     @error_handling_wrapper
