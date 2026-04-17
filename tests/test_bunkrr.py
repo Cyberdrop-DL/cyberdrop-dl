@@ -163,6 +163,68 @@ async def test_album_scrapes_paginated_album_pages() -> None:
     assert len(scheduled_coroutines) == 2
 
 
+async def test_album_continues_when_later_page_reveals_more_pages() -> None:
+    crawler = BunkrrCrawler(mock.Mock())
+    url = AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg")
+    page_1 = BeautifulSoup(
+        """
+        <html>
+            <head><meta property="og:title" content="Bunkr Album"></head>
+            <body><a href="/a/fQ6HHKtg?page=2">2</a></body>
+        </html>
+        """,
+        "html.parser",
+    )
+    page_2 = BeautifulSoup('<html><a href="/a/fQ6HHKtg?page=3">3</a></html>', "html.parser")
+    page_3 = BeautifulSoup("<html></html>", "html.parser")
+    files = [
+        File(name="one.mp4", thumbnail="", date="12:00:00 01/01/2024", slug="one.mp4"),
+        File(name="two.mp4", thumbnail="", date="12:00:00 01/01/2024", slug="two.mp4"),
+        File(name="three.mp4", thumbnail="", date="12:00:00 01/01/2024", slug="three.mp4"),
+    ]
+
+    crawler._request_soup_lenient = mock.AsyncMock(side_effect=[page_1, page_2, page_3])
+    crawler.get_album_results = mock.AsyncMock(return_value={})
+    crawler.create_title = mock.Mock(return_value="Bunkr Album")
+    crawler._parse_album_files = mock.Mock(side_effect=[iter([files[0]]), iter([files[1]]), iter([files[2]])])
+    crawler._album_file = mock.AsyncMock()
+    crawler.create_task = mock.Mock(side_effect=lambda coro: coro.close())
+
+    await crawler._album(ScrapeItem(url=url), "fQ6HHKtg")
+
+    requested_urls = [call.args[0] for call in crawler._request_soup_lenient.await_args_list]
+    assert requested_urls == [
+        AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg?advanced=1"),
+        AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg?advanced=1&page=2"),
+        AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg?advanced=1&page=3"),
+    ]
+
+
+async def test_album_file_uses_album_results_before_referer_lookup() -> None:
+    manager = mock.Mock()
+    manager.states.RUNNING.wait = mock.AsyncMock()
+    manager.progress_manager.scraping_progress.add_task.return_value = 1
+    crawler = BunkrrCrawler(manager)
+    file = File(
+        name="one.mp4",
+        thumbnail="https://i-bunkr-test.bunkr.ru/thumbs/one.jpg",
+        date="12:00:00 01/01/2024",
+        slug="one.mp4",
+    )
+    src = AbsoluteHttpURL("https://bunkr-test.bunkr.ru/one.mp4")
+    results = {crawler.create_db_path(src): 1}
+
+    crawler.check_complete_from_referer = mock.AsyncMock(return_value=False)
+    crawler._direct_file = mock.AsyncMock()
+    crawler.create_task = mock.Mock()
+
+    await crawler._album_file(ScrapeItem(url=AbsoluteHttpURL("https://bunkr.cr/f/one.mp4")), file, results)
+
+    crawler.check_complete_from_referer.assert_not_awaited()
+    crawler._direct_file.assert_not_awaited()
+    crawler.create_task.assert_not_called()
+
+
 async def test_top_level_file_expands_related_album() -> None:
     crawler = BunkrrCrawler(mock.Mock())
     file_url = AbsoluteHttpURL("https://bunkr.cr/f/8-16-8out556m95_30UUdVDDAQ-HnEfe1zW.mp4")

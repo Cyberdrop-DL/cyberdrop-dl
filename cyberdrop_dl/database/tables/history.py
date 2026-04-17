@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 from cyberdrop_dl.utils.utilities import log
 
-from .definitions import create_fixed_history, create_history
+from .definitions import create_fixed_history, create_history, create_history_indexes
 
 if TYPE_CHECKING:
     import datetime
@@ -43,6 +43,8 @@ class HistoryTable:
         await self.fix_primary_keys()
         await self.add_columns_media()
         await self.run_updates()
+        await self.db_conn.executescript(create_history_indexes)
+        await self.db_conn.commit()
 
     async def update_previously_unsupported(self, crawlers: dict[str, Crawler]) -> None:
         """Update old `no_crawler` entries that are now supported."""
@@ -128,21 +130,14 @@ class HistoryTable:
             return False
 
         if domain is None:
-            query = "SELECT completed FROM media WHERE referer = ?"
+            query = "SELECT 1 FROM media WHERE referer = ? and completed != 0 LIMIT 1"
             params = (str(referer),)
         else:
-            query = "SELECT completed FROM media WHERE referer = ? and domain = ?"
+            query = "SELECT 1 FROM media WHERE referer = ? and domain = ? and completed != 0 LIMIT 1"
             params = str(referer), domain
 
         cursor = await self.db_conn.execute(query, params)
-        if domain is None:
-            rows = await cursor.fetchall()
-        else:
-            row = await cursor.fetchone()
-            if row is None:
-                return False
-            rows = [row]
-        return bool(rows and any(row[0] != 0 for row in rows))
+        return await cursor.fetchone() is not None
 
     async def insert_incompleted(self, domain: str, media_item: MediaItem) -> None:
         """Inserts an uncompleted file into the database."""
