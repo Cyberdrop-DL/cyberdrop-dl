@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 _DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://bunkr.cr/api/vs")
+_DOWNLOAD_API_ENTRYPOINT_BY_ID = AbsoluteHttpURL("https://apidl.bunkr.ru/api/_001_v2")
 _REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
 
 
@@ -33,6 +34,7 @@ class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
+    RELATED_ALBUM = ".files-album a[href]"
 
 
 VIDEO_AND_IMAGE_EXTS: set[str] = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"]
@@ -66,6 +68,36 @@ def _make_album_parser(keys: tuple[str, ...]) -> Callable[[BeautifulSoup], Gener
         return decode(files)
 
     return parse
+
+
+def _get_download_button_details(
+    soup: BeautifulSoup,
+    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
+    relative_to: AbsoluteHttpURL,
+) -> tuple[str | None, AbsoluteHttpURL | None]:
+    button = css.select(soup, Selector.DOWNLOAD_BUTTON)
+    if file_id := css.get_attr_or_none(button, "data-id"):
+        return file_id, None
+
+    href = css.get_attr_or_none(button, "href")
+    if not href:
+        raise ValueError("Bunkr download button is missing href")
+    return None, parse_url(href, relative_to)
+
+
+def _get_related_album_url(
+    soup: BeautifulSoup,
+    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
+    relative_to: AbsoluteHttpURL,
+) -> AbsoluteHttpURL | None:
+    href = css.select_one_get_attr_or_none(soup, Selector.RELATED_ALBUM, "href")
+    if not href:
+        return None
+
+    album_url = parse_url(href, relative_to)
+    if album_url.parts[1:2] == ("a",):
+        return album_url
+    return None
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -148,6 +180,9 @@ class BunkrrCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        await self._album(scrape_item, album_id)
+
+    async def _album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self._request_soup_lenient(scrape_item.url.with_query(advanced=1))
         name = open_graph.title(soup)
         title = self.create_title(name, album_id)
@@ -197,6 +232,9 @@ class BunkrrCrawler(Crawler):
             return
 
         soup = await self._request_soup_lenient(scrape_item.url)
+        if await self._try_related_album(scrape_item, soup):
+            return
+
         src = None
         if image := soup.select_one(Selector.IMAGE_PREVIEW):
             src = self.parse_url(css.get_attr(image, "src"))
@@ -204,20 +242,32 @@ class BunkrrCrawler(Crawler):
                 src = None
 
         if not src:
-            dl_link = css.select(soup, Selector.DOWNLOAD_BUTTON, "href")
-            file_id = self.parse_url(dl_link).name
-            src = await self._request_download(file_id)
+            src = await self._resolve_download_src(scrape_item, soup)
 
         name = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
         await self._direct_file(scrape_item, src, name)
+
+    async def _try_related_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> bool:
+        if scrape_item.parents:
+            return False
+
+        album_url = _get_related_album_url(soup, self.parse_url, scrape_item.url)
+        if not album_url:
+            return False
+
+        album_item = scrape_item.create_new(album_url, add_parent=scrape_item.url)
+        try:
+            await self._album(album_item, album_url.name)
+        except Exception as e:
+            self.log(f"[{self.FOLDER_DOMAIN}] Failed to expand related album {album_url}: {e}", 30)
+            return False
+        return True
 
     @error_handling_wrapper
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         name = css.select_text(soup, "h1")
-        dl_link = css.select(soup, Selector.DOWNLOAD_BUTTON, "href")
-        slug = self.parse_url(dl_link).parts[-1]
-        src = await self._request_download(slug)
+        src = await self._resolve_download_src(scrape_item, soup)
         await self._direct_file(scrape_item, src, name)
 
     @error_handling_wrapper
@@ -241,6 +291,29 @@ class BunkrrCrawler(Crawler):
             headers={"Referer": "https://bunkr.sk/"},
         )
         return self.parse_url(ApiResponse(**resp).decrypt())
+
+    async def _request_download_by_id(self, file_id: str) -> AbsoluteHttpURL:
+        resp: dict[str, Any] = await self.request_json(
+            _DOWNLOAD_API_ENTRYPOINT_BY_ID,
+            "POST",
+            json={"id": file_id},
+        )
+        return self.parse_url(ApiResponse(**resp).decrypt())
+
+    async def _resolve_download_src(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> AbsoluteHttpURL:
+        file_id, dl_link = _get_download_button_details(soup, self.parse_url, scrape_item.url.origin())
+        if file_id:
+            return await self._request_download_by_id(file_id)
+
+        assert dl_link is not None
+        if dl_link.host == _REINFORCED_URL.host and dl_link.parts[1:2] == ("file",):
+            return await self._request_download_by_id(dl_link.name)
+
+        # Some pages already expose a CDN URL directly; keep using it as-is.
+        if dl_link.host not in HOST_OPTIONS and dl_link.host != self.DATABASE_PRIMARY_HOST:
+            return dl_link
+
+        return await self._request_download(dl_link.name)
 
     async def _try_request_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup | None:
         try:

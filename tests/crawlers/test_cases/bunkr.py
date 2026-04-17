@@ -28,6 +28,7 @@ TEST_CASES = [
         ],
         257,
     ),
+    ("https://bunkr.cr/a/eccmqVJi", [], 11),
     (
         "https://bunkr.cr/a/TQAgjP8m",
         [
