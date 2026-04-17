@@ -13,6 +13,18 @@
 
 # Python cache
 __pycache__
+/.pytest_cache/
+/.ruff_cache/
+/pytest-cache-files-*/
+
+# Local crawler debug/temp artifacts
+/bunkrr_*.txt
+/output_bunkrr*.txt
+/check_db.py
+/tmp_*/
+/tmp_*.html
+/tmp_*.js
+
 # venv
 .venv
 venv
