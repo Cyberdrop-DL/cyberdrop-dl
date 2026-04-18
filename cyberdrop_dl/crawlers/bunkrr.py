@@ -35,7 +35,6 @@ class Selector:
     ALBUM_PAGE_LINKS = "a[href*='page=']"
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
-    RELATED_ALBUM = ".files-album a[href]"
 
 
 VIDEO_AND_IMAGE_EXTS: set[str] = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"]
@@ -117,21 +116,6 @@ def _get_album_last_page(
 
         last_page = max(last_page or page_num, page_num)
     return last_page
-
-
-def _get_related_album_url(
-    soup: BeautifulSoup,
-    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
-    relative_to: AbsoluteHttpURL,
-) -> AbsoluteHttpURL | None:
-    href = css.select_one_get_attr_or_none(soup, Selector.RELATED_ALBUM, "href")
-    if not href:
-        return None
-
-    album_url = parse_url(href, relative_to)
-    if album_url.parts[1:2] == ("a",):
-        return album_url
-    return None
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -364,9 +348,6 @@ class BunkrrCrawler(Crawler):
             return
 
         soup = await self._request_soup_lenient(scrape_item.url)
-        if await self._try_related_album(scrape_item, soup):
-            return
-
         src = None
         if image := soup.select_one(Selector.IMAGE_PREVIEW):
             src = self.parse_url(css.get_attr(image, "src"))
@@ -378,22 +359,6 @@ class BunkrrCrawler(Crawler):
 
         name = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
         await self._direct_file(scrape_item, src, name)
-
-    async def _try_related_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> bool:
-        if scrape_item.parents:
-            return False
-
-        album_url = _get_related_album_url(soup, self.parse_url, scrape_item.url)
-        if not album_url:
-            return False
-
-        album_item = scrape_item.create_new(album_url, add_parent=scrape_item.url)
-        try:
-            await self._album(album_item, album_url.name)
-        except Exception as e:
-            self.log(f"[{self.FOLDER_DOMAIN}] Failed to expand related album {album_url}: {e}", 30)
-            return False
-        return True
 
     @error_handling_wrapper
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:

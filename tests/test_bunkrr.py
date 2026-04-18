@@ -11,7 +11,6 @@ from cyberdrop_dl.crawlers.bunkrr import (
     _album_page_url,
     _get_album_last_page,
     _get_download_button_details,
-    _get_related_album_url,
 )
 from cyberdrop_dl.data_structures import AbsoluteHttpURL
 from cyberdrop_dl.data_structures.url_objects import ScrapeItem
@@ -93,21 +92,6 @@ def test_get_album_last_page_reads_pagination_links() -> None:
     )
 
     assert last_page == 6
-
-
-def test_get_related_album_url_reads_file_page_album_link() -> None:
-    soup = BeautifulSoup(
-        '<h2 class="files-album">More files in this <a href="../a/eccmqVJi">album</a></h2>',
-        "html.parser",
-    )
-
-    album_url = _get_related_album_url(
-        soup,
-        _parse_with_base,
-        AbsoluteHttpURL("https://bunkr.cr/f/8-16-8out556m95_30UUdVDDAQ-HnEfe1zW.mp4"),
-    )
-
-    assert album_url == AbsoluteHttpURL("https://bunkr.cr/a/eccmqVJi")
 
 
 async def test_album_scrapes_paginated_album_pages() -> None:
@@ -225,7 +209,7 @@ async def test_album_file_uses_album_results_before_referer_lookup() -> None:
     crawler.create_task.assert_not_called()
 
 
-async def test_top_level_file_expands_related_album() -> None:
+async def test_top_level_file_does_not_expand_related_album() -> None:
     crawler = BunkrrCrawler(mock.Mock())
     file_url = AbsoluteHttpURL("https://bunkr.cr/f/8-16-8out556m95_30UUdVDDAQ-HnEfe1zW.mp4")
     soup = BeautifulSoup(
@@ -240,14 +224,17 @@ async def test_top_level_file_expands_related_album() -> None:
         """,
         "html.parser",
     )
+    scrape_item = ScrapeItem(url=file_url)
+    src = AbsoluteHttpURL("https://get.bunkrr.su/file/11234941")
 
+    crawler.check_complete_from_referer = mock.AsyncMock(return_value=False)
+    crawler._request_soup_lenient = mock.AsyncMock(return_value=soup)
+    crawler._resolve_download_src = mock.AsyncMock(return_value=src)
+    crawler._direct_file = mock.AsyncMock()
     crawler._album = mock.AsyncMock()
 
-    expanded = await crawler._try_related_album(ScrapeItem(url=file_url), soup)
+    await crawler.file(scrape_item)
 
-    assert expanded is True
-    crawler._album.assert_awaited_once()
-    album_item, album_id = crawler._album.await_args.args
-    assert album_item.url == AbsoluteHttpURL("https://bunkr.cr/a/eccmqVJi")
-    assert album_item.parents == [file_url]
-    assert album_id == "eccmqVJi"
+    crawler._album.assert_not_awaited()
+    crawler._resolve_download_src.assert_awaited_once_with(scrape_item, soup)
+    crawler._direct_file.assert_awaited_once_with(scrape_item, src, "8 16 8out556m95_30UUdVDDAQ.mp4")
