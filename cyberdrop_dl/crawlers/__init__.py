@@ -10,6 +10,7 @@ from .archivebate import ArchiveBateCrawler
 from .ashemaletube import AShemaleTubeCrawler
 from .bandcamp import BandcampCrawler
 from .beeg import BeegComCrawler
+from .behance import BehanceCrawler
 from .box_dot_com import BoxDotComCrawler
 from .bunkrr import BunkrrCrawler
 from .bunkrr_albums_io import BunkrAlbumsIOCrawler

@@ -127,7 +127,7 @@ def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[
 
 def _parse_srcset(srcset: str) -> str:
     # The best src is the last one (usually)
-    return [src.split(" ")[0] for src in srcset.split(", ")][-1]
+    return [src.strip().split(" ")[0] for src in srcset.split(",") if src.strip()][-1]
 
 
 def decompose(tag: Tag, selector: str) -> None:

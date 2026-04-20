@@ -13,6 +13,16 @@ All the options in these list are optional. The default value for all of them is
 
 <details>
 
+<summary>Behance</summary>
+
+- `access_token`
+
+Value of the `iat0` cookie from the website. This will allow CDL to download mature content (gallery/ images) from Behance.
+
+</details>
+
+<details>
+
 <summary>Coomer</summary>
 
 - `session`
