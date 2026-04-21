@@ -1,6 +1,7 @@
 ---
 description: These are some general settings that will be used regardless of which config is loaded
 ---
+
 # General
 
 ## `disable_crawlers`
@@ -41,7 +42,7 @@ CDL will always try to download from unsupported URLs if the last part of the UR
 
 {% hint style="warning" %}
 This wiki does not cover flaresolverr setup process. If you need help, refer to their documentation. Please do not open issues related to flaresolverr or `DDoS-Guard`.
-See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/jbsparrow/CyberDropDownloader/discussions/839) for alternatives using cookies
+See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839) for alternatives using cookies
 {% endhint %}
 
 ## `max_file_name_length`

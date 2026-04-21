@@ -24,7 +24,7 @@ If you are using one of the provided start files, it should do so automatically.
 
 ## Why do i get `DDoS-Guard` error downloading from `x` site?
 
-You may need to import cookies. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/jbsparrow/CyberDropDownloader/discussions/839)
+You may need to import cookies. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
 
 ## I'm trying to report a bug and they ask me for a logs file. Where is this file?
 
@@ -40,7 +40,7 @@ You check [this page to learn about what each error code means](https://develope
 
 {% hint style="info" %}
 Any "Unknown" error, is usually coding related, or it'll be something like the program not being able to find a file extension for a file.
-You can report unknown error on the issue tracker: <https://github.com/jbsparrow/CyberDropDownloader/issues>
+You can report unknown error on the issue tracker: <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues>
 {% endhint %}
 
 ## Why are all the files skipped?
@@ -59,7 +59,7 @@ It is recommended to revisit the [Getting Started](getting-started/README.md) gu
 
 ## How do I scrape forum threads?
 
-You need to import cookies to use as authentication for those sites. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/jbsparrow/CyberDropDownloader/discussions/839)
+You need to import cookies to use as authentication for those sites. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
 
 ## Why are the filenames the way they are?
 

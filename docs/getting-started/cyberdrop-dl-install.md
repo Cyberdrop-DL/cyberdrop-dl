@@ -13,7 +13,7 @@ This is the simplest method to get the program up and running. Pre-configured st
 The start scripts only work on 64bits operating systems. If you are running a 32bit OS, you need to install directly from pypi and may need to compile some dependencies
 {% endhint %}
 
-You can download them here: [https://github.com/jbsparrow/CyberDropDownloader/releases/latest](https://github.com/jbsparrow/CyberDropDownloader/releases/latest)
+You can download them here: [https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest)
 
 You only need to download the `Cyberdrop-DL_<version>.zip` file, you don't need to worry about the other files.
 
@@ -41,7 +41,7 @@ You can open the start script from the zip in a text editor like notepad. At the
 set "COMMANDLINE_ARGS="
 ```
 
-`COMMANDLINE_ARGS`:  Provide any arguments to pass to Cyberdrop-Dl. For more information, refer to the [CLI Arguments section](../reference/cli-arguments.md)
+`COMMANDLINE_ARGS`: Provide any arguments to pass to Cyberdrop-Dl. For more information, refer to the [CLI Arguments section](../reference/cli-arguments.md)
 
 {% hint style="info" %}
 You **MUST** put the values _inside_ the double quotes. Ex: `set "COMMANDLINE_ARGS=--disable-cache"`

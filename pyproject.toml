@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-authors = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
+authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -41,6 +41,7 @@ dependencies = [
 description = "Bulk downloader for multiple file hosts"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
+manteiners = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
 readme = "README.md"
 requires-python = ">=3.11"
 version = "9.3.0"
@@ -55,8 +56,10 @@ cyberdrop-dl = "cyberdrop_dl.__main__:main"
 cyberdrop-dl-patched = "cyberdrop_dl.__main__:main"
 
 [project.urls]
-Changelog = "https://github.com/NTFSvolume/cdl/blob/main/CHANGELOG.md"
-Repository = "https://github.com/NTFSvolume/cdl"
+Changelog = "https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CHANGELOG.md"
+Funding = 'https://github.com/sponsors/jbsparrow'
+Issues = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
+Repository = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
 
 [build-system]
 build-backend = "uv_build"

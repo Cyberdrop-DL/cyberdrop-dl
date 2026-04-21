@@ -235,7 +235,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
 
     async def fetch_thread(self, scrape_item: ScrapeItem) -> None:
         thread_part_index = len(self.PRIMARY_URL.parts)
-        # https://github.com/jbsparrow/CyberDropDownloader/issues/1165#issuecomment-3086739753
+        # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1165#issuecomment-3086739753
         if self.PRIMARY_URL.parts[-1] == "":
             thread_part_index -= 1
         match scrape_item.url.parts[thread_part_index:]:

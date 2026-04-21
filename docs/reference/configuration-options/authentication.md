@@ -40,7 +40,7 @@ Logging to forums with `Authentication` was deprecated in v6.7.0
 
 You need to use cookie files.
 
-See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/jbsparrow/CyberDropDownloader/discussions/839)
+See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
 {% endhint %}
 
 </details>

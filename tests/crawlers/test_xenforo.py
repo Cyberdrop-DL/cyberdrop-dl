@@ -682,7 +682,7 @@ def test_post_images(cls: type[xenforo.XenforoCrawler], post_content: str, expec
 
 
 def test_embeds_can_extract_google_drive_links() -> None:
-    # https://github.com/jbsparrow/CyberDropDownloader/issues/775
+    # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/775
     crawler = crawler_instances[crawlers.SimpCityCrawler]
     content = """
     <div itemprop="text">
@@ -704,7 +704,7 @@ def test_embeds_can_extract_google_drive_links() -> None:
 
 
 def test_post_smg_extract_attachments() -> None:
-    # https://github.com/jbsparrow/CyberDropDownloader/issues/1070
+    # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1070
     attachments = """
     <h4 class="block-textHeader">Attachments</h4>
         <ul class="attachmentList">
@@ -777,7 +777,7 @@ def test_post_smg_extract_attachments() -> None:
 
 
 def test_post_celebforum_should_use_href_for_images() -> None:
-    # https://github.com/jbsparrow/CyberDropDownloader/issues/1093
+    # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1093
     content = """
     <a href="https://celebforum.to/attachments/jc6huqrju9-jpg.321620/" target="_blank"><img alt="JC6HUqrju9" class="bbImage"
         height="200" loading="lazy"

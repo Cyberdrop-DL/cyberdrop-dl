@@ -1451,7 +1451,7 @@ This update introduces the following changes:
 
 ### Details
 
-- Project changes will documented on <https://github.com/jbsparrow/CyberDropDownloader/blob/master/CHANGELOG.md> for better tracking
+- Project changes will documented on <https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CHANGELOG.md> for better tracking
 - Built-in viewer will fetch CHANGELOG history on first use
 
 ## [5.6.38] - 2024-09-30

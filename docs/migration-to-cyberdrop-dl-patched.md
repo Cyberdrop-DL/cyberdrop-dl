@@ -37,7 +37,7 @@ The command to use the new version will be `cyberdrop-dl-patched`.
 
 ## If you installed using the start files
 
-You can find the new ones here: [new start scripts](https://github.com/jbsparrow/CyberDropDownloader/releases/latest)
+You can find the new ones here: [new start scripts](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest)
 
 Put the new start scripts on the same folder as the old ones, them delete the old ones.
 
