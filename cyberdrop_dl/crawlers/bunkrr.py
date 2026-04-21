@@ -291,8 +291,11 @@ class BunkrrCrawler(Crawler):
                 soup = await self._request_soup_lenient(page_url)
                 page_last_page = _get_album_last_page(soup, self.parse_url, page_url)
                 found_new_file = self._queue_album_page_files(scrape_item, origin, results, seen_slugs, soup)
-            except ScrapeError:
-                break
+            except ScrapeError as e:
+                if getattr(e, "status", None) in {404, 410}:
+                    self.log_debug(f"[Bunkr] stopping album probe at {page_url}: {e}")
+                    break
+                raise
 
             if page_last_page and page < page_last_page:
                 await self._scrape_known_album_pages(

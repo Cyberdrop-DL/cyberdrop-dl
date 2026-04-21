@@ -184,6 +184,51 @@ async def test_album_continues_when_later_page_reveals_more_pages() -> None:
     ]
 
 
+@pytest.mark.parametrize("status", [404, 410])
+async def test_probe_album_pages_stops_on_missing_pages(status: int) -> None:
+    crawler = BunkrrCrawler(mock.Mock())
+    url = AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg")
+    page_2 = BeautifulSoup("<html></html>", "html.parser")
+
+    crawler._request_soup_lenient = mock.AsyncMock(side_effect=[page_2, ScrapeError(status)])
+    crawler._queue_album_page_files = mock.Mock(return_value=True)
+    crawler.log_debug = mock.Mock()
+
+    await crawler._probe_album_pages(
+        ScrapeItem(url=url),
+        url.origin(),
+        {},
+        set(),
+        start_page=2,
+    )
+
+    requested_urls = [call.args[0] for call in crawler._request_soup_lenient.await_args_list]
+    assert requested_urls == [
+        AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg?advanced=1&page=2"),
+        AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg?advanced=1&page=3"),
+    ]
+    crawler.log_debug.assert_called_once()
+
+
+async def test_probe_album_pages_reraises_non_terminal_scrape_errors() -> None:
+    crawler = BunkrrCrawler(mock.Mock())
+    url = AbsoluteHttpURL("https://bunkr.cr/a/fQ6HHKtg")
+    error = ScrapeError(503)
+
+    crawler._request_soup_lenient = mock.AsyncMock(side_effect=error)
+
+    with pytest.raises(ScrapeError) as exc_info:
+        await crawler._probe_album_pages(
+            ScrapeItem(url=url),
+            url.origin(),
+            {},
+            set(),
+            start_page=2,
+        )
+
+    assert exc_info.value is error
+
+
 async def test_album_file_uses_album_results_before_referer_lookup() -> None:
     manager = mock.Mock()
     manager.states.RUNNING.wait = mock.AsyncMock()
