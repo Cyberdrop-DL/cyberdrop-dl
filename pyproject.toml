@@ -65,7 +65,7 @@ cyberdrop-dl-patched = "cyberdrop_dl.__main__:main"
 [project.urls]
 Changelog = "https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CHANGELOG.md"
 Funding = 'https://github.com/sponsors/jbsparrow'
-Issues = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
+Issues = "https://github.com/Cyberdrop-DL/cyberdrop-dl/issues"
 Repository = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
 
 [build-system]

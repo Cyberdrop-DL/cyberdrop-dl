@@ -44,7 +44,7 @@ If everything is okay, your changes will be merged into the project.
 
 ## Setting up the development environment
 
-1. Install `uv` (<https://docs.astral.sh/uv/getting-started/installation/>), the project management package Cyberdrop-DL uses. `uv` will automatically install a compatible python (if required)
+1. Install `uv` (<https://docs.astral.sh/uv/getting-started/installation/>) (project management).
 
 2. Clone the repo
 
@@ -53,9 +53,9 @@ If everything is okay, your changes will be merged into the project.
    cd cyberdrop-dl
    ```
 
-3. Setup the dev enviroment with `uv`
+3. Setup the dev enviroment with `uv`. It will automatically install a compatible python version (if required)
 
-   ```shell
+   
    uv sync --all-extras
    ```
 
@@ -71,7 +71,7 @@ If everything is okay, your changes will be merged into the project.
 
 `Formatting`: This project uses [ruff](https://docs.astral.sh/ruff) for formatting, linting and import sorting.
 
-`TypeChecking`: Type Checking is not enforced but highly recommended. The projects includes config for [`basedpyright`](https://docs.basedpyright.com/latest)
+`TypeChecking`: Type Checking is not enforced but highly recommended. The project includes config for [`basedpyright`](https://docs.basedpyright.com/latest)
 
 `Line Width`: We use a line width of 120.
 
