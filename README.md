@@ -14,7 +14,7 @@ _Bulk asynchronous downloader for multiple file hosts_
 
 [![Discord](https://discordapp.com/api/guilds/1070206871564197908/widget.png?style=banner2)](https://discord.com/invite/P5nsbKErwy)
 
-Brand new and improved! Cyberdrop-DL now has an updated paint job, fantastic new look. It's now easier to use than ever before!
+Brand new and improved! `cyberdrop-dl` now has an updated paint job, fantastic new look. It's now easier to use than ever before!
 
 ![Cyberdrop-DL TUI Preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/cyberdrop-dl_tui_preview.png)
 
