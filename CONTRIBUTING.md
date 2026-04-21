@@ -44,7 +44,7 @@ If everything is okay, your changes will be merged into the project.
 
 ## Setting up the development environment
 
-1. Install `uv` (<https://docs.astral.sh/uv/getting-started/installation/>) (project management).
+1. Install `uv` for project management (<https://docs.astral.sh/uv/getting-started/installation/>).
 
 2. Clone the repo
 
@@ -56,12 +56,12 @@ If everything is okay, your changes will be merged into the project.
 3. Setup the dev enviroment with `uv`. It will automatically install a compatible python version (if required)
 
    
-   uv sync --all-extras
+   
    ```
 
 4. Install the pre-commit hooks:
 
-   ```shell
+   
    uv run prek install
    ```
 
@@ -71,13 +71,13 @@ If everything is okay, your changes will be merged into the project.
 
 `Formatting`: This project uses [ruff](https://docs.astral.sh/ruff) for formatting, linting and import sorting.
 
-`TypeChecking`: Type Checking is not enforced but highly recommended. The project includes config for [`basedpyright`](https://docs.basedpyright.com/latest)
+`Type checking`: Not enforced but highly recommended. The project includes hardcoded config options for [`basedpyright`](https://docs.basedpyright.com/latest)
 
-`Line Width`: We use a line width of 120.
+`Line width`: We use a line width of 120.
 
 ### Code formatting with pre-commit hooks
 
-This project uses git pre-commit hooks to perform formatting and linting before a commit is allowed,
+This project uses git pre-commit hooks to perform formatting and linting before a commit is created,
 to ensure consistent style and catch some common issues early on.
 
 Once installed, hooks will run when you commit. If the formatting isn't quite right or a linter catches something,
@@ -90,6 +90,8 @@ all you need to do is `git add` those files again and retry your commit.
 We recommend [setting up your IDE](https://docs.astral.sh/ruff/editors/) to format and check with `ruff`, but you can always run
 `uv run ruff check --fix` then `uv run ruff format` in the root directory before submitting a pull request.
 If you're using VScode, you can set it to [auto format python files with ruff on save](#editor-settings) in your `settings.json`
+
+The project includes predefined [settings for the zed editor](https://github.com/Cyberdrop-DL/cyberdrop-dl/tree/main/.zed), with a recipe to quickly launch CDL in debug mode for testing
 
 ## Editor settings
 
