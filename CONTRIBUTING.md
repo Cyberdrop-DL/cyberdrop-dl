@@ -55,13 +55,13 @@ If everything is okay, your changes will be merged into the project.
 
 3. Setup the dev enviroment with `uv`. It will automatically install a compatible python version (if required)
 
-   
-   
+   ```sh
+   uv sync --all-extras
    ```
 
 4. Install the pre-commit hooks:
 
-   
+   ```sh
    uv run prek install
    ```
 
