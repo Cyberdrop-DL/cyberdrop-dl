@@ -7,7 +7,7 @@ _Bulk asynchronous downloader for multiple file hosts_
 [![PyPI - Version](https://img.shields.io/pypi/v/cyberdrop-dl-patched)](https://pypi.org/project/cyberdrop-dl-patched/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/cyberdrop-dl-patched)](https://pypi.org/project/cyberdrop-dl-patched/)
 [![Docs](https://img.shields.io/badge/docs-wiki-blue?link=https%3A%2F%2Fscript-ware.gitbook.io%2Fcyberdrop-dl)](https://script-ware.gitbook.io/cyberdrop-dl)
-[![GitHub License](https://img.shields.io/github/license/Cyberdrop-DL/cyberdrop-dl)](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/LICENSE)
+[![GitHub License](https://img.shields.io/github/license/Cyberdrop-DL/cyberdrop-dl)](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/LICENSE)
 [![linting - Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/Cyberdrop-DL/cyberdrop-dl/actions/workflows/ruff.yaml)
 [![tests](https://github.com/Cyberdrop-DL/cyberdrop-dl/actions/workflows/ci.yaml/badge.svg?event=push)](https://github.com/Cyberdrop-DL/cyberdrop-dl/actions/workflows/ci.yaml)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/cyberdrop-dl-patched)](https://pypistats.org/packages/cyberdrop-dl-patched)
@@ -16,7 +16,7 @@ _Bulk asynchronous downloader for multiple file hosts_
 
 Brand new and improved! Cyberdrop-DL now has an updated paint job, fantastic new look. It's now easier to use than ever before!
 
-![Cyberdrop-DL TUI Preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/master/docs/assets/cyberdrop-dl_tui_preview.png)
+![Cyberdrop-DL TUI Preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/cyberdrop-dl_tui_preview.png)
 
 </div>
 
@@ -32,4 +32,4 @@ Follow the [getting-started guide](https://script-ware.gitbook.io/cyberdrop-dl/g
 
 If there is a feature you want, you've discovered a bug, or if you have other general feedback, please create an issue for it!
 
-See [CONTRIBUTING.md](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CONTRIBUTING.md) for instructions on [opening an Issue](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CONTRIBUTING.md#submitting-an-issue). If you want to submit code to the project, follow the [guidelines on how to contribute](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CONTRIBUTING.md#submitting-a-pull-request-pr).
+See [CONTRIBUTING.md](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CONTRIBUTING.md) for instructions on [opening an Issue](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CONTRIBUTING.md#submitting-an-issue). If you want to submit code to the project, follow the [guidelines on how to contribute](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CONTRIBUTING.md#submitting-a-pull-request-pr).

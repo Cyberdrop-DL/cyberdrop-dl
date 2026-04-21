@@ -33,5 +33,5 @@
     - [Generic Crawlers](reference/configuration-options/global-settings/generic_crawlers_instances.md)
 - [CLI Arguments](reference/cli-arguments.md)
 - [Notifications](reference/notifications.md)
-- [Changelog](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CHANGELOG.md)
-- [Contributing](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/master/CONTRIBUTING.md)
+- [Changelog](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CHANGELOG.md)
+- [Contributing](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CONTRIBUTING.md)
