@@ -2,6 +2,12 @@
 name = "cyberdrop-dl-patched"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -39,9 +45,10 @@ dependencies = [
     "yarl >=1.23.0"
 ]
 description = "Bulk downloader for multiple file hosts"
+keywords = ["asyncio", "bunkr", "cyberdrop", "downloader", "mega.nz"]
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
-manteiners = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
+maintainers = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
 readme = "README.md"
 requires-python = ">=3.11"
 version = "9.3.0"
