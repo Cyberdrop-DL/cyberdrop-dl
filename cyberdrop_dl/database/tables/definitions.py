@@ -72,3 +72,9 @@ CREATE TABLE IF NOT EXISTS temp_hash (
 create_hash_index = """
 CREATE INDEX IF NOT EXISTS idx_hash_type_hash ON hash (hash_type, hash);
 """
+
+create_history_indexes = """
+CREATE INDEX IF NOT EXISTS idx_media_referer_domain_completed ON media (referer, domain, completed);
+CREATE INDEX IF NOT EXISTS idx_media_domain_album_completed ON media (domain, album_id, completed, url_path);
+CREATE INDEX IF NOT EXISTS idx_media_download_filename ON media (download_filename);
+"""

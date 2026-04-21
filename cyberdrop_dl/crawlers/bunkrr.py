@@ -13,7 +13,7 @@ from aiohttp import ClientConnectorError
 from cyberdrop_dl.constants import FILE_FORMATS
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.data_structures.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.utils import aio, css, open_graph
 from cyberdrop_dl.utils.utilities import error_handling_wrapper, parse_url, xor_decrypt
 
@@ -26,11 +26,13 @@ if TYPE_CHECKING:
 
 
 _DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://bunkr.cr/api/vs")
+_DOWNLOAD_API_ENTRYPOINT_BY_ID = AbsoluteHttpURL("https://apidl.bunkr.ru/api/_001_v2")
 _REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
 
 
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
+    ALBUM_PAGE_LINKS = "a[href*='page=']"
     DOWNLOAD_BUTTON = "a.btn.ic-download-01"
     IMAGE_PREVIEW = "img.max-h-full.w-auto.object-cover.relative"
 
@@ -39,6 +41,7 @@ VIDEO_AND_IMAGE_EXTS: set[str] = FILE_FORMATS["Images"] | FILE_FORMATS["Videos"]
 HOST_OPTIONS: set[str] = {"bunkr.site", "bunkr.cr", "bunkr.ph"}
 DEEP_SCRAPE_CDNS: set[str] = {"burger", "milkshake"}  # CDNs under maintanance, ignore them and try to get a cached URL
 FILE_KEYS = "id", "name", "original", "slug", "type", "extension", "size", "timestamp", "thumbnail", "cdnEndpoint"
+ALBUM_PAGE_CONCURRENCY = 5
 known_bad_hosts: set[str] = set()
 
 
@@ -66,6 +69,53 @@ def _make_album_parser(keys: tuple[str, ...]) -> Callable[[BeautifulSoup], Gener
         return decode(files)
 
     return parse
+
+
+def _get_download_button_details(
+    soup: BeautifulSoup,
+    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
+    relative_to: AbsoluteHttpURL,
+) -> tuple[str | None, AbsoluteHttpURL | None]:
+    button = css.select(soup, Selector.DOWNLOAD_BUTTON)
+    if file_id := css.get_attr_or_none(button, "data-id"):
+        return file_id, None
+
+    href = css.get_attr_or_none(button, "href")
+    if not href:
+        raise ScrapeError(422, "Bunkr download button is missing href")
+    return None, parse_url(href, relative_to)
+
+
+def _album_page_url(url: AbsoluteHttpURL, page: int) -> AbsoluteHttpURL:
+    url = url.without_query_params("advanced", "page").update_query(advanced=1)
+    if page > 1:
+        return url.update_query(page=page)
+    return url
+
+
+def _get_album_last_page(
+    soup: BeautifulSoup,
+    parse_url: Callable[[str, AbsoluteHttpURL | None], AbsoluteHttpURL],
+    relative_to: AbsoluteHttpURL,
+) -> int | None:
+    last_page = None
+    for page_link in css.iselect(soup, Selector.ALBUM_PAGE_LINKS):
+        href = css.get_attr_or_none(page_link, "href")
+        if not href:
+            continue
+
+        page_url = parse_url(href, relative_to)
+        if page_url.parts[1:3] != relative_to.parts[1:3]:
+            continue
+
+        page = page_url.query.get("page")
+        try:
+            page_num = int(page) if page else 1
+        except ValueError:
+            continue
+
+        last_page = max(last_page or page_num, page_num)
+    return last_page
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -148,34 +198,141 @@ class BunkrrCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup = await self._request_soup_lenient(scrape_item.url.with_query(advanced=1))
+        await self._album(scrape_item, album_id)
+
+    async def _album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        soup = await self._request_soup_lenient(_album_page_url(scrape_item.url, 1))
         name = open_graph.title(soup)
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         origin = scrape_item.url.origin()
         results = await self.get_album_results(album_id)
+        seen_slugs: set[str] = set()
+        last_page = _get_album_last_page(soup, self.parse_url, scrape_item.url)
+        if not self._queue_album_page_files(scrape_item, origin, results, seen_slugs, soup):
+            return
+
+        if last_page is not None:
+            await self._scrape_known_album_pages(
+                scrape_item,
+                origin,
+                results,
+                seen_slugs,
+                start_page=2,
+                last_page=last_page,
+            )
+            return
+
+        await self._probe_album_pages(scrape_item, origin, results, seen_slugs, start_page=2)
+
+    def _queue_album_page_files(
+        self,
+        scrape_item: ScrapeItem,
+        origin: AbsoluteHttpURL,
+        results: dict[str, int],
+        seen_slugs: set[str],
+        soup: BeautifulSoup,
+    ) -> bool:
+        found_new_file = False
         for file in self._parse_album_files(soup):
+            if file.slug in seen_slugs:
+                continue
+
+            seen_slugs.add(file.slug)
+            found_new_file = True
             web_url = origin / "f" / file.slug
             new_scrape_item = scrape_item.create_child(web_url)
             self.create_task(self._album_file(new_scrape_item, file, results))
             scrape_item.add_children()
+        return found_new_file
+
+    async def _scrape_known_album_pages(
+        self,
+        scrape_item: ScrapeItem,
+        origin: AbsoluteHttpURL,
+        results: dict[str, int],
+        seen_slugs: set[str],
+        *,
+        start_page: int,
+        last_page: int,
+    ) -> None:
+        page = start_page
+        while page <= last_page:
+            batch_last_page = min(last_page, page + ALBUM_PAGE_CONCURRENCY - 1)
+            pages = list(range(page, batch_last_page + 1))
+            page_urls = [_album_page_url(scrape_item.url, page_num) for page_num in pages]
+            soups = await aio.gather(
+                [self._request_soup_lenient(page_url) for page_url in page_urls],
+                batch_size=ALBUM_PAGE_CONCURRENCY,
+            )
+            processed_until = pages[-1]
+
+            for page_url, soup in zip(page_urls, soups, strict=True):
+                if page_last_page := _get_album_last_page(soup, self.parse_url, page_url):
+                    last_page = max(last_page, page_last_page)
+                self._queue_album_page_files(scrape_item, origin, results, seen_slugs, soup)
+
+            page = processed_until + 1
+
+    async def _probe_album_pages(
+        self,
+        scrape_item: ScrapeItem,
+        origin: AbsoluteHttpURL,
+        results: dict[str, int],
+        seen_slugs: set[str],
+        *,
+        start_page: int,
+    ) -> None:
+        page = start_page
+        while True:
+            page_url = _album_page_url(scrape_item.url, page)
+            try:
+                soup = await self._request_soup_lenient(page_url)
+                page_last_page = _get_album_last_page(soup, self.parse_url, page_url)
+                found_new_file = self._queue_album_page_files(scrape_item, origin, results, seen_slugs, soup)
+            except ScrapeError as e:
+                if getattr(e, "status", None) in {404, 410}:
+                    self.log_debug(f"[Bunkr] stopping album probe at {page_url}: {e}")
+                    break
+                raise
+
+            if page_last_page and page < page_last_page:
+                await self._scrape_known_album_pages(
+                    scrape_item,
+                    origin,
+                    results,
+                    seen_slugs,
+                    start_page=page + 1,
+                    last_page=page_last_page,
+                )
+                return
+
+            if not found_new_file:
+                break
+
+            page += 1
 
     @auto_task_id
     @error_handling_wrapper
     async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, int]) -> None:
         db_url = scrape_item.url.with_host(self.DATABASE_PRIMARY_HOST)
-        if await self.check_complete_from_referer(db_url):
-            return
-
-        deep_scrape = False
         scrape_item.possible_datetime = self.parse_date(file.date, "%H:%M:%S %d/%m/%Y")
         try:
             src = file.src()
         except ValueError:
-            deep_scrape = True
+            if await self.check_complete_from_referer(db_url):
+                return
+            self.create_task(self.run(scrape_item))
+            return
 
-        deep_scrape = deep_scrape or (
+        if self.check_album_results(src, results):
+            return
+
+        if await self.check_complete_from_referer(db_url):
+            return
+
+        deep_scrape = (
             src.suffix.lower() not in VIDEO_AND_IMAGE_EXTS
             or "no-image" in src.name
             or self.deep_scrape
@@ -183,9 +340,6 @@ class BunkrrCrawler(Crawler):
         )
         if deep_scrape:
             self.create_task(self.run(scrape_item))
-            return
-
-        if self.check_album_results(src, results):
             return
 
         await self._direct_file(scrape_item, src, file.name)
@@ -204,9 +358,7 @@ class BunkrrCrawler(Crawler):
                 src = None
 
         if not src:
-            dl_link = css.select(soup, Selector.DOWNLOAD_BUTTON, "href")
-            file_id = self.parse_url(dl_link).name
-            src = await self._request_download(file_id)
+            src = await self._resolve_download_src(scrape_item, soup)
 
         name = open_graph.title(soup)  # See: https://github.com/jbsparrow/CyberDropDownloader/issues/929
         await self._direct_file(scrape_item, src, name)
@@ -215,9 +367,7 @@ class BunkrrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         name = css.select_text(soup, "h1")
-        dl_link = css.select(soup, Selector.DOWNLOAD_BUTTON, "href")
-        slug = self.parse_url(dl_link).parts[-1]
-        src = await self._request_download(slug)
+        src = await self._resolve_download_src(scrape_item, soup)
         await self._direct_file(scrape_item, src, name)
 
     @error_handling_wrapper
@@ -241,6 +391,29 @@ class BunkrrCrawler(Crawler):
             headers={"Referer": "https://bunkr.sk/"},
         )
         return self.parse_url(ApiResponse(**resp).decrypt())
+
+    async def _request_download_by_id(self, file_id: str) -> AbsoluteHttpURL:
+        resp: dict[str, Any] = await self.request_json(
+            _DOWNLOAD_API_ENTRYPOINT_BY_ID,
+            "POST",
+            json={"id": file_id},
+        )
+        return self.parse_url(ApiResponse(**resp).decrypt())
+
+    async def _resolve_download_src(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> AbsoluteHttpURL:
+        file_id, dl_link = _get_download_button_details(soup, self.parse_url, scrape_item.url.origin())
+        if file_id:
+            return await self._request_download_by_id(file_id)
+
+        assert dl_link is not None
+        if dl_link.host == _REINFORCED_URL.host and dl_link.parts[1:2] == ("file",):
+            return await self._request_download_by_id(dl_link.name)
+
+        # Some pages already expose a CDN URL directly; keep using it as-is.
+        if dl_link.host not in HOST_OPTIONS and dl_link.host != self.DATABASE_PRIMARY_HOST:
+            return dl_link
+
+        return await self._request_download(dl_link.name)
 
     async def _try_request_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup | None:
         try:
