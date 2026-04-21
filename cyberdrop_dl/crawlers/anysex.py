@@ -49,9 +49,8 @@ class AnySexCrawler(FluidPlayerCrawler):
         scrape_item: ScrapeItem,
         name: str | None = None,
     ) -> None:
+        scrape_item.setup_as_album(self.create_title(name))
         async for soup in self.web_pager(scrape_item.url):
-            scrape_item.setup_as_album(self.create_title(name))
-
             for _, new_scrape_item in self.iter_children(scrape_item, soup, ".item > a"):
                 self.create_task(self.album(new_scrape_item, album_id=new_scrape_item.url.parts[2]))
 
