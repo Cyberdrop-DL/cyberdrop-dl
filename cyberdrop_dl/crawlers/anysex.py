@@ -32,11 +32,11 @@ class AnySexCrawler(FluidPlayerCrawler):
                 return await self.video(scrape_item, video_id)
             case ["contents", _, *_]:
                 return await self.direct_file(scrape_item)
-            case [*_, "photos", album_id, _]:
-                return await self.album(scrape_item, album_id)
             case ["photos", "search", *_] if query := scrape_item.url.query.get("q"):
                 query = query.replace("-", " ")
                 return await self.photo_search(scrape_item, query)
+            case [*_, "photos", album_id, _]:
+                return await self.album(scrape_item, album_id)
             case ["search" as type_, *_] if query := scrape_item.url.query.get("q"):
                 query = query.replace("-", " ")
                 return await self.collection(scrape_item, type_, query)
@@ -44,15 +44,11 @@ class AnySexCrawler(FluidPlayerCrawler):
                 raise ValueError
 
     @error_handling_wrapper
-    async def photo_search(
-        self,
-        scrape_item: ScrapeItem,
-        name: str | None = None,
-    ) -> None:
-        scrape_item.setup_as_album(self.create_title(name))
+    async def photo_search(self, scrape_item: ScrapeItem, query: str) -> None:
+        scrape_item.setup_as_album(self.create_title(query))
         async for soup in self.web_pager(scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, ".item > a"):
-                self.create_task(self.album(new_scrape_item, album_id=new_scrape_item.url.parts[2]))
+                self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
