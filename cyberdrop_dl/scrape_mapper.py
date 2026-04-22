@@ -228,7 +228,7 @@ class ScrapeMapper:
                     (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
                 )
 
-            self.create_download_task(wait_until_scrape_is_done())
+            _ = asyncio.create_task(wait_until_scrape_is_done())
 
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
