@@ -105,7 +105,6 @@ class ScrapeStats:
 @dataclasses.dataclass(slots=True)
 class TaskGroups:
     scrape: asyncio.TaskGroup
-    downloads: asyncio.TaskGroup
 
 
 @dataclasses.dataclass(slots=True)
@@ -119,7 +118,7 @@ class ScrapeMapper:
     _jdownloader: JDownloader = dataclasses.field(init=False)
     _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
     _task_groups: TaskGroups = dataclasses.field(
-        init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup(), asyncio.TaskGroup())
+        init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup())
     )
     _seen_urls: set[AbsoluteHttpURL] = dataclasses.field(init=False, default_factory=set)
     _crawlers_disabled_at_runtime: set[str] = dataclasses.field(init=False, default_factory=set)
@@ -191,8 +190,8 @@ class ScrapeMapper:
                 self.manager.client_manager,
                 storage.monitor(self.manager.config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
-                self._task_groups.downloads,
             ):
+                dispatcher = asyncio.create_task(self._download_dispatcher())
                 try:
                     async with self._task_groups.scrape:
                         self.manager.scrape_mapper = self
@@ -200,8 +199,9 @@ class ScrapeMapper:
                         yield self
 
                 finally:
-                    # The done event signals that all scraping is done, but there may still be downloads pending
                     self._done.set()
+                    await self._pending_downloads.put(None)
+                    await dispatcher
 
     async def run(self) -> ScrapeStats:
         self._init_crawlers()
