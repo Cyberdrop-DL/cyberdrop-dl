@@ -163,6 +163,20 @@ class ScrapeMapper:
 
         plugins.load(self.manager)
 
+    async def _download_dispatcher(self) -> None:
+        active: set[asyncio.Task[None]] = set()
+
+        while True:
+            coro = await self._pending_downloads.get()
+            if coro is None:
+                break
+            task = asyncio.create_task(coro)
+            active.add(task)
+            task.add_done_callback(active.discard)
+
+        if active:
+            await asyncio.gather(*active, return_exceptions=True)
+
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
         assert not self._done.is_set()
