@@ -126,6 +126,9 @@ class ScrapeMapper:
     _factory: CrawlerFactory = dataclasses.field(init=False)
     tui: ScrapingUI = dataclasses.field(init=False, default_factory=ScrapingUI)
     _done: asyncio.Event = dataclasses.field(init=False, default_factory=asyncio.Event)
+    _pending_downloads: asyncio.Queue[Coroutine[Any, Any, Any] | None] = dataclasses.field(
+        init=False, default_factory=asyncio.Queue
+    )
 
     def _scrape_queue(self) -> int:
         return sum(f.waiting_items for f in self._factory)
@@ -147,7 +150,7 @@ class ScrapeMapper:
         _ = self._task_groups.scrape.create_task(coro)
 
     def create_download_task(self, coro: Coroutine[Any, Any, _T]) -> None:
-        _ = self._task_groups.downloads.create_task(coro)
+        self._pending_downloads.put_nowait(coro)
 
     def _init_crawlers(self) -> None:
 
