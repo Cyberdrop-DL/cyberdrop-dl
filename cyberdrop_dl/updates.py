@@ -25,6 +25,7 @@ async def check_latest_pypi(session: aiohttp.ClientSession) -> None:
 async def _request_pypi_info(session: aiohttp.ClientSession) -> dict[str, Any]:
     async with session.get(
         _PYPI_JSON_URL,
+        raise_for_status=True,
         timeout=aiohttp.ClientTimeout(
             sock_read=30,
             sock_connect=20,
