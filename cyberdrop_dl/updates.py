@@ -18,7 +18,6 @@ async def check_latest_pypi() -> None:
 
     except Exception as e:
         logger.error(f"Unable to get latest version information {e!r}")
-        raise
     else:
         _parse_pypi_resp(contents)
 
