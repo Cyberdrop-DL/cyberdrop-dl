@@ -71,13 +71,13 @@ def test_disable_console_logging() -> None:
     console = get_console()
     console.record = True
     with console, logs.setup_console_logging():
-        logger.info("This msg should show up")
+        logger.info("This msg SHOULD show up")
         with logs.disable_console_logging():
-            logger.info("This msg should not show up")
+            logger.info("This msg SHOULD NOT show up")
 
-        logger.info("This msg should show up as well")
+        logger.info("This msg also SHOULD show up")
 
     text = console.export_text()
-    assert "This msg should show up" in text
-    assert "This msg should not show up" not in text
-    assert "This msg should show up as well" in text
+    assert "This msg SHOULD show up" in text
+    assert "This msg SHOULD NOT show up" not in text
+    assert "This msg also SHOULD show up" in text
