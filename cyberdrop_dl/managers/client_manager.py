@@ -55,6 +55,8 @@ _DOWNLOAD_ERROR_ETAGS = {
     "637be5da-11d2b": "eFukt Video removed",
     "63a05f27-11d2b": "eFukt Video removed",
     "5a56b09d-1485eb": "eFukt Video removed",
+    "19fdf2cd6-383c-5a4cd5b6710ed": "ImageVenue image not Found",
+    "383c-5a4cd5b6710ed": "ImageVenue image not Found",
 }
 
 _crawler_errors: dict[str, int] = defaultdict(int)
@@ -357,7 +359,7 @@ class ClientManager:
         message = None
 
         def check_etag() -> None:
-            if download and (e_tag := response.headers.get("ETag")) in _DOWNLOAD_ERROR_ETAGS:
+            if download and (e_tag := response.headers.get("ETag", "").strip('"')) in _DOWNLOAD_ERROR_ETAGS:
                 message = _DOWNLOAD_ERROR_ETAGS[e_tag]
                 raise DownloadError(HTTPStatus.NOT_FOUND, message=message)
 
