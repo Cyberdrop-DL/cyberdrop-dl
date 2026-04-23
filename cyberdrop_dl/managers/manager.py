@@ -102,18 +102,19 @@ class Manager:
 
         logger.info(f"Running cyberdrop-dl v{__version__}")
 
-        args_info = {
-            "System": get_system_information(),
-            "Config file": self.config.source,
-            "URLs file": self.config.settings.files.input_file,
-            "Download folder": self.config.settings.files.download_folder,
-            "Database file": self.appdata.db_file,
-            "CLI options": self.cli_args.model_dump(mode="json"),
-            "Auth": auth,
-            "Settings": config_settings.model_dump(mode="json"),
-            "Global Settings": self.config.global_settings.model_dump(mode="json"),
-        }
-        logger.debug(args_info)
+        logger.debug(
+            {
+                "System": get_system_information(),
+                "Config file": self.config.source,
+                "URLs file": self.config.settings.files.input_file,
+                "Download folder": self.config.settings.files.download_folder,
+                "Database file": self.appdata.db_file,
+                "CLI options": self.cli_args.model_dump(mode="json"),
+                "Auth": auth,
+                "Settings": config_settings.model_dump(mode="json"),
+                "Global Settings": self.config.global_settings.model_dump(mode="json"),
+            }
+        )
 
         try:
             db_size = self.appdata.db_file.stat().st_size
