@@ -383,9 +383,13 @@ def flush_logs() -> None:
 
 
 def disable_console_logging():
-    listener = _CONSOLE_LOG_LISTENER.get()
-    listener.stop()
-    listener.start()
+    try:
+        listener = _CONSOLE_LOG_LISTENER.get()
+    except LookupError:
+        pass
+    else:
+        listener.stop()
+        listener.start()
     return _enter_context(_LOG_TO_CONSOLE, False)
 
 

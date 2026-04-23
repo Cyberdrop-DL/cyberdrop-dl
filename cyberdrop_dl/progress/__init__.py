@@ -100,7 +100,7 @@ class LiveUI(ABC):
 
         with disable_console_logging():
             if "pytest" in sys.modules:
-                yield None
+                yield
                 return
 
             with Live(
