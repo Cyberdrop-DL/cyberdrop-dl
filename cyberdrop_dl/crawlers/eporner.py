@@ -76,6 +76,7 @@ class EpornerCrawler(Crawler):
         "Pornstar": "/pornstar/...",
         "Profile": "/profile/...",
         "Search": "/search/...",
+        "Search Photos": "/search-photos/...",
         "Video": ("/<video_name>-<video-id>", "/hd-porn/<video_id>", "/embed/<video_id>"),
         "Photo": "/photo/...",
         "Gallery": "/gallery/...",
@@ -92,7 +93,7 @@ class EpornerCrawler(Crawler):
                 return await self.video(scrape_item, video_id)
             case ["hd-porn" | "embed", video_id, *_]:
                 return await self.video(scrape_item, video_id)
-            case ["cat" | "channel" | "search" | "pornstar", *_]:
+            case ["cat" | "channel" | "search" | "pornstar" | "tag", *_]:
                 return await self.playlist(scrape_item)
             case ["gallery", *_]:
                 return await self.gallery(scrape_item)
@@ -100,6 +101,8 @@ class EpornerCrawler(Crawler):
                 return await self.profile(scrape_item, username)
             case ["photo", photo_id, *_]:
                 return await self.photo(scrape_item, photo_id)
+            case ["search-photos", query, *_]:
+                return await self.search_photos(scrape_item, query)
             case _:
                 raise ValueError
 
@@ -171,6 +174,13 @@ class EpornerCrawler(Crawler):
         link = self.parse_url(link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)
+
+    @error_handling_wrapper
+    async def search_photos(self, scrape_item: ScrapeItem, query: str) -> None:
+        scrape_item.setup_as_album(self.create_title(f"{query} [photo search]"))
+        async for soup in self.web_pager(scrape_item.url):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, ".mbphoto2 > a"):
+                self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
