@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- ImageVenue
+- ImageVenue support
 - Photo search support (Anysex)
 - Photo search and Tags support (ePorner)
 
