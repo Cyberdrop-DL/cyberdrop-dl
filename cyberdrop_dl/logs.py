@@ -34,7 +34,7 @@ _MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOGGER_LISTENE
 _CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOGGER_LISTENER")
 
 MAIN_LOG_FILE: ContextVar[Path] = ContextVar("_MAIN_LOGGER_FILE")
-LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
+_LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
 
 
 if TYPE_CHECKING:
@@ -288,7 +288,7 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     logging.getLogger().setLevel(logging.DEBUG)
     try:
         with _threaded_logger(handler, context_var=_CONSOLE_LOG_LISTENER) as q_handler:
-            q_handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
+            q_handler.addFilter(lambda _: _LOG_TO_CONSOLE.get())
             yield
     finally:
         # Re add it as a normal handler to make sure uncatched exceptions show up
@@ -380,6 +380,13 @@ def flush_logs() -> None:
     listener = _MAIN_LOG_LISTENER.get()
     listener.stop()
     listener.start()
+
+
+def disable_console_logging():
+    listener = _CONSOLE_LOG_LISTENER.get()
+    listener.stop()
+    listener.start()
+    return _enter_context(_LOG_TO_CONSOLE, False)
 
 
 @contextlib.contextmanager
