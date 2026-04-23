@@ -22,7 +22,10 @@ from typing_extensions import override
 from cyberdrop_dl import env
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator, Iterable
+
+    from rich.console import ConsoleRenderable
+
 
 logger = logging.getLogger("cyberdrop_dl")
 for noisy_package in ("aiosqlite",):
@@ -31,17 +34,11 @@ for noisy_package in ("aiosqlite",):
 _T = TypeVar("_T")
 _USER_NAME = Path.home().name
 _DEFAULT_CONSOLE_WIDTH = 240
-_MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOGGER_LISTENER")
-_CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOGGER_LISTENER")
-
-MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
+_MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOG_LISTENER")
+_CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOG_LISTENER")
 _LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
 
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
-
-    from rich.console import ConsoleRenderable
+MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
 
 
 class RedactedConsole(Console):
@@ -303,6 +300,7 @@ def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[N
     with (
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
+        _enter_context(MAIN_LOG_FILE, file),
         _threaded_logger(
             log_handler=LogHandler(
                 level,
@@ -313,11 +311,7 @@ def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[N
         ),
     ):
         logger.info(f"Debug log file: {debug_log_file}")
-        token = MAIN_LOG_FILE.set(file)
-        try:
-            yield
-        finally:
-            MAIN_LOG_FILE.reset(token)
+        yield
 
 
 @contextlib.contextmanager
@@ -392,7 +386,7 @@ def disable_console_logging():
     else:
         listener.stop()
         listener.start()
-    return _enter_context(_LOG_TO_CONSOLE, False)
+    return _enter_context(_LOG_TO_CONSOLE, value=False)
 
 
 @contextlib.contextmanager
