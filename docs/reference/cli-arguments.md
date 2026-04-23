@@ -62,14 +62,6 @@ Only retry downloads that were completed on or before this date. The date should
 This option has no effect unless you run CDL with `--retry-all`
 {% endhint %}
 
-### `config`
-
-| Type  | Default |
-| ----- | ------- |
-| `str` | `None`  |
-
-Name of config to load.
-
 ### `config-file`
 
 | Type   | Default |
@@ -82,15 +74,7 @@ Path to the CDL `settings.yaml` file to load
 If both `config` and `config-file` are supplied, `config-file` takes priority
 {% endhint %}
 
-### `disable-cache`  
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Disables read/writes to requests cache for the current run only. All config settings or arguments related to the cache (ex: `file_host_cache_expire_after`) will be ignored.
-
-### `download`  
+### `download`
 
 | Type       | Default | Action       |
 | ---------- | ------- | ------------ |
@@ -112,7 +96,7 @@ Download TikTok audios from posts and save them as separate files
 | ---------- | ------- | ------------ |
 | `BoolFlag` | `False` | `store_true` |
 
-By default, CDL will download the  "optimized for streaming" version of tiktok videos. Setting this option to `True` will download videos in original (source) quality.
+By default, CDL will download the "optimized for streaming" version of tiktok videos. Setting this option to `True` will download videos in original (source) quality.
 
 `_original` will be added as a suffix to their filename.
 
@@ -179,7 +163,7 @@ Show stats report at the end of a run
 
 Retry all downloads
 
-### `retry-failed`  
+### `retry-failed`
 
 | Type       | Default | Action       |
 | ---------- | ------- | ------------ |
@@ -187,7 +171,7 @@ Retry all downloads
 
 Retry failed downloads
 
-### `retry-maintenance`  
+### `retry-maintenance`
 
 | Type       | Default | Action       |
 | ---------- | ------- | ------------ |
@@ -195,7 +179,7 @@ Retry failed downloads
 
 Retry download of maintenance files (bunkr). Requires files to be hashed
 
-### `show-supported-sites`  
+### `show-supported-sites`
 
 | Type       | Default | Action       |
 | ---------- | ------- | ------------ |
@@ -203,7 +187,7 @@ Retry download of maintenance files (bunkr). Requires files to be hashed
 
 Shows a list of all supported sites and exits
 
-### `ui`  
+### `ui`
 
 | Type                     | Default      |
 | ------------------------ | ------------ |
@@ -225,169 +209,180 @@ Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
 Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
 
 ```shell
-usage: cyberdrop-dl [OPTIONS] URL [URL...]
+Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
 
 Bulk asynchronous downloader for multiple file hosts
 
-options:
-  -h, --help                                                                    show this help message and exit
-  -V, --version                                                                 show CDL version number and exit
-
-CLI-only options:
-  LINK(S)                                                                       link(s) to content to download (passing multiple links is supported)
-  --appdata-folder APPDATA_FOLDER                                               AppData folder path
-  --completed-after COMPLETED_AFTER                                             only retry downloads that were completed on or after this date
-  --completed-before COMPLETED_BEFORE                                           only retry downloads that were completed on or before this date
-  --config CONFIG                                                               name of config to load
-  --config-file CONFIG_FILE                                                     path to the CDL settings.yaml file to load
-  --disable-cache                                                               temporarily disable the requests cache
-  --download                                                                    skips UI, start download immediately
-  --download-tiktok-audios                                                      download TikTok audios from posts and save them as separate files
-  --download-tiktok-src-quality-videos                                          download TikTok videos in source quality
-  --impersonate [IMPERSONATE]                                                   Use this target as impersonation for all scrape requests
-  --max-items-retry MAX_ITEMS_RETRY                                             max number of links to retry
-  --portrait                                                                    force CDL to run with a vertical layout
-  --print-stats                                                                 show stats report at the end of a run
-  --retry-all                                                                   retry all downloads
-  --retry-failed                                                                retry failed downloads
-  --retry-maintenance                                                           retry download of maintenance files (bunkr). Requires files to be hashed
-  --show-supported-sites                                                        shows a list of supported sites and exits
-  --ui UI                                                                       DISABLED, ACTIVITY, SIMPLE or FULLSCREEN
-
-browser_cookies:
-  --auto-import, --no-auto-import
-  --browser BROWSER
-  --sites [SITES ...]
-
-download_options:
-  --block-download-sub-folders, --no-block-download-sub-folders
-  --disable-download-attempt-limit, --no-disable-download-attempt-limit
-  --disable-file-timestamps, --no-disable-file-timestamps
-  --include-album-id-in-folder-name, --no-include-album-id-in-folder-name
-  --include-thread-id-in-folder-name, --no-include-thread-id-in-folder-name
-  --maximum-number-of-children [MAXIMUM_NUMBER_OF_CHILDREN ...]
-  --remove-domains-from-folder-names, --no-remove-domains-from-folder-names
-  --remove-generated-id-from-filenames, --no-remove-generated-id-from-filenames
-  --scrape-single-forum-post, --no-scrape-single-forum-post
-  --separate-posts-format SEPARATE_POSTS_FORMAT
-  --separate-posts, --no-separate-posts
-  --skip-download-mark-completed, --no-skip-download-mark-completed
-  --skip-referer-seen-before, --no-skip-referer-seen-before
-  --maximum-thread-depth MAXIMUM_THREAD_DEPTH
-  --maximum-thread-folder-depth MAXIMUM_THREAD_FOLDER_DEPTH
-
-dupe_cleanup_options:
-  --add-md5-hash, --no-add-md5-hash
-  --add-sha256-hash, --no-add-sha256-hash
-  --auto-dedupe, --no-auto-dedupe
-  --hashing HASHING
-  --send-deleted-to-trash, --no-send-deleted-to-trash
-
-file_size_limits:
-  --maximum-image-size MAXIMUM_IMAGE_SIZE
-  --maximum-other-size MAXIMUM_OTHER_SIZE
-  --maximum-video-size MAXIMUM_VIDEO_SIZE
-  --minimum-image-size MINIMUM_IMAGE_SIZE
-  --minimum-other-size MINIMUM_OTHER_SIZE
-  --minimum-video-size MINIMUM_VIDEO_SIZE
-
-media_duration_limits:
-  --maximum-video-duration MAXIMUM_VIDEO_DURATION
-  --maximum-audio-duration MAXIMUM_AUDIO_DURATION
-  --minimum-video-duration MINIMUM_VIDEO_DURATION
-  --minimum-audio-duration MINIMUM_AUDIO_DURATION
-
-files:
-  -d, --download-folder DOWNLOAD_FOLDER
-  -j, --dump-json, --no-dump-json
-  -i, --input-file INPUT_FILE
-  --save-pages-html, --no-save-pages-html
-
-ignore_options:
-  --exclude-audio, --no-exclude-audio
-  --exclude-images, --no-exclude-images
-  --exclude-other, --no-exclude-other
-  --exclude-videos, --no-exclude-videos
-  --filename-regex-filter FILENAME_REGEX_FILTER
-  --ignore-coomer-ads, --no-ignore-coomer-ads
-  --ignore-coomer-post-content, --no-ignore-coomer-post-content
-  --only-hosts [ONLY_HOSTS ...]
-  --skip-hosts [SKIP_HOSTS ...]
-  --exclude-files-with-no-extension, --no-exclude-files-with-no-extension
-  --exclude-before EXCLUDE_BEFORE
-  --exclude-after EXCLUDE_AFTER
-
-logs:
-  --download-error-urls DOWNLOAD_ERROR_URLS
-  --last-forum-post LAST_FORUM_POST
-  --log-folder LOG_FOLDER
-  --log-line-width LOG_LINE_WIDTH
-  --logs-expire-after LOGS_EXPIRE_AFTER
-  --main-log MAIN_LOG
-  --rotate-logs, --no-rotate-logs
-  --scrape-error-urls SCRAPE_ERROR_URLS
-  --unsupported-urls UNSUPPORTED_URLS
-  --webhook WEBHOOK
-
-runtime_options:
-  --console-log-level CONSOLE_LOG_LEVEL
-  --deep-scrape, --no-deep-scrape
-  --delete-partial-files, --no-delete-partial-files
-  --ignore-history, --no-ignore-history
-  --jdownloader-autostart, --no-jdownloader-autostart
-  --jdownloader-download-dir JDOWNLOADER_DOWNLOAD_DIR
-  --jdownloader-whitelist [JDOWNLOADER_WHITELIST ...]
-  --log-level LOG_LEVEL
-  --send-unsupported-to-jdownloader, --no-send-unsupported-to-jdownloader
-  --skip-check-for-empty-folders, --no-skip-check-for-empty-folders
-  --skip-check-for-partial-files, --no-skip-check-for-partial-files
-  --slow-download-speed SLOW_DOWNLOAD_SPEED
-  --update-last-forum-post, --no-update-last-forum-post
-
-sorting:
-  --scan-folder SCAN_FOLDER
-  --sort-downloads, --no-sort-downloads
-  --sort-folder SORT_FOLDER
-  --sort-incrementer-format SORT_INCREMENTER_FORMAT
-  --sorted-audio SORTED_AUDIO
-  --sorted-image SORTED_IMAGE
-  --sorted-other SORTED_OTHER
-  --sorted-video SORTED_VIDEO
-
-general:
-  --ssl-context SSL_CONTEXT
-  --disable-crawlers [DISABLE_CRAWLERS ...]
-  --enable-generic-crawler, --no-enable-generic-crawler
-  --flaresolverr FLARESOLVERR
-  --max-file-name-length MAX_FILE_NAME_LENGTH
-  --max-folder-name-length MAX_FOLDER_NAME_LENGTH
-  --proxy PROXY
-  --required-free-space REQUIRED_FREE_SPACE
-  --user-agent USER_AGENT
-
-rate_limiting_options:
-  --download-attempts DOWNLOAD_ATTEMPTS
-  --download-delay DOWNLOAD_DELAY
-  --download-speed-limit DOWNLOAD_SPEED_LIMIT
-  --file-host-cache-expire-after FILE_HOST_CACHE_EXPIRE_AFTER
-  --forum-cache-expire-after FORUM_CACHE_EXPIRE_AFTER
-  --jitter JITTER
-  --max-simultaneous-downloads-per-domain MAX_SIMULTANEOUS_DOWNLOADS_PER_DOMAIN
-  --max-simultaneous-downloads MAX_SIMULTANEOUS_DOWNLOADS
-  --rate-limit RATE_LIMIT
-  --connection-timeout CONNECTION_TIMEOUT
-  --read-timeout READ_TIMEOUT
-
-ui_options:
-  --downloading-item-limit DOWNLOADING_ITEM_LIMIT
-  --refresh-rate REFRESH_RATE
-  --scraping-item-limit SCRAPING_ITEM_LIMIT
-  --vi-mode, --no-vi-mode
-
-generic_crawlers_instances:
-  --wordpress-media [WORDPRESS_MEDIA ...]
-  --wordpress-html [WORDPRESS_HTML ...]
-  --discourse [DISCOURSE ...]
-  --chevereto [CHEVERETO ...]
-
+╭─ Commands ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ show         Show a list of all supported sites                                                                                               │
+│ --help (-h)  Display this message and exit.                                                                                                   │
+│ --version    Display application version.                                                                                                     │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Parameters ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ LINKS --links                               link(s) to content to download (passing multiple links is supported) [default: ()]                │
+│ --appdata-folder                            AppData folder path                                                                               │
+│ --completed-after                           only retry downloads that were completed on or after this date                                    │
+│ --completed-before                          only retry downloads that were completed on or before this date                                   │
+│ --config-file                               path to the CDL settings.yaml file to load                                                        │
+│ --download --no-download                    skips UI, start download immediately [default: False]                                             │
+│ --download-tiktok-audios                    download TikTok audios from posts and save them as separate files [default: False]                │
+│   --no-download-tiktok-audios                                                                                                                 │
+│ --download-tiktok-src-quality-videos        download TikTok videos in source quality [default: False]                                         │
+│   --no-download-tiktok-src-quality-videos                                                                                                     │
+│ --impersonate --no-impersonate              Use this target as impersonation for all scrape requests [choices: chrome, edge, safari,          │
+│                                             safari_ios, chrome_android, firefox]                                                              │
+│ --max-items-retry                           max number of links to retry [default: 0]                                                         │
+│ --portrait --no-portrait                    force CDL to run with a vertical layout [default: False]                                          │
+│ --print-stats --no-print-stats              show stats report at the end of a run [default: True]                                             │
+│ --retry-all --no-retry-all                  retry all downloads [default: False]                                                              │
+│ --retry-failed --no-retry-failed            retry failed downloads [default: False]                                                           │
+│ --retry-maintenance --no-retry-maintenance  retry download of maintenance files (bunkr). Requires files to be hashed [default: False]         │
+│ --ui                                        DISABLED, ACTIVITY, SIMPLE or FULLSCREEN [choices: disabled, activity, simple, fullscreen]        │
+│                                             [default: fullscreen]                                                                             │
+│ --source                                                                                                                                      │
+│ --deep-scrape --no-deep-scrape              [default: False]                                                                                  │
+│ --apprise-urls                              [default: ()]                                                                                     │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ BrowserCookies ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --auto-import --no-auto-import  [default: False]                                                                                              │
+│ --browser                       [choices: chrome, firefox, safari, edge, opera, brave, librewolf, opera-gx, vivaldi, chromium] [default:      │
+│                                 firefox]                                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ DownloadOptions ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --block-download-sub-folders               [default: False]                                                                                   │
+│   --no-block-download-sub-folders                                                                                                             │
+│ --disable-download-attempt-limit           [default: False]                                                                                   │
+│   --no-disable-download-attempt-limit                                                                                                         │
+│ --disable-file-timestamps                  [default: False]                                                                                   │
+│   --no-disable-file-timestamps                                                                                                                │
+│ --include-album-id-in-folder-name          [default: False]                                                                                   │
+│   --no-include-album-id-in-folder-name                                                                                                        │
+│ --include-thread-id-in-folder-name         [default: False]                                                                                   │
+│   --no-include-thread-id-in-folder-name                                                                                                       │
+│ --maximum-number-of-children               [default: []]                                                                                      │
+│ --remove-domains-from-folder-names         [default: False]                                                                                   │
+│   --no-remove-domains-from-folder-names                                                                                                       │
+│ --remove-generated-id-from-filenames       [default: False]                                                                                   │
+│   --no-remove-generated-id-from-filenames                                                                                                     │
+│ --scrape-single-forum-post                 [default: False]                                                                                   │
+│   --no-scrape-single-forum-post                                                                                                               │
+│ --separate-posts-format                    [default: {default}]                                                                               │
+│ --separate-posts --no-separate-posts       [default: False]                                                                                   │
+│ --skip-download-mark-completed             [default: False]                                                                                   │
+│   --no-skip-download-mark-completed                                                                                                           │
+│ --maximum-thread-depth                     [default: 0]                                                                                       │
+│ --maximum-thread-folder-depth                                                                                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ DupeCleanup ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --add-md5-hash --no-add-md5-hash                    [default: False]                                                                          │
+│ --add-sha256-hash --no-add-sha256-hash              [default: False]                                                                          │
+│ --auto-dedupe --no-auto-dedupe                      [default: True]                                                                           │
+│ --hashing                                           [choices: off, in-place, post-download] [default: in-place]                               │
+│ --send-deleted-to-trash --no-send-deleted-to-trash  [default: True]                                                                           │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ FileSizeLimits ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --maximum-image-size  [default: 0]                                                                                                            │
+│ --maximum-other-size  [default: 0]                                                                                                            │
+│ --maximum-video-size  [default: 0]                                                                                                            │
+│ --minimum-image-size  [default: 0]                                                                                                            │
+│ --minimum-other-size  [default: 0]                                                                                                            │
+│ --minimum-video-size  [default: 0]                                                                                                            │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Files ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --download-folder --output -o -d        [default: Downloads]                                                                                  │
+│ --dump-json -j --no-dump-json           [default: False]                                                                                      │
+│ --input-file -i                         [default: URLs.txt]                                                                                   │
+│ --save-pages-html --no-save-pages-html  [default: False]                                                                                      │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ General ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --ssl-context             [choices: truststore, certifi, truststore+certifi] [default: truststore+certifi]                                    │
+│ --disable-crawlers        [default: []]                                                                                                       │
+│ --flaresolverr                                                                                                                                │
+│ --max-file-name-length    [default: 95]                                                                                                       │
+│ --max-folder-name-length  [default: 60]                                                                                                       │
+│ --proxy                                                                                                                                       │
+│ --required-free-space     [default: 5000000000]                                                                                               │
+│ --user-agent              [default: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) Gecko/20100101 Firefox/142.0]                         │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ GenericCrawlerInstances ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --wordpress-media  [default: []]                                                                                                              │
+│ --wordpress-html   [default: []]                                                                                                              │
+│ --discourse        [default: []]                                                                                                              │
+│ --chevereto        [default: []]                                                                                                              │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ IgnoreOptions ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --exclude-audio --no-exclude-audio          [default: False]                                                                                  │
+│ --exclude-images --no-exclude-images        [default: False]                                                                                  │
+│ --exclude-other --no-exclude-other          [default: False]                                                                                  │
+│ --exclude-videos --no-exclude-videos        [default: False]                                                                                  │
+│ --filename-regex-filter                                                                                                                       │
+│ --ignore-coomer-ads --no-ignore-coomer-ads  [default: False]                                                                                  │
+│ --ignore-coomer-post-content                [default: True]                                                                                   │
+│   --no-ignore-coomer-post-content                                                                                                             │
+│ --only-hosts                                [default: []]                                                                                     │
+│ --skip-hosts                                [default: []]                                                                                     │
+│ --exclude-files-with-no-extension           [default: True]                                                                                   │
+│   --no-exclude-files-with-no-extension                                                                                                        │
+│ --exclude-before                                                                                                                              │
+│ --exclude-after                                                                                                                               │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Logs ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --download-error-urls           [default: Download_Error_URLs.csv]                                                                            │
+│ --last-forum-post               [default: Last_Scraped_Forum_Posts.csv]                                                                       │
+│ --log-folder                    [default: AppData/Logs]                                                                                       │
+│ --logs-expire-after                                                                                                                           │
+│ --main-log                      [default: downloader.log]                                                                                     │
+│ --rotate-logs --no-rotate-logs  [default: False]                                                                                              │
+│ --scrape-error-urls             [default: Scrape_Error_URLs.csv]                                                                              │
+│ --unsupported-urls              [default: Unsupported_URLs.csv]                                                                               │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ MediaDurationLimits ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --maximum-video-duration  [default: 0:00:00]                                                                                                  │
+│ --maximum-audio-duration  [default: 0:00:00]                                                                                                  │
+│ --minimum-video-duration  [default: 0:00:00]                                                                                                  │
+│ --minimum-audio-duration  [default: 0:00:00]                                                                                                  │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ RateLimiting ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --download-attempts                      [default: 2]                                                                                         │
+│ --download-delay                         [default: 0.0]                                                                                       │
+│ --download-speed-limit                   [default: 0]                                                                                         │
+│ --jitter                                 [default: 0]                                                                                         │
+│ --max-simultaneous-downloads-per-domain  [default: 5]                                                                                         │
+│ --max-simultaneous-downloads             [default: 15]                                                                                        │
+│ --rate-limit                             [default: 25]                                                                                        │
+│ --connection-timeout                     [default: 15]                                                                                        │
+│ --read-timeout                           [default: 300]                                                                                       │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ RuntimeOptions ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --console-log-level                                 [default: 100]                                                                            │
+│ --deep-scrape --no-deep-scrape                      [default: False]                                                                          │
+│ --delete-partial-files --no-delete-partial-files    [default: False]                                                                          │
+│ --ignore-history --no-ignore-history                [default: False]                                                                          │
+│ --jdownloader-autostart --no-jdownloader-autostart  [default: False]                                                                          │
+│ --jdownloader-download-dir                                                                                                                    │
+│ --jdownloader-whitelist                             [default: []]                                                                             │
+│ --log-level                                         [default: 10]                                                                             │
+│ --send-unsupported-to-jdownloader                   [default: False]                                                                          │
+│   --no-send-unsupported-to-jdownloader                                                                                                        │
+│ --skip-check-for-empty-folders                      [default: False]                                                                          │
+│   --no-skip-check-for-empty-folders                                                                                                           │
+│ --skip-check-for-partial-files                      [default: False]                                                                          │
+│   --no-skip-check-for-partial-files                                                                                                           │
+│ --slow-download-speed                               [default: 0]                                                                              │
+│ --update-last-forum-post                            [default: True]                                                                           │
+│   --no-update-last-forum-post                                                                                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Sorting ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --scan-folder                                                                                                                                 │
+│ --sort-downloads --no-sort-downloads  [default: False]                                                                                        │
+│ --sort-folder                         [default: Downloads/Cyberdrop-DL Sorted Downloads]                                                      │
+│ --sort-incrementer-format             [default:  ({i})]                                                                                       │
+│ --sorted-audio                        [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]                                                  │
+│ --sorted-image                        [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]                                                 │
+│ --sorted-other                        [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]                                                  │
+│ --sorted-video                        [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ UIOptions ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --refresh-rate  [default: 10]                                                                                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
