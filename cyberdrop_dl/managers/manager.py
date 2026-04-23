@@ -104,16 +104,17 @@ class Manager:
 
         args_info = {
             "System": get_system_information(),
-            "Config File": self.config.source,
-            "Input File": self.config.settings.files.input_file,
-            "Download Folder": self.config.settings.files.download_folder,
-            "Database File": self.appdata.db_file,
-            "CLI only options": self.cli_args.model_dump(mode="json"),
+            "Config file": self.config.source,
+            "URLs file": self.config.settings.files.input_file,
+            "Download folder": self.config.settings.files.download_folder,
+            "Database file": self.appdata.db_file,
+            "CLI options": self.cli_args.model_dump(mode="json"),
             "Auth": auth,
             "Settings": config_settings.model_dump(mode="json"),
-            "Global Settings": self.config.global_settings.model_dump(mode="json"),
+            "Global ettings": self.config.global_settings.model_dump(mode="json"),
         }
         logger.debug(args_info)
+        logger.debug("Database size: %s", ByteSize(self.appdata.db_file.stat().st_size).human_readable(decimal=True))
         logger.debug("ffmpeg version: %s", ffmpeg.get_ffmpeg_version())
         logger.debug("ffprobe version: %s", ffmpeg.get_ffprobe_version())
 
