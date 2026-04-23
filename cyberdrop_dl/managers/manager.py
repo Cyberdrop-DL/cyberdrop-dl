@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import os
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -124,8 +125,17 @@ class Manager:
             db_size = 0
 
         logger.debug("Database size: %s", ByteSize(db_size).human_readable(decimal=True))
-        logger.debug("ffmpeg version: %s", ffmpeg.get_ffmpeg_version())
-        logger.debug("ffprobe version: %s", ffmpeg.get_ffprobe_version())
+
+        if not ffmpeg.version():
+            msg = "ffmpeg is not installed. HLS downloads will fail"
+            if os.name == "nt":
+                msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
+
+            logger.warning(msg)
+            return
+
+        logger.debug("ffmpeg version: %s", ffmpeg.version())
+        logger.debug("ffprobe version: %s", ffmpeg.ffprobe_version())
 
     async def close(self) -> None:
         await self.client_manager.close()

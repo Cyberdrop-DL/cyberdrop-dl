@@ -49,13 +49,13 @@ _FFPROBE_CALL_PREFIX = (
 
 
 def check_is_available() -> None:
-    if not get_ffmpeg_version():
+    if not version():
         raise RuntimeError("ffmpeg is not installed")
     _check_ffprobe()
 
 
 def _check_ffprobe() -> None:
-    if not get_ffprobe_version():
+    if not ffprobe_version():
         raise RuntimeError("ffprobe is not installed")
 
 
@@ -70,13 +70,13 @@ def which_ffprobe() -> str | None:
 
 
 @functools.cache
-def get_ffmpeg_version() -> str | None:
+def version() -> str | None:
     if bin_path := which_ffmpeg():
         return _get_bin_version(bin_path)
 
 
 @functools.cache
-def get_ffprobe_version() -> str | None:
+def ffprobe_version() -> str | None:
     if bin_path := which_ffprobe():
         return _get_bin_version(bin_path)
 
