@@ -19,6 +19,7 @@ class ImageVenueCrawler(Crawler):
             "/view/o?i=<image_id>",
             "/img.php?image=<image_id>",
         ),
+        "Thumbnail": "cdn-thumbs.imagevenue.com/.../<image_id>_t.jpg",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.imagevenue.com")
     DOMAIN: ClassVar[str] = "imagevenue"
@@ -27,13 +28,20 @@ class ImageVenueCrawler(Crawler):
     async def __async_post_init__(self) -> None:
         self.update_cookies({"nsfw_inter": 1, "continue": 1, "gdrp_popup_showed": 1})
 
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        if url.host.startswith("cdn-thumbs.") and url.name.endswith(suffix := "_t.jpg"):
+            return cls.PRIMARY_URL / url.name.removesuffix(suffix)
+        return url
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["img.php"] if scrape_item.url.query.get("image"):
                 return await self.follow_redirect(scrape_item)
-            case [_]:
+            case [image_id] if image_id.startswith("ME"):
                 return await self.image(scrape_item)
-            case ["view", "o"] if scrape_item.url.query.get("i"):
+            case ["view", "o"] if scrape_item.url.query.get("i") and scrape_item.url.query.get("h"):
                 return await self.image(scrape_item)
             case _:
                 raise ValueError
