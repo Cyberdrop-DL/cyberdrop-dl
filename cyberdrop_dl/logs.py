@@ -23,7 +23,10 @@ from cyberdrop_dl import env
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-logger = logging.getLogger("cyberdrop_dl")
+logger = logging.getLogger()
+for noisy_package in ("aiosqlite",):
+    logging.getLogger(noisy_package).setLevel(logging.ERROR)
+
 _DEFAULT_CONSOLE = Console()
 
 _USER_NAME = Path.home().name
@@ -261,6 +264,8 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
     logger.setLevel(logging.DEBUG)
     handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
+    for name in ():  # ("root", "mega", "rich", "sqlite", "aiohttp"):
+        logging.getLogger(name).setLevel(level)
     try:
         with _threaded_logger(handler):
             yield
@@ -358,25 +363,12 @@ def flush_logs() -> None:
 def borrow_logger(name: str, level: int = logging.INFO) -> Generator[None]:
     """Context manager to temporarily add our log handlers to a third party logger"""
     _3p_logger = logging.getLogger(name)
-    _3p_level = _3p_logger.level
-    _3p_propagate = _3p_logger.propagate
-    _3p_handlers = _3p_logger.handlers.copy()
-
-    def replace_handlers_with(*new_handlers: logging.Handler) -> None:
-        for handler in _3p_logger.handlers[:]:
-            _3p_logger.removeHandler(handler)
-
-        for handler in new_handlers:
-            _3p_logger.addHandler(handler)
-
-    replace_handlers_with(*logger.handlers)
-
+    og_level = _3p_logger.level
+    og_propagate = _3p_logger.propagate
     _3p_logger.propagate = False
     _3p_logger.setLevel(level)
-
     try:
         yield
     finally:
-        replace_handlers_with(*_3p_handlers)
-        _3p_logger.propagate = _3p_propagate
-        _3p_logger.setLevel(_3p_level)
+        _3p_logger.propagate = og_propagate
+        _3p_logger.setLevel(og_level)
