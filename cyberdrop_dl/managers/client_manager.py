@@ -461,9 +461,9 @@ async def _get_dns_resolver(
 
     if (system := platform.system()) in ("Windows", "Android"):
         logger.warning(
-            f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver. Reason: no supported on {system}"
+            f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver. Reason: not supported on {system}"
         )
-        return aiohttp.AsyncResolver
+        return aiohttp.ThreadedResolver
 
     try:
         import aiodns
