@@ -114,7 +114,13 @@ class Manager:
             "Global ettings": self.config.global_settings.model_dump(mode="json"),
         }
         logger.debug(args_info)
-        logger.debug("Database size: %s", ByteSize(self.appdata.db_file.stat().st_size).human_readable(decimal=True))
+
+        try:
+            db_size = self.appdata.db_file.stat().st_size
+        except FileNotFoundError:
+            db_size = 0
+
+        logger.debug("Database size: %s", ByteSize(db_size).human_readable(decimal=True))
         logger.debug("ffmpeg version: %s", ffmpeg.get_ffmpeg_version())
         logger.debug("ffprobe version: %s", ffmpeg.get_ffprobe_version())
 

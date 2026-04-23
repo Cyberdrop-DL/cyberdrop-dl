@@ -9,7 +9,7 @@ from datetime import datetime
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, ClassVar, final
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
@@ -23,11 +23,10 @@ from cyberdrop_dl import env
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-logger = logging.getLogger()
+logger = logging.getLogger("cyberdrop_dl")
 for noisy_package in ("aiosqlite",):
     logging.getLogger(noisy_package).setLevel(logging.ERROR)
 
-_DEFAULT_CONSOLE = Console()
 
 _USER_NAME = Path.home().name
 _DEFAULT_CONSOLE_WIDTH = 240
@@ -92,6 +91,16 @@ class JsonLogRecord(logging.LogRecord):
 logging.setLogRecordFactory(JsonLogRecord)
 
 
+class CDLFormater(logging.Formatter):
+    _CDL_FORMAT: ClassVar[logging.PercentStyle] = logging.PercentStyle("%(message)s")
+
+    def formatMessage(self, record: logging.LogRecord) -> str:  # noqa: N802
+        if record.name.startswith("cyberdrop_dl"):
+            return self._CDL_FORMAT.format(record)
+
+        return self._style.format(record)
+
+
 class LogHandler(RichHandler):
     """Rich Handler with default settings, custom log render to remove padding in files and `color` extra"""
 
@@ -122,6 +131,8 @@ class LogHandler(RichHandler):
                 level_width=10,
                 time_format=lambda dt: Text(f"[{dt.isoformat(sep=' ', timespec='milliseconds')}]", style="log.time"),
             )
+
+        self.setFormatter(CDLFormater("[%(name)s]: %(message)s"))
 
     @override
     def render_message(self, record: logging.LogRecord, message: str) -> ConsoleRenderable:
@@ -167,11 +178,11 @@ def _threaded_logger(log_handler: logging.Handler, *, is_main_log: bool = False)
     q_listener: QueueListener = QueueListener(q, log_handler, respect_handler_level=True)
     q_listener.start()
     token = _MAIN_LOG_LISTENER.set(q_listener) if is_main_log else None
-    logger.addHandler(q_handler)
+    logging.getLogger().addHandler(q_handler)
     try:
         yield
     finally:
-        logger.removeHandler(q_handler)
+        logging.getLogger().removeHandler(q_handler)
         try:
             q_handler.close()
         finally:
@@ -262,7 +273,7 @@ def log_spacer(char: str = "-") -> None:
 @contextlib.contextmanager
 def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
-    logger.setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.DEBUG)
     handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
     for name in ():  # ("root", "mega", "rich", "sqlite", "aiohttp"):
         logging.getLogger(name).setLevel(level)
@@ -271,7 +282,7 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
             yield
     finally:
         # Re add it as a normal handler to make sure uncatched exceptions show up
-        logger.addHandler(handler)
+        logging.getLogger().addHandler(handler)
 
 
 @contextlib.contextmanager
@@ -337,11 +348,11 @@ def _setup_debug_logger() -> Generator[Path | None]:
 @contextlib.contextmanager
 def capture_logs() -> Generator[StringIO]:
     in_memory_handler = logging.StreamHandler(file := StringIO())
-    logger.addHandler(in_memory_handler)
+    logging.getLogger().addHandler(in_memory_handler)
     try:
         yield file
     finally:
-        logger.removeHandler(in_memory_handler)
+        logging.getLogger().removeHandler(in_memory_handler)
 
 
 def export_logs(*, size_limit: float | None = None) -> bytes:
