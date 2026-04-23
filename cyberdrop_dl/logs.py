@@ -9,7 +9,7 @@ from datetime import datetime
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, ClassVar, TypeVar, final
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
@@ -27,10 +27,12 @@ logger = logging.getLogger("cyberdrop_dl")
 for noisy_package in ("aiosqlite",):
     logging.getLogger(noisy_package).setLevel(logging.ERROR)
 
-
+_T = TypeVar("_T")
 _USER_NAME = Path.home().name
 _DEFAULT_CONSOLE_WIDTH = 240
 _MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOGGER_LISTENER")
+_CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOGGER_LISTENER")
+
 MAIN_LOG_FILE: ContextVar[Path] = ContextVar("_MAIN_LOGGER_FILE")
 LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
 
@@ -171,26 +173,36 @@ class BareQueueHandler(QueueHandler):
 
 
 @contextlib.contextmanager
-def _threaded_logger(log_handler: logging.Handler, *, is_main_log: bool = False) -> Generator[None]:
+def _threaded_logger(
+    log_handler: logging.Handler, *, context_var: ContextVar[QueueListener] | None = None
+) -> Generator[BareQueueHandler]:
     """Context-manager to process logs from this handler in another thread"""
     q: queue.Queue[logging.LogRecord] = queue.Queue()
     q_handler: BareQueueHandler = BareQueueHandler(q)
     q_listener: QueueListener = QueueListener(q, log_handler, respect_handler_level=True)
     q_listener.start()
-    token = _MAIN_LOG_LISTENER.set(q_listener) if is_main_log else None
-    logging.getLogger().addHandler(q_handler)
+
+    with _enter_context(context_var, q_listener) if context_var else contextlib.nullcontext():
+        logging.getLogger().addHandler(q_handler)
+        try:
+            yield q_handler
+        finally:
+            logging.getLogger().removeHandler(q_handler)
+            try:
+                q_handler.close()
+            finally:
+                q_listener.stop()
+                for handler in q_listener.handlers[:]:
+                    handler.close()
+
+
+@contextlib.contextmanager
+def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
+    token = context_var.set(value)
     try:
         yield
     finally:
-        logging.getLogger().removeHandler(q_handler)
-        try:
-            q_handler.close()
-        finally:
-            q_listener.stop()
-            for handler in q_listener.handlers[:]:
-                handler.close()
-            if token is not None:
-                _MAIN_LOG_LISTENER.reset(token)
+        context_var.reset(token)
 
 
 @final
@@ -274,9 +286,9 @@ def log_spacer(char: str = "-") -> None:
 def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
-    handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
     try:
-        with _threaded_logger(handler):
+        with _threaded_logger(handler, context_var=_CONSOLE_LOG_LISTENER) as q_handler:
+            q_handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
             yield
     finally:
         # Re add it as a normal handler to make sure uncatched exceptions show up
@@ -290,12 +302,12 @@ def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[N
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
         _threaded_logger(
-            is_main_log=True,
             log_handler=LogHandler(
                 level,
                 show_time=True,
                 console=RedactedConsole(file=fp, width=_DEFAULT_CONSOLE_WIDTH * 2),
             ),
+            context_var=_MAIN_LOG_LISTENER,
         ),
     ):
         logger.info(f"Debug log file: {debug_log_file}")
