@@ -94,7 +94,7 @@ class LiveUI(ABC):
 
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
-        if self.disabled:
+        if self.disabled and not force:
             yield
             return
 
