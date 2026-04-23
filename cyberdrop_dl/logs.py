@@ -275,8 +275,6 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
     handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
-    for name in ():  # ("root", "mega", "rich", "sqlite", "aiohttp"):
-        logging.getLogger(name).setLevel(level)
     try:
         with _threaded_logger(handler):
             yield

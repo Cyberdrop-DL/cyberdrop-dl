@@ -111,7 +111,7 @@ class Manager:
             "CLI options": self.cli_args.model_dump(mode="json"),
             "Auth": auth,
             "Settings": config_settings.model_dump(mode="json"),
-            "Global ettings": self.config.global_settings.model_dump(mode="json"),
+            "Global Settings": self.config.global_settings.model_dump(mode="json"),
         }
         logger.debug(args_info)
 
