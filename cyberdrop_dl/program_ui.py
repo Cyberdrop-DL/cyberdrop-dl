@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 _CONSOLE = Console()
 _ERROR = Text("ERROR: ", style="bold red")
 _WARNING = Text("WARNING: ", style="bold yellow")
-_CHANGELOG_URL = "https://raw.githubusercontent.com/NTFSvolume/cdl/refs/heads/main/CHANGELOG.md"
+_CHANGELOG_URL = "https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/CHANGELOG.md"
 _changelog: str = ""
 
 
