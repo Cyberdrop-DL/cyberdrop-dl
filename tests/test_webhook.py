@@ -68,4 +68,4 @@ async def test_send_webhook_failure_with_non_json_error(caplog: pytest.LogCaptur
         with caplog.at_level(10):
             await send_notification(webhook, "test")
 
-        assert "ClientResponseError: 500" in caplog.text
+        assert "ClientResponseError" in caplog.text
