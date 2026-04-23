@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.crawlers.crawler import CrawlerInfo
 
-_COLUMNS = ("Site", "Primary URL", "Supported Domains", "Supported paths")
+_COLUMNS = ("Site", "Primary URL", "Supported Domains", "Supported Paths")
 
 
 def get_crawlers_info_as_rich_table() -> Table:

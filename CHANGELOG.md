@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Ignore errors while checking for updates
-- `RuntimeError` when downloads reach 99% due to incorrect MAC integitry check (MegaNZ)
+- `RuntimeError` when downloads reach 99% due to incorrect MAC integrity check (MegaNZ)
 
 ## [9.3.1] - 2026-04-21
 
