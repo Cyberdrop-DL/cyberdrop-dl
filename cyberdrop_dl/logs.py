@@ -308,7 +308,7 @@ def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[N
 
 @contextlib.contextmanager
 def _setup_debug_logger() -> Generator[Path | None]:
-    if not env.DEBUG:
+    if not env.DEBUG_MODE:
         yield
         return
 

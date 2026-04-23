@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import __version__, ffmpeg, yaml
+from cyberdrop_dl import __version__, env, ffmpeg, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
@@ -113,6 +113,8 @@ class Manager:
                 "Auth": auth,
                 "Settings": config_settings.model_dump(mode="json"),
                 "Global Settings": self.config.global_settings.model_dump(mode="json"),
+                "Enviroment": env.ALL_VARS,
+                "Enviroment resolved": env.ALL_VARS_RESOLVED,
             }
         )
 
