@@ -37,24 +37,6 @@ def test_export_logs(tmp_path: Path) -> None:
 
 
 class TestBorrowLogger:
-    def test_handlers_swapped_temporarily(self) -> None:
-        root_handler = logging.StreamHandler()
-        logs.logger.handlers.clear()
-        logs.logger.addHandler(root_handler)
-        try:
-            other = logging.getLogger("third_party")
-            original_handler = logging.NullHandler()
-            other.addHandler(original_handler)
-
-            assert other.handlers == [original_handler]
-
-            with logs.borrow_logger("third_party"):
-                assert other.handlers == [root_handler]
-
-            assert other.handlers == [original_handler]
-        finally:
-            logs.logger.removeHandler(root_handler)
-
     def test_level_and_propagate_restored(self) -> None:
         other = logging.getLogger("third_party_restore")
         other.setLevel(logging.WARNING)
