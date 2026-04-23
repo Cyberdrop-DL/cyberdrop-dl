@@ -33,7 +33,7 @@ _DEFAULT_CONSOLE_WIDTH = 240
 _MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOGGER_LISTENER")
 _CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOGGER_LISTENER")
 
-MAIN_LOG_FILE: ContextVar[Path] = ContextVar("_MAIN_LOGGER_FILE")
+MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
 _LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
 
 
@@ -283,7 +283,7 @@ def log_spacer(char: str = "-") -> None:
 
 
 @contextlib.contextmanager
-def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
+def setup_console_logging(level: int = logging.INFO, *, remove: bool = False) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
     try:
@@ -291,8 +291,9 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
             q_handler.addFilter(lambda _: _LOG_TO_CONSOLE.get())
             yield
     finally:
-        # Re add it as a normal handler to make sure uncatched exceptions show up
-        logging.getLogger().addHandler(handler)
+        if not remove:
+            # Re add it as a normal handler to make sure uncatched exceptions show up
+            logging.getLogger().addHandler(handler)
 
 
 @contextlib.contextmanager

@@ -62,3 +62,22 @@ class TestBorrowLogger:
 
         assert other.handlers == [orig_handler]
         assert other.level == logging.CRITICAL
+
+
+def test_disable_console_logging() -> None:
+    from rich import get_console
+
+    logger = logging.getLogger("cyberdrop_dl")
+    console = get_console()
+    console.record = True
+    with console, logs.setup_console_logging(remove=True):
+        logger.info("This msg should show up")
+        with logs.disable_console_logging():
+            logger.info("This msg should not show up")
+
+        logger.info("This msg should show up as well")
+
+    text = console.export_text()
+    assert "This msg should show up" in text
+    assert "This msg should not show up" not in text
+    assert "This msg should show up as well" in text
