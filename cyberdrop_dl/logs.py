@@ -4,6 +4,7 @@ import contextlib
 import json
 import logging
 import queue
+import sys
 from contextvars import ContextVar
 from datetime import datetime
 from io import StringIO
@@ -283,7 +284,7 @@ def log_spacer(char: str = "-") -> None:
 
 
 @contextlib.contextmanager
-def setup_console_logging(level: int = logging.INFO, *, remove: bool = False) -> Generator[None]:
+def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
     handler = LogHandler(level, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
     try:
@@ -291,7 +292,7 @@ def setup_console_logging(level: int = logging.INFO, *, remove: bool = False) ->
             q_handler.addFilter(lambda _: _LOG_TO_CONSOLE.get())
             yield
     finally:
-        if not remove:
+        if "pytest" not in sys.modules:
             # Re add it as a normal handler to make sure uncatched exceptions show up
             logging.getLogger().addHandler(handler)
 

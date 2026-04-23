@@ -70,7 +70,7 @@ def test_disable_console_logging() -> None:
     logger = logging.getLogger("cyberdrop_dl")
     console = get_console()
     console.record = True
-    with console, logs.setup_console_logging(remove=True):
+    with console, logs.setup_console_logging():
         logger.info("This msg should show up")
         with logs.disable_console_logging():
             logger.info("This msg should not show up")
