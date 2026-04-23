@@ -50,13 +50,13 @@ _FFPROBE_CALL_PREFIX = (
 
 def check_is_available() -> None:
     if not get_ffmpeg_version():
-        raise RuntimeError("ffmpeg is not available")
+        raise RuntimeError("ffmpeg is not installed")
     _check_ffprobe()
 
 
 def _check_ffprobe() -> None:
     if not get_ffprobe_version():
-        raise RuntimeError("ffprobe is not available")
+        raise RuntimeError("ffprobe is not installed")
 
 
 @functools.cache

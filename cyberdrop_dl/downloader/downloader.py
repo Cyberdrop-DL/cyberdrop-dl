@@ -145,8 +145,11 @@ class Downloader:
 
         try:
             ffmpeg.check_is_available()
-        except RuntimeError as e:
-            msg = f"{e} - ffmpeg and ffprobe are required for HLS downloads"
+        except RuntimeError:
+            msg = "ffmpeg is not installed. (Required for HLS downloads)"
+            if os.name == "nt":
+                msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
+
             raise DownloadError("FFmpeg Error", msg, media_item) from None
 
         async with self._download_context(media_item):
