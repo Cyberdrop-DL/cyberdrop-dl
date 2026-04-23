@@ -55,5 +55,5 @@ async def _send_notification(url: yarl.URL | str, form: aiohttp.FormData) -> Non
                     _ = error.pop("content", None)
                     logger.error(f"Webhook notification failed: {error}", extra={"color": "red"})
 
-    except Exception:
-        logger.exception("Unable to send webhook notification")
+    except Exception as e:
+        logger.error(f"Unable to send webhook notification: {e:r}")
