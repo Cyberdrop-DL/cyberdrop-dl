@@ -93,13 +93,13 @@ class LiveUI(ABC):
     def __rich__(self) -> RenderableType: ...
 
     @contextlib.contextmanager
-    def __call__(self, *, transient: bool = True) -> Generator[None]:
+    def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
         if self.disabled:
             yield
             return
 
         with disable_console_logging():
-            if "pytest" in sys.modules:
+            if "pytest" in sys.modules and not force:
                 yield
                 return
 
