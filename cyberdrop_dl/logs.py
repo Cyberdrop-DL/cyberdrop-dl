@@ -322,7 +322,9 @@ def _setup_debug_logger() -> Generator[Path | None]:
             raise FileNotFoundError(None, msg, env.DEBUG_LOG_FOLDER)
 
         if not debug_log_folder.is_dir():
-            msg = f"Value of env var 'CDL_DEBUG_LOG_FOLDER' is invalid. Folder '{debug_log_folder}' should a directory"
+            msg = (
+                f"Value of env var 'CDL_DEBUG_LOG_FOLDER' is invalid. Folder '{debug_log_folder}' should a be directory"
+            )
             raise NotADirectoryError(None, msg, env.DEBUG_LOG_FOLDER)
 
         now = datetime.now().strftime("%Y%m%d_%H%M%S")
