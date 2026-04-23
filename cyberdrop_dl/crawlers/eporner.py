@@ -85,6 +85,7 @@ class EpornerCrawler(Crawler):
     DOMAIN: ClassVar[str] = "eporner"
     FOLDER_DOMAIN: ClassVar[str] = "ePorner"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
+    _RATE_LIMIT: ClassVar[tuple[float, float]] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
