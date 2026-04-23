@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14"
 ]
 dependencies = [
-    "aiodns >=4.0.0; sys_platform != 'android'",
+    "aiodns >=4.0.0; sys_platform != 'android' and sys_platform != 'win32'",
     "aiohttp >=3.13.5",
     "aiolimiter >=1.2.1",
     "aiosqlite>=0.22.1",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import platform
 import ssl
 from base64 import b64encode
 from collections import defaultdict
@@ -457,6 +458,13 @@ async def _get_dns_resolver(
 
     # pycares (the underlying C extension that aiodns uses) installs successfully in most cases,
     # but it fails to actually connect to DNS servers on some platforms (e.g., Android).
+
+    if (system := platform.system()) in ("Windows", "Android"):
+        logger.warning(
+            f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver. Reason: no supported on {system}"
+        )
+        return aiohttp.AsyncResolver
+
     try:
         import aiodns
 
