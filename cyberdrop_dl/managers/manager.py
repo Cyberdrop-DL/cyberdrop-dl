@@ -148,8 +148,13 @@ class Manager:
 
         if stats.domain_stats:
             log_spacer()
-            logger.info("URLs by domain:", extra={"color": "cyan"})
-            logger.info(" - " + "\n - ".join(map(str, stats.domain_stats.items())))
+            logger.info("URLs by domain (includes children):", extra={"color": "cyan"})
+
+            def lines():
+                for domain, count in stats.domain_stats.items():
+                    yield f" - {domain}: {count:,}"
+
+            logger.info("\n".join(lines()))
 
         log_spacer()
         logger.info("Download Stats:", extra={"color": "cyan"})
