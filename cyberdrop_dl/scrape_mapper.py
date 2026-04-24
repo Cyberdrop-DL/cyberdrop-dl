@@ -117,9 +117,7 @@ class ScrapeMapper:
     _direct_http: DirectHttpFile = dataclasses.field(init=False)
     _jdownloader: JDownloader = dataclasses.field(init=False)
     _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
-    _task_groups: TaskGroups = dataclasses.field(
-        init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup())
-    )
+    _task_groups: TaskGroups = dataclasses.field(init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup()))
     _seen_urls: set[AbsoluteHttpURL] = dataclasses.field(init=False, default_factory=set)
     _crawlers_disabled_at_runtime: set[str] = dataclasses.field(init=False, default_factory=set)
     _factory: CrawlerFactory = dataclasses.field(init=False)
