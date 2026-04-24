@@ -220,6 +220,7 @@ class ScrapeMapper:
         source_name, source = _source(self.manager)
         async with contextlib.aclosing(source) as items:
             stats = ScrapeStats(source_name)
+            background_tasks = set()
 
             async def wait_until_scrape_is_done() -> None:
                 _ = await self._done.wait()
@@ -228,7 +229,8 @@ class ScrapeMapper:
                     (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
                 )
 
-            _ = asyncio.create_task(wait_until_scrape_is_done())
+            task = asyncio.create_task(wait_until_scrape_is_done())
+            background_tasks.add(task)
 
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
