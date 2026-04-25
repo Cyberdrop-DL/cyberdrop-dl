@@ -90,7 +90,7 @@ TEST_CASES = [
         "https://bunkr.cr/a/A3k5ktj4",
         [
             {
-                "url": "https://c3mb.scdn.st/IMG_2395_sdr-eKRnKxc6.mp4?n=IMG_2395_sdr.mp4",
+                "url": "re:https://c3mb.scdn.st/IMG_2395_sdr-eKRnKxc6.mp4?n=IMG_2395_sdr.mp4",
                 "filename": "IMG_2395_sdr.mp4",
                 "debrid_link": None,
                 "original_filename": "IMG_2395_sdr.mp4",
@@ -100,46 +100,46 @@ TEST_CASES = [
                 "download_folder": "re:Nicol Loveee (Bunkr)",
             },
             {
-                "url": "https://c1fr.scdn.st/Nicol-Loveee-MundoX---Dulces-Mun%CC%83ecas-Traviesas-3-L9Dr07Fl.mp4?n=Nicol+Loveee+MundoX+-+Dulces+Mu%C3%B1ecas+Traviesas+3.mp4",
+                "url": "re:https://c1fr.scdn.st/Nicol-Loveee-MundoX---Dulces-Mun%CC%83ecas-Traviesas-3-L9Dr07Fl.mp4?n=Nicol+Loveee+MundoX+-+Dulces+Mu%C3%B1ecas+Traviesas+3.mp4",
                 "filename": "Nicol Loveee MundoX - Dulces Muñecas Traviesas 3.mp4",
             },
             {
-                "url": "https://c4ta.scdn.st/IMG_0789-VJJEJJFF.mp4?n=IMG_0789.mp4",
+                "url": "re:https://c4ta.scdn.st/IMG_0789-VJJEJJFF.mp4?n=IMG_0789.mp4",
                 "filename": "IMG_0789.mp4",
             },
             {
-                "url": "https://par1.scdn.st/IMG_0658-v3T9XRib.MOV?n=IMG_0658.MOV",
+                "url": "re:https://par1.scdn.st/IMG_0658-v3T9XRib.MOV?n=IMG_0658.MOV",
                 "filename": "IMG_0658.mov",
             },
             {
-                "url": "https://c4ta.scdn.st/IMG_3422-FiKTxDks.MOV?n=IMG_3422.MOV",
+                "url": "re:https://c4ta.scdn.st/IMG_3422-FiKTxDks.MOV?n=IMG_3422.MOV",
                 "filename": "IMG_3422.mov",
             },
             {
-                "url": "https://c1fr.scdn.st/Nicol-Lovee-aka-Laura-Perea-806756813332-D0iwlxIQ.mp4?n=Nicol+Lovee+aka+Laura+Perea+806756813332.mp4",
+                "url": "re:https://c1fr.scdn.st/Nicol-Lovee-aka-Laura-Perea-806756813332-D0iwlxIQ.mp4",
                 "filename": "Nicol Lovee aka Laura Perea 806756813332.mp4",
             },
             {
-                "url": "https://c3mb.scdn.st/IMG_2395_hdr-16K2UV5i.MOV?n=IMG_2395_hdr.MOV",
+                "url": "re:https://c3mb.scdn.st/IMG_2395_hdr-16K2UV5i.MOV?n=IMG_2395_hdr.MOV",
                 "filename": "IMG_2395_hdr.mov",
                 "original_filename": "IMG_2395_hdr.MOV",
             },
             {
-                "url": "https://c1fr.scdn.st/Nicol-Loveee---We-Fuck-This-Argentina-(8361360)-(2021)-1080p-UDXu4F9w.mp4?n=Nicol+Loveee+-+We+Fuck+This+Argentina+(8361360)+(2021)+1080p.mp4",
+                "url": "re:https://c1fr.scdn.st/Nicol-Loveee---We-Fuck-This-Argentina-(8361360)-(2021)-1080p-UDXu4F9w.mp4",
                 "filename": "Nicol Loveee - We Fuck This Argentina (8361360) (2021) 1080p.mp4",
             },
             {
-                "url": "https://c4ta.scdn.st/IMG_3417-LSSAnhjf.MOV?n=IMG_3417.MOV",
+                "url": "re:https://c4ta.scdn.st/IMG_3417-LSSAnhjf.MOV?n=IMG_3417.MOV",
                 "filename": "IMG_3417.mov",
                 "original_filename": "IMG_3417.MOV",
             },
             {
-                "url": "https://c1fr.scdn.st/IMG_2241-viJXLJYt.MP4?n=IMG_2241.MP4",
+                "url": "re:https://c1fr.scdn.st/IMG_2241-viJXLJYt.MP4?n=IMG_2241.MP4",
                 "filename": "IMG_2241.mp4",
                 "original_filename": "IMG_2241.MP4",
             },
             {
-                "url": "https://par1.scdn.st/Nicol-Loveee-Shush_1080p-KMDcQu6l.mp4?n=Nicol-Loveee-Shush_1080p.mp4",
+                "url": "re:https://par1.scdn.st/Nicol-Loveee-Shush_1080p-KMDcQu6l.mp4?n=Nicol-Loveee-Shush_1080p.mp4",
                 "filename": "Nicol-Loveee-Shush_1080p.mp4",
                 "original_filename": "Nicol-Loveee-Shush_1080p.mp4",
             },
