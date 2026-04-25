@@ -265,6 +265,13 @@ class AppData:
     @classmethod
     def from_path(cls, path: Path) -> Self:
         path = path.expanduser().resolve().absolute() / "AppData"
+        if os.name == "nt":
+            # Detect the real path when running in sandboxed interpreter
+            anchor = path / "cyberdrop_dl.anchor"
+            anchor.touch()
+            path = anchor.resolve().parent
+            anchor.unlink()
+
         cache = path / "Cache"
         configs = path / "Configs"
         return cls(
