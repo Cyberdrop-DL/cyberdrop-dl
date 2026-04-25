@@ -78,3 +78,16 @@ def test_album_parser() -> None:
         thumbnail="https://static.scdn.st/f4e2d6c8-9b1a-4d3f-8e7c-5a6b2c9d0e1f/thumbs/c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.png",
         cdnEndpoint="/c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.jpg",
     )
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (
+            "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
+            "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
+        )
+    ],
+)
+def test_unicode_decode(raw: str, expected: str):
+    assert bunkrr._fix_unicode(raw) == expected
