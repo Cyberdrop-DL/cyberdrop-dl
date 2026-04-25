@@ -46,12 +46,6 @@ _DEEP_SCRAPE_CDNS: frozenset[str] = frozenset(
 known_bad_hosts: set[str] = set()
 
 
-def _fix_unicode(value: object) -> Any:
-    if type(value) is str:
-        return value.encode("raw_unicode_escape").decode("raw_unicode_escape")
-    return value
-
-
 def _make_album_parser() -> Callable[[str], Generator[File]]:
     translation_map = {f" {field.name}: ": f'"{field.name}": ' for field in dataclasses.fields(File)}
     pattern = re.compile("|".join(sorted(translation_map.keys(), key=len, reverse=True)))
@@ -62,7 +56,7 @@ def _make_album_parser() -> Callable[[str], Generator[File]]:
     def decode(content: str) -> Generator[File]:
         file: dict[str, Any]
         for file in json.loads(content):
-            yield File(**{name: _fix_unicode(value) for name, value in file.items()})
+            yield File(**file)
 
     def parse(album_js: str) -> Generator[File]:
         content = translate(album_js[album_js.find("=") + 1 : album_js.rfind("];")])

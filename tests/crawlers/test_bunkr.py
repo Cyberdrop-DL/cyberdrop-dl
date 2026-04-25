@@ -36,7 +36,7 @@ def test_album_parser() -> None:
         {
             id: 25960332,
             name: "c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.jpg",
-            original: "2023-02-04 - Position ð\u009f\u0094\u009e BONUS.mp4.jpg",
+            original: "2023-02-04 - Position 🔞 BONUS.mp4.jpg",
             slug: "tR69eocGrklcG",
             type: "image/jpeg",
             extension: "Image",
@@ -78,24 +78,3 @@ def test_album_parser() -> None:
         thumbnail="https://static.scdn.st/f4e2d6c8-9b1a-4d3f-8e7c-5a6b2c9d0e1f/thumbs/c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.png",
         cdnEndpoint="/c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.jpg",
     )
-
-
-@pytest.mark.parametrize(
-    "raw, expected",
-    [
-        (
-            "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
-            "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
-        ),
-        (
-            "filename: !\"#$%\u0026'()*+,-.0123456789:;\u003c\u003d\u003e?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
-            "filename: !\"#$%&'()*+,-.0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
-        ),
-        (
-            "Nicol-Loveee-MundoX---Dulces-Muñecas-Traviesas-3-L9Dr07Fl.mp4",
-            "Nicol-Loveee-MundoX---Dulces-Muñecas-Traviesas-3-L9Dr07Fl.mp4",
-        ),
-    ],
-)
-def test_unicode_decode(raw: str, expected: str):
-    assert bunkrr._fix_unicode(raw) == expected

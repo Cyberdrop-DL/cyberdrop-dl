@@ -187,6 +187,31 @@ TEST_CASES = [
         [],
         141,
     ),
-    ("https://bunkr.ws/a/z5Xt6NqH", [], 3),
+    (
+        "https://bunkr.ws/a/z5Xt6NqH",
+        [
+            {
+                "url": "https://c1be.scdn.st/acba241d-c1e8-40c3-aa73-94daf75fcd13.jpg?n='%22'.jpg",
+                "filename": ".jpg",
+                "debrid_link": None,
+                "original_filename": "'\"'.jpg",
+                "referer": "https://bunkr.site/f/Nzt1ID7lsgwR4",
+                "album_id": "z5Xt6NqH",
+                "uploaded_at": 1756986657,
+                "download_folder": "re:filename (Bunkr)",
+            },
+            {
+                "url": "https://c2ck.scdn.st/e997f757-61dc-45be-bd61-b6998d813beb.jpg?n=%F0%9F%98%83.jpg",
+                "filename": "😃.jpg",
+                "original_filename": "😃.jpg",
+            },
+            {
+                "url": "https://c2ck.scdn.st/72f1e20b-72a5-43b0-8ab2-472016e1d767.mp4?n=filename:+!%22%23$%25%26'()*%2B,-.0123456789:%3B%3C%3D%3E?@ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D.mp4",
+                "filename": "filename !#$%&()+,-.0123456789;=@ABCDEFGHIJKLMNOPQRSTUVWXYZ[].mp4",
+                "original_filename": "filename: !\"#$%&'()*+,-.0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
+            },
+        ],
+        3,
+    ),
     ("https://bunkr.ws/a/aJHkJf3L", [], 172),
 ]
