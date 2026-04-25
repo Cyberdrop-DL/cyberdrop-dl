@@ -86,7 +86,15 @@ def test_album_parser() -> None:
         (
             "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
             "Laura-Perea-en-la-habitaciÃ³n-5XMNsggv.mp4",
-        )
+        ),
+        (
+            "filename: !\"#$%\u0026'()*+,-.0123456789:;\u003c\u003d\u003e?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
+            "filename: !\"#$%&'()*+,-.0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
+        ),
+        (
+            "Nicol-Loveee-MundoX---Dulces-Muñecas-Traviesas-3-L9Dr07Fl.mp4",
+            "Nicol-Loveee-MundoX---Dulces-Muñecas-Traviesas-3-L9Dr07Fl.mp4",
+        ),
     ],
 )
 def test_unicode_decode(raw: str, expected: str):
