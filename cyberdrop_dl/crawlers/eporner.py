@@ -196,17 +196,8 @@ class EpornerCrawler(Crawler):
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-
-        soup_str = soup.get_text()
-        if "File has been removed due to copyright owner request" in soup_str:
-            raise ScrapeError(451)
-        if "Video has been deleted" in soup_str:
-            raise ScrapeError(410)
-
+        video = await self._request_video(scrape_item.url)
         scrape_item.url = canonical_url
-        # TODO: Force utf8 for soup
-        video = _parse_video(soup)
         link = self.parse_url(video.best_src.url)
         scrape_item.uploaded_at = self.parse_iso_date(video.date)
         _, ext = self.get_filename_and_ext(link.name)
@@ -221,9 +212,19 @@ class EpornerCrawler(Crawler):
         if "login" in dl_link.parts:
             raise ScrapeError(
                 401,
-                f"You need to provided logged in cookies to download this video resolution ({video.best_src.resolution.name})",
+                f"You need to provide logged in cookies to download this video resolution ({video.best_src.resolution.name})",
             )
         await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, debrid_link=dl_link)
+
+    async def _request_video(self, url: AbsoluteHttpURL) -> Video:
+        soup = await self.request_soup(url)
+        soup_str = soup.get_text()
+        if "File has been removed due to copyright owner request" in soup_str:
+            raise ScrapeError(451)
+        if "Video has been deleted" in soup_str:
+            raise ScrapeError(410)
+        # TODO: Force utf8 for soup
+        return _parse_video(soup)
 
     async def _request_location_reencoded(self, link: AbsoluteHttpURL):
         # The location header is not encoded and the "requote_url_redirect" param of aiohttp is session scoped
