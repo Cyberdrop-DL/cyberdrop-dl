@@ -8,6 +8,7 @@ from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from aiohttp import ClientConnectorError
+from typing_extensions import override
 
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
@@ -136,6 +137,13 @@ class BunkrrCrawler(Crawler):
                 raise ValueError
             case _:
                 raise ValueError
+
+    @override
+    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        if not self._known_good_host:
+            _ = await self._request_soup_lenient(url)
+        assert self._known_good_host
+        return await super()._get_redirect_url(url.with_host(self._known_good_host))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:

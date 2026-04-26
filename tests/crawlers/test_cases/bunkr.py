@@ -1,6 +1,18 @@
 DOMAIN = "bunkr"
 TEST_CASES = [
     (
+        "https://bunkr.black/v/bla4XTB1v8aG6",
+        [
+            {
+                "url": "re:/AZ-Haul-119-tqLy8ZWy.mp4?n=AZ+Haul+119.mp4",
+                "filename": "AZ Haul 119.mp4",
+                "original_filename": "AZ Haul 119.mp4",
+                "referer": "https://bunkr.site/f/bla4XTB1v8aG6",
+            }
+        ],
+        1,
+    ),
+    (
         "https://bunkr.ax/v/rFicV4QnhSHBE",
         [
             {
