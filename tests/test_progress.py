@@ -36,16 +36,62 @@ def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected
     assert error.format(padding) == expected + ": 0"
 
 
-def test_stats_formating(logs: pytest.LogCaptureFixture) -> None:
-    scrape_errors = tuple(UIError.parse(msg, count=0) for msg in ("Client Connector SSL Error", "502 Bad Gateway"))
-    download_errors = tuple(UIError.parse(msg, count=0) for msg in ("1234g Bad Gateway",))
-    _log_errors(scrape_errors, download_errors)
-    assert logs.messages == [
-        "------------------------------",
-        "Scrape Failures:",
-        "      Client Connector SSL Error: 0",
-        "  502 Bad Gateway: 0",
-        "------------------------------",
-        "Download Failures:",
-        "      1234g Bad Gateway: 0",
-    ]
+@pytest.mark.parametrize(
+    "scrape_errors, download_errors, expected_msgs",
+    [
+        (
+            ["Client Connector SSL Error", "502 Bad Gateway"],
+            ["1234 Bad Gateway"],
+            [
+                "------------------------------",
+                "Scrape Failures:",
+                "       Client Connector SSL Error: 0",
+                "   502 Bad Gateway: 0",
+                "------------------------------",
+                "Download Failures:",
+                "  1234 Bad Gateway: 0",
+            ],
+        ),
+        (
+            ["Error1", "Error2"],
+            ["Error3", "Error4"],
+            [
+                "------------------------------",
+                "Scrape Failures:",
+                "  Error1: 0",
+                "  Error2: 0",
+                "------------------------------",
+                "Download Failures:",
+                "  Error3: 0",
+                "  Error4: 0",
+            ],
+        ),
+        (
+            ["Error1", "Error2"],
+            ["Error3", "2 Error4", "Error5"],
+            [
+                "------------------------------",
+                "Scrape Failures:",
+                "    Error1: 0",
+                "    Error2: 0",
+                "------------------------------",
+                "Download Failures:",
+                "    Error3: 0",
+                "  2 Error4: 0",
+                "    Error5: 0",
+            ],
+        ),
+    ],
+)
+def test_stats_formating(
+    logs: pytest.LogCaptureFixture,
+    scrape_errors: tuple[str, ...],
+    download_errors: tuple[str, ...],
+    expected_msgs: list[str],
+) -> None:
+
+    _log_errors(
+        tuple(UIError.parse(msg, count=0) for msg in scrape_errors),
+        tuple(UIError.parse(msg, count=0) for msg in download_errors),
+    )
+    assert logs.messages == expected_msgs
