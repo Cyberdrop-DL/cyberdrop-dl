@@ -62,7 +62,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     @override
     def __init_downloader__(self) -> None:
-        self.core = MegaCore(MegaAPI(self.manager.client_manager._session, CDL_USER_AGENT))
+        api = MegaAPI(self.manager.client_manager._session)
+        api.user_agent = CDL_USER_AGENT
+        self.core = MegaCore(api)
         self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # type: ignore[reportIncompatibleVariableOverride]
         dl.startup()
 

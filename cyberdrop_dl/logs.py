@@ -117,6 +117,7 @@ class LogHandler(RichHandler):
             show_time=show_time,
             rich_tracebacks=True,
             tracebacks_show_locals=True,
+            tracebacks_max_frames=3,
             locals_max_string=_DEFAULT_CONSOLE_WIDTH,
             tracebacks_extra_lines=2,
             locals_max_length=20,
