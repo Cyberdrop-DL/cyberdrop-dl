@@ -243,10 +243,7 @@ def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIEr
             continue
 
         for error in errors:
-            error_code = error.code if error.code is not None else ""
-            logger.info(
-                f"  {error_code:>{padding}}{' ' if padding else ''}{error.msg}: {error.count:,}", extra={"color": "red"}
-            )
+            logger.info(f"  {error.format(padding)}", extra={"color": "red"})
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
