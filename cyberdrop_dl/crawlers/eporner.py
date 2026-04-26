@@ -46,6 +46,7 @@ class Video:
     date: str
     sources: tuple[VideoSource, ...]
     best_src: VideoSource
+    fallback_src: VideoSource
 
 
 class Codec(IntEnum):
@@ -246,4 +247,5 @@ def _parse_video(soup: BeautifulSoup) -> Video:
         date=extr_text(ld_json, 'uploadDate": "', '"'),
         sources=sources,
         best_src=max(sources),
+        fallback_src=max(source for source in sources if not source.needs_login),
     )
