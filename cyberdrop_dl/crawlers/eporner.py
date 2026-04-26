@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl import env
 from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
@@ -104,9 +104,16 @@ class EpornerCrawler(Crawler):
         if self.logged_in:
             return
 
-        self.log.warning(
-            "Only 720p videos will be downloaded. Please provide logged in cookies to download high resolution videos"
-        )
+        if env.EPORNER_NO_LOGIN_REQUIRED:
+            self.log.warning(
+                "Only 720p videos will be downloaded. High resolution videos (1080p) are only available while logged in."
+            )
+            return
+
+        with self.disable_on_error("Logged in cookies not found"):
+            raise LoginError(
+                "High resolution videos (1080p) are only available while logged in. Set 'CDL_EPORNER_NO_LOGIN_REQUIRED' env var to 'true' to disable this warning if you are ok with 720p videos"
+            )
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
