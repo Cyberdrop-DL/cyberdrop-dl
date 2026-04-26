@@ -85,7 +85,11 @@ class EpornerCrawler(Crawler):
         "Profile": "/profile/...",
         "Search": "/search/...",
         "Search Photos": "/search-photos/...",
-        "Video": ("/<video_name>-<video-id>", "/hd-porn/<video_id>", "/embed/<video_id>"),
+        "Video": (
+            "/<video_name>-<video-id>",
+            "/hd-porn/<video_id>",
+            "/embed/<video_id>",
+        ),
         "Photo": "/photo/...",
         "Gallery": "/gallery/...",
     }
@@ -226,7 +230,15 @@ class EpornerCrawler(Crawler):
                 401,
                 f"Cookies are expired. Please provide new fresh cookies to downlod this video (resolution: ({best_src.resolution.name})",
             )
-        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, debrid_link=dl_link)
+        await self.handle_file(
+            link,
+            scrape_item,
+            video.title,
+            ext,
+            custom_filename=filename,
+            debrid_link=dl_link,
+            referer=scrape_item.url.with_fragment(link.name) if not video.best_src != video.fallback_src else None,
+        )
 
     async def _request_video(self, url: AbsoluteHttpURL) -> Video:
         soup = await self.request_soup(url)
