@@ -345,7 +345,6 @@ def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.parent.with_fragment(url.fragment).with_query(url.query)
 
 
-@functools.cache
 def get_system_information() -> dict[str, Any]:
 
     def get_common_name() -> str:
