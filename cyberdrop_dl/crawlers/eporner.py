@@ -95,6 +95,15 @@ class EpornerCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 2, 1
 
+    async def __async_post_init__(self) -> None:
+        self.logged_in = bool(self.get_cookie_value("PHPSESSID"))
+        if self.logged_in:
+            return
+
+        self.log.warning(
+            "Only 720p videos will be downloaded. Please provide logged in cookies to download high resolution videos"
+        )
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [slug, *_] if slug.startswith("video-"):
@@ -199,21 +208,23 @@ class EpornerCrawler(Crawler):
 
         video = await self._request_video(scrape_item.url)
         scrape_item.url = canonical_url
-        link = self.parse_url(video.best_src.url)
+        best_src = video.best_src if self.logged_in else video.fallback_src
+        link = self.parse_url(best_src.url)
         scrape_item.uploaded_at = self.parse_iso_date(video.date)
         _, ext = self.get_filename_and_ext(link.name)
         filename = self.create_custom_filename(
             video.title,
             ext,
             file_id=video_id,
-            resolution=video.best_src.resolution,
-            video_codec=video.best_src.codec.name.lower(),
+            resolution=best_src.resolution,
+            video_codec=best_src.codec.name.lower(),
         )
         dl_link = await self._request_location_reencoded(link)
         if "login" in dl_link.parts:
+            assert self.logged_in
             raise ScrapeError(
                 401,
-                f"You need to provide logged in cookies to download this video resolution ({video.best_src.resolution.name})",
+                f"Cookies are expired. Please provide new fresh cookies to downlod this video (resolution: ({best_src.resolution.name})",
             )
         await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, debrid_link=dl_link)
 
