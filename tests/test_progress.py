@@ -1,5 +1,6 @@
 import pytest
 
+from cyberdrop_dl.managers.manager import _log_errors
 from cyberdrop_dl.progress.scraping.errors import UIError
 
 
@@ -33,3 +34,18 @@ def test_ui_error_parsing(name: str, expected_msg: str, expected_code: int | Non
 def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected: str):
     error = UIError(msg, 0, code)
     assert error.format(padding) == expected + ": 0"
+
+
+def test_stats_formating(logs: pytest.LogCaptureFixture) -> None:
+    scrape_errors = tuple(UIError.parse(msg, count=0) for msg in ("Client Connector SSL Error", "502 Bad Gateway"))
+    download_errors = tuple(UIError.parse(msg, count=0) for msg in ("1234g Bad Gateway",))
+    _log_errors(scrape_errors, download_errors)
+    assert logs.messages == [
+        "------------------------------",
+        "Scrape Failures:",
+        "      Client Connector SSL Error: 0",
+        "  502 Bad Gateway: 0",
+        "------------------------------",
+        "Download Failures:",
+        "      1234g Bad Gateway: 0",
+    ]
