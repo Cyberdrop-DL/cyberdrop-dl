@@ -43,10 +43,9 @@ class Manager:
         config: Config | None = None,
     ) -> None:
         self.cache: dict[str, Any] = {}
-
-        self.appdata: AppData = appdata or AppData.default()
+        self._appdata: AppData | None = appdata
         self.cli_args: CLIargs = cli_args or CLIargs()
-        self.config: Config = config or Config.from_manager(self)
+        self._config: Config | None = config
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
@@ -54,6 +53,18 @@ class Manager:
         self.scrape_mapper: ScrapeMapper
         self.database: Database
         self.client_manager: ClientManager
+
+    @property
+    def appdata(self) -> AppData:
+        if self._appdata is None:
+            self._appdata = AppData.default()
+        return self._appdata
+
+    @property
+    def config(self) -> Config:
+        if self._config is None:
+            self._config = Config.from_manager(self)
+        return self._config
 
     def resolve_paths(self) -> None:
         self.appdata.mkdirs()
