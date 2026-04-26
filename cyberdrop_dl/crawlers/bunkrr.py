@@ -142,9 +142,10 @@ class BunkrrCrawler(Crawler):
 
     @override
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        async with self._redirect_lock:
-            if not self._known_good_host:
-                _ = await self._request_soup_lenient(url)
+        if not self._known_good_host:
+            async with self._redirect_lock:
+                if not self._known_good_host:
+                    _ = await self._request_soup_lenient(url)
         assert self._known_good_host
         return await super()._get_redirect_url(url.with_host(self._known_good_host))
 
