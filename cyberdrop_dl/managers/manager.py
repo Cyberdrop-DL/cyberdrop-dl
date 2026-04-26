@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
+import sys
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -136,6 +137,7 @@ class Manager:
 
         logger.debug("ffmpeg version: %s", ffmpeg.version())
         logger.debug("ffprobe version: %s", ffmpeg.ffprobe_version())
+        logger.debug({"argv": tuple(sys.argv[1:])})
 
     async def close(self) -> None:
         await self.client_manager.close()

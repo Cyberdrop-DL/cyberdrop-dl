@@ -374,7 +374,6 @@ def get_system_information() -> dict[str, Any]:
         {
             "prefix": sys.prefix,
             "executable": sys.executable,
-            "argv": sys.argv[1:],
         }
         | platform.uname()._asdict()
         | {
