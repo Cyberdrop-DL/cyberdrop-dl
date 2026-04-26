@@ -11,7 +11,7 @@ from aiohttp import ClientConnectorError
 
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph, parse_url, xor_decrypt
 
@@ -30,6 +30,7 @@ _REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BTN = "a.btn.ic-download-01"
+    SERVER_UNDER_MAINTENANCE = "h2:-soup-contains('Server under maintenance')"
     IMAGE_CONTAINER = "img.max-h-full.w-auto.object-cover.relative"
 
 
@@ -190,6 +191,9 @@ class BunkrrCrawler(Crawler):
 
         soup = await self._request_soup_lenient(scrape_item.url)
         src = None
+        if soup.select_one(Selector.SERVER_UNDER_MAINTENANCE):
+            raise ScrapeError("Bunkr Maintenance", message="Server under maintenance")
+
         try:
             image = self.parse_url(css.select(soup, Selector.IMAGE_CONTAINER, "src"))
         except css.SelectorError:
