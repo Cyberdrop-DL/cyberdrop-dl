@@ -44,6 +44,7 @@ _PROFILE_URL_PARTS = {
 class Video:
     title: str
     date: str
+    sources: tuple[VideoSource, ...]
     best_src: VideoSource
 
 
@@ -58,6 +59,7 @@ class VideoSource:
     codec: Codec
     size: str
     url: str
+    needs_login: bool
 
     @staticmethod
     def parse(tag: Tag) -> VideoSource:
@@ -65,8 +67,13 @@ class VideoSource:
         name = tag.get_text(strip=True).removeprefix("Download")
         details = name.split("(", 1)[1].removesuffix(")").split(",")
         res, codec, size = [d.strip() for d in details]
-        codec = Codec[codec.upper()]
-        return VideoSource(Resolution.parse(res), codec, size, link_str)
+        return VideoSource(
+            Resolution.parse(res),
+            codec=Codec[codec.upper()],
+            size=size,
+            url=link_str,
+            needs_login=bool("account.login.checkSilent" in str(tag.get("onclick"))),
+        )
 
 
 class EpornerCrawler(Crawler):
@@ -211,6 +218,11 @@ class EpornerCrawler(Crawler):
             video_codec=video.best_src.codec.name.lower(),
         )
         dl_link = await self._request_location_reencoded(link)
+        if "login" in dl_link.parts:
+            raise ScrapeError(
+                401,
+                f"You need to provided logged in cookies to download this video resolution ({video.best_src.resolution.name})",
+            )
         await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, debrid_link=dl_link)
 
     async def _request_location_reencoded(self, link: AbsoluteHttpURL):
@@ -226,10 +238,11 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1211
 
-    formats = [VideoSource.parse(tag) for tag in soup.select(Selector.FORMATS)]
+    sources = tuple(VideoSource.parse(tag) for tag in soup.select(Selector.FORMATS))
 
     return Video(
         title=extr_text(ld_json, 'name": "', '",'),
         date=extr_text(ld_json, 'uploadDate": "', '"'),
-        best_src=max(formats),
+        sources=sources,
+        best_src=max(sources),
     )
