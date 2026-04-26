@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Pa
 from aiolimiter import AsyncLimiter
 from typing_extensions import deprecated
 
+from cyberdrop_dl import env
 from cyberdrop_dl.clients import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.downloader import Downloader
@@ -214,6 +215,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         cls,
         is_abc: bool = False,
         is_generic: bool = False,
+        is_debug: bool = False,
         db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
         **kwargs,
     ) -> None:
@@ -233,17 +235,21 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         cls.SUPPORTED_PATHS = _sort_supported_paths(cls.SUPPORTED_PATHS)  # pyright: ignore[reportConstantRedefinition]
         cls.IS_ABC: bool = is_abc
 
+        add_to_register = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
+
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
             cls.INFO: CrawlerInfo = CrawlerInfo.generic(cls.NAME, cls.SUPPORTED_PATHS)
-            Registry.generic.add(cls)
+            if add_to_register:
+                Registry.generic.add(cls)
             return
 
         if is_abc:
-            Registry.abc.add(cls)
+            if add_to_register:
+                Registry.abc.add(cls)
             return
 
         if cls.NAME != "RealDebrid":
@@ -266,7 +272,8 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             supported_domains=_make_wiki_supported_domains(cls.SCRAPE_MAPPER_KEYS),
             supported_paths=cls.SUPPORTED_PATHS,
         )
-        Registry.concrete.add(cls)
+        if add_to_register:
+            Registry.concrete.add(cls)
 
     def __init_downloader__(self) -> None:
         self.downloader = dl = Downloader(self.manager, self.DOMAIN)
