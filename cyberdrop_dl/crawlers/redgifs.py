@@ -57,7 +57,7 @@ class RedGifsCrawler(Crawler):
         if error := json_resp.get("error"):
             msg: str = error.get("description") or error.get("message")
             if error.get("code"):
-                msg = f"[{error['code']}] {msg}"
+                msg = f"[{error['code']}] {msg if msg else ''}".strip()
             raise ScrapeError(resp.status, msg)
 
     def __post_init__(self) -> None:
