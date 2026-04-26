@@ -233,8 +233,8 @@ def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIEr
         padding = 0
 
     for title, errors in (
-        ("Scrape Failures:", scrape_errors),
-        ("Download Failures:", download_errors),
+        ("Scrape Errors:", scrape_errors),
+        ("Download Errors:", download_errors),
     ):
         log_spacer()
         logger.info(title, extra={"color": "cyan"})
