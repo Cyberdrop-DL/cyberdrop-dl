@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import dataclasses
 import json
@@ -115,6 +116,7 @@ class BunkrrCrawler(Crawler):
     _known_good_host: ClassVar[str | None] = None
 
     def __post_init__(self) -> None:
+        self._redirect_lock: asyncio.Lock = asyncio.Lock()
         self._parse_album_files = _make_album_parser()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -140,8 +142,9 @@ class BunkrrCrawler(Crawler):
 
     @override
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        if not self._known_good_host:
-            _ = await self._request_soup_lenient(url)
+        async with self._redirect_lock:
+            if not self._known_good_host:
+                _ = await self._request_soup_lenient(url)
         assert self._known_good_host
         return await super()._get_redirect_url(url.with_host(self._known_good_host))
 
