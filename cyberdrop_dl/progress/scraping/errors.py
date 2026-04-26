@@ -56,6 +56,10 @@ class UIError:
 
         return cls(msg, count)
 
+    def format(self, padding: int = 0) -> str:
+        error_code = self.code if self.code is not None else ""
+        return f"  {error_code:>{padding}}{' ' if padding else ''}{self.msg}: {self.count:,}"
+
 
 class _ErrorsPanel:
     """Base class that keeps track of errors and reasons."""
