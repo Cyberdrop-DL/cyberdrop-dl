@@ -90,32 +90,6 @@ class DownloadSpeedLimiter(AsyncLimiter):
         return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
-class DDosGuard:
-    TITLES = ("Just a moment...", "DDoS-Guard")
-    SELECTORS = (
-        "#cf-challenge-running",
-        ".ray_id",
-        ".attack-box",
-        "#cf-please-wait",
-        "#challenge-spinner",
-        "#trk_jschal_js",
-        "#turnstile-wrapper",
-        ".lds-ring",
-    )
-    ALL_SELECTORS = ", ".join(SELECTORS)
-
-
-class CloudflareTurnstile:
-    TITLES = ("Simpcity Cuck Detection", "Attention Required! | Cloudflare", "Sentinel CAPTCHA")
-    SELECTORS = (
-        "captchawrapper",
-        "cf-turnstile",
-        "script[src*='challenges.cloudflare.com/turnstile']",
-        "script:-soup-contains('Dont open Developer Tools')",
-    )
-    ALL_SELECTORS = ", ".join(SELECTORS)
-
-
 class ClientManager:
     """Creates a 'client' that can be referenced by scraping or download sessions."""
 
