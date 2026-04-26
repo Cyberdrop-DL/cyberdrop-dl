@@ -6,6 +6,7 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -134,7 +135,7 @@ class RealDebridAPI:
         self._crawler = crawler
         self._folder_regex: re.Pattern[str]
         self._file_regex: re.Pattern[str]
-        self._headers = {"Authorization": f"Bearer {token}", "User-Agent": "CyberDrop-DL"}
+        self._headers = {"Authorization": f"Bearer {token}", "User-Agent": CDL_USER_AGENT}
 
     def is_supported(self, url: AbsoluteHttpURL) -> bool:
         match = self._file_regex.search(str(url))
