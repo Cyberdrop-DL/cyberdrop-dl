@@ -268,9 +268,14 @@ class AppData:
         if os.name == "nt":
             # Detect the real path when running in sandboxed interpreter
             anchor = path / "cyberdrop_dl.anchor"
+            path.mkdir(parents=True, exist_ok=True)
             anchor.touch()
             path = anchor.resolve().parent
             anchor.unlink()
+            try:
+                path.rmdir()
+            except OSError:
+                pass
 
         cache = path / "Cache"
         configs = path / "Configs"
