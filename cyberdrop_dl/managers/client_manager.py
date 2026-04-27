@@ -134,30 +134,22 @@ class ClientManager:
             self._flaresolverr = FlareSolverrClient(url, self._session)
         return self._flaresolverr
 
-    def _startup(self) -> None:
+    async def __aenter__(self) -> Self:
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
-        if _curl_import_error is not None:
-            return
-
-        self._curl_session = self.new_curl_cffi_session()
-
-    async def __aenter__(self) -> Self:
-        self._startup()
+        if _curl_import_error is None:
+            self._curl_session = self.new_curl_cffi_session()
         return self
 
-    async def __aexit__(self, *args) -> None:
-        await self._session.close()
-        await self._download_session.close()
-        if self._flaresolverr is not None:
-            await self._flaresolverr.aclose()
+    async def __aexit__(self, *_) -> None:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._session.close())
+            tg.create_task(self._download_session.close())
+            if self._flaresolverr is not None:
+                tg.create_task(self._flaresolverr.aclose())
 
-        if _curl_import_error is not None:
-            return
-        try:
-            await self._curl_session.close()
-        except Exception:
-            pass
+            if _curl_import_error is not None:
+                tg.create_task(self._curl_session.close())
 
     @property
     def rate_limiting_options(self):
