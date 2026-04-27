@@ -6,6 +6,7 @@ import dataclasses
 import datetime
 import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
@@ -200,6 +201,10 @@ class ScrapeMapper:
                 storage.monitor(self.manager.config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
             ):
+                loop = asyncio.get_running_loop()
+                previous_factory = loop.get_task_factory()
+                if sys.version_info >= (3, 12):
+                    loop.set_task_factory(asyncio.eager_task_factory)
                 dispatcher = asyncio.create_task(self._download_dispatcher())
                 try:
                     async with self._task_groups.scrape:
@@ -211,6 +216,7 @@ class ScrapeMapper:
                     self._done.set()
                     await self._pending_downloads.put(None)
                     await dispatcher
+                    loop.set_task_factory(previous_factory)
 
     async def run(self) -> ScrapeStats:
         self._init_crawlers()
