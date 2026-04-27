@@ -219,10 +219,16 @@ class ScrapeMapper:
 
                         yield self
 
-                finally:
+                except BaseException:
+                    dispatcher.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await dispatcher
+                    raise
+                else:
                     self._done.set()
                     await self._pending_downloads.put(None)
                     await dispatcher
+                finally:
                     loop.set_task_factory(previous_factory)
 
     async def run(self) -> ScrapeStats:
