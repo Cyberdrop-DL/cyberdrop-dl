@@ -7,7 +7,6 @@ import datetime
 import importlib
 import logging
 import pkgutil
-import random
 import re
 import weakref
 from abc import ABC, abstractmethod
@@ -449,23 +448,11 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             "Referer": str(scrape_item.url),
         }
 
-    async def _fake_download(self, media_item: MediaItem) -> None:
-        with self.manager.scrape_mapper.tui.downloads.download_file(
-            media_item.filename,
-            media_item.domain,
-            total=(steps := int(1e10)),
-        ) as hook:
-            for _ in range(steps):
-                hook.advance(random.randint(0, int(1e4)))
-                await asyncio.sleep(0)
-
     @final
     async def _download(self, media_item: MediaItem, m3u8: m3u8.Rendition | None) -> None:
         try:
             if SKIP_DOWNLOAD.get():
                 return
-
-            return await self._fake_download(media_item)
 
             if m3u8:
                 await self.downloader.download_hls(media_item, m3u8)
