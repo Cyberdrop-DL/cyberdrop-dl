@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Check for version tag
         id: check_tag
@@ -26,7 +28,7 @@ jobs:
       - name: Extract version number
         id: extract_version
         run: |
-          TAG_NAME=${{ env.TAG_NAME }}
+          TAG_NAME=${TAG_NAME}
           VERSION_NUMBER=$(echo "$TAG_NAME" | grep -oE '^[0-9]+' | head -n 1)
           if [ -z "$VERSION_NUMBER" ]; then
             echo "Error: No numeric version found in tag name."
@@ -37,7 +39,7 @@ jobs:
       - name: Extract changelog content
         id: extract_changelog
         run: |
-          TAG_NAME=${{ env.TAG_NAME }}
+          TAG_NAME=${TAG_NAME}
           CHANGELOG_CONTENT=$(awk -v version="$TAG_NAME" '
           /^#+ \[/ { if (p) { exit }; if ($2 == "["version"]") { p=1; next} } p && NF
           ' "CHANGELOG.md")
@@ -51,10 +53,10 @@ jobs:
 
       - name: Create start scripts zip
         run: |
-          mkdir -p zip/Cyberdrop-DL.v${{ env.VERSION_NUMBER }}
-          cp -r scripts/release/* zip/Cyberdrop-DL.v${{ env.VERSION_NUMBER }}
+          mkdir -p zip/Cyberdrop-DL.v${VERSION_NUMBER}
+          cp -r scripts/release/* zip/Cyberdrop-DL.v${VERSION_NUMBER}
           cd zip
-          zip -r ../Cyberdrop-DL.v${{ env.TAG_NAME }}.zip *
+          zip -r ../Cyberdrop-DL.v${TAG_NAME}.zip *
 
       - name: Create GH release
         id: create_release

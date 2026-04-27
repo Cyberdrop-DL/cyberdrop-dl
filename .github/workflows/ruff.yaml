@@ -6,6 +6,8 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: ruff lint
         uses: astral-sh/ruff-action@v3
