@@ -131,7 +131,7 @@ class ScrapeMapper:
         return sum(f.waiting_items for f in self._factory)
 
     def _download_queue(self):
-        total = sum(f.downloader.waiting_items for f in self._factory)
+        total = sum(f.downloader.waiting_items for f in self._factory) + self._pending_downloads.qsize()
         self.tui.files.stats.queued = total
         return total
 
