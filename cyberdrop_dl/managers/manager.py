@@ -120,6 +120,7 @@ class Manager:
                 "System": get_system_information(),
                 "Config file": self.config.source,
                 "URLs file": self.config.settings.files.input_file,
+                "Apprise URLs": tuple(url.format(dump_secret=False) for url in self.config.apprise_urls),
                 "Download folder": self.config.settings.files.download_folder,
                 "Database file": self.appdata.db_file,
                 "CLI options": self.cli_args.model_dump(mode="json"),
@@ -128,6 +129,7 @@ class Manager:
                 "Global Settings": self.config.global_settings.model_dump(mode="json"),
                 "Enviroment": env.ALL_VARS,
                 "Enviroment resolved": env.ALL_VARS_RESOLVED,
+                "argv": tuple(sys.argv[1:]),
             }
         )
 
@@ -148,7 +150,6 @@ class Manager:
                 msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
 
             logger.warning(msg)
-        logger.debug({"argv": tuple(sys.argv[1:])})
 
     async def close(self) -> None:
         await self.client_manager.close()
