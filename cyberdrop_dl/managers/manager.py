@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
+import sys
 import time
 from datetime import timedelta
 from pathlib import Path
@@ -137,16 +138,17 @@ class Manager:
 
         logger.debug("Database size: %s", ByteSize(db_size).human_readable(decimal=True))
 
-        if not ffmpeg.version():
+        if ffmpeg.version():
+            logger.debug("ffmpeg version: %s", ffmpeg.version())
+            logger.debug("ffprobe version: %s", ffmpeg.ffprobe_version())
+
+        else:
             msg = "ffmpeg is not installed. HLS downloads will fail"
             if os.name == "nt":
                 msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
 
             logger.warning(msg)
-            return
-
-        logger.debug("ffmpeg version: %s", ffmpeg.version())
-        logger.debug("ffprobe version: %s", ffmpeg.ffprobe_version())
+        logger.debug({"argv": tuple(sys.argv[1:])})
 
     async def close(self) -> None:
         await self.client_manager.close()
@@ -242,8 +244,8 @@ def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIEr
         padding = 0
 
     for title, errors in (
-        ("Scrape Failures:", scrape_errors),
-        ("Download Failures:", download_errors),
+        ("Scrape Errors:", scrape_errors),
+        ("Download Errors:", download_errors),
     ):
         log_spacer()
         logger.info(title, extra={"color": "cyan"})
@@ -252,10 +254,7 @@ def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIEr
             continue
 
         for error in errors:
-            error_code = error.code if error.code is not None else ""
-            logger.info(
-                f"  {error_code:>{padding}}{' ' if padding else ''}{error.msg}: {error.count:,}", extra={"color": "red"}
-            )
+            logger.info(f"  {error.format(padding)}", extra={"color": "red"})
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)

@@ -1,5 +1,5 @@
 from cyclopts import Parameter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from cyberdrop_dl.models import AliasModel
 
@@ -41,11 +41,11 @@ class RealDebridAuth(AliasModel):
 
 @Parameter(show=False)
 class AuthSettings(AliasModel):
-    coomer: CoomerAuth = CoomerAuth()
-    gofile: GoFileAuth = GoFileAuth()
-    imgur: ImgurAuth = ImgurAuth()
-    jdownloader: JDownloaderAuth = JDownloaderAuth()
-    kemono: KemonoAuth = KemonoAuth()
-    meganz: MegaNzAuth = MegaNzAuth()
-    pixeldrain: PixeldrainAuth = PixeldrainAuth()
-    realdebrid: RealDebridAuth = RealDebridAuth()
+    coomer: CoomerAuth = Field(default_factory=CoomerAuth)
+    gofile: GoFileAuth = Field(default_factory=GoFileAuth)
+    imgur: ImgurAuth = Field(default_factory=ImgurAuth)
+    jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
+    kemono: KemonoAuth = Field(default_factory=KemonoAuth)
+    meganz: MegaNzAuth = Field(default_factory=MegaNzAuth)
+    pixeldrain: PixeldrainAuth = Field(default_factory=PixeldrainAuth)
+    realdebrid: RealDebridAuth = Field(default_factory=RealDebridAuth)

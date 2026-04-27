@@ -55,7 +55,10 @@ class RedGifsCrawler(Crawler):
     @classmethod
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
         if error := json_resp.get("error"):
-            raise ScrapeError(resp.status, error["message"])
+            msg: str = error.get("description") or error.get("message")
+            if error.get("code"):
+                msg = f"[{error['code']}] {msg if msg else ''}".strip()
+            raise ScrapeError(resp.status, msg)
 
     def __post_init__(self) -> None:
         self.headers: dict[str, str] = {}

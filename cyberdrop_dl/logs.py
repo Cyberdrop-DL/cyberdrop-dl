@@ -297,10 +297,13 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
 @contextlib.contextmanager
 def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[None]:
     file.parent.mkdir(parents=True, exist_ok=True)
+    from mega.api import LOG_HTTP_TRAFFIC
+
     with (
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
         _enter_context(MAIN_LOG_FILE, file),
+        _enter_context(LOG_HTTP_TRAFFIC, True),
         _threaded_logger(
             log_handler=LogHandler(
                 level,

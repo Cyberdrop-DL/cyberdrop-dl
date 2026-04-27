@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import dataclasses
 import json
@@ -8,10 +9,11 @@ from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from aiohttp import ClientConnectorError
+from typing_extensions import override
 
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph, parse_url, xor_decrypt
 
@@ -30,6 +32,7 @@ _REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BTN = "a.btn.ic-download-01"
+    SERVER_UNDER_MAINTENANCE = "h2:-soup-contains('Server under maintenance')"
     IMAGE_CONTAINER = "img.max-h-full.w-auto.object-cover.relative"
 
 
@@ -53,15 +56,10 @@ def _make_album_parser() -> Callable[[str], Generator[File]]:
     def translate(text: str) -> str:
         return pattern.sub(lambda m: translation_map[m.group(0)], text.replace("\\'", "'")).strip()
 
-    def fix_unicode(value: object) -> Any:
-        if type(value) is str:
-            return value.encode("raw_unicode_escape").decode("utf-8")
-        return value
-
     def decode(content: str) -> Generator[File]:
         file: dict[str, Any]
         for file in json.loads(content):
-            yield File(**{name: fix_unicode(value) for name, value in file.items()})
+            yield File(**file)
 
     def parse(album_js: str) -> Generator[File]:
         content = translate(album_js[album_js.find("=") + 1 : album_js.rfind("];")])
@@ -119,6 +117,7 @@ class BunkrrCrawler(Crawler):
     _known_good_host: ClassVar[str | None] = None
 
     def __post_init__(self) -> None:
+        self._redirect_lock: asyncio.Lock = asyncio.Lock()
         self._parse_album_files = _make_album_parser()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -141,6 +140,15 @@ class BunkrrCrawler(Crawler):
                 raise ValueError
             case _:
                 raise ValueError
+
+    @override
+    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        if not self._known_good_host:
+            async with self._redirect_lock:
+                if not self._known_good_host:
+                    _ = await self._request_soup_lenient(url)
+        assert self._known_good_host
+        return await super()._get_redirect_url(url.with_host(self._known_good_host))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
@@ -195,6 +203,9 @@ class BunkrrCrawler(Crawler):
 
         soup = await self._request_soup_lenient(scrape_item.url)
         src = None
+        if soup.select_one(Selector.SERVER_UNDER_MAINTENANCE):
+            raise ScrapeError("Bunkr Maintenance", message="Server under maintenance")
+
         try:
             image = self.parse_url(css.select(soup, Selector.IMAGE_CONTAINER, "src"))
         except css.SelectorError:

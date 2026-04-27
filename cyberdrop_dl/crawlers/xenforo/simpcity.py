@@ -7,7 +7,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from .xenforo import XenforoCrawler
 
 
-class SimpCityCrawler(XenforoCrawler):
+class SimpCityCrawler(XenforoCrawler, is_debug=True):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://simpcity.cr")
     DOMAIN: ClassVar[str] = "simpcity"
     FOLDER_DOMAIN: ClassVar[str] = "SimpCity"
