@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl import env
-from cyberdrop_dl.compat import IntEnum
+from bs4 import BeautifulSoup
+
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, parse_url
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup, Tag
+    from collections.abc import Generator
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -45,28 +45,16 @@ class Video:
     title: str
     date: str
     best_src: VideoSource
-
-
-class Codec(IntEnum):
-    H264 = 0
-    AV1 = -1 if env.EPORNER_PREFER_H264 else 1
+    sources: tuple[VideoSource, ...]
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
 class VideoSource:
     resolution: Resolution
-    codec: Codec
-    size: str
-    url: str
-
-    @staticmethod
-    def parse(tag: Tag) -> VideoSource:
-        link_str: str = css.attr(tag, "href")
-        name = tag.get_text(strip=True).removeprefix("Download")
-        details = name.split("(", 1)[1].removesuffix(")").split(",")
-        res, codec, size = [d.strip() for d in details]
-        codec = Codec[codec.upper()]
-        return VideoSource(Resolution.parse(res), codec, size, link_str)
+    fps: float
+    url: AbsoluteHttpURL
+    name: str
+    format: str
 
 
 class EpornerCrawler(Crawler):
@@ -189,47 +177,111 @@ class EpornerCrawler(Crawler):
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-
-        soup_str = soup.get_text()
-        if "File has been removed due to copyright owner request" in soup_str:
-            raise ScrapeError(451)
-        if "Video has been deleted" in soup_str:
-            raise ScrapeError(410)
-
+        video = await self._request_video(scrape_item.url, video_id)
         scrape_item.url = canonical_url
-        # TODO: Force utf8 for soup
-        video = _parse_video(soup)
-        link = self.parse_url(video.best_src.url)
+        src = video.best_src.url
         scrape_item.uploaded_at = self.parse_iso_date(video.date)
-        _, ext = self.get_filename_and_ext(link.name)
         filename = self.create_custom_filename(
             video.title,
-            ext,
+            ext := src.suffix,
             file_id=video_id,
             resolution=video.best_src.resolution,
-            video_codec=video.best_src.codec.name.lower(),
+            fps=video.best_src.fps,
         )
-        dl_link = await self._request_location_reencoded(link)
-        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=filename, debrid_link=dl_link)
 
-    async def _request_location_reencoded(self, link: AbsoluteHttpURL):
-        # The location header is not encoded and the "requote_url_redirect" param of aiohttp is session scoped
-        # so we manually requote this redirect
-        async with self.request(link, allow_redirects=False) as resp:
-            assert resp.location
-            return AbsoluteHttpURL(f"{resp.location.origin()}/{resp.location.raw_path_qs}", encoded=True)
+        await self.handle_file(src, scrape_item, video.title, ext, custom_filename=filename, debrid_link=src)
+
+    async def _request_video(self, url: AbsoluteHttpURL, video_id: str) -> Video:
+        html = await self.request_text(url)
+
+        if "File has been removed due to copyright owner request" in html:
+            raise ScrapeError(451)
+        if "Video has been deleted" in html:
+            raise ScrapeError(410)
+
+        player_hash = extr_text(html, "EP.video.player.hash = '", "';")
+
+        xhr_url = (self.PRIMARY_URL / "xhr/video" / video_id).with_query(
+            hash=_encode_hash(player_hash),
+            domain=self.PRIMARY_URL.host,
+            fallback="false",
+            embed="false",
+            supportedFormats="hls,h265,vp9,av1,mp4",
+        )
+        video: dict[str, Any] = await self.request_json(xhr_url)
+        if video.get("available") is False:
+            raise ScrapeError(404, video.get("message"))
+
+        return _parse_video(html, video)
 
 
-def _parse_video(soup: BeautifulSoup) -> Video:
-    ld_json = css.select_text(soup, Selector.DATE_JS).encode("raw_unicode_escape").decode("unicode-escape")
+def _parse_video(html: str, video: dict[str, Any]) -> Video:
+
+    ld_json = (
+        css.select_text(BeautifulSoup(html, "html.parser"), Selector.DATE_JS)
+        .encode("raw_unicode_escape")
+        .decode("unicode-escape")
+    )
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1211
 
-    formats = [VideoSource.parse(tag) for tag in soup.select(Selector.FORMATS)]
-
+    sources = tuple(_parse_sources(video["sources"]))
     return Video(
         title=extr_text(ld_json, 'name": "', '",'),
         date=extr_text(ld_json, 'uploadDate": "', '"'),
-        best_src=max(formats),
+        sources=sources,
+        best_src=max(src for src in sources if src.format == "mp4"),
     )
+
+
+def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[VideoSource]:
+    for format, options in sources.items():
+        for name, source in options.items():
+            url = parse_url(source["src"])
+            if format == "hls":
+                resolution = _parse_hls_res(url)
+                fps = 0.0
+
+            else:
+                resolution = Resolution.parse(source["labelShort"])
+                fps = _parse_fps(name)
+
+            yield VideoSource(
+                resolution=resolution,
+                fps=fps,
+                url=url,
+                name=name,
+                format=format,
+            )
+
+
+def _parse_hls_res(url: AbsoluteHttpURL) -> Resolution:
+    for part in reversed(url.parts[-2].split(",")):
+        try:
+            return Resolution.parse(part)
+        except ValueError:
+            continue
+    return Resolution.unknown()
+
+
+def _parse_fps(name: str) -> float:
+    try:
+        return float(extr_text(name, "@", "fps"))
+    except ValueError:
+        return 0.0
+
+
+def _encode_hash(hex_hash: str) -> str:
+    assert len(hex_hash) == 32
+    return "".join(_encode_base_36(int(hex_hash[idx : idx + 8], base=16)) for idx in range(0, 32, 8))
+
+
+def _encode_base_36(number: int) -> str:
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+    result = ""
+
+    while number != 0:
+        number, index = divmod(number, 36)
+        result = alphabet[index] + result
+
+    return result or "0"
