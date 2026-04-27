@@ -182,9 +182,7 @@ class ScrapeMapper:
                     task.add_done_callback(active.discard)
 
             if active:
-                async with asyncio.TaskGroup() as tg:
-                    for pending in active:
-                        tg.create_task(asyncio.shield(pending))
+                await asyncio.gather(*active)
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             for task in active:
