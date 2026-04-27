@@ -235,8 +235,8 @@ def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
 
 def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[VideoSource]:
-    for format, options in sources.items():
-        for name, source in options.items():
+    for format, formats in sources.items():
+        for name, source in formats.items():
             url = parse_url(source["src"])
             if format == "hls":
                 resolution = _parse_hls_res(url)
