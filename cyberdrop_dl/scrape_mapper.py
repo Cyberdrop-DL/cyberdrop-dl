@@ -163,28 +163,37 @@ class ScrapeMapper:
 
     async def _download_dispatcher(self) -> None:
         active: set[asyncio.Task[None]] = set()
-
-        while not self._done.is_set():
-            coro = await self._pending_downloads.get()
-            if coro is None:
-                break
-            task = asyncio.create_task(coro)
-            active.add(task)
-            task.add_done_callback(active.discard)
-
-        self.tui.hide_scrape_panel()
-
-        while not self._pending_downloads.empty():
-            coro = self._pending_downloads.get_nowait()
-            if coro is not None:
+        try:
+            while not self._done.is_set():
+                coro = await self._pending_downloads.get()
+                if coro is None:
+                    break
                 task = asyncio.create_task(coro)
                 active.add(task)
                 task.add_done_callback(active.discard)
 
-        if active:
-            async with asyncio.TaskGroup() as tg:
-                for pending in active:
-                    tg.create_task(asyncio.shield(pending))
+            self.tui.hide_scrape_panel()
+
+            while not self._pending_downloads.empty():
+                coro = self._pending_downloads.get_nowait()
+                if coro is not None:
+                    task = asyncio.create_task(coro)
+                    active.add(task)
+                    task.add_done_callback(active.discard)
+
+            if active:
+                async with asyncio.TaskGroup() as tg:
+                    for pending in active:
+                        tg.create_task(asyncio.shield(pending))
+
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            for task in active:
+                task.cancel()
+            while not self._pending_downloads.empty():
+                coro = self._pending_downloads.get_nowait()
+                if coro is not None:
+                    coro.close()
+            raise
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
