@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from bs4 import BeautifulSoup
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -18,11 +18,6 @@ if TYPE_CHECKING:
 
 
 class Selector:
-    _DOWNLOADS = "div#hd-porn-dload > div.dloaddivcol"
-    _H264 = "span.download-h264 > a"
-    _AV1 = "span.download-av1 > a"
-    FORMATS = f"{_DOWNLOADS} {_H264},{_DOWNLOADS} {_AV1}"
-
     PHOTO = "div#gridphoto > a.photohref"
     VIDEO = "div[id^='vf'] div.mbcontent a"
     NEXT_PAGE = "div.numlist2 a.nmnext"
@@ -40,7 +35,7 @@ _PROFILE_URL_PARTS = {
 }
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class Video:
     title: str
     date: str
@@ -48,7 +43,7 @@ class Video:
     sources: tuple[VideoSource, ...]
 
 
-@dataclasses.dataclass(frozen=True, order=True, slots=True)
+@dataclasses.dataclass(order=True, slots=True)
 class VideoSource:
     resolution: Resolution
     fps: float
@@ -65,7 +60,11 @@ class EpornerCrawler(Crawler):
         "Profile": "/profile/...",
         "Search": "/search/...",
         "Search Photos": "/search-photos/...",
-        "Video": ("/<video_name>-<video-id>", "/hd-porn/<video_id>", "/embed/<video_id>"),
+        "Video": (
+            "/<video_name>-<video-id>",
+            "/hd-porn/<video_id>",
+            "/embed/<video_id>",
+        ),
         "Photo": "/photo/...",
         "Gallery": "/gallery/...",
     }
@@ -73,7 +72,7 @@ class EpornerCrawler(Crawler):
     DOMAIN: ClassVar[str] = "eporner"
     FOLDER_DOMAIN: ClassVar[str] = "ePorner"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[tuple[float, float]] = 2, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -185,11 +184,19 @@ class EpornerCrawler(Crawler):
             video.title,
             ext := src.suffix,
             file_id=video_id,
+            video_codec="h264",
             resolution=video.best_src.resolution,
             fps=video.best_src.fps,
         )
 
-        await self.handle_file(src, scrape_item, video.title, ext, custom_filename=filename, debrid_link=src)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            video.title,
+            ext,
+            custom_filename=filename,
+            debrid_link=src,
+        )
 
     async def _request_video(self, url: AbsoluteHttpURL, video_id: str) -> Video:
         html = await self.request_text(url)
