@@ -151,9 +151,6 @@ class Manager:
 
             logger.warning(msg)
 
-    async def close(self) -> None:
-        await self.client_manager.close()
-
     def print_stats(self, stats: ScrapeStats) -> str:
         if not self.cli_args.print_stats:
             return ""

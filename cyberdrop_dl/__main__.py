@@ -72,20 +72,13 @@ async def _post_runtime(manager: Manager) -> None:
         await manager.logs.update_last_forum_post(manager.config.settings.files.input_file)
 
 
-async def _run(manager: Manager) -> None:
-    try:
-        await _scrape(manager)
-    finally:
-        await manager.close()
-
-
 def _main(manager: Manager) -> None:
     manager.resolve_paths()
     if not manager.cli_args.download:
         program_ui.run(manager)
 
     try:
-        aio.run(_run(manager))
+        aio.run(_scrape(manager))
 
     except KeyboardInterrupt:
         logger.info("Exiting (Ctrl + C) ...")

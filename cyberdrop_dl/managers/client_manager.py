@@ -149,6 +149,9 @@ class ClientManager:
     async def __aexit__(self, *args) -> None:
         await self._session.close()
         await self._download_session.close()
+        if self._flaresolverr is not None:
+            await self._flaresolverr.aclose()
+
         if _curl_import_error is not None:
             return
         try:
@@ -421,10 +424,6 @@ class ClientManager:
 
         max_audio_duration = max_audio_duration or float("inf")
         return min_audio_duration <= duration <= max_audio_duration
-
-    async def close(self) -> None:
-        if self._flaresolverr:
-            await self._flaresolverr.aclose()
 
 
 async def _get_dns_resolver(
