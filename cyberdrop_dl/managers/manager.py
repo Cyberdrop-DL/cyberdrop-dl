@@ -284,12 +284,11 @@ class AppData:
         if path != real_path:
             logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", path, real_path)
         anchor.unlink()
-        path = real_path
         try:
-            path.rmdir()
+            real_path.rmdir()
         except OSError:
             pass
-        return path
+        return real_path
 
     @classmethod
     def from_path(cls, path: Path) -> Self:
