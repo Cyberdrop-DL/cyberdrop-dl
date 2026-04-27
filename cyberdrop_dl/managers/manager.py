@@ -281,7 +281,7 @@ class AppData:
         anchor.touch()
         real_path = anchor.resolve().parent
         if path != real_path:
-            logger.warning("Windows path virtualization detected at '%s'. Real destination: '%s'", path, real_path)
+            logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", path, real_path)
         anchor.unlink()
         path = real_path
         try:
