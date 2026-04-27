@@ -200,14 +200,7 @@ class EpornerCrawler(Crawler):
 
     async def _request_video(self, url: AbsoluteHttpURL, video_id: str) -> Video:
         html = await self.request_text(url)
-
-        if "File has been removed due to copyright owner request" in html:
-            raise ScrapeError(451)
-        if "Video has been deleted" in html:
-            raise ScrapeError(410)
-
-        player_hash = extr_text(html, "EP.video.player.hash = '", "';")
-
+        player_hash = _extract_player_hash(html)
         xhr_url = (self.PRIMARY_URL / "xhr/video" / video_id).with_query(
             hash=_encode_hash(player_hash),
             domain=self.PRIMARY_URL.host,
@@ -215,11 +208,11 @@ class EpornerCrawler(Crawler):
             embed="false",
             supportedFormats="hls,h265,vp9,av1,mp4",
         )
-        video: dict[str, Any] = await self.request_json(xhr_url)
-        if video.get("available") is False:
-            raise ScrapeError(404, video.get("message"))
+        resp: dict[str, Any] = await self.request_json(xhr_url)
+        if resp.get("available") is False:
+            raise ScrapeError(404, resp.get("message"))
 
-        return _parse_video(html, video)
+        return _parse_video(html, resp)
 
 
 def _parse_video(html: str, video: dict[str, Any]) -> Video:
@@ -260,6 +253,15 @@ def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[V
                 name=name,
                 format=format,
             )
+
+
+def _extract_player_hash(html: str) -> str:
+    if "File has been removed due to copyright owner request" in html:
+        raise ScrapeError(451)
+    if "Video has been deleted" in html:
+        raise ScrapeError(410)
+
+    return extr_text(html, "EP.video.player.hash = '", "';")
 
 
 def _parse_hls_res(url: AbsoluteHttpURL) -> Resolution:
