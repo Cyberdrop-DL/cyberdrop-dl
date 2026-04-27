@@ -148,7 +148,7 @@ class ClientManager:
             if self._flaresolverr is not None:
                 tg.create_task(self._flaresolverr.aclose())
 
-            if _curl_import_error is not None:
+            if _curl_import_error is None:
 
                 async def close_curl() -> None:
                     try:
