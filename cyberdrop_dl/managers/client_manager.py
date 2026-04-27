@@ -149,7 +149,14 @@ class ClientManager:
                 tg.create_task(self._flaresolverr.aclose())
 
             if _curl_import_error is not None:
-                tg.create_task(self._curl_session.close())
+
+                async def close_curl() -> None:
+                    try:
+                        await self._curl_session.close()
+                    except Exception:
+                        pass
+
+                tg.create_task(close_curl())
 
     @property
     def rate_limiting_options(self):
