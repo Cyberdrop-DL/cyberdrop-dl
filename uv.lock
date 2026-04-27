@@ -722,7 +722,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.4.0"
+version = "9.4.1.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
@@ -807,7 +807,7 @@ requires-dist = [
     { name = "xxhash", specifier = ">=3.7.0" },
     { name = "yarl", specifier = ">=1.23.0" },
 ]
-provides-extras = ["extras", "apprise"]
+provides-extras = ["apprise", "extras"]
 
 [package.metadata.requires-dev]
 dev = [
