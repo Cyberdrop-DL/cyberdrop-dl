@@ -24,7 +24,7 @@ class Selector:
 
     PROFILE_GALLERY = "div[id^='pf'] a"
     PROFILE_PLAYLIST = "div.streameventsday.showAll > div#pl > a"
-    DATE_JS = "main script:-soup-contains('uploadDate')"
+    DATE_JS = "script[type='application/ld+json']:-soup-contains('uploadDate')"
     GALLERY_TITLE = "div#galleryheader > h1"
 
 
@@ -176,7 +176,7 @@ class EpornerCrawler(Crawler):
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        video = await self._request_video(scrape_item.url, video_id)
+        video = await self._request_video(canonical_url, video_id)
         scrape_item.url = canonical_url
         src = video.best_src.url
         scrape_item.uploaded_at = self.parse_iso_date(video.date)

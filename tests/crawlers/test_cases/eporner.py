@@ -32,4 +32,17 @@ TEST_CASES = [
         ],
         1,
     ),
+    (
+        "https://www.eporner.com/embed/5XdtfLAMNOV",
+        [
+            {
+                "url": "https://www.eporner.com/video-5XdtfLAMNOV",
+                "filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Bl [5XdtfLAMNOV][h264][4K@60fps].mp4",  # noqa: RUF001
+                "referer": "https://www.eporner.com/video-5XdtfLAMNOV",
+                "uploaded_at": 1736796270,
+                "download_folder": "re:Loose Files (ePorner)",
+            }
+        ],
+        1,
+    ),
 ]
