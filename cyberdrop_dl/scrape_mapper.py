@@ -171,6 +171,8 @@ class ScrapeMapper:
             active.add(task)
             task.add_done_callback(active.discard)
 
+        self.tui.hide_scrape_panel()
+
         while not self._pending_downloads.empty():
             coro = self._pending_downloads.get_nowait()
             if coro is not None:
@@ -227,17 +229,6 @@ class ScrapeMapper:
         source_name, source = _source(self.manager)
         async with contextlib.aclosing(source) as items:
             stats = ScrapeStats(source_name)
-            background_tasks = set()
-
-            async def wait_until_scrape_is_done() -> None:
-                _ = await self._done.wait()
-                self.tui.hide_scrape_panel()
-                stats.url_count.update(
-                    (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
-                )
-
-            task = asyncio.create_task(wait_until_scrape_is_done())
-            background_tasks.add(task)
 
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
@@ -246,6 +237,10 @@ class ScrapeMapper:
                         break
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
+
+        stats.url_count.update(
+            (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
+        )
 
         if not stats.count:
             logger.warning("No valid links found")
