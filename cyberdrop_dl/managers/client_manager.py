@@ -106,7 +106,7 @@ class ClientManager:
             self.ssl_context = ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_verify_locations(cafile=certifi.where())
 
-        self.cookies = aiohttp.CookieJar(quote_cookie=False)
+        self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.download_slots: dict[str, int] = {}
         self.global_rate_limiter = AsyncLimiter(self.rate_limiting_options.rate_limit, 1)
@@ -119,6 +119,13 @@ class ClientManager:
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
+
+    @property
+    def cookies(self) -> aiohttp.CookieJar:
+        # lazy cause it is loop bound for some reason
+        if self._cookies is None:
+            self._cookies = aiohttp.CookieJar(quote_cookie=False)
+        return self._cookies
 
     @contextlib.contextmanager
     def set_json_checker(self, check: Callable[[Any, AbstractResponse[Any]], None] | None = None) -> Generator[None]:
