@@ -281,8 +281,11 @@ class AppData:
             anchor = path / "cyberdrop_dl.anchor"
             path.mkdir(parents=True, exist_ok=True)
             anchor.touch()
-            path = anchor.resolve().parent
+            real_path = anchor.resolve().parent
+            if path != real_path:
+                logger.warning("Windows path virtualization detected at '%s'. Real destination: '%s'", path, real_path)
             anchor.unlink()
+            path = real_path
             try:
                 path.rmdir()
             except OSError:
