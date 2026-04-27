@@ -272,23 +272,28 @@ class AppData:
     def default(cls) -> Self:
         return cls.from_path(Path.cwd())
 
+    @staticmethod
+    def _resolve_win_path(path: Path) -> Path:
+        # Detect the real path when running in sandboxed interpreter (ex: UWP Python)
+        anchor = path / "cyberdrop_dl.anchor"
+        path.mkdir(parents=True, exist_ok=True)
+        anchor.touch()
+        real_path = anchor.resolve().parent
+        if path != real_path:
+            logger.warning("Windows path virtualization detected at '%s'. Real destination: '%s'", path, real_path)
+        anchor.unlink()
+        path = real_path
+        try:
+            path.rmdir()
+        except OSError:
+            pass
+        return path
+
     @classmethod
     def from_path(cls, path: Path) -> Self:
         path = path.expanduser().resolve().absolute() / "AppData"
         if os.name == "nt":
-            # Detect the real path when running in sandboxed interpreter
-            anchor = path / "cyberdrop_dl.anchor"
-            path.mkdir(parents=True, exist_ok=True)
-            anchor.touch()
-            real_path = anchor.resolve().parent
-            if path != real_path:
-                logger.warning("Windows path virtualization detected at '%s'. Real destination: '%s'", path, real_path)
-            anchor.unlink()
-            path = real_path
-            try:
-                path.rmdir()
-            except OSError:
-                pass
+            path = cls._resolve_win_path(path)
 
         cache = path / "Cache"
         configs = path / "Configs"
