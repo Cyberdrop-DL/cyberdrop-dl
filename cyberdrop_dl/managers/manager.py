@@ -275,6 +275,7 @@ class AppData:
     @staticmethod
     def _resolve_win_path(path: Path) -> Path:
         # Detect the real path when running in sandboxed interpreter (ex: UWP Python)
+        # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1700#issuecomment-4317561031
         anchor = path / "cyberdrop_dl.anchor"
         path.mkdir(parents=True, exist_ok=True)
         anchor.touch()
