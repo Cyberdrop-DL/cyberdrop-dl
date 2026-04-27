@@ -100,7 +100,6 @@ class Manager:
         self.async_db_hash_startup()
 
         self.client_manager = ClientManager(self)
-        await self.client_manager.startup()
 
     def async_db_hash_startup(self) -> None:
         self.database = Database(

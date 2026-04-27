@@ -142,6 +142,10 @@ class ClientManager:
         return self._flaresolverr
 
     async def __aenter__(self) -> Self:
+        global DNS_RESOLVER
+        if DNS_RESOLVER is None:
+            DNS_RESOLVER = await _get_dns_resolver()  # pyright: ignore[reportConstantRedefinition]
+
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
         if _curl_import_error is None:
@@ -229,11 +233,6 @@ class ClientManager:
         for domain, _ in self.cookies._cookies:
             if word in domain:
                 yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
-
-    async def startup(self) -> None:
-        global DNS_RESOLVER
-        if DNS_RESOLVER is None:
-            DNS_RESOLVER = await _get_dns_resolver()
 
     def new_curl_cffi_session(self) -> AsyncSession[CurlResponse]:
         # Calling code should have validated if curl is actually available
