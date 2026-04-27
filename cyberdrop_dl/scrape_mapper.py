@@ -163,7 +163,7 @@ class ScrapeMapper:
     async def _download_dispatcher(self) -> None:
         active: set[asyncio.Task[None]] = set()
 
-        while True:
+        while not self._done.is_set():
             coro = await self._pending_downloads.get()
             if coro is None:
                 break
@@ -171,8 +171,17 @@ class ScrapeMapper:
             active.add(task)
             task.add_done_callback(active.discard)
 
+        while not self._pending_downloads.empty():
+            coro = self._pending_downloads.get_nowait()
+            if coro is not None:
+                task = asyncio.create_task(coro)
+                active.add(task)
+                task.add_done_callback(active.discard)
+
         if active:
-            await asyncio.gather(*active, return_exceptions=True)
+            async with asyncio.TaskGroup() as tg:
+                for pending in active:
+                    tg.create_task(asyncio.shield(pending))
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
