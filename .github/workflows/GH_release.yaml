@@ -3,15 +3,18 @@ name: Create GH Release
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   create_release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6.0.2
         with:
           persist-credentials: false
 
@@ -60,8 +63,9 @@ jobs:
 
       - name: Create GH release
         id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ env.TAG_NAME }}
-          body: ${{ env.CHANGELOG_CONTENT }}
-          files: Cyberdrop-DL.v${{ env.TAG_NAME }}.zip
+        run: |
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --notes "$CHANGELOG_CONTENT" \
+            --draft \
+            "Cyberdrop-DL.v${TAG_NAME}.zip"

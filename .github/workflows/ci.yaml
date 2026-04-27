@@ -5,22 +5,27 @@ on:
     branches:
       - main
     paths:
-      - 'cyberdrop_dl/**/*.py'
-      - 'tests/**/*.py'
-      - '.github/workflows/ci.yaml'
+      - "cyberdrop_dl/**/*.py"
+      - "tests/**/*.py"
+      - ".github/workflows/ci.yaml"
   pull_request:
     branches:
       - main
     paths:
-      - 'cyberdrop_dl/**/*.py'
-      - 'cyberdrop_dl/pyproject.toml'
-      - 'tests/**/*.py'
-      - '.github/workflows/ci.yaml'
+      - "cyberdrop_dl/**/*.py"
+      - "cyberdrop_dl/pyproject.toml"
+      - "tests/**/*.py"
+      - ".github/workflows/ci.yaml"
   workflow_dispatch:
 
-jobs:
+permissions: {}
 
+jobs:
   test:
+    name: Run pytest
+    permissions:
+      contents: read
+
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -34,21 +39,17 @@ jobs:
             python-version: "pypy-3.11"
       fail-fast: true
 
-    defaults:
-      run:
-        shell: bash
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6.0.2
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
-          version: "0.10.11"
           python-version: ${{ matrix.python-version }}
+          enable-cache: false
 
       - name: Install dependencies
         run: |
