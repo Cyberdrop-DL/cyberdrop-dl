@@ -6,7 +6,6 @@ import dataclasses
 import datetime
 import logging
 import re
-import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
@@ -161,31 +160,25 @@ class ScrapeMapper:
 
         plugins.load(self.manager)
 
+    async def _download_worker(self) -> None:
+        while True:
+            coro = await self._pending_downloads.get()
+            if coro is None:
+                break
+            await coro
+
     async def _download_dispatcher(self) -> None:
-        active: set[asyncio.Task[None]] = set()
+        workers: list[asyncio.Task[None]] = []
         try:
-            while not self._done.is_set():
-                coro = await self._pending_downloads.get()
-                if coro is None:
-                    break
-                task = asyncio.create_task(coro)
-                active.add(task)
-                task.add_done_callback(active.discard)
-
+            max_workers = self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+            workers = [asyncio.create_task(self._download_worker()) for _ in range(max_workers)]
+            await self._done.wait()
             self.tui.hide_scrape_panel()
-
-            while not self._pending_downloads.empty():
-                coro = self._pending_downloads.get_nowait()
-                if coro is not None:
-                    task = asyncio.create_task(coro)
-                    active.add(task)
-                    task.add_done_callback(active.discard)
-
-            if active:
-                await asyncio.gather(*active)
-
+            for _ in workers:
+                await self._pending_downloads.put(None)
+            await asyncio.gather(*workers)
         except (asyncio.CancelledError, KeyboardInterrupt):
-            for task in active:
+            for task in workers:
                 task.cancel()
             while not self._pending_downloads.empty():
                 coro = self._pending_downloads.get_nowait()
@@ -208,10 +201,6 @@ class ScrapeMapper:
                 storage.monitor(self.manager.config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
             ):
-                loop = asyncio.get_running_loop()
-                previous_factory = loop.get_task_factory()
-                if sys.version_info >= (3, 12):
-                    loop.set_task_factory(asyncio.eager_task_factory)
                 dispatcher = asyncio.create_task(self._download_dispatcher())
                 try:
                     async with self._task_groups.scrape:
@@ -226,10 +215,7 @@ class ScrapeMapper:
                     raise
                 else:
                     self._done.set()
-                    await self._pending_downloads.put(None)
                     await dispatcher
-                finally:
-                    loop.set_task_factory(previous_factory)
 
     async def run(self) -> ScrapeStats:
         self._init_crawlers()
