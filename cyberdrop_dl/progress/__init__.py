@@ -111,3 +111,20 @@ class LiveUI(ABC):
                 get_renderable=self.__rich__,
             ):
                 yield
+
+
+def strip_markup(text: str) -> str:
+    from rich.markup import _parse
+
+    def parse():
+        for _position, plain_text, _tag in _parse(text):
+            if plain_text is not None:
+                yield plain_text.replace("\\[", "[")
+
+    return "".join(parse())
+
+
+def truncate_float(value: float | int | None, precision: int = 4) -> float | None:
+    if value is None:
+        return None
+    return float(f"{float(value):.{precision}f}")
