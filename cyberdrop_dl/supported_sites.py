@@ -40,24 +40,31 @@ def as_rich_table() -> Table:
     return table
 
 
-def as_markdown() -> str:
-    return "\n".join(_generate_md_rows())
+def as_markdown(indent_level: int = 2) -> str:
+    indent = "#" * indent_level
+
+    def pad(line: str):
+        if line.startswith("#"):
+            return indent + line
+        return line
+
+    return "\n".join(map(pad, _generate_md_rows()))
 
 
 def _generate_md_rows() -> Generator[str]:
     for info in _gen_crawlers_info():
-        yield f"## {info.site}\n"
+        yield f"# {info.site}\n"
         yield f"Primary URL: {str(info.primary_url).rstrip('/')}\n"
         yield f"Supported Domains: {', '.join(info.supported_domains)}\n"
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
-        yield "### Supported paths"
+        yield "## Supported paths"
         for name, paths in supported_paths.items():
             all_paths = ",".join(f"`{path}`" for path in paths)
             yield f"- {name}: {all_paths}"
 
         if notes:
-            yield "\n### Notes"
+            yield "\n## Notes"
             for note in notes:
                 yield f"- {note}"
 
