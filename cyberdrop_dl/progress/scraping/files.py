@@ -44,8 +44,8 @@ class FileStatsPanel:
         self._stats = FileStats()
         self._total: int = 0
         self._tasks_map: dict[str, TaskID] = dict(self._init_tasks())
-        self.simple: Progress = Progress(*columns)
-        self._tasks_map["simple"] = self.simple.add_task("Completed", total=None)
+        self._simple: Progress = Progress(*columns)
+        self._tasks_map["simple"] = self._simple.add_task("Completed", total=1)
         self._panel: Panel = Panel(
             self._progress,
             title="Files",
@@ -64,17 +64,25 @@ class FileStatsPanel:
             yield name, self._progress.add_task(f"[{color}]{desc}", total=1)
 
     def __rich__(self) -> Panel:
+        self._refresh()
+        return self._panel
+
+    @property
+    def simple(self) -> Progress:
+        self._refresh()
+        return self._simple
+
+    def _refresh(self) -> None:
         current_total = self._stats.total
         if current_total != self._total:
             for name, task_id in self._tasks_map.items():
                 if name == "simple":
-                    self.simple.update(task_id, total=current_total, completed=current_total - self.stats.queued)
+                    self._simple.update(task_id, total=current_total, completed=current_total - self._stats.queued)
                 else:
                     self._progress.update(task_id, total=current_total, completed=getattr(self._stats, name))
             self._total = current_total
 
         self._panel.subtitle = f"Total: [white]{current_total:,}"
-        return self._panel
 
     @property
     def stats(self) -> FileStats:

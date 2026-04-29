@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from rich.console import RenderableType
 
-REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.7)
+REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
 
 
