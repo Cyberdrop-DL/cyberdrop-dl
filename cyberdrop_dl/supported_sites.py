@@ -41,10 +41,10 @@ def as_rich_table() -> Table:
 
 
 def as_markdown() -> str:
-    return "\n".join(_make_html_rows())
+    return "\n".join(_generate_md_rows())
 
 
-def _make_html_rows() -> Generator[str]:
+def _generate_md_rows() -> Generator[str]:
     for info in _gen_crawlers_info():
         yield f"## {info.site}\n"
         yield f"Primary URL: {str(info.primary_url).rstrip('/')}\n"

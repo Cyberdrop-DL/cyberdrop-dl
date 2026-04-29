@@ -37,179 +37,2108 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.4.0
+List of sites supported by cyberdrop-dl-patched as of version 9.4.1.dev0
 
-|           Site           |                 Primary URL                 |                                                                                                                                                                 Supported Domains                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Supported paths                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|--------------------------|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|          4chan           |          https://boards.4chan.org           |                                                                                                                                                                      4chan.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             Board: <br> - `/<board>`<br>Thread: <br> - `/<board>/thread/<thread_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|          8Muses          |          https://comics.8muses.com          |                                                                                                                                                                      8muses.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Album: <br> - `/comics/album/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|       AllPornComix       |       https://forum.allporncomix.com        |                                                                                                                                                                   allporncomix.*                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|     Anontransfer.com     |          https://anontransfer.com           |                                                                                                                                                                  anontransfer.com                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Direct Link: <br> - `/download-direct.php?dir=<file_id>&file=<filename>`<br> - `/uploads/<file_id>/<filename>`<br>File: <br> - `/d/<file_id>`<br>Folder: <br> - `/f/<folder_uuid>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|          AnySex          |             https://anysex.com              |                                                                                                                                                                      anysex.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Album: <br> - `/photos/<album_id>/...`<br>Photo Search: <br> - `/photos/search/...`<br>Search: <br> - `/search/...`<br>Video: <br> - `/video/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|       ArchiveBate        |        https://www.archivebate.store        |                                                                                                                                                                   archivebate.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Video: <br> - `/watch/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|       aShemaleTube       |        https://www.ashemaletube.com         |                                                                                                                                                                   ashemaletube.*                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Model: <br> - `/creators/...`<br> - `/model/...`<br> - `/pornstars/...`<br>Playlist: <br> - `/playlists/...`<br>User: <br> - `/profiles/...`<br>Video: <br> - `/videos/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|         Bandcamp         |            https://bandcamp.com             |                                                                                                                                                                     bandcamp.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Album: <br> - `/album/<slug>`<br>Song: <br> - `/track/<slug>`<br><br>**NOTES**<br> - You can set 'CDL_BANDCAMP_FORMATS' env var to a comma separated list of formats to download (Ordered by preference) [Default = 'mp3-320,mp3,aac-hi,wav,flac,vorbis,aiff,alas']                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|         Beeg.com         |              https://beeg.com               |                                                                                                                                                                      beeg.com                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Video: <br> - `/<video_id>`<br> - `/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|         Bellazon         |        https://www.bellazon.com/main        |                                                                                                                                                                     bellazon.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Invision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|      BestPrettyGirl      |         https://bestprettygirl.com          |                                                                                                                                                                 bestprettygirl.com                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                         All Posts: <br> - `/posts/`<br>Category: <br> - `/category/<category_slug>`<br>Date Range: <br> - `...?after=<date>`<br> - `...?before=<date&after=<date>`<br> - `...?before=<date>`<br>Post: <br> - `/<post_slug>/`<br>Tag: <br> - `/tag/<tag_slug>`<br><br>**NOTES**<br> - <br><br>        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.<br><br>        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.<br>        ex: To only download categories from a date range: ,<br>        `/category/<category_slug>?before=<date>`                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|           Box            |             https://www.box.com             |                                                                                                                                                                    app.box.com                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Embedded File or Folder: <br> - `app.box.com/embed/s?sh=<share_code>`<br> - `app.box.com/embed_widget/s?sh=<share_code>`<br>File or Folder: <br> - `app.box.com/s?sh=<share_code>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|          Bunkr           |             https://bunkr.site              |                                                                                                                                                                      bunkr.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             Album: <br> - `/a/<album_id>`<br>Direct Links<br>File: <br> - `/<slug>`<br> - `/d/<slug>`<br> - `/f/<slug>`<br>Video: <br> - `/v/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|     Bunkr-Albums.io      |           https://bunkr-albums.io           |                                                                                                                                                                  bunkr-albums.io                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Search: <br> - `/?search=<query>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|       BuzzHeavier        |           https://buzzheavier.com           |                                                                                                                                                                  buzzheavier.com                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct Links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|       Camwhores.tv       |          https://www.camwhores.tv           |                                                                                                                                                                    camwhores.tv                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Category: <br> - `/categories/<name>/`<br>Search: <br> - `/search/<query>/`<br>Tag: <br> - `/tags/<name>/`<br>Video: <br> - `/videos/<id>/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|          Catbox          |             https://catbox.moe              |                                                                                                                                                       files.catbox.moe<br>litter.catbox.moe                                                                                                                                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct Links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|        CelebForum        |            https://celebforum.to            |                                                                                                                                                                    celebforum.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|        Chevereto         |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Album: <br> - `/a/<id>`<br> - `/a/<name>.<id>`<br> - `/album/<id>`<br> - `/album/<name>.<id>`<br>Category: <br> - `/category/<name>`<br>Direct Links<br>Image: <br> - `/image/<id>`<br> - `/image/<name>.<id>`<br> - `/img/<id>`<br> - `/img/<name>.<id>`<br>Profile: <br> - `/<user_name>`<br>Video: <br> - `/video/<id>`<br> - `/video/<name>.<id>`<br> - `/videos/<id>`<br> - `/videos/<name>.<id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|      cloud.mail.ru       |            https://cloud.mail.ru            |                                                                                                                                                                   cloud.mail.ru                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Public files / folders: <br> - `/public/<web_path>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|     CloudflareStream     |        https://cloudflarestream.com         |                                                                                                                                                     cloudflarestream.com<br>videodelivery.net                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Public Video: <br> - `/<video_uid>`<br> - `/<video_uid>/iframe`<br> - `/<video_uid>/watch`<br> - `/embed/___.js?video=<video_uid>`<br>Restricted Access Video: <br> - `/<jwt_access_token>`<br> - `/<jwt_access_token>/iframe`<br> - `/<jwt_access_token>/watch`<br> - `/embed/___.js?video=<jwt_access_token>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|          Coomer          |              https://coomer.st              |                                                                                                                                                       coomer.party<br>coomer.st<br>coomer.su                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Direct links: <br> - `/data/...`<br> - `/thumbnail/...`<br>Favorites: <br> - `/account/favorites/posts\|artists`<br> - `/favorites?type=post\|artist`<br>Individual Post: <br> - `/<service>/user/<user_id>/post/<post_id>`<br>Model: <br> - `/<service>/user/<user_id>`<br>Search: <br> - `/search?q=...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|        Cyberdrop         |            https://cyberdrop.cr             |                                                                                                                              cyberdrop.*<br>cyberdrop.cr<br>cyberdrop.me<br>cyberdrop.to<br>k1-cd.cdn.gigachad-cdn.ru                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Album: <br> - `/a/<album_id>`<br>Direct links: <br> - `/api/file/d/<file_id>`<br>File: <br> - `/e/<file_id>`<br> - `/f/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|        Cyberfile         |            https://cyberfile.me             |                                                                                                                                                                    cyberfile.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Files: <br> - `/<file_id>`<br> - `/<file_id>/<file_name>`<br>Public Folders: <br> - `/folder/<folder_id>`<br> - `/folder/<folder_id>/<folder_name>`<br>Shared folders: <br> - `/shared/<share_key>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|        DesiVideo         |            https://desivideo.net            |                                                                                                                                                                   desivideo.net                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Search: <br> - `/search?s=<query>`<br>Video: <br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|      DirectHttpFile      |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|        DirtyShip         |            https://dirtyship.com            |                                                                                                                                                                    dirtyship.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Category: <br> - `/category/<name>`<br>Tag: <br> - `/tag/<name>`<br>Video: <br> - `/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|        Discourse         |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/uploads/...`<br>Topic: <br> - `/t/<topic_name>/<topic_id>`<br> - `/t/<topic_name>/<topic_id>/<post_number>`<br><br>**NOTES**<br> - If the URL includes <post_number>, posts with a number lower that it won't be scraped                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|        DoodStream        |           https://doodstream.com            |                                                                                              all3do.com<br>d000d.com<br>do7go.com<br>dood.re<br>dood.yt<br>doodcdn.*<br>doodstream.*<br>doodstream.co<br>myvidplay.com<br>playmogo.com<br>vidply.com                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Video: <br> - `/e/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|         Dropbox          |           https://www.dropbox.com           |                                                                                                                                                                     dropbox.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         File: <br> - `/s/...`<br> - `/scl/fi/<link_key>?rlkey=...`<br> - `/scl/fo/<link_key>/<secure_hash>?preview=<filename>&rlkey=...`<br>Folder: <br> - `/scl/fo/<link_key>/<secure_hash>?rlkey=...`<br> - `/sh/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         E-Hentai         |            https://e-hentai.org             |                                                                                                                                                                     e-hentai.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Album: <br> - `/g/...`<br>File: <br> - `/s/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|           E621           |              https://e621.net               |                                                                                                                                                                      e621.net                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Pools: <br> - `/pools/...`<br>Post: <br> - `/posts/...`<br>Tags: <br> - `/posts?tags=...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|          eFukt           |              https://efukt.com              |                                                                                                                                                                     efukt.com                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Gif: <br> - `/view.gif.php?id=<id>`<br>Homepage: <br> - `/`<br>Photo: <br> - `/pics/....`<br>Series: <br> - `/series/<series_name>`<br>Video: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         ePorner          |           https://www.eporner.com           |                                                                                                                                                                     eporner.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Categories: <br> - `/cat/...`<br>Channels: <br> - `/channel/...`<br>Gallery: <br> - `/gallery/...`<br>Photo: <br> - `/photo/...`<br>Pornstar: <br> - `/pornstar/...`<br>Profile: <br> - `/profile/...`<br>Search: <br> - `/search/...`<br>Search Photos: <br> - `/search-photos/...`<br>Video: <br> - `/<video_name>-<video-id>`<br> - `/embed/<video_id>`<br> - `/hd-porn/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|          Erome           |            https://www.erome.com            |                                                                                                                                                                      erome.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Album: <br> - `/a/<album_id>`<br>Profile: <br> - `/<name>`<br>Search: <br> - `/search?q=<query>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|        Erome.fan         |              https://erome.fan              |                                                                                                                                                                     erome.fan                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Album: <br> - `/a/<album_id>`<br>Profile: <br> - `/a/category/<name>`<br>Search: <br> - `/search/<query>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|        EveriaClub        |             https://everia.club             |                                                                                                                                                                    everia.club                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                         All Posts: <br> - `/posts/`<br>Category: <br> - `/category/<category_slug>`<br>Date Range: <br> - `...?after=<date>`<br> - `...?before=<date&after=<date>`<br> - `...?before=<date>`<br>Post: <br> - `/<post_slug>/`<br>Tag: <br> - `/tag/<tag_slug>`<br><br>**NOTES**<br> - <br><br>        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.<br><br>        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.<br>        ex: To only download categories from a date range: ,<br>        `/category/<category_slug>?before=<date>`                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|         F95Zone          |             https://f95zone.to              |                                                                                                                                                                     f95zone.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         Fapello          |             https://fapello.su              |                                                                                                                                                                     fapello.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Individual Post: <br> - `/.../...`<br>Model: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|        Fileditch         |          https://fileditchfiles.me          |                                                                                                                                                                    fileditch.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct Links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|         Filester         |             https://filester.me             |                                                                                                                                                                     filester.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      File: <br> - `/d/<slug>`<br>Folder: <br> - `/f/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|         FilesVC          |              https://files.vc               |                                                                                                                                                                      files.vc                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct Links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|          Flickr          |           https://www.flickr.com            |                                                                                                                                                                      flickr.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Album: <br> - `/photos/<user_nsid>/albums/<photoset_id>/...`<br>Photo: <br> - `/photos/<user_nsid>/<photo_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|      Forums.plex.tv      |           https://forums.plex.tv            |                                                                                                                                                                   forums.plex.tv                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/uploads/...`<br>Topic: <br> - `/t/<topic_name>/<topic_id>`<br> - `/t/<topic_name>/<topic_id>/<post_number>`<br><br>**NOTES**<br> - If the URL includes <post_number>, posts with a number lower that it won't be scraped                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         FSIBlog          |            https://fsiblog5.com             |                                                                          fsiblog.club<br>fsiblog.com<br>fsiblog1.club<br>fsiblog1.com<br>fsiblog2.club<br>fsiblog2.com<br>fsiblog3.club<br>fsiblog3.com<br>fsiblog4.club<br>fsiblog4.com<br>fsiblog5.club<br>fsiblog5.com                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Posts: <br> - `/<category>/<title>`<br>Search: <br> - `?s=<query>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|       FuckingFast        |           https://fuckingfast.co            |                                                                                                                                                                   fuckingfast.co                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Direct links: <br> - `/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|          FuXXX           |              https://fuxxx.com              |                                                                                                                                                              fuxxx.com<br>fuxxx.tube                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|          Giphy           |              https://giphy.com              |                                                                                                                                                                      giphy.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Direct Link: <br> - `https://media*.giphy.com/media/<gif_id>`<br>Gif: <br> - `/gifs/<slug>-<gif-id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|      GirlsReleased       |        https://www.girlsreleased.com        |                                                                                                                                                                  girlsreleased.*                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Model: <br> - `/model/<model_id>/<model_name>`<br>Set: <br> - `/set/<set_id>`<br>Site: <br> - `/site/<site>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|          GoFile          |              https://gofile.io              |                                                                                                                                                                      gofile.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Direct link: <br> - `/download/<content_id>/<filename>`<br> - `/download/web/<content_id>/<filename>`<br>Folder / File: <br> - `/d/<content_id>`<br><br>**NOTES**<br> - Use `password` as a query param to download password protected folders<br> - ex: https://gofile.io/d/ABC654?password=1234                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|       GoogleDrive        |          https://drive.google.com           |                                                                                                                                            docs.google<br>drive.google<br>drive.usercontent.google.com                                                                                                                                             |                                                                                                                                                                                                                                                                                                                               Docs: <br> - `/document/d/<file_id>`<br>Files: <br> - `/file/d/<file_id>`<br>Folders: <br> - `/drive/folders/<folder_id>`<br> - `/embeddedfolderview/<folder_id>`<br>Sheets: <br> - `/spreadsheets/d/<file_id>`<br>Slides: <br> - `/presentation/d/<file_id>`<br><br>**NOTES**<br> - You can download sheets, slides and docs in a custom format by using it as a query param.<br>ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods<br>Valid Formats:<br><br>document:<br>  - docx (default)<br>  - epub<br>  - md<br>  - odt<br>  - pdf<br>  - rtf<br>  - txt<br>  - zip<br><br>presentation:<br>  - odp<br>  - pptx (default)<br><br>spreadsheets:<br>  - csv<br>  - html<br>  - ods<br>  - tsv<br>  - xslx (default)                                                                                                                                                                                                                                                                                                                               |
-|       GooglePhotos       |          https://photos.google.com          |                                                                                                                                                       photos.app.goo.gl<br>photos.google.com                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Album: <br> - `/share/<album_id>`<br>Photo: <br> - `/album/<album_id>/photo/<photo_id>`<br><br>**NOTES**<br> - Only downloads 'optimized' images, NOT original quality<br> - Can NOT download videos                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|         GUpload          |             https://gupload.xyz             |                                                                                                                                                                     gupload.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Video: <br> - `/data/e/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|          HClips          |             https://hclips.com              |                                                                                                                                     hclips.com<br>hclips.tube<br>privatehomeclips.com<br>privatehomeclips.tube                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|          HDZog           |              https://hdzog.com              |                                                                                                                                                              hdzog.com<br>hdzog.tube                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|         Hianime          |             https://hianime.to              |                                                                                                                                               aniwatch.to<br>aniwatchtv.to<br>hianime.to<br>zoro.to                                                                                                                                                |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Anime: <br> - `/<name>-<anime_id>`<br>Episode: <br> - `/<name>-<anime_id>?ep=<episode_id>`<br> - `/watch/<name>-<anime_id>?ep=<episode_id>`<br><br>**NOTES**<br> - You can select the language to be downloaded by using a 'lang' query param. Valid options: 'sub' or 'dub'. Default: 'sub'If the chosen language is not available, CDL will use the first one available                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|        Hitomi.la         |              https://hitomi.la              |                                                                                                                                                                     hitomi.la                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Collection: <br> - `/artist/...`<br> - `/character/...`<br> - `/group/...`<br> - `/series/...`<br> - `/tag/...`<br> - `/type/...`<br>Gallery: <br> - `/anime/...`<br> - `/cg/...`<br> - `/doujinshi/...`<br> - `/galleries/...`<br> - `/gamecg/...`<br> - `/imageset/...`<br> - `/manga/...`<br> - `/reader/...`<br>Search: <br> - `/search.html?<query>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|        HotLeaksTV        |             https://hotleaks.tv             |                                                                                                                                                                    hotleaks.tv                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Model: <br> - `/<model_id>`<br>Video: <br> - `/<model_id>/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|        HotLeakVip        |             https://hotleak.vip             |                                                                                                                                                                    hotleak.vip                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Model: <br> - `/<model_id>`<br>Video: <br> - `/<model_id>/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|         HotMovs          |             https://hotmovs.com             |                                                                                                                                                            hotmovs.com<br>hotmovs.tube                                                                                                                                                             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|          HotPic          |              https://hotpic.cc              |                                                                                                                                                              2385290.xyz<br>hotpic.*                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Album: <br> - `/album/...`<br>Image: <br> - `/i/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|         Iceyfile         |            https://iceyfile.com             |                                                                                                                                                                     iceyfile.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Files: <br> - `/<file_id>`<br> - `/<file_id>/<file_name>`<br>Public Folders: <br> - `/folder/<folder_id>`<br> - `/folder/<folder_id>/<folder_name>`<br>Shared folders: <br> - `/shared/<share_key>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|         ImageBam         |          https://www.imagebam.com           |                                                                                                                                                                     imagebam.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Gallery: <br> - `/gallery/<id>`<br>Gallery or Image: <br> - `/view/<id>`<br>Image: <br> - `/image/<id>`<br> - `images<x>.imagebam.com/<id>`<br>Thumbnails: <br> - `thumbs<x>.imagebam.com/<id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|        ImagePond         |            https://imagepond.net            |                                                                                                                                                                   imagepond.net                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Album: <br> - `/a/<slug>`<br>Direct links: <br> - `/media/<slug>`<br>Image / Video / Archive: <br> - `/i/<slug>`<br> - `/image/<slug>`<br> - `/img/<slug>`<br> - `/video/<slug>`<br> - `/videos/<slug>`<br>User: <br> - `/<user_name>`<br> - `/user/<user_name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|        ImageVenue        |         https://www.imagevenue.com          |                                                                                                                                                                    imagevenue.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Image: <br> - `/<image_id>`<br> - `/img.php?image=<image_id>`<br> - `/view/o?i=<image_id>`<br>Thumbnail: <br> - `cdn-thumbs.imagevenue.com/.../<image_id>_t.jpg`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|          ImgBB           |               https://ibb.co                |                                                                                                                                                                 ibb.co<br>imgbb.co                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Album: <br> - `/album/<album_id>`<br>Image: <br> - `/<image_id>`<br>Profile: <br> - `<user_name>.imgbb.co/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|          ImgBox          |             https://imgbox.com              |                                                                                                                                                                      imgbox.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Album: <br> - `/g/...`<br>Direct Links<br>Image: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|         ImgLike          |             https://imglike.com             |                                                                                                                                                                    imglike.com                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Album: <br> - `/a/<id>`<br> - `/a/<name>.<id>`<br> - `/album/<id>`<br> - `/album/<name>.<id>`<br>Category: <br> - `/category/<name>`<br>Direct Links<br>Image: <br> - `/image/<id>`<br> - `/image/<name>.<id>`<br> - `/img/<id>`<br> - `/img/<name>.<id>`<br>Profile: <br> - `/<user_name>`<br>Video: <br> - `/video/<id>`<br> - `/video/<name>.<id>`<br> - `/videos/<id>`<br> - `/videos/<name>.<id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|          Imgur           |              https://imgur.com              |                                                                                                                                                                      imgur.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             Album: <br> - `/a/<album_id>`<br>Direct links: <br> - `https://i.imgur.com/<image_id>.<ext>`<br>Gallery: <br> - `/gallery/<slug>-<album_id>`<br>Image: <br> - `/<image_id>`<br> - `/download/<image_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|          Imx.to          |               https://imx.to                |                                                                                                                                                                       imx.to                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Gallery: <br> - `/g/<gallery_id>`<br>Image: <br> - `/i/...`<br> - `/u/i/...`<br>Thumbnail: <br> - `/t/...`<br> - `/u/t/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|        IncestFlix        |         https://www.incestflix.com          |                                                                                                                                                                    incestflix.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Tag: <br> - `/tag/...`<br>Video: <br> - `/watch/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|          InPorn          |             https://inporn.com              |                                                                                                                                                             inporn.com<br>inporn.tube                                                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|           JPG5           |               https://jpg6.su               |                                                                             host.church<br>jpeg.pet<br>jpg.church<br>jpg.fish<br>jpg.fishing<br>jpg.homes<br>jpg.pet<br>jpg1.su<br>jpg2.su<br>jpg3.su<br>jpg4.su<br>jpg5.su<br>jpg6.su<br>jpg7.cr<br>selti-delivery.ru                                                                             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Album: <br> - `/a/<id>`<br> - `/a/<name>.<id>`<br> - `/album/<id>`<br> - `/album/<name>.<id>`<br>Category: <br> - `/category/<name>`<br>Direct Links<br>Image: <br> - `/image/<id>`<br> - `/image/<name>.<id>`<br> - `/img/<id>`<br> - `/img/<name>.<id>`<br>Profile: <br> - `/<user_name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|          Kemono          |              https://kemono.cr              |                                                                                                                                                       kemono.cr<br>kemono.party<br>kemono.su                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct links: <br> - `/data/...`<br> - `/thumbnail/...`<br>Discord Server: <br> - `/discord/<server_id>`<br>Discord Server Channel: <br> - `/discord/server/<server_id>/<channel_id>#...`<br>Favorites: <br> - `/account/favorites/posts\|artists`<br> - `/favorites?type=post\|artist`<br>Individual Post: <br> - `/<service>/user/<user_id>/post/<post_id>`<br>Model: <br> - `/<service>/user/<user_id>`<br>Search: <br> - `/search?q=...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|          Koofr           |              https://koofr.eu               |                                                                                                                                                          k00.fr<br>koofr.eu<br>koofr.net                                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Public Share: <br> - `/links/<content_id>`<br> - `https://k00.fr/<short_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|       LeakedModels       |       https://leakedmodels.com/forum        |                                                                                                                                                                   leakedmodels.*                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|        LeakedZone        |           https://leakedzone.com            |                                                                                                                                                                    leakedzone.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Model: <br> - `/<model_id>`<br>Video: <br> - `/<model_id>/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|         Luscious         |        https://members.luscious.net         |                                                                                                                                                                     luscious.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Album: <br> - `/albums/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         LuxureTV         |            https://luxuretv.com             |                                                                                                                                                                     luxuretv.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Search: <br> - `/searchgate/videos/<search>/...`<br>Video: <br> - `/videos/<name>-<id>.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|         Masahub          |             https://masahub.com             |                                                                                                                                lol49.com<br>masa49.com<br>masafun.net<br>masahub.com<br>masahub2.com<br>vido99.com                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Search: <br> - `?s=<query>`<br>Videos: <br> - `/title`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|        Mediafire         |          https://www.mediafire.com          |                                                                                                                                                                    mediafire.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  File: <br> - `/file/<quick_key>`<br> - `?<quick_key>`<br>Folder: <br> - `/folder/<folder_key>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|        Megacloud         |           https://megacloud.blog            |                                                                                                                                                                    megacloud.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Embed v3: <br> - `/embed-2/v3`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|          MegaNz          |               https://mega.nz               |                                                                                                                                                          mega.co.nz<br>mega.io<br>mega.nz                                                                                                                                                          |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             File: <br> - `/!#<file_id>!<share_key>`<br> - `/file/<file_id>#<share_key>`<br> - `/folder/<folder_id>#<share_key>/file/<file_id>`<br>Folder: <br> - `/F!#<folder_id>!<share_key>`<br> - `/folder/<folder_id>#<share_key>`<br>Subfolder: <br> - `/folder/<folder_id>#<share_key>/folder/<subfolder_id>`<br><br>**NOTES**<br> - Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|          MissAV          |              https://missav.ws              |                                                                                                                                                                      missav.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Genres: <br> - `/genres/<genre>`<br>Labels: <br> - `/labels/<label>`<br>Makers: <br> - `/makers/<maker>`<br>Search: <br> - `/search/<search>`<br>Tags: <br> - `/tags/<tag>`<br>Video: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|         MixDrop          |             https://mixdrop.sb              |                                                                                                                                                         m1xdrop.*<br>mixdrop.*<br>mxdrop.*                                                                                                                                                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         File: <br> - `/e/<file_id>`<br> - `/f/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|        Motherless        |           https://motherless.com            |                                                                                                                                                                    motherless.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Group: <br> - `/g/<group_name>`<br> - `/gi/<image>`<br> - `/gv/<video>`<br>Image: <br> - `/...`<br>User: <br> - `/f/...`<br> - `/u/...`<br>Video: <br> - `pending`<br><br>**NOTES**<br> - Galleries are NOT supported                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|          MyDesi          |             https://lolpol.com              |                                                                                                                                                       fry99.com<br>lolpol.com<br>mydesi.net                                                                                                                                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Search: <br> - `/search/<query>`<br>Videos: <br> - `/title`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|        Nekohouse         |            https://nekohouse.su             |                                                                                                                                                                    nekohouse.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Direct links: <br> - `/(data|thumbnails)/...`<br>Individual Post: <br> - `/<service>/user/<user_id>/post/<post_id>`<br>Model: <br> - `/<service>/user/<user_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|         nHentai          |             https://nhentai.net             |                                                                                                                                                                    nhentai.net                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Collections: <br> - `artist`<br> - `character`<br> - `favorites`<br> - `group`<br> - `parody`<br> - `search`<br> - `tag`<br>Gallery: <br> - `/g/<gallery_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|      NoodleMagazine      |         https://noodlemagazine.com          |                                                                                                                                                                  noodlemagazine.*                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Search: <br> - `/video/<search_query>`<br>Video: <br> - `/watch/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|         nsfw.xxx         |              https://nsfw.xxx               |                                                                                                                                                                      nsfw.xxx                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Category: <br> - `/category/<name>`<br>Post: <br> - `/post/<id>`<br>Search: <br> - `/search?q=<query>`<br>Subreddit: <br> - `/r/<subreddit>`<br>User: <br> - `/user/<username>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         NudoStar         |         https://nudostar.com/forum          |                                                                                                                                                                     nudostar.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|        NudoStarTV        |             https://nudostar.tv             |                                                                                                                                                                    nudostar.tv                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Model: <br> - `/models/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|          ok.ru           |                https://ok.ru                |                                                                                                                                                             odnoklassniki.ru<br>ok.ru                                                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Channel: <br> - `/profile/<username>/c<channel_id>`<br> - `/video/c<channel_id>`<br>Video: <br> - `/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|        OmegaScans        |           https://omegascans.org            |                                                                                                                                                                    omegascans.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Chapter: <br> - `/series/.../...`<br>Direct Links<br>Series: <br> - `/series/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|         OneDrive         |            https://onedrive.com             |                                                                                                                                                            1drv.ms<br>onedrive.live.com                                                                                                                                                            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Access Link: <br> - `https://onedrive.live.com/?authkey=<KEY>&id=<ID>&cid=<CID>`<br>Share Link (anyone can access): <br> - `https://1drv.ms/b/<KEY>`<br> - `https://1drv.ms/f/<KEY>`<br> - `https://1drv.ms/t/<KEY>`<br> - `https://1drv.ms/u/<KEY>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|         OnePace          |             https://onepace.net             |                                                                                                                                                                    onepace.net                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  All episodes: <br> - `/watch`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|         OwnCloud         |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             Public Share: <br> - `/s/<share_token>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|         Patreon          |           https://www.patreon.com           |                                                                                                                                                                     patreon.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Creator: <br> - `/<creator>`<br> - `/cw/<creator>`<br>Post: <br> - `/posts/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|          pCloud          |           https://www.pcloud.com            |                                                                                                                                                            e.pc.cd<br>pc.cd<br>pcloud.*                                                                                                                                                            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Public File or folder: <br> - `?code=<share_code>`<br> - `e.pc.cd/<short_code>`<br> - `u.pc.cd/<short_code>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|       PimpAndHost        |           https://pimpandhost.com           |                                                                                                                                                                   pimpandhost.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Album: <br> - `/album/...`<br>Image: <br> - `/image/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|        PimpBunny         |            https://pimpbunny.com            |                                                                                                                                                                   pimpbunny.com                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Album: <br> - `/albums/<album_name>`<br>Category: <br> - `/categories/<category>`<br>Model Albums: <br> - `/albums/models/<model_name>`<br>Models: <br> - `/onlyfans-models/<model_name>`<br>Tag: <br> - `/tags/<tag>`<br>Videos: <br> - `/videos/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|        PixelDrain        |           https://pixeldrain.com            |                                                                                             pd.1drv.eu.org<br>pd.cybar.xyz<br>pixeldra.in<br>pixeldrain.biz<br>pixeldrain.com<br>pixeldrain.dev<br>pixeldrain.net<br>pixeldrain.nl<br>pixeldrain.tech                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 File: <br> - `/api/file/<file_id>`<br> - `/l/<list_id>#item=<file_index>`<br> - `/u/<file_id>`<br>Filesystem: <br> - `/api/filesystem/<path>...`<br> - `/d/<id>`<br>Folder: <br> - `/api/list/<list_id>`<br> - `/l/<list_id>`<br><br>**NOTES**<br> - text files will not be downloaded but their content will be parsed for URLs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|         PixHost          |             https://pixhost.to              |                                                                                                                                                             pixhost.org<br>pixhost.to                                                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Gallery: <br> - `/gallery/<gallery_id>`<br>Image: <br> - `/show/<image_id>`<br>Thumbnail: <br> - `/thumbs/..`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|        Pkmncards         |            https://pkmncards.com            |                                                                                                                                                                    pkmncards.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Card: <br> - `/card/...`<br>Series: <br> - `/series/...`<br>Set: <br> - `/set/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|         PMVHaven         |            https://pmvhaven.com             |                                                                                                                                                                     pmvhaven.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Playlist: <br> - `/playlists/...`<br>Search results: <br> - `/search/...`<br>Users: <br> - `/profile/...`<br> - `/users/...`<br>Video: <br> - `/video/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         PornHub          |           https://www.pornhub.com           |                                                                                                                                                                     pornhub.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Album: <br> - `/album/...`<br>Channel: <br> - `/channel/...`<br>Gif: <br> - `/gif/...`<br>Photo: <br> - `/photo/...`<br>Playlist: <br> - `/playlist/...`<br>Profile: <br> - `/model/...`<br> - `/pornstar/...`<br> - `/user/...`<br>Video: <br> - `/embed/<video_id>`<br> - `/view_video.php?viewkey=<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|         PornPics         |            https://pornpics.com             |                                                                                                                                                                     pornpics.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Categories: <br> - `/categories/....`<br>Channels: <br> - `/channels/...`<br>Direct Links<br>Gallery: <br> - `/galleries/...`<br>Pornstars: <br> - `/pornstars/...`<br>Search: <br> - `/?q=<query>`<br>Tags: <br> - `/tags/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|         Porntrex         |          https://www.porntrex.com           |                                                                                                                                                                     porntrex.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Album: <br> - `/albums/...`<br>Category: <br> - `/categories/...`<br>Model: <br> - `/models/...`<br>Playlist: <br> - `/playlists/...`<br>Search: <br> - `/search/...`<br>Tag: <br> - `/tags/...`<br>User: <br> - `/members/...`<br>Video: <br> - `/video/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|         PornZog          |             https://pornzog.com             |                                                                                                                                                                     pornzog.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Video: <br> - `/video/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         PostImg          |             https://postimg.cc              |                                                                                                                                                    postimages.org<br>postimg.cc<br>postimg.org                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Album: <br> - `/gallery/<album_id>/...`<br>Direct links: <br> - `i.postimg.cc/<image_id>/...`<br>Image: <br> - `/<image_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|         Ranoz.gg         |              https://ranoz.gg               |                                                                                                                                                                qiwi.gg<br>ranoz.gg                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       File: <br> - `/d/<file_id>`<br> - `/file/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|        RealBooru         |            https://realbooru.com            |                                                                                                                                                                    realbooru.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        File: <br> - `?id=...`<br>Tags: <br> - `?tags=...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|        RealDebrid        |           https://real-debrid.com           |                                                                                                                                                                   real-debrid.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|         RedGifs          |           https://www.redgifs.com           |                                                                                                                                                                     redgifs.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Embeds: <br> - `/ifr/<gif_id>`<br>Gif: <br> - `/watch/<gif_id>`<br>Image: <br> - `/i/<image_id>`<br>User: <br> - `/users/<user>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|         Rootz.so         |            https://www.rootz.so             |                                                                                                                                                                      rootz.so                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       File: <br> - `/d/<file_id>`<br> - `/file/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|       Rule34Vault        |           https://rule34vault.com           |                                                                                                                                                                   rule34vault.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Playlist: <br> - `/playlists/view/...`<br>Post: <br> - `/post/...`<br>Tag: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|       Rule34Video        |           https://rule34video.com           |                                                                                                                                                                   rule34video.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Category: <br> - `/categories/<name>`<br>Members: <br> - `/members/<member_id>`<br>Model: <br> - `/models/<name>`<br>Search: <br> - `/search/<query>`<br>Tag: <br> - `/tags/<name>`<br>Video: <br> - `/video/<id>/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|        Rule34XXX         |             https://rule34.xxx              |                                                                                                                                                                     rule34.xxx                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        File: <br> - `?id=...`<br>Tag: <br> - `?tags=...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|        Rule34XYZ         |             https://rule34.xyz              |                                                                                                                                                                     rule34.xyz                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Playlist: <br> - `/playlists/view/...`<br>Post: <br> - `/post/...`<br>Tag: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|          Rumble          |             https://rumble.com              |                                                                                                                                                                      rumble.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Channel: <br> - `/c/<name>`<br>Embed: <br> - `/embed/<video_id>`<br>User: <br> - `/user/<name>`<br>Video: <br> - `<video_id>-<video-title>.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|        Scrolller         |            https://scrolller.com            |                                                                                                                                                                    scrolller.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Subreddit: <br> - `/r/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         SendNow          |              https://send.now               |                                                                                                                                                                      send.now                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Direct Links                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|         SendVid          |             https://sendvid.com             |                                                                                                                                                                     sendvid.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Direct Links<br>Embeds: <br> - `/embed/...`<br>Videos: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|         Sex.com          |               https://sex.com               |                                                                                                                                                                       sex.*                                                                                                                                                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Shorts Profiles: <br> - `/shorts/<profile>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|         SimpCity         |             https://simpcity.cr             |                                                                                                                                                             simpcity.cr<br>simpcity.su                                                                                                                                                             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|     SocialMediaGirls     |     https://forums.socialmediagirls.com     |                                                                                                                                                                 socialmediagirls.*                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|        SpankBang         |            https://spankbang.com            |                                                                                                                                                                    spankbang.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Playlist: <br> - `/<playlist_id>/playlist/...`<br>Profile: <br> - `/profile/<user>`<br> - `/profile/<user>/videos`<br>Video: <br> - `/<video_id>/embed`<br> - `/<video_id>/video`<br> - `/play/<video_id>`<br> - `<playlist_id>-<video_id>/playlist/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|        Streamable        |           https://streamable.com            |                                                                                                                                                                    streamable.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Video: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|        Streamtape        |           https://streamtape.com            |                                                                                                                                                                   streamtape.com                                                                                                                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Player: <br> - `/e/<video_id>`<br>Videos: <br> - `/v/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|        TabooTube         |          https://www.tabootube.xxx          |                                                                                                                                                                    tabootube.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Video: <br> - `/video/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|         ThisVid          |             https://thisvid.com             |                                                                                                                                                                     thisvid.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Albums: <br> - `/albums/<album_name>`<br>Categories: <br> - `/categories/<name>`<br>Image: <br> - `/albums/<album_name>/<image_name>`<br>Members: <br> - `/members/<member_id>`<br>Search: <br> - `/search/?q=<query>`<br>Tags: <br> - `/tags/<name>`<br>Videos: <br> - `/videos/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|         ThotHub          |             https://thothub.to              |                                                                                                                                                                     thothub.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Album: <br> - `/albums/<id>/<name>`<br>Image: <br> - `/get_image/...`<br>Video: <br> - `/videos/<id>/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|          TikTok          |           https://www.tiktok.com            |                                                                                                                                                                      tiktok.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        Photo: <br> - `/@<user>/photo/<photo_id>`<br>User: <br> - `/@<user>`<br>Video: <br> - `/@<user>/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|        TitsInTops        |        https://titsintops.com/phpBB2        |                                                                                                                                                                    titsintops.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         TNAFlix          |           https://www.tnaflix.com           |                                                                                                                                                                     tnaflix.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 Channel: <br> - `/channel/...`<br>Profile: <br> - `/profile/...`<br>Search: <br> - `/search?what=<query>`<br>Video: <br> - `/<category>/<title>/video<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|       Tokyomotion        |         https://www.tokyomotion.net         |                                                                                                                                                                   tokyomotion.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Albums: <br> - `/album/<album_id>`<br> - `/user/<user>/albums/`<br>Photo: <br> - `/photo/<photo_id>`<br> - `/user/<user>/favorite/photos`<br>Playlist: <br> - `/user/<user>/favorite/videos`<br>Profiles: <br> - `/user/<user>`<br>Search Results: <br> - `/search?...`<br>Video: <br> - `/video/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|         Toonily          |             https://toonily.com             |                                                                                                                                                                     toonily.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Chapter: <br> - `/serie/<name>/chapter-<chapter-id>`<br>Serie: <br> - `/serie/<name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|        Tranny.One        |           https://www.tranny.one            |                                                                                                                                                                     tranny.one                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Album: <br> - `/pics/album/<album_id>`<br>Pornstars: <br> - `/pornstar/<model_id>/<model_name>`<br>Search: <br> - `/search/<search_query>`<br>Video: <br> - `/view/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|       Transfer.it        |             https://transfer.it             |                                                                                                                                                                    transfer.it                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Transfer: <br> - `/t/<transfer_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|        TransFlix         |            https://transflix.net            |                                                                                                                                                                    transflix.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Search: <br> - `/search/?q=<query>`<br>Video: <br> - `/video/<name>-<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|     TubePornClassic      |         https://tubepornclassic.com         |                                                                                                                                                    tubepornclassic.com<br>tubepornclassic.tube                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|         TurboVid         |             https://turbovid.cr             |                                                                                                                                           saint.to<br>saint2.cr<br>saint2.su<br>turbo.cr<br>turbovid.cr                                                                                                                                            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      Album: <br> - `/a/<album_id>`<br>Direct links: <br> - `/data/...`<br>Search: <br> - `library?q=<query>`<br>Video: <br> - `/d/<file_id>`<br> - `/embed/<file_id>`<br> - `/v/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|          Twitch          |            https://www.twitch.tv            |                                                                                                                                                                      twitch.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Clip: <br> - `/<user>/clip/<slug>`<br> - `/embed?clip=<slug>`<br> - `https://clips.twitch.tv/<slug>`<br>Collection: <br> - `/collections/<collection_id>`<br>VOD: <br> - `/<user>/v/<vod_id>`<br> - `/video/<vod_id>`<br> - `/videos/<vod_id>`<br> - `?video=<vod_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|         Twitter          |                https://x.com                |                                                                                                                                                                twitter.com<br>x.com                                                                                                                                                                |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Tweet: <br> - `/<handle>/status/<tweet_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|      TwitterImages       |              https://twimg.com              |                                                                                                                                                                      twimg.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Photo: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|       TWPornStars        |         https://www.twpornstars.com         |                                                                                           indiantw.com<br>twanal.com<br>twgaymuscle.com<br>twgays.com<br>twlesbian.com<br>twmilf.com<br>twonfans.com<br>twpornstars.com<br>twteens.com<br>twtiktoks.com                                                                                            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Photo: <br> - `/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-|           TXXX           |              https://txxx.com               |                                                                                                                                              txxx.com<br>txxx.tube<br>videotxxx.com<br>videotxxx.tube                                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|        Upload.ee         |            https://www.upload.ee            |                                                                                                                                                                     upload.ee                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 File: <br> - `/files/<file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|         UPornia          |             https://upornia.com             |                                                                                                                                                            upornia.com<br>upornia.tube                                                                                                                                                             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|          Vidara          |              https://vidara.to              |                                                                                                                                           stmix.io<br>streamix.so<br>vidara.so<br>vidara.to<br>xca.cymru                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Video: <br> - `/e/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|        ViperGirls        |            https://vipergirls.to            |                                                                                                                                                            viper.click<br>vipergirls.to                                                                                                                                                            |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Threads: <br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br> - `/threads/<thread_name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|         Vipr.im          |               https://vipr.im               |                                                                                                                                                                      vipr.im                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Direct Image: <br> - `/i/.../<slug>`<br>Image: <br> - `/<id>`<br>Thumbnail: <br> - `/th/.../<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-|           VJav           |              https://vjav.com               |                                                                                                                                                               vjav.com<br>vjav.tube                                                                                                                                                                |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|          Voe.sx          |               https://voe.sx                |     alejandrocenturyoil.com<br>diananatureforeign.com<br>heatherwholeinvolve.com<br>jennifercertaindevelopment.com<br>jilliandescribecompany.com<br>jonathansociallike.com<br>mariatheserepublican.com<br>maxfinishseveral.com<br>nathanfromsubject.com<br>richardsignfish.com<br>robertordercharacter.com<br>sarahnewspaperbeat.com<br>voe.sx     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Embed: <br> - `/e/video_id`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|        VoyeurHit         |            https://voyeurhit.com            |                                                                                                                                                          voyeurhit.com<br>voyeurhit.tube                                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|           VSCO           |               https://vsco.co               |                                                                                                                                                                       vsco.*                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Gallery: <br> - `/<user>/gallery`<br>Media: <br> - `/<user>/media/<media_id>`<br> - `/<user>/video/<media_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|           VXXX           |              https://vxxx.com               |                                                                                                                                                               vxxx.com<br>vxxx.tube                                                                                                                                                                |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Video: <br> - `/video-<video-id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-|        WeTransfer        |           https://wetransfer.com            |                                                                                                                                                              we.tl<br>wetransfer.com                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Direct links: <br> - `download.wetransfer.com/...`<br>Public link: <br> - `wetransfer.com/downloads/<file_id>/<security_hash>`<br>Share Link: <br> - `wetransfer.com/downloads/<file_id>/<recipient_id>/<security_hash>`<br>Short Link: <br> - `we.tl/<short_file_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|      WordPressHTML       |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                         All Posts: <br> - `/posts/`<br>Category: <br> - `/category/<category_slug>`<br>Date Range: <br> - `...?after=<date>`<br> - `...?before=<date&after=<date>`<br> - `...?before=<date>`<br>Post: <br> - `/<post_slug>/`<br>Tag: <br> - `/tag/<tag_slug>`<br><br>**NOTES**<br> - <br><br>        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.<br><br>        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.<br>        ex: To only download categories from a date range: ,<br>        `/category/<category_slug>?before=<date>`                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|      WordPressMedia      |             ::GENERIC CRAWLER::             |                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                         All Posts: <br> - `/posts/`<br>Category: <br> - `/category/<category_slug>`<br>Date Range: <br> - `...?after=<date>`<br> - `...?before=<date&after=<date>`<br> - `...?before=<date>`<br>Post: <br> - `/<post_slug>/`<br>Tag: <br> - `/tag/<tag_slug>`<br><br>**NOTES**<br> - <br><br>        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.<br><br>        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.<br>        ex: To only download categories from a date range: ,<br>        `/category/<category_slug>?before=<date>`                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|          Xasiat          |           https://www.xasiat.com            |                                                                                                                                                                      xasiat.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Album: <br> - `/albums/<id>/<name>`<br>Images: <br> - `/get_image/...`<br>Videos: <br> - `/videos/<id>/<name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         XBunker          |             https://xbunker.nu              |                                                                                                                                                                     xbunker.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Attachments: <br> - `/(attachments\|data\|uploads)/...`<br>Threads: <br> - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`<br> - `/goto/<post_id>`<br> - `/posts/<post_id>`<br><br>**NOTES**<br> - base crawler: Xenforo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|         XGroovy          |             https://xgroovy.com             |                                                                                                                                                                     xgroovy.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                          Channel: <br> - `/<category>/channels/...`<br> - `/channels/...`<br>Gif: <br> - `/<category>/gifs/<gif_id>/...`<br> - `/gifs/<gif_id>/...`<br>Images: <br> - `/<category>/photos/<photo_id>/...`<br> - `/photos/<photo_id>/...`<br>Pornstar: <br> - `/<category>/pornstars/<pornstar_id>/...`<br> - `/pornstars/<pornstar_id>/...`<br>Search: <br> - `/<category>/search/...`<br> - `/search/...`<br>Tag: <br> - `/<category>/tags/...`<br> - `/tags/...`<br>Video: <br> - `/<category>/videos/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|         xHamster         |            https://xhamster.com             |                                                                                                                                                                     xhamster.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Creator: <br> - `/creators/<creator_name>`<br>Creator Galleries: <br> - `/creators/<creator_name>/photos`<br>Creator Videos: <br> - `/creators/<creator_name>/exclusive`<br>Gallery: <br> - `/photos/gallery/<gallery_name_or_id>`<br>User: <br> - `/users/<user_name>`<br> - `/users/profiles/<user_name>`<br>User Galleries: <br> - `/users/<user_name>/photos`<br>User Videos: <br> - `/users/<user_name>/videos`<br>Video: <br> - `/videos/<title>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|        XMegaDrive        |         https://www.xmegadrive.com          |                                                                                                                                                                    xmegadrive.*                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Albums: <br> - `/albums/<album_name>`<br>Categories: <br> - `/categories/<name>`<br>Image: <br> - `/albums/<album_name>/<image_name>`<br>Members: <br> - `/members/<member_id>`<br>Search: <br> - `/search/?q=<query>`<br>Tags: <br> - `/tags/<name>`<br>Videos: <br> - `/videos/<slug>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|          XMilf           |              https://xmilf.com              |                                                                                                                                                              xmilf.com<br>xmilf.tube                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Video: <br> - `/embed/<video_id>/...`<br> - `/videos/<video_id>/...`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|         xVideos          |           https://www.xvideos.com           |                                                                                                                                   xv-ru.com<br>xvideos-ar.com<br>xvideos-india.com<br>xvideos.com<br>xvideos.es                                                                                                                                    |     Account: <br> - `/<channel_name>`<br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>`<br>Account Photos: <br> - `/<channel_name>#_tabPhotos`<br> - `/<channel_name>/photos/...`<br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabPhotos`<br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>/photos/...`<br>Account Quickies: <br> - `/<channel_name>#quickies`<br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#quickies`<br>Account Videos: <br> - `/<channel_name>#_tabVideos`<br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabVideos`<br>Video: <br> - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles#quickies/(a\|h\|v)/<video_id>`<br> - `/video.<encoded_id>/<title>`<br> - `/video<id>/<title>`     |
-|        XXXBunker         |            https://xxxbunker.com            |                                                                                                                                                                    xxxbunker.*                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Category: <br> - `/categories/<category>`<br>Search: <br> - `/search/<video_id>`<br>User Favorites: <br> - `/<username>/favoritevideos`<br>Video: <br> - `/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-|        YandexDisk        |         https://disk.yandex.com.tr          |                                                                                                                                                               disk.yandex<br>yadi.sk                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     File: <br> - `/d/<folder_id>/<file_name>`<br> - `/i/<file_id>`<br>Folder: <br> - `/d/<folder_id>`<br><br>**NOTES**<br> - Does NOT support nested folders                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|         YouJizz          |           https://www.youjizz.com           |                                                                                                                                                                     youjizz.*                                                                                                                                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Video: <br> - `/videos/<video_name>`<br> - `/videos/embed/<video_id>`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+## 4chan
+
+Primary URL: https://boards.4chan.org
+
+Supported Domains: 4chan.*
+
+### Supported paths
+- Board: `/<board>`
+- Thread: `/<board>/thread/<thread_id>`
+
+
+## 8Muses
+
+Primary URL: https://comics.8muses.com
+
+Supported Domains: 8muses.*
+
+### Supported paths
+- Album: `/comics/album/...`
+
+
+## AllPornComix
+
+Primary URL: https://forum.allporncomix.com
+
+Supported Domains: allporncomix.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## Anontransfer.com
+
+Primary URL: https://anontransfer.com
+
+Supported Domains: anontransfer.com
+
+### Supported paths
+- Direct Link: `/download-direct.php?dir=<file_id>&file=<filename>`,`/uploads/<file_id>/<filename>`
+- File: `/d/<file_id>`
+- Folder: `/f/<folder_uuid>`
+
+
+## AnySex
+
+Primary URL: https://anysex.com
+
+Supported Domains: anysex.*
+
+### Supported paths
+- Album: `/photos/<album_id>/...`
+- Photo Search: `/photos/search/...`
+- Search: `/search/...`
+- Video: `/video/<video_id>/...`
+
+
+## ArchiveBate
+
+Primary URL: https://www.archivebate.store
+
+Supported Domains: archivebate.*
+
+### Supported paths
+- Video: `/watch/<video_id>`
+
+
+## aShemaleTube
+
+Primary URL: https://www.ashemaletube.com
+
+Supported Domains: ashemaletube.*
+
+### Supported paths
+- Model: `/creators/...`,`/model/...`,`/pornstars/...`
+- Playlist: `/playlists/...`
+- User: `/profiles/...`
+- Video: `/videos/...`
+
+
+## Bandcamp
+
+Primary URL: https://bandcamp.com
+
+Supported Domains: bandcamp.*
+
+### Supported paths
+- Album: `/album/<slug>`
+- Song: `/track/<slug>`
+
+### Notes
+- You can set 'CDL_BANDCAMP_FORMATS' env var to a comma separated list of formats to download (Ordered by preference) [Default = 'mp3-320,mp3,aac-hi,wav,flac,vorbis,aiff,alas']
+
+
+## Beeg.com
+
+Primary URL: https://beeg.com
+
+Supported Domains: beeg.com
+
+### Supported paths
+- Video: `/<video_id>`,`/video/<video_id>`
+
+
+## Bellazon
+
+Primary URL: https://www.bellazon.com/main
+
+Supported Domains: bellazon.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Invision
+
+
+## BestPrettyGirl
+
+Primary URL: https://bestprettygirl.com
+
+Supported Domains: bestprettygirl.com
+
+### Supported paths
+- All Posts: `/posts/`
+- Category: `/category/<category_slug>`
+- Date Range: `...?after=<date>`,`...?before=<date&after=<date>`,`...?before=<date>`
+- Post: `/<post_slug>/`
+- Tag: `/tag/<tag_slug>`
+
+### Notes
+-
+
+        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.
+
+        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.
+        ex: To only download categories from a date range: ,
+        `/category/<category_slug>?before=<date>`
+
+
+## Box
+
+Primary URL: https://www.box.com
+
+Supported Domains: app.box.com
+
+### Supported paths
+- Embedded File or Folder: `app.box.com/embed/s?sh=<share_code>`,`app.box.com/embed_widget/s?sh=<share_code>`
+- File or Folder: `app.box.com/s?sh=<share_code>`
+
+
+## Bunkr
+
+Primary URL: https://bunkr.site
+
+Supported Domains: bunkr.*
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Direct Links:
+- File: `/<slug>`,`/d/<slug>`,`/f/<slug>`
+- Video: `/v/<slug>`
+
+
+## Bunkr-Albums.io
+
+Primary URL: https://bunkr-albums.io
+
+Supported Domains: bunkr-albums.io
+
+### Supported paths
+- Search: `/?search=<query>`
+
+
+## BuzzHeavier
+
+Primary URL: https://buzzheavier.com
+
+Supported Domains: buzzheavier.com
+
+### Supported paths
+- Direct Links:
+
+
+## Camwhores.tv
+
+Primary URL: https://www.camwhores.tv
+
+Supported Domains: camwhores.tv
+
+### Supported paths
+- Category: `/categories/<name>/`
+- Search: `/search/<query>/`
+- Tag: `/tags/<name>/`
+- Video: `/videos/<id>/<slug>`
+
+
+## Catbox
+
+Primary URL: https://catbox.moe
+
+Supported Domains: files.catbox.moe, litter.catbox.moe
+
+### Supported paths
+- Direct Links:
+
+
+## CelebForum
+
+Primary URL: https://celebforum.to
+
+Supported Domains: celebforum.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## Chevereto
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+- Album: `/a/<id>`,`/a/<name>.<id>`,`/album/<id>`,`/album/<name>.<id>`
+- Category: `/category/<name>`
+- Direct Links:
+- Image: `/image/<id>`,`/image/<name>.<id>`,`/img/<id>`,`/img/<name>.<id>`
+- Profile: `/<user_name>`
+- Video: `/video/<id>`,`/video/<name>.<id>`,`/videos/<id>`,`/videos/<name>.<id>`
+
+
+## cloud.mail.ru
+
+Primary URL: https://cloud.mail.ru
+
+Supported Domains: cloud.mail.ru
+
+### Supported paths
+- Public files / folders: `/public/<web_path>`
+
+
+## CloudflareStream
+
+Primary URL: https://cloudflarestream.com
+
+Supported Domains: cloudflarestream.com, videodelivery.net
+
+### Supported paths
+- Public Video: `/<video_uid>`,`/<video_uid>/iframe`,`/<video_uid>/watch`,`/embed/___.js?video=<video_uid>`
+- Restricted Access Video: `/<jwt_access_token>`,`/<jwt_access_token>/iframe`,`/<jwt_access_token>/watch`,`/embed/___.js?video=<jwt_access_token>`
+
+
+## Coomer
+
+Primary URL: https://coomer.st
+
+Supported Domains: coomer.party, coomer.st, coomer.su
+
+### Supported paths
+- Direct links: `/data/...`,`/thumbnail/...`
+- Favorites: `/account/favorites/posts\|artists`,`/favorites?type=post\|artist`
+- Individual Post: `/<service>/user/<user_id>/post/<post_id>`
+- Model: `/<service>/user/<user_id>`
+- Search: `/search?q=...`
+
+
+## Cyberdrop
+
+Primary URL: https://cyberdrop.cr
+
+Supported Domains: cyberdrop.*, cyberdrop.cr, cyberdrop.me, cyberdrop.to, k1-cd.cdn.gigachad-cdn.ru
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Direct links: `/api/file/d/<file_id>`
+- File: `/e/<file_id>`,`/f/<file_id>`
+
+
+## Cyberfile
+
+Primary URL: https://cyberfile.me
+
+Supported Domains: cyberfile.*
+
+### Supported paths
+- Files: `/<file_id>`,`/<file_id>/<file_name>`
+- Public Folders: `/folder/<folder_id>`,`/folder/<folder_id>/<folder_name>`
+- Shared folders: `/shared/<share_key>`
+
+
+## DesiVideo
+
+Primary URL: https://desivideo.net
+
+Supported Domains: desivideo.net
+
+### Supported paths
+- Search: `/search?s=<query>`
+- Video: `/videos/<video_id>/...`
+
+
+## DirectHttpFile
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+
+
+## DirtyShip
+
+Primary URL: https://dirtyship.com
+
+Supported Domains: dirtyship.*
+
+### Supported paths
+- Category: `/category/<name>`
+- Tag: `/tag/<name>`
+- Video: `/<slug>`
+
+
+## Discourse
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+- Attachments: `/uploads/...`
+- Topic: `/t/<topic_name>/<topic_id>`,`/t/<topic_name>/<topic_id>/<post_number>`
+
+### Notes
+- If the URL includes <post_number>, posts with a number lower that it won't be scraped
+
+
+## DoodStream
+
+Primary URL: https://doodstream.com
+
+Supported Domains: all3do.com, d000d.com, do7go.com, dood.re, dood.yt, doodcdn.*, doodstream.*, doodstream.co, myvidplay.com, playmogo.com, vidply.com
+
+### Supported paths
+- Video: `/e/<video_id>`
+
+
+## Dropbox
+
+Primary URL: https://www.dropbox.com
+
+Supported Domains: dropbox.*
+
+### Supported paths
+- File: `/s/...`,`/scl/fi/<link_key>?rlkey=...`,`/scl/fo/<link_key>/<secure_hash>?preview=<filename>&rlkey=...`
+- Folder: `/scl/fo/<link_key>/<secure_hash>?rlkey=...`,`/sh/...`
+
+
+## E-Hentai
+
+Primary URL: https://e-hentai.org
+
+Supported Domains: e-hentai.*
+
+### Supported paths
+- Album: `/g/...`
+- File: `/s/...`
+
+
+## E621
+
+Primary URL: https://e621.net
+
+Supported Domains: e621.net
+
+### Supported paths
+- Pools: `/pools/...`
+- Post: `/posts/...`
+- Tags: `/posts?tags=...`
+
+
+## eFukt
+
+Primary URL: https://efukt.com
+
+Supported Domains: efukt.com
+
+### Supported paths
+- Gif: `/view.gif.php?id=<id>`
+- Homepage: `/`
+- Photo: `/pics/....`
+- Series: `/series/<series_name>`
+- Video: `/...`
+
+
+## ePorner
+
+Primary URL: https://www.eporner.com
+
+Supported Domains: eporner.*
+
+### Supported paths
+- Categories: `/cat/...`
+- Channels: `/channel/...`
+- Gallery: `/gallery/...`
+- Photo: `/photo/...`
+- Pornstar: `/pornstar/...`
+- Profile: `/profile/...`
+- Search: `/search/...`
+- Search Photos: `/search-photos/...`
+- Video: `/<video_name>-<video-id>`,`/embed/<video_id>`,`/hd-porn/<video_id>`
+
+
+## Erome
+
+Primary URL: https://www.erome.com
+
+Supported Domains: erome.*
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Profile: `/<name>`
+- Search: `/search?q=<query>`
+
+
+## Erome.fan
+
+Primary URL: https://erome.fan
+
+Supported Domains: erome.fan
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Profile: `/a/category/<name>`
+- Search: `/search/<query>`
+
+
+## EveriaClub
+
+Primary URL: https://everia.club
+
+Supported Domains: everia.club
+
+### Supported paths
+- All Posts: `/posts/`
+- Category: `/category/<category_slug>`
+- Date Range: `...?after=<date>`,`...?before=<date&after=<date>`,`...?before=<date>`
+- Post: `/<post_slug>/`
+- Tag: `/tag/<tag_slug>`
+
+### Notes
+-
+
+        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.
+
+        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.
+        ex: To only download categories from a date range: ,
+        `/category/<category_slug>?before=<date>`
+
+
+## F95Zone
+
+Primary URL: https://f95zone.to
+
+Supported Domains: f95zone.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## Fapello
+
+Primary URL: https://fapello.su
+
+Supported Domains: fapello.*
+
+### Supported paths
+- Individual Post: `/.../...`
+- Model: `/...`
+
+
+## Fileditch
+
+Primary URL: https://fileditchfiles.me
+
+Supported Domains: fileditch.*
+
+### Supported paths
+- Direct Links:
+
+
+## Filester
+
+Primary URL: https://filester.me
+
+Supported Domains: filester.*
+
+### Supported paths
+- File: `/d/<slug>`
+- Folder: `/f/<slug>`
+
+
+## FilesVC
+
+Primary URL: https://files.vc
+
+Supported Domains: files.vc
+
+### Supported paths
+- Direct Links:
+
+
+## Flickr
+
+Primary URL: https://www.flickr.com
+
+Supported Domains: flickr.*
+
+### Supported paths
+- Album: `/photos/<user_nsid>/albums/<photoset_id>/...`
+- Photo: `/photos/<user_nsid>/<photo_id>/...`
+
+
+## Forums.plex.tv
+
+Primary URL: https://forums.plex.tv
+
+Supported Domains: forums.plex.tv
+
+### Supported paths
+- Attachments: `/uploads/...`
+- Topic: `/t/<topic_name>/<topic_id>`,`/t/<topic_name>/<topic_id>/<post_number>`
+
+### Notes
+- If the URL includes <post_number>, posts with a number lower that it won't be scraped
+
+
+## FSIBlog
+
+Primary URL: https://fsiblog5.com
+
+Supported Domains: fsiblog.club, fsiblog.com, fsiblog1.club, fsiblog1.com, fsiblog2.club, fsiblog2.com, fsiblog3.club, fsiblog3.com, fsiblog4.club, fsiblog4.com, fsiblog5.club, fsiblog5.com
+
+### Supported paths
+- Posts: `/<category>/<title>`
+- Search: `?s=<query>`
+
+
+## FuckingFast
+
+Primary URL: https://fuckingfast.co
+
+Supported Domains: fuckingfast.co
+
+### Supported paths
+- Direct links: `/<file_id>`
+
+
+## FuXXX
+
+Primary URL: https://fuxxx.com
+
+Supported Domains: fuxxx.com, fuxxx.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## Giphy
+
+Primary URL: https://giphy.com
+
+Supported Domains: giphy.*
+
+### Supported paths
+- Direct Link: `https://media*.giphy.com/media/<gif_id>`
+- Gif: `/gifs/<slug>-<gif-id>`
+
+
+## GirlsReleased
+
+Primary URL: https://www.girlsreleased.com
+
+Supported Domains: girlsreleased.*
+
+### Supported paths
+- Model: `/model/<model_id>/<model_name>`
+- Set: `/set/<set_id>`
+- Site: `/site/<site>`
+
+
+## GoFile
+
+Primary URL: https://gofile.io
+
+Supported Domains: gofile.*
+
+### Supported paths
+- Direct link: `/download/<content_id>/<filename>`,`/download/web/<content_id>/<filename>`
+- Folder / File: `/d/<content_id>`
+
+### Notes
+- Use `password` as a query param to download password protected folders
+- ex: https://gofile.io/d/ABC654?password=1234
+
+
+## GoogleDrive
+
+Primary URL: https://drive.google.com
+
+Supported Domains: docs.google, drive.google, drive.usercontent.google.com
+
+### Supported paths
+- Docs: `/document/d/<file_id>`
+- Files: `/file/d/<file_id>`
+- Folders: `/drive/folders/<folder_id>`,`/embeddedfolderview/<folder_id>`
+- Sheets: `/spreadsheets/d/<file_id>`
+- Slides: `/presentation/d/<file_id>`
+
+### Notes
+- You can download sheets, slides and docs in a custom format by using it as a query param.
+ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
+Valid Formats:
+
+document:
+  - docx (default)
+  - epub
+  - md
+  - odt
+  - pdf
+  - rtf
+  - txt
+  - zip
+
+presentation:
+  - odp
+  - pptx (default)
+
+spreadsheets:
+  - csv
+  - html
+  - ods
+  - tsv
+  - xslx (default)
+
+
+## GooglePhotos
+
+Primary URL: https://photos.google.com
+
+Supported Domains: photos.app.goo.gl, photos.google.com
+
+### Supported paths
+- Album: `/share/<album_id>`
+- Photo: `/album/<album_id>/photo/<photo_id>`
+
+### Notes
+- Only downloads 'optimized' images, NOT original quality
+- Can NOT download videos
+
+
+## GUpload
+
+Primary URL: https://gupload.xyz
+
+Supported Domains: gupload.*
+
+### Supported paths
+- Video: `/data/e/<video_id>`
+
+
+## HClips
+
+Primary URL: https://hclips.com
+
+Supported Domains: hclips.com, hclips.tube, privatehomeclips.com, privatehomeclips.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## HDZog
+
+Primary URL: https://hdzog.com
+
+Supported Domains: hdzog.com, hdzog.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## Hianime
+
+Primary URL: https://hianime.to
+
+Supported Domains: aniwatch.to, aniwatchtv.to, hianime.to, zoro.to
+
+### Supported paths
+- Anime: `/<name>-<anime_id>`
+- Episode: `/<name>-<anime_id>?ep=<episode_id>`,`/watch/<name>-<anime_id>?ep=<episode_id>`
+
+### Notes
+- You can select the language to be downloaded by using a 'lang' query param. Valid options: 'sub' or 'dub'. Default: 'sub'If the chosen language is not available, CDL will use the first one available
+
+
+## Hitomi.la
+
+Primary URL: https://hitomi.la
+
+Supported Domains: hitomi.la
+
+### Supported paths
+- Collection: `/artist/...`,`/character/...`,`/group/...`,`/series/...`,`/tag/...`,`/type/...`
+- Gallery: `/anime/...`,`/cg/...`,`/doujinshi/...`,`/galleries/...`,`/gamecg/...`,`/imageset/...`,`/manga/...`,`/reader/...`
+- Search: `/search.html?<query>`
+
+
+## HotLeaksTV
+
+Primary URL: https://hotleaks.tv
+
+Supported Domains: hotleaks.tv
+
+### Supported paths
+- Model: `/<model_id>`
+- Video: `/<model_id>/video/<video_id>`
+
+
+## HotLeakVip
+
+Primary URL: https://hotleak.vip
+
+Supported Domains: hotleak.vip
+
+### Supported paths
+- Model: `/<model_id>`
+- Video: `/<model_id>/video/<video_id>`
+
+
+## HotMovs
+
+Primary URL: https://hotmovs.com
+
+Supported Domains: hotmovs.com, hotmovs.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## HotPic
+
+Primary URL: https://hotpic.cc
+
+Supported Domains: 2385290.xyz, hotpic.*
+
+### Supported paths
+- Album: `/album/...`
+- Image: `/i/...`
+
+
+## Iceyfile
+
+Primary URL: https://iceyfile.com
+
+Supported Domains: iceyfile.*
+
+### Supported paths
+- Files: `/<file_id>`,`/<file_id>/<file_name>`
+- Public Folders: `/folder/<folder_id>`,`/folder/<folder_id>/<folder_name>`
+- Shared folders: `/shared/<share_key>`
+
+
+## ImageBam
+
+Primary URL: https://www.imagebam.com
+
+Supported Domains: imagebam.*
+
+### Supported paths
+- Gallery: `/gallery/<id>`
+- Gallery or Image: `/view/<id>`
+- Image: `/image/<id>`,`images<x>.imagebam.com/<id>`
+- Thumbnails: `thumbs<x>.imagebam.com/<id>`
+
+
+## ImagePond
+
+Primary URL: https://imagepond.net
+
+Supported Domains: imagepond.net
+
+### Supported paths
+- Album: `/a/<slug>`
+- Direct links: `/media/<slug>`
+- Image / Video / Archive: `/i/<slug>`,`/image/<slug>`,`/img/<slug>`,`/video/<slug>`,`/videos/<slug>`
+- User: `/<user_name>`,`/user/<user_name>`
+
+
+## ImageVenue
+
+Primary URL: https://www.imagevenue.com
+
+Supported Domains: imagevenue.*
+
+### Supported paths
+- Image: `/<image_id>`,`/img.php?image=<image_id>`,`/view/o?i=<image_id>`
+- Thumbnail: `cdn-thumbs.imagevenue.com/.../<image_id>_t.jpg`
+
+
+## ImgBB
+
+Primary URL: https://ibb.co
+
+Supported Domains: ibb.co, imgbb.co
+
+### Supported paths
+- Album: `/album/<album_id>`
+- Image: `/<image_id>`
+- Profile: `<user_name>.imgbb.co/`
+
+
+## ImgBox
+
+Primary URL: https://imgbox.com
+
+Supported Domains: imgbox.*
+
+### Supported paths
+- Album: `/g/...`
+- Direct Links:
+- Image: `/...`
+
+
+## ImgLike
+
+Primary URL: https://imglike.com
+
+Supported Domains: imglike.com
+
+### Supported paths
+- Album: `/a/<id>`,`/a/<name>.<id>`,`/album/<id>`,`/album/<name>.<id>`
+- Category: `/category/<name>`
+- Direct Links:
+- Image: `/image/<id>`,`/image/<name>.<id>`,`/img/<id>`,`/img/<name>.<id>`
+- Profile: `/<user_name>`
+- Video: `/video/<id>`,`/video/<name>.<id>`,`/videos/<id>`,`/videos/<name>.<id>`
+
+
+## Imgur
+
+Primary URL: https://imgur.com
+
+Supported Domains: imgur.*
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Direct links: `https://i.imgur.com/<image_id>.<ext>`
+- Gallery: `/gallery/<slug>-<album_id>`
+- Image: `/<image_id>`,`/download/<image_id>`
+
+
+## Imx.to
+
+Primary URL: https://imx.to
+
+Supported Domains: imx.to
+
+### Supported paths
+- Gallery: `/g/<gallery_id>`
+- Image: `/i/...`,`/u/i/...`
+- Thumbnail: `/t/...`,`/u/t/`
+
+
+## IncestFlix
+
+Primary URL: https://www.incestflix.com
+
+Supported Domains: incestflix.*
+
+### Supported paths
+- Tag: `/tag/...`
+- Video: `/watch/...`
+
+
+## InPorn
+
+Primary URL: https://inporn.com
+
+Supported Domains: inporn.com, inporn.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## JPG5
+
+Primary URL: https://jpg6.su
+
+Supported Domains: host.church, jpeg.pet, jpg.church, jpg.fish, jpg.fishing, jpg.homes, jpg.pet, jpg1.su, jpg2.su, jpg3.su, jpg4.su, jpg5.su, jpg6.su, jpg7.cr, selti-delivery.ru
+
+### Supported paths
+- Album: `/a/<id>`,`/a/<name>.<id>`,`/album/<id>`,`/album/<name>.<id>`
+- Category: `/category/<name>`
+- Direct Links:
+- Image: `/image/<id>`,`/image/<name>.<id>`,`/img/<id>`,`/img/<name>.<id>`
+- Profile: `/<user_name>`
+
+
+## Kemono
+
+Primary URL: https://kemono.cr
+
+Supported Domains: kemono.cr, kemono.party, kemono.su
+
+### Supported paths
+- Direct links: `/data/...`,`/thumbnail/...`
+- Discord Server: `/discord/<server_id>`
+- Discord Server Channel: `/discord/server/<server_id>/<channel_id>#...`
+- Favorites: `/account/favorites/posts\|artists`,`/favorites?type=post\|artist`
+- Individual Post: `/<service>/user/<user_id>/post/<post_id>`
+- Model: `/<service>/user/<user_id>`
+- Search: `/search?q=...`
+
+
+## Koofr
+
+Primary URL: https://koofr.eu
+
+Supported Domains: k00.fr, koofr.eu, koofr.net
+
+### Supported paths
+- Public Share: `/links/<content_id>`,`https://k00.fr/<short_id>`
+
+
+## LeakedModels
+
+Primary URL: https://leakedmodels.com/forum
+
+Supported Domains: leakedmodels.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## LeakedZone
+
+Primary URL: https://leakedzone.com
+
+Supported Domains: leakedzone.*
+
+### Supported paths
+- Model: `/<model_id>`
+- Video: `/<model_id>/video/<video_id>`
+
+
+## Luscious
+
+Primary URL: https://members.luscious.net
+
+Supported Domains: luscious.*
+
+### Supported paths
+- Album: `/albums/...`
+
+
+## LuxureTV
+
+Primary URL: https://luxuretv.com
+
+Supported Domains: luxuretv.*
+
+### Supported paths
+- Search: `/searchgate/videos/<search>/...`
+- Video: `/videos/<name>-<id>.html`
+
+
+## Masahub
+
+Primary URL: https://masahub.com
+
+Supported Domains: lol49.com, masa49.com, masafun.net, masahub.com, masahub2.com, vido99.com
+
+### Supported paths
+- Search: `?s=<query>`
+- Videos: `/title`
+
+
+## Mediafire
+
+Primary URL: https://www.mediafire.com
+
+Supported Domains: mediafire.*
+
+### Supported paths
+- File: `/file/<quick_key>`,`?<quick_key>`
+- Folder: `/folder/<folder_key>`
+
+
+## Megacloud
+
+Primary URL: https://megacloud.blog
+
+Supported Domains: megacloud.*
+
+### Supported paths
+- Embed v3: `/embed-2/v3`
+
+
+## MegaNz
+
+Primary URL: https://mega.nz
+
+Supported Domains: mega.co.nz, mega.io, mega.nz
+
+### Supported paths
+- File: `/!#<file_id>!<share_key>`,`/file/<file_id>#<share_key>`,`/folder/<folder_id>#<share_key>/file/<file_id>`
+- Folder: `/F!#<folder_id>!<share_key>`,`/folder/<folder_id>#<share_key>`
+- Subfolder: `/folder/<folder_id>#<share_key>/folder/<subfolder_id>`
+
+### Notes
+- Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over
+
+
+## MissAV
+
+Primary URL: https://missav.ws
+
+Supported Domains: missav.*
+
+### Supported paths
+- Genres: `/genres/<genre>`
+- Labels: `/labels/<label>`
+- Makers: `/makers/<maker>`
+- Search: `/search/<search>`
+- Tags: `/tags/<tag>`
+- Video: `/...`
+
+
+## MixDrop
+
+Primary URL: https://mixdrop.sb
+
+Supported Domains: m1xdrop.*, mixdrop.*, mxdrop.*
+
+### Supported paths
+- File: `/e/<file_id>`,`/f/<file_id>`
+
+
+## Motherless
+
+Primary URL: https://motherless.com
+
+Supported Domains: motherless.*
+
+### Supported paths
+- Group: `/g/<group_name>`,`/gi/<image>`,`/gv/<video>`
+- Image: `/...`
+- User: `/f/...`,`/u/...`
+- Video: `pending`
+
+### Notes
+- Galleries are NOT supported
+
+
+## MyDesi
+
+Primary URL: https://lolpol.com
+
+Supported Domains: fry99.com, lolpol.com, mydesi.net
+
+### Supported paths
+- Search: `/search/<query>`
+- Videos: `/title`
+
+
+## Nekohouse
+
+Primary URL: https://nekohouse.su
+
+Supported Domains: nekohouse.*
+
+### Supported paths
+- Direct links: `/(data|thumbnails)/...`
+- Individual Post: `/<service>/user/<user_id>/post/<post_id>`
+- Model: `/<service>/user/<user_id>`
+
+
+## nHentai
+
+Primary URL: https://nhentai.net
+
+Supported Domains: nhentai.net
+
+### Supported paths
+- Collections: `artist`,`character`,`favorites`,`group`,`parody`,`search`,`tag`
+- Gallery: `/g/<gallery_id>`
+
+
+## NoodleMagazine
+
+Primary URL: https://noodlemagazine.com
+
+Supported Domains: noodlemagazine.*
+
+### Supported paths
+- Search: `/video/<search_query>`
+- Video: `/watch/<video_id>`
+
+
+## nsfw.xxx
+
+Primary URL: https://nsfw.xxx
+
+Supported Domains: nsfw.xxx
+
+### Supported paths
+- Category: `/category/<name>`
+- Post: `/post/<id>`
+- Search: `/search?q=<query>`
+- Subreddit: `/r/<subreddit>`
+- User: `/user/<username>`
+
+
+## NudoStar
+
+Primary URL: https://nudostar.com/forum
+
+Supported Domains: nudostar.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## NudoStarTV
+
+Primary URL: https://nudostar.tv
+
+Supported Domains: nudostar.tv
+
+### Supported paths
+- Model: `/models/...`
+
+
+## ok.ru
+
+Primary URL: https://ok.ru
+
+Supported Domains: odnoklassniki.ru, ok.ru
+
+### Supported paths
+- Channel: `/profile/<username>/c<channel_id>`,`/video/c<channel_id>`
+- Video: `/video/<video_id>`
+
+
+## OmegaScans
+
+Primary URL: https://omegascans.org
+
+Supported Domains: omegascans.*
+
+### Supported paths
+- Chapter: `/series/.../...`
+- Direct Links:
+- Series: `/series/...`
+
+
+## OneDrive
+
+Primary URL: https://onedrive.com
+
+Supported Domains: 1drv.ms, onedrive.live.com
+
+### Supported paths
+- Access Link: `https://onedrive.live.com/?authkey=<KEY>&id=<ID>&cid=<CID>`
+- Share Link (anyone can access): `https://1drv.ms/b/<KEY>`,`https://1drv.ms/f/<KEY>`,`https://1drv.ms/t/<KEY>`,`https://1drv.ms/u/<KEY>`
+
+
+## OnePace
+
+Primary URL: https://onepace.net
+
+Supported Domains: onepace.net
+
+### Supported paths
+- All episodes: `/watch`
+
+
+## OwnCloud
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+- Public Share: `/s/<share_token>`
+
+
+## Patreon
+
+Primary URL: https://www.patreon.com
+
+Supported Domains: patreon.*
+
+### Supported paths
+- Creator: `/<creator>`,`/cw/<creator>`
+- Post: `/posts/<slug>`
+
+
+## pCloud
+
+Primary URL: https://www.pcloud.com
+
+Supported Domains: e.pc.cd, pc.cd, pcloud.*
+
+### Supported paths
+- Public File or folder: `?code=<share_code>`,`e.pc.cd/<short_code>`,`u.pc.cd/<short_code>`
+
+
+## PimpAndHost
+
+Primary URL: https://pimpandhost.com
+
+Supported Domains: pimpandhost.*
+
+### Supported paths
+- Album: `/album/...`
+- Image: `/image/...`
+
+
+## PimpBunny
+
+Primary URL: https://pimpbunny.com
+
+Supported Domains: pimpbunny.com
+
+### Supported paths
+- Album: `/albums/<album_name>`
+- Category: `/categories/<category>`
+- Model Albums: `/albums/models/<model_name>`
+- Models: `/onlyfans-models/<model_name>`
+- Tag: `/tags/<tag>`
+- Videos: `/videos/...`
+
+
+## PixelDrain
+
+Primary URL: https://pixeldrain.com
+
+Supported Domains: pd.1drv.eu.org, pd.cybar.xyz, pixeldra.in, pixeldrain.biz, pixeldrain.com, pixeldrain.dev, pixeldrain.net, pixeldrain.nl, pixeldrain.tech
+
+### Supported paths
+- File: `/api/file/<file_id>`,`/l/<list_id>#item=<file_index>`,`/u/<file_id>`
+- Filesystem: `/api/filesystem/<path>...`,`/d/<id>`
+- Folder: `/api/list/<list_id>`,`/l/<list_id>`
+
+### Notes
+- text files will not be downloaded but their content will be parsed for URLs
+
+
+## PixHost
+
+Primary URL: https://pixhost.to
+
+Supported Domains: pixhost.org, pixhost.to
+
+### Supported paths
+- Gallery: `/gallery/<gallery_id>`
+- Image: `/show/<image_id>`
+- Thumbnail: `/thumbs/..`
+
+
+## Pkmncards
+
+Primary URL: https://pkmncards.com
+
+Supported Domains: pkmncards.*
+
+### Supported paths
+- Card: `/card/...`
+- Series: `/series/...`
+- Set: `/set/...`
+
+
+## PMVHaven
+
+Primary URL: https://pmvhaven.com
+
+Supported Domains: pmvhaven.*
+
+### Supported paths
+- Playlist: `/playlists/...`
+- Search results: `/search/...`
+- Users: `/profile/...`,`/users/...`
+- Video: `/video/...`
+
+
+## PornHub
+
+Primary URL: https://www.pornhub.com
+
+Supported Domains: pornhub.*
+
+### Supported paths
+- Album: `/album/...`
+- Channel: `/channel/...`
+- Gif: `/gif/...`
+- Photo: `/photo/...`
+- Playlist: `/playlist/...`
+- Profile: `/model/...`,`/pornstar/...`,`/user/...`
+- Video: `/embed/<video_id>`,`/view_video.php?viewkey=<video_id>`
+
+
+## PornPics
+
+Primary URL: https://pornpics.com
+
+Supported Domains: pornpics.*
+
+### Supported paths
+- Categories: `/categories/....`
+- Channels: `/channels/...`
+- Direct Links:
+- Gallery: `/galleries/...`
+- Pornstars: `/pornstars/...`
+- Search: `/?q=<query>`
+- Tags: `/tags/...`
+
+
+## Porntrex
+
+Primary URL: https://www.porntrex.com
+
+Supported Domains: porntrex.*
+
+### Supported paths
+- Album: `/albums/...`
+- Category: `/categories/...`
+- Model: `/models/...`
+- Playlist: `/playlists/...`
+- Search: `/search/...`
+- Tag: `/tags/...`
+- User: `/members/...`
+- Video: `/video/...`
+
+
+## PornZog
+
+Primary URL: https://pornzog.com
+
+Supported Domains: pornzog.*
+
+### Supported paths
+- Video: `/video/...`
+
+
+## PostImg
+
+Primary URL: https://postimg.cc
+
+Supported Domains: postimages.org, postimg.cc, postimg.org
+
+### Supported paths
+- Album: `/gallery/<album_id>/...`
+- Direct links: `i.postimg.cc/<image_id>/...`
+- Image: `/<image_id>/...`
+
+
+## Ranoz.gg
+
+Primary URL: https://ranoz.gg
+
+Supported Domains: qiwi.gg, ranoz.gg
+
+### Supported paths
+- File: `/d/<file_id>`,`/file/<file_id>`
+
+
+## RealBooru
+
+Primary URL: https://realbooru.com
+
+Supported Domains: realbooru.*
+
+### Supported paths
+- File: `?id=...`
+- Tags: `?tags=...`
+
+
+## RealDebrid
+
+Primary URL: https://real-debrid.com
+
+Supported Domains: real-debrid.*
+
+### Supported paths
+
+
+## RedGifs
+
+Primary URL: https://www.redgifs.com
+
+Supported Domains: redgifs.*
+
+### Supported paths
+- Embeds: `/ifr/<gif_id>`
+- Gif: `/watch/<gif_id>`
+- Image: `/i/<image_id>`
+- User: `/users/<user>`
+
+
+## Rootz.so
+
+Primary URL: https://www.rootz.so
+
+Supported Domains: rootz.so
+
+### Supported paths
+- File: `/d/<file_id>`,`/file/<file_id>`
+
+
+## Rule34Vault
+
+Primary URL: https://rule34vault.com
+
+Supported Domains: rule34vault.*
+
+### Supported paths
+- Playlist: `/playlists/view/...`
+- Post: `/post/...`
+- Tag: `/...`
+
+
+## Rule34Video
+
+Primary URL: https://rule34video.com
+
+Supported Domains: rule34video.*
+
+### Supported paths
+- Category: `/categories/<name>`
+- Members: `/members/<member_id>`
+- Model: `/models/<name>`
+- Search: `/search/<query>`
+- Tag: `/tags/<name>`
+- Video: `/video/<id>/<slug>`
+
+
+## Rule34XXX
+
+Primary URL: https://rule34.xxx
+
+Supported Domains: rule34.xxx
+
+### Supported paths
+- File: `?id=...`
+- Tag: `?tags=...`
+
+
+## Rule34XYZ
+
+Primary URL: https://rule34.xyz
+
+Supported Domains: rule34.xyz
+
+### Supported paths
+- Playlist: `/playlists/view/...`
+- Post: `/post/...`
+- Tag: `/...`
+
+
+## Rumble
+
+Primary URL: https://rumble.com
+
+Supported Domains: rumble.*
+
+### Supported paths
+- Channel: `/c/<name>`
+- Embed: `/embed/<video_id>`
+- User: `/user/<name>`
+- Video: `<video_id>-<video-title>.html`
+
+
+## Scrolller
+
+Primary URL: https://scrolller.com
+
+Supported Domains: scrolller.*
+
+### Supported paths
+- Subreddit: `/r/...`
+
+
+## SendNow
+
+Primary URL: https://send.now
+
+Supported Domains: send.now
+
+### Supported paths
+- Direct Links:
+
+
+## SendVid
+
+Primary URL: https://sendvid.com
+
+Supported Domains: sendvid.*
+
+### Supported paths
+- Direct Links:
+- Embeds: `/embed/...`
+- Videos: `/...`
+
+
+## Sex.com
+
+Primary URL: https://sex.com
+
+Supported Domains: sex.*
+
+### Supported paths
+- Shorts Profiles: `/shorts/<profile>`
+
+
+## SocialMediaGirls
+
+Primary URL: https://forums.socialmediagirls.com
+
+Supported Domains: socialmediagirls.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## SpankBang
+
+Primary URL: https://spankbang.com
+
+Supported Domains: spankbang.*
+
+### Supported paths
+- Playlist: `/<playlist_id>/playlist/...`
+- Profile: `/profile/<user>`,`/profile/<user>/videos`
+- Video: `/<video_id>/embed`,`/<video_id>/video`,`/play/<video_id>`,`<playlist_id>-<video_id>/playlist/...`
+
+
+## Streamable
+
+Primary URL: https://streamable.com
+
+Supported Domains: streamable.*
+
+### Supported paths
+- Video: `/...`
+
+
+## Streamtape
+
+Primary URL: https://streamtape.com
+
+Supported Domains: streamtape.com
+
+### Supported paths
+- Player: `/e/<video_id>`
+- Videos: `/v/<video_id>`
+
+
+## TabooTube
+
+Primary URL: https://www.tabootube.xxx
+
+Supported Domains: tabootube.*
+
+### Supported paths
+- Video: `/video/...`
+
+
+## ThisVid
+
+Primary URL: https://thisvid.com
+
+Supported Domains: thisvid.*
+
+### Supported paths
+- Albums: `/albums/<album_name>`
+- Categories: `/categories/<name>`
+- Image: `/albums/<album_name>/<image_name>`
+- Members: `/members/<member_id>`
+- Search: `/search/?q=<query>`
+- Tags: `/tags/<name>`
+- Videos: `/videos/<slug>`
+
+
+## ThotHub
+
+Primary URL: https://thothub.to
+
+Supported Domains: thothub.*
+
+### Supported paths
+- Album: `/albums/<id>/<name>`
+- Image: `/get_image/...`
+- Video: `/videos/<id>/<slug>`
+
+
+## TikTok
+
+Primary URL: https://www.tiktok.com
+
+Supported Domains: tiktok.*
+
+### Supported paths
+- Photo: `/@<user>/photo/<photo_id>`
+- User: `/@<user>`
+- Video: `/@<user>/video/<video_id>`
+
+
+## TitsInTops
+
+Primary URL: https://titsintops.com/phpBB2
+
+Supported Domains: titsintops.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## TNAFlix
+
+Primary URL: https://www.tnaflix.com
+
+Supported Domains: tnaflix.*
+
+### Supported paths
+- Channel: `/channel/...`
+- Profile: `/profile/...`
+- Search: `/search?what=<query>`
+- Video: `/<category>/<title>/video<video_id>`
+
+
+## Tokyomotion
+
+Primary URL: https://www.tokyomotion.net
+
+Supported Domains: tokyomotion.*
+
+### Supported paths
+- Albums: `/album/<album_id>`,`/user/<user>/albums/`
+- Photo: `/photo/<photo_id>`,`/user/<user>/favorite/photos`
+- Playlist: `/user/<user>/favorite/videos`
+- Profiles: `/user/<user>`
+- Search Results: `/search?...`
+- Video: `/video/<video_id>`
+
+
+## Toonily
+
+Primary URL: https://toonily.com
+
+Supported Domains: toonily.*
+
+### Supported paths
+- Chapter: `/serie/<name>/chapter-<chapter-id>`
+- Serie: `/serie/<name>`
+
+
+## Tranny.One
+
+Primary URL: https://www.tranny.one
+
+Supported Domains: tranny.one
+
+### Supported paths
+- Album: `/pics/album/<album_id>`
+- Pornstars: `/pornstar/<model_id>/<model_name>`
+- Search: `/search/<search_query>`
+- Video: `/view/<video_id>`
+
+
+## Transfer.it
+
+Primary URL: https://transfer.it
+
+Supported Domains: transfer.it
+
+### Supported paths
+- Transfer: `/t/<transfer_id>`
+
+
+## TransFlix
+
+Primary URL: https://transflix.net
+
+Supported Domains: transflix.*
+
+### Supported paths
+- Search: `/search/?q=<query>`
+- Video: `/video/<name>-<video_id>`
+
+
+## TubePornClassic
+
+Primary URL: https://tubepornclassic.com
+
+Supported Domains: tubepornclassic.com, tubepornclassic.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## TurboVid
+
+Primary URL: https://turbovid.cr
+
+Supported Domains: saint.to, saint2.cr, saint2.su, turbo.cr, turbovid.cr
+
+### Supported paths
+- Album: `/a/<album_id>`
+- Direct links: `/data/...`
+- Search: `library?q=<query>`
+- Video: `/d/<file_id>`,`/embed/<file_id>`,`/v/<file_id>`
+
+
+## Twitch
+
+Primary URL: https://www.twitch.tv
+
+Supported Domains: twitch.*
+
+### Supported paths
+- Clip: `/<user>/clip/<slug>`,`/embed?clip=<slug>`,`https://clips.twitch.tv/<slug>`
+- Collection: `/collections/<collection_id>`
+- VOD: `/<user>/v/<vod_id>`,`/video/<vod_id>`,`/videos/<vod_id>`,`?video=<vod_id>`
+
+
+## Twitter
+
+Primary URL: https://x.com
+
+Supported Domains: twitter.com, x.com
+
+### Supported paths
+- Tweet: `/<handle>/status/<tweet_id>`
+
+
+## TwitterImages
+
+Primary URL: https://twimg.com
+
+Supported Domains: twimg.*
+
+### Supported paths
+- Photo: `/...`
+
+
+## TWPornStars
+
+Primary URL: https://www.twpornstars.com
+
+Supported Domains: indiantw.com, twanal.com, twgaymuscle.com, twgays.com, twlesbian.com, twmilf.com, twonfans.com, twpornstars.com, twteens.com, twtiktoks.com
+
+### Supported paths
+- Photo: `/...`
+
+
+## TXXX
+
+Primary URL: https://txxx.com
+
+Supported Domains: txxx.com, txxx.tube, videotxxx.com, videotxxx.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## Upload.ee
+
+Primary URL: https://www.upload.ee
+
+Supported Domains: upload.ee
+
+### Supported paths
+- File: `/files/<file_id>`
+
+
+## UPornia
+
+Primary URL: https://upornia.com
+
+Supported Domains: upornia.com, upornia.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## Vidara
+
+Primary URL: https://vidara.to
+
+Supported Domains: stmix.io, streamix.so, vidara.so, vidara.to, xca.cymru
+
+### Supported paths
+- Video: `/e/<video_id>`
+
+
+## ViperGirls
+
+Primary URL: https://vipergirls.to
+
+Supported Domains: viper.click, vipergirls.to
+
+### Supported paths
+- Threads: `/goto/<post_id>`,`/posts/<post_id>`,`/threads/<thread_name>`
+
+
+## Vipr.im
+
+Primary URL: https://vipr.im
+
+Supported Domains: vipr.im
+
+### Supported paths
+- Direct Image: `/i/.../<slug>`
+- Image: `/<id>`
+- Thumbnail: `/th/.../<slug>`
+
+
+## VJav
+
+Primary URL: https://vjav.com
+
+Supported Domains: vjav.com, vjav.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## Voe.sx
+
+Primary URL: https://voe.sx
+
+Supported Domains: alejandrocenturyoil.com, diananatureforeign.com, heatherwholeinvolve.com, jennifercertaindevelopment.com, jilliandescribecompany.com, jonathansociallike.com, mariatheserepublican.com, maxfinishseveral.com, nathanfromsubject.com, richardsignfish.com, robertordercharacter.com, sarahnewspaperbeat.com, voe.sx
+
+### Supported paths
+- Embed: `/e/video_id`
+
+
+## VoyeurHit
+
+Primary URL: https://voyeurhit.com
+
+Supported Domains: voyeurhit.com, voyeurhit.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## VSCO
+
+Primary URL: https://vsco.co
+
+Supported Domains: vsco.*
+
+### Supported paths
+- Gallery: `/<user>/gallery`
+- Media: `/<user>/media/<media_id>`,`/<user>/video/<media_id>`
+
+
+## VXXX
+
+Primary URL: https://vxxx.com
+
+Supported Domains: vxxx.com, vxxx.tube
+
+### Supported paths
+- Video: `/video-<video-id>`
+
+
+## WeTransfer
+
+Primary URL: https://wetransfer.com
+
+Supported Domains: we.tl, wetransfer.com
+
+### Supported paths
+- Direct links: `download.wetransfer.com/...`
+- Public link: `wetransfer.com/downloads/<file_id>/<security_hash>`
+- Share Link: `wetransfer.com/downloads/<file_id>/<recipient_id>/<security_hash>`
+- Short Link: `we.tl/<short_file_id>`
+
+
+## WordPressHTML
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+- All Posts: `/posts/`
+- Category: `/category/<category_slug>`
+- Date Range: `...?after=<date>`,`...?before=<date&after=<date>`,`...?before=<date>`
+- Post: `/<post_slug>/`
+- Tag: `/tag/<tag_slug>`
+
+### Notes
+-
+
+        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.
+
+        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.
+        ex: To only download categories from a date range: ,
+        `/category/<category_slug>?before=<date>`
+
+
+## WordPressMedia
+
+Primary URL: ::GENERIC CRAWLER::
+
+Supported Domains:
+
+### Supported paths
+- All Posts: `/posts/`
+- Category: `/category/<category_slug>`
+- Date Range: `...?after=<date>`,`...?before=<date&after=<date>`,`...?before=<date>`
+- Post: `/<post_slug>/`
+- Tag: `/tag/<tag_slug>`
+
+### Notes
+-
+
+        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.
+
+        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.
+        ex: To only download categories from a date range: ,
+        `/category/<category_slug>?before=<date>`
+
+
+## Xasiat
+
+Primary URL: https://www.xasiat.com
+
+Supported Domains: xasiat.*
+
+### Supported paths
+- Album: `/albums/<id>/<name>`
+- Images: `/get_image/...`
+- Videos: `/videos/<id>/<name>`
+
+
+## XBunker
+
+Primary URL: https://xbunker.nu
+
+Supported Domains: xbunker.*
+
+### Supported paths
+- Attachments: `/(attachments\|data\|uploads)/...`
+- Threads: `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`,`/goto/<post_id>`,`/posts/<post_id>`
+
+### Notes
+- base crawler: Xenforo
+
+
+## XGroovy
+
+Primary URL: https://xgroovy.com
+
+Supported Domains: xgroovy.*
+
+### Supported paths
+- Channel: `/<category>/channels/...`,`/channels/...`
+- Gif: `/<category>/gifs/<gif_id>/...`,`/gifs/<gif_id>/...`
+- Images: `/<category>/photos/<photo_id>/...`,`/photos/<photo_id>/...`
+- Pornstar: `/<category>/pornstars/<pornstar_id>/...`,`/pornstars/<pornstar_id>/...`
+- Search: `/<category>/search/...`,`/search/...`
+- Tag: `/<category>/tags/...`,`/tags/...`
+- Video: `/<category>/videos/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## xHamster
+
+Primary URL: https://xhamster.com
+
+Supported Domains: xhamster.*
+
+### Supported paths
+- Creator: `/creators/<creator_name>`
+- Creator Galleries: `/creators/<creator_name>/photos`
+- Creator Videos: `/creators/<creator_name>/exclusive`
+- Gallery: `/photos/gallery/<gallery_name_or_id>`
+- User: `/users/<user_name>`,`/users/profiles/<user_name>`
+- User Galleries: `/users/<user_name>/photos`
+- User Videos: `/users/<user_name>/videos`
+- Video: `/videos/<title>`
+
+
+## XMegaDrive
+
+Primary URL: https://www.xmegadrive.com
+
+Supported Domains: xmegadrive.*
+
+### Supported paths
+- Albums: `/albums/<album_name>`
+- Categories: `/categories/<name>`
+- Image: `/albums/<album_name>/<image_name>`
+- Members: `/members/<member_id>`
+- Search: `/search/?q=<query>`
+- Tags: `/tags/<name>`
+- Videos: `/videos/<slug>`
+
+
+## XMilf
+
+Primary URL: https://xmilf.com
+
+Supported Domains: xmilf.com, xmilf.tube
+
+### Supported paths
+- Video: `/embed/<video_id>/...`,`/videos/<video_id>/...`
+
+
+## xVideos
+
+Primary URL: https://www.xvideos.com
+
+Supported Domains: xv-ru.com, xvideos-ar.com, xvideos-india.com, xvideos.com, xvideos.es
+
+### Supported paths
+- Account: `/<channel_name>`,`/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>`
+- Account Photos: `/<channel_name>#_tabPhotos`,`/<channel_name>/photos/...`,`/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabPhotos`,`/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>/photos/...`
+- Account Quickies: `/<channel_name>#quickies`,`/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#quickies`
+- Account Videos: `/<channel_name>#_tabVideos`,`/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabVideos`
+- Video: `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles#quickies/(a\|h\|v)/<video_id>`,`/video.<encoded_id>/<title>`,`/video<id>/<title>`
+
+
+## XXXBunker
+
+Primary URL: https://xxxbunker.com
+
+Supported Domains: xxxbunker.*
+
+### Supported paths
+- Category: `/categories/<category>`
+- Search: `/search/<video_id>`
+- User Favorites: `/<username>/favoritevideos`
+- Video: `/<video_id>`
+
+
+## YandexDisk
+
+Primary URL: https://disk.yandex.com.tr
+
+Supported Domains: disk.yandex, yadi.sk
+
+### Supported paths
+- File: `/d/<folder_id>/<file_name>`,`/i/<file_id>`
+- Folder: `/d/<folder_id>`
+
+### Notes
+- Does NOT support nested folders
+
+
+## YouJizz
+
+Primary URL: https://www.youjizz.com
+
+Supported Domains: youjizz.*
+
+### Supported paths
+- Video: `/videos/<video_name>`,`/videos/embed/<video_id>`
+
+
 <!-- END_SUPPORTED_SITES-->
