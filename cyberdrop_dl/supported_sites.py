@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from textwrap import dedent
 from typing import TYPE_CHECKING
 
 from rich.table import Table
@@ -53,7 +54,7 @@ def as_markdown(indent_level: int = 2) -> str:
 
 def _generate_md_rows() -> Generator[str]:
     def quoted(lines: Iterable[str], quoted_char: str = "`") -> str:
-        return ",".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
+        return ", ".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
 
     for info in _gen_crawlers_info():
         url = str(info.primary_url).rstrip("/")
@@ -62,9 +63,11 @@ def _generate_md_rows() -> Generator[str]:
         yield f"**Supported Domains**: {quoted(info.supported_domains)}\n"
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
-        yield "**Supported paths**:\n"
+        yield "**Supported Paths**:\n"
         for name, paths in supported_paths.items():
-            yield f"- {name}: {quoted(paths)}"
+            yield f"- {name}:"
+            for path in paths:
+                yield f"  - `{path}`"
 
         if notes:
             yield "\n"
@@ -87,7 +90,7 @@ def _get_supported_paths_and_notes(crawler_info: CrawlerInfo) -> tuple[dict[str,
             supported_paths["Direct Links"] = ()
 
         elif "*note*" in name.casefold():
-            notes.extend(paths)
+            notes.extend(filter(None, map(str.strip, map(dedent, paths))))
         else:
             assert name not in supported_paths
             supported_paths[name] = paths
