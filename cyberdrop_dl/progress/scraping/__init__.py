@@ -8,9 +8,11 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING, Final
 
 import rich
+from rich.console import Group, RenderableType
 from rich.layout import Layout
 
 from cyberdrop_dl import env
+from cyberdrop_dl.cli import UIOptions
 from cyberdrop_dl.progress import LiveUI
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
@@ -36,8 +38,9 @@ class Screen:
         return self.vertical if terminal_is_in_portrait() else self.horizontal
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True)
 class ScrapingUI(LiveUI):
+    mode: UIOptions = UIOptions.FULLSCREEN
     files: FileStatsPanel = dataclasses.field(default_factory=FileStatsPanel)
     scrape_errors: ScrapeErrorsPanel = dataclasses.field(default_factory=ScrapeErrorsPanel)
     download_errors: DownloadErrorsPanel = dataclasses.field(default_factory=DownloadErrorsPanel)
@@ -48,16 +51,23 @@ class ScrapingUI(LiveUI):
     _screen: Screen = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "_screen", self._create_screen())
+        self._screen = self._create_screen()
 
-    def __rich__(self) -> Screen:
+    def __rich__(self) -> RenderableType:
+        if self.mode is UIOptions.SIMPLE:
+            return Group(self.files.simple, self.status)
+        if self.mode is UIOptions.ACTIVITY:
+            return self.status
+
         return self._screen
 
     @contextlib.contextmanager
-    def __call__(self, *, transient: bool = True) -> Generator[None]:
+    def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
         token = _STATUS.set(self.status)
+        if self.mode is not UIOptions.FULLSCREEN:
+            transient = False
         try:
-            with super(ScrapingUI, self).__call__(transient=transient):
+            with super(ScrapingUI, self).__call__(transient=transient, force=force):
                 yield
         finally:
             _STATUS.reset(token)

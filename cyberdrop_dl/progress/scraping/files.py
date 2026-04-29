@@ -45,7 +45,7 @@ class FileStatsPanel:
         self._total: int = 0
         self._tasks_map: dict[str, TaskID] = dict(self._init_tasks())
         self.simple: Progress = Progress(*columns)
-        self._tasks_map["simple"] = self.simple.add_task("Completed", total=0)
+        self._tasks_map["simple"] = self.simple.add_task("Completed", total=None)
         self._panel: Panel = Panel(
             self._progress,
             title="Files",

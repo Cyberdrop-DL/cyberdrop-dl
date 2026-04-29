@@ -1,16 +1,17 @@
 import datetime
 from collections.abc import Iterable
-from enum import StrEnum, auto
+from enum import auto
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
 
 from cyclopts import Parameter
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
+from cyberdrop_dl.compat import CIStrEnum
 from cyberdrop_dl.models.types import HttpURL
 
 
-class UIOptions(StrEnum):
+class UIOptions(CIStrEnum):
     DISABLED = auto()
     ACTIVITY = auto()
     SIMPLE = auto()
