@@ -199,16 +199,16 @@ wheels = [
 
 [[package]]
 name = "async-mega-py"
-version = "2.2.1"
+version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiolimiter" },
     { name = "pycryptodome" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/3b/6acf348b084ba090b2ee757d2040ec2818dffaad0b16eb414628dcc50a97/async_mega_py-2.2.1.tar.gz", hash = "sha256:aca6c853422a2c1abeee8dd9f1737ffce35842f3b81dc89cb91ce931cc31b3a4", size = 40486, upload-time = "2026-04-26T17:33:47.593Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/48/22/74687316093d7b591f60cf4f5cd8cba46e83446e3c9a92fceacc6e01e044/async_mega_py-2.3.1.tar.gz", hash = "sha256:51bf89501adb7349133dca2cbd280621b661067552da56381414e0108eeae4a3", size = 40931, upload-time = "2026-04-28T22:45:02.459Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/2d/e4b4929a3fd59587bb7fb438f91772e0f7bd007434878fb5067e6288a433/async_mega_py-2.2.1-py3-none-any.whl", hash = "sha256:26ff8ae93cd972e475f33fcba2424f618d6d3c0d19fb611280ab651dbfb8fd64", size = 49131, upload-time = "2026-04-26T17:33:46.576Z" },
+    { url = "https://files.pythonhosted.org/packages/43/8c/0c338cb368aa1bc85976b036e39041807d6cc0178d8e0ecab01607c31acd/async_mega_py-2.3.1-py3-none-any.whl", hash = "sha256:cc8bef02309429a8be4feaf84aef04d19fb947b7634fcbe57b0b32769b00849b", size = 49599, upload-time = "2026-04-28T22:45:03.797Z" },
 ]
 
 [[package]]
@@ -781,7 +781,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "apprise", marker = "extra == 'apprise'", specifier = ">=1.10.0" },
     { name = "apprise", marker = "extra == 'extras'", specifier = ">=1.10.0" },
-    { name = "async-mega-py", specifier = ">=2.2.1" },
+    { name = "async-mega-py", specifier = ">=2.3.1" },
     { name = "backports-zstd", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython'" },
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "brotli", marker = "implementation_name == 'cpython' and sys_platform != 'ios'" },

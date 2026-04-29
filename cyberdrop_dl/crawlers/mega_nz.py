@@ -104,7 +104,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         if not resp.url:
             raise ScrapeError(410, "File not accessible anymore")
 
-        name = self.core.decrypt_attrs(resp._at, crypto.key).name
+        name = self.core.decrypt_attrs(resp._at, crypto.key, handle).name
         self.downloader.register(scrape_item.url, crypto, resp.size)
         file_url = self.parse_url(resp.url)
         filename, ext = self.get_filename_and_ext(name)
