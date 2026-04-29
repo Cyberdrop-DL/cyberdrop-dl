@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.supported_sites import get_crawlers_info_as_markdown_table
+from cyberdrop_dl.supported_sites import as_markdown
 
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
@@ -19,7 +19,7 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
 
 
 def make_supported_sites_markdown_table(title: str) -> str:
-    markdown = get_crawlers_info_as_markdown_table()
+    markdown = as_markdown()
     header = f"{title}\n\nList of sites supported by cyberdrop-dl-patched as of version {__version__}\n\n"
     table = header + markdown + "\n"
     return table

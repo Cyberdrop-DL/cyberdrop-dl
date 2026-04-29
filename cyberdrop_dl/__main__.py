@@ -125,9 +125,9 @@ def download(
 @app.command()
 def show() -> None:
     """Show a list of all supported sites"""
-    from cyberdrop_dl.supported_sites import get_crawlers_info_as_rich_table
+    from cyberdrop_dl import supported_sites
 
-    table = get_crawlers_info_as_rich_table()
+    table = supported_sites.as_rich_table()
     app.console.print(table)
 
 
