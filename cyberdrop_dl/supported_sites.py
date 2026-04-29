@@ -6,7 +6,7 @@ from rich.table import Table
 from rich.text import Text
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.crawlers.crawler import CrawlerInfo
 
@@ -43,7 +43,7 @@ def as_rich_table() -> Table:
 def as_markdown(indent_level: int = 2) -> str:
     indent = "#" * indent_level
 
-    def pad(line: str):
+    def pad(line: str) -> str:
         if line.startswith("#"):
             return indent + line
         return line
@@ -52,19 +52,22 @@ def as_markdown(indent_level: int = 2) -> str:
 
 
 def _generate_md_rows() -> Generator[str]:
+    def quoted(lines: Iterable[str], quoted_char: str = "`") -> str:
+        return ",".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
+
     for info in _gen_crawlers_info():
         yield f"# {info.site}\n"
-        yield f"Primary URL: {str(info.primary_url).rstrip('/')}\n"
-        yield f"Supported Domains: {', '.join(info.supported_domains)}\n"
+        yield f"*Primary URL*: {str(info.primary_url).rstrip('/')}\n"
+        yield f"*Supported Domains*: {quoted(info.supported_domains)}\n"
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
-        yield "## Supported paths"
+        yield "*Supported paths*\n"
         for name, paths in supported_paths.items():
-            all_paths = ",".join(f"`{path}`" for path in paths)
-            yield f"- {name}: {all_paths}"
+            yield f"- {name}: {quoted(paths)}"
 
         if notes:
-            yield "\n## Notes"
+            yield "\n"
+            yield "*Notes*\n"
             for note in notes:
                 yield f"- {note}"
 
