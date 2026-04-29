@@ -56,18 +56,19 @@ def _generate_md_rows() -> Generator[str]:
         return ",".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
 
     for info in _gen_crawlers_info():
+        url = str(info.primary_url).rstrip("/")
         yield f"# {info.site}\n"
-        yield f"*Primary URL*: {str(info.primary_url).rstrip('/')}\n"
-        yield f"*Supported Domains*: {quoted(info.supported_domains)}\n"
+        yield f"**Primary URL**: [{url}]({url})\n"
+        yield f"**Supported Domains**: {quoted(info.supported_domains)}\n"
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
-        yield "*Supported paths*\n"
+        yield "**Supported paths**:\n"
         for name, paths in supported_paths.items():
             yield f"- {name}: {quoted(paths)}"
 
         if notes:
             yield "\n"
-            yield "*Notes*\n"
+            yield "**Notes**\n"
             for note in notes:
                 yield f"- {note}"
 
