@@ -15,6 +15,7 @@ from cyberdrop_dl import constants, ddos_guard, signature
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
@@ -53,8 +54,8 @@ class _LazyResponseLog:
     def __json__(self) -> dict[str, Any]:
         resp = self.response.__json__()
         del resp["created_at"]
-        if type(content := resp["content"]) is str and len(content) > 230:
-            resp["content"] = f"{content[:200]} ... ({len(content) - 200:,} chars omitted)"
+        if type(content := resp["content"]) is str:
+            resp["content"] = truncated_preview(content)
         return resp
 
     def __str__(self) -> str:

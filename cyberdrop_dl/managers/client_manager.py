@@ -71,7 +71,7 @@ _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = C
 
 
 class DownloadSpeedLimiter(AsyncLimiter):
-    __slots__ = (*AsyncLimiter.__slots__, "chunk_size")
+    __slots__ = ("chunk_size",)
 
     def __init__(self, speed_limit: int) -> None:
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB

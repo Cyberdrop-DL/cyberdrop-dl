@@ -392,3 +392,9 @@ def is_blob_or_svg(link: str) -> bool:
 def xor_decrypt(encrypted_data: bytes, key: bytes) -> str:
     data = bytearray(b_input ^ b_key for b_input, b_key in zip(encrypted_data, itertools.cycle(key)))
     return data.decode("utf-8", errors="ignore")
+
+
+def truncated_preview(content: str, max_len: int = 150) -> str:
+    if len(content) <= max_len:
+        return content
+    return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"

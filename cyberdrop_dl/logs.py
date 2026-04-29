@@ -119,7 +119,6 @@ class LogHandler(RichHandler):
             tracebacks_show_locals=True,
             tracebacks_max_frames=3,
             locals_max_string=_DEFAULT_CONSOLE_WIDTH,
-            tracebacks_extra_lines=2,
             locals_max_length=20,
             show_path=False,
             show_level=True,
@@ -391,7 +390,7 @@ def disable_console_logging():
     else:
         listener.stop()
         listener.start()
-    return _enter_context(_LOG_TO_CONSOLE, value=False)
+    return _enter_context(_LOG_TO_CONSOLE, False)
 
 
 @contextlib.contextmanager
@@ -399,11 +398,8 @@ def borrow_logger(name: str, level: int = logging.INFO) -> Generator[None]:
     """Context manager to temporarily add our log handlers to a third party logger"""
     _3p_logger = logging.getLogger(name)
     og_level = _3p_logger.level
-    og_propagate = _3p_logger.propagate
-    _3p_logger.propagate = False
     _3p_logger.setLevel(level)
     try:
         yield
     finally:
-        _3p_logger.propagate = og_propagate
         _3p_logger.setLevel(og_level)
