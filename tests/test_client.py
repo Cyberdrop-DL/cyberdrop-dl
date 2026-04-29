@@ -22,9 +22,8 @@ async def test_context_manager(client: ClientManager) -> None:
     with pytest.raises(AttributeError):
         _ = client._download_session
 
-    if AsyncSession:
-        with pytest.raises(AttributeError):
-            _ = client._curl_session
+    with pytest.raises(AttributeError):
+        _ = client._curl_session
 
     async with client:
         assert type(client._session) is aiohttp.ClientSession
