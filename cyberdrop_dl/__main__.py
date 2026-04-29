@@ -1,7 +1,7 @@
 # ruff: noqa: E402
 from rich.traceback import install as install_rich_tracebacks
 
-from cyberdrop_dl.progress import REFRESH_RATE
+from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 
 _ = install_rich_tracebacks(width=None)
 
@@ -30,6 +30,8 @@ async def _scrape(manager: Manager) -> None:
     with setup_file_logging(manager.config.settings.logs.main_log):
         await manager.async_startup()
         REFRESH_RATE.set(manager.config.global_settings.ui_options.refresh_rate)
+        TUI_DISABLED.set(manager.cli_args.ui.is_disabled)
+
         log_spacer()
         async with manager.database:
             log_spacer()

@@ -17,6 +17,10 @@ class UIOptions(CIStrEnum):
     SIMPLE = auto()
     FULLSCREEN = auto()
 
+    @property
+    def is_disabled(self) -> bool:
+        return self is UIOptions.DISABLED
+
 
 @Parameter(name="*")
 class CLIargs(BaseModel):
