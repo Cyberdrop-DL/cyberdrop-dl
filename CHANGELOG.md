@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bunkr.black` redirects always triggering DDosGuard (bunkr)
 - Parsing of API errors (RedGifs)
 - Bypass login check for 1080p+ videos (ePorner)
-- Empty name for some public files (Mega.nz)
+- Empty name for some public files (MegaNZ)
 - Truncated errors on stats summary
 - Flaresolverr session destruction always failing
 
@@ -131,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ⚠️**IMPORTANT**
 
 > This version logs raw HTTP requests and responses to the main log file. They may include credentials, IP, etc. Remove personal information before sharing them or just extract the relevant logs
+>
 > Options to change log level are ignored. It will be fixed on a future version
 
 ### Added
@@ -140,7 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OwnCloud support
 - Support premium URLs (MediaFire)
 - Support subfolders (Filester)
-- Add support for archives (.zip) files (ImagePond)
+- Support for archives (.zip) files (ImagePond)
 
 ### Changed
 
@@ -158,12 +159,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- All settings and UI options about changing configs have been removed. CDL will always use the default config at `AppData/Configs/Default/setting.yaml`. A different config can be specified only via CLI args (`--config-file`)
+- All settings and UI options about changing configs have been removed. CDL will always use the default config at `AppData/Configs/Default/settings.yaml`. A different config can be specified only via CLI args (`--config-file`)
 - The UI Option to export cookies has been removed
 
 ### Fixed
 
-- Download all videos on paginated playlists (50+ videos) (PMVHaven )
+- Download all videos on paginated playlists (50+ videos) (PMVHaven)
 - Handle deleted videos (TubeCorporate)
 - 404 downloads (Bunkr)
 - Update selectors for files with MD5 hashes instead of SHA256 (Filester)
