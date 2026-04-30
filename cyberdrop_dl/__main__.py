@@ -4,7 +4,7 @@ import sys
 from collections.abc import Sequence
 from typing import Annotated
 
-from cyclopts import App, Parameter
+from cyclopts import App, CycloptsPanel, Parameter
 
 from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
 
@@ -133,7 +133,11 @@ def show() -> None:
 
 def main(args: Sequence[str] | None = None) -> None:
     with setup_console_logging():
-        app(args)
+        try:
+            app(args)
+        except* ValueError as exc_group:
+            msg = "\n" + "\n".join(map(str, exc_group.exceptions))
+            app.console.print(CycloptsPanel(msg, title=exc_group.message))
 
 
 if __name__ == "__main__":
