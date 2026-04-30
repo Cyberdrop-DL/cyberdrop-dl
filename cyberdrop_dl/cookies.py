@@ -44,11 +44,18 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
-async def extract_cookies(browser: Browser) -> CookieJar:
+async def extract_cookies(browser: Browser, allowed_domains: list[str] | None = None) -> CookieJar:
+    if not allowed_domains:
+        return CookieJar()
     extract = _COOKIE_EXTRACTORS[browser]
     try:
         data = await asyncio.to_thread(extract)
-        return data
+
+        filtered_jar = CookieJar()
+        for cookie in data:
+            if any(cookie.domain.endswith(d) for d in allowed_domains):
+                filtered_jar.set_cookie(cookie)
+        return filtered_jar
 
     except PermissionError as e:
         msg = (
