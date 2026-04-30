@@ -89,7 +89,11 @@ def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
     cookie_jars: dict[str, MozillaCookieJar] = {}
     for cookie in extracted_cookies:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
-        cookie_jars.setdefault(domain, MozillaCookieJar()).set_cookie(cookie)
+        cookie_jar = cookie_jars.get(domain)
+        if cookie_jar is None:
+            cookies_jars[domain] = cookie_jar = MozillaCookieJar()
+        cookie_jar.set_cookie(cookie)
+        
     return cookie_jars
 
 
