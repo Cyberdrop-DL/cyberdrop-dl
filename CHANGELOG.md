@@ -22,6 +22,18 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.4.2] - 2026-04-30
+
+### Changed
+
+- Send real referrer on reinforced downloads (Bunkr)
+- Improve performance of database lookups
+
+### Fixed
+
+- Location of `apprise.txt` (`AppData/Configs/Default/apprise.txt`)
+- Auto cookies extraction not creating any files
+
 ## [9.4.1] - 2026-04-28
 
 ### Changed
