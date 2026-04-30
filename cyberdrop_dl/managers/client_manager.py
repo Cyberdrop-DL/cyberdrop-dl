@@ -25,7 +25,7 @@ from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.cookies import export_cookies, extract_cookies, read_netscape_files
+from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
 from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
@@ -310,10 +310,11 @@ class ClientManager:
     async def load_cookie_files(self) -> None:
         if self.manager.config.settings.browser_cookies.auto_import:
             assert self.manager.config.settings.browser_cookies.browser
-            cookies = await extract_cookies(
-                self.manager.config.settings.browser_cookies.browser, self.manager.config.settings.browser_cookies.sites
+            cookies = await extract_cookies(self.manager.config.settings.browser_cookies.browser)
+            await export_cookies(
+                filter_cookies(cookies, self.manager.config.settings.browser_cookies.sites),
+                output_path=self.manager.appdata.cookies,
             )
-            await export_cookies(cookies, output_path=self.manager.appdata.cookies)
 
         cookie_files = await asyncio.to_thread(lambda: sorted(self.manager.appdata.cookies.glob("*.txt")))
         if not cookie_files:

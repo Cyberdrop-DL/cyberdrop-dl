@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Final
 from cyberdrop_dl.dependencies import browser_cookie3
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Sequence
+    from collections.abc import AsyncGenerator, Generator, Iterable, Sequence
     from pathlib import Path
 
     from cyberdrop_dl.constants import Browser
@@ -44,18 +44,21 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
-async def extract_cookies(browser: Browser, allowed_domains: list[str] | None = None) -> CookieJar:
-    if not allowed_domains:
-        return CookieJar()
+def filter_cookies(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
+    if not domains:
+        yield from cookies
+    else:
+        allowed_domains = tuple(domains)
+        for cookie in cookies:
+            if cookie.domain.endswith(allowed_domains):
+                yield cookie
+
+
+async def extract_cookies(browser: Browser) -> CookieJar:
+
     extract = _COOKIE_EXTRACTORS[browser]
     try:
-        data = await asyncio.to_thread(extract)
-
-        filtered_jar = CookieJar()
-        for cookie in data:
-            if any(cookie.domain.endswith(d) for d in allowed_domains):
-                filtered_jar.set_cookie(cookie)
-        return filtered_jar
+        return await asyncio.to_thread(extract)
 
     except PermissionError as e:
         msg = (
@@ -85,7 +88,7 @@ async def extract_cookies(browser: Browser, allowed_domains: list[str] | None = 
     raise browser_cookie3.BrowserCookieError(f"{msg}\n\nNothing has been saved.")
 
 
-def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
+def split_cookies(extracted_cookies: Iterable[Cookie]) -> dict[str, MozillaCookieJar]:
     cookie_jars: dict[str, MozillaCookieJar] = {}
     for cookie in extracted_cookies:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
@@ -97,7 +100,7 @@ def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
     return cookie_jars
 
 
-async def export_cookies(cookies: CookieJar, output_path: Path) -> None:
+async def export_cookies(cookies: Iterable[Cookie], output_path: Path) -> None:
     cookie_jars = split_cookies(cookies)
     await asyncio.to_thread(output_path.mkdir, parents=True, exist_ok=True)
     _ = await asyncio.gather(
