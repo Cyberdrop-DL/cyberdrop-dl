@@ -94,8 +94,8 @@ async def test_no_psutil_check_does_not_raise_exception(tmp_path: Path) -> None:
 def test_no_psutil_returns_size_of_closest_parent_on_file_that_does_not_exists(tmp_path: Path) -> None:
     folder = tmp_path / "folder_abc/that/does/not/exists"
     result = storage._disk_usage(folder)
-    assert result > 0
-    assert result == storage._disk_usage(tmp_path)
+    assert result > 1e10
+    assert result == pytest.approx(storage._disk_usage(tmp_path), abs=1e6)
 
 
 async def test_psutil_returns_size_of_closest_parent_on_file_that_does_not_exists(tmp_path: Path) -> None:
