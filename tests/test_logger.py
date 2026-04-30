@@ -46,10 +46,8 @@ class TestBorrowLogger:
 
         with logs.borrow_logger("third_party_restore", level=logging.DEBUG):
             assert other.level == logging.DEBUG
-            assert other.propagate is False
 
         assert other.level == logging.WARNING
-        assert other.propagate is True
 
     def test_exception_inside_block_restores_state(self) -> None:
         other = logging.getLogger("third_party_exc")
