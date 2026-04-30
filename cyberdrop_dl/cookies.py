@@ -166,10 +166,7 @@ def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:
     simple_cookie = SimpleCookie()
     assert cookie.value is not None
 
-    try:
-        simple_cookie[cookie.name] = cookie.value
-    except CookieError:
-        return SimpleCookie()
+    simple_cookie[cookie.name] = cookie.value
 
     morsel = simple_cookie[cookie.name]
     morsel["domain"] = cookie.domain
