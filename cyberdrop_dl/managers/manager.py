@@ -180,7 +180,7 @@ class Manager:
             logger.info("URLs by domain (includes children):", extra={"color": "cyan"})
 
             def lines():
-                for domain, count in stats.domain_stats.items():
+                for domain, count in sorted(stats.domain_stats.items()):
                     yield f" - {domain}: {count:,}"
 
             logger.info("\n".join(lines()))
@@ -211,9 +211,9 @@ class Manager:
         logger.info(f"  Audios: {stats.audios:,}")
         logger.info(f"  Images: {stats.images:,}")
         logger.info(f"  Videos: {stats.videos:,}")
-        logger.info(f"  Other Files: {stats.others:,}")
+        logger.info(f"  Other files: {stats.others:,}")
 
-    def print_errors(self):
+    def print_errors(self) -> None:
         _log_errors(
             tuple(self.scrape_mapper.tui.scrape_errors),
             tuple(self.scrape_mapper.tui.download_errors),
@@ -227,7 +227,7 @@ class Manager:
 
     def print_dedupe_stats(self, stats: DedupeStats) -> None:
         log_spacer()
-        logger.info("Dupe Stats:", extra={"color": "cyan"})
+        logger.info("Dedupe Stats:", extra={"color": "cyan"})
         logger.info(f"  Deleted (duplicates of previous downloads): {stats.deleted:,} files")
         logger.info(f"  Errors: {stats.total - stats.deleted:,} files")
 
