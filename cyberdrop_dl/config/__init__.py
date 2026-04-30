@@ -39,10 +39,11 @@ class Config(BaseModel):
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
-        apprise_file = appdata.configs / "apprise.txt"
+
         global_settings = appdata.configs / "global_settings.yaml"
         auth_file = appdata.configs / "authentication.yaml"
         config_file = config_file or appdata.config_file
+        apprise_file = config_file.parent / "apprise.txt"
 
         return cls(
             source=config_file,
