@@ -394,7 +394,7 @@ def xor_decrypt(encrypted_data: bytes, key: bytes) -> str:
     return data.decode("utf-8", errors="ignore")
 
 
-def truncated_preview(content: str, max_len: int = 150) -> str:
+def truncated_preview(content: str, max_len: int = 100) -> str:
     if len(content) <= max_len:
         return content
     return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"
