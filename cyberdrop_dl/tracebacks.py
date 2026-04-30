@@ -18,7 +18,6 @@ def patch() -> None:
             return False
 
     def new_traverse(obj, *args, **kwargs):
-        value_repr = None
         if is_page_element(obj):
             try:
                 value_repr = truncated_preview(repr(obj))
@@ -26,6 +25,7 @@ def patch() -> None:
                 value_repr = f"<repr-error {str(error)!r}>"
 
             return pretty.Node(value_repr=value_repr, last=False)
+
         return traverse(obj, *args, **kwargs)
 
     pretty.traverse = new_traverse
@@ -33,6 +33,6 @@ def patch() -> None:
 
 def install_except_hook() -> None:
     patch()
-    from rich.traceback import install as install_rich_tracebacks
+    from rich.traceback import install
 
-    _ = install_rich_tracebacks(width=None, word_wrap=True, max_frames=3)
+    _ = install(width=None, word_wrap=True, max_frames=3)
