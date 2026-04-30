@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from http.cookiejar import Cookie, CookieJar, MozillaCookieJar
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from typing import TYPE_CHECKING, Final
 
 from cyberdrop_dl.dependencies import browser_cookie3
@@ -47,7 +47,9 @@ _CHROMIUM_BROWSERS = frozenset(
 async def extract_cookies(browser: Browser) -> CookieJar:
     extract = _COOKIE_EXTRACTORS[browser]
     try:
-        return await asyncio.to_thread(extract)
+        data = await asyncio.to_thread(extract)
+        return data
+
     except PermissionError as e:
         msg = (
             "We've encountered a Permissions Error. Please close all browsers and try again\n"
@@ -78,14 +80,9 @@ async def extract_cookies(browser: Browser) -> CookieJar:
 
 def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
     cookie_jars: dict[str, MozillaCookieJar] = {}
-
     for cookie in extracted_cookies:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
-        cookie_jar = cookie_jars.get(domain)
-        if cookie_jar is None:
-            cookie_jar = MozillaCookieJar()
-        cookie_jar.set_cookie(cookie)
-
+        cookie_jars.setdefault(domain, MozillaCookieJar()).set_cookie(cookie)
     return cookie_jars
 
 
@@ -161,7 +158,12 @@ def _read_netscape_file(file: Path) -> MozillaCookieJar | None:
 def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:
     simple_cookie = SimpleCookie()
     assert cookie.value is not None
-    simple_cookie[cookie.name] = cookie.value
+
+    try:
+        simple_cookie[cookie.name] = cookie.value
+    except CookieError:
+        return SimpleCookie()
+
     morsel = simple_cookie[cookie.name]
     morsel["domain"] = cookie.domain
     morsel["path"] = cookie.path
