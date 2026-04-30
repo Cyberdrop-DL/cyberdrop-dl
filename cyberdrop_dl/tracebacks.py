@@ -31,8 +31,13 @@ def patch() -> None:
     pretty.traverse = new_traverse
 
 
-def install_except_hook() -> None:
+def install_exception_hook(*, show_locals: bool = False) -> None:
     patch()
     from rich.traceback import install
 
-    _ = install(width=None, word_wrap=True, max_frames=3)
+    _ = install(
+        width=None,
+        word_wrap=True,
+        max_frames=3,
+        show_locals=show_locals,
+    )

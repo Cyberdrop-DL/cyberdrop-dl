@@ -8,7 +8,7 @@ from cyclopts import App, Parameter
 
 from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
 
-tracebacks.install_except_hook()
+tracebacks.install_exception_hook()
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
