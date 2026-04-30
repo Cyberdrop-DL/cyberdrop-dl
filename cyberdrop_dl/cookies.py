@@ -55,7 +55,6 @@ def filter_cookies(cookies: Iterable[Cookie], domains: list[str] | None = None) 
 
 
 async def extract_cookies(browser: Browser) -> CookieJar:
-
     extract = _COOKIE_EXTRACTORS[browser]
     try:
         return await asyncio.to_thread(extract)
@@ -175,9 +174,7 @@ def _read_netscape_file(file: Path) -> MozillaCookieJar | None:
 def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:
     simple_cookie = SimpleCookie()
     assert cookie.value is not None
-
     simple_cookie[cookie.name] = cookie.value
-
     morsel = simple_cookie[cookie.name]
     morsel["domain"] = cookie.domain
     morsel["path"] = cookie.path
