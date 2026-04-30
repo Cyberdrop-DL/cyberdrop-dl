@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from http.cookiejar import Cookie, CookieJar, MozillaCookieJar
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from typing import TYPE_CHECKING, Final
 
 from cyberdrop_dl.dependencies import browser_cookie3
@@ -157,7 +157,10 @@ def _parse_cookie_jar(cookie_jar: MozillaCookieJar, now: int) -> Generator[tuple
             has_expired_cookies.add(domain)
             logger.warning(f"Cookies for {domain} are expired")
 
-        yield domain, make_simple_cookie(cookie, now)
+        try:
+            yield domain, make_simple_cookie(cookie, now)
+        except (CookieError, ValueError) as e:
+            logger.error(f"Unable to parse cookie '{cookie.name}' from domain {cookie.domain} ({e!r})")
 
 
 def _read_netscape_file(file: Path) -> MozillaCookieJar | None:

@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from http.cookiejar import Cookie, MozillaCookieJar
 from http.cookies import SimpleCookie
+from typing import TYPE_CHECKING
 
-from cyberdrop_dl.cookies import make_simple_cookie, split_cookies
+from cyberdrop_dl.cookies import _parse_cookie_jar, make_simple_cookie, split_cookies
+
+if TYPE_CHECKING:
+    import pytest
 
 now = 1_000_000
 
@@ -102,3 +106,28 @@ def test_split_cookies() -> None:
     assert tuple(output) == ("example.com", "example2.com")
     assert len(output["example.com"]) == 2
     assert len(output["example2.com"]) == 1
+
+
+def test_parse_cookie_jar() -> None:
+    cookie_jar = MozillaCookieJar()
+    cookie = make_cookie(name="session", value="abc123", domain="www.example.com")
+
+    cookie_jar.set_cookie(cookie)
+    cookies = list(_parse_cookie_jar(cookie_jar, now))
+    assert len(cookies) == 1
+    domain, simple = cookies[0]
+    assert domain == "example.com"
+    assert simple["session"].value == "abc123"
+
+
+def test_parse_cookie_jar_invalid(logs: pytest.LogCaptureFixture) -> None:
+    cookie_jar = MozillaCookieJar()
+    cookie = make_cookie(name="domain", value="abc123", domain="www.example.com")
+    cookie_jar.set_cookie(cookie)
+
+    cookies = list(_parse_cookie_jar(cookie_jar, now))
+    assert len(cookies) == 0
+    assert (
+        logs.messages[-1]
+        == "Unable to parse cookie 'domain' from domain www.example.com (CookieError(\"Attempt to set a reserved key 'domain'\"))"
+    )
