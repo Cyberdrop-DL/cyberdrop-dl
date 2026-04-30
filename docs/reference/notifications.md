@@ -11,7 +11,7 @@ You can set up CDL to sent you the report via discord, email, a native notificat
 
 ## Notifications via Discord
 
-To get notifications via discord, you need to provide a discord `webhook_url` inside the `setting.yaml` of the config you are running.
+To get notifications via discord, you need to provide a discord `webhook_url` inside the `settings.yaml` of your config.
 
 You can learn how to setup a webhook following the [official discord guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
 
@@ -33,25 +33,19 @@ uv tool install cyberdrop-dl-patched[apprise]
 
 ### How to setup Apprise
 
-To send notifications via Apprise, you need to create an `apprise.txt` file inside `AppData/Configs/<config_name>`, where `<config_name>` if the config you want to use. The file must contain a list of URLs and they must be in the format of one of the supported apprise services.
+To send notifications via Apprise, you need to create an `apprise.txt` file inside `AppData/Configs/Default`. The file must contain a list of URLs and they must be in the format of one of the supported apprise services.
 
 You can check the full list of supported services [here](https://appriseit.com/services/).
 
 Apprise services also support the `attach_logs=` tag to send the main log as an attachment.
 
 {% hint style="info" %}
-You can build the URL interactively on their website: https://appriseit.com/url-builder/
+You can build the URL interactively on their website: [https://appriseit.com/url-builder](https://appriseit.com/url-builder)
 {% endhint %}
 
 ### Troubleshooting Apprise notifications
 
 Cyberdrop-DL will show you a message at the end of a run telling you if the apprise notifications were successfully sent or not. If you are having trouble getting notifications via Apprise, follow their [troubleshooting guide](https://github.com/caronc/apprise/wiki/Troubleshooting).
-
-{% hint style="info" %}
-When running on Windows, Cyberdrop-DL will setup OS notifications by default.
-
-You can disable them by deleting the `windows://` line from the default `apprise.txt` file. You can also completely delete the file if you don't have any other notification setup.
-{% endhint %}
 
 ## Examples
 
