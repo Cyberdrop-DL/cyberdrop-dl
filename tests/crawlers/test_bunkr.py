@@ -36,7 +36,7 @@ def test_album_parser() -> None:
         {
             id: 25960332,
             name: "c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.jpg",
-            original: "2023-02-04 - Position ð\u009f\u0094\u009e BONUS.mp4.jpg",
+            original: "2023-02-04 - Position 🔞 BONUS.mp4.jpg",
             slug: "tR69eocGrklcG",
             type: "image/jpeg",
             extension: "Image",

@@ -276,6 +276,7 @@ class Sorting(SettingsGroup):
 class BrowserCookies(SettingsGroup):
     auto_import: bool = False
     browser: Browser | None = Browser.firefox
+    sites: list[str] = Field(default_factory=list)
 
 
 class DupeCleanup(SettingsGroup):

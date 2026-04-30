@@ -150,7 +150,12 @@ class FlareSolverrClient:
 
         async with self._request_lock:
             request_id = self._request_id()
-            with show_msg(f"Waiting for flaresolver [{request_id}]"):
+            msg = (
+                "Destroying flaresolverr session"
+                if command is Command.DESTROY_SESSION
+                else f"Waiting for flaresolverr [{request_id}]"
+            )
+            with show_msg(msg):
                 logger.debug(f"Making FlareSolverr request #{request_id} with {params = }")
                 async with self._aiohttp_session.post(self.url, json=params, **timeout) as response:
                     return Response.from_dict(await response.json())

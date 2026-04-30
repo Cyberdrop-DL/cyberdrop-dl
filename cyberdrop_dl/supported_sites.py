@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from textwrap import dedent
 from typing import TYPE_CHECKING
 
 from rich.table import Table
@@ -10,74 +11,88 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.crawlers.crawler import CrawlerInfo
 
-_COLUMNS = ("Site", "Primary URL", "Supported Domains", "Supported Paths")
 
-
-def get_crawlers_info_as_rich_table() -> Table:
-    table = Table(
-        title=Text("cyberdrop-dl supported sites", style="green"),
-        show_lines=True,
-        highlight=True,
-    )
-    for column in _COLUMNS[0:3]:
-        table.add_column(column, no_wrap=True)
-
-    for row_values in _gen_crawlers_info_rows():
-        table.add_row(*row_values[:3])
-
-    return table
-
-
-def _gen_crawlers_info_rows() -> Generator[tuple[str, ...]]:
+def _gen_crawlers_info() -> Generator[CrawlerInfo]:
     from cyberdrop_dl.crawlers.crawler import Registry
 
     Registry.import_all()
 
     crawlers = Registry.generic | Registry.concrete
     infos = (crawler.INFO for crawler in crawlers)
-    for info in sorted(infos, key=lambda x: x.site.casefold()):
-        yield _get_row_values(info)
+    yield from sorted(infos, key=lambda x: x.site.casefold())
 
 
-def get_crawlers_info_as_markdown_table() -> str:
-    from py_markdown_table.markdown_table import markdown_table
+def as_rich_table() -> Table:
+    table = Table(
+        title=Text("cyberdrop-dl supported sites", style="green"),
+        show_lines=True,
+        highlight=True,
+    )
+    for column in ("Site", "Primary URL", "Supported Domains"):
+        table.add_column(column, no_wrap=True)
 
-    rows = list(_make_html_rows())
-    table = markdown_table(rows).set_params("markdown", padding_width=10, padding_weight="centerright", quote=False)
-    return table.get_markdown()
+    for crawler_info in _gen_crawlers_info():
+        table.add_row(
+            crawler_info.site,
+            str(crawler_info.primary_url).rstrip("/"),
+            "\n".join(crawler_info.supported_domains),
+        )
 
-
-def _make_html_rows() -> Generator[dict[str, str]]:
-    for row in _gen_crawlers_info_rows():
-        values = (value.replace("\n", "<br>") for value in row)
-        yield dict(zip(_COLUMNS, values, strict=True))
-
-
-def _get_row_values(crawler_info: CrawlerInfo) -> tuple[str, ...]:
-    supported_paths, notes = _get_supported_paths_and_notes(crawler_info)
-    if notes:
-        supported_paths = f"{supported_paths}\n\n**NOTES**\n{notes}"
-    supported_domains = "\n".join(crawler_info.supported_domains)
-    return crawler_info.site, str(crawler_info.primary_url).rstrip("/"), supported_domains, supported_paths
+    return table
 
 
-def _get_supported_paths_and_notes(crawler_info: CrawlerInfo) -> tuple[str, str]:
-    supported_paths: list[str] = []
+def as_markdown(indent_level: int = 2) -> str:
+    indent = "#" * indent_level
+
+    def pad(line: str) -> str:
+        if line.startswith("#"):
+            return indent + line
+        return line
+
+    return "\n".join(map(pad, _generate_md_rows()))
+
+
+def _generate_md_rows() -> Generator[str]:
+    def quoted(lines: Iterable[str], quoted_char: str = "`") -> str:
+        return ", ".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
+
+    for info in _gen_crawlers_info():
+        url = str(info.primary_url).rstrip("/")
+        yield f"# {info.site}\n"
+        yield f"**Primary URL**: [{url}]({url})\n"
+        yield f"**Supported Domains**: {quoted(info.supported_domains)}\n"
+
+        supported_paths, notes = _get_supported_paths_and_notes(info)
+        yield "**Supported Paths**:\n"
+        for name, paths in supported_paths.items():
+            yield f"- {name}:"
+            for path in paths:
+                yield f"  - `{path}`"
+
+        if notes:
+            yield "\n"
+            yield "**Notes**\n"
+            for note in notes:
+                yield f"- {note}"
+
+        yield "\n"
+
+
+def _get_supported_paths_and_notes(crawler_info: CrawlerInfo) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
+    supported_paths: dict[str, tuple[str, ...]] = {}
     notes: list[str] = []
-
-    def join(paths: Iterable[str], *, quote_char: str = "`") -> str:
-        return "\n".join(f" - {quote_char}{p}{quote_char}" for p in paths)
 
     for name, paths in crawler_info.supported_paths.items():
         if isinstance(paths, str):
             paths = (paths,)
 
         if "direct link" in name.casefold() and paths == ("",):
-            supported_paths.append("Direct Links")
+            supported_paths["Direct Links"] = ()
 
         elif "*note*" in name.casefold():
-            notes.append(join(paths, quote_char=""))
+            notes.extend(filter(None, map(str.strip, map(dedent, paths))))
         else:
-            supported_paths.append(f"{name}: \n{join(paths)}")
+            assert name not in supported_paths
+            supported_paths[name] = paths
 
-    return "\n".join(supported_paths), "\n".join(notes)
+    return supported_paths, tuple(notes)

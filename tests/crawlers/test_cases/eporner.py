@@ -4,26 +4,45 @@ TEST_CASES = [
         "https://www.eporner.com/video-ia7DS1X427X/yoga-pmv/",
         [
             {
-                "url": "https://www.eporner.com/dload/ia7DS1X427X/2160/11435843-2160p-av1.mp4",
-                "filename": "Yoga PMV [ia7DS1X427X][av1][4K].mp4",
+                "url": "https://www.eporner.com/video-ia7DS1X427X",
+                "filename": "Yoga PMV [ia7DS1X427X][h264][4K].mp4",
+                "debrid_link": "re:11435843-2160p.mp4",
                 "original_filename": '"Yoga" PMV',
                 "referer": "https://www.eporner.com/video-ia7DS1X427X",
                 "album_id": None,
-                "datetime": 1722220285,
+                "uploaded_at": 1722220285,
+                "download_folder": "re:Loose Files (ePorner)",
             }
         ],
+        1,
     ),
     (
-        # Invalid json on the page
-        "https://www.eporner.com/video-6kuhFUubtC2/nightqueen-presents-jessa-fucked-peta-bailey-fucked-both-later/",
+        "https://www.eporner.com/video-5XdtfLAMNOV",
         [
             {
-                "url": "https://www.eporner.com/dload/6kuhFUubtC2/1080/13445569-1080p.mp4",
-                "filename": "NightQueen Presents Jessa Fucked Peta Bailey Fucked Both Later 🤤 [6kuhFUubtC2][h264][1080p].mp4",
-                "original_filename": "NightQueen Presents Jessa Fucked Peta Bailey Fucked Both Later 🤤",
-                "referer": "https://www.eporner.com/video-6kuhFUubtC2",
+                "url": "https://www.eporner.com/video-5XdtfLAMNOV",
+                "filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Bl [5XdtfLAMNOV][h264][4K@60fps].mp4",  # noqa: RUF001
+                "debrid_link": "re:12538936-2160p.mp4",
+                "original_filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Blonde Fucks With Her Boss",  # noqa: RUF001
+                "referer": "https://www.eporner.com/video-5XdtfLAMNOV",
                 "album_id": None,
+                "uploaded_at": 1736796270,
+                "download_folder": "re:Loose Files (ePorner)",
             }
         ],
+        1,
+    ),
+    (
+        "https://www.eporner.com/embed/5XdtfLAMNOV",
+        [
+            {
+                "url": "https://www.eporner.com/video-5XdtfLAMNOV",
+                "filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Bl [5XdtfLAMNOV][h264][4K@60fps].mp4",  # noqa: RUF001
+                "referer": "https://www.eporner.com/video-5XdtfLAMNOV",
+                "uploaded_at": 1736796270,
+                "download_folder": "re:Loose Files (ePorner)",
+            }
+        ],
+        1,
     ),
 ]

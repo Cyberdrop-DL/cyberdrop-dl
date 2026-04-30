@@ -215,13 +215,18 @@ def delete_empty_files_and_folders(dirname: Path | str) -> bool:
                 if not deleted:
                     has_non_empty_subfolders = True
             elif _get_size(entry) == 0:
-                logger.debug(f"Deleting '{entry.path}'")
-                os.unlink(entry)  # noqa: PTH108
+                try:
+                    os.unlink(entry)  # noqa: PTH108
+                except OSError as e:
+                    logger.error(f"Unable to delete '{entry.path}' ({e!r})")
+                    has_non_empty_files = True
+                else:
+                    logger.debug(f"Deleted '{entry.path}'")
             else:
                 has_non_empty_files = True
 
     except OSError:
-        logger.exception(f"Unknown errot while walking '{dirname}'")
+        logger.exception(f"Unknown error while walking '{dirname}'")
         pass
 
     if has_non_empty_files or has_non_empty_subfolders:
@@ -340,8 +345,8 @@ def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.parent.with_fragment(url.fragment).with_query(url.query)
 
 
-@functools.cache
 def get_system_information() -> dict[str, Any]:
+
     def get_common_name() -> str:
         system = platform.system()
 
@@ -364,11 +369,18 @@ def get_system_information() -> dict[str, Any]:
             return f"{default} {edition}"
         return default
 
-    system_info = platform.uname()._asdict() | {
-        "architecture": str(platform.architecture()),
-        "python": f"{platform.python_version()} {platform.python_implementation()}",
-        "common_name": get_common_name(),
-    }
+    system_info = (
+        {
+            "prefix": sys.prefix,
+            "executable": sys.executable,
+        }
+        | platform.uname()._asdict()
+        | {
+            "architecture": str(platform.architecture()),
+            "python": f"{platform.python_version()} {platform.python_implementation()}",
+            "common_name": get_common_name(),
+        }
+    )
     _ = system_info.pop("node", None)
     return system_info
 
@@ -380,3 +392,9 @@ def is_blob_or_svg(link: str) -> bool:
 def xor_decrypt(encrypted_data: bytes, key: bytes) -> str:
     data = bytearray(b_input ^ b_key for b_input, b_key in zip(encrypted_data, itertools.cycle(key)))
     return data.decode("utf-8", errors="ignore")
+
+
+def truncated_preview(content: str, max_len: int = 100) -> str:
+    if len(content) <= max_len:
+        return content
+    return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"

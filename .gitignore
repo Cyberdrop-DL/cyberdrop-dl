@@ -31,3 +31,4 @@ venv
 **.DS_Store
 .aider*
 .env
+repomix-output.xml

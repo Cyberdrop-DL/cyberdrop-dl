@@ -1,8 +1,4 @@
 # ruff: noqa: E402
-from rich.traceback import install as install_rich_tracebacks
-
-_ = install_rich_tracebacks(width=None)
-
 import logging
 import sys
 from collections.abc import Sequence
@@ -10,12 +6,16 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
-from cyberdrop_dl import __version__, aio, program_ui, webhook
+from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
+
+tracebacks.install_exception_hook()
+
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.logs import log_spacer, setup_console_logging, setup_file_logging
 from cyberdrop_dl.managers.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
+from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.updates import check_latest_pypi
@@ -27,6 +27,8 @@ logger = logging.getLogger("cyberdrop_dl")
 async def _scrape(manager: Manager) -> None:
     with setup_file_logging(manager.config.settings.logs.main_log):
         await manager.async_startup()
+        REFRESH_RATE.set(manager.config.global_settings.ui_options.refresh_rate)
+        TUI_DISABLED.set(manager.cli_args.ui.is_disabled)
 
         log_spacer()
         async with manager.database:
@@ -70,20 +72,13 @@ async def _post_runtime(manager: Manager) -> None:
         await manager.logs.update_last_forum_post(manager.config.settings.files.input_file)
 
 
-async def _run(manager: Manager) -> None:
-    try:
-        await _scrape(manager)
-    finally:
-        await manager.close()
-
-
 def _main(manager: Manager) -> None:
     manager.resolve_paths()
     if not manager.cli_args.download:
         program_ui.run(manager)
 
     try:
-        aio.run(_run(manager))
+        aio.run(_scrape(manager))
 
     except KeyboardInterrupt:
         logger.info("Exiting (Ctrl + C) ...")
@@ -130,9 +125,9 @@ def download(
 @app.command()
 def show() -> None:
     """Show a list of all supported sites"""
-    from cyberdrop_dl.supported_sites import get_crawlers_info_as_rich_table
+    from cyberdrop_dl import supported_sites
 
-    table = get_crawlers_info_as_rich_table()
+    table = supported_sites.as_rich_table()
     app.console.print(table)
 
 

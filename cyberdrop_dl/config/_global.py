@@ -97,7 +97,7 @@ class RateLimiting(SettingsGroup):
 
 
 class UIOptions(SettingsGroup):
-    refresh_rate: PositiveInt = 10
+    refresh_rate: PositiveFloat = 10.0
 
 
 class GenericCrawlerInstances(SettingsGroup):
