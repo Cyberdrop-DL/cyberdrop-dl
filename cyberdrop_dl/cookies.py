@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from http.cookiejar import Cookie, CookieJar, MozillaCookieJar
-from http.cookies import CookieError, SimpleCookie
+from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Final
 
 from cyberdrop_dl.dependencies import browser_cookie3
@@ -91,9 +91,9 @@ def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
         cookie_jar = cookie_jars.get(domain)
         if cookie_jar is None:
-            cookies_jars[domain] = cookie_jar = MozillaCookieJar()
+            cookie_jars[domain] = cookie_jar = MozillaCookieJar()
         cookie_jar.set_cookie(cookie)
-        
+
     return cookie_jars
 
 
