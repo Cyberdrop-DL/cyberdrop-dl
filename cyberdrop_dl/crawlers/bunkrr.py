@@ -40,6 +40,8 @@ _HOST_OPTIONS: frozenset[str] = frozenset(("bunkr.site", "bunkr.cr", "bunkr.ph")
 _DEEP_SCRAPE_CDNS: frozenset[str] = frozenset(
     (
         "burger",
+        "cheese",
+        "kebab",
         "milkshake",
         "static.scdn.st",
         "wiener",
