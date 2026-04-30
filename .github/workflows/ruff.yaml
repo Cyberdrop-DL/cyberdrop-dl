@@ -1,20 +1,24 @@
 name: Ruff
-on: [ push, pull_request ]
+
+permissions: {}
+
+on:
+  push:
+  pull_request:
+
 jobs:
   ruff:
+    name: Lint and format
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: checkout code
-        uses: actions/checkout@v5
-
-      - name: ruff lint
-        uses: astral-sh/ruff-action@v3
+        uses: actions/checkout@v6.0.2
         with:
-          version: "0.15.6"
+          persist-credentials: false
 
-      - name: ruff format check
-        uses: astral-sh/ruff-action@v3
-        with:
-          version: "0.15.6"
-          args:
-            "format --check --diff"
+      - uses: astral-sh/ruff-action@v4.0.0
+      - run: ruff format --check --diff
+        if: ${{ !cancelled() }}
