@@ -216,8 +216,9 @@ class BunkrrCrawler(Crawler):
 
         if self.deep_scrape or not src:
             reinforced_url = css.select(soup, Selector.DOWNLOAD_BTN, "href")
-            file_id = self.parse_url(reinforced_url).name
-            src = await self._request_download(file_id)
+            referrer_url = self.parse_url(reinforced_url)
+            file_id = referrer_url.name
+            src = await self._request_download(file_id, str(referrer_url))
 
         await self._direct_file(scrape_item, src, open_graph.title(soup))
 
@@ -225,7 +226,7 @@ class BunkrrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         name = css.select_text(soup, "h1")
-        src = await self._request_download(file_id)
+        src = await self._request_download(file_id, str(scrape_item.url))
         await self._direct_file(scrape_item, src, name)
 
     @error_handling_wrapper
@@ -239,12 +240,12 @@ class BunkrrCrawler(Crawler):
             scrape_item.url = _REINFORCED_URL
         await self.handle_file(_override_cdn(link), scrape_item, name, ext, custom_filename=filename)
 
-    async def _request_download(self, file_id: str) -> AbsoluteHttpURL:
+    async def _request_download(self, file_id: str, referrer: str) -> AbsoluteHttpURL:
         resp: dict[str, Any] = await self.request_json(
             _DOWNLOAD_API_ENTRYPOINT,
             "POST",
             json={"id": file_id},
-            headers={"Referer": str(_REINFORCED_URL)},
+            headers={"Referer": referrer},
         )
         return self.parse_url(_parse_api_resp(**resp))
 
