@@ -15,7 +15,7 @@ name = "aiodns"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycares" },
+    { name = "pycares", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/da/97235e953109936bfeda62c1f9f1a7c5652d4dc49f2b5911f9ae1043afa9/aiodns-4.0.0.tar.gz", hash = "sha256:17be26a936ba788c849ba5fd20e0ba69d8c46e6273e846eb5430eae2630ce5b1", size = 26204, upload-time = "2026-01-10T22:33:27.211Z" }
 wheels = [
@@ -198,12 +198,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2f/74/9c16829d3e7e45ce7daf1b704687fa4fde7ea00d72eafe8de18c72bf5995/apprise-1.10.0.tar.gz", hash = "sha256:b768f32d99e45ed5f4c3eef1f67903e803c97f97ba61a531a5d0a45d40df90a8", size = 2188611, upload-time = "2026-04-26T14:23:51.928Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/f9/177a73589d34e676d10bc4c6a8328710e28af5907234e9f25bb149a04eec/apprise-1.10.0-py3-none-any.whl", hash = "sha256:e685303d3568bb7a057d6ddeafd27ee12fff183ca36483ad4bacc0b9b4efa82c", size = 1632292, upload-time = "2026-04-26T14:23:49.28Z" },
-]
-
-[package.optional-dependencies]
-windows = [
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 
 [[package]]
@@ -767,7 +761,8 @@ dependencies = [
 [package.optional-dependencies]
 apprise = [
     { name = "apprise" },
-    { name = "apprise", extra = ["windows"], marker = "sys_platform == 'win32'" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -786,8 +781,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.5" },
     { name = "aiolimiter", specifier = ">=1.2.1" },
     { name = "aiosqlite", specifier = ">=0.22.1" },
-    { name = "apprise", marker = "sys_platform != 'win32' and extra == 'apprise'", specifier = ">=1.10.0" },
-    { name = "apprise", extras = ["windows"], marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=1.10.0" },
+    { name = "apprise", marker = "extra == 'apprise'", specifier = ">=1.10.0" },
     { name = "async-mega-py", specifier = ">=2.3.1" },
     { name = "backports-zstd", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython'" },
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
@@ -805,11 +799,13 @@ requires-dist = [
     { name = "psutil", marker = "sys_platform != 'android'", specifier = ">=7.2.1" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = ">=2.13.1" },
+    { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=311" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "readchar", specifier = ">=4.2.2" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "send2trash", specifier = ">=2.0.0" },
     { name = "truststore", specifier = ">=0.10.4" },
+    { name = "tzdata", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=2025.3" },
     { name = "xxhash", specifier = ">=3.7.0" },
     { name = "yarl", specifier = ">=1.23.0" },
 ]
@@ -1417,7 +1413,7 @@ name = "pycares"
 version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi" },
+    { name = "cffi", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/df/a0/9c823651872e6a0face3f0311de2a40c8bbcb9c8dcb15680bd019ac56ac7/pycares-5.0.1.tar.gz", hash = "sha256:5a3c249c830432631439815f9a818463416f2a8cbdb1e988e78757de9ae75081", size = 652222, upload-time = "2026-01-01T12:37:00.604Z" }
 wheels = [
