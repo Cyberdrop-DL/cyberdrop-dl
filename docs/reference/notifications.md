@@ -23,7 +23,6 @@ Cyberdrop-DL uses [Apprise](https://github.com/caronc/apprise) to send notificat
 
 {% hint style="info" %}
 `apprise` is an an optional dependency; It's not installed by default with CDL. To install `cyberdrop-dl` with `apprise`, especify it as an extra while installing cyberdrop:
-ex:
 
 ```shell
 uv tool install cyberdrop-dl-patched[apprise]
@@ -39,8 +38,8 @@ You can check the full list of supported services [here](https://appriseit.com/s
 
 Apprise services also support the `attach_logs=` tag to send the main log as an attachment.
 
-{% hint style="info" %}
-You can build the URL interactively on their website: [https://appriseit.com/url-builder](https://appriseit.com/url-builder)
+{% hint style="success" %}
+You can build the URL interactively on their website: [https://appriseit.com/url-builder](https://appriseit.com/url-builder/)
 {% endhint %}
 
 ### Troubleshooting Apprise notifications
