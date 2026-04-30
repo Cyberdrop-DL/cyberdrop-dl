@@ -193,7 +193,7 @@ class GoFileCrawler(Crawler):
         )
 
         if password:
-            sha256_password = sha256(password.encode()).hexdigest()
+            sha256_password = sha256(password.encode(), usedforsecurity=False).hexdigest()
             api_url = api_url.update_query(password=sha256_password)
 
         for page in itertools.count(1):
