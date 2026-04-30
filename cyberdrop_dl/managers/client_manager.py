@@ -106,7 +106,7 @@ class ClientManager:
             self.ssl_context = ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_verify_locations(cafile=certifi.where())
 
-        self.cookies = aiohttp.CookieJar(quote_cookie=False)
+        self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.download_slots: dict[str, int] = {}
         self.global_rate_limiter = AsyncLimiter(self.rate_limiting_options.rate_limit, 1)
@@ -119,6 +119,13 @@ class ClientManager:
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
+
+    @property
+    def cookies(self) -> aiohttp.CookieJar:
+        # lazy cause it is loop bound for some reason
+        if self._cookies is None:
+            self._cookies = aiohttp.CookieJar(quote_cookie=False)
+        return self._cookies
 
     @contextlib.contextmanager
     def set_json_checker(self, check: Callable[[Any, AbstractResponse[Any]], None] | None = None) -> Generator[None]:
@@ -134,27 +141,33 @@ class ClientManager:
             self._flaresolverr = FlareSolverrClient(url, self._session)
         return self._flaresolverr
 
-    def _startup(self) -> None:
+    async def __aenter__(self) -> Self:
+        global DNS_RESOLVER
+        if DNS_RESOLVER is None:
+            DNS_RESOLVER = await _get_dns_resolver()  # pyright: ignore[reportConstantRedefinition]
+
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
-        if _curl_import_error is not None:
-            return
-
-        self._curl_session = self.new_curl_cffi_session()
-
-    async def __aenter__(self) -> Self:
-        self._startup()
+        if _curl_import_error is None:
+            self._curl_session = self.new_curl_cffi_session()
         return self
 
-    async def __aexit__(self, *args) -> None:
-        await self._session.close()
-        await self._download_session.close()
-        if _curl_import_error is not None:
-            return
-        try:
-            await self._curl_session.close()
-        except Exception:
-            pass
+    async def __aexit__(self, *_) -> None:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._session.close())
+            tg.create_task(self._download_session.close())
+            if self._flaresolverr is not None:
+                tg.create_task(self._flaresolverr.aclose())
+
+            if _curl_import_error is None:
+
+                async def close_curl() -> None:
+                    try:
+                        await self._curl_session.close()
+                    except Exception:
+                        pass
+
+                tg.create_task(close_curl())
 
     @property
     def rate_limiting_options(self):
@@ -220,11 +233,6 @@ class ClientManager:
         for domain, _ in self.cookies._cookies:
             if word in domain:
                 yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
-
-    async def startup(self) -> None:
-        global DNS_RESOLVER
-        if DNS_RESOLVER is None:
-            DNS_RESOLVER = await _get_dns_resolver()
 
     def new_curl_cffi_session(self) -> AsyncSession[CurlResponse]:
         # Calling code should have validated if curl is actually available
@@ -421,10 +429,6 @@ class ClientManager:
 
         max_audio_duration = max_audio_duration or float("inf")
         return min_audio_duration <= duration <= max_audio_duration
-
-    async def close(self) -> None:
-        if self._flaresolverr:
-            await self._flaresolverr.aclose()
 
 
 async def _get_dns_resolver(

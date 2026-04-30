@@ -100,7 +100,6 @@ class Manager:
         self.async_db_hash_startup()
 
         self.client_manager = ClientManager(self)
-        await self.client_manager.startup()
 
     def async_db_hash_startup(self) -> None:
         self.database = Database(
@@ -150,9 +149,6 @@ class Manager:
                 msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
 
             logger.warning(msg)
-
-    async def close(self) -> None:
-        await self.client_manager.close()
 
     def print_stats(self, stats: ScrapeStats) -> str:
         if not self.cli_args.print_stats:

@@ -167,7 +167,7 @@ class ScrapeMapper:
         _ = filepath.MAX_FOLDER_LEN.set(self.manager.config.global_settings.general.max_folder_name_length)
 
         await self.manager.client_manager.load_cookie_files()
-
+        self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!
         with self.tui():
             async with (

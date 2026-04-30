@@ -19,7 +19,7 @@ dependencies = [
     "aiohttp >=3.13.5",
     "aiolimiter >=1.2.1",
     "aiosqlite>=0.22.1",
-    "async-mega-py >=2.2.1",
+    "async-mega-py >=2.3.1",
     "backports.zstd; platform_python_implementation == 'CPython' and python_version < '3.14'",
     "beautifulsoup4 >=4.14.3",
     "brotli; implementation_name=='cpython' and sys_platform!='ios'",
@@ -51,7 +51,7 @@ license-files = ["LICENSE"]
 maintainers = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
 readme = "README.md"
 requires-python = ">=3.11"
-version = "9.4.1.dev0"
+version = "9.4.1"
 
 [project.optional-dependencies]
 apprise = [
@@ -78,7 +78,6 @@ requires = ["uv_build<=0.10.11"]
 [dependency-groups]
 dev = [
     "prek>=0.3.9",
-    "py-markdown-table>=1.3.0",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
     "pytest>=9.0.3",

@@ -73,6 +73,7 @@ class _PlaceHolderConfigInclude:
     video_codec: bool = True
     audio_codec: bool = True
     resolution: bool = True
+    fps: bool = True
     hash: bool = True
 
 
@@ -843,6 +844,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         video_codec: str | None = None,
         audio_codec: str | None = None,
         resolution: Resolution | str | int | None = None,
+        fps: float | None = None,
         hash_string: str | None = None,
     ) -> str:
 
@@ -856,7 +858,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
             if _include.resolution and resolution and resolution not in (Resolution.highest(), Resolution.unknown()):
                 res = resolution if type(resolution) is Resolution else Resolution.parse(resolution)
-                yield res.name
+                if fps and _include.fps:
+                    yield res.name + "@" + (str(int(fps)) if fps.is_integer() else f"{fps:.1f}") + "fps"
+                else:
+                    yield res.name
 
             if _include.hash and hash_string:
                 assert any(hash_string.startswith(x) for x in _HASH_PREFIXES), f"Invalid: {hash_string = }"

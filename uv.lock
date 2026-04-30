@@ -199,16 +199,16 @@ wheels = [
 
 [[package]]
 name = "async-mega-py"
-version = "2.2.1"
+version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiolimiter" },
     { name = "pycryptodome" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/3b/6acf348b084ba090b2ee757d2040ec2818dffaad0b16eb414628dcc50a97/async_mega_py-2.2.1.tar.gz", hash = "sha256:aca6c853422a2c1abeee8dd9f1737ffce35842f3b81dc89cb91ce931cc31b3a4", size = 40486, upload-time = "2026-04-26T17:33:47.593Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/48/22/74687316093d7b591f60cf4f5cd8cba46e83446e3c9a92fceacc6e01e044/async_mega_py-2.3.1.tar.gz", hash = "sha256:51bf89501adb7349133dca2cbd280621b661067552da56381414e0108eeae4a3", size = 40931, upload-time = "2026-04-28T22:45:02.459Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/2d/e4b4929a3fd59587bb7fb438f91772e0f7bd007434878fb5067e6288a433/async_mega_py-2.2.1-py3-none-any.whl", hash = "sha256:26ff8ae93cd972e475f33fcba2424f618d6d3c0d19fb611280ab651dbfb8fd64", size = 49131, upload-time = "2026-04-26T17:33:46.576Z" },
+    { url = "https://files.pythonhosted.org/packages/43/8c/0c338cb368aa1bc85976b036e39041807d6cc0178d8e0ecab01607c31acd/async_mega_py-2.3.1-py3-none-any.whl", hash = "sha256:cc8bef02309429a8be4feaf84aef04d19fb947b7634fcbe57b0b32769b00849b", size = 49599, upload-time = "2026-04-28T22:45:03.797Z" },
 ]
 
 [[package]]
@@ -722,7 +722,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.4.1.dev0"
+version = "9.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
@@ -766,7 +766,6 @@ extras = [
 [package.dev-dependencies]
 dev = [
     { name = "prek" },
-    { name = "py-markdown-table" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -782,7 +781,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "apprise", marker = "extra == 'apprise'", specifier = ">=1.10.0" },
     { name = "apprise", marker = "extra == 'extras'", specifier = ">=1.10.0" },
-    { name = "async-mega-py", specifier = ">=2.2.1" },
+    { name = "async-mega-py", specifier = ">=2.3.1" },
     { name = "backports-zstd", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython'" },
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "brotli", marker = "implementation_name == 'cpython' and sys_platform != 'ios'" },
@@ -812,7 +811,6 @@ provides-extras = ["apprise", "extras"]
 [package.metadata.requires-dev]
 dev = [
     { name = "prek", specifier = ">=0.3.9" },
-    { name = "py-markdown-table", specifier = ">=1.3.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
@@ -1405,15 +1403,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/04/78/0acd37ca84ce3ddffaa92ef0f571e073faa6d8ff1f0559ab1272188ea2be/psutil-7.2.2-cp36-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:b58fabe35e80b264a4e3bb23e6b96f9e45a3df7fb7eed419ac0e5947c61e47cc", size = 148266, upload-time = "2026-01-28T18:15:31.597Z" },
     { url = "https://files.pythonhosted.org/packages/b4/90/e2159492b5426be0c1fef7acba807a03511f97c5f86b3caeda6ad92351a7/psutil-7.2.2-cp37-abi3-win_amd64.whl", hash = "sha256:eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988", size = 137737, upload-time = "2026-01-28T18:15:33.849Z" },
     { url = "https://files.pythonhosted.org/packages/8c/c7/7bb2e321574b10df20cbde462a94e2b71d05f9bbda251ef27d104668306a/psutil-7.2.2-cp37-abi3-win_arm64.whl", hash = "sha256:8c233660f575a5a89e6d4cb65d9f938126312bca76d8fe087b947b3a1aaac9ee", size = 134617, upload-time = "2026-01-28T18:15:36.514Z" },
-]
-
-[[package]]
-name = "py-markdown-table"
-version = "1.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/dd/f6/9ab65a746a4ab6618e4c9da6875cacee269c496694dcbeab8ead9ebb29dc/py_markdown_table-1.3.0.tar.gz", hash = "sha256:be63f6bcbe32e10a9a68575eb48a648949df067b54b48ad6d993b0e5748f57d6", size = 15714, upload-time = "2025-02-06T16:56:21.116Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/5e/c4afc80e5a76aa7d0801378cb720a2f894097c25497221ad139b5b73d24d/py_markdown_table-1.3.0-py3-none-any.whl", hash = "sha256:b8740b57e466f343dbb1e9c7ca4e2d1b4281d96fb922bf1ed60b6c496c8725c4", size = 13426, upload-time = "2025-02-06T16:56:19.303Z" },
 ]
 
 [[package]]
