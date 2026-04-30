@@ -35,9 +35,13 @@ uv tool install cyberdrop-dl-patched[apprise]
 
 To send notifications via Apprise, you need to create an `apprise.txt` file inside `AppData/Configs/<config_name>`, where `<config_name>` if the config you want to use. The file must contain a list of URLs and they must be in the format of one of the supported apprise services.
 
-You can check the full list of supported services [here](https://github.com/caronc/apprise/wiki) and the URL format than each one uses [here](https://github.com/caronc/apprise?tab=readme-ov-file#supported-notifications).
+You can check the full list of supported services [here](https://appriseit.com/services/).
 
 Apprise services also support the `attach_logs=` tag to send the main log as an attachment.
+
+{% hint style="info" %}
+You can build the URL interactively on their website: https://appriseit.com/url-builder/
+{% endhint %}
 
 ### Troubleshooting Apprise notifications
 
@@ -73,12 +77,12 @@ attach_logs=mailto://user:password@domain.com
 {% tab title="Native OS notifications" %}
 Some operating systems require additional dependencies for notifications to work. Cyberdrop-DL includes the required dependencies for Windows. Follow the url on the OS name to get additional information on how to set them up.
 
-| OS | Syntax|
-| ---- | --- |
-|[Linux (DBus Notifications)](https://github.com/caronc/apprise/wiki/Notify_dbus) | `dbus://` <br> `qt://` <br> `glib://` <br> `kde://`|
-|[Linux (Gnome Notifications)](https://github.com/caronc/apprise/wiki/Notify_gnome) | `gnome://` |
-|[macOS](https://github.com/caronc/apprise/wiki/Notify_macosx)  | `macosx://`   |
-|[Windows](https://github.com/caronc/apprise/wiki/Notify_windows)| `windows://` |
+| OS                                                                                 | Syntax                                              |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [Linux (DBus Notifications)](https://github.com/caronc/apprise/wiki/Notify_dbus)   | `dbus://` <br> `qt://` <br> `glib://` <br> `kde://` |
+| [Linux (Gnome Notifications)](https://github.com/caronc/apprise/wiki/Notify_gnome) | `gnome://`                                          |
+| [macOS](https://github.com/caronc/apprise/wiki/Notify_macosx)                      | `macosx://`                                         |
+| [Windows](https://github.com/caronc/apprise/wiki/Notify_windows)                   | `windows://`                                        |
 
 {% endtab %}
 
