@@ -55,10 +55,8 @@ version = "9.4.1"
 
 [project.optional-dependencies]
 apprise = [
-    "apprise >=1.10.0"
-]
-extras = [
-    "apprise >=1.10.0"
+    'apprise >=1.10.0 ; platform_system != "Windows"',
+    'apprise[windows] >=1.10.0 ; platform_system == "Windows"'
 ]
 
 [project.scripts]
