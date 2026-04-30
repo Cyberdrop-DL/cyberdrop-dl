@@ -8,7 +8,7 @@ soup = BeautifulSoup("".join(f"{i}" for i in range(500)), "html.parser")
 
 
 def test_pretty_truncates_bs4() -> None:
-    output = pretty.traverse(soup).value_repr
+    output = tracebacks.original_traverse()(soup).value_repr
 
     assert len(output) > 500
     tracebacks.patch()

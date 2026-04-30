@@ -1,15 +1,32 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from rich.pretty import Node
+
+_original_traverse = None
+
+
+def original_traverse() -> Callable[..., Node]:
+    patch()
+    assert callable(_original_traverse)
+    return _original_traverse
+
 
 def patch() -> None:
+    global _original_traverse
+    if _original_traverse is not None:
+        return
+
     from bs4.element import PageElement
     from rich import pretty
 
     from cyberdrop_dl.utils import truncated_preview
 
     traverse = pretty.traverse
-    if traverse.__name__ == "new_traverse":
-        return
 
     def is_page_element(obj: object) -> bool:
         try:
@@ -29,6 +46,7 @@ def patch() -> None:
         return traverse(obj, *args, **kwargs)
 
     pretty.traverse = new_traverse
+    _original_traverse = traverse
 
 
 def install_exception_hook(*, show_locals: bool = False) -> None:
