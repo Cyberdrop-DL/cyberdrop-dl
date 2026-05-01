@@ -725,7 +725,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.4.2"
+version = "9.4.3"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
