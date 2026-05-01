@@ -17,15 +17,15 @@ def _env(name: str, *, censor: bool = False) -> str | None:
 RUNNING_IN_TERMUX = bool(
     os.getenv("TERMUX_VERSION") or os.getenv("TERMUX_MAIN_PACKAGE_FORMAT") or "com.termux" in os.getenv("$PREFIX", "")
 )
-PORTRAIT_MODE = bool(RUNNING_IN_TERMUX or _env("PORTRAIT_MODE"))
+PORTRAIT_MODE = bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
 
 
 DEBUG_LOG_FOLDER = _env("DEBUG_LOG_FOLDER")
 
 MAX_CRAWLER_ERRORS = int(_env("MAX_CRAWLER_ERRORS") or 10)
 DEBUG_MODE = bool(
-    DEBUG_LOG_FOLDER
-    or _env("DEBUG_MODE")
+    _env("DEBUG_MODE")
+    or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
     or os.getenv("TERM_PROGRAM") in ("vscode", "zed")
 )

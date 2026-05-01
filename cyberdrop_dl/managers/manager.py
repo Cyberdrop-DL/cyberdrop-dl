@@ -125,7 +125,7 @@ class Manager:
                 "CLI options": self.cli_args.model_dump(mode="json"),
                 "Auth": auth,
                 "Settings": config_settings.model_dump(mode="json"),
-                "Global Settings": self.config.global_settings.model_dump(mode="json"),
+                "Global settings": self.config.global_settings.model_dump(mode="json"),
                 "Enviroment": env.ALL_VARS,
                 "Enviroment resolved": env.ALL_VARS_RESOLVED,
                 "argv": tuple(sys.argv[1:]),

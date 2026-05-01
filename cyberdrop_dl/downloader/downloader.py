@@ -148,7 +148,7 @@ class Downloader:
             if os.name == "nt":
                 msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
 
-            raise DownloadError("FFmpeg Error", msg, media_item) from None
+            raise DownloadError("FFmpeg Error", msg, media_item)
 
         async with self._download_context(media_item):
             await self._start_hls_download(media_item, m3u8_group)
