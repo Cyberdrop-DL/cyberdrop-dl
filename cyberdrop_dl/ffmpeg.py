@@ -394,13 +394,13 @@ _EMPTY_FFPROBE_RESULT: FFprobeResult = FFprobeResult.from_output({"streams": []}
 
 @dataclasses.dataclass(slots=True)
 class SubProcessResult:
+    return_code: int | None
     stdout: str
     stderr: str
-    return_code: int | None
-    success: bool = dataclasses.field(init=False)
 
-    def __post_init__(self) -> None:
-        self.success = self.return_code == 0
+    @property
+    def success(self) -> bool:
+        return self.return_code == 0
 
     def __json__(self) -> dict[str, Any]:
         me = dataclasses.asdict(self)
