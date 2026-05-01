@@ -56,6 +56,6 @@ def install_exception_hook(*, show_locals: bool = False) -> None:
     _ = install(
         width=None,
         word_wrap=True,
-        max_frames=3,
+        max_frames=30,
         show_locals=show_locals,
     )
