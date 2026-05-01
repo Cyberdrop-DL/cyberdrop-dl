@@ -429,7 +429,7 @@ async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
 
     assert bin
     process_id = str(uuid.uuid4())
-    logger.debug("Running %s subprocess [id=%s]\n:%s", program, process_id, {"command": [bin, *cmd]})
+    logger.debug("Running %s subprocess [id=%s]\n:%s", program, process_id, {"command": [bin, *map(str, cmd)]})
     process = await asyncio.create_subprocess_exec(bin, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
