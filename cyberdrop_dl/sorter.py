@@ -199,7 +199,7 @@ class Sorter:
         )
         dest = await asyncio.to_thread(_move_file, file, dest, self.incrementer_format)
         if dest:
-            logger.warning("Moved '{}' to '{}'", file, dest)
+            logger.debug("Moved '{}' to '{}'", file, dest)
         else:
             self.tui.stats.errors += 1
         return bool(dest)

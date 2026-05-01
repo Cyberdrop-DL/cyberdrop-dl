@@ -49,7 +49,15 @@ _FFPROBE_CALL_PREFIX = (
 )
 
 
-def check_is_available() -> None:
+def is_installed() -> bool:
+    try:
+        _check()
+        return True
+    except RuntimeError:
+        return False
+
+
+def _check() -> None:
     if not version():
         raise RuntimeError("ffmpeg is not installed")
     _check_ffprobe()

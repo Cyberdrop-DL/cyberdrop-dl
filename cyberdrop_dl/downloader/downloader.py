@@ -143,9 +143,7 @@ class Downloader:
         if media_item.url.path in self.processed_items and not self._ignore_history:
             return
 
-        try:
-            ffmpeg.check_is_available()
-        except RuntimeError:
+        if not ffmpeg.is_installed():
             msg = "ffmpeg is not installed. (Required for HLS downloads)"
             if os.name == "nt":
                 msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
