@@ -8,6 +8,7 @@ import json
 import logging
 import shutil
 import subprocess
+import uuid
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict, overload
@@ -17,7 +18,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from cyberdrop_dl.utils import DictDataclass
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator, Mapping
+    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -385,15 +386,16 @@ _EMPTY_FFPROBE_RESULT: FFprobeResult = FFprobeResult.from_output({"streams": []}
 
 @dataclasses.dataclass(slots=True)
 class SubProcessResult:
-    return_code: int | None
     stdout: str
     stderr: str
-    success: bool
-    command: _CMD
+    return_code: int | None
+    success: bool = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self.success = self.return_code == 0
 
     def __json__(self) -> dict[str, Any]:
-        joined_command = " ".join(map(str, self.command))
-        me = dataclasses.asdict(self) | {"command": joined_command}
+        me = dataclasses.asdict(self)
         try:
             stdout = json.loads(self.stdout)
         except json.JSONDecodeError:
@@ -406,24 +408,26 @@ class SubProcessResult:
         return str(self.__json__())
 
 
-async def _run_command(command: _CMD) -> SubProcessResult:
+async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
     assert not isinstance(command, str)
     program, *cmd = command
-    if program == "ffmpeg":
-        program = which_ffmpeg()
-    elif program == "ffprobe":
-        program = which_ffprobe()
 
-    assert program
-    logger.debug(f"Running command: {program, *cmd}")
-    process = await asyncio.create_subprocess_exec(program, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if program == "ffmpeg":
+        bin = which_ffmpeg()
+    elif program == "ffprobe":
+        bin = which_ffprobe()
+    else:
+        raise ValueError(f"Unexpected program in command {command}")
+
+    assert bin
+    process_id = str(uuid.uuid4())
+    logger.debug("Running %s subprocess [id=%s]\n:%s", program, process_id, {"command": [bin, *cmd]})
+    process = await asyncio.create_subprocess_exec(bin, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
-        process.returncode,
         stdout=stdout.decode("utf-8", errors="ignore"),
         stderr=stderr.decode("utf-8", errors="ignore"),
-        success=process.returncode == 0,
-        command=cmd,
+        return_code=process.returncode,
     )
-    logger.debug(result)
+    logger.debug("%s subprocess [id=%s] output:\n%s", program, process_id, result)
     return result
