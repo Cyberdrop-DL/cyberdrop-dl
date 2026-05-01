@@ -317,7 +317,7 @@ def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[N
         logger.info(f"Debug log file: {debug_log_file}")
         try:
             yield
-        except* Exception:
+        except Exception:
             with _enter_context(_LOG_TO_CONSOLE, False):
                 logger.critical("Unrecoverable error", exc_info=True)
             raise
