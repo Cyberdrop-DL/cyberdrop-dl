@@ -1,9 +1,9 @@
 # ruff: noqa: RUF012
+import logging
 import re
 from datetime import date, datetime, timedelta
-from logging import DEBUG
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -27,7 +27,7 @@ from cyberdrop_dl.models.types import (
     NonEmptyStrOrNone,
     PathOrNone,
 )
-from cyberdrop_dl.models.validators import falsy_as, to_timedelta
+from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_timedelta
 from cyberdrop_dl.utils import delete_empty_files_and_folders
 from cyberdrop_dl.utils.strings import validate_format_string
 
@@ -199,19 +199,46 @@ class IgnoreOptions(SettingsGroup):
 
 
 class RuntimeOptions(SettingsGroup):
-    console_log_level: NonNegativeInt = 100
+    log_level: NonNegativeInt | Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = logging.DEBUG
+    "Only log messages of this level or higher to the main log file"
+    console_log_level: NonNegativeInt | Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+    "Only log messages of this level or higher to the the console. If the value is `None`, use the same level as `log_level`"
     deep_scrape: bool = False
     delete_partial_files: bool = False
     ignore_history: bool = False
     jdownloader_autostart: bool = False
     jdownloader_download_dir: PathOrNone = None
     jdownloader_whitelist: ListNonEmptyStr = []
-    log_level: NonNegativeInt = DEBUG
+
     send_unsupported_to_jdownloader: bool = False
     skip_check_for_empty_folders: bool = False
     skip_check_for_partial_files: bool = False
     slow_download_speed: ByteSizeSerilized = ByteSize(0)
     update_last_forum_post: bool = True
+
+    @field_validator("log_level", "console_log_level", mode="before")
+    @classmethod
+    def normalize_log_level(cls, value: object):
+        value = falsy_as_none(value)
+        if type(value) is str:
+            try:
+                return logging.getLevelNamesMapping()[value.upper()]
+            except KeyError:
+                raise ValueError("Invalid log level name", value) from None
+        return value
+
+    @property
+    def effective_log_level(self) -> int:
+        assert type(self.log_level) is int
+        return self.log_level
+
+    @property
+    def effective_console_log_level(self) -> int:
+        if not self.console_log_level:
+            return self.effective_log_level
+
+        assert type(self.console_log_level) is int
+        return self.console_log_level
 
 
 class Sorting(SettingsGroup):
