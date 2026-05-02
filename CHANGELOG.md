@@ -53,9 +53,9 @@ Logs
 RuntimeOptions:
 
 - `--update-last-forum-post`
-- Support for integers values with `--log-level` and `--console-log-level` will be removed on v10. They will only accept valid log level names
+- Support for integers values with `--log-level` and `--console-log-level` will be removed on v10. They will only accept log level names
 
-Authetication entries for:
+Authentication entries for:
 
 - `Imgur.client_id` (no longer required)
 - `Kemono.session` (can be supplied by cookies)
