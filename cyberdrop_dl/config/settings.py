@@ -224,7 +224,7 @@ class RuntimeOptions(SettingsGroup):
             try:
                 return logging.getLevelNamesMapping()[value.upper()]
             except KeyError:
-                raise ValueError("Invalid log level name", value) from None
+                raise ValueError(f"invalid log level name: {value!r}") from None
         return value
 
     @property
