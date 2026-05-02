@@ -49,17 +49,17 @@ Download Options:
 Logs
 
 - `--last-forum-post`
-- Using integers for `--log-level` and `--console-log-level`. On v10 they will only accept valid log level names
 
 RuntimeOptions:
 
 - `--update-last-forum-post`
+- Support for integers values with `--log-level` and `--console-log-level` will be removed on v10. They will only accept valid log level names
 
-Dedicated authetication options for:
+Authetication entries for:
 
-- `Imgur.client_id` (No longer required)
-- `Kemono.session` (Can be supplied by cookies)
-- `Coomer.session` (Can be supplied by cookies)
+- `Imgur.client_id` (no longer required)
+- `Kemono.session` (can be supplied by cookies)
+- `Coomer.session` (can be supplied by cookies)
 
 DupeCleanup:
 
