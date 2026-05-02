@@ -31,7 +31,10 @@ def _safe_delete(entry: os.DirEntry[str]) -> bool:
 
 
 def delete_empty_files_and_folders_in_place(dirname: Path | str) -> bool:
-    """walks and removes in place"""
+    """Recursively delete empty files and directories from *dirname*.
+
+    Every empty file is removed immediately, and a directory is removed only when all of its children have already been
+    walked and the dir itself is also empty"""
 
     has_non_empty_files = False
     has_non_empty_subfolders = False
@@ -49,8 +52,8 @@ def delete_empty_files_and_folders_in_place(dirname: Path | str) -> bool:
             else:
                 has_non_empty_files = True
 
-    except OSError:
-        logger.exception(f"Unexpected error while walking '{dirname}'")
+    except OSError as e:
+        logger.error(f"Unexpected error while walking '{dirname}' ({e!r})")
         return False
 
     if has_non_empty_files or has_non_empty_subfolders:
