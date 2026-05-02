@@ -191,51 +191,14 @@ def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) ->
     return download_dir / scrape_item.create_download_path(domain)
 
 
-def _get_size(path: os.DirEntry[str]) -> int | None:
-    try:
-        return path.stat(follow_symlinks=False).st_size
-    except (OSError, ValueError):
-        return
-
-
-def delete_empty_files_and_folders(dirname: Path | str) -> bool:
+def delete_empty_files_and_folders(path: Path) -> None:
     """walks and removes in place"""
 
-    has_non_empty_files = False
-    has_non_empty_subfolders = False
+    from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
 
-    try:
-        for entry in os.scandir(dirname):
-            try:
-                is_dir = entry.is_dir(follow_symlinks=False)
-            except OSError:
-                is_dir = False
-            if is_dir:
-                deleted = delete_empty_files_and_folders(entry.path)
-                if not deleted:
-                    has_non_empty_subfolders = True
-            elif _get_size(entry) == 0:
-                try:
-                    os.unlink(entry)  # noqa: PTH108
-                except OSError as e:
-                    logger.error(f"Unable to delete '{entry.path}' ({e!r})")
-                    has_non_empty_files = True
-                else:
-                    logger.debug(f"Deleted '{entry.path}'")
-            else:
-                has_non_empty_files = True
-
-    except OSError:
-        logger.exception(f"Unknown error while walking '{dirname}'")
-        pass
-
-    if has_non_empty_files or has_non_empty_subfolders:
-        return False
-    try:
-        os.rmdir(dirname)  # noqa: PTH106
-        return True
-    except OSError:
-        return False
+    if not path.is_dir():
+        return
+    _ = delete_empty_files_and_folders_in_place(path)
 
 
 def check_partials_and_empty_folders(manager: Manager) -> None:
@@ -253,11 +216,11 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         return
 
     logger.info("Deleting empty files and folders...")
-    _ = delete_empty_files_and_folders(download_folder)
+    delete_empty_files_and_folders(download_folder)
 
     sorted_folder = manager.config.settings.sorting.sort_folder
     if sorted_folder and manager.config.settings.sorting.sort_downloads:
-        _ = delete_empty_files_and_folders(sorted_folder)
+        delete_empty_files_and_folders(sorted_folder)
 
 
 def _partial_files(dir: Path | str) -> Generator[Path]:

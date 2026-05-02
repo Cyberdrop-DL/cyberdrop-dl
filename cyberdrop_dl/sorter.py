@@ -80,7 +80,7 @@ class Sorter:
                     _ = tg.create_task(sort_subfolder(path))
 
         logger.info("DONE!", extra={"color": "green"})
-        _ = delete_empty_files_and_folders(self.input_dir)
+        delete_empty_files_and_folders(self.input_dir)
 
     async def _sort_file(self, folder_name: str, file: Path) -> None:
         ext = file.suffix.lower()

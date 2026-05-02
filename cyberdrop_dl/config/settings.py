@@ -127,7 +127,7 @@ class Logs(SettingsGroup):
             if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:
                 file.unlink()
 
-        _ = delete_empty_files_and_folders(self.log_folder)
+        delete_empty_files_and_folders(self.log_folder)
 
     def __eq__(self, other: object) -> bool:
         # Exclude _created_at from compare (AKA __pydantic_private__)
