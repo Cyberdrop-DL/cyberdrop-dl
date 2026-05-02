@@ -347,7 +347,9 @@ class ConfigSettings(AliasModel):
         for name, value in vars(model).items():
             if isinstance(value, Path):
                 if "{config}" in str(value):
-                    raise RuntimeError(f"Using '{{config}}' as reference on a path is no longer support: {value}")
+                    raise RuntimeError(
+                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                    )
 
                 object.__setattr__(model, name, value.expanduser().resolve().absolute())
 
