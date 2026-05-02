@@ -19,7 +19,7 @@ dependencies = [
     "aiohttp >=3.13.5",
     "aiolimiter >=1.2.1",
     "aiosqlite>=0.22.1",
-    "async-mega-py >=2.3.1",
+    "async-mega-py >=2.4.0",
     "backports.zstd; platform_python_implementation == 'CPython' and python_version < '3.14'",
     "beautifulsoup4 >=4.14.3",
     "brotli; implementation_name=='cpython' and sys_platform!='ios'",
