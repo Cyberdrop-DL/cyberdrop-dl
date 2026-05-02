@@ -234,6 +234,8 @@ class RuntimeOptions(SettingsGroup):
 
     @property
     def effective_console_log_level(self) -> int:
+        if type(self.console_log_level) is int and self.console_log_level > 50:
+            self.console_log_level = None
         if not self.console_log_level:
             return self.effective_log_level
 

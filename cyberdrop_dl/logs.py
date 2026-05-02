@@ -320,6 +320,9 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
     file.parent.mkdir(parents=True, exist_ok=True)
     import mega
 
+    if "pytest" not in sys.modules:
+        logging.captureWarnings(True)
+
     with (
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
