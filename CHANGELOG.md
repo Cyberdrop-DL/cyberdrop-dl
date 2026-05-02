@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `--log-level` and `--console-log-level` now accept level names as valid values, ex: `INFO` or `WARNING`
 - An empty or null value for `--console-log-level` will use the same level as `--log-level`
-- For `--console-log-level`, values higger than `50` (`CRITICAL`) will be reset to `None`
+- For `--console-log-level`, values higger than 50 (`CRITICAL`) will be reset to `None`
 
 ### Deprecated
 
@@ -74,7 +74,7 @@ DupeCleanup:
 
 ### Fixed
 
-- CRITICAL errors not being logged to the main log file
+- `CRITICAL` errors not being logged to the main log file
 
 ## [9.4.2] - 2026-04-30
 
