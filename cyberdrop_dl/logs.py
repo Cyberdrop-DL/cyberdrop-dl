@@ -181,7 +181,6 @@ class BareQueueHandler(QueueHandler):
 def _threaded_logger(
     log_handler: logging.Handler,
     *,
-    name: HandlerName | None = None,
     context_var: ContextVar[QueueListener] | None = None,
 ) -> Generator[BareQueueHandler]:
     """Context-manager to process logs from this handler in another thread"""
@@ -189,8 +188,6 @@ def _threaded_logger(
     q_handler: BareQueueHandler = BareQueueHandler(q)
     q_listener: QueueListener = QueueListener(q, log_handler, respect_handler_level=True)
     q_listener.start()
-    if name:
-        q_handler.set_name(name)
 
     with _enter_context(context_var, q_listener) if context_var else contextlib.nullcontext():
         logging.getLogger().addHandler(q_handler)
@@ -299,21 +296,17 @@ def _get_handler(name: str) -> logging.Handler:
     raise LookupError(name)
 
 
-def set_levels(main_file: int, console: int) -> None:
-    _get_handler(HandlerName.CONSOLE).setLevel(console)
-    _get_handler(HandlerName.MAIN_LOG).setLevel(main_file)
+def set_console_level(level: int) -> None:
+    _get_handler(HandlerName.CONSOLE).setLevel(level)
 
 
 @contextlib.contextmanager
-def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
-    handler = LogHandler(level, show_time=False)
+def setup_console_logging() -> Generator[None]:
+    handler = LogHandler(logging.DEBUG, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
     try:
-        with _threaded_logger(
-            handler,
-            context_var=_CONSOLE_LOG_LISTENER,
-            name=HandlerName.CONSOLE,
-        ) as q_handler:
+        with _threaded_logger(handler, context_var=_CONSOLE_LOG_LISTENER) as q_handler:
+            q_handler.set_name(HandlerName.CONSOLE)
             q_handler.addFilter(lambda _: _LOG_TO_CONSOLE.get())
             yield
     finally:
@@ -323,7 +316,7 @@ def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
 
 
 @contextlib.contextmanager
-def setup_file_logging(file: Path, /) -> Generator[None]:
+def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generator[None]:
     file.parent.mkdir(parents=True, exist_ok=True)
     import mega
 
@@ -339,10 +332,11 @@ def setup_file_logging(file: Path, /) -> Generator[None]:
                 show_time=True,
                 console=RedactedConsole(file=fp, width=_DEFAULT_CONSOLE_WIDTH * 2),
             ),
-            name=HandlerName.MAIN_LOG,
             context_var=_MAIN_LOG_LISTENER,
-        ),
+        ) as handler,
     ):
+        handler.setLevel(level)
+        handler.set_name(HandlerName.MAIN_LOG)
         logger.info(f"Debug log file: {debug_log_file}")
         try:
             yield
@@ -386,9 +380,9 @@ def _setup_debug_logger() -> Generator[Path | None]:
                 console=Console(file=fp, width=_DEFAULT_CONSOLE_WIDTH * 2),
                 show_time=True,
             ),
-            name=HandlerName.DEBUG_LOG,
-        ),
+        ) as handler,
     ):
+        handler.set_name(HandlerName.DEBUG_LOG)
         yield debug_log_file
 
 

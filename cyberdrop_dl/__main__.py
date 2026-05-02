@@ -12,7 +12,7 @@ tracebacks.install_exception_hook()
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.logs import log_spacer, setup_console_logging, setup_file_logging
+from cyberdrop_dl.logs import log_spacer, set_console_level, setup_console_logging, setup_file_logging
 from cyberdrop_dl.managers.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
@@ -25,7 +25,10 @@ logger = logging.getLogger("cyberdrop_dl")
 
 
 async def _scrape(manager: Manager) -> None:
-    with setup_file_logging(manager.config.settings.logs.main_log):
+    with setup_file_logging(
+        manager.config.settings.logs.main_log,
+        level=manager.config.settings.runtime_options.effective_log_level,
+    ):
         await manager.async_startup()
         REFRESH_RATE.set(manager.config.global_settings.ui_options.refresh_rate)
         TUI_DISABLED.set(manager.cli_args.ui.is_disabled)
@@ -73,6 +76,7 @@ async def _post_runtime(manager: Manager) -> None:
 
 
 def _main(manager: Manager) -> None:
+    set_console_level(manager.config.settings.runtime_options.effective_console_log_level)
     manager.resolve_paths()
     if not manager.cli_args.download:
         program_ui.run(manager)
