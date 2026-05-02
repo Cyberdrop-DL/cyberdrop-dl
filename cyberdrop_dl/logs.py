@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("cyberdrop_dl")
-for noisy_package in ("aiosqlite",):
+for noisy_package in ("aiosqlite", "markdown_it"):
     logging.getLogger(noisy_package).setLevel(logging.ERROR)
 
 _T = TypeVar("_T")

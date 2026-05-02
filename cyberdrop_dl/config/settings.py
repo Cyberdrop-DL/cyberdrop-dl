@@ -199,10 +199,10 @@ class IgnoreOptions(SettingsGroup):
 
 
 class RuntimeOptions(SettingsGroup):
-    log_level: NonNegativeInt | Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = logging.DEBUG
+    log_level: NonNegativeInt | Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     "Only log messages of this level or higher to the main log file"
     console_log_level: NonNegativeInt | Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
-    "Only log messages of this level or higher to the the console. If the value is `None`, use the same level as `log_level`"
+    "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
     deep_scrape: bool = False
     delete_partial_files: bool = False
     ignore_history: bool = False
