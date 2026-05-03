@@ -7,7 +7,6 @@ from typing import Annotated
 from cyclopts import App, CycloptsPanel, Parameter
 
 from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
-from cyberdrop_dl.constants import Hashing
 
 tracebacks.install_exception_hook()
 
@@ -61,10 +60,10 @@ async def _scrape(manager: Manager) -> None:
 
 async def _post_runtime(manager: Manager) -> None:
     """Actions to complete after main runtime, and before UI shutdown."""
-    logger.info("Running Post-Download Processes\n ", extra={"color": "green"})
+    logger.info("Running Post-Download Processes\n", extra={"color": "green"})
 
     if (
-        manager.config.settings.dupe_cleanup_options.hashing != Hashing.OFF
+        manager.config.settings.dupe_cleanup_options.hashing.enabled
         and manager.config.settings.dupe_cleanup_options.auto_dedupe
         and not manager.config.settings.runtime_options.ignore_history
     ):

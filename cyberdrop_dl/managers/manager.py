@@ -110,11 +110,7 @@ class Manager:
             self.appdata.db_file,
             self.config.settings.runtime_options.ignore_history,
         )
-        self.deduper = Czkawka(
-            self.hasher.download_folder,
-            self.database,
-            self.config.settings.dupe_cleanup_options.send_deleted_to_trash,
-        )
+        self.deduper = Czkawka.from_manager(self)
         self.sorter = Sorter.from_manager(self)
 
     def _log_config_settings(self) -> None:
