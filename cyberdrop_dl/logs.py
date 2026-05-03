@@ -4,12 +4,14 @@ import contextlib
 import json
 import logging
 import queue
+import sys
 from contextvars import ContextVar
 from datetime import datetime
+from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, ClassVar, TypeVar, final
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
@@ -21,24 +23,29 @@ from typing_extensions import override
 from cyberdrop_dl import env
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
-logger = logging.getLogger("cyberdrop_dl")
-for noisy_package in ("aiosqlite",):
-    logging.getLogger(noisy_package).setLevel(logging.ERROR)
-
-
-_USER_NAME = Path.home().name
-_DEFAULT_CONSOLE_WIDTH = 240
-_MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOGGER_LISTENER")
-MAIN_LOG_FILE: ContextVar[Path] = ContextVar("_MAIN_LOGGER_FILE")
-LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Generator, Iterable
 
     from rich.console import ConsoleRenderable
+
+
+logger = logging.getLogger("cyberdrop_dl")
+for noisy_package in ("aiosqlite", "markdown_it"):
+    logging.getLogger(noisy_package).setLevel(logging.ERROR)
+
+_T = TypeVar("_T")
+_USER_NAME = Path.home().name
+_DEFAULT_CONSOLE_WIDTH = 240
+_MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOG_LISTENER")
+_CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOG_LISTENER")
+_LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
+
+MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
+
+
+class HandlerName(StrEnum):
+    CONSOLE = "cdl-console"
+    MAIN_LOG = "cdl-main-log-file"
+    DEBUG_LOG = "cdl-debug-log-file"
 
 
 class RedactedConsole(Console):
@@ -117,8 +124,8 @@ class LogHandler(RichHandler):
             show_time=show_time,
             rich_tracebacks=True,
             tracebacks_show_locals=True,
+            tracebacks_max_frames=30,
             locals_max_string=_DEFAULT_CONSOLE_WIDTH,
-            tracebacks_extra_lines=2,
             locals_max_length=20,
             show_path=False,
             show_level=True,
@@ -171,26 +178,38 @@ class BareQueueHandler(QueueHandler):
 
 
 @contextlib.contextmanager
-def _threaded_logger(log_handler: logging.Handler, *, is_main_log: bool = False) -> Generator[None]:
+def _threaded_logger(
+    log_handler: logging.Handler,
+    *,
+    context_var: ContextVar[QueueListener] | None = None,
+) -> Generator[BareQueueHandler]:
     """Context-manager to process logs from this handler in another thread"""
     q: queue.Queue[logging.LogRecord] = queue.Queue()
     q_handler: BareQueueHandler = BareQueueHandler(q)
     q_listener: QueueListener = QueueListener(q, log_handler, respect_handler_level=True)
     q_listener.start()
-    token = _MAIN_LOG_LISTENER.set(q_listener) if is_main_log else None
-    logging.getLogger().addHandler(q_handler)
+
+    with _enter_context(context_var, q_listener) if context_var else contextlib.nullcontext():
+        logging.getLogger().addHandler(q_handler)
+        try:
+            yield q_handler
+        finally:
+            logging.getLogger().removeHandler(q_handler)
+            try:
+                q_handler.close()
+            finally:
+                q_listener.stop()
+                for handler in q_listener.handlers[:]:
+                    handler.close()
+
+
+@contextlib.contextmanager
+def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
+    token = context_var.set(value)
     try:
         yield
     finally:
-        logging.getLogger().removeHandler(q_handler)
-        try:
-            q_handler.close()
-        finally:
-            q_listener.stop()
-            for handler in q_listener.handlers[:]:
-                handler.close()
-            if token is not None:
-                _MAIN_LOG_LISTENER.reset(token)
+        context_var.reset(token)
 
 
 @final
@@ -270,40 +289,64 @@ def log_spacer(char: str = "-") -> None:
     logger.info(char * 30, stacklevel=2)
 
 
+def _get_handler(name: str) -> logging.Handler:
+    for handler in logging.getLogger().handlers:
+        if handler.get_name() == name:
+            return handler
+    raise LookupError(name)
+
+
+def set_console_level(level: int) -> None:
+    _get_handler(HandlerName.CONSOLE).setLevel(level)
+
+
 @contextlib.contextmanager
-def setup_console_logging(level: int = logging.INFO) -> Generator[None]:
-    handler = LogHandler(level, show_time=False)
+def setup_console_logging() -> Generator[None]:
+    handler = LogHandler(logging.DEBUG, show_time=False)
     logging.getLogger().setLevel(logging.DEBUG)
-    handler.addFilter(lambda _: LOG_TO_CONSOLE.get())
     try:
-        with _threaded_logger(handler):
+        with _threaded_logger(handler, context_var=_CONSOLE_LOG_LISTENER) as q_handler:
+            q_handler.set_name(HandlerName.CONSOLE)
+            q_handler.addFilter(lambda _: _LOG_TO_CONSOLE.get())
             yield
     finally:
-        # Re add it as a normal handler to make sure uncatched exceptions show up
-        logging.getLogger().addHandler(handler)
+        if "pytest" not in sys.modules:
+            # Re add it as a normal handler to make sure uncatched exceptions show up
+            logging.getLogger().addHandler(handler)
 
 
 @contextlib.contextmanager
-def setup_file_logging(file: Path, /, level: int = logging.DEBUG) -> Generator[None]:
+def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generator[None]:
     file.parent.mkdir(parents=True, exist_ok=True)
+    import mega
+
+    if "pytest" not in sys.modules:
+        logging.captureWarnings(True)
+
     with (
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
+        _enter_context(MAIN_LOG_FILE, file),
+        _enter_context(mega.LOG_HTTP_TRAFFIC, True),
+        _enter_context(mega.LOG_FILE_PROGRESS, False),
         _threaded_logger(
-            is_main_log=True,
             log_handler=LogHandler(
-                level,
+                level=logging.DEBUG,
                 show_time=True,
                 console=RedactedConsole(file=fp, width=_DEFAULT_CONSOLE_WIDTH * 2),
             ),
-        ),
+            context_var=_MAIN_LOG_LISTENER,
+        ) as handler,
     ):
+        handler.setLevel(level)
+        handler.set_name(HandlerName.MAIN_LOG)
         logger.info(f"Debug log file: {debug_log_file}")
-        token = MAIN_LOG_FILE.set(file)
         try:
             yield
-        finally:
-            MAIN_LOG_FILE.reset(token)
+        except Exception:
+            with _enter_context(_LOG_TO_CONSOLE, False):
+                logger.critical("Unrecoverable error", exc_info=True)
+            raise
 
 
 @contextlib.contextmanager
@@ -336,12 +379,13 @@ def _setup_debug_logger() -> Generator[Path | None]:
         debug_log_file.open("w", encoding="utf8") as fp,
         _threaded_logger(
             LogHandler(
-                logging.DEBUG,
+                level=logging.NOTSET + 1,
                 console=Console(file=fp, width=_DEFAULT_CONSOLE_WIDTH * 2),
                 show_time=True,
-            )
-        ),
+            ),
+        ) as handler,
     ):
+        handler.set_name(HandlerName.DEBUG_LOG)
         yield debug_log_file
 
 
@@ -370,16 +414,24 @@ def flush_logs() -> None:
     listener.start()
 
 
+def disable_console_logging():
+    try:
+        listener = _CONSOLE_LOG_LISTENER.get()
+    except LookupError:
+        pass
+    else:
+        listener.stop()
+        listener.start()
+    return _enter_context(_LOG_TO_CONSOLE, False)
+
+
 @contextlib.contextmanager
 def borrow_logger(name: str, level: int = logging.INFO) -> Generator[None]:
     """Context manager to temporarily add our log handlers to a third party logger"""
     _3p_logger = logging.getLogger(name)
     og_level = _3p_logger.level
-    og_propagate = _3p_logger.propagate
-    _3p_logger.propagate = False
     _3p_logger.setLevel(level)
     try:
         yield
     finally:
-        _3p_logger.propagate = og_propagate
         _3p_logger.setLevel(og_level)

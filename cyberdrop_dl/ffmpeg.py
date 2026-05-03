@@ -8,6 +8,7 @@ import json
 import logging
 import shutil
 import subprocess
+import uuid
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict, overload
@@ -17,7 +18,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from cyberdrop_dl.utils import DictDataclass
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator, Mapping
+    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -48,15 +49,23 @@ _FFPROBE_CALL_PREFIX = (
 )
 
 
-def check_is_available() -> None:
-    if not get_ffmpeg_version():
-        raise RuntimeError("ffmpeg is not available")
+def is_installed() -> bool:
+    try:
+        _check()
+        return True
+    except RuntimeError:
+        return False
+
+
+def _check() -> None:
+    if not version():
+        raise RuntimeError("ffmpeg is not installed")
     _check_ffprobe()
 
 
 def _check_ffprobe() -> None:
-    if not get_ffprobe_version():
-        raise RuntimeError("ffprobe is not available")
+    if not ffprobe_version():
+        raise RuntimeError("ffprobe is not installed")
 
 
 @functools.cache
@@ -70,13 +79,13 @@ def which_ffprobe() -> str | None:
 
 
 @functools.cache
-def get_ffmpeg_version() -> str | None:
+def version() -> str | None:
     if bin_path := which_ffmpeg():
         return _get_bin_version(bin_path)
 
 
 @functools.cache
-def get_ffprobe_version() -> str | None:
+def ffprobe_version() -> str | None:
     if bin_path := which_ffprobe():
         return _get_bin_version(bin_path)
 
@@ -388,12 +397,13 @@ class SubProcessResult:
     return_code: int | None
     stdout: str
     stderr: str
-    success: bool
-    command: _CMD
+
+    @property
+    def success(self) -> bool:
+        return self.return_code == 0
 
     def __json__(self) -> dict[str, Any]:
-        joined_command = " ".join(map(str, self.command))
-        me = dataclasses.asdict(self) | {"command": joined_command}
+        me = dataclasses.asdict(self)
         try:
             stdout = json.loads(self.stdout)
         except json.JSONDecodeError:
@@ -406,24 +416,26 @@ class SubProcessResult:
         return str(self.__json__())
 
 
-async def _run_command(command: _CMD) -> SubProcessResult:
+async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
     assert not isinstance(command, str)
     program, *cmd = command
-    if program == "ffmpeg":
-        program = which_ffmpeg()
-    elif program == "ffprobe":
-        program = which_ffprobe()
 
-    assert program
-    logger.debug(f"Running command: {program, *cmd}")
-    process = await asyncio.create_subprocess_exec(program, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if program == "ffmpeg":
+        bin = which_ffmpeg()
+    elif program == "ffprobe":
+        bin = which_ffprobe()
+    else:
+        raise ValueError(f"Unexpected program in command {command}")
+
+    assert bin
+    process_id = str(uuid.uuid4())
+    logger.debug("Running %s subprocess [id=%s]\n:%s", program, process_id, {"command": [bin, *map(str, cmd)]})
+    process = await asyncio.create_subprocess_exec(bin, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
-        process.returncode,
         stdout=stdout.decode("utf-8", errors="ignore"),
         stderr=stderr.decode("utf-8", errors="ignore"),
-        success=process.returncode == 0,
-        command=cmd,
+        return_code=process.returncode,
     )
-    logger.debug(result)
+    logger.debug("%s subprocess [id=%s] output:\n%s", program, process_id, result)
     return result

@@ -127,3 +127,24 @@ class TestMergeDicts:
         dict2 = {"a": 1}
         expected = {"a": {"x": 1}}
         assert merge_dicts(dict1, dict2) == expected
+
+
+class TestRuntimeLogsConfig:
+    @staticmethod
+    def parse(level: object, console_level: object):
+        return settings.RuntimeOptions.model_validate({"log_level": level, "console_log_level": console_level})
+
+    def test_default(self) -> None:
+        default = settings.RuntimeOptions()
+        expected = settings.RuntimeOptions(log_level="debug", console_log_level="debug")  # pyright: ignore[reportArgumentType]
+
+        assert default.effective_log_level == 10
+        assert default.effective_console_log_level == 10
+        assert default.effective_log_level == expected.effective_log_level
+        assert default.effective_console_log_level == expected.effective_console_log_level
+
+    def test_falsy_console_log_level(self) -> None:
+        for a, b in [(30, None), (40, ""), (20, "none")]:
+            config = self.parse(a, b)
+            assert config.effective_log_level == a
+            assert config.effective_console_log_level == a

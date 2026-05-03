@@ -9,7 +9,6 @@ If the message board needs to scrape the actual HTML of page, Inherit for HTMLMe
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import dataclasses
 import datetime
@@ -472,10 +471,10 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         scrape_item.setup_as_post("")
         post_title = self.create_separate_post_title(None, str(post.id), post.date)
         scrape_item.add_to_parent_title(post_title)
-        seen, duplicates, tasks = set(), set(), []
+        seen = set()
         stats: dict[str, int] = {}
-        max_children_error: MaxChildrenError | None = None
-        try:
+
+        async with self.new_task_group(scrape_item) as tg:
             for scraper in (
                 self._attachments,
                 self._images,
@@ -485,23 +484,14 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                 self._lazy_load_embeds,
             ):
                 for link in scraper(post):
-                    duplicates.add(link) if link in seen else seen.add(link)
+                    seen.add(link)
                     scraper_name = scraper.__name__.removeprefix("_")
                     stats[scraper_name] = stats.get(scraper_name, 0) + 1
-                    tasks.append(self.process_child(scrape_item, link, embeds="embeds" in scraper_name))
+                    tg.create_task(self.process_child(scrape_item, link, embeds="embeds" in scraper_name))
                     scrape_item.add_children()
-        except MaxChildrenError as e:
-            max_children_error = e
 
         if seen:
             self.log.info(f"post #{post.id} {stats = }")
-        if duplicates:
-            msg = f"Found duplicate links in post {scrape_item.parent}. Selectors are too generic: {duplicates}"
-            self.log.warning(msg)
-
-        await asyncio.gather(*tasks)
-        if max_children_error is not None:
-            raise max_children_error
 
     def _external_links(self, post: ForumPostProtocol) -> Iterable[str]:
         selector = self.SELECTORS.posts.links

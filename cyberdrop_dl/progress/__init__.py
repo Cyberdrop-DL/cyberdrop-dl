@@ -12,7 +12,7 @@ from rich.markup import escape
 from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
-from cyberdrop_dl.logs import LOG_TO_CONSOLE
+from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from rich.console import RenderableType
 
-REFRESH_RATE: ContextVar[int] = ContextVar("REFRESH_RATE", default=10)
+REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
 
 
@@ -93,13 +93,16 @@ class LiveUI(ABC):
     def __rich__(self) -> RenderableType: ...
 
     @contextlib.contextmanager
-    def __call__(self, *, transient: bool = True) -> Generator[None]:
-        if self.disabled or "pytest" in sys.modules:
-            yield None
+    def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
+        if self.disabled and not force:
+            yield
             return
 
-        console_token = LOG_TO_CONSOLE.set(False)
-        try:
+        with disable_console_logging():
+            if "pytest" in sys.modules and not force:
+                yield
+                return
+
             with Live(
                 refresh_per_second=REFRESH_RATE.get(),
                 auto_refresh=True,
@@ -108,5 +111,3 @@ class LiveUI(ABC):
                 get_renderable=self.__rich__,
             ):
                 yield
-        finally:
-            LOG_TO_CONSOLE.reset(console_token)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Self, TypeVar
+from typing import TYPE_CHECKING, Annotated, Self, TypeVar
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
@@ -28,21 +28,22 @@ _APP: App | None = None
 
 @Parameter(name="*")
 class Config(BaseModel):
-    source: Path | None = None
+    source: Annotated[Path | None, Parameter(show=False)] = None
 
     auth: AuthSettings = Field(default_factory=AuthSettings)
     settings: ConfigSettings = Field(default_factory=ConfigSettings)
     global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
 
     deep_scrape: bool = False
-    apprise_urls: tuple[AppriseURL, ...] = ()
+    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
-        apprise_file = appdata.configs / "apprise.txt"
+
         global_settings = appdata.configs / "global_settings.yaml"
         auth_file = appdata.configs / "authentication.yaml"
         config_file = config_file or appdata.config_file
+        apprise_file = config_file.parent / "apprise.txt"
 
         return cls(
             source=config_file,

@@ -262,7 +262,7 @@ class ScrapeItem:
             yield self
         finally:
             if old_url != self.url:
-                logger.info(f"URL transformation applied: \n  {old_url = !s}\n  new_url: {self.url}")
+                logger.info(f"URL transformation applied: \n  {old_url = !s}\n  new_url = {self.url}")
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(url={self.url!r}, parent_title={self.parent_title!r}, possible_datetime={self.uploaded_at!r}"

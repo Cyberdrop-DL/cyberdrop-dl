@@ -45,7 +45,7 @@ class AppriseURL(AliasModel):
             self.tags = (self.tags - self._VALID_TAGS) | {"simplified"}
 
     def __str__(self) -> str:
-        return self._format(dump_secret=True)
+        return self.format(dump_secret=True)
 
     @property
     def scheme(self) -> str:
@@ -61,9 +61,9 @@ class AppriseURL(AliasModel):
 
     @model_serializer()
     def serialize(self, info: SerializationInfo) -> str:
-        return self._format(dump_secret=info.mode != "json")
+        return self.format(dump_secret=info.mode != "json")
 
-    def _format(self, dump_secret: bool) -> str:
+    def format(self, dump_secret: bool) -> str:
         url = str(self.url.get_secret_value() if dump_secret else self.url)
         if not self.tags:
             return url

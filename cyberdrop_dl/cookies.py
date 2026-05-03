@@ -6,13 +6,13 @@ import os
 import sys
 import time
 from http.cookiejar import Cookie, CookieJar, MozillaCookieJar
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from typing import TYPE_CHECKING, Final
 
 from cyberdrop_dl.dependencies import browser_cookie3
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Sequence
+    from collections.abc import AsyncGenerator, Generator, Iterable, Sequence
     from pathlib import Path
 
     from cyberdrop_dl.constants import Browser
@@ -44,10 +44,21 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
+def filter_cookies(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
+    if not domains:
+        yield from cookies
+    else:
+        allowed_domains = tuple(domains)
+        for cookie in cookies:
+            if cookie.domain.endswith(allowed_domains):
+                yield cookie
+
+
 async def extract_cookies(browser: Browser) -> CookieJar:
     extract = _COOKIE_EXTRACTORS[browser]
     try:
         return await asyncio.to_thread(extract)
+
     except PermissionError as e:
         msg = (
             "We've encountered a Permissions Error. Please close all browsers and try again\n"
@@ -76,20 +87,19 @@ async def extract_cookies(browser: Browser) -> CookieJar:
     raise browser_cookie3.BrowserCookieError(f"{msg}\n\nNothing has been saved.")
 
 
-def split_cookies(extracted_cookies: CookieJar) -> dict[str, MozillaCookieJar]:
+def split_cookies(extracted_cookies: Iterable[Cookie]) -> dict[str, MozillaCookieJar]:
     cookie_jars: dict[str, MozillaCookieJar] = {}
-
     for cookie in extracted_cookies:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
         cookie_jar = cookie_jars.get(domain)
         if cookie_jar is None:
-            cookie_jar = MozillaCookieJar()
+            cookie_jars[domain] = cookie_jar = MozillaCookieJar()
         cookie_jar.set_cookie(cookie)
 
     return cookie_jars
 
 
-async def export_cookies(cookies: CookieJar, output_path: Path) -> None:
+async def export_cookies(cookies: Iterable[Cookie], output_path: Path) -> None:
     cookie_jars = split_cookies(cookies)
     await asyncio.to_thread(output_path.mkdir, parents=True, exist_ok=True)
     _ = await asyncio.gather(
@@ -146,7 +156,10 @@ def _parse_cookie_jar(cookie_jar: MozillaCookieJar, now: int) -> Generator[tuple
             has_expired_cookies.add(domain)
             logger.warning(f"Cookies for {domain} are expired")
 
-        yield domain, make_simple_cookie(cookie, now)
+        try:
+            yield domain, make_simple_cookie(cookie, now)
+        except (CookieError, ValueError) as e:
+            logger.error(f"Unable to parse cookie '{cookie.name}' from domain {cookie.domain} ({e!r})")
 
 
 def _read_netscape_file(file: Path) -> MozillaCookieJar | None:

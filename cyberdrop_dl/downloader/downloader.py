@@ -143,11 +143,12 @@ class Downloader:
         if media_item.url.path in self.processed_items and not self._ignore_history:
             return
 
-        try:
-            ffmpeg.check_is_available()
-        except RuntimeError as e:
-            msg = f"{e} - ffmpeg and ffprobe are required for HLS downloads"
-            raise DownloadError("FFmpeg Error", msg, media_item) from None
+        if not ffmpeg.is_installed():
+            msg = "ffmpeg is not installed. (Required for HLS downloads)"
+            if os.name == "nt":
+                msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
+
+            raise DownloadError("FFmpeg Error", msg, media_item)
 
         async with self._download_context(media_item):
             await self._start_hls_download(media_item, m3u8_group)

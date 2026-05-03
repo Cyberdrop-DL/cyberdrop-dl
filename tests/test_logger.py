@@ -2,8 +2,10 @@ import logging
 from pathlib import Path
 
 import pytest
+from rich import get_console
 
 from cyberdrop_dl import logs
+from cyberdrop_dl.progress import LiveUI
 
 TEXT = "\n".join(f"line {idx}" for idx in range(1, 5))
 
@@ -44,10 +46,8 @@ class TestBorrowLogger:
 
         with logs.borrow_logger("third_party_restore", level=logging.DEBUG):
             assert other.level == logging.DEBUG
-            assert other.propagate is False
 
         assert other.level == logging.WARNING
-        assert other.propagate is True
 
     def test_exception_inside_block_restores_state(self) -> None:
         other = logging.getLogger("third_party_exc")
@@ -62,3 +62,44 @@ class TestBorrowLogger:
 
         assert other.handlers == [orig_handler]
         assert other.level == logging.CRITICAL
+
+
+def test_disable_console_logging() -> None:
+
+    logger = logging.getLogger("cyberdrop_dl")
+    console = get_console()
+    console.record = True
+    with console, logs.setup_console_logging():
+        logger.info("This msg SHOULD show up")
+        with logs.disable_console_logging():
+            logger.info("This msg SHOULD NOT show up")
+
+        logger.info("This msg also SHOULD show up")
+
+    text = console.export_text()
+    assert "This msg SHOULD show up" in text
+    assert "This msg SHOULD NOT show up" not in text
+    assert "This msg also SHOULD show up" in text
+
+
+def test_entering_a_live_disables_console_logging() -> None:
+    logger = logging.getLogger("cyberdrop_dl")
+    console = get_console()
+    console.record = True
+
+    class DummyLiveUI(LiveUI):
+        def __rich__(self):
+            return "In Live"
+
+    with console, logs.setup_console_logging():
+        logger.info("This msg SHOULD show up")
+        with DummyLiveUI()(transient=False, force=True):
+            logger.info("This msg SHOULD NOT show up")
+
+        logger.info("This msg also SHOULD show up")
+
+    text = console.export_text()
+    assert "In Live" in text
+    assert "This msg SHOULD show up" in text
+    assert "This msg SHOULD NOT show up" not in text
+    assert "This msg also SHOULD show up" in text

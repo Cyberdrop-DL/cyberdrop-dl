@@ -22,6 +22,120 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.5.1] - 2026-05-03
+
+### Fixed
+
+- Some previously downloaded URLs not being skipped
+
+## [9.5.0] - 2026-05-02
+
+### Changed
+
+- `--log-level` and `--console-log-level` now accept level names as valid values, ex: `INFO` or `WARNING`
+- An empty or null value for `--console-log-level` will use the same level as `--log-level`
+- For `--console-log-level`, values higger than 50 (`CRITICAL`) will be reset to `None`
+
+### Deprecated
+
+Several config options:
+
+CLI Only options:
+
+- `--completed-after`
+- `--completed-before`
+- `--download`, `--retry-all`, `--retry-failed`, `--retry-maintenance` options will be removed and replaced with dedicated subcommands
+
+Download Options:
+
+- `--disable-download-attempt-limit`
+- `--remove-generated-id-from-filenames`
+- `--scrape-single-forum-post`
+
+Logs
+
+- `--last-forum-post`
+
+RuntimeOptions:
+
+- `--update-last-forum-post`
+- Support for integers values with `--log-level` and `--console-log-level` will be removed on v10. They will only accept log level names
+
+Authentication entries for:
+
+- `Imgur.client_id` (no longer required)
+- `Kemono.session` (can be supplied by cookies)
+- `Coomer.session` (can be supplied by cookies)
+
+DupeCleanup:
+
+- `--add-md5-hash` and `--add-sha256-hash` will removed and merged into a single config option as a list of hashes to enable
+
+### Fixed
+
+- `--log-level` and `--console-log-level` being ignored
+- Skip empty files removal if the root folder no longer exists
+
+## [9.4.3] - 2026-05-01
+
+### Fixed
+
+- `CRITICAL` errors not being logged to the main log file
+
+## [9.4.2] - 2026-04-30
+
+### Changed
+
+- Send real referrer on reinforced downloads (Bunkr)
+- Improve performance of database lookups
+
+### Fixed
+
+- Location of `apprise.txt` (`AppData/Configs/Default/apprise.txt`)
+- Auto cookies extraction not creating any files
+
+## [9.4.1] - 2026-04-28
+
+### Changed
+
+- `--refresh-rate` now accepts fractions of a seconds as value (ex: 0.5)
+- Detect and bypass `AppData` virtualization when Python is installed from the Microsoft store
+
+### Fixed
+
+- `--refresh-rate` being ignored
+- `--ui` mode being ignored
+- Error decoding some filenames (bunkr)
+- Handle "server under maintenance" pages (Bunkr)
+- `bunkr.black` redirects always triggering DDosGuard (bunkr)
+- Parsing of API errors (RedGifs)
+- Bypass login check for 1080p+ videos (ePorner)
+- Empty name for some public files (MegaNZ)
+- Truncated errors on stats summary
+- Flaresolverr session destruction always failing
+
+## [9.4.0] - 2026-04-23
+
+### Added
+
+- ImageVenue support
+- Photo search support (Anysex)
+- Photo search and Tags support (ePorner)
+
+### Changed
+
+- Log CDL enviroment vars
+- Always use threads to resolve DNS queries on Windows
+
+### Removed
+
+- InfluencerBitches support (No longer exists)
+
+### Fixed
+
+- Ignore errors while checking for updates
+- `RuntimeError` when downloads reach 99% due to incorrect MAC integrity check (MegaNZ)
+
 ## [9.3.1] - 2026-04-21
 
 ### Fixed
@@ -87,6 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ⚠️**IMPORTANT**
 
 > This version logs raw HTTP requests and responses to the main log file. They may include credentials, IP, etc. Remove personal information before sharing them or just extract the relevant logs
+>
 > Options to change log level are ignored. It will be fixed on a future version
 
 ### Added
@@ -96,7 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OwnCloud support
 - Support premium URLs (MediaFire)
 - Support subfolders (Filester)
-- Add support for archives (.zip) files (ImagePond)
+- Support for archives (.zip) files (ImagePond)
 
 ### Changed
 
@@ -114,12 +229,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- All settings and UI options about changing configs have been removed. CDL will always use the default config at `AppData/Configs/Default/setting.yaml`. A different config can be specified only via CLI args (`--config-file`)
+- All settings and UI options about changing configs have been removed. CDL will always use the default config at `AppData/Configs/Default/settings.yaml`. A different config can be specified only via CLI args (`--config-file`)
 - The UI Option to export cookies has been removed
 
 ### Fixed
 
-- Download all videos on paginated playlists (50+ videos) (PMVHaven )
+- Download all videos on paginated playlists (50+ videos) (PMVHaven)
 - Handle deleted videos (TubeCorporate)
 - 404 downloads (Bunkr)
 - Update selectors for files with MD5 hashes instead of SHA256 (Filester)

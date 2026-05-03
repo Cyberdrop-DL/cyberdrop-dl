@@ -8,6 +8,8 @@ import importlib.util
 import logging
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
+
 from cyberdrop_dl import aio
 from cyberdrop_dl.logs import MAIN_LOG_FILE, borrow_logger, export_logs, log_spacer
 from cyberdrop_dl.models import AppriseURL
@@ -53,7 +55,18 @@ def _parse_apprise_url(*urls: str) -> tuple[AppriseURL, ...]:
         logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
         return ()
 
-    return tuple(AppriseURL.model_validate({"url": url}) for url in set(urls))
+    models: list[AppriseURL] = []
+    errors: list[ValueError] = []
+    for url in dict.fromkeys(urls):
+        try:
+            models.append(AppriseURL.model_validate({"url": url}))
+        except ValidationError as e:
+            errors.append(ValueError(f"Not a valid apprise URL: {e.errors(include_url=False)[0]['input']}"))
+
+    if errors:
+        raise BaseExceptionGroup("Invalid Apprise file", errors)
+
+    return tuple(models)
 
 
 async def send_notifications(urls: Sequence[AppriseURL], body: str) -> None:

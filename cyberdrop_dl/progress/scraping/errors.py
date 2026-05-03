@@ -48,13 +48,17 @@ class UIError:
     @classmethod
     def parse(cls, msg: str, count: int) -> Self:
         if len(parts := msg.split(" ", 1)) == 2:
-            error_code, msg = parts
+            error_code, real_msg = parts
             try:
-                return cls(msg, count, int(error_code))
+                return cls(real_msg, count, int(error_code))
             except ValueError:
                 pass
 
         return cls(msg, count)
+
+    def format(self, padding: int = 0) -> str:
+        error_code = self.code if self.code is not None else ""
+        return f"{error_code:>{padding}}{' ' if padding or error_code else ''}{self.msg}: {self.count:,}"
 
 
 class _ErrorsPanel:

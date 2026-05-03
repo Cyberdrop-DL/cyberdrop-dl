@@ -15,6 +15,7 @@ from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
 from typing_extensions import override
 
+from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
@@ -61,7 +62,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     @override
     def __init_downloader__(self) -> None:
-        self.core = MegaCore(MegaAPI(self.manager.client_manager._session))
+        api = MegaAPI(self.manager.client_manager._session)
+        api.user_agent = CDL_USER_AGENT
+        self.core = MegaCore(api)
         self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # type: ignore[reportIncompatibleVariableOverride]
         dl.startup()
 
@@ -101,7 +104,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         if not resp.url:
             raise ScrapeError(410, "File not accessible anymore")
 
-        name = self.core.decrypt_attrs(resp._at, crypto.key).name
+        name = self.core.decrypt_attrs(resp._at, crypto.key, handle).name
         self.downloader.register(scrape_item.url, crypto, resp.size)
         file_url = self.parse_url(resp.url)
         filename, ext = self.get_filename_and_ext(name)

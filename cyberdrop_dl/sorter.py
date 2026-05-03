@@ -80,7 +80,7 @@ class Sorter:
                     _ = tg.create_task(sort_subfolder(path))
 
         logger.info("DONE!", extra={"color": "green"})
-        _ = delete_empty_files_and_folders(self.input_dir)
+        delete_empty_files_and_folders(self.input_dir)
 
     async def _sort_file(self, folder_name: str, file: Path) -> None:
         ext = file.suffix.lower()
@@ -199,7 +199,7 @@ class Sorter:
         )
         dest = await asyncio.to_thread(_move_file, file, dest, self.incrementer_format)
         if dest:
-            logger.warning("Moved '{}' to '{}'", file, dest)
+            logger.debug("Moved '{}' to '{}'", file, dest)
         else:
             self.tui.stats.errors += 1
         return bool(dest)

@@ -1,28 +1,11 @@
 from pathlib import Path
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.cli import CustomHelpFormatter, make_parser
-from cyberdrop_dl.supported_sites import get_crawlers_info_as_markdown_table
+from cyberdrop_dl.supported_sites import as_markdown
 
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
 SUPPORTED_SITES_MD = REPO_ROOT / "docs/reference/supported-websites.md"
-
-
-def update_cli_overview() -> None:
-    parser = make_parser().parser
-
-    def get_wide_formatter(_=None) -> CustomHelpFormatter:
-        return CustomHelpFormatter(parser.prog, width=300)
-
-    parser._get_formatter = get_wide_formatter
-    help_text = parser.format_help()
-    shell = "```shell"
-    cli_overview, *_ = help_text.partition("")
-    current_content = CLI_ARGUMENTS_MD.read_text(encoding="utf8")
-    new_content, *_ = current_content.partition(shell)
-    new_content += f"{shell}\n{cli_overview}```\n"
-    write_if_updated(CLI_ARGUMENTS_MD, current_content, new_content)
 
 
 def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
@@ -36,7 +19,7 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
 
 
 def make_supported_sites_markdown_table(title: str) -> str:
-    markdown = get_crawlers_info_as_markdown_table()
+    markdown = as_markdown()
     header = f"{title}\n\nList of sites supported by cyberdrop-dl-patched as of version {__version__}\n\n"
     table = header + markdown + "\n"
     return table
@@ -54,5 +37,4 @@ def update_supported_sites() -> None:
 
 
 if __name__ == "__main__":
-    update_cli_overview()
     update_supported_sites()

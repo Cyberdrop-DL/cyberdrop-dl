@@ -25,7 +25,7 @@ from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.cookies import export_cookies, extract_cookies, read_netscape_files
+from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
 from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
@@ -55,6 +55,8 @@ _DOWNLOAD_ERROR_ETAGS = {
     "637be5da-11d2b": "eFukt Video removed",
     "63a05f27-11d2b": "eFukt Video removed",
     "5a56b09d-1485eb": "eFukt Video removed",
+    "19fdf2cd6-383c-5a4cd5b6710ed": "ImageVenue image not Found",
+    "383c-5a4cd5b6710ed": "ImageVenue image not Found",
 }
 
 _crawler_errors: dict[str, int] = defaultdict(int)
@@ -69,7 +71,7 @@ _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = C
 
 
 class DownloadSpeedLimiter(AsyncLimiter):
-    __slots__ = (*AsyncLimiter.__slots__, "chunk_size")
+    __slots__ = ("chunk_size",)
 
     def __init__(self, speed_limit: int) -> None:
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
@@ -88,32 +90,6 @@ class DownloadSpeedLimiter(AsyncLimiter):
         return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
-class DDosGuard:
-    TITLES = ("Just a moment...", "DDoS-Guard")
-    SELECTORS = (
-        "#cf-challenge-running",
-        ".ray_id",
-        ".attack-box",
-        "#cf-please-wait",
-        "#challenge-spinner",
-        "#trk_jschal_js",
-        "#turnstile-wrapper",
-        ".lds-ring",
-    )
-    ALL_SELECTORS = ", ".join(SELECTORS)
-
-
-class CloudflareTurnstile:
-    TITLES = ("Simpcity Cuck Detection", "Attention Required! | Cloudflare", "Sentinel CAPTCHA")
-    SELECTORS = (
-        "captchawrapper",
-        "cf-turnstile",
-        "script[src*='challenges.cloudflare.com/turnstile']",
-        "script:-soup-contains('Dont open Developer Tools')",
-    )
-    ALL_SELECTORS = ", ".join(SELECTORS)
-
-
 class ClientManager:
     """Creates a 'client' that can be referenced by scraping or download sessions."""
 
@@ -130,7 +106,7 @@ class ClientManager:
             self.ssl_context = ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_verify_locations(cafile=certifi.where())
 
-        self.cookies = aiohttp.CookieJar(quote_cookie=False)
+        self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.download_slots: dict[str, int] = {}
         self.global_rate_limiter = AsyncLimiter(self.rate_limiting_options.rate_limit, 1)
@@ -143,6 +119,13 @@ class ClientManager:
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
+
+    @property
+    def cookies(self) -> aiohttp.CookieJar:
+        # lazy cause it is loop bound for some reason
+        if self._cookies is None:
+            self._cookies = aiohttp.CookieJar(quote_cookie=False)
+        return self._cookies
 
     @contextlib.contextmanager
     def set_json_checker(self, check: Callable[[Any, AbstractResponse[Any]], None] | None = None) -> Generator[None]:
@@ -158,27 +141,33 @@ class ClientManager:
             self._flaresolverr = FlareSolverrClient(url, self._session)
         return self._flaresolverr
 
-    def _startup(self) -> None:
+    async def __aenter__(self) -> Self:
+        global DNS_RESOLVER
+        if DNS_RESOLVER is None:
+            DNS_RESOLVER = await _get_dns_resolver()  # pyright: ignore[reportConstantRedefinition]
+
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
-        if _curl_import_error is not None:
-            return
-
-        self._curl_session = self.new_curl_cffi_session()
-
-    async def __aenter__(self) -> Self:
-        self._startup()
+        if _curl_import_error is None:
+            self._curl_session = self.new_curl_cffi_session()
         return self
 
-    async def __aexit__(self, *args) -> None:
-        await self._session.close()
-        await self._download_session.close()
-        if _curl_import_error is not None:
-            return
-        try:
-            await self._curl_session.close()
-        except Exception:
-            pass
+    async def __aexit__(self, *_) -> None:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._session.close())
+            tg.create_task(self._download_session.close())
+            if self._flaresolverr is not None:
+                tg.create_task(self._flaresolverr.aclose())
+
+            if _curl_import_error is None:
+
+                async def close_curl() -> None:
+                    try:
+                        await self._curl_session.close()
+                    except Exception:
+                        pass
+
+                tg.create_task(close_curl())
 
     @property
     def rate_limiting_options(self):
@@ -244,11 +233,6 @@ class ClientManager:
         for domain, _ in self.cookies._cookies:
             if word in domain:
                 yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
-
-    async def startup(self) -> None:
-        global DNS_RESOLVER
-        if DNS_RESOLVER is None:
-            DNS_RESOLVER = await _get_dns_resolver()
 
     def new_curl_cffi_session(self) -> AsyncSession[CurlResponse]:
         # Calling code should have validated if curl is actually available
@@ -327,7 +311,10 @@ class ClientManager:
         if self.manager.config.settings.browser_cookies.auto_import:
             assert self.manager.config.settings.browser_cookies.browser
             cookies = await extract_cookies(self.manager.config.settings.browser_cookies.browser)
-            await export_cookies(cookies, output_path=self.manager.appdata.cookies)
+            await export_cookies(
+                filter_cookies(cookies, self.manager.config.settings.browser_cookies.sites),
+                output_path=self.manager.appdata.cookies,
+            )
 
         cookie_files = await asyncio.to_thread(lambda: sorted(self.manager.appdata.cookies.glob("*.txt")))
         if not cookie_files:
@@ -357,7 +344,7 @@ class ClientManager:
         message = None
 
         def check_etag() -> None:
-            if download and (e_tag := response.headers.get("ETag")) in _DOWNLOAD_ERROR_ETAGS:
+            if download and (e_tag := response.headers.get("ETag", "").strip('"')) in _DOWNLOAD_ERROR_ETAGS:
                 message = _DOWNLOAD_ERROR_ETAGS[e_tag]
                 raise DownloadError(HTTPStatus.NOT_FOUND, message=message)
 
@@ -445,10 +432,6 @@ class ClientManager:
 
         max_audio_duration = max_audio_duration or float("inf")
         return min_audio_duration <= duration <= max_audio_duration
-
-    async def close(self) -> None:
-        if self._flaresolverr:
-            await self._flaresolverr.aclose()
 
 
 async def _get_dns_resolver(

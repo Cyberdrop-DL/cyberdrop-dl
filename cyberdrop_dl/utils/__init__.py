@@ -191,46 +191,14 @@ def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) ->
     return download_dir / scrape_item.create_download_path(domain)
 
 
-def _get_size(path: os.DirEntry[str]) -> int | None:
-    try:
-        return path.stat(follow_symlinks=False).st_size
-    except (OSError, ValueError):
-        return
-
-
-def delete_empty_files_and_folders(dirname: Path | str) -> bool:
+def delete_empty_files_and_folders(path: Path) -> None:
     """walks and removes in place"""
 
-    has_non_empty_files = False
-    has_non_empty_subfolders = False
+    from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
 
-    try:
-        for entry in os.scandir(dirname):
-            try:
-                is_dir = entry.is_dir(follow_symlinks=False)
-            except OSError:
-                is_dir = False
-            if is_dir:
-                deleted = delete_empty_files_and_folders(entry.path)
-                if not deleted:
-                    has_non_empty_subfolders = True
-            elif _get_size(entry) == 0:
-                logger.debug(f"Deleting '{entry.path}'")
-                os.unlink(entry)  # noqa: PTH108
-            else:
-                has_non_empty_files = True
-
-    except OSError:
-        logger.exception(f"Unknown errot while walking '{dirname}'")
-        pass
-
-    if has_non_empty_files or has_non_empty_subfolders:
-        return False
-    try:
-        os.rmdir(dirname)  # noqa: PTH106
-        return True
-    except OSError:
-        return False
+    if not path.is_dir():
+        return
+    _ = delete_empty_files_and_folders_in_place(path)
 
 
 def check_partials_and_empty_folders(manager: Manager) -> None:
@@ -248,11 +216,11 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         return
 
     logger.info("Deleting empty files and folders...")
-    _ = delete_empty_files_and_folders(download_folder)
+    delete_empty_files_and_folders(download_folder)
 
     sorted_folder = manager.config.settings.sorting.sort_folder
     if sorted_folder and manager.config.settings.sorting.sort_downloads:
-        _ = delete_empty_files_and_folders(sorted_folder)
+        delete_empty_files_and_folders(sorted_folder)
 
 
 def _partial_files(dir: Path | str) -> Generator[Path]:
@@ -340,8 +308,8 @@ def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.parent.with_fragment(url.fragment).with_query(url.query)
 
 
-@functools.cache
 def get_system_information() -> dict[str, Any]:
+
     def get_common_name() -> str:
         system = platform.system()
 
@@ -364,11 +332,18 @@ def get_system_information() -> dict[str, Any]:
             return f"{default} {edition}"
         return default
 
-    system_info = platform.uname()._asdict() | {
-        "architecture": str(platform.architecture()),
-        "python": f"{platform.python_version()} {platform.python_implementation()}",
-        "common_name": get_common_name(),
-    }
+    system_info = (
+        {
+            "prefix": sys.prefix,
+            "executable": sys.executable,
+        }
+        | platform.uname()._asdict()
+        | {
+            "architecture": str(platform.architecture()),
+            "python": f"{platform.python_version()} {platform.python_implementation()}",
+            "common_name": get_common_name(),
+        }
+    )
     _ = system_info.pop("node", None)
     return system_info
 
@@ -380,3 +355,9 @@ def is_blob_or_svg(link: str) -> bool:
 def xor_decrypt(encrypted_data: bytes, key: bytes) -> str:
     data = bytearray(b_input ^ b_key for b_input, b_key in zip(encrypted_data, itertools.cycle(key)))
     return data.decode("utf-8", errors="ignore")
+
+
+def truncated_preview(content: str, max_len: int = 100) -> str:
+    if len(content) <= max_len:
+        return content
+    return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"

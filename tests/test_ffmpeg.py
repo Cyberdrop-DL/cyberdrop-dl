@@ -6,7 +6,7 @@ import pytest
 from cyberdrop_dl import ffmpeg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-FFPROBE_IS_INSTALLED = bool(ffmpeg.get_ffprobe_version())
+FFPROBE_IS_INSTALLED = bool(ffmpeg.ffprobe_version())
 
 pytestmark = pytest.mark.skipif(not FFPROBE_IS_INSTALLED, reason="ffprobe is not installed")
 

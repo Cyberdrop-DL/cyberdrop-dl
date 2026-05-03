@@ -5,7 +5,7 @@ import logging
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, cast
 
-from .definitions import create_fixed_history, create_history
+from .definitions import create_fixed_history, create_history, create_media_index
 
 if TYPE_CHECKING:
     import datetime
@@ -71,6 +71,8 @@ class HistoryTable:
 
         await self.db_conn.executescript(updates)
         await self.db_conn.commit()
+        await self.db_conn.executescript(create_media_index)
+        await self.db_conn.commit()
 
     async def delete_invalid_rows(self) -> None:
         query = "DELETE FROM media WHERE download_filename = '' "
@@ -82,10 +84,10 @@ class HistoryTable:
         if self._database.ignore_history:
             return "", False
 
-        query = "SELECT referer, completed FROM media WHERE domain = ? and url_path = ?"
+        query = "SELECT referer, completed FROM media WHERE domain = ? and url_path = ? LIMIT 1"
         cursor = await self.db_conn.execute(query, (domain, db_path))
         if row := await cursor.fetchone():
-            return row[0], row[1]
+            return row[0], bool(row[1])
         return "", False
 
     async def update_referer(self, domain: str, db_path: str, referer: URL) -> None:
@@ -116,21 +118,14 @@ class HistoryTable:
             return False
 
         if domain is None:
-            query = "SELECT completed FROM media WHERE referer = ?"
+            query = "SELECT 1 FROM media WHERE referer = ? AND completed != 0) LIMIT 1"
             params = (str(referer),)
         else:
-            query = "SELECT completed FROM media WHERE referer = ? and domain = ?"
-            params = str(referer), domain
+            query = "SELECT 1 FROM media WHERE domain = ? AND referer = ? AND completed != 0 LIMIT 1"
+            params = domain, str(referer)
 
         cursor = await self.db_conn.execute(query, params)
-        if domain is None:
-            rows = await cursor.fetchall()
-        else:
-            row = await cursor.fetchone()
-            if row is None:
-                return False
-            rows = [row]
-        return bool(rows and any(row[0] != 0 for row in rows))
+        return await cursor.fetchone() is not None
 
     async def insert_incompleted(self, domain: str, media_item: MediaItem) -> None:
         """Inserts an uncompleted file into the database."""
@@ -200,7 +195,7 @@ class HistoryTable:
             return
 
         url_path = media_item.db_path
-        query = "SELECT duration FROM media WHERE domain = ? and url_path = ?"
+        query = "SELECT duration FROM media WHERE domain = ? and url_path = ? LIMIT 1"
         cursor = await self.db_conn.execute(query, (domain, url_path))
         if row := await cursor.fetchone():
             return row[0]
@@ -214,11 +209,9 @@ class HistoryTable:
 
     async def check_filename_exists(self, filename: str) -> bool:
         """Checks whether a downloaded filename exists in the database."""
-        query = "SELECT EXISTS(SELECT 1 FROM media WHERE download_filename = ?)"
+        query = "SELECT 1 FROM media WHERE download_filename = ? LIMIT 1"
         cursor = await self.db_conn.execute(query, (filename,))
-        row = await cursor.fetchone()
-        # TODO: this is a bug. It should check the first index
-        return row == 1
+        return await cursor.fetchone() is not None
 
     async def get_downloaded_filename(self, domain: str, media_item: MediaItem) -> str | None:
         """Returns the downloaded filename from the database."""
@@ -227,7 +220,7 @@ class HistoryTable:
             return media_item.filename
 
         url_path = media_item.db_path
-        query = "SELECT download_filename FROM media WHERE domain = ? and url_path = ?"
+        query = "SELECT download_filename FROM media WHERE domain = ? and url_path = ? LIMIT 1"
         cursor = await self.db_conn.execute(query, (domain, url_path))
         if row := await cursor.fetchone():
             return row[0]
