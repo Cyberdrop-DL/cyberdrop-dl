@@ -9,11 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal
 
 import xxhash
-from send2trash import send2trash
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.constants import Hashing, TempExt
-from cyberdrop_dl.progress.dedupe import DedupeUI
+from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
 if TYPE_CHECKING:
@@ -57,20 +56,19 @@ async def hash_directory_scanner(manager: Manager, path: Path) -> None:
 @dataclasses.dataclass(slots=True)
 class Hasher:
     manager: Manager
-    hashed_media_items: list[MediaItem] = dataclasses.field(init=False, default_factory=list)
+    hashed_media_items: list[MediaItem] = dataclasses.field(init=False, repr=False, default_factory=list)
     hashes_dict: dict[str, dict[int, set[Path]]] = dataclasses.field(
-        init=False, default_factory=lambda: defaultdict(lambda: defaultdict(set))
+        init=False,
+        repr=False,
+        default_factory=lambda: defaultdict(lambda: defaultdict(set)),
     )
     _sem: asyncio.BoundedSemaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.BoundedSemaphore(20))
     _cwd: Path = dataclasses.field(init=False, default_factory=Path.cwd)
-    _hashed_items: set[tuple[str, ...]] = dataclasses.field(default_factory=set)
+    _hashed_items: set[tuple[str, ...]] = dataclasses.field(default_factory=set, repr=False)
     _tui: HashingUI = dataclasses.field(init=False)
-    _dedupe_tui: DedupeUI = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        base_dir = self.download_folder
-        self._tui = HashingUI(base_dir)
-        self._dedupe_tui = DedupeUI(base_dir)
+        self._tui = HashingUI(self.download_folder)
 
     @property
     def download_folder(self) -> Path:
@@ -78,7 +76,7 @@ class Hasher:
 
     @property
     def stats(self):
-        return self._tui.stats, self._dedupe_tui.stats
+        return self._tui.stats
 
     @property
     def config(self) -> DupeCleanup:
@@ -87,14 +85,6 @@ class Hasher:
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
         return await asyncio.to_thread(_compute_hash, file_path, hash_type)
-
-    @property
-    def _to_trash(self) -> bool:
-        return self.config.send_deleted_to_trash
-
-    @property
-    def _deleted_file_suffix(self) -> Literal["Sent to trash", "Permanently deleted"]:
-        return "Sent to trash" if self._to_trash else "Permanently deleted"
 
     async def hash_directory(self, path: Path) -> HashingStats:
         path = Path(path)
@@ -222,49 +212,9 @@ class Hasher:
             return
         with self._tui():
             file_hashes_dict = await self.get_file_hashes_dict()
-        with self._dedupe_tui():
-            await self.final_dupe_cleanup(file_hashes_dict)
 
-    async def final_dupe_cleanup(self, final_dict: dict[str, dict[int, set[Path]]]) -> None:
-        """cleanup files based on dedupe setting"""
-
-        get_matches = self.manager.database.hash.get_files_with_hash_matches
-        base_dir = self.download_folder
-        async with asyncio.TaskGroup() as tg:
-
-            async def delete_dupes(hash_value: str, size: int) -> None:
-                db_matches = await get_matches(hash_value, size, "xxh128")
-                for row in db_matches[1:]:
-                    file = Path(row["folder"], row["download_filename"])
-                    if not file.is_relative_to(base_dir):
-                        await self._sem.acquire()
-                        tg.create_task(self._delete_and_log(file, hash_value))
-
-            for hash_value, size_dict in final_dict.items():
-                for size in size_dict:
-                    tg.create_task(delete_dupes(hash_value, size))
-
-    async def _delete_and_log(self, file: Path, xxh128_value: str) -> None:
-        hash_string = f"xxh128:{xxh128_value}"
-        with self._dedupe_tui.new_file(file):
-            try:
-                deleted = await _delete_file(file, self._to_trash)
-            except OSError as e:
-                logger.exception(f"Unable to remove '{file}' ({hash_string}): {e}")
-
-            else:
-                if not deleted:
-                    return
-
-                msg = (
-                    f"Removed new download '{file}' [{self._deleted_file_suffix}]. "
-                    f"File hash matches with a previous download ({hash_string})"
-                )
-                logger.info(msg)
-                self._dedupe_tui.stats.deleted += 1
-
-            finally:
-                self._sem.release()
+        deduper = Czkawka(self.download_folder, self.manager.database, to_trash=self.config.send_deleted_to_trash)
+        await deduper.run(file_hashes_dict)
 
     async def get_file_hashes_dict(self) -> dict[str, dict[int, set[Path]]]:
 
@@ -283,27 +233,3 @@ class Hasher:
             except Exception:
                 logger.exception(msg=f"Unable to hash '{media_item.path}'")
         return self.hashes_dict
-
-
-async def _delete_file(path: Path, to_trash: bool = True) -> bool:
-    """Deletes a file and return `True` on success, `False` is the file was not found.
-
-    Any other exception is propagated"""
-
-    if to_trash:
-        coro = asyncio.to_thread(send2trash, path)
-    else:
-        coro = aio.unlink(path)
-
-    try:
-        await coro
-        return True
-    except FileNotFoundError:
-        pass
-    except OSError as e:
-        # send2trash raises everything as a bare OSError. We should only ignore FileNotFound and raise everything else
-        msg = str(e)
-        if "File not found" not in msg:
-            raise
-
-    return False
