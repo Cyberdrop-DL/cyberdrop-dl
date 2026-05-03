@@ -14,7 +14,7 @@ import imagesize
 
 from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.constants import FileExt, TempExt
-from cyberdrop_dl.progress.sorting import SortingUI
+from cyberdrop_dl.progress.sorting import SortingUI, SortStats
 from cyberdrop_dl.utils import delete_empty_files_and_folders, strings
 
 if TYPE_CHECKING:
@@ -35,10 +35,14 @@ class Sorter:
     other_format: str | None
     incrementer_format: str = "{i}"
 
-    tui: SortingUI = dataclasses.field(init=False)
+    _tui: SortingUI = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.tui = SortingUI(self.input_dir, self.output_dir)
+        self._tui = SortingUI(self.input_dir, self.output_dir)
+
+    @property
+    def stats(self) -> SortStats:
+        return self._tui.stats
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
@@ -61,8 +65,8 @@ class Sorter:
         logger.info("Sorting downloads...", extra={"color": "cyan"})
         await aio.mkdir(self.output_dir, parents=True, exist_ok=True)
 
-        self.tui.disabled = disable_tui
-        with self.tui():
+        self._tui.disabled = disable_tui
+        with self._tui():
             await self._run()
 
     async def _run(self) -> None:
@@ -98,7 +102,7 @@ class Sorter:
 
         except Exception:
             logger.exception("Unknown error while sorting '{}'", file)
-            self.tui.stats.errors += 1
+            self._tui.stats.errors += 1
 
     async def sort_audio(self, file: Path, base_name: str) -> None:
         if not self.audio_format:
@@ -120,7 +124,7 @@ class Sorter:
             length=duration,
             sample_rate=sample_rate,
         ):
-            self.tui.stats.audios += 1
+            self._tui.stats.audios += 1
 
     async def sort_image(self, file: Path, base_name: str) -> None:
         if not self.image_format:
@@ -151,7 +155,7 @@ class Sorter:
             resolution=resolution,
             width=width,
         ):
-            self.tui.stats.images += 1
+            self._tui.stats.images += 1
 
     async def sort_video(self, file: Path, base_name: str) -> None:
         if not self.video_format:
@@ -179,14 +183,14 @@ class Sorter:
             resolution=resolution,
             width=width,
         ):
-            self.tui.stats.videos += 1
+            self._tui.stats.videos += 1
 
     async def sort_other(self, file: Path, base_name: str) -> None:
         if not self.other_format:
             return
 
         if await self._move_file(file, base_name, self.other_format):
-            self.tui.stats.others += 1
+            self._tui.stats.others += 1
 
     async def _move_file(self, file: Path, base_name: str, format_str: str, /, **kwargs: object) -> bool:
         dest = _format_dest(
@@ -201,7 +205,7 @@ class Sorter:
         if dest:
             logger.debug("Moved '{}' to '{}'", file, dest)
         else:
-            self.tui.stats.errors += 1
+            self._tui.stats.errors += 1
         return bool(dest)
 
 

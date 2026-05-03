@@ -221,7 +221,7 @@ class Manager:
 
         self.print_hashing_stats(self.hasher.stats)
         self.print_dedupe_stats(self.deduper.stats)
-        # self.print_sort_stats()
+        self.print_sort_stats(self.sorter.stats)
         self.print_errors()
 
     def print_sort_stats(self, stats: SortStats):
