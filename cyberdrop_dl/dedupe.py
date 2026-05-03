@@ -5,7 +5,7 @@ import contextlib
 import dataclasses
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from send2trash import send2trash
 
@@ -24,16 +24,12 @@ logger = logging.getLogger(__name__)
 class Czkawka:
     base_dir: Path
     database: Database
-    to_trash: bool
+    use_trash_bin: bool
     _sem: asyncio.BoundedSemaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.BoundedSemaphore(20))
     _tui: DedupeUI = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._tui = DedupeUI(self.base_dir)
-
-    @property
-    def _deleted_file_suffix(self) -> Literal["Sent to trash", "Permanently deleted"]:
-        return "Sent to trash" if self.to_trash else "Permanently deleted"
 
     async def run(self, final_dict: dict[str, dict[int, set[Path]]]) -> None:
         with self._tui():
@@ -62,9 +58,11 @@ class Czkawka:
 
     async def _delete_and_log(self, file: Path, xxh128_value: str) -> None:
         hash_string = f"xxh128:{xxh128_value}"
+        suffix = "Sent to trash" if self.use_trash_bin else "Permanently deleted"
+
         with self._tui.new_file(file):
             try:
-                deleted = await _delete_file(file, self.to_trash)
+                deleted = await _delete_file(file, self.use_trash_bin)
             except OSError as e:
                 logger.exception(f"Unable to remove '{file}' ({hash_string}): {e}")
 
@@ -73,7 +71,7 @@ class Czkawka:
                     return
 
                 msg = (
-                    f"Removed new download '{file}' [{self._deleted_file_suffix}]. "
+                    f"Removed new download '{file}' [{suffix}]. "
                     f"File hash matches with a previous download ({hash_string})"
                 )
                 logger.info(msg)

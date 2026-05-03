@@ -213,7 +213,7 @@ class Hasher:
         with self._tui():
             file_hashes_dict = await self.get_file_hashes_dict()
 
-        deduper = Czkawka(self.download_folder, self.manager.database, to_trash=self.config.send_deleted_to_trash)
+        deduper = Czkawka(self.download_folder, self.manager.database, use_trash_bin=self.config.send_deleted_to_trash)
         await deduper.run(file_hashes_dict)
 
     async def get_file_hashes_dict(self) -> dict[str, dict[int, set[Path]]]:
