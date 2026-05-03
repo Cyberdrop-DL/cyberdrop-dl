@@ -122,7 +122,7 @@ class HistoryTable:
             params = (str(referer),)
         else:
             query = "SELECT 1 FROM media WHERE domain = ? AND referer = ? AND completed != 0 LIMIT 1"
-            params = str(referer), domain
+            params = domain, str(referer)
 
         cursor = await self.db_conn.execute(query, params)
         return await cursor.fetchone() is not None
