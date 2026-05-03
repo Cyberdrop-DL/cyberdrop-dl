@@ -10,12 +10,13 @@ from typing import TYPE_CHECKING
 from send2trash import send2trash
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.progress.dedupe import DedupeUI
+from cyberdrop_dl.progress.dedupe import DedupeStats, DedupeUI
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.database import Database
+    from cyberdrop_dl.hasher import FileHashes
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,15 @@ class Czkawka:
     def __post_init__(self) -> None:
         self._tui = DedupeUI(self.base_dir)
 
-    async def run(self, final_dict: dict[str, dict[int, set[Path]]]) -> None:
-        with self._tui():
-            await self.final_dupe_cleanup(final_dict)
+    @property
+    def stats(self) -> DedupeStats:
+        return self._tui.stats
 
-    async def final_dupe_cleanup(self, final_dict: dict[str, dict[int, set[Path]]]) -> None:
+    async def run(self, file_hashes: FileHashes) -> None:
+        with self._tui():
+            await self.final_dupe_cleanup(file_hashes)
+
+    async def final_dupe_cleanup(self, file_hashes: FileHashes) -> None:
         async with asyncio.TaskGroup() as tg:
 
             async def delete_dupes(hash_value: str, size: int) -> None:
@@ -44,7 +49,7 @@ class Czkawka:
                         await self._sem.acquire()
                         tg.create_task(self._delete_and_log(file, hash_value))
 
-            for hash_value, size_dict in final_dict.items():
+            for hash_value, size_dict in file_hashes.items():
                 for size in size_dict:
                     tg.create_task(delete_dupes(hash_value, size))
 

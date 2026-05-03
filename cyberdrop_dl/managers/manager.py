@@ -15,6 +15,7 @@ from cyberdrop_dl import __version__, env, ffmpeg, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
+from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
@@ -54,6 +55,7 @@ class Manager:
         self.scrape_mapper: ScrapeMapper
         self.database: Database
         self.client_manager: ClientManager
+        self.deduper: Czkawka
 
     @property
     def appdata(self) -> AppData:
@@ -106,6 +108,7 @@ class Manager:
             self.appdata.db_file,
             self.config.settings.runtime_options.ignore_history,
         )
+        self.deduper = Czkawka(self.hasher.download_folder, self.database, self.config.send_deleted_to_trash)
 
     def _log_config_settings(self) -> None:
         auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}
@@ -209,9 +212,8 @@ class Manager:
         logger.info(f"  Sent to Jdownloader: {self.scrape_mapper.tui.scrape_errors.sent_to_jdownloader:,}")
         logger.info(f"  Skipped: {self.scrape_mapper.tui.scrape_errors.skipped:,}")
 
-        hash_stats, dedupe_stats = self.hasher.stats
-        self.print_hashing_stats(hash_stats)
-        self.print_dedupe_stats(dedupe_stats)
+        self.print_hashing_stats(self.hasher.stats)
+        self.print_dedupe_stats(self.deduper.stats)
         # self.print_sort_stats()
         self.print_errors()
 

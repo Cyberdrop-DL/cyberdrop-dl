@@ -7,6 +7,7 @@ from typing import Annotated
 from cyclopts import App, CycloptsPanel, Parameter
 
 from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
+from cyberdrop_dl.constants import Hashing
 
 tracebacks.install_exception_hook()
 
@@ -64,6 +65,14 @@ async def _post_runtime(manager: Manager) -> None:
     logger.info("Running Post-Download Processes\n ", extra={"color": "green"})
 
     await manager.hasher.cleanup_dupes_after_download()
+
+    if (
+        manager.config.settings.dupe_cleanup_options.hashing != Hashing.OFF
+        and manager.config.settings.dupe_cleanup_options.auto_dedupe
+        and not manager.config.settings.runtime_options.ignore_history
+    ):
+        file_hashes = await manager.hasher.run()
+        await manager.deduper.run(file_hashes)
 
     if manager.config.settings.sorting.sort_downloads and not manager.cli_args.retry_any:
         sorter = Sorter.from_manager(manager)

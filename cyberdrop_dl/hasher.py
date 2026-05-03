@@ -12,7 +12,6 @@ import xxhash
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.constants import Hashing, TempExt
-from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
 if TYPE_CHECKING:
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.managers.manager import Manager
     from cyberdrop_dl.url_objects import MediaItem
 
+FileHashes = dict[str, dict[int, set[Path]]]
 
 _HASHERS: Final = {
     "md5": hashlib.md5,
@@ -57,7 +57,7 @@ async def hash_directory_scanner(manager: Manager, path: Path) -> None:
 class Hasher:
     manager: Manager
     hashed_media_items: list[MediaItem] = dataclasses.field(init=False, repr=False, default_factory=list)
-    hashes_dict: dict[str, dict[int, set[Path]]] = dataclasses.field(
+    hashes_dict: FileHashes = dataclasses.field(
         init=False,
         repr=False,
         default_factory=lambda: defaultdict(lambda: defaultdict(set)),
@@ -203,20 +203,11 @@ class Hasher:
         self.hashes_dict[hash][size].add(absolute_path)
         self._hashed_items.add(media_item.id)
 
-    async def cleanup_dupes_after_download(self) -> None:
-        if self.config.hashing == Hashing.OFF:
-            return
-        if not self.config.auto_dedupe:
-            return
-        if self.manager.config.settings.runtime_options.ignore_history:
-            return
+    async def run(self) -> FileHashes:
         with self._tui():
-            file_hashes_dict = await self.get_file_hashes_dict()
+            return await self._get_file_hashes_dict()
 
-        deduper = Czkawka(self.download_folder, self.manager.database, use_trash_bin=self.config.send_deleted_to_trash)
-        await deduper.run(file_hashes_dict)
-
-    async def get_file_hashes_dict(self) -> dict[str, dict[int, set[Path]]]:
+    async def _get_file_hashes_dict(self) -> FileHashes:
 
         async def exists(item: MediaItem) -> MediaItem | None:
             if await aio.is_file(item.path):
