@@ -68,9 +68,13 @@ class Hasher:
     _dedupe_tui: DedupeUI = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        base_dir = self.manager.config.settings.files.download_folder.expanduser().resolve().absolute()
+        base_dir = self.download_folder
         self._tui = HashingUI(base_dir)
         self._dedupe_tui = DedupeUI(base_dir)
+
+    @property
+    def download_folder(self) -> Path:
+        return self.manager.config.settings.files.download_folder.expanduser().resolve().absolute()
 
     @property
     def stats(self):
@@ -225,14 +229,16 @@ class Hasher:
         """cleanup files based on dedupe setting"""
 
         get_matches = self.manager.database.hash.get_files_with_hash_matches
+        base_dir = self.download_folder
         async with asyncio.TaskGroup() as tg:
 
             async def delete_dupes(hash_value: str, size: int) -> None:
                 db_matches = await get_matches(hash_value, size, "xxh128")
                 for row in db_matches[1:]:
                     file = Path(row["folder"], row["download_filename"])
-                    await self._sem.acquire()
-                    tg.create_task(self._delete_and_log(file, hash_value))
+                    if not file.is_relative_to(base_dir):
+                        await self._sem.acquire()
+                        tg.create_task(self._delete_and_log(file, hash_value))
 
             for hash_value, size_dict in final_dict.items():
                 for size in size_dict:
