@@ -18,7 +18,6 @@ from cyberdrop_dl.managers.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
-from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.updates import check_latest_pypi
 from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
 
@@ -64,8 +63,6 @@ async def _post_runtime(manager: Manager) -> None:
     """Actions to complete after main runtime, and before UI shutdown."""
     logger.info("Running Post-Download Processes\n ", extra={"color": "green"})
 
-    await manager.hasher.cleanup_dupes_after_download()
-
     if (
         manager.config.settings.dupe_cleanup_options.hashing != Hashing.OFF
         and manager.config.settings.dupe_cleanup_options.auto_dedupe
@@ -75,8 +72,7 @@ async def _post_runtime(manager: Manager) -> None:
         await manager.deduper.run(file_hashes)
 
     if manager.config.settings.sorting.sort_downloads and not manager.cli_args.retry_any:
-        sorter = Sorter.from_manager(manager)
-        await sorter.run()
+        await manager.sorter.run()
 
     check_partials_and_empty_folders(manager)
 

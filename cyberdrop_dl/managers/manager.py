@@ -20,6 +20,7 @@ from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.logs import LogManager
+from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import get_system_information
 
 if TYPE_CHECKING:
@@ -56,6 +57,7 @@ class Manager:
         self.database: Database
         self.client_manager: ClientManager
         self.deduper: Czkawka
+        self.sorter: Sorter
 
     @property
     def appdata(self) -> AppData:
@@ -108,7 +110,12 @@ class Manager:
             self.appdata.db_file,
             self.config.settings.runtime_options.ignore_history,
         )
-        self.deduper = Czkawka(self.hasher.download_folder, self.database, self.config.send_deleted_to_trash)
+        self.deduper = Czkawka(
+            self.hasher.download_folder,
+            self.database,
+            self.config.settings.dupe_cleanup_options.send_deleted_to_trash,
+        )
+        self.sorter = Sorter.from_manager(self)
 
     def _log_config_settings(self) -> None:
         auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}

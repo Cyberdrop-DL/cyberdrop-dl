@@ -5,7 +5,7 @@ import contextlib
 import dataclasses
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from send2trash import send2trash
 
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.hasher import FileHashes
+    from cyberdrop_dl.managers.manager import Manager
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,14 @@ class Czkawka:
     use_trash_bin: bool
     _sem: asyncio.BoundedSemaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.BoundedSemaphore(20))
     _tui: DedupeUI = dataclasses.field(init=False, repr=False)
+
+    @classmethod
+    def from_manager(cls, manager: Manager) -> Self:
+        return cls(
+            base_dir=manager.hasher.download_folder,
+            database=manager.database,
+            use_trash_bin=manager.config.settings.dupe_cleanup_options.send_deleted_to_trash,
+        )
 
     def __post_init__(self) -> None:
         self._tui = DedupeUI(self.base_dir)
