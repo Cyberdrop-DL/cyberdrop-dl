@@ -48,9 +48,9 @@ class Czkawka:
 
     async def run(self, file_hashes: FileHashes) -> None:
         with self._tui():
-            await self.final_dupe_cleanup(file_hashes)
+            await self._dedupe(file_hashes)
 
-    async def final_dupe_cleanup(self, file_hashes: FileHashes) -> None:
+    async def _dedupe(self, file_hashes: FileHashes) -> None:
         async with asyncio.TaskGroup() as tg:
 
             async def delete_dupes(hash_value: str, size: int) -> None:
