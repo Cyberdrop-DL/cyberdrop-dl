@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
-from send2trash import send2trash
+import send2trash
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.progress.dedupe import DedupeStats, DedupeUI
@@ -33,7 +33,7 @@ class Czkawka:
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
         return cls(
-            base_dir=manager.hasher.download_folder,
+            base_dir=manager.config.settings.files.download_folder.expanduser().resolve().absolute(),
             database=manager.database,
             use_trash_bin=manager.config.settings.dupe_cleanup_options.send_deleted_to_trash,
         )
@@ -76,7 +76,7 @@ class Czkawka:
 
         with self._tui.new_file(file):
             try:
-                deleted = await _delete_file(file, self.use_trash_bin)
+                deleted = await _delete_file(file, to_trash=self.use_trash_bin)
             except OSError as e:
                 logger.exception(f"Unable to remove '{file}' ({hash_string}): {e}")
 
@@ -95,13 +95,13 @@ class Czkawka:
                 self._sem.release()
 
 
-async def _delete_file(path: Path, to_trash: bool = True) -> bool:
+async def _delete_file(path: Path, *, to_trash: bool) -> bool:
     """Deletes a file and return `True` on success, `False` is the file was not found.
 
     Any other exception is propagated"""
 
     if to_trash:
-        coro = asyncio.to_thread(send2trash, path)
+        coro = asyncio.to_thread(send2trash.send2trash, path)
     else:
         coro = aio.unlink(path)
 
@@ -109,11 +109,10 @@ async def _delete_file(path: Path, to_trash: bool = True) -> bool:
         await coro
         return True
     except FileNotFoundError:
-        pass
+        return False
     except OSError as e:
         # send2trash raises everything as a bare OSError. We should only ignore FileNotFound and raise everything else
         msg = str(e)
         if "File not found" not in msg:
             raise
-
-    return False
+        return False
