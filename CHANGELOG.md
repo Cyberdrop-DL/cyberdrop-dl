@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Do not try to dedupe files outside the download folder
+- CDL crashing cause it was trying to dedupe files outside the download folder
 
 ## [9.5.1] - 2026-05-03
 
