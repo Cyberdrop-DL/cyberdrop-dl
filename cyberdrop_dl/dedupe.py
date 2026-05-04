@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import dataclasses
+import itertools
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
@@ -13,7 +13,8 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.progress.dedupe import DedupeStats, DedupeUI
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    import sqlite3
+    from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.hasher import FileHashes
@@ -53,22 +54,14 @@ class Czkawka:
         async with asyncio.TaskGroup() as tg:
 
             async def delete_dupes(hash_value: str, size: int) -> None:
-                async with contextlib.aclosing(self._get_db_matches(hash_value, size)) as files:
-                    async for file in files:
-                        await self._sem.acquire()
-                        tg.create_task(self._delete_and_log(file, hash_value))
+                db_matches = await self.database.hash.get_files_with_hash_matches(hash_value, size, "xxh128")
+                for file in _filter_db_matches(db_matches, self.base_dir):
+                    await self._sem.acquire()
+                    tg.create_task(self._delete_and_log(file, hash_value))
 
-            for hash_value, size_dict in file_hashes.items():
-                for size in size_dict:
+            for hash_value, sizes in file_hashes.items():
+                for size in sizes:
                     tg.create_task(delete_dupes(hash_value, size))
-
-    async def _get_db_matches(self, hash_value: str, size: int) -> AsyncGenerator[Path]:
-        get_matches = self.database.hash.get_files_with_hash_matches
-        db_matches = await get_matches(hash_value, size, "xxh128")
-        for row in db_matches[1:]:
-            file = Path(row["folder"], row["download_filename"])
-            if file.is_relative_to(self.base_dir):
-                yield file
 
     async def _delete_and_log(self, file: Path, xxh128_value: str) -> None:
         hash_string = f"xxh128:{xxh128_value}"
@@ -116,3 +109,10 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
         if "File not found" not in msg:
             raise
         return False
+
+
+def _filter_db_matches(db_matches: Iterable[sqlite3.Row], base_dir: Path) -> Generator[Path]:
+    for row in itertools.islice(db_matches, 1, None):
+        file = Path(row["folder"], row["download_filename"])
+        if file.is_relative_to(base_dir):
+            yield file
