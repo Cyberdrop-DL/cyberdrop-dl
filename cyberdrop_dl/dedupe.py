@@ -71,18 +71,14 @@ class Czkawka:
             try:
                 deleted = await _delete_file(file, to_trash=self.use_trash_bin)
             except OSError as e:
-                logger.exception(f"Unable to remove '{file}' ({hash_string}): {e}")
+                logger.error(f"Unable to remove '{file}' ({hash_string}): {e!r}")
 
             else:
-                if not deleted:
-                    return
-
-                msg = (
-                    f"Removed new download '{file}' [{suffix}]. "
-                    f"File hash matches with a previous download ({hash_string})"
-                )
-                logger.info(msg)
-                self._tui.stats.deleted += 1
+                if deleted:
+                    logger.info(
+                        f"Removed new download '{file}' [{suffix}]. File hash matches with a previous download ({hash_string})"
+                    )
+                    self._tui.stats.deleted += 1
 
             finally:
                 self._sem.release()
@@ -105,13 +101,13 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
         return False
     except OSError as e:
         # send2trash raises everything as a bare OSError. We should only ignore FileNotFound and raise everything else
-        msg = str(e)
-        if "File not found" not in msg:
-            raise
-        return False
+        if "file not found" in str(e).casefold():
+            return False
+        raise
 
 
 def _filter_db_matches(db_matches: Iterable[sqlite3.Row], base_dir: Path) -> Generator[Path]:
+    # always keep the first row, AKA the first file ever downloaded with this hash
     for row in itertools.islice(db_matches, 1, None):
         file = Path(row["folder"], row["download_filename"])
         if file.is_relative_to(base_dir):
