@@ -127,4 +127,4 @@ def strip_markup(text: str) -> str:
 def truncate_float(value: float | int | None, precision: int = 4) -> float | None:
     if value is None:
         return None
-    return float(f"{float(value):.{precision}f}")
+    return round(value, precision)
