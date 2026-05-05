@@ -5,7 +5,7 @@ import dataclasses
 import sys
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.live import Live
 from rich.markup import escape
@@ -24,12 +24,28 @@ REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
 
 
-def create_test_live(renderable: RenderableType, transient: bool = False) -> Live:
+class JsonableRenderableType(Protocol):
+    def __rich__(self) -> RenderableType: ...
+
+    def __json__(self) -> Any: ...
+
+
+def create_test_live(renderable: JsonableRenderableType, transient: bool = False, json: bool = True) -> Live:
+    from rich.json import JSON
+
+    if json:
+
+        def get_renderable() -> RenderableType:
+            return JSON.from_data(renderable.__json__())
+
+    else:
+        get_renderable = renderable.__rich__
+
     return Live(
         auto_refresh=True,
         refresh_per_second=20,
         transient=transient,
-        get_renderable=lambda: renderable,
+        get_renderable=get_renderable,
     )
 
 
@@ -109,5 +125,23 @@ class LiveUI(ABC):
                 screen=transient,
                 transient=transient,
                 get_renderable=self.__rich__,
+                redirect_stderr=False,
             ):
                 yield
+
+
+def strip_markup(text: str) -> str:
+    from rich.markup import _parse
+
+    def parse():
+        for _position, plain_text, _tag in _parse(text):
+            if plain_text is not None:
+                yield plain_text.replace("\\[", "[")
+
+    return "".join(parse())
+
+
+def truncate_float(value: float | int | None, precision: int = 4) -> float | None:
+    if value is None:
+        return None
+    return round(value, precision)

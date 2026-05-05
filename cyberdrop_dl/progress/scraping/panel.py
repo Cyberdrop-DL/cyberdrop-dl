@@ -14,7 +14,7 @@ from rich.spinner import Spinner
 from rich.text import Text
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.progress import create_test_live
+from cyberdrop_dl.progress import create_test_live, strip_markup, truncate_float
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ _generate_unique_id = itertools.count(1).__next__
 @final
 @dataclasses.dataclass(slots=True, frozen=True)
 class StatusMessage:
-    description: Text | str = f" cyberdrop-dl [blue]v{__version__}[/blue]"
+    description: str = f" cyberdrop-dl [blue]v{__version__}[/blue]"
     _messages: dict[int, tuple[Spinner, Text]] = dataclasses.field(init=False, default_factory=dict)
     _cols: Columns = dataclasses.field(init=False, default_factory=Columns)
 
@@ -37,16 +37,29 @@ class StatusMessage:
     def __rich__(self) -> Columns:
         return self._cols
 
+    def _append_msg(self, msg: object) -> int:
+        msg_id = _generate_unique_id()
+        self._messages[msg_id] = new_msg = Spinner("dots3", style="green"), Text(escape(str(msg)))
+        self._cols.renderables.extend(new_msg)
+        return msg_id
+
     @contextlib.contextmanager
     def __call__(self, msg: object) -> Generator[None]:
-        msg_id = _generate_unique_id()
+        msg_id = self._append_msg(msg)
         try:
-            self._messages[msg_id] = new_msg = Spinner("dots3", style="green"), Text(escape(str(msg)))
-            self._cols.renderables.extend(new_msg)
             yield
         finally:
-            _ = self._messages.pop(msg_id)
-            self._cols.renderables[3:] = itertools.chain.from_iterable(self._messages.values())
+            self._pop_msg(msg_id)
+
+    def _pop_msg(self, msg_id: int) -> None:
+        del self._messages[msg_id]
+        self._cols.renderables[3:] = itertools.chain.from_iterable(self._messages.values())
+
+    def __json__(self):
+        return {
+            "description": strip_markup(self.description).strip(),
+            "messages": tuple(strip_markup(text.plain) for _, text in self._messages.values()),
+        }
 
     async def simulate(self) -> None:
         await asyncio.sleep(2)
@@ -86,7 +99,8 @@ class ScrapingPanel(OverFlowPanel):
         c = self._add_task("url_c")
         await asyncio.sleep(5)
         d = self._add_task("url_d")
-        _ = self._add_task("url_e")
+        _ = self._add_task("http://example.com/file1")
+        _ = self._add_task("http://example.com/file2")
         await asyncio.sleep(5)
         self._remove_task(a)
         self._remove_task(b)
@@ -100,8 +114,19 @@ class ScrapingPanel(OverFlowPanel):
             with self.new("http://github3.com"):
                 await asyncio.sleep(2)
 
+    def __json__(self):
+        return tuple(
+            {
+                "url": strip_markup(task.description),
+                "elapsed": truncate_float(task.elapsed),
+            }
+            for task in self._progress.tasks
+        )
+
 
 if __name__ == "__main__":
+    import rich
+
     panel = ScrapingPanel()
     status = StatusMessage()
     with create_test_live(status):
@@ -109,3 +134,8 @@ if __name__ == "__main__":
 
     with create_test_live(panel):
         asyncio.run(panel.simulate())
+
+    status._append_msg("test msg1")
+    status._append_msg("test msg2")
+    dump = {"scrape": panel.__json__(), "status": status.__json__()}
+    rich.print(dump)

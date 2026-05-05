@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import time
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Any, final
 
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, TaskID, TextColumn
@@ -83,6 +83,9 @@ class FileStatsPanel:
             self._total = current_total
 
         self._panel.subtitle = f"Total: [white]{current_total:,}"
+
+    def __json__(self) -> dict[str, Any]:
+        return dataclasses.asdict(self._stats)
 
     @property
     def stats(self) -> FileStats:

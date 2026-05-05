@@ -5,7 +5,7 @@ import dataclasses
 import functools
 import random
 from types import MappingProxyType
-from typing import TYPE_CHECKING, ClassVar, Final, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Self
 
 import rich
 from rich.console import Group
@@ -129,7 +129,10 @@ class _ErrorsPanel:
         self.add("404 not found")
         for error in random.choices(tuple(_ERROR_OVERRIDES), k=40):
             self.add(error)
-            await asyncio.sleep(random.random() * 5)
+            await asyncio.sleep(random.random())
+
+    def __json__(self) -> dict[str, Any]:
+        return {"errors": tuple(dataclasses.asdict(error) for error in self)}
 
 
 class DownloadErrorsPanel(_ErrorsPanel):
@@ -151,6 +154,11 @@ class ScrapeErrorsPanel(_ErrorsPanel):
             self.sent_to_jdownloader += 1
         else:
             self.skipped += 1
+
+    def __json__(self) -> dict[str, Any]:
+        me = super().__json__()
+        me.update(sent_to_jdownloader=self.sent_to_jdownloader, skipped=self.skipped)
+        return me
 
 
 _ERROR_OVERRIDES = MappingProxyType(
@@ -183,3 +191,5 @@ if __name__ == "__main__":
     with create_test_live(panel, transient=True):
         asyncio.run(panel.simulate())
         rich.print(sorted(panel))
+
+    rich.print(panel.__json__())

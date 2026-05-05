@@ -7,7 +7,7 @@ import itertools
 import random
 from contextvars import ContextVar
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, final
 
 from rich.jupyter import JupyterMixin
 from rich.markup import escape
@@ -27,7 +27,7 @@ from rich.table import Column
 from rich.text import Text
 from typing_extensions import override
 
-from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live
+from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
@@ -210,6 +210,9 @@ class DownloadsPanel(OverFlowPanel):
 
         return ProgressHook(advance, get_speed, on_exit)
 
+    def __json__(self) -> tuple[dict[str, Any], ...]:
+        return tuple(_dump_task(tasks) for tasks in self._progress.tasks)
+
     async def simulate(self) -> None:
 
         async def download(hook: ProgressHook, size: int) -> None:
@@ -266,6 +269,20 @@ class DownloadsPanel(OverFlowPanel):
                 download_files(itertools.islice(iter_files, batch_size))
                 # The overflow number should go up every 2 seconds
                 await asyncio.sleep(2)
+
+
+def _dump_task(task: Task) -> dict[str, Any]:
+    real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
+    return {
+        "speed": truncate_float(real_task.finished_speed or real_task.speed),
+        "size": task.total,
+        "completed": task.completed,
+        "hls": _HLS_TASK_FIELD_NAME in task.fields,
+        "bytes_downloaded": real_task.completed,
+        "description": strip_markup(task.description),
+        "eta": task.time_remaining,
+        "visible": task.visible,
+    }
 
 
 if __name__ == "__main__":
