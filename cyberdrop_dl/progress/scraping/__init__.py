@@ -6,6 +6,7 @@ import dataclasses
 import json
 import shutil
 import sys
+import time
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Final
 
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 _PANEL_PADDING: Final = 5
 _STATUS: ContextVar[StatusMessage] = ContextVar("_STATUS")
+_WRITE_JSON: bool = True
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -51,6 +53,7 @@ class ScrapingUI(LiveUI):
     downloads: DownloadsPanel = dataclasses.field(default_factory=DownloadsPanel)
     status: StatusMessage = dataclasses.field(default_factory=StatusMessage)
     _screen: Screen = dataclasses.field(init=False)
+    _last_write: float | None = None
 
     def __post_init__(self) -> None:
         self._screen = self._create_screen()
@@ -68,9 +71,16 @@ class ScrapingUI(LiveUI):
         return renderable
 
     def _emit_jsonl(self) -> None:
+        now = time.monotonic()
+        if self._last_write is None:
+            self._last_write = now
+        elif now - self._last_write < 5:
+            return
+
         json.dump(self.__json__(), sys.stderr, ensure_ascii=False, separators=(",", ":"))
         sys.stderr.write("\n")
         sys.stderr.flush()
+        self._last_write = now
 
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
