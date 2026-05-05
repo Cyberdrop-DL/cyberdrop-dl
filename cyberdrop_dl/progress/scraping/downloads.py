@@ -27,7 +27,7 @@ from rich.table import Column
 from rich.text import Text
 from typing_extensions import override
 
-from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live
+from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
@@ -274,12 +274,12 @@ class DownloadsPanel(OverFlowPanel):
 def _dump_task(task: Task) -> dict[str, Any]:
     real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
     return {
-        "speed": real_task.finished_speed or real_task.speed,
+        "speed": truncate_float(real_task.finished_speed or real_task.speed),
         "size": task.total,
         "completed": task.completed,
         "hls": _HLS_TASK_FIELD_NAME in task.fields,
         "bytes_downloaded": real_task.completed,
-        "description": task.description,
+        "description": strip_markup(task.description),
         "eta": task.time_remaining,
         "visible": task.visible,
     }
