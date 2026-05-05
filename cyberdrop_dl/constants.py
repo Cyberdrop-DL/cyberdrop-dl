@@ -65,6 +65,10 @@ class Hashing(CIStrEnum):
     IN_PLACE = auto()
     POST_DOWNLOAD = auto()
 
+    @property
+    def enabled(self) -> bool:
+        return self is not Hashing.OFF
+
 
 class Browser(StrEnum):
     chrome = auto()

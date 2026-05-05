@@ -725,7 +725,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.5.1"
+version = "9.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
@@ -754,6 +754,7 @@ dependencies = [
     { name = "rich" },
     { name = "send2trash" },
     { name = "truststore" },
+    { name = "typing-extensions" },
     { name = "xxhash" },
     { name = "yarl" },
 ]
@@ -805,6 +806,7 @@ requires-dist = [
     { name = "rich", specifier = ">=15.0.0" },
     { name = "send2trash", specifier = ">=2.0.0" },
     { name = "truststore", specifier = ">=0.10.4" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "tzdata", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=2025.3" },
     { name = "xxhash", specifier = ">=3.7.0" },
     { name = "yarl", specifier = ">=1.23.0" },

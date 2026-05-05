@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+import asyncio
+import dataclasses
+import itertools
+import logging
+from pathlib import Path
+from typing import TYPE_CHECKING, Self
+
+import send2trash
+
+from cyberdrop_dl import aio
+from cyberdrop_dl.progress.dedupe import DedupeStats, DedupeUI
+
+if TYPE_CHECKING:
+    import sqlite3
+    from collections.abc import Generator, Iterable
+
+    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.hasher import FileHashes
+    from cyberdrop_dl.managers.manager import Manager
+
+logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass(slots=True)
+class Czkawka:
+    base_dir: Path
+    database: Database
+    use_trash_bin: bool
+    _sem: asyncio.BoundedSemaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.BoundedSemaphore(20))
+    _tui: DedupeUI = dataclasses.field(init=False, repr=False)
+
+    @classmethod
+    def from_manager(cls, manager: Manager) -> Self:
+        return cls(
+            base_dir=manager.config.settings.files.download_folder.expanduser().resolve().absolute(),
+            database=manager.database,
+            use_trash_bin=manager.config.settings.dupe_cleanup_options.send_deleted_to_trash,
+        )
+
+    def __post_init__(self) -> None:
+        self._tui = DedupeUI(self.base_dir)
+
+    @property
+    def stats(self) -> DedupeStats:
+        return self._tui.stats
+
+    async def run(self, file_hashes: FileHashes) -> None:
+        with self._tui():
+            await self._dedupe(file_hashes)
+
+    async def _dedupe(self, file_hashes: FileHashes) -> None:
+        async with asyncio.TaskGroup() as tg:
+
+            async def delete_dupes(hash_value: str, size: int) -> None:
+                db_matches = await self.database.hash.get_files_with_hash_matches(hash_value, size, "xxh128")
+                for file in _filter_db_matches(db_matches, self.base_dir):
+                    await self._sem.acquire()
+                    tg.create_task(self._delete_and_log(file, hash_value))
+
+            for hash_value, sizes in file_hashes.items():
+                for size in sizes:
+                    tg.create_task(delete_dupes(hash_value, size))
+
+    async def _delete_and_log(self, file: Path, xxh128_value: str) -> None:
+        hash_string = f"xxh128:{xxh128_value}"
+        suffix = "Sent to trash" if self.use_trash_bin else "Permanently deleted"
+
+        with self._tui.new_file(file):
+            try:
+                deleted = await _delete_file(file, to_trash=self.use_trash_bin)
+            except OSError as e:
+                logger.error(f"Unable to remove '{file}' ({hash_string}): {e!r}")
+
+            else:
+                if deleted:
+                    logger.info(
+                        f"Removed new download '{file}' [{suffix}]. File hash matches with a previous download ({hash_string})"
+                    )
+                    self._tui.stats.deleted += 1
+
+            finally:
+                self._sem.release()
+
+
+async def _delete_file(path: Path, *, to_trash: bool) -> bool:
+    """Deletes a file and return `True` on success, `False` is the file was not found.
+
+    Any other exception is propagated"""
+
+    if to_trash:
+        coro = asyncio.to_thread(send2trash.send2trash, path)
+    else:
+        coro = aio.unlink(path)
+
+    try:
+        await coro
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError as e:
+        # send2trash raises everything as a bare OSError. We should only ignore FileNotFound and raise everything else
+        if "file not found" in str(e).casefold():
+            return False
+        raise
+
+
+def _filter_db_matches(db_matches: Iterable[sqlite3.Row], base_dir: Path) -> Generator[Path]:
+    # always keep the first row, AKA the first file ever downloaded with this hash
+    for row in itertools.islice(db_matches, 1, None):
+        file = Path(row["folder"], row["download_filename"])
+        if file.is_relative_to(base_dir):
+            yield file
