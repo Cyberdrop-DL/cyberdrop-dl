@@ -59,7 +59,6 @@ class CoomerFansCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["p", post_id, *_]:
                 return await self.post(scrape_item, post_id)
-
             case ["u", _service, _user_id, *_]:
                 return await self.profile(scrape_item)
             case _:
