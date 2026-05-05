@@ -2,9 +2,10 @@
 import logging
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Annotated
 
-from cyclopts import App, CycloptsPanel, Parameter
+from cyclopts import App, CycloptsPanel, Parameter, validators
 
 from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
 
@@ -19,6 +20,7 @@ from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.updates import check_latest_pypi
 from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
+from cyberdrop_dl.utils.transfer import TransferManager
 
 logger = logging.getLogger("cyberdrop_dl")
 
@@ -100,6 +102,14 @@ app = App(
     result_action="return_value",
 )
 
+database_app = App(
+    name="cyberdrop-dl database",
+    help="Commands for managing the database",
+    version=__version__,
+)
+
+app.command(database_app, "database")
+
 
 @app.default()
 def download(
@@ -137,6 +147,27 @@ def show() -> None:
 
     table = supported_sites.as_rich_table()
     app.console.print(table)
+
+
+@database_app.command()
+def transfer(
+    db_path: Annotated[
+        Path,
+        Parameter(
+            help="Path to the SQLite database file to migrate",
+            validator=validators.Path(exists=True, file_okay=True, dir_okay=False, ext=".db"),
+        ),
+    ],
+    force: Annotated[
+        bool,
+        Parameter(
+            help="Skip the 'already latest' early-exit check and run all migration steps regardless of detected version"
+        ),
+    ] = False,
+) -> None:
+    """Migrate an old database to the latest schema version."""
+    manager = TransferManager(db_path)
+    manager.run(force=force)
 
 
 def main(args: Sequence[str] | None = None) -> None:
