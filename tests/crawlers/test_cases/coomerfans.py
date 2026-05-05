@@ -15,6 +15,20 @@ TEST_CASES = [
         ],
     ),
     (
+        "https://coomerfans.com/p/63797958",
+        [
+            {
+                "url": "https://img1.coomerfans.com/storage/3/xt/qi/2892ac-01963009-8b1f-725c-b601-d57777b4bb98.mp4",
+                "filename": "2892ac-01963009-8b1f-725c-b601-d57777b4bb98.mp4",
+                "debrid_link": None,
+                "original_filename": "2892ac-01963009-8b1f-725c-b601-d57777b4bb98.mp4",
+                "referer": "re:https://coomerfans.com/p/63797958",
+                "uploaded_at": 1738836595,
+                "download_folder": "re:carolynnmoon (CoomerFans)",
+            }
+        ],
+    ),
+    (
         "https://coomerfans.com/p/73779832/338170/onlyfans",
         [
             {
