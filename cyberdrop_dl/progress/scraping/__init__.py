@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import json
 import shutil
+import sys
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Final
 
@@ -54,12 +56,21 @@ class ScrapingUI(LiveUI):
         self._screen = self._create_screen()
 
     def __rich__(self) -> RenderableType:
+        self._emit_jsonl()
         if self.mode is UIOptions.SIMPLE:
-            return Group(self.files.simple, self.status)
-        if self.mode is UIOptions.ACTIVITY:
-            return self.status
+            renderable = Group(self.files.simple, self.status)
+        elif self.mode is UIOptions.ACTIVITY:
+            renderable = self.status
 
-        return self._screen
+        else:
+            renderable = self._screen
+
+        return renderable
+
+    def _emit_jsonl(self) -> None:
+        json.dump(self.__json__(), sys.stderr, ensure_ascii=False, separators=(",", ":"))
+        sys.stderr.write("\n")
+        sys.stderr.flush()
 
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
@@ -109,6 +120,16 @@ class ScrapingUI(LiveUI):
                 self.downloads._push_one_invisible()
             except IndexError:
                 break
+
+    def __json__(self):
+        return {
+            "files": self.files.__json__(),
+            "scrape_errors": self.scrape_errors.__json__(),
+            "download_errors": self.download_errors.__json__(),
+            "scraping": self.scrape.__json__(),
+            "downloads": self.downloads.__json__(),
+            "status": self.status.__json__(),
+        }
 
     async def simulate(self) -> None:
 

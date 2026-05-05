@@ -125,6 +125,7 @@ class LiveUI(ABC):
                 screen=transient,
                 transient=transient,
                 get_renderable=self.__rich__,
+                redirect_stderr=False,
             ):
                 yield
 
