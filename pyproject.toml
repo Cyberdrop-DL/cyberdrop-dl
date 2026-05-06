@@ -171,9 +171,6 @@ unfixable = [
 "tests/crawlers/test_cases/*" = [
     "RUF001"  # String contains ambiguous chars.
 ]
-"tests/crawlers/test_cases2/*" = [
-    "RUF001"  # String contains ambiguous chars.
-]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
