@@ -83,6 +83,7 @@ TEST_CASES = [
     },
     {
         "url": "https://mega.nz/folder/yAkimbjQ#Ijoqfoqzesat1LDq5NKc-Q/file/bFtTwQ6a",
+        "description": "single file within folder",
         "results": [
             {
                 "url": "https://mega.nz/folder/yAkimbjQ#Ijoqfoqzesat1LDq5NKc-Q/file/bFtTwQ6a",
@@ -97,6 +98,7 @@ TEST_CASES = [
     },
     {
         "url": "https://mega.nz/folder/yAkimbjQ#Ijoqfoqzesat1LDq5NKc-Q/folder/zJkgxYia",
+        "description": "subfolder within folder",
         "results": [
             {
                 "url": "re:https://mega.nz/folder/yAkimbjQ#Ijoqfoqzesat1LDq5NKc-Q/file",

@@ -88,10 +88,19 @@ TEST_CASES = [
         ],
         "count": 285,
     },
-    {"url": "https://jpg6.su/a/alyrosez.Y2Pmn", "results": []},
-    {"url": "https://jpg6.su/a/alyrosez.Y2Pmn?password=1234", "results": []},
+    {
+        "url": "https://jpg6.su/a/alyrosez.Y2Pmn",
+        "description": "Password protected, no password supplied",
+        "results": [],
+    },
+    {
+        "url": "https://jpg6.su/a/alyrosez.Y2Pmn?password=1234",
+        "description": "Password protected, incorrect password supplied",
+        "results": [],
+    },
     {
         "url": "https://jpg6.su/a/alyrosez.Y2Pmn?password=aly",
+        "description": "Password protected, valid password supplied",
         "results": [
             {
                 "url": "https://simp2.selti-delivery.ru/0afcc905cd6c64e52.jpg",

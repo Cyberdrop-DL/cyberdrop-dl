@@ -14,6 +14,7 @@ TEST_CASES = [
     },
     {
         "url": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud/",
+        "description": "Video with unknown resolution",
         "results": [
             {
                 "url": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud",
@@ -38,6 +39,7 @@ TEST_CASES = [
     },
     {
         "url": "https://anysex.com/shemale/photos/156591/natures-big-secret/",
+        "description": "Album with just one image",
         "results": [
             {
                 "url": "https://photos.anysex.com/contents/albums/main/1920x9999/156000/156591/255953.jpg",
@@ -51,7 +53,12 @@ TEST_CASES = [
     {
         "url": "https://anysex.com/search/?q=helena-price",
         "results": [
-            {"url": "ANY", "download_folder": "re:helena price [search] (AnySex)", "referer": "ANY", "album_id": None}
+            {
+                "url": "ANY",
+                "download_folder": "re:helena price [search] (AnySex)",
+                "referer": "ANY",
+                "album_id": None,
+            }
         ],
         "count": range(18, 30),
     },

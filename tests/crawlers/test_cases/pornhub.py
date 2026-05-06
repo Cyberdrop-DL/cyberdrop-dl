@@ -17,6 +17,7 @@ TEST_CASES = [
     },
     {
         "url": "https://www.pornhub.com/view_video.php?viewkey=ph5d530fd885a81",
+        "description": "mp4 available",
         "results": [
             {
                 "url": "https://www.pornhub.com/embed/ph5d530fd885a81",
@@ -30,6 +31,7 @@ TEST_CASES = [
     },
     {
         "url": "https://www.pornhub.com/embed/6890ddc0b4b11",
+        "description": "m3u8 download",
         "results": [
             {
                 "url": "https://www.pornhub.com/embed/6890ddc0b4b11",

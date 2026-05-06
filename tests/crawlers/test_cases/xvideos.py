@@ -37,6 +37,7 @@ TEST_CASES = [
     },
     {
         "url": "https://www.xvideos.es/video.oiubcfkc787/_mi_esposa_colombiana_queria_un_masaje_con_un_masajista_por_que_es_normal_",
+        "description": "Title should always be the original title, ignore auto translated title",
         "results": [
             {
                 "url": "https://www.xvideos.es/video.oiubcfkc787/_",

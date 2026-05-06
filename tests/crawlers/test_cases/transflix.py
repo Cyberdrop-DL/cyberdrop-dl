@@ -14,6 +14,7 @@ TEST_CASES = [
     {"url": "https://transflix.net/search?q=ruby+wren", "results": [], "count": 6},
     {
         "url": "https://transflix.net/video/hunnypaint-take-care-tranny-videos-xxx-43343",
+        "description": "Timestamp mixed with leading letters",
         "results": [
             {
                 "url": "https://cdn.transflix.net/video/2025-03-28/qa2cxgri1743182001.mp4",

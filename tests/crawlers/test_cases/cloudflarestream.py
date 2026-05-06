@@ -2,6 +2,7 @@ DOMAIN = "cloudflarestream"
 TEST_CASES = [
     {
         "url": "https://customer-eq7kiuol0tk9chox.cloudflarestream.com/embed/sdk-iframe-integration.fla9.latest.js?video=e7bd2dd67e0f8860b4ae81e33a966049",
+        "description": "This video has subtitles",
         "results": [
             {
                 "url": "https://watch.cloudflarestream.com/e7bd2dd67e0f8860b4ae81e33a966049",

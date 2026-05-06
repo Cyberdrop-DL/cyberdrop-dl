@@ -2,6 +2,7 @@ DOMAIN = "drive.google"
 TEST_CASES = [
     {
         "url": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit",
+        "description": "small file with no warning",
         "results": [
             {
                 "url": "ANY",
@@ -14,6 +15,7 @@ TEST_CASES = [
     },
     {
         "url": "https://drive.google.com/file/d/15WghIO0iwekXStmVWeK5HxC566iN41l6/view",
+        "description": "small file with no warning",
         "results": [
             {
                 "url": "ANY",
@@ -26,6 +28,7 @@ TEST_CASES = [
     },
     {
         "url": "https://drive.usercontent.google.com/download?id=1fXgBupLzThTGLLsiYCHRQJixuDsR1bSI&export=download",
+        "description": "file with warning doe to large size (529M)",
         "results": [
             {
                 "url": "ANY",
@@ -38,6 +41,9 @@ TEST_CASES = [
     },
     {
         "url": "https://drive.google.com/file/d/1WHv5Dm1GtrDZj-AxJZd3T-NMIBXty3eV/view",
+        "description": """
+        Huge file with warning do to large size (9.8G), this test may fail.
+        Public download without an account are limited to about 5G per day and they return 429 with that happens""",
         "results": [
             {
                 "url": "ANY",
@@ -86,6 +92,7 @@ TEST_CASES = [
     },
     {
         "url": "https://docs.google.com/spreadsheets/d/1E3LpudUdUZycJpxSKK-c9-oIDuJoo5_7/edit?format=ods",
+        "description": "This is a spreeadsheet but the id is a normal file id. We won't be able to download it with a custom format",
         "results": [
             {
                 "url": "ANY",
@@ -98,6 +105,7 @@ TEST_CASES = [
     },
     {
         "url": "https://drive.google.com/file/d/0ByeS4oOUV-49Zzh4R1J6R09zazQ/edit",
+        "description": "v0 file id (28 chars)",
         "results": [
             {
                 "url": "ANY",
@@ -120,5 +128,10 @@ TEST_CASES = [
             }
         ],
     },
-    {"url": "https://drive.google.com/drive/folders/1k8pgIaGw6PribxVqMgmDtlpzbUPJuzrX", "results": [], "count": 135},
+    {
+        "url": "https://drive.google.com/drive/folders/1k8pgIaGw6PribxVqMgmDtlpzbUPJuzrX",
+        "description": "Folder with +50 files",
+        "results": [],
+        "count": 135,
+    },
 ]

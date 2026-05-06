@@ -44,6 +44,7 @@ class CrawlerTestCase:
     results: list[Result]
     description: str | None = None
     fail: bool | str | int = False
+    xfail: str | None = None
     skip: str | bool = False
     count: Sequence[int] | int | None = None
     options: list[str] | None = None
@@ -91,6 +92,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     _TEST_CASE_ADAPTER.validate_python({"domain": domain} | case) for case in test_cases
                 )
         metafunc.parametrize("test_case", all_test_cases, ids=lambda case: case.test_id)
+
+        for test in metafunc._calls:
+            this_case: CrawlerTestCase = test.params["test_case"]  # pyright: ignore[reportAssignmentType]
+            if this_case.xfail:
+                # TODO: xfail this tests
+                pass
 
 
 @pytest.mark.crawler_test_case

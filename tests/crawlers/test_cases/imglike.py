@@ -78,6 +78,7 @@ TEST_CASES = [
     },
     {
         "url": "https://imglike.com/album/D%C3%A9sir%C3%A9e-Nick-Boob-Slip-at-unesco-benefiz-gala%2C-2001.vihF",
+        "description": "Fails with aiohttp and works with curl-cffi",
         "results": [
             {
                 "url": "https://imglike.com/images/2020/12/03/Desiree-Nick-Boob-Slip-at-unesco-benefiz-gala-2001-1.jpg",

@@ -2,6 +2,8 @@ DOMAIN = "iceyfile"
 TEST_CASES = [
     {
         "url": "https://iceyfile.com/be60cca8a9dec177/fff.png",
+        "description": "This will fail. iceyfile now always requires a 1 type access only captcha for individual files",
+        "xfail": "This will fail. iceyfile now always requires a 1 type access only captcha for individual files",
         "results": [
             {
                 "url": "re:https://srv1\\.iceyfile\\.net/be60cca8a9dec177/fff\\.png\\?download_token=",

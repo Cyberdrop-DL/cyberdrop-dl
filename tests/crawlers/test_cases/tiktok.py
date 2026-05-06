@@ -26,6 +26,7 @@ TEST_CASES = [
     {"url": "https://www.tiktok.com/@ploense", "results": [], "count": 2},
     {
         "url": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374",
+        "skip": "post was deleted",
         "results": [
             {
                 "url": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374/0",

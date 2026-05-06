@@ -66,5 +66,10 @@ TEST_CASES = [
         "count": 18,
     },
     {"url": "https://www.mediafire.com/folder/9a6a91cgbd7m8", "results": [], "count": 36},
-    {"url": "https://www.mediafire.com/folder/ujs6wzw0cecof/", "results": []},
+    {
+        "url": "https://www.mediafire.com/folder/ujs6wzw0cecof/",
+        "description": "DMCA folder",
+        "fail": 410,
+        "results": [],
+    },
 ]

@@ -13,6 +13,7 @@ TEST_CASES = [
     },
     {
         "url": "https://thisvid.com/videos/smelling-foreskin/",
+        "description": "No resolution info in video page",
         "results": [
             {
                 "url": "https://thisvid.com/videos/smelling-foreskin",

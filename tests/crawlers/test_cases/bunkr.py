@@ -161,6 +161,7 @@ TEST_CASES = [
     },
     {
         "url": "https://bunkr.cr/a/5aZU25Cb",
+        "description": "paginated",
         "results": [
             {
                 "url": "ANY",
@@ -182,7 +183,14 @@ TEST_CASES = [
         ],
         "count": 220,
     },
-    {"url": "https://bunkrrr.org/a/n12rHpzB", "results": [], "count": 141},
+    {
+        "url": "https://bunkrrr.org/a/n12rHpzB",
+        "description": """
+        .org domain redirect to a different domain and discards query params.
+        This test is to make sure CDL does not get stuck in an infinite loop while doing album pagination""",
+        "results": [],
+        "count": 141,
+    },
     {
         "url": "https://bunkr.ws/a/z5Xt6NqH",
         "results": [
