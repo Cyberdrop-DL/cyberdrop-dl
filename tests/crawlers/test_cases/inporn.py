@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Stepson Fucked His Stepmom During A Storm [1979593].mp4",
                 "referer": "https://inporn.com/video/1979593/stepson-fucked-his-stepmom-during-a-storm",
                 "download_folder": r"re:Loose Files (InPorn)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Latoya14.jpg",
                 "referer": "https://imagetwist.com/uynrhb4lavce",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

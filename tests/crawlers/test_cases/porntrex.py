@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "3001819_1080p.mp4",
                 "download_folder": "re:Loose Files (Porntrex)",
                 "referer": "https://www.porntrex.com/video/3001819",
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -32,7 +32,7 @@ TEST_CASES = [
                 "url": "re:/get_image/",
                 "referer": "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
                 "download_folder": "re:Brandi Love SET 35 (Porntrex)",
-                "datetime": None,
+                "uploaded_at": None,
                 "album_id": "57737",
             },
         ],

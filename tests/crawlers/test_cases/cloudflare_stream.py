@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "e7bd2dd67e0f8860b4ae81e33a966049.mp4",
                 "referer": "https://watch.cloudflarestream.com/e7bd2dd67e0f8860b4ae81e33a966049",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -23,7 +23,7 @@ TEST_CASES = [
                 "original_filename": "1c0006dc4f4299fa33d0dfd161db1c35.mp4",
                 "referer": "https://watch.cloudflarestream.com/1c0006dc4f4299fa33d0dfd161db1c35",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -20,7 +20,7 @@ TEST_CASES = [
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -32,7 +32,7 @@ TEST_CASES = [
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -44,7 +44,7 @@ TEST_CASES = [
                 "filename": "525669511_18517410283043270_6195144073773837855_n.jpg",
                 "referer": "https://imx.to/i/68g6y2",
                 "album_id": "1g79u",
-                "datetime": None,
+                "uploaded_at": None,
                 "download_folder": "re:Krysten Ritter",
             },
             {

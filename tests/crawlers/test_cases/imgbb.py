@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Long-toes-are-the-best.jpg",
                 "referer": "https://ibb.co/FbtMCg43",
                 "album_id": None,
-                "datetime": 1740984052,
+                "uploaded_at": 1740984052,
             }
         ],
     ),
@@ -20,7 +20,7 @@ TEST_CASES = [
                 "filename": "Long-toes-are-the-best.jpg",
                 "referer": "https://i.ibb.co/DDnyT5fW/Long-toes-are-the-best.jpg",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -31,7 +31,7 @@ TEST_CASES = [
                 "url": "re:.jpg",
                 "album_id": "yhdTNv",
                 "download_filename": r"re:ALEXA_2024/25 \(ImgBB\)",
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
         1537,

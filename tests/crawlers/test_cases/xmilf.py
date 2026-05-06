@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Big Boob Stepmother Tries Porn [1561649].mp4",
                 "referer": "https://xmilf.com/video/1561649/big-boob-stepmother-tries-porn",
                 "download_folder": r"re:Loose Files (XMilf)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

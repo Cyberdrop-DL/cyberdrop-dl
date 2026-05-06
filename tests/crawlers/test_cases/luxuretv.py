@@ -8,7 +8,7 @@ TEST_CASES = [
                 "url": "https://luxuretv.com/videos/tts-372359.html",
                 "filename": "tts [372359].mp4",
                 "referer": "https://luxuretv.com/videos/tts-372359.html",
-                "datetime": 1763236013,
+                "uploaded_at": 1763236013,
             }
         ],
     ),

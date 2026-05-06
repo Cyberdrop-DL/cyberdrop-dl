@@ -10,7 +10,7 @@ TEST_CASES = [
                 "filename": "rKn1KVv.mp4",
                 "original_filename": "rKn1KVv.mp4",
                 "album_id": "uvh9Obt",
-                "datetime": 1763735344,
+                "uploaded_at": 1763735344,
             }
         ],
     ),

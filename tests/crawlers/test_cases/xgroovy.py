@@ -9,7 +9,7 @@ TEST_CASES = [
                 "filename": "Brunette Bombshell Casts Her Magic in Amateur POV [598490][1080p].mp4",
                 "debrid_link": "ANY",
                 "referer": "https://xgroovy.com/videos/598490/brunette-bombshell-casts-her-magic-in-amateur-pov",
-                "datetime": 1758692603,
+                "uploaded_at": 1758692603,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "filename": "Jaw-dropping! [463103].mp4",
                 "debrid_link": "ANY",
                 "referer": "https://xgroovy.com/shemale/gifs/463103/jaw-dropping3",
-                "datetime": 1733330169,
+                "uploaded_at": 1733330169,
             }
         ],
     ),

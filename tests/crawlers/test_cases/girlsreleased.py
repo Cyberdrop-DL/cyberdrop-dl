@@ -9,7 +9,7 @@ TEST_CASES = [
                 "download_folder": r"re:2025-11-19 - 152521 - Nike (GirlsReleased)",
                 "referer": "re:https://imx.to/i/",
                 "album_id": "152521",
-                "datetime": 1763542843,
+                "uploaded_at": 1763542843,
             }
         ],
         64,

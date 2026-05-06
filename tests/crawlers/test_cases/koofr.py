@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Cyberdrop-DL.v8.4.0.zip",
                 "referer": "https://app.koofr.net/links/b0299c24-366a-4a61-b395-dc4fa3d7781e?password=756626",
                 "album_id": None,
-                "datetime": 1761254288,
+                "uploaded_at": 1761254288,
             }
         ],
     ),

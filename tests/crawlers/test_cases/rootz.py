@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Cyberdrop-DL.v8.4.0.zip",
                 "download_folder": r"re:Loose Files \(Rootz.so\)",
                 "referer": "https://www.rootz.so/d/RniLI",
-                "datetime": None,
+                "uploaded_at": None,
                 "debrid_link": "ANY",
             }
         ],

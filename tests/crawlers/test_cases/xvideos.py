@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "ohfceph5e51.mp4",
                 "referer": "https://www.xvideos.com/video.ohfceph5e51/mia_khalifa_-_mia_khalifa_gets_her_pussy_pounded_in_doggy_before_taking_a_hot_cumshot_inside_her_mouth",
                 "album_id": None,
-                "datetime": 1751666400,
+                "uploaded_at": 1751666400,
             }
         ],
     ),
@@ -31,7 +31,7 @@ TEST_CASES = [
                 "original_filename": "uvfdtpm4c2a.mp4",
                 "referer": "https://www.xvideos.es/video.uvfdtpm4c2a/video_de_verificacion",
                 "album_id": None,
-                "datetime": 1689535483,
+                "uploaded_at": 1689535483,
             }
         ],
     ),

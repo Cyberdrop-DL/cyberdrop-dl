@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "685761cc22593.jpg",
                 "referer": "https://imgadult.com/img-685761cc22595.html",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

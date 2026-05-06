@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "start_linux.sh",
                 "referer": "https://transfer.it/t/mgxqsZtVCZCJ#Ac1XhBCD",
                 "album_id": "mgxqsZtVCZCJ",
-                "datetime": 1771261828,
+                "uploaded_at": 1771261828,
                 "download_folder": "re:Multiple files (Transfer.it)/test/Cyberdrop-DL.v8.4.0",
             },
             {
@@ -19,7 +19,7 @@ TEST_CASES = [
                 "original_filename": "start_windows.bat",
                 "referer": "https://transfer.it/t/mgxqsZtVCZCJ#4c9HiBpQ",
                 "album_id": "mgxqsZtVCZCJ",
-                "datetime": 1771261828,
+                "uploaded_at": 1771261828,
             },
         ],
     ),

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "GGCW62sr.dat",
                 "referer": "https://safe.soul.lol/GGCW62sr.dat",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -20,7 +20,7 @@ TEST_CASES = [
                 "filename": "GGCW62sr.dat",
                 "referer": "https://safe.soul.lol/GGCW62sr.dat",
                 "album_id": "fH8aoyxD",
-                "datetime": 1757997917,
+                "uploaded_at": 1757997917,
                 "download_folder": r"re:cdl_test \(Safe\.Soul\)",
             },
             {
@@ -28,7 +28,7 @@ TEST_CASES = [
                 "filename": "rQPLKGeA.zip",
                 "referer": "https://safe.soul.lol/rQPLKGeA.zip",
                 "album_id": "fH8aoyxD",
-                "datetime": 1757997915,
+                "uploaded_at": 1757997915,
                 "download_folder": r"re:cdl_test \(Safe\.Soul\)",
             },
             {
@@ -36,7 +36,7 @@ TEST_CASES = [
                 "filename": "8WXnedx1.bin",
                 "referer": "https://safe.soul.lol/8WXnedx1.bin",
                 "album_id": "fH8aoyxD",
-                "datetime": 1757997914,
+                "uploaded_at": 1757997914,
                 "download_folder": r"re:cdl_test \(Safe\.Soul\)",
             },
         ],

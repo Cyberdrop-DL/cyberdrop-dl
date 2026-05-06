@@ -9,7 +9,7 @@ TEST_CASES = [
                 "referer": "https://www.erome.com/a/JSXnUS4Y",
                 "download_folder": "re:who likes abs- (Erome)",
                 "album_id": "JSXnUS4Y",
-                "datetime": None,
+                "uploaded_at": None,
             },
             {
                 "url": "https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg?v=1737273168",
@@ -26,7 +26,7 @@ TEST_CASES = [
                 "referer": "https://www.erome.com/a/osUNHQvy",
                 "download_folder": "re:perfect gym outfit (Erome)",
                 "album_id": "osUNHQvy",
-                "datetime": None,
+                "uploaded_at": None,
             },
         ],
     ),

@@ -11,7 +11,7 @@ TEST_CASES = [
                 "filename": "fff",
                 "referer": "https://iceyfile.com/be60cca8a9dec177/fff.png",
                 "album_id": None,
-                "datetime": 1755488372,
+                "uploaded_at": 1755488372,
             }
         ],
     ),
@@ -24,7 +24,7 @@ TEST_CASES = [
                 "referer": "https://iceyfile.com/be60cca8a9dec177/fff.png",
                 "download_folder": r"re:CDL_test \(Iceyfile\)",
                 "album_id": "75061972f799eeacba32ac81f37493bc",
-                "datetime": 1755491602,
+                "uploaded_at": 1755491602,
             }
         ],
     ),

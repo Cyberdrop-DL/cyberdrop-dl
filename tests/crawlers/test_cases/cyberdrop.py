@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "0h07ynuksluicazppofcw_source-ClHET0f7.mp4",
                 "referer": "https://cyberdrop.cr/f/de155Wa0Z7OV59",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "original_filename": "0h07ynuksluicazppofcw_source-ClHET0f7.mp4",
                 "referer": "https://cyberdrop.cr/f/de155Wa0Z7OV59",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -35,7 +35,7 @@ TEST_CASES = [
                 "original_filename": "0h07ynuksluicazppofcw_source-ClHET0f7.mp4",
                 "referer": "https://cyberdrop.cr/f/de155Wa0Z7OV59",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -47,7 +47,7 @@ TEST_CASES = [
                 "referer": "re:https://cyberdrop.cr/f/",
                 "download_folder": r"re:me1adinha \(Cyberdrop\)",
                 "album_id": "eEwua7SZ",
-                "datetime": 1635742800,
+                "uploaded_at": 1635742800,
             }
         ],
         13,

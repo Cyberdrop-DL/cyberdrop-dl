@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Lesbian Sucking Big Natural Boobs 8 [874501].mp4",
                 "referer": "https://hdzog.com/videos/874501/lesbian-sucking-big-natural-boobs-8",
                 "download_folder": r"re:Loose Files (HDZog)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

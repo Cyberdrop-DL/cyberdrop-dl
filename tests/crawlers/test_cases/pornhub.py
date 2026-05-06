@@ -10,7 +10,7 @@ TEST_CASES = [
                 "referer": "https://www.pornhub.com/photo/453277801",
                 "album_id": "36252941",
                 "download_folder": r"re:White Top White Striped Calvins \(PornHub\)",
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
         8,
@@ -25,7 +25,7 @@ TEST_CASES = [
                 "original_filename": "ph5d530fd885a81.mp4",
                 "referer": "https://www.pornhub.com/view_video.php?viewkey=ph5d530fd885a81",
                 "album_id": None,
-                "datetime": 1565724764,
+                "uploaded_at": 1565724764,
             }
         ],
     ),
@@ -39,7 +39,7 @@ TEST_CASES = [
                 "original_filename": "6890ddc0b4b11.mp4",
                 "referer": "https://www.pornhub.com/view_video.php?viewkey=6890ddc0b4b11",
                 "album_id": None,
-                "datetime": 1754324606,
+                "uploaded_at": 1754324606,
             }
         ],
     ),

@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "LONE SURVIVOR",
                 "referer": "https://www.flickr.com/photos/jillblack33/42279501790",
                 "album_id": None,
-                "datetime": 1534502481,
+                "uploaded_at": 1534502481,
                 "download_folder": "re:Loose Files (Flickr)",
             }
         ],
@@ -25,7 +25,7 @@ TEST_CASES = [
                 "original_filename": "Happy Birthday, to My Wonderful, Husband, Gerry",
                 "referer": "https://www.flickr.com/photos/soniaadammurray/52448052841",
                 "album_id": None,
-                "datetime": 1666536987,
+                "uploaded_at": 1666536987,
                 "download_folder": "re:Loose Files (Flickr)",
             }
         ],

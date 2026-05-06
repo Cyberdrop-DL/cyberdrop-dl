@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Allison Hopwood Aka Ravenrose [7927427].mp4",
                 "referer": r"re:https://privatehomeclips.com/embed/7927427",
                 "download_folder": r"re:Loose Files \(HClips\)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

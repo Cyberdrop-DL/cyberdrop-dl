@@ -10,7 +10,7 @@ TEST_CASES = [
                 "debrid_link": None,
                 "referer": "https://ge.xhamster.desi/videos/horny-asian-slut-fucking-with-big-toy-and-cumming-a-lot-xhW9s1z",
                 "album_id": None,
-                "datetime": 1609776316,
+                "uploaded_at": 1609776316,
             }
         ],
     ),
@@ -24,7 +24,7 @@ TEST_CASES = [
                 "debrid_link": None,  # Should download an HLS stream
                 "referer": "https://xhamster45.desi/videos/eating-her-ass-xhdR056",
                 "album_id": None,
-                "datetime": 1764724818,
+                "uploaded_at": 1764724818,
             }
         ],
     ),
@@ -38,7 +38,7 @@ TEST_CASES = [
                 "referer": "https://ge.xhamster.com/photos/gallery/15860946/511409501",
                 "download_folder": r"re:Take me to the carwash at DigitalDesire \[gallery\] \(xHamster\)",
                 "album_id": "15860946",
-                "datetime": 1643783409,
+                "uploaded_at": 1643783409,
             }
         ],
         19,
@@ -53,7 +53,7 @@ TEST_CASES = [
                 "referer": "https://ge.xhamster.com/photos/gallery/15860946/511409501",
                 "download_folder": r"re:Take me to the carwash at DigitalDesire \[gallery\] \(xHamster\)",
                 "album_id": "15860946",
-                "datetime": 1643783409,
+                "uploaded_at": 1643783409,
             }
         ],
         19,
@@ -68,7 +68,7 @@ TEST_CASES = [
                 "referer": "https://xhamster.com/videos/18yo-alexandra-student-bdsm-real-casting-2023793",
                 "download_folder": r"re:ombreto \[user\] \(xHamster\)[\\/]videos",
                 "album_id": None,
-                "datetime": 1372456260,
+                "uploaded_at": 1372456260,
             }
         ],
         42,
@@ -98,7 +98,7 @@ TEST_CASES = [
                 "referer": "https://xhamster.com/photos/gallery/16252066/517308698",
                 "download_folder": r"re:DanielaGomezx \[user\] \(xHamster\)[\\/]galleries[\\/]New image change",
                 "album_id": "16252066",
-                "datetime": 1738917721,
+                "uploaded_at": 1738917721,
             },
             {
                 "url": "https://ic-ph-nss.xhcdn.com/a/Mzc4ODY4M2VkNzM0ZTM3OGVjMGQ1ZTFjZGU1MzhhZDU/webp/000/517/308/699_1000.jpg",
@@ -107,7 +107,7 @@ TEST_CASES = [
                 "referer": "https://xhamster.com/photos/gallery/16252066/517308699",
                 "download_folder": r"re:DanielaGomezx \[user\] \(xHamster\)[\\/]galleries[\\/]New image change",
                 "album_id": "16252066",
-                "datetime": 1738917721,
+                "uploaded_at": 1738917721,
             },
         ],
     ),

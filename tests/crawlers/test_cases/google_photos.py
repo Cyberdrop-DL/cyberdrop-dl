@@ -10,7 +10,7 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (GooglePhotos)",
                 "referer": "https://photos.google.com/share/AF1QipPc_n2CZWqhYO2A9CJ4hYySaQZ5tCyMxWKC9r7ZtVrt-X87KJNe97-SQ4i23Jx4FA/photo/AF1QipPc1xpdMsAEsTCZD7InU5evF61tLLdRJrV_vzqr",
                 "album_id": None,
-                "datetime": 1737761657,
+                "uploaded_at": 1737761657,
             }
         ],
     ),

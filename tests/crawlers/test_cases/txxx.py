@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Naughty Hitomi Okubo is cheating on her partner [8497861].mp4",
                 "referer": "https://txxx.com/videos/8497861/naughty-hitomi-okubo-is-cheating-on-her-partner",
                 "download_folder": r"re:Loose Files (TXXX)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

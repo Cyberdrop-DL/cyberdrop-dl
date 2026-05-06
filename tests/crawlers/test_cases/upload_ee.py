@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "cyberdrop.txt",
                 "referer": "https://www.upload.ee/files/19033236/cyberdrop.txt.html",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

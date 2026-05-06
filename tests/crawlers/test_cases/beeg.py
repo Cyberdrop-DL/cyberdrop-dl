@@ -10,7 +10,7 @@ TEST_CASES = [
                 "filename": "Blonde in Sexy Dress Takes Deep Anal Dildo [825220911617085][1080p].mp4",
                 "original_filename": "Blonde in Sexy Dress Takes Deep Anal Dildo",
                 "album_id": None,
-                "datetime": 1773100800,
+                "uploaded_at": 1773100800,
             }
         ],
     ),

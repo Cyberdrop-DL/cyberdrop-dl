@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Ebony teen Romy Indy Has A Dirty Side And Wants Dick (18+) [235983].mp4",
                 "referer": "https://vxxx.com/video-235983",
                 "download_folder": r"re:Loose Files (VXXX)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

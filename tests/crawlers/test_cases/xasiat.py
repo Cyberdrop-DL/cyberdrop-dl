@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "2155729.jpg",
                 "referer": "https://www.xasiat.com/get_image/2/01a28782c7940969a3a3d55ab1842268/sources/30000/30487/2155729.jpg/",
                 "album_id": "30487",
-                "datetime": None,
+                "uploaded_at": None,
                 "download_folder": r"re:\[Cosplay\] 屿鱼 蔚蓝档案 妃咲 JK \[61P-797MB\] \[album\] \(Xasiat\)",
             }
         ],

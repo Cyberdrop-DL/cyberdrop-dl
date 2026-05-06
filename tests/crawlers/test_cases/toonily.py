@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "01.jpg",
                 "referer": "https://toonily.com/serie/black-crow-6780cc7a/chapter-1",
                 "album_id": None,
-                "datetime": 1725498328,
+                "uploaded_at": 1725498328,
                 "download_folder": r"re:Black Crow (Toonily)/Chapter 1",
             }
         ],
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "filename": "01.jpg",
                 "referer": "https://toonily.com/serie/black-crow-6780cc7a/chapter-1",
                 "album_id": None,
-                "datetime": 1725498328,
+                "uploaded_at": 1725498328,
                 "download_folder": r"re:Black Crow (Toonily)/Chapter 1",
             }
         ],

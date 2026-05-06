@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "9336871520980.mp4",
                 "referer": "https://ok.ru/video/9336871520980",
                 "album_id": None,
-                "datetime": 1737401550,
+                "uploaded_at": 1737401550,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "original_filename": "1416667269705.mp4",
                 "referer": "https://ok.ru/video/1416667269705",
                 "album_id": None,
-                "datetime": 1566236730,
+                "uploaded_at": 1566236730,
             }
         ],
     ),
@@ -35,7 +35,7 @@ TEST_CASES = [
                 "original_filename": "9469624191496.mp4",
                 "referer": "https://ok.ru/video/9469624191496",
                 "album_id": None,
-                "datetime": 1753377221,
+                "uploaded_at": 1753377221,
             }
         ],
     ),

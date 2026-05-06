@@ -10,7 +10,7 @@ TEST_CASES = [
                 "download_folder": "re:Mashin Eiyuuden Wataru- Shichikon no Ryuujinmaru",
                 "referer": "https://hianime.to/watch/mashin-eiyuuden-wataru-shichikon-no-ryuujinmaru-15111?ep=130673",
                 "album_id": "15111",
-                "datetime": None,
+                "uploaded_at": None,
             },
             {
                 "url": "https://mgstatics.xyz/subtitle/fc47006103970f7121e6e99f4294be18/fc47006103970f7121e6e99f4294be18.vtt",

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Masturbating Each Others Pussies With Jade Kimiko And Syren Demer [6241829].mp4",
                 "referer": "https://upornia.com/videos/6241829/masturbating-each-others-pussies-with-jade-kimiko-and-syren-demer",
                 "download_folder": r"re:Loose Files (UPornia)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

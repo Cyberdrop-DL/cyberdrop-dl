@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "4113319_720p.mp4",
                 "referer": "https://rule34video.com/video/4113319/fubuki-outdoor-resort-sex",
                 "album_id": None,
-                "datetime": 1763528400,
+                "uploaded_at": 1763528400,
             },
         ],
     ),

@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "underwear-cherricali-picsjpg-YdJuVW.jpg",
                 "referer": "https://nsfw.xxx/post/17668088",
                 "album_id": "17668088",
-                "datetime": 1651381200,
+                "uploaded_at": 1651381200,
                 "download_folder": "re:2022-05 - Barely covered [17668088] (nsfw.xxx)",
             }
         ],

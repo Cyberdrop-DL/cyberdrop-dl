@@ -74,8 +74,8 @@ def _load_test_cases(path: Path) -> None:
 def _fix_test_cases(test_cases: list[TestTuple]) -> Generator[TestTuple]:
     for test_case in test_cases:
         for result in test_case[1]:
-            if "datetime" in result:
-                result["uploaded_at"] = result.pop("datetime")
+            if "uploaded_at" in result:
+                result["uploaded_at"] = result.pop("uploaded_at")
 
         yield test_case
 

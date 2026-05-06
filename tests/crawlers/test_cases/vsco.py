@@ -11,7 +11,7 @@ TEST_CASES = [
                 "original_filename": "vsco_011326.jpg",
                 "debrid_link": "https://im.vsco.co/aws-us-west-2/b62a22/417332/6966cb5dff125db06d53e4ee/vsco_011326.jpg",
                 "album_id": None,
-                "datetime": 1768344414,
+                "uploaded_at": 1768344414,
             }
         ],
     ),
@@ -25,7 +25,7 @@ TEST_CASES = [
                 "original_filename": "981efca9-7bc7-4094-838e-37614e7b0ee23057935271654318106.jpg",
                 "referer": "http://vsco.co/jollyt/media/693f6a601d2d2bba406eb093",
                 "album_id": None,
-                "datetime": 1765763682,
+                "uploaded_at": 1765763682,
                 "download_folder": "re:jollyt (VSCO)",
             },
             {
@@ -124,7 +124,7 @@ TEST_CASES = [
                 "original_filename": "6b31aa8f-de5d-452b-baf2-81d2b080997a.mp4",
                 "referer": "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
                 "album_id": None,
-                "datetime": 1768819516,
+                "uploaded_at": 1768819516,
                 "download_folder": "re:philippswildlife (VSCO)",
             }
         ],

@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "Home Alone (1990).mp4",
                 "referer": "https://rumble.com/v71komc-home-alone-1990.html",
                 "album_id": None,
-                "datetime": 1762902545,
+                "uploaded_at": 1762902545,
             },
             {
                 "url": "https://1a-1791.com/video/fww1/4d/s8/11/K/A/T/y/KATyz.fn8Si.vtt",
@@ -17,7 +17,7 @@ TEST_CASES = [
                 "original_filename": "English (auto)",
                 "referer": "https://rumble.com/v71komc-home-alone-1990.html#Home Alone (1990) [v6ze0m4][1384p].en.auto.vtt",
                 "album_id": None,
-                "datetime": 1762902545,
+                "uploaded_at": 1762902545,
             },
         ],
     ),
@@ -30,7 +30,7 @@ TEST_CASES = [
                 "original_filename": "RESIDENTE -- BZRP Music Sessions #49.mp4",
                 "referer": "https://rumble.com/vwu8gp-residente-bzrp-music-sessions-49.html",
                 "album_id": None,
-                "datetime": 1646760933,
+                "uploaded_at": 1646760933,
             }
         ],
     ),

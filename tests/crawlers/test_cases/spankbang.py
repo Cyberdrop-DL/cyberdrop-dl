@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "WIFE FOR FREE USE . Devil Khloee [9qwc4][1080p].mp4",
                 "referer": "https://spankbang.com/9qwc4/video/wife+for+free+use+devil+khloee",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "original_filename": "Korean dance",
                 "referer": "https://spankbang.com/9ndp4/video/korean+dance",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
                 "download_folder": "re:Loose Files (SpankBang)",
             }
         ],

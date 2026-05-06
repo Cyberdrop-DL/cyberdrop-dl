@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "ADOFAI.vpk",
                 "referer": "https://www.mediafire.com/file/ctppmpm7giofsgv",
                 "album_id": None,
-                "datetime": 1695838138,
+                "uploaded_at": 1695838138,
             }
         ],
     ),
@@ -20,7 +20,7 @@ TEST_CASES = [
                 "filename": "ipwn1x-1.0.iso",
                 "referer": "https://www.mediafire.com/file/511jd1358yxvf26",
                 "album_id": None,
-                "datetime": 1654132657,
+                "uploaded_at": 1654132657,
             }
         ],
     ),
@@ -33,7 +33,7 @@ TEST_CASES = [
                 "referer": "https://www.mediafire.com/file/5iv342h2u39e0t6",
                 "download_folder": r"re:kcc samples \(Mediafire\)",
                 "album_id": "ixh40veo6hrc5",
-                "datetime": 1746643902,
+                "uploaded_at": 1746643902,
             },
         ],
         11,

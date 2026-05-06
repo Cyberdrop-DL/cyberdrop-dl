@@ -9,7 +9,7 @@ TEST_CASES = [
                 "referer": "https://coomer.st/fansly/user/445978322480930816/post/644032890815913985",
                 "download_folder": r"re:zombonn \(Coomer\)",
                 "album_id": "445978322480930816",
-                "datetime": 1715061766,
+                "uploaded_at": 1715061766,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "referer": "https://coomer.st/onlyfans/user/lostfaefoundskates/post/729202326",
                 "download_folder": r"re:lostfaefoundskates \(Coomer\)",
                 "album_id": "lostfaefoundskates",
-                "datetime": 1694414991,
+                "uploaded_at": 1694414991,
             }
         ],
     ),
@@ -34,7 +34,7 @@ TEST_CASES = [
                 "filename": "3024x4032_c0ef341d7e60ceed82a906b8062806cb.jpg",
                 "referer": "https://coomer.st/data/4b/de/4bde70ea2dd6284938aa90af959f78c4f3e24fbf6b06ed842f0356824fe9bef0.jpg?f=3024x4032_c0ef341d7e60ceed82a906b8062806cb.jpg",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             },
         ],
     ),

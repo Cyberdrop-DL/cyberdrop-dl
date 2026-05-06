@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Naked_Diva__2005_.jpg",
                 "referer": "https://picstate.com/view/full/5391859_e3p1g",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

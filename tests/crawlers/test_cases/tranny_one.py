@@ -8,7 +8,7 @@ TEST_CASES = [
                 "url": r"re:https://stream.tranny.one/.+/3176393.mp4",
                 "filename": "Travesti pelirroja voluptuosa muy intensa y sudorosa. [1195231].mp4",
                 "referer": "https://es.tranny.one/view/1195231",
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "TidyShowyBream-large.jpg",
                 "referer": "https://www.redgifs.com/watch/tidyshowybream",
                 "album_id": None,
-                "datetime": 1734826081,
+                "uploaded_at": 1734826081,
             }
         ],
     ),

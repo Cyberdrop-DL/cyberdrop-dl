@@ -7,7 +7,7 @@ TEST_CASES = [
                 "url": r"re:nhentai.net/galleries/1941242/",
                 "referer": "https://nhentai.net/g/363796",
                 "album_id": "363796",
-                "datetime": 1624512830,
+                "uploaded_at": 1624512830,
             }
         ],
         25,

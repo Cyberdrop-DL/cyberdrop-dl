@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Farewell Deep Kiss [9741037].mp4",
                 "referer": "https://txxxporn.tube/videos/9741037/farewell-deep-kiss",
                 "download_folder": r"re:Loose Files \(HotMovs\)",
-                "datetime": int,
+                "uploaded_at": int,
             }
         ],
     ),

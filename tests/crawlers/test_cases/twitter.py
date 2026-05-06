@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "KfifaGUZoO2lsD79.mp4",
                 "referer": "https://x.com/matthewisabel/status/2014444098690613718",
                 "album_id": None,
-                "datetime": 1769115874,
+                "uploaded_at": 1769115874,
                 "download_folder": "re:@matthewisabel (Twitter)/2026-01-22 - 2014444098690613718",
             }
         ],

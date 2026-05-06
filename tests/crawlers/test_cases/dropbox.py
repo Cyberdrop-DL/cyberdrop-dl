@@ -10,7 +10,7 @@ TEST_CASES = [
                 "filename": "Spherical-Cow-0.1.1.apk",
                 "referer": "https://www.dropbox.com/scl/fo/6rtuuvcnhe8e0oivnfqtx/AAk0xkSvKleGaorbZfRJglA/Spherical-Cow-0.1.1.apk?rlkey=zbjcf274goirtfak2prmizi5p&dl=0",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -41,7 +41,7 @@ TEST_CASES = [
                 "filename": "afrojack_presskit_2014.zip",
                 "referer": "https://www.dropbox.com/scl/fo/vyuocyiqz1j93d71bdz18/ALdJdvzyF0lkH94c8dhztuw/afrojack_presskit_2014.zip?rlkey=hx60uhd3u1cecajczl1x9zn1l&dl=0",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

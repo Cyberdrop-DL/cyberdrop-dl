@@ -9,7 +9,7 @@ TEST_CASES = [
                 "referer": "https://xxxbunker.com/11634231",
                 "debrid_link": "ANY",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -23,7 +23,7 @@ TEST_CASES = [
                 "download_folder": "re:aarielle alexis [search]",
                 "debrid_link": "ANY",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
         68,

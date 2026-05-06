@@ -10,7 +10,7 @@ TEST_CASES = [
                 "filename": "ANGEL_MOVIE_082.mp4",
                 "referer": "https://cyberfile.me/c5w9",
                 "album_id": None,
-                "datetime": 1726579084,
+                "uploaded_at": 1726579084,
             }
         ],
     ),
@@ -23,7 +23,7 @@ TEST_CASES = [
                 "referer": "https://cyberfile.me/88pe",
                 "download_folder": r"re:JAV \(Cyberfile\)",
                 "album_id": "-dprdwxcs8",
-                "datetime": 1728519855,
+                "uploaded_at": 1728519855,
             }
         ],
     ),
@@ -36,7 +36,7 @@ TEST_CASES = [
                 "original_filename": "Sophia Locke  - Inserted (4K).mp4",
                 "referer": "https://cyberfile.me/b8lt",
                 "album_id": None,
-                "datetime": 1696232232,
+                "uploaded_at": 1696232232,
             }
         ],
     ),
@@ -49,7 +49,7 @@ TEST_CASES = [
                 "referer": "https://cyberfile.me/71nn",
                 "download_folder": r"re:Sophia Locke \(Cyberfile\)",
                 "album_id": "avk-q2uqnz",
-                "datetime": 1698316590,
+                "uploaded_at": 1698316590,
             }
         ],
         44,
@@ -74,7 +74,7 @@ TEST_CASES = [
                 "referer": "https://cyberfile.me/8QdR",
                 "download_folder": r"re:Autumn Falls JulesJordan Videos \(Cyberfile\)",
                 "album_id": "30cab170dd652309c8b8f25aaba4ec85",
-                "datetime": 1669199683,
+                "uploaded_at": 1669199683,
             }
         ],
         6,
@@ -93,7 +93,7 @@ TEST_CASES = [
                 "filename": "HIPANGEL_021.mp4",
                 "referer": "https://cyberfile.me/ktP2",
                 "album_id": None,
-                "datetime": 1726582638,
+                "uploaded_at": 1726582638,
             }
         ],
     ),
@@ -106,7 +106,7 @@ TEST_CASES = [
                 "original_filename": "1 Hour ASMR   ???? ????.mp4",
                 "referer": "https://cyberfile.me/7cfu",
                 "album_id": None,
-                "datetime": 1703854148,
+                "uploaded_at": 1703854148,
             }
         ],
     ),
@@ -123,7 +123,7 @@ TEST_CASES = [
                 "original_filename": "ASMR   1 HOUR OF UP-CLOSE & PERSONAL ATTENTION ❤️ NEGATIVE ENERGY & STRESS REMOVAL ❤️ (LIGHT LOFI).mp4",
                 "referer": "https://cyberfile.me/7cfq",
                 "album_id": None,
-                "datetime": 1703853101,
+                "uploaded_at": 1703853101,
             }
         ],
     ),
@@ -136,7 +136,7 @@ TEST_CASES = [
                 "referer": "https://cyberfile.me/7tko",
                 "download_folder": r"re:Loose Files \(Cyberfile\)",
                 "album_id": "2c96uzj717",
-                "datetime": 1710334967,
+                "uploaded_at": 1710334967,
             }
         ],
     ),

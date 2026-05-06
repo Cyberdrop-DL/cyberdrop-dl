@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Cyberdrop-DL.v8.4.0.zip",
                 "download_folder": r"re:Loose Files \(Ranoz.gg\)",
                 "referer": "https://ranoz.gg/file/SSWIWRsb",
-                "datetime": None,
+                "uploaded_at": None,
                 "debrid_link": "ANY",
             }
         ],

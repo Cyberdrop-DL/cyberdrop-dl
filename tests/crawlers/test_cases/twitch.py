@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "not scared btw",
                 "referer": "https://clips.twitch.tv/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
                 "album_id": None,
-                "datetime": 1707334361,
+                "uploaded_at": 1707334361,
                 "download_folder": "re:Loose Files (Twitch)",
             }
         ],
@@ -55,7 +55,7 @@ TEST_CASES = [
                 "original_filename": "who asked",
                 "referer": "https://www.twitch.tv/videos/1744169736",
                 "album_id": None,
-                "datetime": 1676928416,
+                "uploaded_at": 1676928416,
                 "download_folder": "re:Loose Files (Twitch)",
             }
         ],
@@ -70,7 +70,7 @@ TEST_CASES = [
                 "original_filename": "IM GUNNA MAKE IT...",
                 "referer": "https://clips.twitch.tv/LitigiousNaiveReubenUWot-E0uuswUYOhs9htgV",
                 "album_id": None,
-                "datetime": 1767765454,
+                "uploaded_at": 1767765454,
                 "download_folder": "re:Loose Files (Twitch)",
             }
         ],

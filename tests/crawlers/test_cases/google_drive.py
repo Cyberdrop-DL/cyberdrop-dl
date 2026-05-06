@@ -9,7 +9,7 @@ TEST_CASES = [
                 "filename": "file-50MB.dat",
                 "referer": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -22,7 +22,7 @@ TEST_CASES = [
                 "filename": "file-100MB.dat",
                 "referer": "https://drive.google.com/file/d/15WghIO0iwekXStmVWeK5HxC566iN41l6",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -35,7 +35,7 @@ TEST_CASES = [
                 "filename": "cifar10_stats.npz",
                 "referer": "https://drive.google.com/file/d/1fXgBupLzThTGLLsiYCHRQJixuDsR1bSI",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -49,7 +49,7 @@ TEST_CASES = [
                 "filename": "bundle_cutouts_africa.zip",
                 "referer": "https://drive.google.com/file/d/1WHv5Dm1GtrDZj-AxJZd3T-NMIBXty3eV",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -61,7 +61,7 @@ TEST_CASES = [
                 "filename": "test.docx",
                 "referer": "https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=docx",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -73,7 +73,7 @@ TEST_CASES = [
                 "filename": "test.txt",
                 "referer": "https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=txt",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -85,7 +85,7 @@ TEST_CASES = [
                 "filename": "test.docx",
                 "referer": "https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=docx",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -99,7 +99,7 @@ TEST_CASES = [
                 "filename": "TK Online 1.5.xlsx",
                 "referer": "https://drive.google.com/file/d/1E3LpudUdUZycJpxSKK-c9-oIDuJoo5_7",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -112,7 +112,7 @@ TEST_CASES = [
                 "filename": "Big Buck Bunny.mp4",
                 "referer": "https://drive.google.com/file/d/0ByeS4oOUV-49Zzh4R1J6R09zazQ",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -124,7 +124,7 @@ TEST_CASES = [
                 "filename": "My Buddy - Henry Burr - Gus Kahn - Walter Donaldson.mp3",
                 "referer": "https://drive.google.com/file/d/1IP0o8dHcQrIHGgVyp0Ofvx2cGfLzyO1x",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),

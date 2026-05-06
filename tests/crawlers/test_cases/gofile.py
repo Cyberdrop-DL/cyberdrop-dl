@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "[5ahw24au]chance-01.mp4",
                 "download_folder": r"re:Loose Files \(GoFile\)",
                 "referer": "https://gofile.io/d/2ORt9N#f1f28c6a-d02b-44a3-80ec-d9ef6b23913e",
-                "datetime": 1756801442,
+                "uploaded_at": 1756801442,
             }
         ],
     ),
@@ -23,7 +23,7 @@ TEST_CASES = [
                 "download_folder": r"re:01 \(GoFile\)",
                 "referer": "https://gofile.io/d/9d83784e-2be6-472c-909f-0377704cfde3#69b4c1e4-a80a-45d5-ad76-061e48105bd0",
                 "album_id": "9d83784e-2be6-472c-909f-0377704cfde3",
-                "datetime": 1701541586,
+                "uploaded_at": 1701541586,
             },
         ],
     ),

@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "E-26dWKftfB.mp4",
                 "referer": "https://turbovid.cr/d/E-26dWKftfB",
                 "album_id": None,
-                "datetime": 1749272400,
+                "uploaded_at": 1749272400,
             }
         ],
     ),
@@ -20,7 +20,7 @@ TEST_CASES = [
                 "filename": "E-26dWKftfB.mp4",
                 "referer": "https://turbovid.cr/d/E-26dWKftfB",
                 "album_id": None,
-                "datetime": 1749272400,
+                "uploaded_at": 1749272400,
             }
         ],
     ),
@@ -33,7 +33,7 @@ TEST_CASES = [
                 "referer": "https://turbovid.cr/d/LM54NzGj8PO",
                 "download_folder": "re:Qoqsik (TurboVid)",
                 "album_id": "Bls2Yfbxco0",
-                "datetime": 1763269200,
+                "uploaded_at": 1763269200,
             }
         ],
     ),
@@ -45,7 +45,7 @@ TEST_CASES = [
                 "filename": "E-26dWKftfB.mp4",
                 "referer": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
     ),
@@ -57,7 +57,7 @@ TEST_CASES = [
                 "filename": "Grumpy Cat.mp4",
                 "original_filename": "Grumpy Cat.mp4",
                 "album_id": None,
-                "datetime": 1770872400,
+                "uploaded_at": 1770872400,
             }
         ],
     ),
