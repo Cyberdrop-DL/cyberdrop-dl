@@ -27,7 +27,7 @@ _CSV_DELIMITER = ","
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class LogFiles:
+class CSVFiles:
     main_log: Path
     last_post_log: Path
     unsupported_urls_log: Path
@@ -43,8 +43,8 @@ class LogFiles:
 
 
 @dataclasses.dataclass(slots=True)
-class LogManager:
-    files: LogFiles
+class CSVLogsManager:
+    files: CSVFiles
     task_group: asyncio.TaskGroup = dataclasses.field(init=False, default_factory=asyncio.TaskGroup)
     _file_locks: dict[Path, asyncio.Lock] = dataclasses.field(
         init=False, default_factory=lambda: defaultdict(asyncio.Lock)
@@ -54,7 +54,7 @@ class LogManager:
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
-        files = LogFiles(
+        files = CSVFiles(
             main_log=manager.config.settings.logs.main_log,
             last_post_log=manager.config.settings.logs.last_forum_post,
             unsupported_urls_log=manager.config.settings.logs.unsupported_urls,

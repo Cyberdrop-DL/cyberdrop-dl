@@ -15,12 +15,12 @@ from pydantic.types import ByteSize
 from cyberdrop_dl import __version__, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
-from cyberdrop_dl.managers.logs import LogManager
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import get_system_information
@@ -50,7 +50,7 @@ class Manager:
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
-        self.logs: LogManager = LogManager.from_manager(self)
+        self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
         self.scrape_mapper: ScrapeMapper
         self.database: Database
         self.client_manager: ClientManager
@@ -72,7 +72,7 @@ class Manager:
     def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
         self.config.settings.resolve_paths()
-        self.logs = LogManager.from_manager(self)
+        self.logs = CSVLogsManager.from_manager(self)
         self.logs.delete_old_logs()
 
     @contextlib.contextmanager
