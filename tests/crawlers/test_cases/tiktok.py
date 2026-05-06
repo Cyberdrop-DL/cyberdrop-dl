@@ -1,14 +1,14 @@
 DOMAIN = "tiktok"
 TEST_CASES = [
-    (
-        "https://tiktok.com/@_sophialocke_/video/7271803599443791146",
-        [
+    {
+        "url": "https://tiktok.com/@_sophialocke_/video/7271803599443791146",
+        "results": [
             {
                 "url": "https://www.tiktok.com/@_sophialocke_/video/7271803599443791146",
                 "original_filename": "7271803599443791146.mp4",
                 "referer": "https://www.tiktok.com/@_sophialocke_/video/7271803599443791146",
                 "album_id": "7271803599443791146",
-                "download_folder": r"re:_sophialocke_ \(TikTok\)",
+                "download_folder": "re:_sophialocke_ \\(TikTok\\)",
                 "uploaded_at": 1693098723,
             },
             {
@@ -18,26 +18,22 @@ TEST_CASES = [
                 "referer": "https://www.tiktok.com/@_sophialocke_/video/7271803599443791146",
                 "debrid_link": "ANY",
                 "album_id": "7271803599443791146",
-                "download_folder": r"re:_sophialocke_ \(TikTok\)",
+                "download_folder": "re:_sophialocke_ \\(TikTok\\)",
                 "uploaded_at": 1693098723,
             },
         ],
-    ),
-    (
-        "https://www.tiktok.com/@ploense",
-        [],
-        2,
-    ),
-    (
-        "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374",
-        [
+    },
+    {"url": "https://www.tiktok.com/@ploense", "results": [], "count": 2},
+    {
+        "url": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374",
+        "results": [
             {
                 "url": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374/0",
                 "debrid_url": "ANY",
                 "filename": "7545228111973977374_img000.jpeg",
                 "referer": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374",
                 "album_id": "7545228111973977374",
-                "download_folder": r"re:ggwendollyn \(TikTok\)",
+                "download_folder": "re:ggwendollyn \\(TikTok\\)",
                 "uploaded_at": 1756760334,
             },
             {
@@ -83,13 +79,10 @@ TEST_CASES = [
                 "referer": "https://www.tiktok.com/@ggwendollyn/photo/7545228111973977374",
                 "debrid_link": "ANY",
                 "album_id": "7545228111973977374",
-                "download_folder": r"re:ggwendollyn \(TikTok\)/Audios",
+                "download_folder": "re:ggwendollyn \\(TikTok\\)/Audios",
                 "uploaded_at": 1756760334,
             },
         ],
-        None,
-        {
-            "skip": "post was deleted",
-        },
-    ),
+        "count": None,
+    },
 ]

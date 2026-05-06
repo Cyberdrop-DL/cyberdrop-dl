@@ -1,8 +1,8 @@
 DOMAIN = "megacloud"
 TEST_CASES = [
-    (
-        "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642?k=1&autoPlay=1&oa=0&asi=1",
-        [
+    {
+        "url": "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642?k=1&autoPlay=1&oa=0&asi=1",
+        "results": [
             {
                 "url": "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642",
                 "debrid_url": "ANY",
@@ -48,5 +48,5 @@ TEST_CASES = [
                 "filename": "TZb4gRkOQ642 [TZb4gRkOQ642][1080p].spa.vtt",
             },
         ],
-    ),
+    }
 ]

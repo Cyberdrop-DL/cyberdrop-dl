@@ -1,8 +1,8 @@
 DOMAIN = "4chan"
 TEST_CASES = [
-    (
-        "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
-        [
+    {
+        "url": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
+        "results": [
             {
                 "url": "https://i.4cdn.org/wg/1772229579282188.jpg",
                 "filename": "1721679422587858.jpg",
@@ -194,6 +194,6 @@ TEST_CASES = [
                 "download_folder": "re:Muslim- Islamic- Persian [thread] (4chan)",
             },
         ],
-        19,
-    )
+        "count": 19,
+    }
 ]

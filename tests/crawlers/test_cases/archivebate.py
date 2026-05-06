@@ -1,8 +1,8 @@
 DOMAIN = "archivebate"
 TEST_CASES = [
-    (
-        "https://www.archivebate.store/watch/16321694",
-        [
+    {
+        "url": "https://www.archivebate.store/watch/16321694",
+        "results": [
             {
                 "url": "https://mixdrop.sb/e/67pwzwz6uxjggd",
                 "filename": "7e73779e-d4be-4e7d-982c-5244ad4f6b33.mp4",
@@ -14,6 +14,6 @@ TEST_CASES = [
                 "download_folder": "re:clairwittenmyer [Chaturbate] (ArchiveBate)/Show on 2026-04-11 01-00-44",
             }
         ],
-        1,
-    )
+        "count": 1,
+    }
 ]

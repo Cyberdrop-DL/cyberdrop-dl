@@ -1,8 +1,8 @@
 DOMAIN = "transfer.it"
 TEST_CASES = [
-    (
-        "https://transfer.it/t/mgxqsZtVCZCJ",
-        [
+    {
+        "url": "https://transfer.it/t/mgxqsZtVCZCJ",
+        "results": [
             {
                 "url": "https://bt7.api.mega.co.nz/cs/g?x=mgxqsZtVCZCJ&n=Ac1XhBCD&fn=start_linux.sh",
                 "filename": "start_linux.sh",
@@ -22,5 +22,5 @@ TEST_CASES = [
                 "uploaded_at": 1771261828,
             },
         ],
-    ),
+    }
 ]

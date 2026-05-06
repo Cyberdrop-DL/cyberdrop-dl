@@ -1,8 +1,8 @@
 DOMAIN = "upload.ee"
 TEST_CASES = [
-    (
-        "https://www.upload.ee/files/19033236/cyberdrop.txt.html",
-        [
+    {
+        "url": "https://www.upload.ee/files/19033236/cyberdrop.txt.html",
+        "results": [
             {
                 "url": "re:https://www.upload.ee/download/19033236",
                 "filename": "cyberdrop.txt",
@@ -11,5 +11,5 @@ TEST_CASES = [
                 "uploaded_at": None,
             }
         ],
-    ),
+    }
 ]

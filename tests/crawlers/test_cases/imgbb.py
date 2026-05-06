@@ -1,8 +1,8 @@
 DOMAIN = "imgbb"
 TEST_CASES = [
-    (
-        "https://ibb.co/FbtMCg43",
-        [
+    {
+        "url": "https://ibb.co/FbtMCg43",
+        "results": [
             {
                 "url": "https://i.ibb.co/DDnyT5fW/Long-toes-are-the-best.jpg",
                 "filename": "Long-toes-are-the-best.jpg",
@@ -11,10 +11,10 @@ TEST_CASES = [
                 "uploaded_at": 1740984052,
             }
         ],
-    ),
-    (
-        "https://i.ibb.co/DDnyT5fW/Long-toes-are-the-best.jpg",
-        [
+    },
+    {
+        "url": "https://i.ibb.co/DDnyT5fW/Long-toes-are-the-best.jpg",
+        "results": [
             {
                 "url": "https://i.ibb.co/DDnyT5fW/Long-toes-are-the-best.jpg",
                 "filename": "Long-toes-are-the-best.jpg",
@@ -23,22 +23,22 @@ TEST_CASES = [
                 "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://ibb.co/album/yhdTNv",
-        [
+    },
+    {
+        "url": "https://ibb.co/album/yhdTNv",
+        "results": [
             {
                 "url": "re:.jpg",
                 "album_id": "yhdTNv",
-                "download_filename": r"re:ALEXA_2024/25 \(ImgBB\)",
+                "download_filename": "re:ALEXA_2024/25 \\(ImgBB\\)",
                 "uploaded_at": None,
             }
         ],
-        1537,
-    ),
-    (
-        "https://ibb.co/album/DDcTkZ",
-        [
+        "count": 1537,
+    },
+    {
+        "url": "https://ibb.co/album/DDcTkZ",
+        "results": [
             {
                 "url": "https://i.ibb.co/xSSVZ3TF/FOISTUDIOS-arna-SET2-16.jpg",
                 "filename": "FOISTUDIOS-arna-SET2-16.jpg",
@@ -100,6 +100,6 @@ TEST_CASES = [
                 "album_id": "DDcTkZ",
             },
         ],
-        10,
-    ),
+        "count": 10,
+    },
 ]

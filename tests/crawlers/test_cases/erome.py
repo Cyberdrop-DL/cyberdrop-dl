@@ -1,8 +1,8 @@
 DOMAIN = "erome"
 TEST_CASES = [
-    (
-        "https://www.erome.com/a/JSXnUS4Y",
-        [
+    {
+        "url": "https://www.erome.com/a/JSXnUS4Y",
+        "results": [
             {
                 "url": "https://s51.erome.com/3982/JSXnUS4Y/TMXwTHuO.jpeg?v=1737273158",
                 "filename": "TMXwTHuO.jpeg",
@@ -11,15 +11,12 @@ TEST_CASES = [
                 "album_id": "JSXnUS4Y",
                 "uploaded_at": None,
             },
-            {
-                "url": "https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg?v=1737273168",
-                "filename": "KtkQrRqf.jpeg",
-            },
+            {"url": "https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg?v=1737273168", "filename": "KtkQrRqf.jpeg"},
         ],
-    ),
-    (
-        "https://www.erome.com/a/osUNHQvy",
-        [
+    },
+    {
+        "url": "https://www.erome.com/a/osUNHQvy",
+        "results": [
             {
                 "url": "https://v19.erome.com/4075/osUNHQvy/wZcJpWWD_720p.mp4",
                 "filename": "wZcJpWWD_720p.mp4",
@@ -27,7 +24,7 @@ TEST_CASES = [
                 "download_folder": "re:perfect gym outfit (Erome)",
                 "album_id": "osUNHQvy",
                 "uploaded_at": None,
-            },
+            }
         ],
-    ),
+    },
 ]

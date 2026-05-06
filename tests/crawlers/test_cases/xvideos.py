@@ -1,8 +1,8 @@
 DOMAIN = "xvideos"
 TEST_CASES = [
-    (
-        "https://www.xvideos.com/video.ohfceph5e51/mia_khalifa_-_mia_khalifa_gets_her_pussy_pounded_in_doggy_before_taking_a_hot_cumshot_inside_her_mouth",
-        [
+    {
+        "url": "https://www.xvideos.com/video.ohfceph5e51/mia_khalifa_-_mia_khalifa_gets_her_pussy_pounded_in_doggy_before_taking_a_hot_cumshot_inside_her_mouth",
+        "results": [
             {
                 "url": "https://www.xvideos.com/video.ohfceph5e51/_",
                 "filename": "MIA KHALIFA - Mia Khalifa Gets Her Pussy Pounded In Doggy Before Takin [ohfceph5e51][1080p].mp4",
@@ -12,19 +12,19 @@ TEST_CASES = [
                 "uploaded_at": 1751666400,
             }
         ],
-    ),
-    (
-        "https://de.xvideos.com/video.ohfceph5e51/mia_khalifa_-_mia_khalifa_gets_her_pussy_pounded_in_doggy_before_taking_a_hot_cumshot_inside_her_mouth",
-        [
+    },
+    {
+        "url": "https://de.xvideos.com/video.ohfceph5e51/mia_khalifa_-_mia_khalifa_gets_her_pussy_pounded_in_doggy_before_taking_a_hot_cumshot_inside_her_mouth",
+        "results": [
             {
                 "url": "https://de.xvideos.com/video.ohfceph5e51/_",
                 "filename": "MIA KHALIFA - Mia Khalifa Gets Her Pussy Pounded In Doggy Before Takin [ohfceph5e51][1080p].mp4",
             }
         ],
-    ),
-    (
-        "https://www.xvideos.es/profiles/petite1810",
-        [
+    },
+    {
+        "url": "https://www.xvideos.es/profiles/petite1810",
+        "results": [
             {
                 "url": "https://www.xvideos.es/video.uvfdtpm4c2a/_",
                 "filename": "Vídeo de verificación [uvfdtpm4c2a][1920p].mp4",
@@ -34,37 +34,36 @@ TEST_CASES = [
                 "uploaded_at": 1689535483,
             }
         ],
-    ),
-    (
-        # Title should always be the original title, ignore auto translated title
-        "https://www.xvideos.es/video.oiubcfkc787/_mi_esposa_colombiana_queria_un_masaje_con_un_masajista_por_que_es_normal_",
-        [
+    },
+    {
+        "url": "https://www.xvideos.es/video.oiubcfkc787/_mi_esposa_colombiana_queria_un_masaje_con_un_masajista_por_que_es_normal_",
+        "results": [
             {
                 "url": "https://www.xvideos.es/video.oiubcfkc787/_",
                 "filename": "My Colombian Wife Wanted Massage by Male Masseur ! Why Is this Normal [oiubcfkc787][1080p].mp4",
                 "referer": "https://www.xvideos.es/video.oiubcfkc787/_mi_esposa_colombiana_queria_un_masaje_con_un_masajista_por_que_es_normal_",
             }
         ],
-    ),
-    (
-        "https://it.xvideos.com/valter_karotti#quickies/h/uceupff0647",
-        [
+    },
+    {
+        "url": "https://it.xvideos.com/valter_karotti#quickies/h/uceupff0647",
+        "results": [
             {
                 "url": "https://it.xvideos.com/video.uceupff0647/_",
                 "filename": "Beauty Gina Gerson Takes Monster Cock in Anal - Anal Orgasm [uceupff0647][1080p].mp4",
                 "referer": "https://it.xvideos.com/video.uceupff0647/_",
             }
         ],
-    ),
-    (
-        "https://it.xvideos.com/channels/scout69_official/photos/10612349/german_scout_-_skinny_candee_licious",
-        [
+    },
+    {
+        "url": "https://it.xvideos.com/channels/scout69_official/photos/10612349/german_scout_-_skinny_candee_licious",
+        "results": [
             {
-                "url": r"re:https:\/\/profile-pics-cdn\d+\.xvideos-cdn\.com",
+                "url": "re:https:\\/\\/profile-pics-cdn\\d+\\.xvideos-cdn\\.com",
                 "album_id": "10612349",
                 "referer": "https://it.xvideos.com/channels/scout69_official/photos/10612349/german_scout_-_skinny_candee_licious",
             }
         ],
-        24,
-    ),
+        "count": 24,
+    },
 ]

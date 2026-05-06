@@ -1,8 +1,8 @@
 DOMAIN = "voe.sx"
 TEST_CASES = [
-    (
-        "https://jilliandescribecompany.com/bhrc4degufg9",
-        [
+    {
+        "url": "https://jilliandescribecompany.com/bhrc4degufg9",
+        "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/bhrc4degufg9",
                 "debrid_link": "ANY",
@@ -24,10 +24,10 @@ TEST_CASES = [
                 "filename": "Dr4gr4c3Fr4nc143x7Pv [bhrc4degufg9][720p].es.vtt",
             },
         ],
-    ),
-    (
-        "https://voe.sx/ueof3kkmzcal",
-        [
+    },
+    {
+        "url": "https://voe.sx/ueof3kkmzcal",
+        "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/ueof3kkmzcal",
                 "debrid_link": "ANY",
@@ -37,10 +37,10 @@ TEST_CASES = [
                 "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://jilliandescribecompany.com/e/a8pkxqgb5kvy",
-        [
+    },
+    {
+        "url": "https://jilliandescribecompany.com/e/a8pkxqgb5kvy",
+        "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/a8pkxqgb5kvy",
                 "debrid_link": "ANY",
@@ -50,7 +50,7 @@ TEST_CASES = [
                 "uploaded_at": None,
             }
         ],
-    ),
-    ("https://voe.sx/bhrc4degufg9", [], 4),
-    ("https://voe.sx/e/bhrc4degufg9", [], 4),
+    },
+    {"url": "https://voe.sx/bhrc4degufg9", "results": [], "count": 4},
+    {"url": "https://voe.sx/e/bhrc4degufg9", "results": [], "count": 4},
 ]

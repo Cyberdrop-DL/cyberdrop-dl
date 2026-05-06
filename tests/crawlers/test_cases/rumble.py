@@ -1,8 +1,8 @@
 DOMAIN = "rumble"
 TEST_CASES = [
-    (
-        "https://rumble.com/v71komc-home-alone-1990.html",
-        [
+    {
+        "url": "https://rumble.com/v71komc-home-alone-1990.html",
+        "results": [
             {
                 "url": "https://rumble.com/hls-vod/6ze0m4/playlist.m3u8",
                 "filename": "Home Alone (1990) [v6ze0m4][1384p].mp4",
@@ -20,10 +20,10 @@ TEST_CASES = [
                 "uploaded_at": 1762902545,
             },
         ],
-    ),
-    (
-        "https://rumble.com/vwu8gp-residente-bzrp-music-sessions-49.html?e9s=src_v1_s",
-        [
+    },
+    {
+        "url": "https://rumble.com/vwu8gp-residente-bzrp-music-sessions-49.html?e9s=src_v1_s",
+        "results": [
             {
                 "url": "https://1a-1791.com/video/s8/2/z/z/A/s/zzAsd.caa.mp4",
                 "filename": "RESIDENTE -- BZRP Music Sessions #49 [vu82er][360p].mp4",
@@ -33,10 +33,10 @@ TEST_CASES = [
                 "uploaded_at": 1646760933,
             }
         ],
-    ),
-    (
-        "https://rumble.com/c/RumbleEvents",
-        [
+    },
+    {
+        "url": "https://rumble.com/c/RumbleEvents",
+        "results": [
             {
                 "url": "https://1a-1791.com/video/s8/2/5/s/Q/8/5sQ8e.aaa.rec.mp4",
                 "filename": "CLOSING OUT Dave Rubin & Benny Johnson LIVE - Rumble Exclusive Live at TPU [v1at1kt][1080p].mp4",
@@ -54,5 +54,5 @@ TEST_CASES = [
                 "referer": "https://rumble.com/v1dbxvl-rumble-exclusive-live-at-tpusa.html",
             },
         ],
-    ),
+    },
 ]

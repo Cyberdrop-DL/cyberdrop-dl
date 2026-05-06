@@ -168,6 +168,9 @@ unfixable = [
     "T20"  # flake8-print
 ]
 "__init__.py" = ["E402"]  # imports not at the top of the file.
+"tests/crawlers/test_cases/*" = [
+    "RUF001"  # String contains ambiguous chars.
+]
 "tests/crawlers/test_cases2/*" = [
     "RUF001"  # String contains ambiguous chars.
 ]

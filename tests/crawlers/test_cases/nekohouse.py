@@ -1,13 +1,13 @@
 DOMAIN = "nekohouse"
 TEST_CASES = [
-    (
-        "https://nekohouse.su/fanbox/user/705370/post/9605906",
-        [
+    {
+        "url": "https://nekohouse.su/fanbox/user/705370/post/9605906",
+        "results": [
             {
                 "url": "https://nekohouse.su/data/33/7f/337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg",
                 "filename": "337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg",
                 "referer": "https://nekohouse.su/fanbox/user/705370/post/9605906",
-                "download_folder": r"re:shiratamaco \(Nekohouse\)",
+                "download_folder": "re:shiratamaco \\(Nekohouse\\)",
                 "album_id": "705370",
                 "uploaded_at": 1743063817,
             },
@@ -26,31 +26,31 @@ TEST_CASES = [
                 "uploaded_at": 1743063817,
             },
         ],
-    ),
-    (
-        "https://nekohouse.su/thumbnail/data/33/7f/337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg?type=preview",
-        [
+    },
+    {
+        "url": "https://nekohouse.su/thumbnail/data/33/7f/337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg?type=preview",
+        "results": [
             {
                 "url": "https://nekohouse.su/data/33/7f/337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg",
                 "filename": "337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg",
                 "referer": "https://nekohouse.su/data/33/7f/337f1f97e0414358092fe9de88046614e35aab417d030da820e4816e3cab3e42.jpg",
                 "album_id": None,
                 "uploaded_at": None,
-            },
+            }
         ],
-    ),
-    (
-        "https://nekohouse.su/fanbox/user/92778036",
-        [
+    },
+    {
+        "url": "https://nekohouse.su/fanbox/user/92778036",
+        "results": [
             {
                 "url": "https://nekohouse.su/data/01/44/014495e8f29a8a31ac008ff0038392f738a5237eff36c06a29b35f60d9ef470e.png",
                 "filename": "014495e8f29a8a31ac008ff0038392f738a5237eff36c06a29b35f60d9ef470e.png",
                 "referer": "https://nekohouse.su/fanbox/user/92778036/post/9570757",
-                "download_folder": r"re:redkingtaraba \(Nekohouse\)",
+                "download_folder": "re:redkingtaraba \\(Nekohouse\\)",
                 "album_id": "92778036",
                 "uploaded_at": 1742473273,
-            },
+            }
         ],
-        549,
-    ),
+        "count": 549,
+    },
 ]
