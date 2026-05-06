@@ -73,7 +73,7 @@ class Manager:
             self._config = Config.from_manager(self)
         return self._config
 
-    def resolve_paths(self) -> None:
+    def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
         self.config.settings.resolve_paths()
         self.logs = LogManager.from_manager(self)
@@ -81,7 +81,7 @@ class Manager:
 
     @contextlib.contextmanager
     def __call__(self) -> Generator[Self]:
-        self.resolve_paths()
+        self.__resolve_paths()
         self.database = Database(
             self.appdata.db_file,
             self.config.settings.runtime_options.ignore_history,
@@ -165,11 +165,11 @@ class Manager:
         log_spacer()
 
         with capture_logs() as stream:
-            self._print_stats(stats)
+            self.__print_stats(stats)
 
         return stream.getvalue()
 
-    def _print_stats(self, stats: ScrapeStats) -> None:
+    def __print_stats(self, stats: ScrapeStats) -> None:
 
         elapsed = timedelta(seconds=int(time.monotonic() - stats.start_time))
         total_data_written = ByteSize(self.scrape_mapper.tui.downloads.bytes_downloaded).human_readable(decimal=True)
