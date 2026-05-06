@@ -93,17 +93,11 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 )
         metafunc.parametrize("test_case", all_test_cases, ids=lambda case: case.test_id)
 
-        for test in metafunc._calls:
-            this_case: CrawlerTestCase = test.params["test_case"]  # pyright: ignore[reportAssignmentType]
-            if this_case.xfail:
-                # TODO: xfail this tests
-                pass
-
 
 @pytest.mark.crawler_test_case
-async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> None:
-    if skip := test_case.skip:
-        pytest.skip(skip) if isinstance(skip, str) else pytest.skip()
+async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase, request: pytest.FixtureRequest) -> None:
+    if test_case.skip:
+        pytest.skip(reason=test_case.skip if isinstance(test_case.skip, str) else "")
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
