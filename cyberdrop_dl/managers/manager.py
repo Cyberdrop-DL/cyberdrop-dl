@@ -189,20 +189,8 @@ class Manager:
 
             logger.info("\n".join(lines()))
 
-        log_spacer()
-        logger.info("Download Stats:", extra={"color": "cyan"})
-        logger.info(f"  Downloaded: {self.scrape_mapper.tui.files.stats.completed:,} files")
-        logger.info(f"  Skipped (by config): {self.scrape_mapper.tui.files.stats.skipped:,} files")
-        logger.info(
-            f"  Skipped (previously downloaded): {self.scrape_mapper.tui.files.stats.previously_completed:,} files"
-        )
-        logger.info(f"  Failed: {self.scrape_mapper.tui.files.stats.failed:,} files")
-
-        log_spacer()
-        logger.info("Unsupported URLs Stats:", extra={"color": "cyan"})
-        logger.info(f"  Sent to Jdownloader: {self.scrape_mapper.tui.scrape_errors.sent_to_jdownloader:,}")
-        logger.info(f"  Skipped: {self.scrape_mapper.tui.scrape_errors.skipped:,}")
-
+        stats.print(self.scrape_mapper.tui.files.stats)
+        stats.print(self.scrape_mapper.tui.scrape_errors)
         stats.print(self.hasher.stats)
         stats.print(self.deduper.stats)
         stats.print(self.sorter.stats)
