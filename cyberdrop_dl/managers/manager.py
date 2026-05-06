@@ -18,7 +18,7 @@ from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
-from cyberdrop_dl.logs import capture_logs, log_spacer
+from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.logs import LogManager
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
@@ -80,7 +80,7 @@ class Manager:
         self.logs.delete_old_logs()
 
     @contextlib.contextmanager
-    def __call__(self) -> Any:
+    def __call__(self) -> Generator[Self]:
         self.resolve_paths()
         self.database = Database(
             self.appdata.db_file,
@@ -88,11 +88,12 @@ class Manager:
         )
         self.deduper = Czkawka.from_manager(self)
         self.sorter = Sorter.from_manager(self)
-        REFRESH_RATE.set(self.config.global_settings.ui_options.refresh_rate)
-        TUI_DISABLED.set(self.cli_args.ui.is_disabled)
-        self._log_config_settings()
         self.client_manager = ClientManager(self)
-        with _cache_context(self.appdata.cache_file, self.cache):
+        with (
+            _cache_context(self.appdata.cache_file, self.cache),
+            _enter_context(REFRESH_RATE, self.config.global_settings.ui_options.refresh_rate),
+            _enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
+        ):
             yield self
 
     def add_completed(self, media_item: MediaItem) -> None:
@@ -104,7 +105,7 @@ class Manager:
     def completed_downloads(self) -> list[MediaItem]:
         return self._completed_downloads
 
-    def _log_config_settings(self) -> None:
+    def log_config_settings(self) -> None:
         auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}
         config_settings = self.config.settings.model_copy()
         config_settings.runtime_options.deep_scrape = self.config.deep_scrape

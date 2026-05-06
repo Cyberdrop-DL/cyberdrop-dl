@@ -27,6 +27,7 @@ async def _scrape(manager: Manager) -> None:
         manager.config.settings.logs.main_log,
         level=manager.config.settings.runtime_options.effective_log_level,
     ):
+        manager.log_config_settings()
         log_spacer()
         async with manager.database:
             log_spacer()

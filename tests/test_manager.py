@@ -28,7 +28,7 @@ def test_args_logging_should_censor_webhook(
 ) -> None:
     logs_model = running_manager.config.settings.logs
     running_manager.config.settings.logs = update_model(logs_model, webhook=webhook)
-    running_manager._log_config_settings()
+    running_manager.log_config_settings()
     assert logs.messages
     assert "Running cyberdrop-dl " in logs.text
     assert webhook not in logs.text

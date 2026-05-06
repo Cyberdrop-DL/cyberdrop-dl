@@ -65,9 +65,7 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 
 @pytest.fixture(scope="function")
 def manager() -> Generator[Manager]:
-    manager = Manager()
-    manager.resolve_paths()
-    with manager():
+    with Manager()() as manager:
         yield manager
 
 
