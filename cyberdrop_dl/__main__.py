@@ -12,7 +12,7 @@ tracebacks.install_exception_hook()
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.logs import log_spacer, setup_console_logging, setup_file_logging
+from cyberdrop_dl.logs import log_spacer, set_console_level, setup_console_logging, setup_file_logging
 from cyberdrop_dl.managers.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
@@ -76,6 +76,7 @@ async def _post_runtime(manager: Manager) -> None:
 
 
 def _main(manager: Manager) -> None:
+    set_console_level(manager.config.settings.runtime_options.effective_console_log_level)
     try:
         with manager():
             if not manager.cli_args.download:

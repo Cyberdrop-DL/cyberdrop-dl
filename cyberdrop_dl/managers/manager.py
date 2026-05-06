@@ -18,7 +18,7 @@ from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
-from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer, set_console_level
+from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.logs import LogManager
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
@@ -81,7 +81,6 @@ class Manager:
 
     @contextlib.contextmanager
     def __call__(self) -> Generator[Self]:
-        set_console_level(self.config.settings.runtime_options.effective_console_log_level)
         self.resolve_paths()
         self.database = Database(
             self.appdata.db_file,
