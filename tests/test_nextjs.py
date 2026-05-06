@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from cyberdrop_dl.utils import next_js
 
-pytest.skip("website down")
+pytest.skip("website down", allow_module_level=True)
 
 
 @pytest.fixture(name="soup", scope="module")
