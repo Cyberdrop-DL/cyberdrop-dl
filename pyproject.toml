@@ -111,7 +111,7 @@ omit = [
 ]
 
 [tool.pytest.ini_options]
-addopts = ["--strict-config", "--strict-markers", "--tb=short", "-s", "-v"]
+addopts = ["--tb=short", "-ra", "-s", "-v"]
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 asyncio_mode = "auto"
@@ -122,6 +122,8 @@ markers = [
     "crawler_test_case: tests that do full run with a crawler (making actual network requests)"
 ]
 minversion = "8.4.1"
+strict_config = true
+strict_markers = true
 
 [tool.ruff]
 exclude = ["cyberdrop_dl/dependencies/browser_cookie3.py"]
