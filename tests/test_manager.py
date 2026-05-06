@@ -4,10 +4,16 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
+from cyberdrop_dl.config import Config
+from cyberdrop_dl.database import Database
+from cyberdrop_dl.dedupe import Czkawka
+from cyberdrop_dl.managers.client_manager import ClientManager
+from cyberdrop_dl.managers.manager import Manager
+from cyberdrop_dl.progress import REFRESH_RATE
+from cyberdrop_dl.sorter import Sorter
+
 if TYPE_CHECKING:
     from pydantic import BaseModel
-
-    from cyberdrop_dl.managers.manager import Manager
 
     _M = TypeVar("_M", bound=BaseModel)
 
@@ -36,3 +42,21 @@ def test_args_logging_should_censor_webhook(
     _, _, webhook_text = webhook_line.partition(":")
     webhook_url = webhook_text.strip().split(" ")[0].replace('"', "").strip()
     assert output == webhook_url
+
+
+def test_manager_context() -> None:
+    config = Config.parse_args(["--refresh-rate", "40"])
+    manager = Manager(config=config)
+
+    for attr in ("database", "deduper", "sorter", "client_manager"):
+        with pytest.raises(AttributeError):
+            getattr(manager, attr)
+
+    assert REFRESH_RATE.get() == 10
+
+    with manager():
+        assert type(manager.database) is Database
+        assert type(manager.deduper) is Czkawka
+        assert type(manager.sorter) is Sorter
+        assert type(manager.client_manager) is ClientManager
+        assert REFRESH_RATE.get() == 40
