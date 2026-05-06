@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.clients.download_client import DownloadClient
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
 

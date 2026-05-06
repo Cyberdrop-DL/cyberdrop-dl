@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from cyberdrop_dl import __version__, yaml
-from cyberdrop_dl.managers.manager import Manager, _cache_context
+from cyberdrop_dl.manager import Manager, _cache_context
 
 
 def test_cache_file_is_not_saved_outside_ctx() -> None:

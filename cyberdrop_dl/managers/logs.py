@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from yarl import URL
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import MediaItem
 
 

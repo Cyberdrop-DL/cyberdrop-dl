@@ -18,7 +18,7 @@ from cyberdrop_dl.utils import parse_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 
 def _crawler_mock(func: str = "handle_media_item") -> mock._patch[mock.AsyncMock]:

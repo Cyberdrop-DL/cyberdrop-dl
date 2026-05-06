@@ -23,7 +23,7 @@ from cyberdrop_dl.utils import text_editor
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 
 _CONSOLE = Console()

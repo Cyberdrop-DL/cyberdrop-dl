@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 _curl_import_error = None
 try:
@@ -63,7 +63,7 @@ _crawler_errors: dict[str, int] = defaultdict(int)
 
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 _null_context = contextlib.nullcontext()
 

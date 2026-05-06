@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config._global import GenericCrawlerInstances
     from cyberdrop_dl.crawlers.crawler import Crawler
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
     _T = TypeVar("_T")
     _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)

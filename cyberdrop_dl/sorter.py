@@ -18,7 +18,7 @@ from cyberdrop_dl.progress.sorting import SortingUI, SortStats
 from cyberdrop_dl.utils import delete_empty_files_and_folders, strings
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 
 logger = logging.getLogger(__name__)

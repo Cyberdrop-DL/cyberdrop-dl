@@ -6,8 +6,8 @@ try:
 except ImportError:
     AsyncSession = None
 
+from cyberdrop_dl.manager import Manager
 from cyberdrop_dl.managers.client_manager import ClientManager
-from cyberdrop_dl.managers.manager import Manager
 
 
 @pytest.fixture

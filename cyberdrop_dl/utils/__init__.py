@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
     from cyberdrop_dl.downloader.downloader import Downloader
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 
     class _HasManager(Protocol):

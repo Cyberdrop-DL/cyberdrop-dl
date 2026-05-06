@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 
     import aiohttp
 
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.managers.client_manager import ClientManager
-    from cyberdrop_dl.managers.manager import Manager
     from cyberdrop_dl.progress import ProgressHook
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
