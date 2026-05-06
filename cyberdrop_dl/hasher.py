@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Final, Literal
 
 import xxhash
 
-from cyberdrop_dl import aio
+from cyberdrop_dl import aio, stats
 from cyberdrop_dl.constants import Hashing, TempExt
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
@@ -47,9 +47,9 @@ def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> 
 
 async def hash_directory_scanner(manager: Manager, path: Path) -> None:
     async with manager.database:
-        stats = await hash_directory(manager, path)
+        hash_stats = await hash_directory(manager, path)
 
-    manager.print_hashing_stats(stats)
+    stats.print(hash_stats)
 
 
 async def hash_directory(manager: Manager, path: Path) -> HashingStats:

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import __version__, env, ffmpeg, yaml
+from cyberdrop_dl import __version__, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
@@ -26,13 +26,9 @@ from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import get_system_information
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Generator
     from os import PathLike
 
-    from cyberdrop_dl.progress.dedupe import DedupeStats
-    from cyberdrop_dl.progress.hashing import HashingStats
-    from cyberdrop_dl.progress.scraping.errors import UIError
-    from cyberdrop_dl.progress.sorting import SortStats
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
     from cyberdrop_dl.url_objects import MediaItem
 
@@ -169,26 +165,26 @@ class Manager:
 
         return stream.getvalue()
 
-    def __print_stats(self, stats: ScrapeStats) -> None:
+    def __print_stats(self, scrape_stats: ScrapeStats) -> None:
 
-        elapsed = timedelta(seconds=int(time.monotonic() - stats.start_time))
+        elapsed = timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
         total_data_written = ByteSize(self.scrape_mapper.tui.downloads.bytes_downloaded).human_readable(decimal=True)
 
         logger.info("Run Stats:", extra={"color": "cyan"})
         logger.info(f"  Config file: {self.config.source}")
-        logger.info(f"  URLs source: {stats.source}")
-        logger.info(f"  URLs: {stats.count:,}")
-        logger.info(f"  URL groups: {len(stats.unique_groups):,}")
+        logger.info(f"  URLs source: {scrape_stats.source}")
+        logger.info(f"  URLs: {scrape_stats.count:,}")
+        logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
         logger.info(f"  Logs folder: {self.config.settings.logs.log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
-        if stats.domain_stats:
+        if scrape_stats.domain_stats:
             log_spacer()
             logger.info("URLs by domain (includes children):", extra={"color": "cyan"})
 
             def lines():
-                for domain, count in sorted(stats.domain_stats.items()):
+                for domain, count in sorted(scrape_stats.domain_stats.items()):
                     yield f" - {domain}: {count:,}"
 
             logger.info("\n".join(lines()))
@@ -207,55 +203,13 @@ class Manager:
         logger.info(f"  Sent to Jdownloader: {self.scrape_mapper.tui.scrape_errors.sent_to_jdownloader:,}")
         logger.info(f"  Skipped: {self.scrape_mapper.tui.scrape_errors.skipped:,}")
 
-        self.print_hashing_stats(self.hasher.stats)
-        self.print_dedupe_stats(self.deduper.stats)
-        self.print_sort_stats(self.sorter.stats)
-        _log_errors(
+        stats.print(self.hasher.stats)
+        stats.print(self.deduper.stats)
+        stats.print(self.sorter.stats)
+        stats.print_errors(
             tuple(self.scrape_mapper.tui.scrape_errors),
             tuple(self.scrape_mapper.tui.download_errors),
         )
-
-    def print_sort_stats(self, stats: SortStats):
-        log_spacer()
-        logger.info("Sort Stats:", extra={"color": "cyan"})
-        logger.info(f"  Audios: {stats.audios:,}")
-        logger.info(f"  Images: {stats.images:,}")
-        logger.info(f"  Videos: {stats.videos:,}")
-        logger.info(f"  Other files: {stats.others:,}")
-
-    def print_hashing_stats(self, stats: HashingStats) -> None:
-        log_spacer()
-        logger.info("Checksum Stats:", extra={"color": "cyan"})
-        logger.info(f"  Newly hashed: {stats.new_hashed:,} files")
-        logger.info(f"  Previously hashed: {stats.prev_hashed:,} files")
-
-    def print_dedupe_stats(self, stats: DedupeStats) -> None:
-        log_spacer()
-        logger.info("Dedupe Stats:", extra={"color": "cyan"})
-        logger.info(f"  Deleted (duplicates of previous downloads): {stats.deleted:,} files")
-        logger.info(f"  Errors: {stats.total - stats.deleted:,} files")
-
-
-def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIError]) -> None:
-    error_codes = (error.code for error in (*scrape_errors, *download_errors) if error.code is not None)
-
-    try:
-        padding = len(str(max(error_codes)))
-    except ValueError:
-        padding = 0
-
-    for title, errors in (
-        ("Scrape Errors:", scrape_errors),
-        ("Download Errors:", download_errors),
-    ):
-        log_spacer()
-        logger.info(title, extra={"color": "cyan"})
-        if not errors:
-            logger.info(f"  {'None':>{padding}}", extra={"color": "green"})
-            continue
-
-        for error in errors:
-            logger.info(f"  {error.format(padding)}", extra={"color": "red"})
 
 
 @contextlib.contextmanager
