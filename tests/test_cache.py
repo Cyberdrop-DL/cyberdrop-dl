@@ -5,10 +5,10 @@ from cyberdrop_dl import __version__, yaml
 from cyberdrop_dl.managers.manager import Manager, _cache_context
 
 
-def test_cache_file_is_not_saved_outside_ctx(manager: Manager) -> None:
+def test_cache_file_is_not_saved_outside_ctx() -> None:
+    manager = Manager()
     cache_file = manager.appdata.cache_file
     manager.cache["test"] = 1
-
     assert manager.cache == {"test": 1}
     assert not cache_file.exists()
 
