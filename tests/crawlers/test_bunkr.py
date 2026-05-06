@@ -1,6 +1,6 @@
 import pytest
 
-from cyberdrop_dl.crawlers import bunkrr
+from cyberdrop_dl.crawlers import bunkr
 
 
 @pytest.mark.parametrize(
@@ -14,7 +14,7 @@ from cyberdrop_dl.crawlers import bunkrr
     ],
 )
 def test_parse_api_resp(timestamp: int, url: str, expected: str) -> None:
-    url = bunkrr._parse_api_resp(url, timestamp, encrypted=True)
+    url = bunkr._parse_api_resp(url, timestamp, encrypted=True)
     assert url == expected
 
 
@@ -62,11 +62,11 @@ def test_album_parser() -> None:
     ];
     console.log('Album files embedded:', window.albumFiles.length, 'files');
     """
-    files = {f.id: f for f in bunkrr._make_album_parser()(album_js)}
+    files = {f.id: f for f in bunkr._make_album_parser()(album_js)}
     assert len(files) == 3
     file_id = 25960332
     file = files[file_id]
-    assert file == bunkrr.File(
+    assert file == bunkr.File(
         id=file_id,
         name="c44e4c1a-90d5-4eba-8a58-f71fe3dfaa4f-md4d01c011ab729eda-ZEpjlipI.jpg",
         original="2023-02-04 - Position 🔞 BONUS.mp4.jpg",

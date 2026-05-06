@@ -100,7 +100,7 @@ class File:
         self.src = _override_cdn(src)
 
 
-class BunkrrCrawler(Crawler):
+class BunkrCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Video": "/v/<slug>",
