@@ -1,0 +1,101 @@
+DOMAIN = "dirtyship"
+TEST_CASES = [
+    {
+        "url": "https://dirtyship.com/rose-asmr-intimate-ear-licks-and-kisses-patreon-video-leaked",
+        "results": [
+            {
+                "url": "https://cdn11.dirtyship.net/Roseasmrearlickis.mp4",
+                "filename": "Rose ASMR Intimate Ear licks And Kisses Patreon Video Leaked.mp4",
+                "debrid_link": None,
+                "original_filename": "Roseasmrearlickis.mp4",
+                "referer": "https://dirtyship.com/rose-asmr-intimate-ear-licks-and-kisses-patreon-video-leaked",
+                "album_id": None,
+                "uploaded_at": 1736980488,
+                "download_folder": "re:Loose Files (DirtyShip)",
+            }
+        ],
+        "count": 1,
+    },
+    {
+        "url": "https://dirtyship.com/aftynrose-cuddly-naughty-lingerie-try-on-haul-asmr-video",
+        "results": [
+            {
+                "url": "https://cdn6.dirtyship.net/cdndirtyship/aftynroselingerietryonhaulv.mp4",
+                "filename": "AftynRose Cuddly & Naughty Lingerie Try On Haul ASMR Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "aftynroselingerietryonhaulv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-cuddly-naughty-lingerie-try-on-haul-asmr-video",
+                "album_id": None,
+                "uploaded_at": 1612180561,
+                "download_folder": "re:Loose Files (DirtyShip)",
+            }
+        ],
+        "count": 1,
+    },
+    {
+        "url": "https://dirtyship.com/tag/aftynrose-2021",
+        "results": [
+            {
+                "url": "https://cdn10.dirtyship.net/dirtyship/cdn2/aftynroseasmrrelaxtonighv.mp4",
+                "filename": "AftynRose ASMR Relax in My Lap Tonight Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "aftynroseasmrrelaxtonighv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-relax-in-my-lap-tonight-video",
+                "album_id": None,
+                "uploaded_at": 1616896081,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+            {
+                "url": "https://cdn7.dirtyship.net/cdn2/aftyrosesexynightv.mp4",
+                "filename": "AftynRose ASMR Sleepy Sexy Night With Me Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "aftyrosesexynightv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-sleepy-sexy-night-with-me-video-1",
+                "album_id": None,
+                "uploaded_at": 1613311594,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+            {
+                "url": "https://cdn7.dirtyship.net/cdn2/AftynRoseUndressingv.mp4",
+                "filename": "AftynRose ASMR Slowly Undressing For Bed Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "AftynRoseUndressingv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-slowly-undressing-for-bed-video-a",
+                "album_id": None,
+                "uploaded_at": 1616124852,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+            {
+                "url": "https://cdn7.dirtyship.net/cdn2/aftynrosewetshirtv.mp4",
+                "filename": "AftynRose ASMR Wet T-Shirt Cheeky Spray Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "aftynrosewetshirtv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-wet-t-shirt-cheeky-spray-video-1",
+                "album_id": None,
+                "uploaded_at": 1616636602,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+            {
+                "url": "https://cdn6.dirtyship.net/cdndirtyship/aftynrosefunwithtonguev.mp4",
+                "filename": "AftynRose ASMR Fun With The Tongue Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "aftynrosefunwithtonguev.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-fun-with-the-tongue-video",
+                "album_id": None,
+                "uploaded_at": 1615256752,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+            {
+                "url": "https://cdn7.dirtyship.net/cdn2/Aftynroseballsv.mp4",
+                "filename": "AftynRose ASMR Bulmas Quest For More Balls Video [1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "Aftynroseballsv.mp4",
+                "referer": "https://dirtyship.com/aftynrose-asmr-bulmas-quest-for-more-balls-video-1",
+                "album_id": None,
+                "uploaded_at": 1612309588,
+                "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
+            },
+        ],
+        "count": 6,
+    },
+]
