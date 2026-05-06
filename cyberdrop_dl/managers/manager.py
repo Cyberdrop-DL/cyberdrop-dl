@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import os
@@ -20,11 +21,12 @@ from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import capture_logs, log_spacer
 from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.managers.logs import LogManager
+from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import get_system_information
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
     from os import PathLike
 
     from cyberdrop_dl.progress.dedupe import DedupeStats
@@ -77,18 +79,21 @@ class Manager:
         self.logs = LogManager.from_manager(self)
         self.logs.delete_old_logs()
 
-    async def __aenter__(self) -> Self:
-        cache_file = self.appdata.cache_file
-        try:
-            self.cache.update(yaml.load(cache_file))
-        except FileNotFoundError:
-            cache_file.parent.mkdir(exist_ok=True, parents=True)
-            cache_file.touch()
-        return self
-
-    async def __aexit__(self, *_) -> None:
-        self.cache["version"] = __version__
-        yaml.save(self.appdata.cache_file, self.cache)
+    @contextlib.contextmanager
+    def __call__(self) -> Any:
+        self.resolve_paths()
+        self.database = Database(
+            self.appdata.db_file,
+            self.config.settings.runtime_options.ignore_history,
+        )
+        self.deduper = Czkawka.from_manager(self)
+        self.sorter = Sorter.from_manager(self)
+        REFRESH_RATE.set(self.config.global_settings.ui_options.refresh_rate)
+        TUI_DISABLED.set(self.cli_args.ui.is_disabled)
+        self._log_config_settings()
+        self.client_manager = ClientManager(self)
+        with _cache_context(self.appdata.cache_file, self.cache):
+            yield self
 
     def add_completed(self, media_item: MediaItem) -> None:
         if media_item.is_segment:
@@ -98,20 +103,6 @@ class Manager:
     @property
     def completed_downloads(self) -> list[MediaItem]:
         return self._completed_downloads
-
-    async def async_startup(self) -> None:
-        self._log_config_settings()
-        self.async_db_hash_startup()
-
-        self.client_manager = ClientManager(self)
-
-    def async_db_hash_startup(self) -> None:
-        self.database = Database(
-            self.appdata.db_file,
-            self.config.settings.runtime_options.ignore_history,
-        )
-        self.deduper = Czkawka.from_manager(self)
-        self.sorter = Sorter.from_manager(self)
 
     def _log_config_settings(self) -> None:
         auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}
@@ -218,7 +209,10 @@ class Manager:
         self.print_hashing_stats(self.hasher.stats)
         self.print_dedupe_stats(self.deduper.stats)
         self.print_sort_stats(self.sorter.stats)
-        self.print_errors()
+        _log_errors(
+            tuple(self.scrape_mapper.tui.scrape_errors),
+            tuple(self.scrape_mapper.tui.download_errors),
+        )
 
     def print_sort_stats(self, stats: SortStats):
         log_spacer()
@@ -227,12 +221,6 @@ class Manager:
         logger.info(f"  Images: {stats.images:,}")
         logger.info(f"  Videos: {stats.videos:,}")
         logger.info(f"  Other files: {stats.others:,}")
-
-    def print_errors(self) -> None:
-        _log_errors(
-            tuple(self.scrape_mapper.tui.scrape_errors),
-            tuple(self.scrape_mapper.tui.download_errors),
-        )
 
     def print_hashing_stats(self, stats: HashingStats) -> None:
         log_spacer()
@@ -267,6 +255,21 @@ def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIEr
 
         for error in errors:
             logger.info(f"  {error.format(padding)}", extra={"color": "red"})
+
+
+@contextlib.contextmanager
+def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
+    try:
+        cache.update(yaml.load(cache_file))
+    except FileNotFoundError:
+        cache_file.parent.mkdir(exist_ok=True, parents=True)
+        cache_file.touch()
+
+    try:
+        yield
+    finally:
+        cache["version"] = __version__
+        yaml.save(cache_file, cache)
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)

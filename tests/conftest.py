@@ -63,16 +63,15 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
     return caplog
 
 
-@pytest.fixture(scope="function", name="manager")
-def post_startup_manager() -> Manager:
+@pytest.fixture(scope="function")
+def manager() -> Generator[Manager]:
     manager = Manager()
     manager.resolve_paths()
-    return manager
+    with manager():
+        yield manager
 
 
 @pytest.fixture(scope="function")
 async def running_manager(manager: Manager) -> AsyncGenerator[Manager]:
-    await manager.async_startup()
-
     async with manager.database:
         yield manager

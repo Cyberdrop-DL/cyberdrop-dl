@@ -46,7 +46,6 @@ def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> 
 
 
 async def hash_directory_scanner(manager: Manager, path: Path) -> None:
-    manager.async_db_hash_startup()
     async with manager.database:
         stats = await manager.hasher.hash_directory(path)
 

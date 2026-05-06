@@ -15,7 +15,6 @@ from cyberdrop_dl.config import Config
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_console_logging, setup_file_logging
 from cyberdrop_dl.managers.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
-from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.updates import check_latest_pypi
 from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
@@ -28,10 +27,6 @@ async def _scrape(manager: Manager) -> None:
         manager.config.settings.logs.main_log,
         level=manager.config.settings.runtime_options.effective_log_level,
     ):
-        await manager.async_startup()
-        REFRESH_RATE.set(manager.config.global_settings.ui_options.refresh_rate)
-        TUI_DISABLED.set(manager.cli_args.ui.is_disabled)
-
         log_spacer()
         async with manager.database:
             log_spacer()
@@ -86,7 +81,8 @@ def _main(manager: Manager) -> None:
         program_ui.run(manager)
 
     try:
-        aio.run(_scrape(manager))
+        with manager():
+            aio.run(_scrape(manager))
 
     except KeyboardInterrupt:
         logger.info("Exiting (Ctrl + C) ...")
