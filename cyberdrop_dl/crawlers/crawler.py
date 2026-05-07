@@ -172,15 +172,17 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     @final
     def __init__(self, manager: Manager) -> None:
         self.manager: Manager = manager
-        self.downloader: HTTPDownloader = dataclasses.field(init=False)
-        self.client: HTTPClient = dataclasses.field(init=False)
+
         self._startup_lock: asyncio.Lock = asyncio.Lock()
         self._ready: bool = False
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
-
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
+
+        self.client: HTTPClient = self.manager.client_manager.scraper_client
+        self.downloader: HTTPDownloader = HTTPDownloader(self.manager, self.DOMAIN)
+
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -195,13 +197,11 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         async with self._startup_lock:
             if self._ready:
                 return
-            self.client = self.manager.client_manager.scraper_client
             self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
 
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
                 self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
 
-            self.downloader = HTTPDownloader(self.manager, self.DOMAIN)
             if self._DOWNLOAD_SLOTS:
                 self.downloader.download_slots = self._DOWNLOAD_SLOTS
             await self.__async_post_init__()

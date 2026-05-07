@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
+    from cyberdrop_dl.clients.download_client import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
@@ -70,6 +71,7 @@ class HTTPDownloader:
         self.download_slots: int = (
             manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
         )
+        self.client: DownloadClient = self.manager.client_manager.download_client
 
         self._log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
         self._processed_items: set[str] = set()
@@ -78,10 +80,6 @@ class HTTPDownloader:
         self._current_attempt_filesize: dict[str, int] = {}
         self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
         self._semaphore: asyncio.Semaphore | None = None
-
-    @property
-    def client(self):
-        return self.manager.client_manager.download_client
 
     @property
     def _domain_limiter(self) -> asyncio.Semaphore:
