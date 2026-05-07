@@ -198,7 +198,7 @@ class ScrapeMapper:
             logger.exception("Failed to connect to jDownloader")
 
         await self._real_debrid.__async_init__()
-        self._direct_http.__init_downloader__()
+        await self._direct_http.__async_post_init__()
 
         item_limit = 0
         if self.manager.cli_args.retry_any and self.manager.cli_args.max_items_retry:

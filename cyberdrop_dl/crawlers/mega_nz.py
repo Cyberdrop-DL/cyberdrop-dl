@@ -13,7 +13,6 @@ from mega.api import MegaAPI
 from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
-from typing_extensions import override
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
@@ -60,15 +59,12 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     def password(self) -> str | None:
         return self.manager.config.auth.meganz.password or None
 
-    @override
-    def __init_downloader__(self) -> None:
+    async def __async_post_init__(self) -> None:
         api = MegaAPI(self.manager.client_manager._session)
         api.user_agent = CDL_USER_AGENT
         self.core = MegaCore(api)
-        self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # type: ignore[reportIncompatibleVariableOverride]
+        self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         dl.startup()
-
-    async def __async_post_init__(self) -> None:
         await self.login(self.PRIMARY_URL)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
