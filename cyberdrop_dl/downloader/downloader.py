@@ -52,6 +52,7 @@ _KNOWN_BAD_URLS = {
 
 
 _GENERIC_CRAWLERS = ".", "no_crawler"
+_FILE_LOCKS: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
 
 
 class Downloader:
@@ -65,7 +66,6 @@ class Downloader:
         self.waiting_items = 0
 
         self._current_attempt_filesize: dict[str, int] = {}
-        self._file_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
         self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
         self._semaphore: asyncio.Semaphore = field(init=False)
 
@@ -328,7 +328,7 @@ class Downloader:
         if not media_item.is_segment:
             logger.info(f"{self._log_prefix} starting: {media_item.url}")
 
-        async with self._file_locks[media_item.filename]:
+        async with _FILE_LOCKS[media_item.filename]:
             logger.debug(f"Lock for '{media_item.filename}' acquired")
             try:
                 return bool(await self.download(media_item))
