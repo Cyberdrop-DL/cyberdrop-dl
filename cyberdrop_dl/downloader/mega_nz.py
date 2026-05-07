@@ -62,7 +62,7 @@ class MegaDownloadClient(DownloadClient):
 @dataclasses.dataclass(slots=True)
 class MegaDownloader(Downloader):
     def __post_init__(self) -> None:
-        super().__post_init__()
+        super(MegaDownloader, self).__post_init__()
         self.client: MegaDownloadClient = MegaDownloadClient(self.manager)  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @property
