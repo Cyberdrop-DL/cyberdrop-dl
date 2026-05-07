@@ -5,7 +5,6 @@ import contextlib
 import logging
 import platform
 import ssl
-from base64 import b64encode
 from collections import defaultdict
 from collections.abc import Generator
 from contextvars import ContextVar
@@ -19,19 +18,18 @@ from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 
 from cyberdrop_dl import ddos_guard, env
-from cyberdrop_dl.aio import WeakAsyncLocks
 from cyberdrop_dl.clients import HTTPClient
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, TooManyCrawlerErrors
 from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable
     from http.cookies import BaseCookie
 
     from curl_cffi.requests import AsyncSession
@@ -90,18 +88,18 @@ class DownloadSpeedLimiter(AsyncLimiter):
         return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
-def _make_ssl_context(ssl_context: str | None) -> ssl.SSLContext | Literal[False]:
-    if not ssl_context:
+def _make_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
+    if not name:
         return False
-    if ssl_context == "certifi":
+    if name == "certifi":
         return ssl.create_default_context(cafile=certifi.where())
-    if ssl_context == "truststore":
+    if name == "truststore":
         return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    if ssl_context == "truststore+certifi":
+    if name == "truststore+certifi":
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.load_verify_locations(cafile=certifi.where())
         return ctx
-    raise ValueError(ssl_context)
+    raise ValueError(name)
 
 
 class ClientManager:
@@ -119,7 +117,7 @@ class ClientManager:
         self.speed_limiter = DownloadSpeedLimiter(self.rate_limiting_options.download_speed_limit)
         self.download_client = DownloadClient(manager, self)
         self._flaresolverr: FlareSolverrClient | None = None
-        self.file_locks: WeakAsyncLocks[str] = WeakAsyncLocks()
+
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
         self._curl_session: AsyncSession[CurlResponse]
@@ -184,26 +182,8 @@ class ClientManager:
 
         return min(instances, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
 
-    @staticmethod
-    def check_curl_cffi_is_available() -> None:
-        if _curl_import_error is None:
-            return
-
-        system = "Android" if env.RUNNING_IN_TERMUX else "the system"
-        msg = (
-            f"curl_cffi is required to scrape this URL but a dependency it's not available on {system}.\n"
-            f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{_curl_import_error!r}"
-        )
-        raise ScrapeError("Missing Dependency", msg)
-
-    @staticmethod
-    def basic_auth(username: str, password: str) -> str:
-        """Returns a basic auth token."""
-        token = b64encode(f"{username}:{password}".encode()).decode("ascii")
-        return f"Basic {token}"
-
     def is_allowed_filetype(self, media_item: MediaItem) -> bool:
-        """Checks if the file type is allowed to download."""
+
         ignore_options = self.manager.config.settings.ignore_options
         ext = media_item.ext.lower()
 
@@ -371,16 +351,6 @@ class ClientManager:
             check(await response.json(), response)
             return
 
-    @staticmethod
-    def check_content_length(headers: Mapping[str, Any]) -> None:
-        content_length, content_type = headers.get("Content-Length"), headers.get("Content-Type")
-        if content_length is None or content_type is None:
-            return
-        if content_length == "322509" and content_type == "video/mp4":
-            raise DownloadError(status="Bunkr Maintenance", message="Bunkr under maintenance")
-        if content_length == "73003" and content_type == "video/mp4":
-            raise DownloadError(410)  # Placeholder video with text "Video removed" (efukt)
-
     async def check_file_duration(self, media_item: MediaItem) -> bool:
         """Checks the file runtime against the config runtime limits."""
         if media_item.is_segment:
@@ -459,7 +429,7 @@ async def _get_dns_resolver(
             _ = await resolver.query_dns("github.com", "A")
 
     except Exception as e:
-        logger.warning(f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver: {e}")
+        logger.warning(f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver: {e!r}")
         return aiohttp.ThreadedResolver
 
     else:

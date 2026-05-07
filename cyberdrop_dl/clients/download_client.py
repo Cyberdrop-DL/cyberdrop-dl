@@ -99,7 +99,7 @@ class DownloadClient:
         media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
         if not media_item.path:
             proceed, skip = await self.get_final_file_info(media_item, domain)
-            self.client_manager.check_content_length(resp.headers)
+            _check_content_length(resp.headers)
             if skip:
                 self.manager.scrape_mapper.tui.files.stats.skipped += 1
                 return False
@@ -510,3 +510,13 @@ def _fallback_generator(media_item: MediaItem):
     gen = gen_fallback()
     _ = next(gen)
     return gen
+
+
+def _check_content_length(headers: Mapping[str, Any]) -> None:
+    content_length, content_type = headers.get("Content-Length"), headers.get("Content-Type")
+    if content_length is None or content_type is None:
+        return
+    if content_length == "322509" and content_type == "video/mp4":
+        raise DownloadError(status="Bunkr Maintenance", message="Bunkr under maintenance")
+    if content_length == "73003" and content_type == "video/mp4":
+        raise DownloadError(410)  # Placeholder video with text "Video removed" (efukt)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import contextlib
 import dataclasses
 import functools
@@ -362,3 +363,8 @@ def truncated_preview(content: str, max_len: int = 100) -> str:
     if len(content) <= max_len:
         return content
     return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"
+
+
+def basic_auth(username: str, password: str) -> str:
+    token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
+    return f"Basic {token}"

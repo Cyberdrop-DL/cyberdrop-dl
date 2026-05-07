@@ -66,7 +66,7 @@ class Downloader:
 
         self._additional_headers = {}
         self._current_attempt_filesize: dict[str, int] = {}
-        self._file_lock_vault = manager.client_manager.file_locks
+        self._file_lock_vault = aio.WeakAsyncLocks()
         self._ignore_history = manager.config.settings.runtime_options.ignore_history
         self._semaphore: asyncio.Semaphore = field(init=False)
 
