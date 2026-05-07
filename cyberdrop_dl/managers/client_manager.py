@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import Generator
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 import aiohttp
 import certifi
@@ -90,22 +90,26 @@ class DownloadSpeedLimiter(AsyncLimiter):
         return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
+def _make_ssl_context(ssl_context: str | None) -> ssl.SSLContext | Literal[False]:
+    if not ssl_context:
+        return False
+    if ssl_context == "certifi":
+        return ssl.create_default_context(cafile=certifi.where())
+    if ssl_context == "truststore":
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    if ssl_context == "truststore+certifi":
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.load_verify_locations(cafile=certifi.where())
+        return ctx
+    raise ValueError(ssl_context)
+
+
 class ClientManager:
     """Creates a 'client' that can be referenced by scraping or download sessions."""
 
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        ssl_context = self.manager.config.global_settings.general.ssl_context
-        if not ssl_context:
-            self.ssl_context = False
-        elif ssl_context == "certifi":
-            self.ssl_context = ssl.create_default_context(cafile=certifi.where())
-        elif ssl_context == "truststore":
-            self.ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        elif ssl_context == "truststore+certifi":
-            self.ssl_context = ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ctx.load_verify_locations(cafile=certifi.where())
-
+        self.ssl_context = _make_ssl_context(self.manager.config.global_settings.general.ssl_context)
         self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.download_slots: dict[str, int] = {}
