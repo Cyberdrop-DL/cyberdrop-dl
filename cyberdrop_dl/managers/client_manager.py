@@ -27,7 +27,7 @@ from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable, Mapping
     from http.cookies import BaseCookie
 
     from curl_cffi.requests import AsyncSession
@@ -301,12 +301,9 @@ class ClientManager:
 
         message = None
 
-        def check_etag() -> None:
-            if download and (e_tag := response.headers.get("ETag", "").strip('"')) in _DOWNLOAD_ERROR_ETAGS:
-                message = _DOWNLOAD_ERROR_ETAGS[e_tag]
-                raise DownloadError(HTTPStatus.NOT_FOUND, message=message)
+        if download:
+            _check_etag(response.headers)
 
-        check_etag()
         if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
             # Check DDosGuard even on successful pages
             await ddos_guard.check(response)
@@ -408,3 +405,9 @@ async def _get_dns_resolver(
 
     else:
         return aiohttp.AsyncResolver
+
+
+def _check_etag(headers: Mapping[str, str]) -> None:
+    e_tag = headers.get("ETag", "").strip('"')
+    if message := _DOWNLOAD_ERROR_ETAGS.get(e_tag):
+        raise DownloadError(HTTPStatus.NOT_FOUND, message)
