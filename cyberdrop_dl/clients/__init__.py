@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
-import platform
 import time
 import uuid
 from pathlib import Path
@@ -15,7 +14,7 @@ from multidict import CIMultiDict
 from cyberdrop_dl import constants, ddos_guard, signature
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
-from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
+from cyberdrop_dl.exceptions import DDOSGuardError
 from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
@@ -28,12 +27,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients import flaresolverr
     from cyberdrop_dl.managers.client_manager import ClientManager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-_curl_import_error = None
-try:
-    from curl_cffi.requests import AsyncSession  # pyright: ignore[reportUnusedImport]  # noqa: F401
-except ImportError as e:
-    _curl_import_error = e
 
 
 logger = logging.getLogger(__name__)
@@ -131,7 +124,6 @@ class HTTPClient:
 
         impersonate = self.client_manager.manager.cli_args.impersonate or impersonate
         if impersonate:
-            _check_curl_cffi_is_available()
             if impersonate is True:
                 impersonate = "chrome"
             request_params["impersonate"] = impersonate
@@ -324,14 +316,3 @@ class HTTPClientProxy:
     async def request_text(self, *args, **kwargs) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
-
-
-def _check_curl_cffi_is_available() -> None:
-    if _curl_import_error is None:
-        return
-
-    msg = (
-        f"curl_cffi is required to scrape this URL but a dependency it's not available on {platform.system()}.\n"
-        f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{_curl_import_error!r}"
-    )
-    raise ScrapeError("Missing Dependency", msg)

@@ -24,7 +24,7 @@ from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, TooManyCrawlerErrors
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
 from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
@@ -224,12 +224,19 @@ class ClientManager:
                 yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-        # Calling code should have validated if curl is actually available
-        import warnings
 
-        from curl_cffi.aio import AsyncCurl
-        from curl_cffi.requests import AsyncSession
-        from curl_cffi.utils import CurlCffiWarning
+        try:
+            from curl_cffi.aio import AsyncCurl
+            from curl_cffi.requests import AsyncSession
+            from curl_cffi.utils import CurlCffiWarning
+        except ImportError:
+            msg = (
+                f"curl_cffi is required to scrape this URL but a dependency it's not available on {platform.system()}.\n"
+                f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{_curl_import_error!r}"
+            )
+            raise ScrapeError("Missing Dependency", msg) from None
+
+        import warnings
 
         loop = asyncio.get_running_loop()
 
