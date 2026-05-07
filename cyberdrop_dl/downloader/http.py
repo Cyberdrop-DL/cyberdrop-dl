@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import os
 from typing import TYPE_CHECKING, NamedTuple
@@ -64,27 +65,37 @@ async def _exclusive_lock(media_item: MediaItem) -> AsyncGenerator[None]:
             logger.debug(f"Lock for '{media_item.filename}' released")
 
 
+@dataclasses.dataclass(slots=True)
 class Downloader:
     """Hight level class that handles limiters, database checks, skip by config checks and retries"""
 
-    def __init__(self, manager: Manager, domain: str) -> None:
-        self.manager: Manager = manager
-        self.config: Config = manager.config
-        self.domain: str = domain
-        self.download_slots: int = (
-            manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+    manager: Manager
+    domain: str
+    log_prefix: str = "Download"
+    use_server_lock: bool = False
+
+    waiting_items: int = dataclasses.field(init=False, default=0)
+    download_slots: int = dataclasses.field(init=False)
+    client: DownloadClient = dataclasses.field(init=False)
+
+    _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
+    _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
+    _semaphore: asyncio.Semaphore | None = dataclasses.field(init=False, default=None)
+    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(init=False, default_factory=aio.WeakAsyncLocks)
+
+    @property
+    def config(self) -> Config:
+        return self.manager.config
+
+    @property
+    def _ignore_history(self) -> bool:
+        return self.manager.config.settings.runtime_options.ignore_history
+
+    def __post_init__(self) -> None:
+        self.download_slots = (
+            self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
         )
-        self.client: DownloadClient = self.manager.client_manager.download_client
-
-        self.log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
-        self._processed_items: set[str] = set()
-        self.waiting_items = 0
-
-        self._current_attempt_filesize: dict[str, int] = {}
-        self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
-        self._semaphore: asyncio.Semaphore | None = None
-        self.use_server_lock: bool = False
-        self._server_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+        self.client = self.manager.client_manager.download_client
 
     def _server_lock(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
         if self.use_server_lock:

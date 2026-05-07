@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING, final
 
 from mega.chunker import MegaChunker, get_chunks
@@ -58,18 +59,15 @@ class MegaDownloadClient(DownloadClient):
         media_item.partial_file.touch()
 
 
+@dataclasses.dataclass(slots=True)
 class MegaDownloader(Downloader):
-    def __init__(self, manager: Manager, domain: str) -> None:
-        super().__init__(manager, domain)
-        self._client = MegaDownloadClient(self.manager)
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.client: MegaDownloadClient = MegaDownloadClient(self.manager)  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @property
     def max_attempts(self):
         return 1
-
-    @property
-    def client(self) -> MegaDownloadClient:
-        return self._client
 
     def register(self, url: URL, crypto: Crypto, file_size: int) -> None:
         self.client._decrypt_mapping[url] = crypto, file_size

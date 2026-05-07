@@ -17,6 +17,7 @@ class DirectHttpFile(Crawler, is_generic=True):
 
     async def __async_post_init__(self) -> None:
         self.downloader = Downloader(self.manager, self.DOMAIN)
+        self.downloader.log_prefix = "Download attempt (unsupported domain)"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         try:
