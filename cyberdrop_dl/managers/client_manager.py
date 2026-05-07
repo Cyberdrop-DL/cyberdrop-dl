@@ -100,9 +100,8 @@ class ClientManager:
         self.ssl_context = _make_ssl_context(self.manager.config.global_settings.general.ssl_context)
         self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
-        self.download_slots: dict[str, int] = {}
         self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
-        self.global_download_slots = asyncio.Semaphore(
+        self.global_download_limiter = asyncio.Semaphore(
             self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
         self.scraper_client = HTTPClient.from_client(self)
@@ -169,17 +168,6 @@ class ClientManager:
                         pass
 
                 tg.create_task(close_curl())
-
-    def get_download_slots(self, domain: str) -> int:
-        """Returns the download limit for a domain."""
-
-        instances = self.download_slots.get(
-            domain, self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
-        )
-
-        return min(
-            instances, self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
-        )
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
 

@@ -84,7 +84,7 @@ class Downloader:
         return self.manager.client_manager.download_client
 
     @property
-    def _sem(self) -> asyncio.Semaphore:
+    def _domain_limiter(self) -> asyncio.Semaphore:
         if self.__semaphore is None:
             limit = min(
                 self.download_slots,
@@ -135,8 +135,8 @@ class Downloader:
         server = (media_item.debrid_link or media_item.url).host
         server_limit, domain_limit, global_limit = (
             self.client.server_limiter(media_item.domain, server),
-            self._sem,
-            self.manager.client_manager.global_download_slots,
+            self._domain_limiter,
+            self.manager.client_manager.global_download_limiter,
         )
 
         async with server_limit, domain_limit, global_limit:
