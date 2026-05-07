@@ -63,7 +63,7 @@ async def _exclusive_lock(media_item: MediaItem) -> AsyncGenerator[None]:
             logger.debug(f"Lock for '{media_item.filename}' released")
 
 
-class Downloader:
+class HTTPDownloader:
     def __init__(self, manager: Manager, domain: str) -> None:
         self.manager: Manager = manager
         self.domain: str = domain
@@ -77,7 +77,7 @@ class Downloader:
 
         self._current_attempt_filesize: dict[str, int] = {}
         self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
-        self.__semaphore: asyncio.Semaphore | None = None
+        self._semaphore: asyncio.Semaphore | None = None
 
     @property
     def client(self):
@@ -85,14 +85,14 @@ class Downloader:
 
     @property
     def _domain_limiter(self) -> asyncio.Semaphore:
-        if self.__semaphore is None:
+        if self._semaphore is None:
             limit = min(
                 self.download_slots,
                 self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain,
             )
-            self.__semaphore = asyncio.Semaphore(limit)
+            self._semaphore = asyncio.Semaphore(limit)
 
-        return self.__semaphore
+        return self._semaphore
 
     @error_handling_wrapper
     async def download(self, media_item: MediaItem) -> bool:

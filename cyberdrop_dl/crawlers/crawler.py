@@ -23,7 +23,7 @@ from typing_extensions import deprecated
 from cyberdrop_dl import env
 from cyberdrop_dl.clients import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
-from cyberdrop_dl.downloader.downloader import Downloader
+from cyberdrop_dl.downloader.http import HTTPDownloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
@@ -172,7 +172,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     @final
     def __init__(self, manager: Manager) -> None:
         self.manager: Manager = manager
-        self.downloader: Downloader = dataclasses.field(init=False)
+        self.downloader: HTTPDownloader = dataclasses.field(init=False)
         self.client: HTTPClient = dataclasses.field(init=False)
         self._startup_lock: asyncio.Lock = asyncio.Lock()
         self._ready: bool = False
@@ -201,7 +201,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
                 self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
 
-            self.downloader = Downloader(self.manager, self.DOMAIN)
+            self.downloader = HTTPDownloader(self.manager, self.DOMAIN)
             if self._DOWNLOAD_SLOTS:
                 self.downloader.download_slots = self._DOWNLOAD_SLOTS
             await self.__async_post_init__()

@@ -34,7 +34,7 @@ from cyberdrop_dl.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
-    from cyberdrop_dl.downloader.downloader import Downloader
+    from cyberdrop_dl.downloader.http import HTTPDownloader
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 
@@ -140,7 +140,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     link_to_show = link_to_show or link
     origin = origin or get_origin(item)
     if is_downloader:
-        self, item = cast("Downloader", self), cast("MediaItem", item)
+        self, item = cast("HTTPDownloader", self), cast("MediaItem", item)
         self.write_download_error(item, error_log_msg, exc_info)
         return
 
