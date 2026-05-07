@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import logging
 import os
-from dataclasses import field
 from typing import TYPE_CHECKING, NamedTuple
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
-    from cyberdrop_dl.clients.download_client import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
@@ -69,15 +67,32 @@ class Downloader:
     def __init__(self, manager: Manager, domain: str) -> None:
         self.manager: Manager = manager
         self.domain: str = domain
+        self.download_slots: int = (
+            manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+        )
 
-        self.client: DownloadClient = field(init=False)
         self._log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
         self._processed_items: set[str] = set()
         self.waiting_items = 0
 
         self._current_attempt_filesize: dict[str, int] = {}
         self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
-        self._semaphore: asyncio.Semaphore = field(init=False)
+        self.__semaphore: asyncio.Semaphore | None = None
+
+    @property
+    def client(self):
+        return self.manager.client_manager.download_client
+
+    @property
+    def _sem(self) -> asyncio.Semaphore:
+        if self.__semaphore is None:
+            limit = min(
+                self.download_slots,
+                self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain,
+            )
+            self.__semaphore = asyncio.Semaphore(limit)
+
+        return self.__semaphore
 
     @error_handling_wrapper
     async def download(self, media_item: MediaItem) -> bool:
@@ -106,15 +121,6 @@ class Downloader:
             return 1
         return self.manager.config.global_settings.rate_limiting_options.download_attempts
 
-    def startup(self) -> None:
-        """Starts the downloader."""
-        self.client = self.manager.client_manager.download_client
-        self._semaphore = asyncio.Semaphore(self.manager.client_manager.get_download_slots(self.domain))
-
-        self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
-        if self.manager.config.settings.sorting.sort_downloads:
-            self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
-
     @contextlib.asynccontextmanager
     async def _download_context(self, media_item: MediaItem):
 
@@ -129,7 +135,7 @@ class Downloader:
         server = (media_item.debrid_link or media_item.url).host
         server_limit, domain_limit, global_limit = (
             self.client.server_limiter(media_item.domain, server),
-            self._semaphore,
+            self._sem,
             self.manager.client_manager.global_download_slots,
         )
 
@@ -331,8 +337,6 @@ class Downloader:
             await asyncio.to_thread(os.utime, complete_file, (media_item.uploaded_at, media_item.uploaded_at))
         except OSError:
             pass
-
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
     async def start_download(self, media_item: MediaItem) -> bool:
         if not media_item.is_segment:

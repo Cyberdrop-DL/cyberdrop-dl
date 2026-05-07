@@ -166,6 +166,10 @@ class ScrapeMapper:
         _ = filepath.MAX_FILE_LEN.set(self.manager.config.global_settings.general.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(self.manager.config.global_settings.general.max_folder_name_length)
 
+        self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
+        if self.manager.config.settings.sorting.sort_downloads:
+            self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+
         await self.manager.client_manager.load_cookie_files()
         self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!

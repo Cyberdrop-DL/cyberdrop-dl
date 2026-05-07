@@ -197,11 +197,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                 return
             self.client = self.manager.client_manager.scraper_client
             self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
-            if self._DOWNLOAD_SLOTS:
-                self.manager.client_manager.download_slots[self.DOMAIN] = self._DOWNLOAD_SLOTS
+
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
                 self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
             self.__init_downloader__()
+            if self._DOWNLOAD_SLOTS:
+                self.downloader.download_slots = self._DOWNLOAD_SLOTS
             await self.__async_post_init__()
             self._ready = True
 
@@ -277,8 +278,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             Registry.concrete.add(cls)
 
     def __init_downloader__(self) -> None:
-        self.downloader = dl = Downloader(self.manager, self.DOMAIN)
-        dl.startup()
+        self.downloader = Downloader(self.manager, self.DOMAIN)
 
     @final
     @staticmethod

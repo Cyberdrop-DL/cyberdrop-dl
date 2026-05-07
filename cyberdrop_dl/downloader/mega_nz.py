@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, final
 
 from mega.chunker import MegaChunker, get_chunks
@@ -69,7 +68,6 @@ class MegaDownloader(Downloader):
     def startup(self) -> None:
         """Starts the downloader."""
         self.client = MegaDownloadClient(self.manager)  # type: ignore[reportIncompatibleVariableOverride]
-        self._semaphore = asyncio.Semaphore(self.manager.client_manager.get_download_slots(self.domain))
 
     def register(self, url: URL, crypto: Crypto, file_size: int) -> None:
         self.client._decrypt_mapping[url] = crypto, file_size
