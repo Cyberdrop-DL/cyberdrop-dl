@@ -59,15 +59,17 @@ class MegaDownloadClient(DownloadClient):
 
 
 class MegaDownloader(Downloader):
-    client: MegaDownloadClient
+    def __init__(self, manager: Manager, domain: str) -> None:
+        super().__init__(manager, domain)
+        self._client = MegaDownloadClient(self.manager)
 
     @property
     def max_attempts(self):
         return 1
 
-    def startup(self) -> None:
-        """Starts the downloader."""
-        self.client = MegaDownloadClient(self.manager)  # type: ignore[reportIncompatibleVariableOverride]
+    @property
+    def client(self) -> MegaDownloadClient:
+        return self._client
 
     def register(self, url: URL, crypto: Crypto, file_size: int) -> None:
         self.client._decrypt_mapping[url] = crypto, file_size

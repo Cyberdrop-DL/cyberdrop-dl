@@ -63,8 +63,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         api = MegaAPI(self.manager.client_manager._session)
         api.user_agent = CDL_USER_AGENT
         self.core = MegaCore(api)
-        self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
-        dl.startup()
+        self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         await self.login(self.PRIMARY_URL)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
