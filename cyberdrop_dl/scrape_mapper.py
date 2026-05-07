@@ -128,10 +128,10 @@ class ScrapeMapper:
     _done: asyncio.Event = dataclasses.field(init=False, default_factory=asyncio.Event)
 
     def _scrape_queue(self) -> int:
-        return sum(f.waiting_items for f in self._factory)
+        return sum(crawler.waiting_items for crawler in self._factory)
 
     def _download_queue(self):
-        total = sum(f.downloader.waiting_items for f in self._factory)
+        total = sum(crawler.downloader.waiting_items for crawler in self._factory)
         self.tui.files.stats.queued = total
         return total
 

@@ -23,10 +23,8 @@ from cyberdrop_dl.exceptions import (
 from cyberdrop_dl.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.utils import dates, error_handling_wrapper, parse_url
 
-logger = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import Generator
     from pathlib import Path
 
@@ -35,13 +33,15 @@ if TYPE_CHECKING:
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
+logger = logging.getLogger(__name__)
+
 
 class SegmentDownloadResult(NamedTuple):
     item: MediaItem
     downloaded: bool
 
 
-KNOWN_BAD_URLS = {
+_KNOWN_BAD_URLS = {
     "https://i.imgur.com/removed.png": 404,
     "https://saint2.su/assets/notfound.gif": 404,
     "https://bnkr.b-cdn.net/maintenance-vid.mp4": 503,
@@ -51,7 +51,7 @@ KNOWN_BAD_URLS = {
 }
 
 
-GENERIC_CRAWLERS = ".", "no_crawler"
+_GENERIC_CRAWLERS = ".", "no_crawler"
 
 
 class Downloader:
@@ -60,14 +60,13 @@ class Downloader:
         self.domain: str = domain
 
         self.client: DownloadClient = field(init=False)
-        self.log_prefix = "Download attempt (unsupported domain)" if domain in GENERIC_CRAWLERS else "Download"
-        self.processed_items: set[str] = set()
+        self._log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
+        self._processed_items: set[str] = set()
         self.waiting_items = 0
 
-        self._additional_headers = {}
         self._current_attempt_filesize: dict[str, int] = {}
-        self._file_lock_vault = aio.WeakAsyncLocks()
-        self._ignore_history = manager.config.settings.runtime_options.ignore_history
+        self._file_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+        self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
         self._semaphore: asyncio.Semaphore = field(init=False)
 
     @error_handling_wrapper
@@ -83,16 +82,16 @@ class Downloader:
                 if e.status != 999:
                     media_item.attempts += 1
 
-                logger.error(f"{self.log_prefix} failed: {media_item.url} with error: {e!s}")
+                logger.error(f"{self._log_prefix} failed: {media_item.url} with error: {e!s}")
                 if media_item.attempts >= self.max_attempts:
                     raise
 
                 logger.info(
-                    f"Retrying {self.log_prefix.lower()}: {media_item.url} , retry attempt: {media_item.attempts + 1}"
+                    f"Retrying {self._log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
                 )
 
     @property
-    def max_attempts(self):
+    def max_attempts(self) -> int:
         if self.manager.config.settings.download_options.disable_download_attempt_limit:
             return 1
         return self.manager.config.global_settings.rate_limiting_options.download_attempts
@@ -125,14 +124,14 @@ class Downloader:
         )
 
         async with server_limit, domain_limit, global_limit:
-            self.processed_items.add(media_item.db_path)
+            self._processed_items.add(media_item.db_path)
             self.waiting_items -= 1
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
         """Runs the download loop."""
 
-        if media_item.url.path in self.processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self._ignore_history:
             return False
 
         async with self._download_context(media_item):
@@ -140,7 +139,7 @@ class Downloader:
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if media_item.url.path in self.processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self._ignore_history:
             return
 
         if not ffmpeg.is_installed():
@@ -300,7 +299,7 @@ class Downloader:
             raise RestrictedFiletypeError(origin=media_item)
         if not await self.manager.client_manager.check_file_duration(media_item):
             raise DurationError(origin=media_item)
-        if not _check_allowed_date_range(media_item, self.manager.config):
+        if not _is_allowed_date_range(media_item, self.manager.config):
             raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
@@ -327,9 +326,9 @@ class Downloader:
 
     async def start_download(self, media_item: MediaItem) -> bool:
         if not media_item.is_segment:
-            logger.info(f"{self.log_prefix} starting: {media_item.url}")
+            logger.info(f"{self._log_prefix} starting: {media_item.url}")
 
-        async with self._file_lock_vault[media_item.filename]:
+        async with self._file_locks[media_item.filename]:
             logger.debug(f"Lock for '{media_item.filename}' acquired")
             try:
                 return bool(await self.download(media_item))
@@ -339,8 +338,8 @@ class Downloader:
     async def _download(self, media_item: MediaItem) -> bool | None:
         """Downloads the media item."""
         url_as_str = str(media_item.url)
-        if url_as_str in KNOWN_BAD_URLS:
-            raise DownloadError(KNOWN_BAD_URLS[url_as_str])
+        if url_as_str in _KNOWN_BAD_URLS:
+            raise DownloadError(_KNOWN_BAD_URLS[url_as_str])
         try:
             media_item.attempts = media_item.attempts or 1
             if not media_item.is_segment:
@@ -374,7 +373,7 @@ class Downloader:
             ui_message = getattr(e, "status", type(e).__name__)
             if media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
                 if self._current_attempt_filesize.get(media_item.filename, 0) >= size:
-                    raise DownloadError(ui_message, message=f"{self.log_prefix} failed", retry=True) from None
+                    raise DownloadError(ui_message, message=f"{self._log_prefix} failed", retry=True) from None
 
                 self._current_attempt_filesize[media_item.filename] = size
                 raise DownloadError(status=999, message="Download timeout reached, retrying", retry=True) from None
@@ -389,7 +388,7 @@ class Downloader:
         exc_info: Exception | None = None,
     ) -> None:
         logger.error(
-            f"{self.log_prefix} Failed: {media_item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {media_item.referer}",
+            f"{self._log_prefix} Failed: {media_item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {media_item.referer}",
             exc_info=exc_info,
         )
         self.manager.logs.write_download_error(media_item, error_log_msg.csv_log_msg)
@@ -409,13 +408,15 @@ def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
     )
 
 
-def _check_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
-    """Checks if the file was uploaded within the config date range"""
-    datetime = media_item.uploaded_at_date
-    if not datetime:
+def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
+    if not media_item.uploaded_at_date:
         return True
 
-    item_date = datetime.date()
+    return _filter_by_date(media_item.uploaded_at_date, config)
+
+
+def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
+    item_date = item_datetime.date()
     ignore_options = config.settings.ignore_options
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:

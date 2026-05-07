@@ -101,10 +101,14 @@ class ClientManager:
         self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.download_slots: dict[str, int] = {}
-        self.global_rate_limiter = AsyncLimiter(self.rate_limiting_options.rate_limit, 1)
-        self.global_download_slots = asyncio.Semaphore(self.rate_limiting_options.max_simultaneous_downloads)
+        self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
+        self.global_download_slots = asyncio.Semaphore(
+            self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+        )
         self.scraper_client = HTTPClient.from_client(self)
-        self.speed_limiter = DownloadSpeedLimiter(self.rate_limiting_options.download_speed_limit)
+        self.speed_limiter = DownloadSpeedLimiter(
+            self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+        )
         self.download_client = DownloadClient(manager, self)
         self._flaresolverr: FlareSolverrClient | None = None
 
@@ -166,16 +170,16 @@ class ClientManager:
 
                 tg.create_task(close_curl())
 
-    @property
-    def rate_limiting_options(self):
-        return self.manager.config.global_settings.rate_limiting_options
-
     def get_download_slots(self, domain: str) -> int:
         """Returns the download limit for a domain."""
 
-        instances = self.download_slots.get(domain, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
+        instances = self.download_slots.get(
+            domain, self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+        )
 
-        return min(instances, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
+        return min(
+            instances, self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+        )
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
 
@@ -206,7 +210,7 @@ class ClientManager:
             impersonate="chrome",
             verify=bool(self.ssl_context),
             proxy=proxy_or_none,
-            timeout=self.rate_limiting_options._curl_timeout,
+            timeout=self.manager.config.global_settings.rate_limiting_options._curl_timeout,
             max_redirects=8,
             cookies={cookie.key: cookie.value for cookie in self.cookies},
         )
@@ -222,7 +226,7 @@ class ClientManager:
             },
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.rate_limiting_options._aiohttp_timeout,
+            timeout=self.manager.config.global_settings.rate_limiting_options._aiohttp_timeout,
             proxy=self.manager.config.global_settings.general.proxy,
             connector=tcp_conn,
             requote_redirect_url=False,
@@ -255,14 +259,9 @@ class ClientManager:
         response: ClientResponse | CurlResponse | AbstractResponse[Any],
         download: bool = False,
     ) -> None:
-        """Checks the HTTP status code and raises an exception if it's not acceptable.
-
-        If the response is successful and has valid html, returns soup
-        """
+        """Checks the HTTP status code and raises an exception if it's not acceptable."""
         if not isinstance(response, AbstractResponse):
             response = AbstractResponse.create(response)
-
-        message = None
 
         if download:
             _check_etag(response.headers)
@@ -275,7 +274,7 @@ class ClientManager:
         await self._check_json(response)
 
         await ddos_guard.check(response)
-        raise DownloadError(status=response.status, message=message)
+        raise DownloadError(status=response.status)
 
     async def _check_json(self, response: AbstractResponse[Any]) -> None:
         if "json" not in response.content_type:
