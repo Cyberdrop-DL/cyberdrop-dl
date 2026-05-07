@@ -24,16 +24,15 @@ from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.ffmpeg import probe
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
-    from http.cookies import BaseCookie
+    from collections.abc import Callable, Generator, Mapping
 
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.url_objects import MediaItem
 
 
 logger = logging.getLogger(__name__)
@@ -177,42 +176,6 @@ class ClientManager:
         instances = self.download_slots.get(domain, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
 
         return min(instances, self.rate_limiting_options.max_simultaneous_downloads_per_domain)
-
-    def is_allowed_filetype(self, media_item: MediaItem) -> bool:
-
-        ignore_options = self.manager.config.settings.ignore_options
-        ext = media_item.ext.lower()
-
-        return not (
-            (ignore_options.exclude_images and ext in FileExt.IMAGE)
-            or (ignore_options.exclude_videos and ext in FileExt.VIDEO)
-            or (ignore_options.exclude_audio and ext in FileExt.AUDIO)
-            or (ignore_options.exclude_other and ext not in FileExt.MEDIA)
-        )
-
-    def check_allowed_date_range(self, media_item: MediaItem) -> bool:
-        """Checks if the file was uploaded within the config date range"""
-        datetime = media_item.uploaded_at_date
-        if not datetime:
-            return True
-
-        item_date = datetime.date()
-        ignore_options = self.manager.config.settings.ignore_options
-
-        if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
-            return False
-        if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
-            return False
-        return True
-
-    def filter_cookies_by_word_in_domain(self, word: str) -> Iterable[tuple[str, BaseCookie[str]]]:
-        """Yields pairs of `[domain, BaseCookie]` for every cookie with a domain that has `word` in it"""
-        if not self.cookies:
-            return
-        self.cookies._do_expiration()
-        for domain, _ in self.cookies._cookies:
-            if word in domain:
-                yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
 

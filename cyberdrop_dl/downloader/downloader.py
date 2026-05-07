@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.clients.download_client import DownloadClient
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
@@ -295,11 +296,11 @@ class Downloader:
         """Checks if the file can be downloaded."""
         if not await storage.has_sufficient_space(media_item.download_folder):
             raise InsufficientFreeSpaceError(media_item)
-        if not self.manager.client_manager.is_allowed_filetype(media_item):
+        if not _is_allowed_filetype(media_item, self.manager.config):
             raise RestrictedFiletypeError(origin=media_item)
         if not await self.manager.client_manager.check_file_duration(media_item):
             raise DurationError(origin=media_item)
-        if not self.manager.client_manager.check_allowed_date_range(media_item):
+        if not _check_allowed_date_range(media_item, self.manager.config):
             raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
@@ -394,3 +395,31 @@ class Downloader:
         self.manager.logs.write_download_error(media_item, error_log_msg.csv_log_msg)
         self.manager.scrape_mapper.tui.files.stats.failed += 1
         self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
+
+
+def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
+    ignore_options = config.settings.ignore_options
+    ext = media_item.ext.lower()
+
+    return not (
+        (ignore_options.exclude_images and ext in constants.FileExt.IMAGE)
+        or (ignore_options.exclude_videos and ext in constants.FileExt.VIDEO)
+        or (ignore_options.exclude_audio and ext in constants.FileExt.AUDIO)
+        or (ignore_options.exclude_other and ext not in constants.FileExt.MEDIA)
+    )
+
+
+def _check_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
+    """Checks if the file was uploaded within the config date range"""
+    datetime = media_item.uploaded_at_date
+    if not datetime:
+        return True
+
+    item_date = datetime.date()
+    ignore_options = config.settings.ignore_options
+
+    if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
+        return False
+    if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
+        return False
+    return True
