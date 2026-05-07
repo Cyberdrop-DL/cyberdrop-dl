@@ -12,7 +12,6 @@ from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
-    ErrorLogMessage,
     InsufficientFreeSpaceError,
     InvalidContentTypeError,
     RestrictedDateRangeError,
@@ -64,16 +63,19 @@ async def _exclusive_lock(media_item: MediaItem) -> AsyncGenerator[None]:
             logger.debug(f"Lock for '{media_item.filename}' released")
 
 
-class HTTPDownloader:
+class Downloader:
+    """Hight level class that handles limiters, database checks, skip by config checks and retries"""
+
     def __init__(self, manager: Manager, domain: str) -> None:
         self.manager: Manager = manager
+        self.config: Config = manager.config
         self.domain: str = domain
         self.download_slots: int = (
             manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
         )
         self.client: DownloadClient = self.manager.client_manager.download_client
 
-        self._log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
+        self.log_prefix = "Download attempt (unsupported domain)" if domain in _GENERIC_CRAWLERS else "Download"
         self._processed_items: set[str] = set()
         self.waiting_items = 0
 
@@ -86,7 +88,7 @@ class HTTPDownloader:
         if self._semaphore is None:
             limit = min(
                 self.download_slots,
-                self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain,
+                self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain,
             )
             self._semaphore = asyncio.Semaphore(limit)
 
@@ -105,19 +107,19 @@ class HTTPDownloader:
                 if e.status != 999:
                     media_item.attempts += 1
 
-                logger.error(f"{self._log_prefix} failed: {media_item.url} with error: {e!s}")
+                logger.error(f"{self.log_prefix} failed: {media_item.url} with error: {e!s}")
                 if media_item.attempts >= self.max_attempts:
                     raise
 
                 logger.info(
-                    f"Retrying {self._log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
+                    f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
                 )
 
     @property
     def max_attempts(self) -> int:
-        if self.manager.config.settings.download_options.disable_download_attempt_limit:
+        if self.config.settings.download_options.disable_download_attempt_limit:
             return 1
-        return self.manager.config.global_settings.rate_limiting_options.download_attempts
+        return self.config.global_settings.rate_limiting_options.download_attempts
 
     @contextlib.asynccontextmanager
     async def _download_context(self, media_item: MediaItem):
@@ -309,11 +311,11 @@ class HTTPDownloader:
         """Checks if the file can be downloaded."""
         if not await storage.has_sufficient_space(media_item.download_folder):
             raise InsufficientFreeSpaceError(media_item)
-        if not _is_allowed_filetype(media_item, self.manager.config):
+        if not _is_allowed_filetype(media_item, self.config):
             raise RestrictedFiletypeError(origin=media_item)
         if not await self.manager.client_manager.check_file_duration(media_item):
             raise DurationError(origin=media_item)
-        if not _is_allowed_date_range(media_item, self.manager.config):
+        if not _is_allowed_date_range(media_item, self.config):
             raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
@@ -321,7 +323,7 @@ class HTTPDownloader:
         if media_item.is_segment:
             return
 
-        if self.manager.config.settings.download_options.disable_file_timestamps:
+        if self.config.settings.download_options.disable_file_timestamps:
             return
         if not media_item.uploaded_at:
             logger.warning(f"Unable to parse upload date for {media_item.url}, using current datetime as file datetime")
@@ -338,7 +340,7 @@ class HTTPDownloader:
 
     async def start_download(self, media_item: MediaItem) -> bool:
         if not media_item.is_segment:
-            logger.info(f"{self._log_prefix} starting: {media_item.url}")
+            logger.info(f"{self.log_prefix} starting: {media_item.url}")
 
         async with _exclusive_lock(media_item):
             return bool(await self.download(media_item))
@@ -381,27 +383,13 @@ class HTTPDownloader:
             ui_message = getattr(e, "status", type(e).__name__)
             if media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
                 if self._current_attempt_filesize.get(media_item.filename, 0) >= size:
-                    raise DownloadError(ui_message, message=f"{self._log_prefix} failed", retry=True) from None
+                    raise DownloadError(ui_message, message=f"{self.log_prefix} failed", retry=True) from None
 
                 self._current_attempt_filesize[media_item.filename] = size
                 raise DownloadError(status=999, message="Download timeout reached, retrying", retry=True) from None
 
             message = str(e)
             raise DownloadError(ui_message, message, retry=True) from e
-
-    def write_download_error(
-        self,
-        media_item: MediaItem,
-        error_log_msg: ErrorLogMessage,
-        exc_info: Exception | None = None,
-    ) -> None:
-        logger.error(
-            f"{self._log_prefix} Failed: {media_item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {media_item.referer}",
-            exc_info=exc_info,
-        )
-        self.manager.logs.write_download_error(media_item, error_log_msg.csv_log_msg)
-        self.manager.scrape_mapper.tui.files.stats.failed += 1
-        self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:

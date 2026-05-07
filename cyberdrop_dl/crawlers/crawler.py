@@ -23,7 +23,7 @@ from typing_extensions import deprecated
 from cyberdrop_dl import env
 from cyberdrop_dl.clients import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
-from cyberdrop_dl.downloader.http import HTTPDownloader
+from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
@@ -181,7 +181,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
 
         self.client: HTTPClient = self.manager.client_manager.scraper_client
-        self.downloader: HTTPDownloader = HTTPDownloader(self.manager, self.DOMAIN)
+        self.downloader: Downloader = Downloader(self.manager, self.DOMAIN)
 
         self.__post_init__()
 

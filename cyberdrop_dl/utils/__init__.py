@@ -34,7 +34,7 @@ from cyberdrop_dl.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
-    from cyberdrop_dl.downloader.http import HTTPDownloader
+    from cyberdrop_dl.downloader.http import Downloader
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 
@@ -140,8 +140,14 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     link_to_show = link_to_show or link
     origin = origin or get_origin(item)
     if is_downloader:
-        self, item = cast("HTTPDownloader", self), cast("MediaItem", item)
-        self.write_download_error(item, error_log_msg, exc_info)
+        self, item = cast("Downloader", self), cast("MediaItem", item)
+        logger.error(
+            f"{self.log_prefix} Failed: {item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {item.referer}",
+            exc_info=exc_info,
+        )
+        self.manager.logs.write_download_error(item, error_log_msg.csv_log_msg)
+        self.manager.scrape_mapper.tui.files.stats.failed += 1
+        self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
         return
 
     logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)

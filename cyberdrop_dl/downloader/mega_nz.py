@@ -6,7 +6,7 @@ from mega.chunker import MegaChunker, get_chunks
 
 from cyberdrop_dl import aio, storage
 from cyberdrop_dl.clients.download_client import DownloadClient
-from cyberdrop_dl.downloader.http import HTTPDownloader
+from cyberdrop_dl.downloader.http import Downloader
 
 if TYPE_CHECKING:
     import aiohttp
@@ -58,7 +58,7 @@ class MegaDownloadClient(DownloadClient):
         media_item.partial_file.touch()
 
 
-class MegaDownloader(HTTPDownloader):
+class MegaDownloader(Downloader):
     def __init__(self, manager: Manager, domain: str) -> None:
         super().__init__(manager, domain)
         self._client = MegaDownloadClient(self.manager)
