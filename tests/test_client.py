@@ -1,7 +1,9 @@
+import sys
+
 import aiohttp
 import pytest
-from curl_cffi.requests import AsyncSession
 
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
 from cyberdrop_dl.managers.client_manager import ClientManager
 
@@ -24,4 +26,11 @@ async def test_context_manager(client: ClientManager) -> None:
         assert type(client._session) is aiohttp.ClientSession
         assert type(client._download_session) is aiohttp.ClientSession
         assert client._curl_session is None
-        assert type(client.curl_session) is AsyncSession
+
+        if sys.implementation.name == "cpython":
+            from curl_cffi.requests import AsyncSession
+
+            assert type(client.curl_session) is AsyncSession
+        else:
+            with pytest.raises(ScrapeError):
+                _ = client.curl_session
