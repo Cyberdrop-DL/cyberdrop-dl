@@ -120,7 +120,14 @@ class ClientManager:
 
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
-        self._curl_session: AsyncSession[CurlResponse]
+
+        self._curl_session: AsyncSession[CurlResponse] | None = None
+
+    @property
+    def curl_session(self) -> AsyncSession[CurlResponse]:
+        if self._curl_session is None:
+            self._curl_session = self._create_curl_session()
+        return self._curl_session
 
     @property
     def cookies(self) -> aiohttp.CookieJar:
@@ -150,8 +157,6 @@ class ClientManager:
 
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
-        if _curl_import_error is None:
-            self._curl_session = self.new_curl_cffi_session()
         return self
 
     async def __aexit__(self, *_) -> None:
@@ -161,11 +166,11 @@ class ClientManager:
             if self._flaresolverr is not None:
                 tg.create_task(self._flaresolverr.aclose())
 
-            if _curl_import_error is None:
+            if (curl := self._curl_session) is not None:
 
                 async def close_curl() -> None:
                     try:
-                        await self._curl_session.close()
+                        await curl.close()
                     except Exception:
                         pass
 
@@ -218,7 +223,7 @@ class ClientManager:
             if word in domain:
                 yield domain, self.cookies.filter_cookies(AbsoluteHttpURL(f"https://{domain}"))
 
-    def new_curl_cffi_session(self) -> AsyncSession[CurlResponse]:
+    def _create_curl_session(self) -> AsyncSession[CurlResponse]:
         # Calling code should have validated if curl is actually available
         import warnings
 

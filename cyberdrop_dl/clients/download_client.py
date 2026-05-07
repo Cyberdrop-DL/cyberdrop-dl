@@ -154,9 +154,9 @@ class DownloadClient:
     @contextlib.asynccontextmanager
     async def __request_context(
         self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
-    ) -> AsyncGenerator[AbstractResponse | aiohttp.ClientResponse]:
+    ) -> AsyncGenerator[AbstractResponse[Any] | aiohttp.ClientResponse]:
         if domain in _USE_IMPERSONATION:
-            resp = await self.client_manager._curl_session.get(str(url), stream=True, headers=headers)
+            resp = await self.client_manager.curl_session.get(str(url), stream=True, headers=headers)
             try:
                 yield AbstractResponse.create(resp)
             finally:
