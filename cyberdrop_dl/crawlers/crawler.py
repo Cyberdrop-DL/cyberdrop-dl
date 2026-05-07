@@ -461,6 +461,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         try:
             if SKIP_DOWNLOAD.get():
                 return
+
             if m3u8:
                 await self.downloader.download_hls(media_item, m3u8)
             else:

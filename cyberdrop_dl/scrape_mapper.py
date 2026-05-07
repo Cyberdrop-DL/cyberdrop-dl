@@ -105,7 +105,6 @@ class ScrapeStats:
 @dataclasses.dataclass(slots=True)
 class TaskGroups:
     scrape: asyncio.TaskGroup
-    downloads: asyncio.TaskGroup
 
 
 @dataclasses.dataclass(slots=True)
@@ -118,20 +117,21 @@ class ScrapeMapper:
     _direct_http: DirectHttpFile = dataclasses.field(init=False)
     _jdownloader: JDownloader = dataclasses.field(init=False)
     _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
-    _task_groups: TaskGroups = dataclasses.field(
-        init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup(), asyncio.TaskGroup())
-    )
+    _task_groups: TaskGroups = dataclasses.field(init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup()))
     _seen_urls: set[AbsoluteHttpURL] = dataclasses.field(init=False, default_factory=set)
     _crawlers_disabled_at_runtime: set[str] = dataclasses.field(init=False, default_factory=set)
     _factory: CrawlerFactory = dataclasses.field(init=False)
     tui: ScrapingUI = dataclasses.field(init=False, default_factory=ScrapingUI)
     _done: asyncio.Event = dataclasses.field(init=False, default_factory=asyncio.Event)
+    _pending_downloads: asyncio.Queue[Coroutine[Any, Any, Any] | None] = dataclasses.field(
+        init=False, default_factory=asyncio.Queue
+    )
 
     def _scrape_queue(self) -> int:
         return sum(f.waiting_items for f in self._factory)
 
     def _download_queue(self):
-        total = sum(f.downloader.waiting_items for f in self._factory)
+        total = sum(f.downloader.waiting_items for f in self._factory) + self._pending_downloads.qsize()
         self.tui.files.stats.queued = total
         return total
 
@@ -147,7 +147,7 @@ class ScrapeMapper:
         _ = self._task_groups.scrape.create_task(coro)
 
     def create_download_task(self, coro: Coroutine[Any, Any, _T]) -> None:
-        _ = self._task_groups.downloads.create_task(coro)
+        self._pending_downloads.put_nowait(coro)
 
     def _init_crawlers(self) -> None:
 
@@ -159,6 +159,32 @@ class ScrapeMapper:
         _disable_crawlers_by_config(self.crawlers, *self.manager.config.global_settings.general.disable_crawlers)
 
         plugins.load(self.manager)
+
+    async def _download_worker(self) -> None:
+        while True:
+            coro = await self._pending_downloads.get()
+            if coro is None:
+                break
+            await coro
+
+    async def _download_dispatcher(self) -> None:
+        workers: list[asyncio.Task[None]] = []
+        try:
+            max_workers = self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+            workers = [asyncio.create_task(self._download_worker()) for _ in range(max_workers)]
+            await self._done.wait()
+            self.tui.hide_scrape_panel()
+            for _ in workers:
+                await self._pending_downloads.put(None)
+            await asyncio.gather(*workers)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            for task in workers:
+                task.cancel()
+            while not self._pending_downloads.empty():
+                coro = self._pending_downloads.get_nowait()
+                if coro is not None:
+                    coro.close()
+            raise
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
@@ -174,17 +200,22 @@ class ScrapeMapper:
                 self.manager.client_manager,
                 storage.monitor(self.manager.config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
-                self._task_groups.downloads,
             ):
+                dispatcher = asyncio.create_task(self._download_dispatcher())
                 try:
                     async with self._task_groups.scrape:
                         self.manager.scrape_mapper = self
 
                         yield self
 
-                finally:
-                    # The done event signals that all scraping is done, but there may still be downloads pending
+                except BaseException:
+                    dispatcher.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await dispatcher
+                    raise
+                else:
                     self._done.set()
+                    await dispatcher
 
     async def run(self) -> ScrapeStats:
         self._init_crawlers()
@@ -204,15 +235,6 @@ class ScrapeMapper:
         async with contextlib.aclosing(source) as items:
             stats = ScrapeStats(source_name)
 
-            async def wait_until_scrape_is_done() -> None:
-                _ = await self._done.wait()
-                self.tui.hide_scrape_panel()
-                stats.url_count.update(
-                    (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
-                )
-
-            self.create_download_task(wait_until_scrape_is_done())
-
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
                 if self._should_scrape(item):
@@ -220,6 +242,10 @@ class ScrapeMapper:
                         break
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
+
+        stats.url_count.update(
+            (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
+        )
 
         if not stats.count:
             logger.warning("No valid links found")
