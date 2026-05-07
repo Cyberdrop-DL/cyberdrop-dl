@@ -336,6 +336,7 @@ def get_system_information() -> dict[str, Any]:
         {
             "prefix": sys.prefix,
             "executable": sys.executable,
+            "GIL enabled": sys._is_gil_enabled() if sys.version_info >= (3, 13) else True,
         }
         | platform.uname()._asdict()
         | {
