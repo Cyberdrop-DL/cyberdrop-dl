@@ -123,7 +123,7 @@ class PCloudCrawler(Crawler):
         db_url = (scrape_item.url.origin() / "file" / file._id).with_query(code=scrape_item.url.query["code"])
         await self.handle_file(db_url, scrape_item, file.name, ext, debrid_link=link, custom_filename=filename)
 
-    _file_task = auto_task_id(file)
+    _file_task = auto_task_id(error_handling_wrapper(file))
 
     async def _request_download_url(self, scrape_item: ScrapeItem, file: File) -> AbsoluteHttpURL:
         path = "getmediatranscodepublink" if "video" in file.contenttype else "getpublinkdownload"
@@ -137,7 +137,9 @@ class PCloudCrawler(Crawler):
         if variants := resp.get("variants"):
             resp = next(v for v in variants if v["transcodetype"] == "original")
 
-        return self.parse_url(f"https://{resp['hosts'][0]}{resp['path']}")
+        host: str = next(iter(resp["hosts"]))
+        path: str = resp["path"]
+        return self.parse_url(f"https://{host}{path}")
 
     async def _api_request(self, api_url: AbsoluteHttpURL) -> dict[str, Any]:
         resp: dict[str, Any] = await self.request_json(api_url)
