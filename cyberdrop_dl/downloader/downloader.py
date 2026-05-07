@@ -19,7 +19,6 @@ from cyberdrop_dl.exceptions import (
     RestrictedDateRangeError,
     RestrictedFiletypeError,
     SkipDownloadError,
-    TooManyCrawlerErrors,
 )
 from cyberdrop_dl.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.utils import dates, error_handling_wrapper, parse_url
@@ -326,11 +325,6 @@ class Downloader:
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
 
     async def start_download(self, media_item: MediaItem) -> bool:
-        try:
-            self.client.client_manager.check_domain_errors(self.domain)
-        except TooManyCrawlerErrors:
-            return False
-
         if not media_item.is_segment:
             logger.info(f"{self.log_prefix} starting: {media_item.url}")
 
@@ -347,7 +341,6 @@ class Downloader:
         if url_as_str in KNOWN_BAD_URLS:
             raise DownloadError(KNOWN_BAD_URLS[url_as_str])
         try:
-            self.client.client_manager.check_domain_errors(self.domain)
             media_item.attempts = media_item.attempts or 1
             if not media_item.is_segment:
                 media_item.duration = await self.manager.database.history.get_duration(self.domain, media_item)

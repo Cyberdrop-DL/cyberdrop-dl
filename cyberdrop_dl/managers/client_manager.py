@@ -5,8 +5,6 @@ import contextlib
 import logging
 import platform
 import ssl
-from collections import defaultdict
-from collections.abc import Generator
 from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal, Self
@@ -17,14 +15,14 @@ import truststore
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 
-from cyberdrop_dl import ddos_guard, env
+from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.clients import HTTPClient
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError, TooManyCrawlerErrors
+from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.ffmpeg import probe
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
@@ -37,11 +35,6 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.manager import Manager
 
-_curl_import_error = None
-try:
-    from curl_cffi.requests import AsyncSession  # noqa: TC002
-except ImportError as e:
-    _curl_import_error = e
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +49,6 @@ _DOWNLOAD_ERROR_ETAGS = {
     "19fdf2cd6-383c-5a4cd5b6710ed": "ImageVenue image not Found",
     "383c-5a4cd5b6710ed": "ImageVenue image not Found",
 }
-
-_crawler_errors: dict[str, int] = defaultdict(int)
 
 
 if TYPE_CHECKING:
@@ -229,12 +220,12 @@ class ClientManager:
             from curl_cffi.aio import AsyncCurl
             from curl_cffi.requests import AsyncSession
             from curl_cffi.utils import CurlCffiWarning
-        except ImportError:
+        except ImportError as e:
             msg = (
                 f"curl_cffi is required to scrape this URL but a dependency it's not available on {platform.system()}.\n"
-                f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{_curl_import_error!r}"
+                f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{e!r}"
             )
-            raise ScrapeError("Missing Dependency", msg) from None
+            raise ScrapeError("Missing Dependency", msg) from e
 
         import warnings
 
@@ -257,51 +248,22 @@ class ClientManager:
             cookies={cookie.key: cookie.value for cookie in self.cookies},
         )
 
-    def create_aiohttp_session(
-        self,
-    ) -> ClientSession:
+    def create_aiohttp_session(self) -> ClientSession:
+        assert DNS_RESOLVER is not None
+        tcp_conn = aiohttp.TCPConnector(ssl=self.ssl_context, resolver=DNS_RESOLVER())
+        tcp_conn._resolver_owner = True
+
         return ClientSession(
             headers={
-                "User-agent": self.manager.config.global_settings.general.user_agent,
+                "User-Agent": self.manager.config.global_settings.general.user_agent,
             },
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=self.rate_limiting_options._aiohttp_timeout,
             proxy=self.manager.config.global_settings.general.proxy,
-            connector=self._new_tcp_connector(),
+            connector=tcp_conn,
             requote_redirect_url=False,
         )
-
-    def _new_tcp_connector(self) -> aiohttp.TCPConnector:
-        assert DNS_RESOLVER is not None
-        conn = aiohttp.TCPConnector(ssl=self.ssl_context, resolver=DNS_RESOLVER())
-        conn._resolver_owner = True
-        return conn
-
-    def check_domain_errors(self, domain: str) -> None:
-        if _crawler_errors[domain] >= env.MAX_CRAWLER_ERRORS:
-            if crawler := self.manager.scrape_mapper.disable_crawler(domain):
-                msg = (
-                    f"{crawler.__class__.__name__} has been disabled after too many errors. "
-                    f"URLs from the following domains will be ignored: {crawler.SCRAPE_MAPPER_KEYS}"
-                )
-                logger.error(msg)
-            raise TooManyCrawlerErrors
-
-    @contextlib.contextmanager
-    def request_context(self, domain: str) -> Generator[None]:
-        self.check_domain_errors(domain)
-        try:
-            yield
-        except DDOSGuardError:
-            _crawler_errors[domain] += 1
-            raise
-        else:
-            # we could potentially reset the counter here
-            # _crawler_errors[domain] = 0
-            pass
-        finally:
-            pass
 
     async def load_cookie_files(self) -> None:
         if self.manager.config.settings.browser_cookies.auto_import:

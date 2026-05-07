@@ -55,11 +55,6 @@ class DownloadClient:
 
         return self._server_locks[server]
 
-    @contextlib.asynccontextmanager
-    async def _track_errors(self, domain: str):
-        with self.client_manager.request_context(domain):
-            yield
-
     async def _download(self, domain: str, media_item: MediaItem) -> bool:
         """Downloads a file."""
         downloaded_filename = await self.manager.database.history.get_downloaded_filename(domain, media_item)
@@ -265,8 +260,7 @@ class DownloadClient:
             await self.process_completed(media_item, domain)
             return False
 
-        async with self._track_errors(domain):
-            downloaded = await self._download(domain, media_item)
+        downloaded = await self._download(domain, media_item)
 
         if downloaded:
             await aio.move(media_item.partial_file, media_item.path)
