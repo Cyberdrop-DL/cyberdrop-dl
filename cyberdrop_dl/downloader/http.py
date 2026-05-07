@@ -86,7 +86,7 @@ class Downloader:
         self.use_server_lock: bool = False
         self._server_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
 
-    def _server_limiter(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
+    def _server_lock(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
         if self.use_server_lock:
             return self._server_locks[server]
         return _NULL_CONTEXT
@@ -141,13 +141,11 @@ class Downloader:
         self.waiting_items += 1
 
         server = (media_item.debrid_link or media_item.url).host
-        server_limit, domain_limit, global_limit = (
-            self._server_limiter(server),
+        async with (
+            self._server_lock(server),
             self._domain_limiter,
             self.manager.client_manager.global_download_limiter,
-        )
-
-        async with server_limit, domain_limit, global_limit:
+        ):
             self._processed_items.add(media_item.db_path)
             self.waiting_items -= 1
             yield
