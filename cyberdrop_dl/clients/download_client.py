@@ -34,26 +34,17 @@ logger = logging.getLogger(__name__)
 _CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
 _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
-_NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
 _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
 
 
 class DownloadClient:
-    """AIOHTTP operations for downloading."""
+    """Low level class that performs the actual HTTP download operations"""
 
     def __init__(self, manager: Manager, client_manager: ClientManager) -> None:
         self.manager = manager
         self.client_manager = client_manager
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
-        self._server_locks = aio.WeakAsyncLocks[str]()
-        self.server_locked_domains: set[str] = set()
         self._supports_ranges: bool = True
-
-    def server_limiter(self, domain: str, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
-        if domain not in self.server_locked_domains:
-            return _NULL_CONTEXT
-
-        return self._server_locks[server]
 
     async def _download(self, domain: str, media_item: MediaItem) -> bool:
         """Downloads a file."""
@@ -141,7 +132,7 @@ class DownloadClient:
 
     def _get_resp_reader(
         self, resp: aiohttp.ClientResponse | AbstractResponse[Any]
-    ) -> AbstractResponse | aiohttp.StreamReader:
+    ) -> AbstractResponse[Any] | aiohttp.StreamReader:
         if isinstance(resp, AbstractResponse):
             return resp
         return resp.content

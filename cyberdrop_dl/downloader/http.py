@@ -51,6 +51,7 @@ _KNOWN_BAD_URLS = {
 
 _GENERIC_CRAWLERS = ".", "no_crawler"
 _FILE_LOCKS: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+_NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
 
 
 @contextlib.asynccontextmanager
@@ -82,6 +83,13 @@ class Downloader:
         self._current_attempt_filesize: dict[str, int] = {}
         self._ignore_history: bool = manager.config.settings.runtime_options.ignore_history
         self._semaphore: asyncio.Semaphore | None = None
+        self.use_server_lock: bool = False
+        self._server_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+
+    def _server_limiter(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
+        if self.use_server_lock:
+            return self._server_locks[server]
+        return _NULL_CONTEXT
 
     @property
     def _domain_limiter(self) -> asyncio.Semaphore:
@@ -134,7 +142,7 @@ class Downloader:
 
         server = (media_item.debrid_link or media_item.url).host
         server_limit, domain_limit, global_limit = (
-            self.client.server_limiter(media_item.domain, server),
+            self._server_limiter(server),
             self._domain_limiter,
             self.manager.client_manager.global_download_limiter,
         )

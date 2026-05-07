@@ -200,7 +200,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
 
             if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
+                self.downloader.use_server_lock = True
 
             if self._DOWNLOAD_SLOTS:
                 self.downloader.download_slots = self._DOWNLOAD_SLOTS
