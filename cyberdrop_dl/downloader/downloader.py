@@ -25,7 +25,7 @@ from cyberdrop_dl.utils import dates, error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Generator
+    from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
     from cyberdrop_dl.clients.download_client import DownloadClient
@@ -53,6 +53,16 @@ _KNOWN_BAD_URLS = {
 
 _GENERIC_CRAWLERS = ".", "no_crawler"
 _FILE_LOCKS: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+
+
+@contextlib.asynccontextmanager
+async def _exclusive_lock(media_item: MediaItem) -> AsyncGenerator[None]:
+    async with _FILE_LOCKS[media_item.filename]:
+        logger.debug(f"Lock for '{media_item.filename}' acquired")
+        try:
+            yield
+        finally:
+            logger.debug(f"Lock for '{media_item.filename}' released")
 
 
 class Downloader:
@@ -328,12 +338,8 @@ class Downloader:
         if not media_item.is_segment:
             logger.info(f"{self._log_prefix} starting: {media_item.url}")
 
-        async with _FILE_LOCKS[media_item.filename]:
-            logger.debug(f"Lock for '{media_item.filename}' acquired")
-            try:
-                return bool(await self.download(media_item))
-            finally:
-                logger.debug(f"Lock for '{media_item.filename}' released")
+        async with _exclusive_lock(media_item):
+            return bool(await self.download(media_item))
 
     async def _download(self, media_item: MediaItem) -> bool | None:
         """Downloads the media item."""
