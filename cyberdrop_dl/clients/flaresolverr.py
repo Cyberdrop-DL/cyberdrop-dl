@@ -16,6 +16,7 @@ from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.exceptions import DDOSGuardError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -71,6 +72,25 @@ class Response:
             message=resp["message"],
             solution=Solution.from_dict(sol) if (sol := resp.get("solution")) else None,
         )
+
+
+class _LazyResponseLog:
+    def __init__(self, response: dict[str, Any]) -> None:
+        self.resp = response
+
+    def __json__(self) -> dict[str, Any]:
+        try:
+            html = self.resp["solution"]["response"]
+        except LookupError:
+            pass
+        else:
+            if type(html) is str:
+                self.resp["solution"]["response"] = truncated_preview(html)
+
+        return self.resp
+
+    def __str__(self) -> str:
+        return str(self.__json__())
 
 
 @dataclasses.dataclass(slots=True)
@@ -160,7 +180,7 @@ class Client:
                 logger.debug("Making FlareSolverr request [id=%s]\n%s", request_id, params)
                 async with self._aiohttp_session.post(self.url, json=params, **timeout) as response:
                     resp = await response.json()
-                    logger.debug("Finished FlareSolverr request [id=%s]\n%s", request_id, resp)
+                    logger.debug("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp))
                     return Response.from_dict(resp)
 
     async def _create_session(self) -> None:
