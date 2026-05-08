@@ -20,9 +20,7 @@ from cyberdrop_dl.clients import HTTPClient, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
-from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
-from cyberdrop_dl.ffmpeg import probe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
@@ -32,7 +30,6 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import MediaItem
 
 
 logger = logging.getLogger(__name__)
@@ -244,50 +241,8 @@ class ClientManager:
             check(await response.json(), response)
             return
 
-    async def check_file_duration(self, media_item: MediaItem) -> bool:
-        """Checks the file runtime against the config runtime limits."""
-        if media_item.is_segment:
-            return True
-
-        is_video = media_item.ext.lower() in FileExt.VIDEO
-        is_audio = media_item.ext.lower() in FileExt.AUDIO
-        if not (is_video or is_audio):
-            return True
-
-        duration_limits = self.manager.config.settings.media_duration_limits.ranges
-        duration: float | None = await _probe_duration(media_item)
-        media_item.duration = duration
-
-        if duration is None:
-            return True
-
-        await self.manager.database.history.add_duration(media_item.domain, media_item)
-
-        if is_video:
-            return duration in duration_limits.video
-
-        return duration in duration_limits.audio
-
 
 def _check_etag(headers: Mapping[str, str]) -> None:
     e_tag = headers.get("ETag", "").strip('"')
     if message := _DOWNLOAD_ERROR_ETAGS.get(e_tag):
         raise DownloadError(HTTPStatus.NOT_FOUND, message)
-
-
-async def _probe_duration(media_item: MediaItem) -> float | None:
-    if media_item.duration:
-        return media_item.duration
-
-    if media_item.downloaded:
-        properties = await probe(media_item.path)
-
-    else:
-        properties = await probe(media_item.url, headers=media_item.headers)
-
-    if properties.format.duration:
-        return properties.format.duration
-    if properties.video:
-        return properties.video.duration
-    if properties.audio:
-        return properties.audio.duration

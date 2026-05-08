@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
+from cyberdrop_dl.clients.download_client import filter_by_duration
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
@@ -320,7 +321,8 @@ class Downloader:
             raise InsufficientFreeSpaceError(media_item)
         if not _is_allowed_filetype(media_item, self.config):
             raise RestrictedFiletypeError(origin=media_item)
-        if not await self.manager.client_manager.check_file_duration(media_item):
+        if await filter_by_duration(media_item, self.config):
+            await self.manager.database.history.add_duration(media_item.domain, media_item)
             raise DurationError(origin=media_item)
         if not _is_allowed_date_range(media_item, self.config):
             raise RestrictedDateRangeError(origin=media_item)

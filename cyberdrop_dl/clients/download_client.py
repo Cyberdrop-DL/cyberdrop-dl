@@ -9,7 +9,7 @@ from collections.abc import Generator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
-from cyberdrop_dl import aio, constants, storage
+from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     import aiohttp
 
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.managers.client_manager import ClientManager
     from cyberdrop_dl.progress import ProgressHook
@@ -256,7 +257,7 @@ class DownloadClient:
         if downloaded:
             await aio.move(media_item.partial_file, media_item.path)
             if not media_item.is_segment:
-                proceed = await self.client_manager.check_file_duration(media_item)
+                proceed = not filter_by_duration(media_item, self.manager.config)
                 await self.manager.database.history.add_duration(domain, media_item)
                 if not proceed:
                     logger.info(f"Download skipped {media_item.url} due to runtime restrictions")
@@ -497,3 +498,43 @@ def _check_content_length(headers: Mapping[str, Any]) -> None:
         raise DownloadError(status="Bunkr Maintenance", message="Bunkr under maintenance")
     if content_length == "73003" and content_type == "video/mp4":
         raise DownloadError(410)  # Placeholder video with text "Video removed" (efukt)
+
+
+async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
+    if media_item.is_segment:
+        return False
+
+    is_video = media_item.ext.lower() in FileExt.VIDEO
+    is_audio = media_item.ext.lower() in FileExt.AUDIO
+    if not (is_video or is_audio):
+        return False
+
+    duration_limits = config.settings.media_duration_limits.ranges
+    duration: float | None = await _probe_duration(media_item)
+    media_item.duration = duration
+
+    if duration is None:
+        return False
+
+    if is_video:
+        return duration not in duration_limits.video
+
+    return duration not in duration_limits.audio
+
+
+async def _probe_duration(media_item: MediaItem) -> float | None:
+    if media_item.duration:
+        return media_item.duration
+
+    if media_item.downloaded:
+        properties = await ffmpeg.probe(media_item.path)
+
+    else:
+        properties = await ffmpeg.probe(media_item.url, headers=media_item.headers)
+
+    if properties.format.duration:
+        return properties.format.duration
+    if properties.video:
+        return properties.video.duration
+    if properties.audio:
+        return properties.audio.duration
