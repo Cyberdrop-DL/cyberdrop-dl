@@ -45,7 +45,7 @@ class MegaDownloadClient(DownloadClient):
                 await check_free_space()
                 chunk_size = len(chunk)
 
-                await self.http_client.speed_limiter.acquire(chunk_size)
+                await self.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()

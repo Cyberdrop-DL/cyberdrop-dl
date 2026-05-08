@@ -6,7 +6,9 @@ import itertools
 import logging
 import time
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, final
+
+from aiolimiter import AsyncLimiter
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
@@ -38,6 +40,16 @@ _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
 
 
+class DownloadSpeedLimiter(AsyncLimiter):
+    __slots__ = ()
+
+    async def acquire(self, amount: float = 1) -> None:
+        if self.max_rate <= 0:
+            return
+        await super().acquire(amount)
+
+
+@final
 class DownloadClient:
     """Low level class that performs the actual HTTP download operations"""
 
@@ -45,9 +57,11 @@ class DownloadClient:
         self.manager = manager
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
+        speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+        self.speed_limiter = DownloadSpeedLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
-        if upper_limit := self.http_client.speed_limiter.max_rate:
-            self.chunk_size = min(self.chunk_size, int(upper_limit))
+        if speed_limit:
+            self.chunk_size = min(self.chunk_size, speed_limit)
 
     @property
     def http_client(self) -> HTTPClient:
@@ -185,7 +199,7 @@ class DownloadClient:
             async for chunk in content.iter_chunked(self.chunk_size):
                 await check_free_space()
                 chunk_size = len(chunk)
-                await self.http_client.speed_limiter.acquire(chunk_size)
+                await self.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()

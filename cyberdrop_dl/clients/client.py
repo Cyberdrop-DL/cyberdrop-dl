@@ -11,7 +11,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
-from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
@@ -69,15 +68,6 @@ class _LazyResponseLog:
         return str(self.__json__())
 
 
-class DownloadSpeedLimiter(AsyncLimiter):
-    __slots__ = ()
-
-    async def acquire(self, amount: float = 1) -> None:
-        if self.max_rate <= 0:
-            return
-        await super().acquire(amount)
-
-
 @final
 class HTTPClient:
     def __init__(self, manager: Manager) -> None:
@@ -91,11 +81,7 @@ class HTTPClient:
             self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
 
-        speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
-        self.speed_limiter = DownloadSpeedLimiter(speed_limit, time_period=1)
-
         self._cookies: aiohttp.CookieJar | None = None
-
         self._save_responses_to_disk = manager.config.settings.files.save_pages_html
         self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
 
@@ -174,8 +160,8 @@ class HTTPClient:
             cookies={cookie.key: cookie.value for cookie in self.cookies},
         )
 
-    def create_aiohttp_session(self) -> ClientSession:
-        return ClientSession(
+    def create_aiohttp_session(self) -> aiohttp.ClientSession:
+        return aiohttp.ClientSession(
             headers={"User-Agent": self.manager.config.global_settings.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
@@ -192,7 +178,7 @@ class HTTPClient:
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    async def check_http_status(self, response: ClientResponse | CurlResponse | AbstractResponse[Any]) -> None:
+    async def check_http_status(self, response: aiohttp.ClientResponse | CurlResponse | AbstractResponse[Any]) -> None:
         """Checks the HTTP status code and raises an exception if it's not acceptable."""
         if not isinstance(response, AbstractResponse):
             response = AbstractResponse.create(response)
