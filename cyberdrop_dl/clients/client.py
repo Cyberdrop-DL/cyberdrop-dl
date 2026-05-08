@@ -253,7 +253,6 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
-        cache_disabled: bool = False,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         self = cast("HTTPClient", self)
