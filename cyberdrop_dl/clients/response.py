@@ -82,23 +82,26 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     def __repr__(self) -> str:
         return f"<{type(self).__name__} [{self.status}] ({self.url})>"
 
-    def __json__(self) -> dict[str, Any]:
-        if content := self._text:
+    def _get_content(self) -> Any:
+        if self._text:
             if "json" in self.content_type:
-                content = json.loads(content)
+                return json.loads(self._text)
 
-            elif "html" in self.content_type:
-                content = BeautifulSoup(content, "html.parser").prettify(formatter="html")
+            if "html" in self.content_type:
+                return BeautifulSoup(self._text, "html.parser").prettify(formatter="html")
 
-        elif not ("json" in self.content_type or "html" in self.content_type):
-            content = f"<{self.content_type} payload>"
+        if not ("json" in self.content_type or "html" in self.content_type):
+            return f"<{self.content_type} payload>"
 
+        return self._text
+
+    def __json__(self) -> dict[str, Any]:
         return {
             "url": str(self.url),
             "status_code": self.status,
             "created_at": str(self.created_at),
             "response_headers": dict(self.headers),
-            "content": content,
+            "content": self._get_content(),
         }
 
     @abstractmethod
@@ -238,6 +241,9 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
 
         assert "json" in self.content_type
         return self._resp.content
+
+    def _get_content(self) -> Any:
+        return super()._get_content() or self._resp.content
 
     @override
     @classmethod
