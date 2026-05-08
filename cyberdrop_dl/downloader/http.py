@@ -77,8 +77,6 @@ class Downloader:
 
     waiting_items: int = dataclasses.field(init=False, default=0)
 
-    client: DownloadClient = dataclasses.field(init=False)
-
     _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
     _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
     _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
@@ -87,7 +85,10 @@ class Downloader:
     def __post_init__(self) -> None:
         upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
         self._semaphore = asyncio.Semaphore(min(self.download_slots or upper_limit, upper_limit))
-        self.client = self.manager.client_manager.download_client
+
+    @property
+    def client(self) -> DownloadClient:
+        return self.manager.client_manager.download_client
 
     @property
     def config(self) -> Config:

@@ -4,6 +4,7 @@ import dataclasses
 from typing import TYPE_CHECKING, final
 
 from mega.chunker import MegaChunker, get_chunks
+from typing_extensions import override
 
 from cyberdrop_dl import aio, storage
 from cyberdrop_dl.clients.download_client import DownloadClient
@@ -61,9 +62,16 @@ class MegaDownloadClient(DownloadClient):
 
 @dataclasses.dataclass(slots=True)
 class MegaDownloader(Downloader):
+    _client: MegaDownloadClient = dataclasses.field(init=False)
+
     def __post_init__(self) -> None:
         super(MegaDownloader, self).__post_init__()
-        self.client: MegaDownloadClient = MegaDownloadClient(self.manager)  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._client = MegaDownloadClient(self.manager)
+
+    @override
+    @property
+    def client(self) -> MegaDownloadClient:
+        return self._client
 
     @property
     def max_attempts(self):
