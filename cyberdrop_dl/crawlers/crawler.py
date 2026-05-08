@@ -180,7 +180,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
 
-        self.client: HTTPClient = self.manager.client_manager.scraper_client
         self.downloader: Downloader = Downloader(
             self.manager,
             self.DOMAIN,
@@ -189,6 +188,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         )
 
         self.__post_init__()
+
+    @property
+    def client(self) -> HTTPClient:
+        return self.manager.client_manager.scraper_client
 
     def __post_init__(self) -> None:
         """Override in subclasses to add custom init logic

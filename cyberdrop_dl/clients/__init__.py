@@ -7,7 +7,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast
 
 from multidict import CIMultiDict
 
@@ -261,10 +261,12 @@ def _write_resp_to_disk(
         pass
 
 
-class HTTPClientProxy:
+class HTTPClientProxy(Protocol):
     DOMAIN: ClassVar[str]
     _IMPERSONATE: ClassVar[str | bool | None] = None
-    client: HTTPClient  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    @property
+    def client(self) -> HTTPClient: ...
 
     @classmethod
     def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
