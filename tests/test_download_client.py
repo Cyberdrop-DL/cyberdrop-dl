@@ -2,24 +2,28 @@ import pytest
 from multidict import CIMultiDict
 
 from cyberdrop_dl.clients.download_client import DownloadClient, _check_content_type, _get_content_type
-from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import InvalidContentTypeError
 from cyberdrop_dl.manager import Manager
 
 
-def test_chunk_size_is_never_greater_that_speed_limit() -> None:
-    manager = Manager()
+@pytest.mark.parametrize(
+    "limit",
+    [
+        (5_000_000,),
+        (500_000_000,),
+    ],
+)
+def test_chunk_size_is_never_greater_that_speed_limit(manager: Manager, limit: int) -> None:
+    max_expected = 1024 * 1024 * 10
     limit = manager.config.global_settings.rate_limiting_options.download_speed_limit
     assert limit == 0
     client = DownloadClient(manager)
     assert client.chunk_size != limit
-    assert client.chunk_size == 1024 * 1024 * 10
+    assert client.chunk_size == max_expected
 
-    manager = Manager(config=Config.parse_args(["--download-speed-limit", "5MB"]))
-    limit = manager.config.global_settings.rate_limiting_options.download_speed_limit
-    assert limit == 5_000_000
+    manager.config.global_settings.rate_limiting_options.download_speed_limit = limit
     client = DownloadClient(manager)
-    assert client.chunk_size == limit
+    assert client.chunk_size == min(limit or max_expected, max_expected)
 
 
 def test_get_content_type() -> None:
