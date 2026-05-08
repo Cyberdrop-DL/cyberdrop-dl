@@ -18,6 +18,7 @@ from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
+from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
@@ -151,7 +152,8 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
         try:
-            await self.core.login(self.user, self.password)
+            with show_msg("Login into mega.nz"):
+                await self.core.login(self.user, self.password)
             self._logged_in = True
         except Exception as e:
             self.disabled = True

@@ -113,7 +113,7 @@ class Client:
         try:
             await self._destroy_session()
         except Exception as e:
-            logger.error(f"Unable to destroy flaresolver session ({e})")
+            logger.error(f"Unable to destroy flaresolver session ({e}!r)")
 
     async def _ensure_session(self) -> None:
         msg = "Unable to create Flaresolverr session"
