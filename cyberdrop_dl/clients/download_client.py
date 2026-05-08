@@ -102,7 +102,7 @@ class DownloadClient:
         await self.http_client.check_http_status(resp)
 
         if not media_item.is_segment:
-            _ = get_content_type(media_item.ext, resp.headers)
+            _check_content_type(_get_content_type(resp.headers), media_item.ext)
 
         media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
         if not media_item.path:
@@ -370,26 +370,20 @@ class DownloadClient:
         return media.filesize in limits.other
 
 
-def get_content_type(ext: str, headers: Mapping[str, str]) -> str | None:
-    content_type: str = headers.get("Content-Type", "")
-    content_length = headers.get("Content-Length")
-    if not content_type and not content_length:
+def _check_content_type(content_type: str, ext: str) -> str | None:
+    if _is_html_or_text(content_type) and ext.lower() not in FileExt.TEXT:
+        msg = f"Received '{content_type}', was expecting binary payload"
+        raise InvalidContentTypeError(message=msg)
+
+
+def _get_content_type(headers: Mapping[str, str]) -> str:
+    content_type = headers.get("Content-Type")
+    if not content_type:
         msg = "No content type in response headers"
         raise InvalidContentTypeError(message=msg)
 
-    if not content_type:
-        return None
-
     override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
-    override: str | None = _CONTENT_TYPES_OVERRIDES.get(override_key)
-    content_type = override or content_type
-    content_type = content_type.lower()
-
-    if is_html_or_text(content_type) and ext.lower() not in FileExt.TEXT:
-        msg = f"Received '{content_type}', was expecting other"
-        raise InvalidContentTypeError(message=msg)
-
-    return content_type
+    return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type
 
 
 def get_last_modified(headers: Mapping[str, str]) -> int | None:
@@ -397,7 +391,7 @@ def get_last_modified(headers: Mapping[str, str]) -> int | None:
         return dates.parse_http(date_str)
 
 
-def is_html_or_text(content_type: str) -> bool:
+def _is_html_or_text(content_type: str) -> bool:
     return any(s in content_type for s in ("html", "text"))
 
 

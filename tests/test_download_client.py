@@ -1,5 +1,9 @@
-from cyberdrop_dl.clients.download_client import DownloadClient
+import pytest
+from multidict import CIMultiDict
+
+from cyberdrop_dl.clients.download_client import DownloadClient, _check_content_type, _get_content_type
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.exceptions import InvalidContentTypeError
 from cyberdrop_dl.manager import Manager
 
 
@@ -16,3 +20,22 @@ def test_chunk_size_is_never_greater_that_speed_limit() -> None:
     assert limit == 5_000_000
     client = DownloadClient(manager)
     assert client.chunk_size == limit
+
+
+def test_get_content_type() -> None:
+    def get(value: str) -> str:
+        return _get_content_type(CIMultiDict({"content-type": value}))
+
+    assert get("text/vnd.trolltech.linguist") == "video/MP2T"
+    assert get("text/HTML") == "text/HTML"
+    assert get("application/json") == "application/json"
+
+    with pytest.raises(InvalidContentTypeError):
+        _ = get("")
+
+
+def test_check_content_type() -> None:
+    _check_content_type("text/html", ".txt")
+
+    with pytest.raises(InvalidContentTypeError, match="Received 'text/html', was expecting binary payload"):
+        _check_content_type("text/html", ".mp4")
