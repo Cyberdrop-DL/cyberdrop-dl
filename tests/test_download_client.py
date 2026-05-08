@@ -1,7 +1,7 @@
 import pytest
 from multidict import CIMultiDict
 
-from cyberdrop_dl.clients.download_client import DownloadClient, _check_content_type, _get_content_type
+from cyberdrop_dl.clients.downloads import DownloadClient, _check_content_type, _get_content_type
 from cyberdrop_dl.exceptions import InvalidContentTypeError
 from cyberdrop_dl.manager import Manager
 

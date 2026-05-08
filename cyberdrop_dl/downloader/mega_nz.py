@@ -7,7 +7,7 @@ from mega.chunker import MegaChunker, get_chunks
 from typing_extensions import override
 
 from cyberdrop_dl import aio, storage
-from cyberdrop_dl.clients.download_client import DownloadClient, make_speed_checker
+from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker
 from cyberdrop_dl.downloader.http import Downloader
 
 if TYPE_CHECKING:

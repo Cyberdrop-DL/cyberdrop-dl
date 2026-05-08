@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from cyberdrop_dl.clients.client import HTTPClient
+    from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager

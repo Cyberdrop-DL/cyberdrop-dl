@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
-from cyberdrop_dl.clients.download_client import filter_by_duration
+from cyberdrop_dl.clients.downloads import filter_by_duration
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
-    from cyberdrop_dl.clients.download_client import DownloadClient
+    from cyberdrop_dl.clients.downloads import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition

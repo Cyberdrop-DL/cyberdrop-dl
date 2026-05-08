@@ -21,7 +21,7 @@ from aiolimiter import AsyncLimiter
 from typing_extensions import deprecated
 
 from cyberdrop_dl import env
-from cyberdrop_dl.clients.client import HTTPClient, HTTPClientProxy
+from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
-from cyberdrop_dl.clients.client import HTTPClient
+from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka

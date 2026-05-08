@@ -4,7 +4,7 @@ import sys
 import aiohttp
 import pytest
 
-from cyberdrop_dl.clients.client import HTTPClient
+from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
 
