@@ -247,7 +247,7 @@ class HTTPClient:
         else:
             _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
-        async with self.__request(url, method, request_params, impersonate=bool(impersonate)) as resp:
+        async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
             exc = None
             try:
                 yield await self._check_response(resp, url)
@@ -272,7 +272,7 @@ class HTTPClient:
             self.cookies.update_cookies(simple_cookie, url)
 
     @contextlib.asynccontextmanager
-    async def __request(
+    async def _request(
         self,
         url: AbsoluteHttpURL,
         method: HttpMethod,
@@ -288,27 +288,32 @@ class HTTPClient:
             url,
             _LazyRequestLog(request_params),
         )
-        resp = None
-        try:
-            if impersonate:
-                async with contextlib.aclosing(
-                    await self.curl_session.request(method, str(url), stream=True, **request_params)
-                ) as curl_resp:
-                    resp = AbstractResponse.create(curl_resp)
-                    yield resp
-                    self.__sync_session_cookies(url)
 
-                return
+        async with self.__request(url, method, request_params, impersonate=impersonate) as resp:
+            logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
+            yield resp
 
-            async with (
-                self._session.request(method, url, **request_params) as aio_resp,
-            ):
-                resp = AbstractResponse.create(aio_resp)
-                yield resp
+    @contextlib.asynccontextmanager
+    async def __request(
+        self,
+        url: AbsoluteHttpURL,
+        method: HttpMethod,
+        request_params: Mapping[str, Any],
+        *,
+        impersonate: bool,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
 
-        finally:
-            if resp is not None:
-                logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
+        if impersonate:
+            async with contextlib.aclosing(
+                await self.curl_session.request(method, str(url), stream=True, **request_params)
+            ) as curl_resp:
+                yield AbstractResponse.create(curl_resp)
+                self.__sync_session_cookies(url)
+
+            return
+
+        async with self._session.request(method, url, **request_params) as aio_resp:
+            yield AbstractResponse.create(aio_resp)
 
     async def _check_response(self, abs_resp: AbstractResponse[Any], url: AbsoluteHttpURL, data: Any | None = None):
         """Checks the HTTP response status and retries DDOS Guard errors with FlareSolverr.

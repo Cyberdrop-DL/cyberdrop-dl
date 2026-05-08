@@ -143,7 +143,7 @@ class Client:
             timeout.update(timeout=aiohttp.ClientTimeout(total=5 * 60, connect=60))  # 5 minutes to create session
 
         #  timeout in milliseconds (60s)
-        params = {"cmd": command, "maxTimeout": 60_000} | params
+        params = {"cmd": str(command), "maxTimeout": 60_000} | params
 
         if data:
             assert command is Command.POST_REQUEST
@@ -157,9 +157,11 @@ class Client:
                 else f"Waiting for flaresolverr [{request_id}]"
             )
             with show_msg(msg):
-                logger.debug(f"Making FlareSolverr request #{request_id} with {params = }")
+                logger.debug("Making FlareSolverr request [id=%s]\n%s", request_id, params)
                 async with self._aiohttp_session.post(self.url, json=params, **timeout) as response:
-                    return Response.from_dict(await response.json())
+                    resp = await response.json()
+                    logger.debug("Finished FlareSolverr request [id=%s]\n%s", request_id, resp)
+                    return Response.from_dict(resp)
 
     async def _create_session(self) -> None:
         session_id = "cyberdrop-dl"
