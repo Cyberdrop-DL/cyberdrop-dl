@@ -249,9 +249,13 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     @classmethod
     def create(cls, solution: FlaresolverrSolution, /) -> Self:
         content_type, location = _parse_headers(solution.url, solution.headers)
-        text = solution.content if type(solution.content) is str else ""
-        if not content_type and text:
-            content_type = _infer_content_type_from_body(text)
+        if type(solution.content) is str:
+            text = solution.content
+            if content_type and text:
+                content_type = _infer_content_type_from_body(text)
+        else:
+            text = ""
+            content_type = content_type or "application/json"
 
         return cls(
             content_type=content_type,
