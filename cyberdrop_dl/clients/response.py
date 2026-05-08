@@ -136,6 +136,13 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         filename = aiohttp.multipart.content_disposition_filename(params)
         return ContentDisposition(disposition_type, params, filename)
 
+    @final
+    @property
+    def aiohttp_resp(self) -> ClientResponse:
+        if type(self._resp) is ClientResponse:
+            return self._resp
+        raise RuntimeError(f"Unexpected response type: {type(self._resp)!r}")
+
     @property
     def consumed(self) -> bool:
         return bool(self._text)
