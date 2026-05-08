@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 
     import aiohttp
 
+    from cyberdrop_dl.clients import HTTPClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.managers.client_manager import ClientManager
     from cyberdrop_dl.progress import ProgressHook
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
@@ -41,9 +41,9 @@ _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
 class DownloadClient:
     """Low level class that performs the actual HTTP download operations"""
 
-    def __init__(self, manager: Manager, client_manager: ClientManager) -> None:
+    def __init__(self, manager: Manager, client: HTTPClient) -> None:
         self.manager = manager
-        self.client_manager = client_manager
+        self.client = client
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
 
@@ -78,7 +78,7 @@ class DownloadClient:
         if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
             await aio.unlink(media_item.partial_file)
 
-        await self.client_manager.check_http_status(resp, download=True)
+        await self.client.check_http_status(resp, download=True)
 
         if not media_item.is_segment:
             _ = get_content_type(media_item.ext, resp.headers)
@@ -143,14 +143,14 @@ class DownloadClient:
         self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
     ) -> AsyncGenerator[AbstractResponse[Any] | aiohttp.ClientResponse]:
         if domain in _USE_IMPERSONATION:
-            resp = await self.client_manager.curl_session.get(str(url), stream=True, headers=headers)
+            resp = await self.client.curl_session.get(str(url), stream=True, headers=headers)
             try:
                 yield AbstractResponse.create(resp)
             finally:
                 await resp.aclose()
             return
 
-        async with self.client_manager._download_session.get(url, headers=headers) as resp:
+        async with self.client._download_session.get(url, headers=headers) as resp:
             yield resp
 
     async def _request_download(
@@ -204,10 +204,10 @@ class DownloadClient:
         await self._pre_download_check(media_item)
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
-            async for chunk in content.iter_chunked(self.client_manager.speed_limiter.chunk_size):
+            async for chunk in content.iter_chunked(self.client.speed_limiter.chunk_size):
                 await check_free_space()
                 chunk_size = len(chunk)
-                await self.client_manager.speed_limiter.acquire(chunk_size)
+                await self.client.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()

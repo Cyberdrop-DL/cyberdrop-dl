@@ -41,7 +41,7 @@ async def _scrape(manager: Manager) -> None:
             stats_summary = manager.print_stats(stats)
 
             log_spacer()
-            async with manager.client_manager.create_aiohttp_session() as session:
+            async with manager.http_client.create_aiohttp_session() as session:
                 await check_latest_pypi(session)
             log_spacer()
             logger.info("Closing program...")

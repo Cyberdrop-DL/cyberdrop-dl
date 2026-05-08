@@ -89,7 +89,7 @@ class Downloader:
 
     @property
     def client(self) -> DownloadClient:
-        return self.manager.client_manager.download_client
+        return self.manager.http_client.download_client
 
     @property
     def config(self) -> Config:
@@ -146,7 +146,7 @@ class Downloader:
         async with (
             self._server_lock(server),
             self._semaphore,
-            self.manager.client_manager.global_download_limiter,
+            self.manager.http_client.global_download_limiter,
         ):
             self._processed_items.add(media_item.db_path)
             self.waiting_items -= 1

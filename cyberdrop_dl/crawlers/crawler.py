@@ -191,7 +191,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @property
     def client(self) -> HTTPClient:
-        return self.manager.client_manager.scraper_client
+        return self.manager.http_client
 
     def __post_init__(self) -> None:
         """Override in subclasses to add custom init logic
@@ -205,7 +205,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         async with self._startup_lock:
             if self._ready:
                 return
-            self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
+            self.manager.http_client.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
 
             await self.__async_post_init__()
             self._ready = True

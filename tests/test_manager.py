@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
+from cyberdrop_dl.clients import HTTPClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.manager import Manager
-from cyberdrop_dl.managers.client_manager import ClientManager
 from cyberdrop_dl.progress import REFRESH_RATE
 from cyberdrop_dl.sorter import Sorter
 
@@ -58,5 +58,5 @@ def test_manager_context() -> None:
         assert type(manager.database) is Database
         assert type(manager.deduper) is Czkawka
         assert type(manager.sorter) is Sorter
-        assert type(manager.client_manager) is ClientManager
+        assert type(manager.http_client) is HTTPClient
         assert REFRESH_RATE.get() == 40

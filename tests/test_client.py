@@ -5,17 +5,17 @@ import aiohttp
 import pytest
 import truststore
 
+from cyberdrop_dl.clients import HTTPClient, _make_ssl_context
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
-from cyberdrop_dl.managers.client_manager import ClientManager, _make_ssl_context
 
 
 @pytest.fixture
-def client(manager: Manager) -> ClientManager:
-    return ClientManager(manager)
+def client(manager: Manager) -> HTTPClient:
+    return HTTPClient(manager)
 
 
-async def test_context_manager(client: ClientManager) -> None:
+async def test_context_manager(client: HTTPClient) -> None:
     with pytest.raises(AttributeError):
         _ = client._session
 

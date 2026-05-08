@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @final
 class MegaDownloadClient(DownloadClient):
     def __init__(self, manager: Manager) -> None:
-        super().__init__(manager, manager.client_manager)
+        super().__init__(manager, manager.http_client)
         self._decrypt_mapping: dict[URL, tuple[Crypto, int]] = {}
         self._supports_ranges = False
 
@@ -45,7 +45,7 @@ class MegaDownloadClient(DownloadClient):
                 await check_free_space()
                 chunk_size = len(chunk)
 
-                await self.client_manager.speed_limiter.acquire(chunk_size)
+                await self.client.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()

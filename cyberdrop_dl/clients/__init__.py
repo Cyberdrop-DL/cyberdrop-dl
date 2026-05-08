@@ -2,31 +2,56 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import dataclasses
 import logging
+import platform
+import ssl
 import time
 import uuid
+from contextvars import ContextVar
+from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self, cast, final
 
+import aiohttp
+import certifi
+import truststore
+from aiohttp import ClientResponse, ClientSession
+from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
-from cyberdrop_dl import constants, ddos_guard, signature
+from cyberdrop_dl import constants, cookies, ddos_guard, signature
+from cyberdrop_dl.clients import tcp
+from cyberdrop_dl.clients.download_client import DownloadClient
+from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
 
     from bs4 import BeautifulSoup
+    from curl_cffi.requests import AsyncSession
+    from curl_cffi.requests.models import Response as CurlResponse
     from curl_cffi.requests.session import HttpMethod
 
     from cyberdrop_dl.clients import flaresolverr
-    from cyberdrop_dl.managers.client_manager import ClientManager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
+
+
+_DOWNLOAD_ERROR_ETAGS = {
+    "d835884373f4d6c8f24742ceabe74946": "Imgur image has been removed",
+    "65b7753c-528a": "SC Scrape Image",
+    "5c4fb843-ece": "PixHost Removed Image",
+    "637be5da-11d2b": "eFukt Video removed",
+    "63a05f27-11d2b": "eFukt Video removed",
+    "5a56b09d-1485eb": "eFukt Video removed",
+    "19fdf2cd6-383c-5a4cd5b6710ed": "ImageVenue image not Found",
+    "383c-5a4cd5b6710ed": "ImageVenue image not Found",
+}
 
 
 logger = logging.getLogger(__name__)
@@ -62,19 +87,199 @@ class _LazyResponseLog:
         return str(self.__json__())
 
 
-@dataclasses.dataclass(slots=True)
+_JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
+
+
+class DownloadSpeedLimiter(AsyncLimiter):
+    __slots__ = ("chunk_size",)
+
+    def __init__(self, speed_limit: int) -> None:
+        self.chunk_size: int = 1024 * 1024 * 10  # 10MB
+        if speed_limit:
+            self.chunk_size = min(self.chunk_size, speed_limit)
+        super().__init__(speed_limit, 1)
+
+    async def acquire(self, amount: float | None = None) -> None:
+        if self.max_rate <= 0:
+            return
+        if not amount:
+            amount = self.chunk_size
+        await super().acquire(amount)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
+
+
+def _make_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
+    if not name:
+        return False
+    if name == "certifi":
+        return ssl.create_default_context(cafile=certifi.where())
+    if name == "truststore":
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    if name == "truststore+certifi":
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.load_verify_locations(cafile=certifi.where())
+        return ctx
+    raise ValueError(name)
+
+
 class HTTPClient:
-    client_manager: ClientManager
     _save_responses_to_disk: bool
     _responses_folder: Path
 
-    @classmethod
-    def from_client(cls, client_manager: ClientManager) -> Self:
-        return cls(
-            client_manager,
-            client_manager.manager.config.settings.files.save_pages_html,
-            client_manager.manager.config.settings.logs.main_log.parent / "cdl_responses",
+    def __init__(self, manager: Manager) -> None:
+        self.manager = manager
+        self.ssl_context = _make_ssl_context(self.manager.config.global_settings.general.ssl_context)
+        self._cookies: aiohttp.CookieJar | None = None
+        self.rate_limits: dict[str, AsyncLimiter] = {}
+        self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
+        self.global_download_limiter = asyncio.Semaphore(
+            self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
+
+        self.speed_limiter = DownloadSpeedLimiter(
+            self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+        )
+        self.download_client = DownloadClient(manager, self)
+        self._flaresolverr: FlareSolverrClient | None = None
+
+        self._session: aiohttp.ClientSession
+        self._download_session: aiohttp.ClientSession
+
+        self._curl_session: AsyncSession[CurlResponse] | None = None
+        self._save_responses_to_disk = manager.config.settings.files.save_pages_html
+        self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
+
+    @property
+    def curl_session(self) -> AsyncSession[CurlResponse]:
+        if self._curl_session is None:
+            self._curl_session = self._create_curl_session()
+        return self._curl_session
+
+    @property
+    def cookies(self) -> aiohttp.CookieJar:
+        # lazy cause it is loop bound for some reason
+        if self._cookies is None:
+            self._cookies = aiohttp.CookieJar(quote_cookie=False)
+        return self._cookies
+
+    @contextlib.contextmanager
+    def set_json_checker(self, check: Callable[[Any, AbstractResponse[Any]], None] | None = None) -> Generator[None]:
+        token = _JSON_CHECK.set(check)
+        try:
+            yield
+        finally:
+            _JSON_CHECK.reset(token)
+
+    @property
+    def flaresolverr(self) -> FlareSolverrClient | None:
+        if self._flaresolverr is None and (url := self.manager.config.global_settings.general.flaresolverr):
+            self._flaresolverr = FlareSolverrClient(url, self._session)
+        return self._flaresolverr
+
+    async def __aenter__(self) -> Self:
+        await tcp.choose_dns_resolver()
+        self._session = self.create_aiohttp_session()
+        self._download_session = self.create_aiohttp_session()
+        return self
+
+    async def __aexit__(self, *_) -> None:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._session.close())
+            tg.create_task(self._download_session.close())
+            if self._flaresolverr is not None:
+                tg.create_task(self._flaresolverr.aclose())
+
+            if (curl := self._curl_session) is not None:
+
+                async def close_curl() -> None:
+                    try:
+                        await curl.close()
+                    except Exception:
+                        pass
+
+                tg.create_task(close_curl())
+
+    def _create_curl_session(self) -> AsyncSession[CurlResponse]:
+
+        try:
+            from curl_cffi.aio import AsyncCurl
+            from curl_cffi.requests import AsyncSession
+            from curl_cffi.utils import CurlCffiWarning
+        except ImportError as e:
+            msg = (
+                f"curl_cffi is required to scrape this URL but a dependency it's not available on {platform.system()}.\n"
+                f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{e!r}"
+            )
+            raise ScrapeError("Missing Dependency", msg) from e
+
+        import warnings
+
+        loop = asyncio.get_running_loop()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=CurlCffiWarning)
+            acurl = AsyncCurl(loop=loop)
+
+        proxy_or_none = str(proxy) if (proxy := self.manager.config.global_settings.general.proxy) else None
+
+        return AsyncSession(
+            loop=loop,
+            async_curl=acurl,
+            impersonate="chrome",
+            verify=bool(self.ssl_context),
+            proxy=proxy_or_none,
+            timeout=self.manager.config.global_settings.rate_limiting_options._curl_timeout,
+            max_redirects=8,
+            cookies={cookie.key: cookie.value for cookie in self.cookies},
+        )
+
+    def create_aiohttp_session(self) -> ClientSession:
+        return ClientSession(
+            headers={"User-Agent": self.manager.config.global_settings.general.user_agent},
+            raise_for_status=False,
+            cookie_jar=self.cookies,
+            timeout=self.manager.config.global_settings.rate_limiting_options._aiohttp_timeout,
+            proxy=self.manager.config.global_settings.general.proxy,
+            connector=tcp.new_connector(self.ssl_context),
+            requote_redirect_url=False,
+        )
+
+    async def load_cookie_files(self, cookie_files: list[Path]) -> None:
+        if not cookie_files:
+            return
+
+        async for cookie in cookies.read_netscape_files(cookie_files):
+            self.cookies.update_cookies(cookie)
+
+    @final
+    async def check_http_status(
+        self, response: ClientResponse | CurlResponse | AbstractResponse[Any], download: bool = False
+    ) -> None:
+        """Checks the HTTP status code and raises an exception if it's not acceptable."""
+        if not isinstance(response, AbstractResponse):
+            response = AbstractResponse.create(response)
+
+        if download:
+            _check_etag(response.headers)
+
+        if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
+            # Check DDosGuard even on successful pages
+            await ddos_guard.check_resp(response)
+            return
+
+        await self._check_json(response)
+        await ddos_guard.check_resp(response)
+        raise DownloadError(status=response.status)
+
+    async def _check_json(self, response: AbstractResponse[Any]) -> None:
+        if "json" not in response.content_type:
+            return
+
+        if check := _JSON_CHECK.get():
+            check(await response.json(), response)
+            return
 
     @property
     def _default_headers(self) -> dict[Any, Any]:
@@ -82,7 +287,7 @@ class HTTPClient:
 
     @contextlib.asynccontextmanager
     async def _limiter(self, domain: str) -> AsyncGenerator[None]:
-        async with self.client_manager.global_rate_limiter, self.client_manager.rate_limits[domain]:
+        async with self.global_rate_limiter, self.rate_limits[domain]:
             yield
 
     def _prepare_headers(self, headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
@@ -120,14 +325,14 @@ class HTTPClient:
         if method == "GET" and (data or json):
             method = "POST"
 
-        impersonate = self.client_manager.manager.cli_args.impersonate or impersonate
+        impersonate = self.manager.cli_args.impersonate or impersonate
         if impersonate:
             if impersonate is True:
                 impersonate = "chrome"
             request_params["impersonate"] = impersonate
 
         else:
-            _ = headers.setdefault("User-agent", self.client_manager.manager.config.global_settings.general.user_agent)
+            _ = headers.setdefault("User-agent", self.manager.config.global_settings.general.user_agent)
 
         async with self.__request(url, method, request_params, impersonate=bool(impersonate)) as resp:
             exc = None
@@ -138,7 +343,7 @@ class HTTPClient:
                 raise
             finally:
                 if self._save_responses_to_disk:
-                    _ = self.client_manager.manager.logs.task_group.create_task(
+                    _ = self.manager.logs.task_group.create_task(
                         asyncio.to_thread(
                             _write_resp_to_disk,
                             self._responses_folder,
@@ -157,9 +362,9 @@ class HTTPClient:
         The reverse (sync `aiohttp` -> `curl`) is not needed at the moment, so it is skipped
         """
         now = time.time()
-        for cookie in self.client_manager.curl_session.cookies.jar:
+        for cookie in self.curl_session.cookies.jar:
             simple_cookie = make_simple_cookie(cookie, now)
-            self.client_manager.cookies.update_cookies(simple_cookie, url)
+            self.cookies.update_cookies(simple_cookie, url)
 
     @contextlib.asynccontextmanager
     async def __request(
@@ -182,7 +387,7 @@ class HTTPClient:
         try:
             if impersonate:
                 async with contextlib.aclosing(
-                    await self.client_manager.curl_session.request(method, str(url), stream=True, **request_params)
+                    await self.curl_session.request(method, str(url), stream=True, **request_params)
                 ) as curl_resp:
                     resp = AbstractResponse.create(curl_resp)
                     yield resp
@@ -191,7 +396,7 @@ class HTTPClient:
                 return
 
             async with (
-                self.client_manager._session.request(method, url, **request_params) as aio_resp,
+                self._session.request(method, url, **request_params) as aio_resp,
             ):
                 resp = AbstractResponse.create(aio_resp)
                 yield resp
@@ -205,10 +410,10 @@ class HTTPClient:
 
         Returns an AbstractResponse confirmed to not be a DDOS Guard page."""
         try:
-            await self.client_manager.check_http_status(abs_resp)
+            await self.check_http_status(abs_resp)
             return abs_resp
         except DDOSGuardError as e:
-            if not (flare := self.client_manager.flaresolverr):
+            if not (flare := self.flaresolverr):
                 raise
 
             try:
@@ -216,10 +421,8 @@ class HTTPClient:
             except RuntimeError:
                 raise e from None
 
-            self.client_manager.cookies.update_cookies(solution.cookies)
-            await _check_flaresolverr_resp(
-                self.client_manager.manager.config.global_settings.general.user_agent, solution
-            )
+            self.cookies.update_cookies(solution.cookies)
+            await _check_flaresolverr_resp(self.manager.config.global_settings.general.user_agent, solution)
             return AbstractResponse.create(solution)
 
 
@@ -295,7 +498,7 @@ class HTTPClientProxy(Protocol):
         if impersonate is None:
             impersonate = self._IMPERSONATE
 
-        with self.client.client_manager.set_json_checker(self.__json_resp_check__):
+        with self.client.set_json_checker(self.__json_resp_check__):
             async with (
                 self.client._limiter(self.DOMAIN),
                 self.client.request(*args, impersonate=impersonate, **kwargs) as resp,
@@ -316,3 +519,9 @@ class HTTPClientProxy(Protocol):
     async def request_text(self, *args, **kwargs) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
+
+
+def _check_etag(headers: Mapping[str, str]) -> None:
+    e_tag = headers.get("ETag", "").strip('"')
+    if message := _DOWNLOAD_ERROR_ETAGS.get(e_tag):
+        raise DownloadError(HTTPStatus.NOT_FOUND, message)
