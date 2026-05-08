@@ -26,6 +26,7 @@ from cyberdrop_dl.ffmpeg import probe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
+    from pathlib import Path
 
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
@@ -208,16 +209,7 @@ class ClientManager:
             requote_redirect_url=False,
         )
 
-    async def load_cookie_files(self) -> None:
-        if self.manager.config.settings.browser_cookies.auto_import:
-            assert self.manager.config.settings.browser_cookies.browser
-            cookie_jar = await cookies.extract(self.manager.config.settings.browser_cookies.browser)
-            await cookies.export(
-                cookies.filter(cookie_jar, self.manager.config.settings.browser_cookies.sites),
-                output_path=self.manager.appdata.cookies,
-            )
-
-        cookie_files = await asyncio.to_thread(lambda: sorted(self.manager.appdata.cookies.glob("*.txt")))
+    async def load_cookie_files(self, cookie_files: list[Path]) -> None:
         if not cookie_files:
             return
 

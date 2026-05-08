@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import dataclasses
 import logging
@@ -12,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import __version__, env, ffmpeg, stats, yaml
+from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.csv_logs import CSVLogsManager
@@ -198,6 +199,17 @@ class Manager:
             tuple(self.scrape_mapper.tui.scrape_errors),
             tuple(self.scrape_mapper.tui.download_errors),
         )
+
+    async def get_cookie_files(self) -> list[Path]:
+        if self.config.settings.browser_cookies.auto_import:
+            assert self.config.settings.browser_cookies.browser
+            cookie_jar = await cookies.extract(self.config.settings.browser_cookies.browser)
+            await cookies.export(
+                cookies.filter(cookie_jar, self.config.settings.browser_cookies.sites),
+                output_path=self.appdata.cookies,
+            )
+
+        return await asyncio.to_thread(lambda: sorted(self.appdata.cookies.glob("*.txt")))
 
 
 @contextlib.contextmanager

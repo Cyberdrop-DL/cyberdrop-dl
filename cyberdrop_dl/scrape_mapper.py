@@ -170,7 +170,7 @@ class ScrapeMapper:
         if self.manager.config.settings.sorting.sort_downloads:
             self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
-        await self.manager.client_manager.load_cookie_files()
+        await self.manager.client_manager.load_cookie_files(await self.manager.get_cookie_files())
         self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!
         with self.tui():
