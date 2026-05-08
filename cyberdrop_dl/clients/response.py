@@ -31,8 +31,6 @@ else:
     class CurlResponse: ...
 
 
-__all__ = ["AbstractResponse"]
-
 _ResponseT = TypeVar(
     "_ResponseT",
     bound=ClientResponse | CurlResponse | FlaresolverrSolution,
@@ -92,6 +90,9 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
             elif "html" in self.content_type:
                 content = BeautifulSoup(content, "html.parser").prettify(formatter="html")
 
+        elif not ("json" in self.content_type or "html" in self.content_type):
+            content = f"<{self.content_type} payload>"
+
         return {
             "url": str(self.url),
             "status_code": self.status,
@@ -144,10 +145,6 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         raise RuntimeError(f"Unexpected response type: {type(self._resp)!r}")
 
     @property
-    def consumed(self) -> bool:
-        return bool(self._text)
-
-    @property
     def ok(self) -> bool:
         """Returns `True` if `status` is less than `400`, `False` if not.
 
@@ -197,7 +194,6 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
     @final
     def create_report(self, exc: Exception | None = None, **extras: Any) -> str:
-        assert self.consumed
 
         me = self.__json__()
         if exc:
