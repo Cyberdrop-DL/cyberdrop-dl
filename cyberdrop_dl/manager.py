@@ -54,7 +54,7 @@ class Manager:
         self.hasher: Hasher = Hasher(self)
         self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
         self.http_client: HTTPClient = HTTPClient(self)
-        self.download_client = DownloadClient(self)
+        self.download_client: DownloadClient = DownloadClient(self)
 
         self.scrape_mapper: ScrapeMapper
         self.database: Database
