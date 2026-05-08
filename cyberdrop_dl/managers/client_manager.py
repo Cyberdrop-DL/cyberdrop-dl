@@ -254,19 +254,7 @@ class ClientManager:
         if not (is_video or is_audio):
             return True
 
-        duration_limits = self.manager.config.settings.media_duration_limits
-        min_video_duration: float = duration_limits.minimum_video_duration.total_seconds()
-        max_video_duration: float = duration_limits.maximum_video_duration.total_seconds()
-        min_audio_duration: float = duration_limits.minimum_audio_duration.total_seconds()
-        max_audio_duration: float = duration_limits.maximum_audio_duration.total_seconds()
-        video_duration_limits = min_video_duration, max_video_duration
-        audio_duration_limits = min_audio_duration, max_audio_duration
-
-        if is_video and not any(video_duration_limits):
-            return True
-        if is_audio and not any(audio_duration_limits):
-            return True
-
+        duration_limits = self.manager.config.settings.media_duration_limits.ranges
         duration: float | None = await _probe_duration(media_item)
         media_item.duration = duration
 
@@ -276,12 +264,9 @@ class ClientManager:
         await self.manager.database.history.add_duration(media_item.domain, media_item)
 
         if is_video:
-            max_video_duration = max_video_duration or float("inf")
+            return duration in duration_limits.video
 
-            return min_video_duration <= duration <= max_video_duration
-
-        max_audio_duration = max_audio_duration or float("inf")
-        return min_audio_duration <= duration <= max_audio_duration
+        return duration in duration_limits.audio
 
 
 def _check_etag(headers: Mapping[str, str]) -> None:

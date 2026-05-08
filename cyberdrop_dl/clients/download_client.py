@@ -421,23 +421,15 @@ class DownloadClient:
 
     def check_filesize_limits(self, media: MediaItem) -> bool:
         """Checks if the file size is within the limits."""
-        file_size_limits = self.manager.config.settings.file_size_limits
-        max_video_filesize = file_size_limits.maximum_video_size or float("inf")
-        min_video_filesize = file_size_limits.minimum_video_size
-        max_image_filesize = file_size_limits.maximum_image_size or float("inf")
-        min_image_filesize = file_size_limits.minimum_image_size
-        max_other_filesize = file_size_limits.maximum_other_size or float("inf")
-        min_other_filesize = file_size_limits.minimum_other_size
+        limits = self.manager.config.settings.file_size_limits.ranges
 
         assert media.filesize is not None
         if media.ext in FileExt.IMAGE:
-            proceed = min_image_filesize < media.filesize < max_image_filesize
-        elif media.ext in FileExt.VIDEO:
-            proceed = min_video_filesize < media.filesize < max_video_filesize
-        else:
-            proceed = min_other_filesize < media.filesize < max_other_filesize
+            return media.filesize in limits.image
+        if media.ext in FileExt.VIDEO:
+            return media.filesize in limits.video
 
-        return proceed
+        return media.filesize in limits.other
 
 
 def get_content_type(ext: str, headers: Mapping[str, str]) -> str | None:
