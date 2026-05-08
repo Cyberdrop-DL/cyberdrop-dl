@@ -46,7 +46,7 @@ async def test_context_manager(client: HTTPClient) -> None:
 
 
 def test_create_aiohttp_session_outside_loop(client: HTTPClient) -> None:
-    with pytest.raises(RuntimeError, match="DNS resolver is unknown"):
+    with pytest.raises(RuntimeError, match="no running event loop"):
         _ = client.create_aiohttp_session()
 
 
