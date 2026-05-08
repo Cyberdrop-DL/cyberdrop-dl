@@ -5,18 +5,17 @@ import contextlib
 import itertools
 import logging
 import time
-from collections.abc import Generator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Coroutine, Generator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Coroutine, Mapping
     from pathlib import Path
     from typing import Any
 
@@ -158,37 +157,8 @@ class DownloadClient:
         media_item: MediaItem,
         process_response: Callable[[aiohttp.ClientResponse | AbstractResponse[Any]], Coroutine[None, None, bool]],
     ) -> bool:
-        download_url = media_item.debrid_link or media_item.url
-
-        fallback_url_generator = _fallback_generator(media_item)
-        fallback_count = 0
-
-        while True:
-            resp = None
-            try:
-                async with self.__request_context(download_url, media_item.domain, media_item.headers) as resp:
-                    return await process_response(resp)
-            except (DownloadError, DDOSGuardError):
-                if resp is None:
-                    raise
-                try:
-                    next_download_url = fallback_url_generator.send(resp)
-                except StopIteration:
-                    pass
-                else:
-                    if not next_download_url:
-                        raise
-                    if media_item.debrid_link and media_item.debrid_link == download_url:
-                        msg = f" with debrid URL {download_url} failed, retrying with fallback URL: "
-                    elif media_item.url == download_url:
-                        msg = " failed, retrying with fallback URL: "
-                    else:
-                        fallback_count += 1
-                        msg = f" with fallback URL #{fallback_count} {download_url} failed, retrying with new fallback URL: "
-                    logger.error(f"Download of {media_item.url}{msg}{next_download_url}")
-                    download_url = next_download_url
-                    continue
-                raise
+        async with self.__request_context(media_item.real_url, media_item.domain, media_item.headers) as resp:
+            return await process_response(resp)
 
     async def _append_content(
         self,
@@ -444,32 +414,6 @@ def get_last_modified(headers: Mapping[str, str]) -> int | None:
 
 def is_html_or_text(content_type: str) -> bool:
     return any(s in content_type for s in ("html", "text"))
-
-
-def _fallback_generator(media_item: MediaItem):
-    fallbacks = media_item.fallbacks
-
-    def gen_fallback() -> Generator[AbsoluteHttpURL | None, aiohttp.ClientResponse, None]:
-        response = yield
-        if fallbacks is None:
-            return
-
-        if callable(fallbacks):
-            for retry in itertools.count(1):
-                if not response:
-                    return
-                url = fallbacks(response, retry)
-                if not url:
-                    return
-                response = yield url
-
-        else:
-            for fall in fallbacks:  # noqa: UP028
-                yield fall
-
-    gen = gen_fallback()
-    _ = next(gen)
-    return gen
 
 
 def _check_content_length(headers: Mapping[str, Any]) -> None:
