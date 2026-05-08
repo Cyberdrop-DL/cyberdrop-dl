@@ -18,11 +18,9 @@ from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, Slow
 from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Coroutine, Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
     from pathlib import Path
     from typing import Any
-
-    import aiohttp
 
     from cyberdrop_dl.clients.client import HTTPClient
     from cyberdrop_dl.config import Config
@@ -83,17 +81,15 @@ class DownloadClient:
 
         await asyncio.sleep(self.manager.config.global_settings.rate_limiting_options.total_delay)
 
-        def process_response(resp: aiohttp.ClientResponse | AbstractResponse[Any]):
-            return self._process_response(media_item, domain, resume_point, resp)
-
-        return await self._request_download(media_item, process_response)
+        async with self.__request_context(media_item.real_url, media_item.domain, media_item.headers) as resp:
+            return await self._process_response(media_item, domain, resume_point, resp)
 
     async def _process_response(
         self,
         media_item: MediaItem,
         domain: str,
         resume_point: int,
-        resp: aiohttp.ClientResponse | AbstractResponse[Any],
+        resp: AbstractResponse[Any],
     ) -> bool:
         if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
             await aio.unlink(media_item.partial_file)
@@ -149,20 +145,13 @@ class DownloadClient:
             hook.advance(resume_point)
 
         with hook:
-            await self._append_content(media_item, hook, self._get_resp_reader(resp))
+            await self._append_content(media_item, hook, resp)
         return True
-
-    def _get_resp_reader(
-        self, resp: aiohttp.ClientResponse | AbstractResponse[Any]
-    ) -> AbstractResponse[Any] | aiohttp.StreamReader:
-        if isinstance(resp, AbstractResponse):
-            return resp
-        return resp.content
 
     @contextlib.asynccontextmanager
     async def __request_context(
         self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
-    ) -> AsyncGenerator[AbstractResponse[Any] | aiohttp.ClientResponse]:
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
         if domain in _USE_IMPERSONATION:
             resp = await self.http_client.curl_session.get(str(url), stream=True, headers=headers)
             try:
@@ -174,29 +163,14 @@ class DownloadClient:
         async with self.http_client._download_session.get(url, headers=headers) as resp:
             yield resp
 
-    async def _request_download(
-        self,
-        media_item: MediaItem,
-        process_response: Callable[[aiohttp.ClientResponse | AbstractResponse[Any]], Coroutine[None, None, bool]],
-    ) -> bool:
-        async with self.__request_context(media_item.real_url, media_item.domain, media_item.headers) as resp:
-            return await process_response(resp)
-
-    async def _append_content(
-        self,
-        media_item: MediaItem,
-        hook: ProgressHook,
-        content: aiohttp.StreamReader | AbstractResponse[Any],
-    ) -> None:
-        """Appends content to a file."""
-
+    async def _append_content(self, media_item: MediaItem, hook: ProgressHook, resp: AbstractResponse[Any]) -> None:
         check_free_space = storage.create_free_space_checker(media_item)
         check_download_speed = make_speed_checker(media_item, hook, self.download_speed_threshold)
         await check_free_space()
         await self._pre_download_check(media_item)
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
-            async for chunk in content.iter_chunked(self.chunk_size):
+            async for chunk in resp.iter_chunked(self.chunk_size):
                 await check_free_space()
                 chunk_size = len(chunk)
                 await self.speed_limiter.acquire(chunk_size)

@@ -82,8 +82,11 @@ class HTTPClient:
         )
 
         self._cookies: aiohttp.CookieJar | None = None
-        self._save_responses_to_disk = manager.config.settings.files.save_pages_html
-        self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
+        self._responses_folder: Path | None = (
+            manager.config.settings.logs.main_log.parent / "cdl_responses"
+            if manager.config.settings.files.save_pages_html
+            else None
+        )
 
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
@@ -229,8 +232,9 @@ class HTTPClient:
                 exc = e
                 raise
             finally:
-                if self._save_responses_to_disk:
+                if self._responses_folder:
                     self.manager.logs.write_response(self._responses_folder, url, resp, exc)
+                exc = None
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
         """
