@@ -224,24 +224,6 @@ class HTTPClient:
         await ddos_guard.check_resp(response)
         raise DownloadError(status=response.status)
 
-    @property
-    def _default_headers(self) -> dict[Any, Any]:
-        return {}
-
-    def _prepare_headers(self, headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
-        """Add default headers and transform it to CIMultiDict"""
-        combined = CIMultiDict(self._default_headers)
-        if headers:
-            headers = CIMultiDict(headers)
-            new: set[str] = set()
-            for key, value in headers.items():
-                if key in new:
-                    combined.add(key, value)
-                else:
-                    combined[key] = value
-                    new.add(key)
-        return combined
-
     @contextlib.asynccontextmanager
     async def request(
         self: object,
@@ -255,7 +237,7 @@ class HTTPClient:
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         self = cast("HTTPClient", self)
-        request_params["headers"] = headers = self._prepare_headers(headers)
+        request_params["headers"] = headers = _prepare_headers(headers)
         request_params["data"] = data
         request_params["json"] = json
 
@@ -269,7 +251,7 @@ class HTTPClient:
             request_params["impersonate"] = impersonate
 
         else:
-            _ = headers.setdefault("User-agent", self.manager.config.global_settings.general.user_agent)
+            _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
         async with self.__request(url, method, request_params, impersonate=bool(impersonate)) as resp:
             exc = None
@@ -362,6 +344,10 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
     if check := _JSON_CHECK.get():
         check(await response.json(), response)
         return
+
+
+def _prepare_headers(headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
+    return CIMultiDict(headers) if headers else CIMultiDict()
 
 
 class HTTPClientProxy(Protocol):
