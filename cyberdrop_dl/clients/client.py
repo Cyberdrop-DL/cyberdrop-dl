@@ -138,20 +138,14 @@ class HTTPClient:
 
     async def __aexit__(self, *_) -> None:
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self._session.close())
             tg.create_task(self._download_session.close())
+            if self._curl_session is not None:
+                tg.create_task(self._curl_session.close())
+
             if self._flaresolverr is not None:
-                tg.create_task(self._flaresolverr.aclose())
-
-            if (curl := self._curl_session) is not None:
-
-                async def close_curl() -> None:
-                    try:
-                        await curl.close()
-                    except Exception:
-                        pass
-
-                tg.create_task(close_curl())
+                # close before closing aiohttp session
+                await self._flaresolverr.aclose()
+            await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
 
