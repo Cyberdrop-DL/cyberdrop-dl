@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 import aiohttp
 import pytest
 
-from cyberdrop_dl.clients.flaresolverr import Command, FlareSolverrClient
+from cyberdrop_dl.clients.flaresolverr import Client, Command
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
@@ -14,19 +14,19 @@ pytestmark = pytest.mark.skipif(not FLARESOLVER_URL, reason=f"{ENV_NAME} environ
 
 
 @pytest.fixture
-async def flaresolverr() -> AsyncGenerator[FlareSolverrClient]:
+async def flaresolverr() -> AsyncGenerator[Client]:
     async with aiohttp.ClientSession() as session:
-        flare = FlareSolverrClient(AbsoluteHttpURL(FLARESOLVER_URL) / "v1", session)
+        flare = Client(AbsoluteHttpURL(FLARESOLVER_URL) / "v1", session)
         yield flare
 
 
-def test_flaresolver(flaresolverr: FlareSolverrClient) -> None:
+def test_flaresolver(flaresolverr: Client) -> None:
     assert flaresolverr.url
     assert flaresolverr._request_id() == 1
     assert flaresolverr._request_id() == 2
 
 
-async def test_create_session(flaresolverr: FlareSolverrClient) -> None:
+async def test_create_session(flaresolverr: Client) -> None:
     assert flaresolverr._session_id == ""
     resp = await flaresolverr._request(Command.CREATE_SESSION, session="cyberdrop-dl")
     assert resp.ok
@@ -36,7 +36,7 @@ async def test_create_session(flaresolverr: FlareSolverrClient) -> None:
     assert "The session has been removed" in resp.message
 
 
-async def test_create_session_methods(flaresolverr: FlareSolverrClient) -> None:
+async def test_create_session_methods(flaresolverr: Client) -> None:
     assert flaresolverr._session_id == ""
     await flaresolverr._create_session()
     assert flaresolverr._session_id == "cyberdrop-dl"
@@ -44,7 +44,7 @@ async def test_create_session_methods(flaresolverr: FlareSolverrClient) -> None:
     assert flaresolverr._session_id == ""
 
 
-async def test_request_w_solution(flaresolverr: FlareSolverrClient) -> None:
+async def test_request_w_solution(flaresolverr: Client) -> None:
     url = AbsoluteHttpURL("https://google.com")
     solution = await flaresolverr.request(url)
     assert solution.status == 200

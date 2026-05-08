@@ -199,12 +199,12 @@ class DownloadClient:
         """Appends content to a file."""
 
         check_free_space = storage.create_free_space_checker(media_item)
-        check_download_speed = self.make_speed_checker(media_item, hook)
+        check_download_speed = make_speed_checker(media_item, hook, self.download_speed_threshold)
         await check_free_space()
         await self._pre_download_check(media_item)
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
-            async for chunk in content.iter_chunked(self.client.speed_limiter.chunk_size):
+            async for chunk in content.iter_chunked(self.client.chunk_size):
                 await check_free_space()
                 chunk_size = len(chunk)
                 await self.client.speed_limiter.acquire(chunk_size)
@@ -224,24 +224,6 @@ class DownloadClient:
         if not await aio.get_size(media_item.partial_file):
             await aio.unlink(media_item.partial_file, missing_ok=True)
             raise DownloadError(HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
-
-    def make_speed_checker(self, media_item: MediaItem, hook: ProgressHook) -> Callable[[], None]:
-        last_slow_speed_read = None
-
-        def check_download_speed() -> None:
-            nonlocal last_slow_speed_read
-            if not self.download_speed_threshold:
-                return
-
-            speed = hook.get_speed()
-            if speed > self.download_speed_threshold:
-                last_slow_speed_read = None
-            elif not last_slow_speed_read:
-                last_slow_speed_read = time.perf_counter()
-            elif time.perf_counter() - last_slow_speed_read > _SLOW_DOWNLOAD_PERIOD:
-                raise SlowDownloadError(origin=media_item)
-
-        return check_download_speed
 
     async def download_file(self, domain: str, media_item: MediaItem) -> bool:
         """Starts a file."""
@@ -538,3 +520,22 @@ async def _probe_duration(media_item: MediaItem) -> float | None:
         return properties.video.duration
     if properties.audio:
         return properties.audio.duration
+
+
+def make_speed_checker(media_item: MediaItem, hook: ProgressHook, speed_threshold: int) -> Callable[[], None]:
+    last_slow_speed_read = None
+
+    def check_download_speed() -> None:
+        nonlocal last_slow_speed_read
+        if not speed_threshold:
+            return
+
+        speed = hook.get_speed()
+        if speed > speed_threshold:
+            last_slow_speed_read = None
+        elif not last_slow_speed_read:
+            last_slow_speed_read = time.perf_counter()
+        elif time.perf_counter() - last_slow_speed_read > _SLOW_DOWNLOAD_PERIOD:
+            raise SlowDownloadError(origin=media_item)
+
+    return check_download_speed

@@ -74,23 +74,15 @@ _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = C
 
 
 class DownloadSpeedLimiter(AsyncLimiter):
-    __slots__ = ("chunk_size",)
+    __slots__ = ()
 
     def __init__(self, speed_limit: int) -> None:
-        self.chunk_size: int = 1024 * 1024 * 10  # 10MB
-        if speed_limit:
-            self.chunk_size = min(self.chunk_size, speed_limit)
         super().__init__(speed_limit, 1)
 
-    async def acquire(self, amount: float | None = None) -> None:
+    async def acquire(self, amount: float = 1) -> None:
         if self.max_rate <= 0:
             return
-        if not amount:
-            amount = self.chunk_size
         await super().acquire(amount)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
 @final
@@ -105,18 +97,20 @@ class HTTPClient:
             self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
 
-        self.speed_limiter = DownloadSpeedLimiter(
-            self.manager.config.global_settings.rate_limiting_options.download_speed_limit
-        )
+        speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+        self.speed_limiter = DownloadSpeedLimiter(speed_limit)
+        self.chunk_size: int = 1024 * 1024 * 10  # 10MB
+        if speed_limit:
+            self.chunk_size = min(self.chunk_size, speed_limit)
+
         self.download_client = DownloadClient(manager, self)
         self._save_responses_to_disk = manager.config.settings.files.save_pages_html
         self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
 
-        self._flaresolverr: flaresolverr.FlareSolverrClient | None = None
-
+        self._flaresolverr: flaresolverr.Client | None = None
+        self._curl_session: AsyncSession[CurlResponse] | None = None
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
-        self._curl_session: AsyncSession[CurlResponse] | None = None
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -132,9 +126,9 @@ class HTTPClient:
         return self._cookies
 
     @property
-    def flaresolverr(self) -> flaresolverr.FlareSolverrClient | None:
+    def flaresolverr(self) -> flaresolverr.Client | None:
         if self._flaresolverr is None and (url := self.manager.config.global_settings.general.flaresolverr):
-            self._flaresolverr = flaresolverr.FlareSolverrClient(url, self._session)
+            self._flaresolverr = flaresolverr.Client(url, self._session)
         return self._flaresolverr
 
     async def __aenter__(self) -> Self:
@@ -212,7 +206,6 @@ class HTTPClient:
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    @final
     async def check_http_status(
         self, response: ClientResponse | CurlResponse | AbstractResponse[Any], download: bool = False
     ) -> None:
@@ -228,17 +221,9 @@ class HTTPClient:
             await ddos_guard.check_resp(response)
             return
 
-        await self._check_json(response)
+        await _check_json(response)
         await ddos_guard.check_resp(response)
         raise DownloadError(status=response.status)
-
-    async def _check_json(self, response: AbstractResponse[Any]) -> None:
-        if "json" not in response.content_type:
-            return
-
-        if check := _JSON_CHECK.get():
-            check(await response.json(), response)
-            return
 
     @property
     def _default_headers(self) -> dict[Any, Any]:
@@ -398,6 +383,15 @@ def _write_resp_to_disk(
         _ = file.write_text(content, "utf8")
     except OSError:
         pass
+
+
+async def _check_json(response: AbstractResponse[Any]) -> None:
+    if "json" not in response.content_type:
+        return
+
+    if check := _JSON_CHECK.get():
+        check(await response.json(), response)
+        return
 
 
 class HTTPClientProxy(Protocol):

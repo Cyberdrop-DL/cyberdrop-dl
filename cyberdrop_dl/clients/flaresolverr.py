@@ -74,7 +74,7 @@ class Response:
 
 
 @dataclasses.dataclass(slots=True)
-class FlareSolverrClient:
+class Client:
     """Class that handles communication with flaresolverr."""
 
     url: AbsoluteHttpURL
