@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-from cyberdrop_dl import __version__ as current
+from cyberdrop_dl import __version__
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _PYPI_JSON_URL = "https://pypi.org/pypi/cyberdrop-dl-patched/json"
 logger = logging.getLogger(__name__)
@@ -15,13 +18,14 @@ async def check_latest_pypi(session: aiohttp.ClientSession) -> None:
     logger.info("Checking for updates...")
     try:
         data = await _request_pypi_info(session)
-
     except Exception as e:
         logger.error(f"Unable to get latest version information {e!r}")
     else:
-        latest: str = data["info"]["version"]
-        releases: set[str] = set(data["releases"])
-        return _log_updates(releases, latest)
+        return _compare_and_log_version(
+            data["releases"],
+            current=__version__,
+            latest=data["info"]["version"],
+        )
 
 
 async def _request_pypi_info(session: aiohttp.ClientSession) -> dict[str, Any]:
@@ -36,7 +40,8 @@ async def _request_pypi_info(session: aiohttp.ClientSession) -> dict[str, Any]:
         return await response.json()
 
 
-def _log_updates(releases: set[str], latest: str) -> None:
+def _compare_and_log_version(releases: Iterable[str], *, current: str, latest: str) -> None:
+    releases = set(releases)
     if current not in releases:
         logger.warning(f"You are using an unreleased version of CDL: {current}. Latest stable release {latest}")
     elif _is_dev_release(current):
