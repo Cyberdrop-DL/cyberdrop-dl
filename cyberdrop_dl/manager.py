@@ -16,6 +16,7 @@ from pydantic.types import ByteSize
 from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.clients.client import HTTPClient
+from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
@@ -53,6 +54,7 @@ class Manager:
         self.hasher: Hasher = Hasher(self)
         self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
         self.http_client: HTTPClient = HTTPClient(self)
+        self.download_client = DownloadClient(self)
 
         self.scrape_mapper: ScrapeMapper
         self.database: Database

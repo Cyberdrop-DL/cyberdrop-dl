@@ -17,7 +17,6 @@ from multidict import CIMultiDict
 
 from cyberdrop_dl import cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
-from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -35,6 +34,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
+_JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
 
 logger = logging.getLogger(__name__)
 
@@ -61,22 +61,16 @@ class _LazyResponseLog:
     def __json__(self) -> dict[str, Any]:
         resp = self.response.__json__()
         del resp["created_at"]
-        if type(content := resp["content"]) is str:
-            resp["content"] = truncated_preview(content)
+        if type(resp["content"]) is str:
+            resp["content"] = truncated_preview(resp["content"])
         return resp
 
     def __str__(self) -> str:
         return str(self.__json__())
 
 
-_JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
-
-
 class DownloadSpeedLimiter(AsyncLimiter):
     __slots__ = ()
-
-    def __init__(self, speed_limit: int) -> None:
-        super().__init__(speed_limit, 1)
 
     async def acquire(self, amount: float = 1) -> None:
         if self.max_rate <= 0:
@@ -89,20 +83,22 @@ class HTTPClient:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
         self.ssl_context = tcp.create_ssl_context(self.manager.config.global_settings.general.ssl_context)
-        self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
-        self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
+        self.global_rate_limiter = AsyncLimiter(
+            self.manager.config.global_settings.rate_limiting_options.rate_limit, time_period=1
+        )
         self.global_download_limiter = asyncio.Semaphore(
             self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
 
         speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
-        self.speed_limiter = DownloadSpeedLimiter(speed_limit)
+        self.speed_limiter = DownloadSpeedLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
             self.chunk_size = min(self.chunk_size, speed_limit)
 
-        self.download_client = DownloadClient(manager)
+        self._cookies: aiohttp.CookieJar | None = None
+
         self._save_responses_to_disk = manager.config.settings.files.save_pages_html
         self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
 

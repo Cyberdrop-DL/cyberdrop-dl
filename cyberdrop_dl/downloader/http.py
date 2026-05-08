@@ -89,7 +89,7 @@ class Downloader:
 
     @property
     def client(self) -> DownloadClient:
-        return self.manager.http_client.download_client
+        return self.manager.download_client
 
     @property
     def config(self) -> Config:
