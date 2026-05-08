@@ -4,7 +4,7 @@ from http.cookiejar import Cookie, MozillaCookieJar
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl.cookies import _parse_cookie_jar, make_simple_cookie, split_cookies
+from cyberdrop_dl.cookies import _parse_cookie_jar, make_simple_cookie, split
 
 if TYPE_CHECKING:
     import pytest
@@ -100,7 +100,7 @@ def test_split_cookies() -> None:
     for cookie in cookies:
         cookie_jar.set_cookie(cookie)
 
-    output = split_cookies(cookie_jar)
+    output = split(cookie_jar)
     assert type(next(iter(output.values()))) is MozillaCookieJar
     assert tuple(output) == ("example.com", "example2.com")
     assert len(output["example.com"]) == 2

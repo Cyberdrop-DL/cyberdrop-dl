@@ -44,7 +44,7 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
-def filter_cookies(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
+def filter(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
     if not domains:
         yield from cookies
     else:
@@ -54,10 +54,9 @@ def filter_cookies(cookies: Iterable[Cookie], domains: list[str] | None = None) 
                 yield cookie
 
 
-async def extract_cookies(browser: Browser) -> CookieJar:
-    extract = _COOKIE_EXTRACTORS[browser]
+async def extract(browser: Browser) -> CookieJar:
     try:
-        return await asyncio.to_thread(extract)
+        return await asyncio.to_thread(_COOKIE_EXTRACTORS[browser])
 
     except PermissionError as e:
         msg = (
@@ -87,7 +86,7 @@ async def extract_cookies(browser: Browser) -> CookieJar:
     raise browser_cookie3.BrowserCookieError(f"{msg}\n\nNothing has been saved.")
 
 
-def split_cookies(extracted_cookies: Iterable[Cookie]) -> dict[str, MozillaCookieJar]:
+def split(extracted_cookies: Iterable[Cookie]) -> dict[str, MozillaCookieJar]:
     cookie_jars: dict[str, MozillaCookieJar] = {}
     for cookie in extracted_cookies:
         domain = cookie.domain.lstrip(".").removeprefix("www.")
@@ -99,8 +98,8 @@ def split_cookies(extracted_cookies: Iterable[Cookie]) -> dict[str, MozillaCooki
     return cookie_jars
 
 
-async def export_cookies(cookies: Iterable[Cookie], output_path: Path) -> None:
-    cookie_jars = split_cookies(cookies)
+async def export(cookies: Iterable[Cookie], output_path: Path) -> None:
+    cookie_jars = split(cookies)
     await asyncio.to_thread(output_path.mkdir, parents=True, exist_ok=True)
     _ = await asyncio.gather(
         *(

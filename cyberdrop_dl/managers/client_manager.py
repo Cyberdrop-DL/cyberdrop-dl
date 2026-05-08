@@ -15,13 +15,12 @@ import truststore
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 
-from cyberdrop_dl import ddos_guard
+from cyberdrop_dl import cookies, ddos_guard
 from cyberdrop_dl.clients import HTTPClient, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.cookies import export_cookies, extract_cookies, filter_cookies, read_netscape_files
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.ffmpeg import probe
 
@@ -212,9 +211,9 @@ class ClientManager:
     async def load_cookie_files(self) -> None:
         if self.manager.config.settings.browser_cookies.auto_import:
             assert self.manager.config.settings.browser_cookies.browser
-            cookies = await extract_cookies(self.manager.config.settings.browser_cookies.browser)
-            await export_cookies(
-                filter_cookies(cookies, self.manager.config.settings.browser_cookies.sites),
+            cookie_jar = await cookies.extract(self.manager.config.settings.browser_cookies.browser)
+            await cookies.export(
+                cookies.filter(cookie_jar, self.manager.config.settings.browser_cookies.sites),
                 output_path=self.manager.appdata.cookies,
             )
 
@@ -222,7 +221,7 @@ class ClientManager:
         if not cookie_files:
             return
 
-        async for cookie in read_netscape_files(cookie_files):
+        async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
     @final
