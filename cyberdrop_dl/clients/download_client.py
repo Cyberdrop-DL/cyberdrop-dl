@@ -9,6 +9,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
+from cyberdrop_dl.clients import etag
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
@@ -77,7 +78,8 @@ class DownloadClient:
         if resp.status == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE:
             await aio.unlink(media_item.partial_file)
 
-        await self.client.check_http_status(resp, download=True)
+        etag.check(resp.headers)
+        await self.client.check_http_status(resp)
 
         if not media_item.is_segment:
             _ = get_content_type(media_item.ext, resp.headers)

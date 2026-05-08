@@ -16,7 +16,7 @@ from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
 from cyberdrop_dl import cookies, ddos_guard, signature
-from cyberdrop_dl.clients import etag, flaresolverr, tcp
+from cyberdrop_dl.clients import flaresolverr, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
@@ -199,15 +199,10 @@ class HTTPClient:
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    async def check_http_status(
-        self, response: ClientResponse | CurlResponse | AbstractResponse[Any], download: bool = False
-    ) -> None:
+    async def check_http_status(self, response: ClientResponse | CurlResponse | AbstractResponse[Any]) -> None:
         """Checks the HTTP status code and raises an exception if it's not acceptable."""
         if not isinstance(response, AbstractResponse):
             response = AbstractResponse.create(response)
-
-        if download:
-            etag.check(response.headers)
 
         if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
             # Check DDosGuard even on successful pages
