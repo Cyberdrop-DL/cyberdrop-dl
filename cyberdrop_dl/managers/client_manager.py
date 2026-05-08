@@ -284,24 +284,7 @@ class ClientManager:
         if is_audio and not any(audio_duration_limits):
             return True
 
-        async def get_duration() -> float | None:
-            if media_item.duration:
-                return media_item.duration
-
-            if media_item.downloaded:
-                properties = await probe(media_item.path)
-
-            else:
-                properties = await probe(media_item.url, headers=media_item.headers)
-
-            if properties.format.duration:
-                return properties.format.duration
-            if is_video and properties.video:
-                return properties.video.duration
-            if is_audio and properties.audio:
-                return properties.audio.duration
-
-        duration: float | None = await get_duration()
+        duration: float | None = await _probe_duration(media_item)
         media_item.duration = duration
 
         if duration is None:
@@ -322,3 +305,21 @@ def _check_etag(headers: Mapping[str, str]) -> None:
     e_tag = headers.get("ETag", "").strip('"')
     if message := _DOWNLOAD_ERROR_ETAGS.get(e_tag):
         raise DownloadError(HTTPStatus.NOT_FOUND, message)
+
+
+async def _probe_duration(media_item: MediaItem) -> float | None:
+    if media_item.duration:
+        return media_item.duration
+
+    if media_item.downloaded:
+        properties = await probe(media_item.path)
+
+    else:
+        properties = await probe(media_item.url, headers=media_item.headers)
+
+    if properties.format.duration:
+        return properties.format.duration
+    if properties.video:
+        return properties.video.duration
+    if properties.audio:
+        return properties.audio.duration
