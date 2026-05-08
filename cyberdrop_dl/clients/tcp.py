@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import logging
 import platform
-from typing import TYPE_CHECKING
+import ssl
+from typing import TYPE_CHECKING, Literal
 
 import aiohttp
+import certifi
+import truststore
 
 if TYPE_CHECKING:
     import asyncio
-    import ssl
 
 
 logger = logging.getLogger(__name__)
@@ -56,3 +58,17 @@ def new_connector(ssl_context: ssl.SSLContext | bool) -> aiohttp.TCPConnector:
     tcp_conn = aiohttp.TCPConnector(ssl=ssl_context, resolver=_DNS_RESOLVER())
     tcp_conn._resolver_owner = True
     return tcp_conn
+
+
+def make_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
+    if not name:
+        return False
+    if name == "certifi":
+        return ssl.create_default_context(cafile=certifi.where())
+    if name == "truststore":
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    if name == "truststore+certifi":
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.load_verify_locations(cafile=certifi.where())
+        return ctx
+    raise ValueError(name)

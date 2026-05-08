@@ -4,25 +4,21 @@ import asyncio
 import contextlib
 import logging
 import platform
-import ssl
 import time
 import uuid
 from contextvars import ContextVar
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
-import certifi
-import truststore
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
 from cyberdrop_dl import constants, cookies, ddos_guard, signature
-from cyberdrop_dl.clients.client import tcp
+from cyberdrop_dl.clients import flaresolverr, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
-from cyberdrop_dl.clients.flaresolverr import FlareSolverrClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -37,7 +33,6 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
     from curl_cffi.requests.session import HttpMethod
 
-    from cyberdrop_dl.clients.client import flaresolverr
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -110,27 +105,11 @@ class DownloadSpeedLimiter(AsyncLimiter):
         return f"{self.__class__.__name__}(speed_limit={self.max_rate}, chunk_size={self.chunk_size})"
 
 
-def _make_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
-    if not name:
-        return False
-    if name == "certifi":
-        return ssl.create_default_context(cafile=certifi.where())
-    if name == "truststore":
-        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    if name == "truststore+certifi":
-        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.load_verify_locations(cafile=certifi.where())
-        return ctx
-    raise ValueError(name)
-
-
+@final
 class HTTPClient:
-    _save_responses_to_disk: bool
-    _responses_folder: Path
-
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.ssl_context = _make_ssl_context(self.manager.config.global_settings.general.ssl_context)
+        self.ssl_context = tcp.make_ssl_context(self.manager.config.global_settings.general.ssl_context)
         self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
@@ -142,14 +121,14 @@ class HTTPClient:
             self.manager.config.global_settings.rate_limiting_options.download_speed_limit
         )
         self.download_client = DownloadClient(manager, self)
-        self._flaresolverr: FlareSolverrClient | None = None
+        self._save_responses_to_disk = manager.config.settings.files.save_pages_html
+        self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
+
+        self._flaresolverr: flaresolverr.FlareSolverrClient | None = None
 
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
-
         self._curl_session: AsyncSession[CurlResponse] | None = None
-        self._save_responses_to_disk = manager.config.settings.files.save_pages_html
-        self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -173,9 +152,9 @@ class HTTPClient:
             _JSON_CHECK.reset(token)
 
     @property
-    def flaresolverr(self) -> FlareSolverrClient | None:
+    def flaresolverr(self) -> flaresolverr.FlareSolverrClient | None:
         if self._flaresolverr is None and (url := self.manager.config.global_settings.general.flaresolverr):
-            self._flaresolverr = FlareSolverrClient(url, self._session)
+            self._flaresolverr = flaresolverr.FlareSolverrClient(url, self._session)
         return self._flaresolverr
 
     async def __aenter__(self) -> Self:

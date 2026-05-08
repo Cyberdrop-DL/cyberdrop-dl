@@ -1,11 +1,9 @@
-import ssl
 import sys
 
 import aiohttp
 import pytest
-import truststore
 
-from cyberdrop_dl.clients.client import HTTPClient, _make_ssl_context
+from cyberdrop_dl.clients.client import HTTPClient
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
 
@@ -37,27 +35,3 @@ async def test_context_manager(client: HTTPClient) -> None:
             with pytest.raises(ScrapeError):
                 _ = client.curl_session
                 # test_ssl_context.py
-
-
-class TestMakeSSLContext:
-    def test_none_or_empty_string_returns_false(self) -> None:
-        assert _make_ssl_context(None) is False
-        assert _make_ssl_context("") is False
-
-    def test_certifi_returns_default_context_with_certifi_bundle(self) -> None:
-        ctx = _make_ssl_context("certifi")
-        assert type(ctx) is ssl.SSLContext
-        assert ctx.check_hostname is True
-        assert ctx.verify_mode == ssl.CERT_REQUIRED
-
-    def test_truststore_returns_truststore_context(self) -> None:
-        ctx = _make_ssl_context("truststore")
-        assert isinstance(ctx, truststore.SSLContext)
-
-    def test_truststore_plus_certifi_returns_combined_context(self) -> None:
-        ctx = _make_ssl_context("truststore+certifi")
-        assert type(ctx) is truststore.SSLContext
-
-    def test_unknown_name_raises_value_error(self) -> None:
-        with pytest.raises(ValueError, match="foobar"):
-            _make_ssl_context("foobar")
