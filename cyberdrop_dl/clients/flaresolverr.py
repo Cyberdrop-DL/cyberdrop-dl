@@ -36,7 +36,7 @@ class Command(StrEnum):
 
 @dataclasses.dataclass(slots=True)
 class Solution:
-    content: str
+    content: Any
     cookies: SimpleCookie
     headers: CIMultiDictProxy[str]
     url: AbsoluteHttpURL
@@ -224,11 +224,12 @@ async def check_solution(cdl_user_agent: str, solution: Solution) -> None:
         f"\n  Flaresolverr: '{solution.user_agent}'"
     )
 
-    try:
-        ddos_guard.check_html(solution.content)
-    except DDOSGuardError:
-        if solution.user_agent != cdl_user_agent:
-            raise DDOSGuardError(mismatch_ua_msg) from None
+    if type(solution.content) is str:
+        try:
+            ddos_guard.check_html(solution.content)
+        except DDOSGuardError:
+            if solution.user_agent != cdl_user_agent:
+                raise DDOSGuardError(mismatch_ua_msg) from None
 
     if solution.user_agent != cdl_user_agent:
         logger.warning(f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid")
