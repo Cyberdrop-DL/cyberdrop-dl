@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import itertools
 import logging
 import time
@@ -12,21 +11,21 @@ from aiolimiter import AsyncLimiter
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
-from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
     from typing import Any
 
     from cyberdrop_dl.clients.client import HTTPClient
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.progress import ProgressHook
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
+    from cyberdrop_dl.url_objects import MediaItem
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +80,12 @@ class DownloadClient:
 
         await asyncio.sleep(self.manager.config.global_settings.rate_limiting_options.total_delay)
 
-        async with self.__request_context(media_item.real_url, media_item.domain, media_item.headers) as resp:
+        async with self.http_client.request(
+            media_item.real_url,
+            headers=media_item.headers,
+            impersonate=media_item.domain in _USE_IMPERSONATION,
+            check=False,
+        ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 
     async def _process_response(
@@ -147,21 +151,6 @@ class DownloadClient:
         with hook:
             await self._append_content(media_item, hook, resp)
         return True
-
-    @contextlib.asynccontextmanager
-    async def __request_context(
-        self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-        if domain in _USE_IMPERSONATION:
-            resp = await self.http_client.curl_session.get(str(url), stream=True, headers=headers)
-            try:
-                yield AbstractResponse.create(resp)
-            finally:
-                await resp.aclose()
-            return
-
-        async with self.http_client._download_session.get(url, headers=headers) as resp:
-            yield resp
 
     async def _append_content(self, media_item: MediaItem, hook: ProgressHook, resp: AbstractResponse[Any]) -> None:
         check_free_space = storage.create_free_space_checker(media_item)

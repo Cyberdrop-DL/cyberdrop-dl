@@ -205,6 +205,7 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
+        check: bool = True,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         self = cast("HTTPClient", self)
@@ -227,12 +228,15 @@ class HTTPClient:
         async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
             exc = None
             try:
-                yield await self._check_response(resp, url)
+                if check:
+                    yield await self._check_response(resp, url)
+                else:
+                    yield resp
             except Exception as e:
                 exc = e
                 raise
             finally:
-                if self._responses_folder:
+                if self._responses_folder and check:
                     self.manager.logs.write_response(self._responses_folder, url, resp, exc)
                 exc = None
 
