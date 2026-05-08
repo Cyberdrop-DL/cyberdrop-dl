@@ -164,13 +164,14 @@ class HTTPClient:
         )
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
+        tcp_conn = tcp.create_connector(self.ssl_context)
         return aiohttp.ClientSession(
             headers={"User-Agent": self.manager.config.global_settings.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=self.manager.config.global_settings.rate_limiting_options._aiohttp_timeout,
             proxy=self.manager.config.global_settings.general.proxy,
-            connector=tcp.create_connector(self.ssl_context),
+            connector=tcp_conn,
             requote_redirect_url=False,
         )
 

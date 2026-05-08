@@ -54,7 +54,8 @@ async def choose_dns_resolver() -> type[aiohttp.AsyncResolver] | type[aiohttp.Th
 
 
 def create_connector(ssl_context: ssl.SSLContext | bool) -> aiohttp.TCPConnector:
-    assert _DNS_RESOLVER is not None
+    if _DNS_RESOLVER is None:
+        raise RuntimeError("DNS resolver is unknown")
     tcp_conn = aiohttp.TCPConnector(ssl=ssl_context, resolver=_DNS_RESOLVER())
     tcp_conn._resolver_owner = True
     return tcp_conn

@@ -15,6 +15,7 @@ from cyberdrop_dl.utils import json
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import Iterable, Iterator
 
     from yarl import URL
@@ -218,15 +219,16 @@ def _write_resp_to_disk(
     response: AbstractResponse[Any],
     exc: Exception | None = None,
 ) -> None:
-
-    max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
-
-    log_date = response.created_at.strftime(constants.LOGS_DATETIME_FORMAT)
-    path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
-    filename = f"{path_safe_url[:max_stem_len]}_{log_date}.html"
-    file = folder / filename
-    content = response.create_report(exc)
+    file = _prepare_resp_file(folder, url, response.created_at)
     try:
-        _ = file.write_text(content, "utf8")
+        _ = file.write_text(response.create_report(exc), "utf8")
     except OSError:
         pass
+
+
+def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime) -> Path:
+    max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
+    log_date = created_at.strftime(constants.LOGS_DATETIME_FORMAT)
+    path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
+    filename = f"{path_safe_url[:max_stem_len]}_{log_date}.html"
+    return folder / filename
