@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     import aiohttp
 
-    from cyberdrop_dl.clients import HTTPClient
+    from cyberdrop_dl.clients.client import HTTPClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.progress import ProgressHook

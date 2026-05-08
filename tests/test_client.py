@@ -5,7 +5,7 @@ import aiohttp
 import pytest
 import truststore
 
-from cyberdrop_dl.clients import HTTPClient, _make_ssl_context
+from cyberdrop_dl.clients.client import HTTPClient, _make_ssl_context
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
 

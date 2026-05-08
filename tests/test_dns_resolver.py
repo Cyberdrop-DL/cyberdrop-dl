@@ -3,7 +3,7 @@ import os
 
 from aiohttp.resolver import AsyncResolver, ThreadedResolver
 
-from cyberdrop_dl.clients import tcp
+from cyberdrop_dl.clients.client import tcp
 
 
 def test_dns_resolver_should_be_async_on_macos_and_linux() -> None:

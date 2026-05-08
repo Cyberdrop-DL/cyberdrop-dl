@@ -15,7 +15,7 @@ from pydantic.types import ByteSize
 
 from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
-from cyberdrop_dl.clients import HTTPClient
+from cyberdrop_dl.clients.client import HTTPClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
