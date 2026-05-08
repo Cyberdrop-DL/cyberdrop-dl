@@ -225,33 +225,19 @@ class HTTPClient:
         else:
             _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
-        resp = exc = None
+        yielded: bool = False
         try:
             async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
                 if check:
                     await self.check_http_status(resp)
+                yielded = True
                 yield resp
-        except DDOSGuardError as e:
-            exc = e
-            if not self.flaresolverr:
+        except DDOSGuardError:
+            if not self.flaresolverr or yielded:
                 raise
 
-            try:
-                resp = await self._flaresolverr_request(url, data)
-            except Exception as flare_e:
-                flare_e.__cause__ = e
-                exc = flare_e
-                raise flare_e from e
-            else:
-                yield resp
-
-        except Exception as e:
-            exc = e
-            raise
-        finally:
-            if self._responses_folder and resp:
-                self.manager.logs.write_response(self._responses_folder, url, resp, exc)
-            exc = resp = None
+            resp = await self._flaresolverr_request(url, data)
+            yield resp
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
         """
@@ -283,10 +269,15 @@ class HTTPClient:
             url,
             _LazyRequestLog(request_params),
         )
-
+        exc = None
         async with self.__request(url, method, request_params, impersonate=impersonate) as resp:
             logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
-            yield resp
+            try:
+                yield resp
+            finally:
+                if self._responses_folder:
+                    self.manager.logs.write_response(self._responses_folder, url, resp, exc)
+                del exc
 
     @contextlib.asynccontextmanager
     async def __request(
