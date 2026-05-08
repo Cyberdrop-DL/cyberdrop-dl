@@ -91,7 +91,7 @@ app = App(
     name="cyberdrop-dl",
     help="Bulk asynchronous downloader for multiple file hosts",
     version=__version__,
-    default_parameter=Parameter(negative_iterable=[]),
+    default_parameter=Parameter(negative_iterable=[], json_dict=False, json_list=False),
     result_action="return_value",
 )
 
