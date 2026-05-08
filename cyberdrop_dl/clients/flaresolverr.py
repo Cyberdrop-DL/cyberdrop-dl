@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
 
+from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.exceptions import DDOSGuardError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -191,3 +192,20 @@ def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
         if expires := cookie.get("expiry") or cookie.get("expires"):
             morsel["max-age"] = str(max(0, int(expires) - int(now)))
     return simple_cookie
+
+
+async def check_solution(cdl_user_agent: str, solution: Solution) -> None:
+    mismatch_ua_msg = (
+        "Config user_agent and flaresolverr user_agent do not match:"
+        f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
+        f"\n  Flaresolverr: '{solution.user_agent}'"
+    )
+
+    try:
+        ddos_guard.check_html(solution.content)
+    except DDOSGuardError:
+        if solution.user_agent != cdl_user_agent:
+            raise DDOSGuardError(mismatch_ua_msg) from None
+
+    if solution.user_agent != cdl_user_agent:
+        logger.warning(f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid")

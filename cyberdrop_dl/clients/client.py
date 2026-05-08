@@ -376,25 +376,8 @@ class HTTPClient:
                 raise e from None
 
             self.cookies.update_cookies(solution.cookies)
-            await _check_flaresolverr_resp(self.manager.config.global_settings.general.user_agent, solution)
+            await flaresolverr.check_solution(self.manager.config.global_settings.general.user_agent, solution)
             return AbstractResponse.create(solution)
-
-
-async def _check_flaresolverr_resp(cdl_user_agent: str, solution: flaresolverr.Solution) -> None:
-    mismatch_ua_msg = (
-        "Config user_agent and flaresolverr user_agent do not match:"
-        f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
-        f"\n  Flaresolverr: '{solution.user_agent}'"
-    )
-
-    try:
-        ddos_guard.check_html(solution.content)
-    except DDOSGuardError:
-        if solution.user_agent != cdl_user_agent:
-            raise DDOSGuardError(mismatch_ua_msg) from None
-
-    if solution.user_agent != cdl_user_agent:
-        logger.warning(f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid")
 
 
 def _write_resp_to_disk(

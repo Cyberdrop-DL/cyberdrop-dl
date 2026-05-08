@@ -37,6 +37,7 @@ _ResponseT = TypeVar(
     "_ResponseT",
     bound=ClientResponse | CurlResponse | FlaresolverrSolution,
     infer_variance=True,
+    default=Any,
 )
 
 
