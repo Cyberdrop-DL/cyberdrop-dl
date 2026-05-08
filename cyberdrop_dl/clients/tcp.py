@@ -53,14 +53,14 @@ async def choose_dns_resolver() -> type[aiohttp.AsyncResolver] | type[aiohttp.Th
     return _DNS_RESOLVER
 
 
-def new_connector(ssl_context: ssl.SSLContext | bool) -> aiohttp.TCPConnector:
+def create_connector(ssl_context: ssl.SSLContext | bool) -> aiohttp.TCPConnector:
     assert _DNS_RESOLVER is not None
     tcp_conn = aiohttp.TCPConnector(ssl=ssl_context, resolver=_DNS_RESOLVER())
     tcp_conn._resolver_owner = True
     return tcp_conn
 
 
-def make_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
+def create_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
     if not name:
         return False
     if name == "certifi":

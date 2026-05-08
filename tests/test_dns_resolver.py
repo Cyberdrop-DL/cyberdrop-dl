@@ -19,23 +19,23 @@ def test_dns_resolver_should_be_async_on_macos_and_linux() -> None:
 
 class TestMakeSSLContext:
     def test_none_or_empty_string_returns_false(self) -> None:
-        assert tcp.make_ssl_context(None) is False
-        assert tcp.make_ssl_context("") is False
+        assert tcp.create_ssl_context(None) is False
+        assert tcp.create_ssl_context("") is False
 
     def test_certifi_returns_default_context_with_certifi_bundle(self) -> None:
-        ctx = tcp.make_ssl_context("certifi")
+        ctx = tcp.create_ssl_context("certifi")
         assert type(ctx) is ssl.SSLContext
         assert ctx.check_hostname is True
         assert ctx.verify_mode == ssl.CERT_REQUIRED
 
     def test_truststore_returns_truststore_context(self) -> None:
-        ctx = tcp.make_ssl_context("truststore")
+        ctx = tcp.create_ssl_context("truststore")
         assert isinstance(ctx, truststore.SSLContext)
 
     def test_truststore_plus_certifi_returns_combined_context(self) -> None:
-        ctx = tcp.make_ssl_context("truststore+certifi")
+        ctx = tcp.create_ssl_context("truststore+certifi")
         assert type(ctx) is truststore.SSLContext
 
     def test_unknown_name_raises_value_error(self) -> None:
         with pytest.raises(ValueError, match="foobar"):
-            tcp.make_ssl_context("foobar")
+            tcp.create_ssl_context("foobar")

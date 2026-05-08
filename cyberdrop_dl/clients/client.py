@@ -17,7 +17,7 @@ from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
 from cyberdrop_dl import constants, cookies, ddos_guard, signature
-from cyberdrop_dl.clients import flaresolverr, tcp
+from cyberdrop_dl.clients import etag, flaresolverr, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
@@ -26,7 +26,7 @@ from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
 
     from bs4 import BeautifulSoup
     from curl_cffi.requests import AsyncSession
@@ -35,18 +35,6 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-
-_DOWNLOAD_ERROR_ETAGS = {
-    "d835884373f4d6c8f24742ceabe74946": "Imgur image has been removed",
-    "65b7753c-528a": "SC Scrape Image",
-    "5c4fb843-ece": "PixHost Removed Image",
-    "637be5da-11d2b": "eFukt Video removed",
-    "63a05f27-11d2b": "eFukt Video removed",
-    "5a56b09d-1485eb": "eFukt Video removed",
-    "19fdf2cd6-383c-5a4cd5b6710ed": "ImageVenue image not Found",
-    "383c-5a4cd5b6710ed": "ImageVenue image not Found",
-}
 
 
 logger = logging.getLogger(__name__)
@@ -109,7 +97,7 @@ class DownloadSpeedLimiter(AsyncLimiter):
 class HTTPClient:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.ssl_context = tcp.make_ssl_context(self.manager.config.global_settings.general.ssl_context)
+        self.ssl_context = tcp.create_ssl_context(self.manager.config.global_settings.general.ssl_context)
         self._cookies: aiohttp.CookieJar | None = None
         self.rate_limits: dict[str, AsyncLimiter] = {}
         self.global_rate_limiter = AsyncLimiter(self.manager.config.global_settings.rate_limiting_options.rate_limit, 1)
@@ -142,14 +130,6 @@ class HTTPClient:
         if self._cookies is None:
             self._cookies = aiohttp.CookieJar(quote_cookie=False)
         return self._cookies
-
-    @contextlib.contextmanager
-    def set_json_checker(self, check: Callable[[Any, AbstractResponse[Any]], None] | None = None) -> Generator[None]:
-        token = _JSON_CHECK.set(check)
-        try:
-            yield
-        finally:
-            _JSON_CHECK.reset(token)
 
     @property
     def flaresolverr(self) -> flaresolverr.FlareSolverrClient | None:
@@ -221,7 +201,7 @@ class HTTPClient:
             cookie_jar=self.cookies,
             timeout=self.manager.config.global_settings.rate_limiting_options._aiohttp_timeout,
             proxy=self.manager.config.global_settings.general.proxy,
-            connector=tcp.new_connector(self.ssl_context),
+            connector=tcp.create_connector(self.ssl_context),
             requote_redirect_url=False,
         )
 
@@ -241,7 +221,7 @@ class HTTPClient:
             response = AbstractResponse.create(response)
 
         if download:
-            _check_etag(response.headers)
+            etag.check(response.headers)
 
         if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
             # Check DDosGuard even on successful pages
@@ -263,11 +243,6 @@ class HTTPClient:
     @property
     def _default_headers(self) -> dict[Any, Any]:
         return {}
-
-    @contextlib.asynccontextmanager
-    async def _limiter(self, domain: str) -> AsyncGenerator[None]:
-        async with self.global_rate_limiter, self.rate_limits[domain]:
-            yield
 
     def _prepare_headers(self, headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
         """Add default headers and transform it to CIMultiDict"""
@@ -477,12 +452,16 @@ class HTTPClientProxy(Protocol):
         if impersonate is None:
             impersonate = self._IMPERSONATE
 
-        with self.client.set_json_checker(self.__json_resp_check__):
+        token = _JSON_CHECK.set(self.__json_resp_check__)
+        try:
             async with (
-                self.client._limiter(self.DOMAIN),
+                self.client.global_rate_limiter,
+                self.client.rate_limits[self.DOMAIN],
                 self.client.request(*args, impersonate=impersonate, **kwargs) as resp,
             ):
                 yield resp
+        finally:
+            _JSON_CHECK.reset(token)
 
     @signature.copy(request)
     async def request_json(self, *args, **kwargs) -> Any:
@@ -498,9 +477,3 @@ class HTTPClientProxy(Protocol):
     async def request_text(self, *args, **kwargs) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
-
-
-def _check_etag(headers: Mapping[str, str]) -> None:
-    e_tag = headers.get("ETag", "").strip('"')
-    if message := _DOWNLOAD_ERROR_ETAGS.get(e_tag):
-        raise DownloadError(HTTPStatus.NOT_FOUND, message)
