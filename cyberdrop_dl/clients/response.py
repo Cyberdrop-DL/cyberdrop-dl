@@ -251,7 +251,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
         content_type, location = _parse_headers(solution.url, solution.headers)
         if type(solution.content) is str:
             text = solution.content
-            if content_type and text:
+            if not content_type and text:
                 content_type = _infer_content_type_from_body(text)
         else:
             text = ""
