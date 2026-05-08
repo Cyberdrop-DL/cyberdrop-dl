@@ -211,7 +211,7 @@ class DownloadClient:
         if downloaded:
             await aio.move(media_item.partial_file, media_item.path)
             if not media_item.is_segment:
-                proceed = not filter_by_duration(media_item, self.manager.config)
+                proceed = not await filter_by_duration(media_item, self.manager.config)
                 await self.manager.database.history.add_duration(domain, media_item)
                 if not proceed:
                     logger.info(f"Download skipped {media_item.url} due to runtime restrictions")
