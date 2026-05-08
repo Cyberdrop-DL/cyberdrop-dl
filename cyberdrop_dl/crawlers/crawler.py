@@ -181,7 +181,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
 
         self.client: HTTPClient = self.manager.client_manager.scraper_client
-        self.downloader: Downloader = Downloader(self.manager, self.DOMAIN)
+        self.downloader: Downloader = Downloader(
+            self.manager,
+            self.DOMAIN,
+            use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
+            download_slots=self._DOWNLOAD_SLOTS,
+        )
 
         self.__post_init__()
 
@@ -199,11 +204,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                 return
             self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
 
-            if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.downloader.use_server_lock = True
-
-            if self._DOWNLOAD_SLOTS:
-                self.downloader.download_slots = self._DOWNLOAD_SLOTS
             await self.__async_post_init__()
             self._ready = True
 

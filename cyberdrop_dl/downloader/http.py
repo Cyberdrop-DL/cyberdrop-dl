@@ -72,16 +72,22 @@ class Downloader:
     manager: Manager
     domain: str
     log_prefix: str = "Download"
+    download_slots: int | None = None
     use_server_lock: bool = False
 
     waiting_items: int = dataclasses.field(init=False, default=0)
-    download_slots: int = dataclasses.field(init=False)
+
     client: DownloadClient = dataclasses.field(init=False)
 
     _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
     _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
-    _semaphore: asyncio.Semaphore | None = dataclasses.field(init=False, default=None)
+    _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
     _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(init=False, default_factory=aio.WeakAsyncLocks)
+
+    def __post_init__(self) -> None:
+        upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+        self._semaphore = asyncio.Semaphore(min(self.download_slots or upper_limit, upper_limit))
+        self.client = self.manager.client_manager.download_client
 
     @property
     def config(self) -> Config:
@@ -91,27 +97,16 @@ class Downloader:
     def _ignore_history(self) -> bool:
         return self.manager.config.settings.runtime_options.ignore_history
 
-    def __post_init__(self) -> None:
-        self.download_slots = (
-            self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
-        )
-        self.client = self.manager.client_manager.download_client
+    @property
+    def max_attempts(self) -> int:
+        if self.config.settings.download_options.disable_download_attempt_limit:
+            return 1
+        return self.config.global_settings.rate_limiting_options.download_attempts
 
     def _server_lock(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
         if self.use_server_lock:
             return self._server_locks[server]
         return _NULL_CONTEXT
-
-    @property
-    def _domain_limiter(self) -> asyncio.Semaphore:
-        if self._semaphore is None:
-            limit = min(
-                self.download_slots,
-                self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain,
-            )
-            self._semaphore = asyncio.Semaphore(limit)
-
-        return self._semaphore
 
     @error_handling_wrapper
     async def download(self, media_item: MediaItem) -> bool:
@@ -134,12 +129,6 @@ class Downloader:
                     f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
                 )
 
-    @property
-    def max_attempts(self) -> int:
-        if self.config.settings.download_options.disable_download_attempt_limit:
-            return 1
-        return self.config.global_settings.rate_limiting_options.download_attempts
-
     @contextlib.asynccontextmanager
     async def _download_context(self, media_item: MediaItem):
 
@@ -154,7 +143,7 @@ class Downloader:
         server = (media_item.debrid_link or media_item.url).host
         async with (
             self._server_lock(server),
-            self._domain_limiter,
+            self._semaphore,
             self.manager.client_manager.global_download_limiter,
         ):
             self._processed_items.add(media_item.db_path)
