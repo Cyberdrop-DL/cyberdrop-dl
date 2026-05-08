@@ -5,20 +5,23 @@ import csv
 import dataclasses
 import logging
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
+from cyberdrop_dl import constants
 from cyberdrop_dl.exceptions import get_origin
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.utils import json
+from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from pathlib import Path
 
     from yarl import URL
 
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import MediaItem
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 
 logger = logging.getLogger(__name__)
@@ -129,6 +132,23 @@ class CSVLogsManager:
             self._write_to_csv(self.files.scrape_error_log, url=url, error=error_message, origin=origin)
         )
 
+    def write_response(
+        self,
+        folder: Path,
+        url: AbsoluteHttpURL,
+        response: AbstractResponse[Any],
+        exc: Exception | None = None,
+    ):
+        _ = self.task_group.create_task(
+            asyncio.to_thread(
+                _write_resp_to_disk,
+                folder,
+                url,
+                response,
+                exc,
+            )
+        )
+
     async def update_last_forum_post(self, input_file: Path) -> None:
         """Updates the last forum post."""
 
@@ -190,3 +210,23 @@ def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:
 
     with input_file.open("w", encoding="utf8") as f:
         f.write("\n".join(updated_urls))
+
+
+def _write_resp_to_disk(
+    folder: Path,
+    url: AbsoluteHttpURL,
+    response: AbstractResponse[Any],
+    exc: Exception | None = None,
+) -> None:
+
+    max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
+
+    log_date = response.created_at.strftime(constants.LOGS_DATETIME_FORMAT)
+    path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
+    filename = f"{path_safe_url[:max_stem_len]}_{log_date}.html"
+    file = folder / filename
+    content = response.create_report(exc)
+    try:
+        _ = file.write_text(content, "utf8")
+    except OSError:
+        pass

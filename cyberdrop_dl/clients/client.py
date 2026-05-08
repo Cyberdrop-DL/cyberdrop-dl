@@ -8,7 +8,6 @@ import time
 import uuid
 from contextvars import ContextVar
 from http import HTTPStatus
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
@@ -16,17 +15,17 @@ from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
-from cyberdrop_dl import constants, cookies, ddos_guard, signature
+from cyberdrop_dl import cookies, ddos_guard, signature
 from cyberdrop_dl.clients import etag, flaresolverr, tcp
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.utils import truncated_preview
-from cyberdrop_dl.utils.filepath import sanitize_filename
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Mapping
+    from pathlib import Path
 
     from bs4 import BeautifulSoup
     from curl_cffi.requests import AsyncSession
@@ -281,15 +280,7 @@ class HTTPClient:
                 raise
             finally:
                 if self._save_responses_to_disk:
-                    _ = self.manager.logs.task_group.create_task(
-                        asyncio.to_thread(
-                            _write_resp_to_disk,
-                            self._responses_folder,
-                            url,
-                            resp,
-                            exc,
-                        )
-                    )
+                    self.manager.logs.write_response(self._responses_folder, url, resp, exc)
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
         """
@@ -362,26 +353,6 @@ class HTTPClient:
             self.cookies.update_cookies(solution.cookies)
             await flaresolverr.check_solution(self.manager.config.global_settings.general.user_agent, solution)
             return AbstractResponse.create(solution)
-
-
-def _write_resp_to_disk(
-    folder: Path,
-    url: AbsoluteHttpURL,
-    response: AbstractResponse[Any],
-    exc: Exception | None = None,
-) -> None:
-
-    max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
-
-    log_date = response.created_at.strftime(constants.LOGS_DATETIME_FORMAT)
-    path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
-    filename = f"{path_safe_url[:max_stem_len]}_{log_date}.html"
-    file = folder / filename
-    content = response.create_report(exc)
-    try:
-        _ = file.write_text(content, "utf8")
-    except OSError:
-        pass
 
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
