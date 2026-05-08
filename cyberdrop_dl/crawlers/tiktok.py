@@ -105,7 +105,7 @@ class TikTokCrawler(Crawler):
         if value := self.get_cookie_value(cookie_name):
             self._headers["x-proxy-cookie"] = f"{cookie_name}={value}"
             self.log.info(f"Found {cookie_name} cookies")
-        self.client.client_manager.cookies.clear_domain(self.PRIMARY_URL.host)
+        self.client.cookies.clear_domain(self.PRIMARY_URL.host)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

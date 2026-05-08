@@ -659,7 +659,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     def get_cookie_value(self, name: str) -> str | None:
-        if morsel := self.client.client_manager.cookies.filter_cookies(self.PRIMARY_URL).get(name):
+        if morsel := self.client.cookies.filter_cookies(self.PRIMARY_URL).get(name):
             return morsel.value
 
     @final
@@ -669,7 +669,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         If `url` is `None`, defaults to `self.PRIMARY_URL`
         """
         response_url = url or self.PRIMARY_URL
-        self.client.client_manager.cookies.update_cookies(cookies, response_url)
+        self.client.cookies.update_cookies(cookies, response_url)
 
     @final
     def iter_tags(
