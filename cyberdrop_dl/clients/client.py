@@ -102,7 +102,7 @@ class HTTPClient:
         if speed_limit:
             self.chunk_size = min(self.chunk_size, speed_limit)
 
-        self.download_client = DownloadClient(manager, self)
+        self.download_client = DownloadClient(manager)
         self._save_responses_to_disk = manager.config.settings.files.save_pages_html
         self._responses_folder = manager.config.settings.logs.main_log.parent / "cdl_responses"
 

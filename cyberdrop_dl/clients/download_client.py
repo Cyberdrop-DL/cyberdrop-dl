@@ -41,11 +41,14 @@ _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
 class DownloadClient:
     """Low level class that performs the actual HTTP download operations"""
 
-    def __init__(self, manager: Manager, client: HTTPClient) -> None:
+    def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.client = client
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
+
+    @property
+    def http_client(self) -> HTTPClient:
+        return self.manager.http_client
 
     async def _download(self, domain: str, media_item: MediaItem) -> bool:
         """Downloads a file."""
@@ -79,7 +82,7 @@ class DownloadClient:
             await aio.unlink(media_item.partial_file)
 
         etag.check(resp.headers)
-        await self.client.check_http_status(resp)
+        await self.http_client.check_http_status(resp)
 
         if not media_item.is_segment:
             _ = get_content_type(media_item.ext, resp.headers)
@@ -144,14 +147,14 @@ class DownloadClient:
         self, url: AbsoluteHttpURL, domain: str, headers: dict[str, str]
     ) -> AsyncGenerator[AbstractResponse[Any] | aiohttp.ClientResponse]:
         if domain in _USE_IMPERSONATION:
-            resp = await self.client.curl_session.get(str(url), stream=True, headers=headers)
+            resp = await self.http_client.curl_session.get(str(url), stream=True, headers=headers)
             try:
                 yield AbstractResponse.create(resp)
             finally:
                 await resp.aclose()
             return
 
-        async with self.client._download_session.get(url, headers=headers) as resp:
+        async with self.http_client._download_session.get(url, headers=headers) as resp:
             yield resp
 
     async def _request_download(
@@ -176,10 +179,10 @@ class DownloadClient:
         await self._pre_download_check(media_item)
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
-            async for chunk in content.iter_chunked(self.client.chunk_size):
+            async for chunk in content.iter_chunked(self.http_client.chunk_size):
                 await check_free_space()
                 chunk_size = len(chunk)
-                await self.client.speed_limiter.acquire(chunk_size)
+                await self.http_client.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()
