@@ -7,7 +7,7 @@ import platform
 import ssl
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import TYPE_CHECKING, Any, Literal, Self, final
 
 import aiohttp
 import certifi
@@ -225,16 +225,9 @@ class ClientManager:
         async for cookie in read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    def get_rate_limiter(self, domain: str) -> AsyncLimiter:
-        """Get a rate limiter for a domain."""
-        if domain in self.rate_limits:
-            return self.rate_limits[domain]
-        return self.rate_limits["other"]
-
+    @final
     async def check_http_status(
-        self,
-        response: ClientResponse | CurlResponse | AbstractResponse[Any],
-        download: bool = False,
+        self, response: ClientResponse | CurlResponse | AbstractResponse[Any], download: bool = False
     ) -> None:
         """Checks the HTTP status code and raises an exception if it's not acceptable."""
         if not isinstance(response, AbstractResponse):
@@ -245,12 +238,11 @@ class ClientManager:
 
         if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
             # Check DDosGuard even on successful pages
-            await ddos_guard.check(response)
+            await ddos_guard.check_resp(response)
             return
 
         await self._check_json(response)
-
-        await ddos_guard.check(response)
+        await ddos_guard.check_resp(response)
         raise DownloadError(status=response.status)
 
     async def _check_json(self, response: AbstractResponse[Any]) -> None:

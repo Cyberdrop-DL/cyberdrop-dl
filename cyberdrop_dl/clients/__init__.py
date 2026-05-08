@@ -82,8 +82,7 @@ class HTTPClient:
 
     @contextlib.asynccontextmanager
     async def _limiter(self, domain: str) -> AsyncGenerator[None]:
-        domain_limiter = self.client_manager.get_rate_limiter(domain)
-        async with self.client_manager.global_rate_limiter, domain_limiter:
+        async with self.client_manager.global_rate_limiter, self.client_manager.rate_limits[domain]:
             yield
 
     def _prepare_headers(self, headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
@@ -232,7 +231,7 @@ async def _check_flaresolverr_resp(cdl_user_agent: str, solution: flaresolverr.S
     )
 
     try:
-        await ddos_guard.check(solution.content)
+        ddos_guard.check_html(solution.content)
     except DDOSGuardError:
         if solution.user_agent != cdl_user_agent:
             raise DDOSGuardError(mismatch_ua_msg) from None
