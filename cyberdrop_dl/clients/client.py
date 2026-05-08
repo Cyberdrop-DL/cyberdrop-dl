@@ -236,7 +236,7 @@ class HTTPClient:
                 exc = e
                 raise
             finally:
-                if self._responses_folder and check:
+                if self._responses_folder:
                     self.manager.logs.write_response(self._responses_folder, url, resp, exc)
                 exc = None
 
