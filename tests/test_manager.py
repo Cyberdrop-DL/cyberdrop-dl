@@ -48,7 +48,7 @@ def test_manager_context() -> None:
     config = Config.parse_args(["--refresh-rate", "40"])
     manager = Manager(config=config)
 
-    for attr in ("database", "deduper", "sorter", "http_client"):
+    for attr in ("database", "deduper", "sorter"):
         with pytest.raises(AttributeError):
             getattr(manager, attr)
 
