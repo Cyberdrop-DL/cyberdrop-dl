@@ -233,11 +233,10 @@ class HTTPClient:
                 yielded = True
                 yield resp
         except DDOSGuardError:
-            if not self.flaresolverr or yielded:
+            if yielded or not self.flaresolverr:
                 raise
 
-            resp = await self._flaresolverr_request(url, data)
-            yield resp
+            yield await self._flaresolverr_request(url, data)
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
         """
@@ -278,6 +277,7 @@ class HTTPClient:
                 if self._responses_folder:
                     self.manager.logs.write_response(self._responses_folder, url, resp, exc)
                 del exc
+                del resp
 
     @contextlib.asynccontextmanager
     async def __request(
