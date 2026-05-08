@@ -314,7 +314,7 @@ class HTTPClient:
 
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
-        await flaresolverr.check_solution(self.manager.config.global_settings.general.user_agent, solution)
+        flaresolverr.verify_solution(self.manager.config.global_settings.general.user_agent, solution)
         return AbstractResponse.create(solution)
 
 

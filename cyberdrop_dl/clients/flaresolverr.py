@@ -217,7 +217,7 @@ def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
     return simple_cookie
 
 
-async def check_solution(cdl_user_agent: str, solution: Solution) -> None:
+def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
     mismatch_ua_msg = (
         "Config user_agent and flaresolverr user_agent do not match:"
         f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
