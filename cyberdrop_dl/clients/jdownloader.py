@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from myjdapi.myjdapi import Jddevice
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 

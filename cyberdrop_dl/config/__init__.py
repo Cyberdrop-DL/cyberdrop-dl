@@ -19,7 +19,7 @@ from .settings import ConfigSettings
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from cyberdrop_dl.managers.manager import AppData, Manager
+    from cyberdrop_dl.manager import AppData, Manager
 
     _BaseModelT = TypeVar("_BaseModelT", bound=BaseModel)
 

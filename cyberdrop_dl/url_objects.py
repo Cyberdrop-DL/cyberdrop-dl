@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     import aiohttp
 
     from cyberdrop_dl import signature
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
     class AbsoluteHttpURL(yarl.URL):
         @signature.copy(yarl.URL.__new__)

@@ -1,8 +1,8 @@
 DOMAIN = "pimpbunny.com"
 TEST_CASES = [
-    (
-        "https://pimpbunny.com/videos/vladislava-flexes-muscles-in-the-shower",
-        [
+    {
+        "url": "https://pimpbunny.com/videos/vladislava-flexes-muscles-in-the-shower",
+        "results": [
             {
                 "url": "https://pimpbunny.com/videos/vladislava-flexes-muscles-in-the-shower",
                 "filename": "Vladislava Flexes Muscles In The Shower [344744][1440p].mp4",
@@ -10,34 +10,30 @@ TEST_CASES = [
                 "album_id": None,
             }
         ],
-    ),
-    (
-        "https://pimpbunny.com/albums/boudoirbunny/",
-        [
+    },
+    {
+        "url": "https://pimpbunny.com/albums/boudoirbunny/",
+        "results": [
             {
                 "url": "re:https://pimpbunny.com/get_image",
-                "download_folder": r"re:Boudoirbunny \[album\] \(PimpBunny\)",
+                "download_folder": "re:Boudoirbunny \\[album\\] \\(PimpBunny\\)",
                 "referer": "https://pimpbunny.com/albums/boudoirbunny/",
                 "album_id": None,
             }
         ],
-        73,
-    ),
-    (
-        "https://pimpbunny.com/albums/models/boudoirbunny/",
-        [
+        "count": 73,
+    },
+    {
+        "url": "https://pimpbunny.com/albums/models/boudoirbunny/",
+        "results": [
             {
                 "url": "re:https://pimpbunny.com/get_image",
-                "download_folder": r"re:BoudoIrBunny \[model\] \(PimpBunny\)/Boudoirbunny \[album\]",
+                "download_folder": "re:BoudoIrBunny \\[model\\] \\(PimpBunny\\)/Boudoirbunny \\[album\\]",
                 "referer": "https://pimpbunny.com/albums/boudoirbunny/",
                 "album_id": None,
             }
         ],
-        102,
-    ),
-    (
-        "https://pimpbunny.com/onlyfans-models/boudoirbunny/",
-        [],
-        107,
-    ),
+        "count": 102,
+    },
+    {"url": "https://pimpbunny.com/onlyfans-models/boudoirbunny/", "results": [], "count": 107},
 ]

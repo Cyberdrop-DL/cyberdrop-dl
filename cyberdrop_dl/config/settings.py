@@ -1,7 +1,9 @@
 # ruff: noqa: RUF012
+import dataclasses
 import logging
 import re
 from datetime import date, datetime, timedelta
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -143,6 +145,26 @@ class Logs(SettingsGroup):
         return self.__dict__ == other.__dict__
 
 
+@dataclasses.dataclass(slots=True)
+class Range:
+    min: float
+    max: float
+
+    def __post_init__(self) -> None:
+        if not self.max:
+            self.max = float("inf")
+
+    def __contains__(self, value: float, /) -> bool:
+        return self.min <= value <= self.max
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FileSizeRanges:
+    video: Range
+    image: Range
+    other: Range
+
+
 class FileSizeLimits(SettingsGroup):
     maximum_image_size: ByteSizeSerilized = ByteSize(0)
     maximum_other_size: ByteSizeSerilized = ByteSize(0)
@@ -150,6 +172,29 @@ class FileSizeLimits(SettingsGroup):
     minimum_image_size: ByteSizeSerilized = ByteSize(0)
     minimum_other_size: ByteSizeSerilized = ByteSize(0)
     minimum_video_size: ByteSizeSerilized = ByteSize(0)
+
+    @cached_property
+    def ranges(self) -> FileSizeRanges:
+        return FileSizeRanges(
+            video=Range(
+                self.minimum_video_size,
+                self.maximum_video_size,
+            ),
+            image=Range(
+                self.minimum_image_size,
+                self.maximum_image_size,
+            ),
+            other=Range(
+                self.minimum_other_size,
+                self.maximum_other_size,
+            ),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class MediaDurationRanges:
+    video: Range
+    audio: Range
 
 
 class MediaDurationLimits(SettingsGroup):
@@ -170,6 +215,19 @@ class MediaDurationLimits(SettingsGroup):
         if input_date is None:
             return timedelta(seconds=0)
         return to_timedelta(input_date)
+
+    @cached_property
+    def ranges(self) -> MediaDurationRanges:
+        return MediaDurationRanges(
+            video=Range(
+                self.minimum_video_duration.total_seconds(),
+                self.maximum_video_duration.total_seconds(),
+            ),
+            audio=Range(
+                self.minimum_audio_duration.total_seconds(),
+                self.maximum_audio_duration.total_seconds(),
+            ),
+        )
 
 
 class IgnoreOptions(SettingsGroup):

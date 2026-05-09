@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Final, Literal
 
 import xxhash
 
-from cyberdrop_dl import aio
+from cyberdrop_dl import aio, stats
 from cyberdrop_dl.constants import Hashing, TempExt
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from yarl import URL
 
     from cyberdrop_dl.config.settings import DupeCleanup
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import MediaItem
 
 FileHashes = dict[str, dict[int, set[Path]]]
@@ -46,11 +46,24 @@ def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> 
 
 
 async def hash_directory_scanner(manager: Manager, path: Path) -> None:
-    manager.async_db_hash_startup()
     async with manager.database:
-        stats = await manager.hasher.hash_directory(path)
+        hash_stats = await hash_directory(manager, path)
 
-    manager.print_hashing_stats(stats)
+    stats.print(hash_stats)
+
+
+async def hash_directory(manager: Manager, path: Path) -> HashingStats:
+    hasher = Hasher(manager)
+    hasher._tui = tui = HashingUI(path)
+    with tui():
+        if not await aio.is_dir(path):
+            raise NotADirectoryError(None, path)
+
+        async with asyncio.TaskGroup() as tg:
+            async for file in aio.rglob(path, "*"):
+                _ = tg.create_task(hasher.update_db_and_retrive_hash(file))
+
+    return tui.stats
 
 
 @dataclasses.dataclass(slots=True)
@@ -85,24 +98,6 @@ class Hasher:
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
         return await asyncio.to_thread(_compute_hash, file_path, hash_type)
-
-    async def hash_directory(self, path: Path) -> HashingStats:
-        path = Path(path)
-        tui = HashingUI(path)
-        old_tui = self._tui
-        with tui():
-            if not await aio.is_dir(path):
-                raise NotADirectoryError(None, path)
-
-            try:
-                self._tui = tui
-                async with asyncio.TaskGroup() as tg:
-                    async for file in aio.rglob(path, "*"):
-                        _ = tg.create_task(self.update_db_and_retrive_hash(file))
-            finally:
-                self._tui = old_tui
-
-        return tui.stats
 
     async def hash_item(self, media_item: MediaItem) -> None:
         if media_item.is_segment:

@@ -1,50 +1,50 @@
 DOMAIN = "imx.to"
 TEST_CASES = [
-    (
-        "https://imx.to/i/65axjs",
-        [
+    {
+        "url": "https://imx.to/i/65axjs",
+        "results": [
             {
                 "url": "https://image.imx.to/u/i/2025/06/07/65axjs.jpg",
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://imx.to/u/i/2025/06/07/65axjs.jpg",
-        [
+    },
+    {
+        "url": "https://imx.to/u/i/2025/06/07/65axjs.jpg",
+        "results": [
             {
                 "url": "https://image.imx.to/u/i/2025/06/07/65axjs.jpg",
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://i006.imx.to/i/2025/06/07/65axjs.jpg",
-        [
+    },
+    {
+        "url": "https://i006.imx.to/i/2025/06/07/65axjs.jpg",
+        "results": [
             {
                 "url": "https://image.imx.to/u/i/2025/06/07/65axjs.jpg",
                 "filename": "MetArt_Aperi_Melena-A_high_0014.jpg",
                 "referer": "https://imx.to/i/65axjs",
                 "album_id": None,
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://imx.to/g/1g79u",
-        [
+    },
+    {
+        "url": "https://imx.to/g/1g79u",
+        "results": [
             {
                 "url": "https://image.imx.to/u/i/2025/08/01/68g6y2.jpg",
                 "filename": "525669511_18517410283043270_6195144073773837855_n.jpg",
                 "referer": "https://imx.to/i/68g6y2",
                 "album_id": "1g79u",
-                "datetime": None,
+                "uploaded_at": None,
                 "download_folder": "re:Krysten Ritter",
             },
             {
@@ -68,15 +68,15 @@ TEST_CASES = [
                 "referer": "https://imx.to/i/68g6y4",
             },
         ],
-    ),
-    (
-        "https://imx.to/u/t/2025/08/01/68g6y2.jpg",
-        [
+    },
+    {
+        "url": "https://imx.to/u/t/2025/08/01/68g6y2.jpg",
+        "results": [
             {
                 "url": "https://image.imx.to/u/i/2025/08/01/68g6y2.jpg",
                 "filename": "525669511_18517410283043270_6195144073773837855_n.jpg",
                 "referer": "https://imx.to/i/68g6y2",
-            },
+            }
         ],
-    ),
+    },
 ]

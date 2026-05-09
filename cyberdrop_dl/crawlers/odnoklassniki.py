@@ -148,7 +148,7 @@ class OdnoklassnikiCrawler(Crawler):
         resolution, src = _get_best_src(metadata)
         cdn_url = self.parse_url(src)
         # downloads may fail if we have cdn cookies
-        self.client.client_manager.cookies.clear_domain(cdn_url.host)
+        self.client.cookies.clear_domain(cdn_url.host)
         json_ld = css.json_ld(soup)
         title: str = metadata["movie"].get("title") or json_ld["name"]
         scrape_item.uploaded_at = self.parse_iso_date(json_ld["uploadDate"])

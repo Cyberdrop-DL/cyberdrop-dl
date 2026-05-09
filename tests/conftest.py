@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from cyberdrop_dl.managers.manager import Manager
+from cyberdrop_dl.manager import Manager
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -63,16 +63,13 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
     return caplog
 
 
-@pytest.fixture(scope="function", name="manager")
-def post_startup_manager() -> Manager:
-    manager = Manager()
-    manager.resolve_paths()
-    return manager
+@pytest.fixture(scope="function")
+def manager() -> Generator[Manager]:
+    with Manager()() as manager:
+        yield manager
 
 
 @pytest.fixture(scope="function")
 async def running_manager(manager: Manager) -> AsyncGenerator[Manager]:
-    await manager.async_startup()
-
     async with manager.database:
         yield manager

@@ -1,8 +1,8 @@
 DOMAIN = "porntrex"
 TEST_CASES = [
-    (
-        "https://www.porntrex.com/video/3001819/a-pandemic-will-not-stop-the-two-lovers",
-        [
+    {
+        "url": "https://www.porntrex.com/video/3001819/a-pandemic-will-not-stop-the-two-lovers",
+        "results": [
             {
                 "url": "https://www.porntrex.com/video/3001819",
                 "debrid_url": "re:/get_file/",
@@ -10,32 +10,26 @@ TEST_CASES = [
                 "original_filename": "3001819_1080p.mp4",
                 "download_folder": "re:Loose Files (Porntrex)",
                 "referer": "https://www.porntrex.com/video/3001819",
-                "datetime": None,
+                "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://www.porntrex.com/search/song/",
-        [
-            {
-                "url": "ANY",
-                "download_folder": "re:song [search] (Porntrex)",
-                "album_id": None,
-            },
-        ],
-        range(255, 300),
-    ),
-    (
-        "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
-        [
+    },
+    {
+        "url": "https://www.porntrex.com/search/song/",
+        "results": [{"url": "ANY", "download_folder": "re:song [search] (Porntrex)", "album_id": None}],
+        "count": range(255, 300),
+    },
+    {
+        "url": "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
+        "results": [
             {
                 "url": "re:/get_image/",
                 "referer": "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
                 "download_folder": "re:Brandi Love SET 35 (Porntrex)",
-                "datetime": None,
+                "uploaded_at": None,
                 "album_id": "57737",
-            },
+            }
         ],
-        376,
-    ),
+        "count": 376,
+    },
 ]

@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config._global import GenericCrawlerInstances
     from cyberdrop_dl.crawlers.crawler import Crawler
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
     _T = TypeVar("_T")
     _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
@@ -128,10 +128,10 @@ class ScrapeMapper:
     _done: asyncio.Event = dataclasses.field(init=False, default_factory=asyncio.Event)
 
     def _scrape_queue(self) -> int:
-        return sum(f.waiting_items for f in self._factory)
+        return sum(crawler.waiting_items for crawler in self._factory)
 
     def _download_queue(self):
-        total = sum(f.downloader.waiting_items for f in self._factory)
+        total = sum(crawler.downloader.waiting_items for crawler in self._factory)
         self.tui.files.stats.queued = total
         return total
 
@@ -166,12 +166,16 @@ class ScrapeMapper:
         _ = filepath.MAX_FILE_LEN.set(self.manager.config.global_settings.general.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(self.manager.config.global_settings.general.max_folder_name_length)
 
-        await self.manager.client_manager.load_cookie_files()
+        self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
+        if self.manager.config.settings.sorting.sort_downloads:
+            self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+
+        await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
         self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!
         with self.tui():
             async with (
-                self.manager.client_manager,
+                self.manager.http_client,
                 storage.monitor(self.manager.config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
@@ -194,7 +198,7 @@ class ScrapeMapper:
             logger.exception("Failed to connect to jDownloader")
 
         await self._real_debrid.__async_init__()
-        self._direct_http.__init_downloader__()
+        await self._direct_http.__async_post_init__()
 
         item_limit = 0
         if self.manager.cli_args.retry_any and self.manager.cli_args.max_items_retry:

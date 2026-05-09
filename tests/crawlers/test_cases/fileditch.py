@@ -1,15 +1,15 @@
 DOMAIN = "fileditch"
 TEST_CASES = [
-    (
-        "https://fileditchfiles.me/file.php?f=/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
-        [
+    {
+        "url": "https://fileditchfiles.me/file.php?f=/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
+        "results": [
             {
-                "url": r"re:https://thegumonmyshoe.me/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
+                "url": "re:https://thegumonmyshoe.me/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "filename": "FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "referer": "https://fileditchfiles.me/file.php?f=/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
-                "download_folder": r"re:Loose Files (Fileditch)",
-                "datetime": None,
-            },
+                "download_folder": "re:Loose Files (Fileditch)",
+                "uploaded_at": None,
+            }
         ],
-    ),
+    }
 ]

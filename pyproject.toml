@@ -52,7 +52,7 @@ license-files = ["LICENSE"]
 maintainers = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
 readme = "README.md"
 requires-python = ">=3.11"
-version = "9.6.0"
+version = "9.7.1.dev2"
 
 [project.optional-dependencies]
 apprise = [
@@ -111,7 +111,7 @@ omit = [
 ]
 
 [tool.pytest.ini_options]
-addopts = ["-s"]
+addopts = ["--tb=short", "-ra", "-s", "-v"]
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 asyncio_mode = "auto"
@@ -122,6 +122,8 @@ markers = [
     "crawler_test_case: tests that do full run with a crawler (making actual network requests)"
 ]
 minversion = "8.4.1"
+strict_config = true
+strict_markers = true
 
 [tool.ruff]
 exclude = ["cyberdrop_dl/dependencies/browser_cookie3.py"]
@@ -168,6 +170,9 @@ unfixable = [
     "T20"  # flake8-print
 ]
 "__init__.py" = ["E402"]  # imports not at the top of the file.
+"tests/crawlers/test_cases/*" = [
+    "RUF001"  # String contains ambiguous chars.
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

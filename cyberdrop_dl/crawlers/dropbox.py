@@ -166,7 +166,7 @@ class DropboxCrawler(Crawler):
 
     @error_handling_wrapper
     async def _get_web_token(self, *_):
-        async with self.request(self.PRIMARY_URL, method="HEAD", cache_disabled=True):
+        async with self.request(self.PRIMARY_URL, method="HEAD"):
             token = self.get_cookie_value("t")
             if not token:
                 self.disabled = True

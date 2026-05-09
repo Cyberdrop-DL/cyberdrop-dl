@@ -62,4 +62,4 @@ async def test_solve_anubis_challenge() -> None:
 
 async def test_ddos_response_should_raise_ddos_guard_error() -> None:
     with pytest.raises(DDOSGuardError):
-        await ddos_guard.check(anubis_html)
+        ddos_guard.check_html(anubis_html)

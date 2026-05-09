@@ -13,8 +13,6 @@ from bs4 import BeautifulSoup
 
 from cyberdrop_dl.exceptions import DDOSGuardError
 
-__all__ = ["check"]
-
 
 class _Response(Protocol):
     @property
@@ -22,22 +20,18 @@ class _Response(Protocol):
     async def text(self) -> str: ...
 
 
-async def check(content: _Response | str | BeautifulSoup, /) -> None:
-    if isinstance(content, str):
-        soup = BeautifulSoup(content, "html.parser")
-
-    elif isinstance(content, BeautifulSoup):
-        soup = content
-
-    elif "html" not in content.content_type:
+async def check_resp(resp: _Response, /) -> None:
+    if "html" not in resp.content_type:
         return
 
-    else:
-        try:
-            soup = BeautifulSoup(await content.text(), "html.parser")
-        except UnicodeDecodeError:
-            return
+    return check_html(await resp.text())
 
+
+def check_html(html: str) -> None:
+    check_soup(BeautifulSoup(html, "html.parser"))
+
+
+def check_soup(soup: BeautifulSoup) -> None:
     for protection in (DDosGuard, CloudFlareTurnstile, Anubis):
         if protection.check(soup):
             raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")

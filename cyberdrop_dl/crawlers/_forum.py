@@ -351,7 +351,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         self.log.warning(msg)
 
     async def check_login_with_request(self, login_url: AbsoluteHttpURL) -> tuple[str, bool]:
-        text = await self.request_text(login_url, cache_disabled=True)
+        text = await self.request_text(login_url)
         logged_in = '<span class="p-navgroup-user-linkText">' in text or "You are already logged in." in text
         return text, logged_in
 

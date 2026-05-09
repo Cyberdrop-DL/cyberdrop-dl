@@ -1,8 +1,8 @@
 DOMAIN = "tokyomotion"
 TEST_CASES = [
-    (
-        "https://www.tokyomotion.net/album/68827",
-        [
+    {
+        "url": "https://www.tokyomotion.net/album/68827",
+        "results": [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895409.jpg",
                 "filename": "895409.jpg",
@@ -234,11 +234,11 @@ TEST_CASES = [
                 "download_folder": "re:mikansu1_4 (Tokyomotion)",
             },
         ],
-        23,
-    ),
-    (
-        "https://www.tokyomotion.net/video/6347379",
-        [
+        "count": 23,
+    },
+    {
+        "url": "https://www.tokyomotion.net/video/6347379",
+        "results": [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
@@ -250,11 +250,11 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (Tokyomotion)",
             }
         ],
-        1,
-    ),
-    (
-        "https://www.tokyomotion.net/user/cocomincho/videos",
-        [
+        "count": 1,
+    },
+    {
+        "url": "https://www.tokyomotion.net/user/cocomincho/videos",
+        "results": [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
@@ -276,11 +276,11 @@ TEST_CASES = [
                 "download_folder": "re:cocomincho [user] (Tokyomotion)/videos",
             },
         ],
-        2,
-    ),
-    (
-        "https://www.tokyomotion.net/user/cocomincho",
-        [
+        "count": 2,
+    },
+    {
+        "url": "https://www.tokyomotion.net/user/cocomincho",
+        "results": [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
@@ -303,7 +303,7 @@ TEST_CASES = [
             },
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/be73a49ae8a96a385e5a",
-                "filename": "３P [6075129].mp4",  # noqa: RUF001
+                "filename": "３P [6075129].mp4",
                 "debrid_link": None,
                 "original_filename": "6075129.mp4",
                 "referer": "https://www.tokyomotion.net/video/6075129",
@@ -352,11 +352,11 @@ TEST_CASES = [
                 "download_folder": "re:cocomincho [user] (Tokyomotion)/favorite/videos",
             },
         ],
-        7,
-    ),
-    (
-        "https://www.tokyomotion.net/photo/895409/",
-        [
+        "count": 7,
+    },
+    {
+        "url": "https://www.tokyomotion.net/photo/895409/",
+        "results": [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895409.jpg",
                 "filename": "895409.jpg",
@@ -364,7 +364,7 @@ TEST_CASES = [
                 "album_id": None,
                 "uploaded_at": None,
                 "download_folder": "re:Loose Files (Tokyomotion)",
-            },
+            }
         ],
-    ),
+    },
 ]

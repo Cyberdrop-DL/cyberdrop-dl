@@ -67,7 +67,6 @@ class CLIargs(BaseModel):
             "chrome_android",
             "firefox",
         ]
-        | bool
         | None
     ) = Field(
         default=None,

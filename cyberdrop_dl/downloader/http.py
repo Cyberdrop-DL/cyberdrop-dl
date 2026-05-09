@@ -2,38 +2,38 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import os
-from dataclasses import field
 from typing import TYPE_CHECKING, NamedTuple
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
+from cyberdrop_dl.clients.downloads import filter_by_duration
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
-    ErrorLogMessage,
     InsufficientFreeSpaceError,
     InvalidContentTypeError,
     RestrictedDateRangeError,
     RestrictedFiletypeError,
     SkipDownloadError,
-    TooManyCrawlerErrors,
 )
 from cyberdrop_dl.url_objects import HlsSegment, MediaItem
 from cyberdrop_dl.utils import dates, error_handling_wrapper, parse_url
 
-logger = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    import datetime
+    from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
-    from cyberdrop_dl.clients.download_client import DownloadClient
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.clients.downloads import DownloadClient
+    from cyberdrop_dl.config import Config
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
+
+logger = logging.getLogger(__name__)
 
 
 class SegmentDownloadResult(NamedTuple):
@@ -41,7 +41,7 @@ class SegmentDownloadResult(NamedTuple):
     downloaded: bool
 
 
-KNOWN_BAD_URLS = {
+_KNOWN_BAD_URLS = {
     "https://i.imgur.com/removed.png": 404,
     "https://saint2.su/assets/notfound.gif": 404,
     "https://bnkr.b-cdn.net/maintenance-vid.mp4": 503,
@@ -51,24 +51,64 @@ KNOWN_BAD_URLS = {
 }
 
 
-GENERIC_CRAWLERS = ".", "no_crawler"
+_GENERIC_CRAWLERS = ".", "no_crawler"
+_FILE_LOCKS: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+_NULL_CONTEXT: contextlib.nullcontext[None] = contextlib.nullcontext()
 
 
+@contextlib.asynccontextmanager
+async def _exclusive_lock(media_item: MediaItem) -> AsyncGenerator[None]:
+    async with _FILE_LOCKS[media_item.filename]:
+        logger.debug(f"Lock for '{media_item.filename}' acquired")
+        try:
+            yield
+        finally:
+            logger.debug(f"Lock for '{media_item.filename}' released")
+
+
+@dataclasses.dataclass(slots=True)
 class Downloader:
-    def __init__(self, manager: Manager, domain: str) -> None:
-        self.manager: Manager = manager
-        self.domain: str = domain
+    """Hight level class that handles limiters, database checks, skip by config checks and retries"""
 
-        self.client: DownloadClient = field(init=False)
-        self.log_prefix = "Download attempt (unsupported domain)" if domain in GENERIC_CRAWLERS else "Download"
-        self.processed_items: set[str] = set()
-        self.waiting_items = 0
+    manager: Manager
+    domain: str
+    log_prefix: str = "Download"
+    download_slots: int | None = None
+    use_server_lock: bool = False
 
-        self._additional_headers = {}
-        self._current_attempt_filesize: dict[str, int] = {}
-        self._file_lock_vault = manager.client_manager.file_locks
-        self._ignore_history = manager.config.settings.runtime_options.ignore_history
-        self._semaphore: asyncio.Semaphore = field(init=False)
+    waiting_items: int = dataclasses.field(init=False, default=0)
+
+    _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
+    _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
+    _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
+    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(init=False, default_factory=aio.WeakAsyncLocks)
+
+    def __post_init__(self) -> None:
+        upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
+        self._semaphore = asyncio.Semaphore(min(self.download_slots or upper_limit, upper_limit))
+
+    @property
+    def client(self) -> DownloadClient:
+        return self.manager.download_client
+
+    @property
+    def config(self) -> Config:
+        return self.manager.config
+
+    @property
+    def _ignore_history(self) -> bool:
+        return self.manager.config.settings.runtime_options.ignore_history
+
+    @property
+    def max_attempts(self) -> int:
+        if self.config.settings.download_options.disable_download_attempt_limit:
+            return 1
+        return self.config.global_settings.rate_limiting_options.download_attempts
+
+    def _server_lock(self, server: str) -> asyncio.Lock | contextlib.nullcontext[None]:
+        if self.use_server_lock:
+            return self._server_locks[server]
+        return _NULL_CONTEXT
 
     @error_handling_wrapper
     async def download(self, media_item: MediaItem) -> bool:
@@ -88,23 +128,8 @@ class Downloader:
                     raise
 
                 logger.info(
-                    f"Retrying {self.log_prefix.lower()}: {media_item.url} , retry attempt: {media_item.attempts + 1}"
+                    f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
                 )
-
-    @property
-    def max_attempts(self):
-        if self.manager.config.settings.download_options.disable_download_attempt_limit:
-            return 1
-        return self.manager.config.global_settings.rate_limiting_options.download_attempts
-
-    def startup(self) -> None:
-        """Starts the downloader."""
-        self.client = self.manager.client_manager.download_client
-        self._semaphore = asyncio.Semaphore(self.manager.client_manager.get_download_slots(self.domain))
-
-        self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
-        if self.manager.config.settings.sorting.sort_downloads:
-            self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
     @contextlib.asynccontextmanager
     async def _download_context(self, media_item: MediaItem):
@@ -118,21 +143,19 @@ class Downloader:
         self.waiting_items += 1
 
         server = (media_item.debrid_link or media_item.url).host
-        server_limit, domain_limit, global_limit = (
-            self.client.server_limiter(media_item.domain, server),
+        async with (
+            self._server_lock(server),
             self._semaphore,
-            self.manager.client_manager.global_download_slots,
-        )
-
-        async with server_limit, domain_limit, global_limit:
-            self.processed_items.add(media_item.db_path)
+            self.manager.http_client.global_download_limiter,
+        ):
+            self._processed_items.add(media_item.db_path)
             self.waiting_items -= 1
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
         """Runs the download loop."""
 
-        if media_item.url.path in self.processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self._ignore_history:
             return False
 
         async with self._download_context(media_item):
@@ -140,7 +163,7 @@ class Downloader:
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if media_item.url.path in self.processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self._ignore_history:
             return
 
         if not ffmpeg.is_installed():
@@ -296,11 +319,12 @@ class Downloader:
         """Checks if the file can be downloaded."""
         if not await storage.has_sufficient_space(media_item.download_folder):
             raise InsufficientFreeSpaceError(media_item)
-        if not self.manager.client_manager.is_allowed_filetype(media_item):
+        if not _is_allowed_filetype(media_item, self.config):
             raise RestrictedFiletypeError(origin=media_item)
-        if not await self.manager.client_manager.check_file_duration(media_item):
+        if await filter_by_duration(media_item, self.config):
+            await self.manager.database.history.add_duration(media_item.domain, media_item)
             raise DurationError(origin=media_item)
-        if not self.manager.client_manager.check_allowed_date_range(media_item):
+        if not _is_allowed_date_range(media_item, self.config):
             raise RestrictedDateRangeError(origin=media_item)
 
     async def set_file_datetime(self, media_item: MediaItem, complete_file: Path) -> None:
@@ -308,7 +332,7 @@ class Downloader:
         if media_item.is_segment:
             return
 
-        if self.manager.config.settings.download_options.disable_file_timestamps:
+        if self.config.settings.download_options.disable_file_timestamps:
             return
         if not media_item.uploaded_at:
             logger.warning(f"Unable to parse upload date for {media_item.url}, using current datetime as file datetime")
@@ -323,31 +347,19 @@ class Downloader:
         except OSError:
             pass
 
-    """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
-
     async def start_download(self, media_item: MediaItem) -> bool:
-        try:
-            self.client.client_manager.check_domain_errors(self.domain)
-        except TooManyCrawlerErrors:
-            return False
-
         if not media_item.is_segment:
             logger.info(f"{self.log_prefix} starting: {media_item.url}")
 
-        async with self._file_lock_vault[media_item.filename]:
-            logger.debug(f"Lock for '{media_item.filename}' acquired")
-            try:
-                return bool(await self.download(media_item))
-            finally:
-                logger.debug(f"Lock for '{media_item.filename}' released")
+        async with _exclusive_lock(media_item):
+            return bool(await self.download(media_item))
 
     async def _download(self, media_item: MediaItem) -> bool | None:
         """Downloads the media item."""
         url_as_str = str(media_item.url)
-        if url_as_str in KNOWN_BAD_URLS:
-            raise DownloadError(KNOWN_BAD_URLS[url_as_str])
+        if url_as_str in _KNOWN_BAD_URLS:
+            raise DownloadError(_KNOWN_BAD_URLS[url_as_str])
         try:
-            self.client.client_manager.check_domain_errors(self.domain)
             media_item.attempts = media_item.attempts or 1
             if not media_item.is_segment:
                 media_item.duration = await self.manager.database.history.get_duration(self.domain, media_item)
@@ -388,16 +400,32 @@ class Downloader:
             message = str(e)
             raise DownloadError(ui_message, message, retry=True) from e
 
-    def write_download_error(
-        self,
-        media_item: MediaItem,
-        error_log_msg: ErrorLogMessage,
-        exc_info: Exception | None = None,
-    ) -> None:
-        logger.error(
-            f"{self.log_prefix} Failed: {media_item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {media_item.referer}",
-            exc_info=exc_info,
-        )
-        self.manager.logs.write_download_error(media_item, error_log_msg.csv_log_msg)
-        self.manager.scrape_mapper.tui.files.stats.failed += 1
-        self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
+
+def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
+    ignore_options = config.settings.ignore_options
+    ext = media_item.ext.lower()
+
+    return not (
+        (ignore_options.exclude_images and ext in constants.FileExt.IMAGE)
+        or (ignore_options.exclude_videos and ext in constants.FileExt.VIDEO)
+        or (ignore_options.exclude_audio and ext in constants.FileExt.AUDIO)
+        or (ignore_options.exclude_other and ext not in constants.FileExt.MEDIA)
+    )
+
+
+def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
+    if not media_item.uploaded_at_date:
+        return True
+
+    return _filter_by_date(media_item.uploaded_at_date, config)
+
+
+def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
+    item_date = item_datetime.date()
+    ignore_options = config.settings.ignore_options
+
+    if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
+        return False
+    if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
+        return False
+    return True

@@ -123,12 +123,7 @@ class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
                 attempt += 1
                 await asyncio.sleep(wait_time)
                 data = parse_login_form(text) | credentials
-                async with self.request(
-                    login_url / "login",
-                    method="POST",
-                    data=data,
-                    cache_disabled=True,
-                ):
+                async with self.request(login_url / "login", method="POST", data=data):
                     pass
                 await asyncio.sleep(wait_time)
                 text, logged_in = await self.check_login_with_request(login_url)

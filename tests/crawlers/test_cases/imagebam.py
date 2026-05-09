@@ -1,44 +1,44 @@
 DOMAIN = "imagebam"
 TEST_CASES = [
-    (
-        "https://www.imagebam.com/image/9b65e0342494935",
-        [
+    {
+        "url": "https://www.imagebam.com/image/9b65e0342494935",
+        "results": [
             {
                 "url": "https://images3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
                 "filename": "0_1456043.jpg",
                 "original_filename": "9b65e0342494935.JPG",
                 "referer": "https://www.imagebam.com/image/9b65e0342494935",
                 "album_id": "hfqrglgtcf4u143xlnvkpfksofn1et7w",
-            },
+            }
         ],
-    ),
-    (
-        "https://images3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
-        [
+    },
+    {
+        "url": "https://images3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
+        "results": [
             {
                 "url": "https://images3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
                 "filename": "0_1456043.jpg",
                 "original_filename": "9b65e0342494935.JPG",
                 "referer": "https://www.imagebam.com/image/9b65e0342494935",
                 "album_id": "hfqrglgtcf4u143xlnvkpfksofn1et7w",
-            },
+            }
         ],
-    ),
-    (
-        "https://thumbs3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
-        [
+    },
+    {
+        "url": "https://thumbs3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
+        "results": [
             {
                 "url": "https://images3.imagebam.com/eb/21/02/9b65e0342494935.JPG",
                 "filename": "0_1456043.jpg",
                 "original_filename": "9b65e0342494935.JPG",
                 "referer": "https://www.imagebam.com/image/9b65e0342494935",
                 "album_id": "hfqrglgtcf4u143xlnvkpfksofn1et7w",
-            },
+            }
         ],
-    ),
-    (
-        "https://www.imagebam.com/gallery/hfqrglgtcf4u143xlnvkpfksofn1et7w",
-        [
+    },
+    {
+        "url": "https://www.imagebam.com/gallery/hfqrglgtcf4u143xlnvkpfksofn1et7w",
+        "results": [
             {
                 "url": "https://images3.imagebam.com/68/8f/e5/84105c342494938.jpg",
                 "filename": "main_large.jpg",
@@ -68,48 +68,48 @@ TEST_CASES = [
                 "album_id": "hfqrglgtcf4u143xlnvkpfksofn1et7w",
             },
         ],
-    ),
-    (
-        "https://www.imagebam.com/view/ME5IIKF",
-        [
+    },
+    {
+        "url": "https://www.imagebam.com/view/ME5IIKF",
+        "results": [
             {
                 "url": "https://images4.imagebam.com/d0/99/a7/ME5IIKF_o.png",
                 "filename": "Logic.png",
                 "original_filename": "ME5IIKF_o.png",
                 "referer": "https://www.imagebam.com/view/ME5IIKF",
                 "album_id": "GA2LOS",
-            },
+            }
         ],
-    ),
-    (
-        "https://www.imagebam.com/view/GA2LOS",
-        [
+    },
+    {
+        "url": "https://www.imagebam.com/view/GA2LOS",
+        "results": [
             {
                 "url": "https://images4.imagebam.com/4b/b6/4a/ME5IIKH_o.png",
                 "filename": "Pads Logic.png",
                 "original_filename": "ME5IIKH_o.png",
                 "referer": "https://www.imagebam.com/view/ME5IIKH",
                 "album_id": "GA2LOS",
-            },
+            }
         ],
-        4,
-    ),
-    (
-        "https://thumbs4.imagebam.com/e5/ab/48/ME5IIKD_t.png",
-        [
+        "count": 4,
+    },
+    {
+        "url": "https://thumbs4.imagebam.com/e5/ab/48/ME5IIKD_t.png",
+        "results": [
             {
                 "url": "https://images4.imagebam.com/e5/ab/48/ME5IIKD_o.png",
                 "referer": "https://www.imagebam.com/view/ME5IIKD",
-            },
+            }
         ],
-    ),
-    (
-        "https://images4.imagebam.com/e5/ab/48/ME5IIKD_o.png",
-        [
+    },
+    {
+        "url": "https://images4.imagebam.com/e5/ab/48/ME5IIKD_o.png",
+        "results": [
             {
                 "url": "https://images4.imagebam.com/e5/ab/48/ME5IIKD_o.png",
                 "referer": "https://www.imagebam.com/view/ME5IIKD",
-            },
+            }
         ],
-    ),
+    },
 ]

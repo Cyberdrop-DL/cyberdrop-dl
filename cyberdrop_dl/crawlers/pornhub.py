@@ -253,7 +253,7 @@ class PornHubCrawler(Crawler):
         if await self.check_complete_from_referer(page_url):
             return
 
-        soup = await self.request_soup(page_url, cache_disabled=True)
+        soup = await self.request_soup(page_url)
         _check_video_is_available(soup)
         title = css.select_text(soup, _SELECTORS.TITLE)
         formats = [Format.new(media) for media in get_media_list(soup)]
@@ -295,7 +295,7 @@ class PornHubCrawler(Crawler):
 
         mp4_media_url = self.parse_url(mp4_format.url)
         # This returns an empty list when downloading multiple videos concurrently
-        mp4_media: list[Media] = await self.request_json(mp4_media_url, cache_disabled=True)
+        mp4_media: list[Media] = await self.request_json(mp4_media_url)
         return max((Format.new(media) for media in mp4_media), default=None)
 
 

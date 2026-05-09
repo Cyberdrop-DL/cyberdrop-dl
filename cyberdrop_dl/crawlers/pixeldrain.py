@@ -10,7 +10,7 @@ from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils import basic_auth, error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -108,10 +108,7 @@ class PixelDrainCrawler(Crawler):
     def __post_init__(self) -> None:
         self._headers: dict[str, str] = {}
         if api_key := self.manager.config.auth.pixeldrain.api_key:
-            self._headers["Authorization"] = self.manager.client_manager.basic_auth(
-                "Cyberdrop-DL",
-                api_key,
-            )
+            self._headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
 
     @classmethod
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:

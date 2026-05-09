@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import contextlib
 import dataclasses
 import functools
@@ -33,8 +34,8 @@ from cyberdrop_dl.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
-    from cyberdrop_dl.downloader.downloader import Downloader
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.downloader.http import Downloader
+    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 
     class _HasManager(Protocol):
@@ -140,7 +141,13 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     origin = origin or get_origin(item)
     if is_downloader:
         self, item = cast("Downloader", self), cast("MediaItem", item)
-        self.write_download_error(item, error_log_msg, exc_info)
+        logger.error(
+            f"{self.log_prefix} Failed: {item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {item.referer}",
+            exc_info=exc_info,
+        )
+        self.manager.logs.write_download_error(item, error_log_msg.csv_log_msg)
+        self.manager.scrape_mapper.tui.files.stats.failed += 1
+        self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
         return
 
     logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)
@@ -336,6 +343,7 @@ def get_system_information() -> dict[str, Any]:
         {
             "prefix": sys.prefix,
             "executable": sys.executable,
+            "GIL enabled": sys._is_gil_enabled() if sys.version_info >= (3, 13) else True,
         }
         | platform.uname()._asdict()
         | {
@@ -361,3 +369,8 @@ def truncated_preview(content: str, max_len: int = 100) -> str:
     if len(content) <= max_len:
         return content
     return f"{content[:max_len]} ... ({len(content) - max_len:,} chars omitted)"
+
+
+def basic_auth(username: str, password: str) -> str:
+    token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
+    return f"Basic {token}"

@@ -1,8 +1,8 @@
 DOMAIN = "xmegadrive"
 TEST_CASES = [
-    (
-        "https://www.xmegadrive.com/videos/reach-around-handjob-hom-3-goddess-zephy/",
-        [
+    {
+        "url": "https://www.xmegadrive.com/videos/reach-around-handjob-hom-3-goddess-zephy/",
+        "results": [
             {
                 "url": "https://www.xmegadrive.com/videos/reach-around-handjob-hom-3-goddess-zephy/",
                 "filename": "Reach Around Handjob HoM 3 - Goddess Zephy [200825][720p].mp4",
@@ -11,5 +11,5 @@ TEST_CASES = [
                 "album_id": None,
             }
         ],
-    ),
+    }
 ]

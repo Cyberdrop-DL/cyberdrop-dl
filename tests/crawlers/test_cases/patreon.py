@@ -1,8 +1,8 @@
 DOMAIN = "patreon"
 TEST_CASES = [
-    (
-        "https://www.patreon.com/posts/jujutsu-kaisen-1-150611726",
-        [
+    {
+        "url": "https://www.patreon.com/posts/jujutsu-kaisen-1-150611726",
+        "results": [
             {
                 "url": "re:fe88322e8f1441acb3ee40ea26c71baa",
                 "filename": "jjk 3x7 copy.jpg",
@@ -24,6 +24,6 @@ TEST_CASES = [
                 "download_folder": "re:AutoSave (Patreon)/2026-02-12 - Jujutsu Kaisen 3x7- -Tokyo Colony No. 1- -- Rea",
             },
         ],
-        2,
-    )
+        "count": 2,
+    }
 ]

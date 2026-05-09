@@ -10,7 +10,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Mapping
+    from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
@@ -48,17 +48,16 @@ class Post(DictDataclass):
     def __post_init__(self):
         part = "photo" if self.images else "video"
         self.canonical_url = _PRIMARY_URL / str(self.author) / part / self.id
+        self.images = self.images or []
 
     @classmethod
-    def from_dict(cls, video: Mapping[str, Any], /) -> Self:
+    def from_dict(cls, video: dict[str, Any], /, **overrides: Any) -> Self:
         return super(Post, cls).from_dict(
-            dict(
-                **video,
-                author=Author.from_dict(video["author"]),
-                music_info=MusicInfo.from_dict(video["music_info"]),
-                id=video.get("id") or video["video_id"],
-                play=video.get("play") or video["play_url"],
-            )
+            video,
+            author=Author.from_dict(video["author"]),
+            music_info=MusicInfo.from_dict(video["music_info"]),
+            id=video.get("id") or video["video_id"],
+            play=video.get("play") or video["play_url"],
         )
 
 
@@ -105,7 +104,7 @@ class TikTokCrawler(Crawler):
         if value := self.get_cookie_value(cookie_name):
             self._headers["x-proxy-cookie"] = f"{cookie_name}={value}"
             self.log.info(f"Found {cookie_name} cookies")
-        self.client.client_manager.cookies.clear_domain(self.PRIMARY_URL.host)
+        self.client.cookies.clear_domain(self.PRIMARY_URL.host)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

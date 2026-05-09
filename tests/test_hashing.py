@@ -10,7 +10,7 @@ import pytest
 from cyberdrop_dl.hasher import hash_directory_scanner
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 
 def get_hashes(path: Path) -> set[tuple[str, str]]:
