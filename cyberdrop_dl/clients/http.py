@@ -11,10 +11,9 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
-from aiolimiter import AsyncLimiter
 from multidict import CIMultiDict
 
-from cyberdrop_dl import cookies, ddos_guard, signature
+from cyberdrop_dl import aio, cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
@@ -73,9 +72,9 @@ class HTTPClient:
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
         self.ssl_context = tcp.create_ssl_context(self.manager.config.global_settings.general.ssl_context)
-        self.rate_limits: dict[str, AsyncLimiter] = {}
-        self.global_rate_limiter = AsyncLimiter(
-            self.manager.config.global_settings.rate_limiting_options.rate_limit, time_period=1
+        self.rate_limits: dict[str, aio.RateLimiter] = {}
+        self.global_rate_limiter = aio.RateLimiter.w_no_burst(
+            self.manager.config.global_settings.rate_limiting_options.rate_limit
         )
         self.global_download_limiter = asyncio.Semaphore(
             self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads

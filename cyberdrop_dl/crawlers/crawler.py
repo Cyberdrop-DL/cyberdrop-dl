@@ -17,10 +17,9 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
 
-from aiolimiter import AsyncLimiter
 from typing_extensions import deprecated
 
-from cyberdrop_dl import env
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.http import Downloader
@@ -205,7 +204,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         async with self._startup_lock:
             if self._ready:
                 return
-            self.manager.http_client.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
+            self.manager.http_client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
 
             await self.__async_post_init__()
             self._ready = True
