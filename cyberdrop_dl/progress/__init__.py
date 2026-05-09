@@ -80,6 +80,23 @@ class ProgressHook:
         self._done = True
 
 
+def chain_hooks(*hooks: ProgressHook) -> ProgressHook:
+    """Fan `advance`/`done`; delegate `get_speed` to the first. Inner hooks must not be reused after chaining."""
+    if not hooks:
+        raise ValueError("chain_hooks requires at least one hook")
+    head = hooks[0]
+
+    def advance(amount: int = 1) -> None:
+        for h in hooks:
+            h.advance(amount)
+
+    def done() -> None:
+        for h in hooks:
+            h.done()
+
+    return ProgressHook(advance, head.get_speed, done)
+
+
 class LiveUI(ABC):
     @property
     def disabled(self) -> bool:

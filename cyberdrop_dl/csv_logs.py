@@ -4,6 +4,7 @@ import asyncio
 import csv
 import dataclasses
 import logging
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
@@ -11,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Self
 from cyberdrop_dl import constants
 from cyberdrop_dl.exceptions import get_origin
 from cyberdrop_dl.logs import log_spacer
+from cyberdrop_dl.progress import ProgressHook
 from cyberdrop_dl.utils import json
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
@@ -37,10 +39,14 @@ class CSVFiles:
     unsupported_urls_log: Path
     download_error_log: Path
     scrape_error_log: Path
+    progress_events_file: Path | None = None
+    scrape_events_file: Path | None = None
     jsonl_file: Path = dataclasses.field(init=False)
 
     def __iter__(self) -> Iterator[Path]:
-        return iter(dataclasses.astuple(self))
+        for value in dataclasses.astuple(self):
+            if isinstance(value, Path):
+                yield value
 
     def __post_init__(self) -> None:
         self.jsonl_file = self.main_log.with_suffix(".results.jsonl")
@@ -58,12 +64,16 @@ class CSVLogsManager:
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
+        main_log = manager.config.settings.logs.main_log
+        files_settings = manager.config.settings.files
         files = CSVFiles(
-            main_log=manager.config.settings.logs.main_log,
+            main_log=main_log,
             last_post_log=manager.config.settings.logs.last_forum_post,
             unsupported_urls_log=manager.config.settings.logs.unsupported_urls,
             download_error_log=manager.config.settings.logs.download_error_urls,
             scrape_error_log=manager.config.settings.logs.scrape_error_urls,
+            progress_events_file=main_log.with_suffix(".progress.jsonl") if files_settings.progress_events else None,
+            scrape_events_file=main_log.with_suffix(".scrape.jsonl") if files_settings.scrape_events else None,
         )
         return cls(files)
 
@@ -83,6 +93,64 @@ class CSVLogsManager:
     async def write_jsonl(self, data: Iterable[dict[str, Any]]) -> None:
         async with self._file_locks[self.files.jsonl_file]:
             await asyncio.to_thread(json.dump_jsonl, data, self.files.jsonl_file)
+
+    def write_progress_event(self, event: dict[str, Any]) -> None:
+        if (path := self.files.progress_events_file) is None:
+            return
+        _ = self.task_group.create_task(self._append_jsonl(path, event))
+
+    def write_scrape_event(self, event: dict[str, Any]) -> None:
+        if (path := self.files.scrape_events_file) is None:
+            return
+        _ = self.task_group.create_task(self._append_jsonl(path, event))
+
+    async def _append_jsonl(self, path: Path, event: dict[str, Any]) -> None:
+        async with self._file_locks[path]:
+            await asyncio.to_thread(_ensure_parent, path)
+            await asyncio.to_thread(json.dump_jsonl, (event,), path)
+
+    def make_progress_writer(
+        self,
+        *,
+        url: str,
+        filename: str,
+        total: int | None,
+        interval: float,
+        min_bytes: int,
+    ) -> ProgressHook:
+        cumulative = 0
+        started = False
+        last_emit_ts = time.monotonic()
+        last_emit_bytes = 0
+
+        def emit_start() -> None:
+            nonlocal started
+            self.write_progress_event(
+                {"event": "start", "ts": time.time(), "url": url, "filename": filename, "total": total},
+            )
+            started = True
+
+        def advance(amount: int = 1) -> None:
+            nonlocal cumulative, last_emit_ts, last_emit_bytes
+            if not started:
+                emit_start()
+            cumulative += amount
+            now = time.monotonic()
+            if (now - last_emit_ts) >= interval and (cumulative - last_emit_bytes) >= min_bytes:
+                self.write_progress_event(
+                    {"event": "chunk", "ts": time.time(), "url": url, "bytes": cumulative},
+                )
+                last_emit_ts = now
+                last_emit_bytes = cumulative
+
+        def done() -> None:
+            if not started:
+                emit_start()
+            self.write_progress_event(
+                {"event": "finish", "ts": time.time(), "url": url, "bytes": cumulative, "ok": True},
+            )
+
+        return ProgressHook(advance, _zero_speed, done)
 
     async def _write_to_csv(self, file: Path, **row: object) -> None:
         async with self._file_locks[file]:
@@ -224,6 +292,14 @@ def _write_resp_to_disk(
         _ = file.write_text(response.create_report(exc), "utf8")
     except OSError:
         pass
+
+
+def _ensure_parent(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _zero_speed() -> float:
+    return 0.0
 
 
 def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime) -> Path:

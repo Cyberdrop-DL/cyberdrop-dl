@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 REGEX_LINKS = re.compile(r"(?:http.*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]))")
 
 
+def _scrape_event(event: str, stats: dict[str, int]) -> dict[str, Any]:
+    return {"event": event, "ts": time.time(), **stats}
+
+
 def _filter_by_date(scrape_item: ScrapeItem, before: datetime.date | None, after: datetime.date | None) -> bool:
     skip = False
     item_date = scrape_item.completed_at or scrape_item.created_at
@@ -180,6 +184,11 @@ class ScrapeMapper:
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
             ):
+                files_settings = self.manager.config.settings.files
+                if files_settings.scrape_events:
+                    _ = self.manager.logs.task_group.create_task(
+                        self._poll_scrape_stats(files_settings.scrape_event_interval),
+                    )
                 try:
                     async with self._task_groups.scrape:
                         self.manager.scrape_mapper = self
@@ -189,6 +198,10 @@ class ScrapeMapper:
                 finally:
                     # The done event signals that all scraping is done, but there may still be downloads pending
                     self._done.set()
+                    if files_settings.scrape_events:
+                        self.manager.logs.write_scrape_event(
+                            _scrape_event("scrape_complete", dataclasses.asdict(self.tui.files.stats)),
+                        )
 
     async def run(self) -> ScrapeStats:
         self._init_crawlers()
@@ -314,6 +327,21 @@ class ScrapeMapper:
             return False
 
         return True
+
+    async def _poll_scrape_stats(self, interval: float) -> None:
+        last: dict[str, int] | None = None
+        while True:
+            try:
+                _ = await asyncio.wait_for(self._done.wait(), timeout=interval)
+            except TimeoutError:
+                pass
+            if self._done.is_set():
+                return
+            self._download_queue()  # refresh stats.queued (normally driven by Rich)
+            current = dataclasses.asdict(self.tui.files.stats)
+            if current != last:
+                self.manager.logs.write_scrape_event(_scrape_event("stats", current))
+                last = current
 
     def disable_crawler(self, domain: str) -> type[Crawler] | None:
         """Disables a crawler at runtime, after the scrape mapper is already running.
