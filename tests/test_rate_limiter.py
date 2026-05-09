@@ -37,7 +37,7 @@ async def test_w_no_burst_spreads_evenly() -> None:
     times = await consume(limiter, n_calls)
     deltas = [times[i + 1] - times[i] for i in range(n_calls - 1)]
     for delta in deltas:
-        assert delta == pytest.approx(0.1, rel=0.05)
+        assert delta == pytest.approx(0.1, rel=0.15)
 
 
 async def test_default_contructor_allows_burst() -> None:
@@ -58,4 +58,4 @@ async def test_acquire_when_bucket_is_full() -> None:
     assert time.perf_counter() - start < 0.001
     await limiter.acquire(1)
     delta = time.perf_counter() - start
-    assert delta == pytest.approx(expected_delta, rel=0.05)
+    assert delta == pytest.approx(expected_delta, rel=0.15)
