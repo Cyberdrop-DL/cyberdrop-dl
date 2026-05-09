@@ -273,6 +273,8 @@ class HTTPClient:
             logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
             try:
                 yield resp
+            except Exception as e:
+                exc = e
             finally:
                 if self._responses_folder:
                     self.manager.logs.write_response(self._responses_folder, url, resp, exc)
