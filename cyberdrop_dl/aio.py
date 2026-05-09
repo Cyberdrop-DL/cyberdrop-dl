@@ -50,7 +50,7 @@ class RateLimiter(AsyncLimiter):
     __slots__ = ()
 
     async def acquire(self, amount: float = 1) -> None:
-        if self.max_rate <= 0:
+        if self.max_rate == 0:
             return
         await super().acquire(amount)
 
@@ -61,7 +61,13 @@ class RateLimiter(AsyncLimiter):
         Instead of allowing up to <max_rate> acquisitions over a period of <time_period>,
         spread them evenly across the <time_period> to maintain a steady rate of <max_rate>.
         """
+        if max_rate == 0:
+            return cls.no_op()
         return cls(max_rate=1, time_period=time_period / max_rate)
+
+    @classmethod
+    def no_op(cls) -> Self:
+        return cls(max_rate=0, time_period=1)
 
 
 @dataclasses.dataclass(slots=True, eq=False)
