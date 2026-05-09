@@ -193,7 +193,7 @@ class TransferManager:
 
         db = Database(_db_path=path, ignore_history=True)
         async with db:
-            pass # Create the schema and close to initialize the file on disk.
+            pass  # Create the schema and close to initialize the file on disk.
 
     def _make_backup_path(self) -> Path:
         stem = self.db_path.stem
