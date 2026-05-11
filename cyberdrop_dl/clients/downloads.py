@@ -69,11 +69,10 @@ class DownloadClient:
 
         await asyncio.sleep(self.manager.config.global_settings.rate_limiting_options.total_delay)
 
-        async with self.http_client.request(
+        async with self.http_client.raw_request(
             media_item.real_url,
             headers=media_item.headers,
             impersonate=media_item.domain in _USE_IMPERSONATION,
-            check=False,
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 

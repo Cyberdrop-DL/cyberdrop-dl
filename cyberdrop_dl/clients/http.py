@@ -81,12 +81,9 @@ class HTTPClient:
         )
 
         self._cookies: aiohttp.CookieJar | None = None
-        self._responses_folder: Path | None = (
-            manager.config.settings.logs.main_log.parent / "cdl_responses"
-            if manager.config.settings.files.save_pages_html
-            else None
+        self._dump_responses: bool = (
+            manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses
         )
-
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
         self._session: aiohttp.ClientSession
@@ -111,6 +108,19 @@ class HTTPClient:
             self._flaresolverr = flaresolverr.Client(url, self._session)
         return self._flaresolverr
 
+    def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
+        """
+        Apply to the cookies from the `curl` session into the `aiohttp` session, filtering them by the URL
+
+        This is mostly just to get the `cf_cleareance` cookie value into the `aiohttp` session
+
+        The reverse (sync `aiohttp` -> `curl`) is not needed at the moment, so it is skipped
+        """
+        now = time.time()
+        for cookie in self.curl_session.cookies.jar:
+            simple_cookie = make_simple_cookie(cookie, now)
+            self.cookies.update_cookies(simple_cookie, url)
+
     async def __aenter__(self) -> Self:
         await tcp.choose_dns_resolver()
         self._session = self.create_aiohttp_session()
@@ -129,7 +139,6 @@ class HTTPClient:
             await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-
         try:
             from curl_cffi.aio import AsyncCurl
             from curl_cffi.requests import AsyncSession
@@ -204,10 +213,35 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
-        check: bool = True,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
+        """Make an HTTP request and retry w flaresolverr if required"""
         self = cast("HTTPClient", self)
+        yielded: bool = False
+        try:
+            async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+                await self.check_http_status(resp)
+                yielded = True
+                yield resp
+        except DDOSGuardError:
+            if yielded or not self.flaresolverr:
+                raise
+
+            yield await self._flaresolverr_request(url, data)
+
+    @contextlib.asynccontextmanager
+    async def raw_request(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        headers: Mapping[str, str] | None = None,
+        impersonate: str | bool | None = None,
+        data: Any = None,
+        json: Any = None,
+        request_params: dict[str, Any] | None = None,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        request_params = request_params or {}
         request_params["headers"] = headers = _prepare_headers(headers)
         request_params["data"] = data
         request_params["json"] = json
@@ -224,31 +258,8 @@ class HTTPClient:
         else:
             _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
-        yielded: bool = False
-        try:
-            async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
-                if check:
-                    await self.check_http_status(resp)
-                yielded = True
-                yield resp
-        except DDOSGuardError:
-            if yielded or not self.flaresolverr:
-                raise
-
-            yield await self._flaresolverr_request(url, data)
-
-    def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
-        """
-        Apply to the cookies from the `curl` session into the `aiohttp` session, filtering them by the URL
-
-        This is mostly just to get the `cf_cleareance` cookie value into the `aiohttp` session
-
-        The reverse (sync `aiohttp` -> `curl`) is not needed at the moment, so it is skipped
-        """
-        now = time.time()
-        for cookie in self.curl_session.cookies.jar:
-            simple_cookie = make_simple_cookie(cookie, now)
-            self.cookies.update_cookies(simple_cookie, url)
+        async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
+            yield resp
 
     @contextlib.asynccontextmanager
     async def _request(
@@ -269,14 +280,15 @@ class HTTPClient:
         )
         exc = None
         async with self.__request(url, method, request_params, impersonate=impersonate) as resp:
+            resp.id = request_id
             logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
             try:
                 yield resp
             except Exception as e:
                 exc = e
             finally:
-                if self._responses_folder:
-                    self.manager.logs.write_response(self._responses_folder, url, resp, exc)
+                if self._dump_responses:
+                    self.manager.logs.write_response(url, resp, exc)
                 del exc
                 del resp
 
@@ -307,12 +319,11 @@ class HTTPClient:
         url: AbsoluteHttpURL,
         data: Any | None = None,
     ):
-        """Checks the HTTP response status and retries DDOS Guard errors with FlareSolverr.
+        """Make a request with FlareSolverr.
 
-        Returns an AbstractResponse confirmed to not be a DDOS Guard page."""
+        Returns an AbstractResponse confirmed to not be a DDOS Guard page, even if flaresolverr fails to detect/solve a challenge"""
 
         assert self.flaresolverr
-
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
         flaresolverr.verify_solution(self.manager.config.global_settings.general.user_agent, solution)
@@ -328,7 +339,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-def _prepare_headers(headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
+def _prepare_headers(headers: Mapping[str, str] | None) -> CIMultiDict[str]:
     return CIMultiDict(headers) if headers else CIMultiDict()
 
 

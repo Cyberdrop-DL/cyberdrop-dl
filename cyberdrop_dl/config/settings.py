@@ -76,6 +76,8 @@ class Files(SettingsGroup):
     dump_json: Annotated[bool, Parameter(alias="-j")] = Field(default=False, validation_alias="j")
     input_file: Annotated[Path, Parameter(alias="-i")] = Field(default=Path("URLs.txt"), validation_alias="i")
     save_pages_html: bool = False
+    dump_responses: bool = False
+    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
 
 class Logs(SettingsGroup):
