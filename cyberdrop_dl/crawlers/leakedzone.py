@@ -95,10 +95,10 @@ class LeakedZoneCrawler(Crawler):
             for post in (Post.from_dict(post) for post in posts):
                 if post.type is PostType.VIDEO:
                     post_url = self.PRIMARY_URL / model_name / "video" / post.id
-                    await self._handle_video(scrape_item.create_child(post_url), post)
+                    self.create_task(self._video(scrape_item.create_child(post_url), post))
                 else:
                     post_url = self.PRIMARY_URL / model_name / "photo" / post.id
-                    await self._handle_image(scrape_item.create_child(post_url), post)
+                    self.create_task(self._image(scrape_item.create_child(post_url), post))
                 scrape_item.add_children()
 
     @error_handling_wrapper
@@ -112,19 +112,24 @@ class LeakedZoneCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(model_name))
         encoded_url = self.get_encoded_video_url(soup)
         post = Post(video_id, PostType.VIDEO, stream_url_play=encoded_url)
-        await self._handle_video(scrape_item, post, check_referer=False)
+        await self._handle_video(scrape_item, post)
 
-    async def _handle_video(self, scrape_item: ScrapeItem, post: Post, check_referer: bool = True) -> None:
-        if check_referer and await self.check_complete_from_referer(scrape_item):
+    @error_handling_wrapper
+    async def _video(self, scrape_item: ScrapeItem, post: Post) -> None:
+        if await self.check_complete_from_referer(scrape_item):
             return
+        await self._handle_video(scrape_item, post)
+
+    async def _handle_video(self, scrape_item: ScrapeItem, post: Post) -> None:
         url = self.parse_url(_decode_video_url(post.stream_url_play))
-        m3u8 = await self.get_m3u8_from_index_url(url)
+        m3u8, _ = await self.request_m3u8(url)
         filename, ext = self.get_filename_and_ext(f"{post.id}.mp4")
         if post.created_at:
             scrape_item.uploaded_at = self.parse_iso_date(post.created_at)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, m3u8=m3u8)
 
-    async def _handle_image(self, scrape_item: ScrapeItem, post: Post) -> None:
+    @error_handling_wrapper
+    async def _image(self, scrape_item: ScrapeItem, post: Post) -> None:
         image_url = self.IMAGES_CDN / post.image
         filename, ext = self.get_filename_and_ext(image_url.name)
         assert post.created_at
