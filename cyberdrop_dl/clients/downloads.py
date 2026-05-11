@@ -84,7 +84,7 @@ class DownloadClient:
             media_item.real_url,
             headers=media_item.headers,
             impersonate=media_item.domain in _USE_IMPERSONATION,
-            check=False,
+            download=True,
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 

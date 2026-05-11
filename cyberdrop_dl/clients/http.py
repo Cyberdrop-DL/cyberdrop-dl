@@ -202,7 +202,7 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
-        check: bool = True,
+        download: bool = False,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         self = cast("HTTPClient", self)
@@ -225,12 +225,12 @@ class HTTPClient:
         yielded: bool = False
         try:
             async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
-                if check:
+                if not download:
                     await self.check_http_status(resp)
                 yielded = True
                 yield resp
         except DDOSGuardError:
-            if yielded or not self.flaresolverr:
+            if download or yielded or not self.flaresolverr:
                 raise
 
             yield await self._flaresolverr_request(url, data)
