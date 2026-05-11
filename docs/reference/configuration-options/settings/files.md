@@ -70,7 +70,7 @@ Not every request made by CDL returns an HTML page (ex: API requests generally r
 | ------ | ------- |
 | `bool` | `False` |
 
-CDL will save to disk a copy of every non binary request (text/HTML/JSON) as a single file. The files will be saved to a folder named `cdl_responses`, located in the same folder as the main log file.
+CDL will save to disk a copy of every non binary request (text/HTML/JSON) as a single file. The files will be saved to a folder named `cdl_responses`, inside the parent folder of the main log file.
 
 {% hint style="info" %}
 Flaresolverr responses are excluded. They are never dumped to disk
