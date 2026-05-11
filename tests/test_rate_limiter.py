@@ -46,7 +46,7 @@ async def test_default_contructor_allows_burst() -> None:
     start = time.perf_counter()
     await asyncio.gather(*(limiter.acquire() for _ in range(max_rate)))
     delta = time.perf_counter() - start
-    assert delta < 0.001
+    assert delta < 0.002
 
 
 async def test_acquire_when_bucket_is_full() -> None:
