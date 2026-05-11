@@ -202,10 +202,35 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
-        download: bool = False,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
+        """Make an HTTP request and retry w flaresolverr if required"""
         self = cast("HTTPClient", self)
+        yielded: bool = False
+        try:
+            async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+                await self.check_http_status(resp)
+                yielded = True
+                yield resp
+        except DDOSGuardError:
+            if yielded or not self.flaresolverr:
+                raise
+
+            yield await self._flaresolverr_request(url, data)
+
+    @contextlib.asynccontextmanager
+    async def raw_request(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        headers: Mapping[str, str] | None = None,
+        impersonate: str | bool | None = None,
+        data: Any = None,
+        json: Any = None,
+        request_params: dict[str, Any] | None = None,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        request_params = request_params or {}
         request_params["headers"] = headers = _prepare_headers(headers)
         request_params["data"] = data
         request_params["json"] = json
@@ -222,18 +247,8 @@ class HTTPClient:
         else:
             _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
-        yielded: bool = False
-        try:
-            async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
-                if not download:
-                    await self.check_http_status(resp)
-                yielded = True
-                yield resp
-        except DDOSGuardError:
-            if download or yielded or not self.flaresolverr:
-                raise
-
-            yield await self._flaresolverr_request(url, data)
+        async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
+            yield resp
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
         """
