@@ -26,13 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New `--dump-responses` option to save non binary responses (text/HTML/json) to disk
+- New `--dump-responses` option to save non binary responses (text/HTML/JSON) to disk
 
 ### Changed
 
 - Log downloads requests/responses
 - Log flaresolverr requests/responses
-- Prevent requests from bursting over the rate limit when CDL starts
+- Prevent requests bursting at the start of a run
 
 ### Deprecated
 
@@ -46,8 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Parsing of json responses from non Selenium forks of Flaresolverr
 - Flaresolverr session destruction always failing
-- Handle posts with deleted images (Tiktok)
-- A single video scrape error stoping the entire scrape queue (LeakedZone/Hotleak)
+- Handle posts with deleted images (TikTok)
+- A single video download error canceling the entire scrape queue (LeakedZone/Hotleak)
 
 ## [9.7.0] - 2026-05-07
 
