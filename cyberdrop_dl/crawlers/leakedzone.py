@@ -11,6 +11,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -75,20 +77,11 @@ class LeakedZoneCrawler(Crawler):
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        model_name: str = css.select_text(soup, Selector.MODEL_NAME_FROM_PROFILE)
+        model_name = css.select_text(soup, Selector.MODEL_NAME_FROM_PROFILE)
         scrape_item.setup_as_profile(self.create_title(model_name))
 
-        for page in itertools.count(1):
-            posts: list[dict[str, Any]] = await self.request_json(
-                scrape_item.url.with_query(page=page),
-                headers={"X-Requested-With": "XMLHttpRequest"},
-            )
-            # We may be able to omit the last request by just checking the number of posts
-            # Seems to always return 48 posts
-            if not posts:
-                break
-
-            for post in (Post.from_dict(post) for post in posts):
+        async for posts in self.api_pager(scrape_item.url):
+            for post in posts:
                 if post.type is PostType.VIDEO:
                     post_url = self.PRIMARY_URL / model_name / "video" / post.id
                     self.create_task(self._video(scrape_item.create_child(post_url), post))
@@ -97,13 +90,29 @@ class LeakedZoneCrawler(Crawler):
                     self.create_task(self._image(scrape_item.create_child(post_url), post))
                 scrape_item.add_children()
 
+    async def api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[tuple[Post, ...]]:
+        for page in itertools.count(1):
+            posts = tuple(
+                map(
+                    Post.from_dict,
+                    await self.request_json(
+                        url.with_query(page=page),
+                        headers={
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    ),
+                )
+            )
+            yield posts
+            if len(posts) < 48:
+                break
+
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-
         model_name = css.select_text(soup, Selector.MODEL_NAME)
         scrape_item.setup_as_album(self.create_title(model_name))
         encoded_url = self._extract_video(soup)
