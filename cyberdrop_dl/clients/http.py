@@ -267,6 +267,7 @@ class HTTPClient:
         )
         exc = None
         async with self.__request(url, method, request_params, impersonate=impersonate) as resp:
+            resp.id = request_id
             logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
             try:
                 yield resp
