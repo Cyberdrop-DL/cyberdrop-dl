@@ -304,12 +304,11 @@ class HTTPClient:
         url: AbsoluteHttpURL,
         data: Any | None = None,
     ):
-        """Checks the HTTP response status and retries DDOS Guard errors with FlareSolverr.
+        """Make a request with FlareSolverr.
 
-        Returns an AbstractResponse confirmed to not be a DDOS Guard page."""
+        Returns an AbstractResponse confirmed to not be a DDOS Guard page, even if flaresolverr fails to detect/solve a challenge"""
 
         assert self.flaresolverr
-
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
         flaresolverr.verify_solution(self.manager.config.global_settings.general.user_agent, solution)
