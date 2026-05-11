@@ -397,22 +397,22 @@ async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
     if media_item.is_segment:
         return False
 
-    is_video = media_item.ext.lower() in FileExt.VIDEO
-    is_audio = media_item.ext.lower() in FileExt.AUDIO
-    if not (is_video or is_audio):
-        return False
-
     duration_limits = config.settings.media_duration_limits.ranges
-    duration: float | None = await _probe_duration(media_item)
-    media_item.duration = duration
-
-    if duration is None:
+    if media_item.ext.lower() in FileExt.VIDEO:
+        limits = duration_limits.video
+    elif media_item.ext.lower() in FileExt.AUDIO:
+        limits = duration_limits.audio
+    else:
         return False
 
-    if is_video:
-        return duration not in duration_limits.video
+    if limits is None:
+        return False
 
-    return duration not in duration_limits.audio
+    media_item.duration = await _probe_duration(media_item)
+    if media_item.duration is None:
+        return False
+
+    return media_item.duration not in limits
 
 
 async def _probe_duration(media_item: MediaItem) -> float | None:

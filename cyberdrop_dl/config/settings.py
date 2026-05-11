@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -159,6 +159,12 @@ class Range:
     def __contains__(self, value: float, /) -> bool:
         return self.min <= value <= self.max
 
+    @classmethod
+    def parse(cls, min: float, max: float) -> Self | None:
+        if not min and not max:
+            return None
+        return cls(min, max)
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class FileSizeRanges:
@@ -195,8 +201,8 @@ class FileSizeLimits(SettingsGroup):
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class MediaDurationRanges:
-    video: Range
-    audio: Range
+    video: Range | None
+    audio: Range | None
 
 
 class MediaDurationLimits(SettingsGroup):
@@ -221,11 +227,11 @@ class MediaDurationLimits(SettingsGroup):
     @cached_property
     def ranges(self) -> MediaDurationRanges:
         return MediaDurationRanges(
-            video=Range(
+            video=Range.parse(
                 self.minimum_video_duration.total_seconds(),
                 self.maximum_video_duration.total_seconds(),
             ),
-            audio=Range(
+            audio=Range.parse(
                 self.minimum_audio_duration.total_seconds(),
                 self.maximum_audio_duration.total_seconds(),
             ),
