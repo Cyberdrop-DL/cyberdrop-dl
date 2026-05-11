@@ -109,6 +109,19 @@ class HTTPClient:
             self._flaresolverr = flaresolverr.Client(url, self._session)
         return self._flaresolverr
 
+    def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
+        """
+        Apply to the cookies from the `curl` session into the `aiohttp` session, filtering them by the URL
+
+        This is mostly just to get the `cf_cleareance` cookie value into the `aiohttp` session
+
+        The reverse (sync `aiohttp` -> `curl`) is not needed at the moment, so it is skipped
+        """
+        now = time.time()
+        for cookie in self.curl_session.cookies.jar:
+            simple_cookie = make_simple_cookie(cookie, now)
+            self.cookies.update_cookies(simple_cookie, url)
+
     async def __aenter__(self) -> Self:
         await tcp.choose_dns_resolver()
         self._session = self.create_aiohttp_session()
@@ -127,7 +140,6 @@ class HTTPClient:
             await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-
         try:
             from curl_cffi.aio import AsyncCurl
             from curl_cffi.requests import AsyncSession
@@ -249,19 +261,6 @@ class HTTPClient:
 
         async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
             yield resp
-
-    def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
-        """
-        Apply to the cookies from the `curl` session into the `aiohttp` session, filtering them by the URL
-
-        This is mostly just to get the `cf_cleareance` cookie value into the `aiohttp` session
-
-        The reverse (sync `aiohttp` -> `curl`) is not needed at the moment, so it is skipped
-        """
-        now = time.time()
-        for cookie in self.curl_session.cookies.jar:
-            simple_cookie = make_simple_cookie(cookie, now)
-            self.cookies.update_cookies(simple_cookie, url)
 
     @contextlib.asynccontextmanager
     async def _request(
