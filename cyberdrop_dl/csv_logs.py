@@ -228,7 +228,8 @@ def _write_resp_to_disk(
         _ = file.write_text(response.create_report(exc), "utf8")
     except OSError as e:
         logger.warning(f"Unable to write response from {url} to disk ({e!r})")
-        pass
+    else:
+        logger.debug(f"Saved response from {url} to '{file}'")
 
 
 def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime, ext: str = ".html") -> Path:
