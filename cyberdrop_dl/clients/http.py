@@ -217,17 +217,16 @@ class HTTPClient:
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
         self = cast("HTTPClient", self)
-        yielded: bool = False
-        try:
-            async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+        async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+            try:
                 await self.check_http_status(resp)
-                yielded = True
+            except DDOSGuardError:
+                await resp.aclose()
+                if not self.flaresolverr:
+                    raise
+                yield await self._flaresolverr_request(url, data)
+            else:
                 yield resp
-        except DDOSGuardError:
-            if yielded or not self.flaresolverr:
-                raise
-
-            yield await self._flaresolverr_request(url, data)
 
     @contextlib.asynccontextmanager
     async def raw_request(
