@@ -82,7 +82,9 @@ class HTTPClient:
         )
 
         self._cookies: aiohttp.CookieJar | None = None
-        self._dump_responses: bool = manager.config.settings.files.save_pages_html
+        self._dump_responses: bool = (
+            manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses
+        )
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
         self._session: aiohttp.ClientSession
