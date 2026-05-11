@@ -55,6 +55,10 @@ class CSVLogsManager:
     )
     _has_headers: set[Path] = dataclasses.field(init=False, default_factory=set)
     _ready: bool = dataclasses.field(init=False, default=False)
+    _responses_folder: Path = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self._responses_folder = self.files.main_log.parent / "cdl_responses"
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
@@ -135,7 +139,6 @@ class CSVLogsManager:
 
     def write_response(
         self,
-        folder: Path,
         url: AbsoluteHttpURL,
         response: AbstractResponse[Any],
         exc: Exception | None = None,
@@ -143,7 +146,7 @@ class CSVLogsManager:
         _ = self.task_group.create_task(
             asyncio.to_thread(
                 _write_resp_to_disk,
-                folder,
+                self._responses_folder,
                 url,
                 response,
                 exc,

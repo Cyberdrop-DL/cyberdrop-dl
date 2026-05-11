@@ -82,12 +82,7 @@ class HTTPClient:
         )
 
         self._cookies: aiohttp.CookieJar | None = None
-        self._responses_folder: Path | None = (
-            manager.config.settings.logs.main_log.parent / "cdl_responses"
-            if manager.config.settings.files.save_pages_html
-            else None
-        )
-
+        self._dump_responses: bool = manager.config.settings.files.save_pages_html
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
         self._session: aiohttp.ClientSession
@@ -274,8 +269,8 @@ class HTTPClient:
             try:
                 yield resp
             finally:
-                if self._responses_folder:
-                    self.manager.logs.write_response(self._responses_folder, url, resp, exc)
+                if self._dump_responses:
+                    self.manager.logs.write_response(url, resp, exc)
                 del exc
                 del resp
 
@@ -327,7 +322,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-def _prepare_headers(headers: Mapping[str, str] | None = None) -> CIMultiDict[str]:
+def _prepare_headers(headers: Mapping[str, str] | None) -> CIMultiDict[str]:
     return CIMultiDict(headers) if headers else CIMultiDict()
 
 
