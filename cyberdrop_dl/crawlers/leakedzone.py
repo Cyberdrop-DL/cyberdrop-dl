@@ -6,7 +6,7 @@ import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.compat import IntEnum
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
 
@@ -21,19 +21,14 @@ class PostType(IntEnum):
     VIDEO = 1
 
 
-class Selectors:
+class Selector:
     JW_PLAYER = "script:-soup-contains('playerInstance.setup')"
     MODEL_NAME_FROM_PROFILE = "div.actor-name > h1"
     MODEL_NAME_FROM_VIDEO = "h2.actor-title-port"
     MODEL_NAME = f"{MODEL_NAME_FROM_VIDEO}, {MODEL_NAME_FROM_PROFILE}"
 
 
-_SELECTORS = Selectors()
-PRIMARY_URL = AbsoluteHttpURL("https://leakedzone.com")
-IMAGES_CDN = AbsoluteHttpURL("https://image-cdn.leakedzone.com/storage/")
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(slots=True)
 class Post:
     id: str
     type: PostType
@@ -44,11 +39,11 @@ class Post:
     @staticmethod
     def from_dict(post: dict[str, Any]) -> Post:
         return Post(
-            str(post["id"]),
-            PostType(post["type"]),
-            post["created_at"],
-            post["image"].replace("_thumb", ""),
-            post.get("stream_url_play", ""),
+            id=str(post["id"]),
+            type=PostType(post["type"]),
+            created_at=post["created_at"],
+            image=post["image"].replace("_thumb", ""),
+            stream_url_play=post.get("stream_url_play", ""),
         )
 
 
@@ -59,9 +54,9 @@ class LeakedZoneCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "leakedzone"
     FOLDER_DOMAIN: ClassVar[str] = "LeakedZone"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    IMAGES_CDN: ClassVar[AbsoluteHttpURL] = IMAGES_CDN
-    _RATE_LIMIT = 3, 10
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://leakedzone.com")
+    IMAGES_CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://image-cdn.leakedzone.com/storage/")
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -73,25 +68,26 @@ class LeakedZoneCrawler(Crawler):
                 raise ValueError
 
     @classmethod
-    def get_encoded_video_url(cls, soup: BeautifulSoup) -> str:
-        js_text = css.select_text(soup, _SELECTORS.JW_PLAYER)
+    def _extract_video(cls, soup: BeautifulSoup) -> str:
+        js_text = css.select_text(soup, Selector.JW_PLAYER)
         return extr_text(js_text, 'file: f("', '"),')
 
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-
-        model_name: str = css.select_text(soup, _SELECTORS.MODEL_NAME_FROM_PROFILE)
+        model_name: str = css.select_text(soup, Selector.MODEL_NAME_FROM_PROFILE)
         scrape_item.setup_as_profile(self.create_title(model_name))
-        headers = {"X-Requested-With": "XMLHttpRequest"}
+
         for page in itertools.count(1):
             posts: list[dict[str, Any]] = await self.request_json(
-                scrape_item.url.with_query(page=page), headers=headers
+                scrape_item.url.with_query(page=page),
+                headers={"X-Requested-With": "XMLHttpRequest"},
             )
             # We may be able to omit the last request by just checking the number of posts
             # Seems to always return 48 posts
             if not posts:
                 break
+
             for post in (Post.from_dict(post) for post in posts):
                 if post.type is PostType.VIDEO:
                     post_url = self.PRIMARY_URL / model_name / "video" / post.id
@@ -108,9 +104,9 @@ class LeakedZoneCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        model_name = css.select_text(soup, _SELECTORS.MODEL_NAME)
+        model_name = css.select_text(soup, Selector.MODEL_NAME)
         scrape_item.setup_as_album(self.create_title(model_name))
-        encoded_url = self.get_encoded_video_url(soup)
+        encoded_url = self._extract_video(soup)
         post = Post(video_id, PostType.VIDEO, stream_url_play=encoded_url)
         await self._handle_video(scrape_item, post)
 
