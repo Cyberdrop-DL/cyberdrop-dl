@@ -71,10 +71,13 @@ class ScrapingUI(LiveUI):
         return renderable
 
     def _emit_jsonl(self) -> None:
+        if not env.WRITE_JSON_UI:
+            return
+
         now = time.monotonic()
         if self._last_write is None:
             self._last_write = now
-        elif now - self._last_write < 5:
+        elif now - self._last_write < env.WRITE_JSON_UI:
             return
 
         json.dump(self.__json__(), sys.stderr, ensure_ascii=False, separators=(",", ":"))
