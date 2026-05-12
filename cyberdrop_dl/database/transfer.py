@@ -9,6 +9,7 @@ from pathlib import Path
 
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
+from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 logger = logging.getLogger(__name__)
@@ -208,4 +209,5 @@ def _transfer(new_conn: sqlite3.Connection) -> None:
 
 
 if __name__ == "__main__":
-    run(Path(sys.argv[1]))
+    with setup_console_logging():
+        run(Path(sys.argv[1]))
