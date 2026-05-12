@@ -17,10 +17,9 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
 
-from aiolimiter import AsyncLimiter
 from typing_extensions import deprecated
 
-from cyberdrop_dl import env
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.http import Downloader
@@ -205,7 +204,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         async with self._startup_lock:
             if self._ready:
                 return
-            self.manager.http_client.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
+            self.manager.http_client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
 
             await self.__async_post_init__()
             self._ready = True
@@ -241,7 +240,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         cls.SUPPORTED_PATHS = _sort_supported_paths(cls.SUPPORTED_PATHS)  # pyright: ignore[reportConstantRedefinition]
         cls.IS_ABC: bool = is_abc
 
-        add_to_register = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
+        add_to_registry = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
 
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
@@ -249,12 +248,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
             cls.INFO: CrawlerInfo = CrawlerInfo.generic(cls.NAME, cls.SUPPORTED_PATHS)
-            if add_to_register:
+            if add_to_registry:
                 Registry.generic.add(cls)
             return
 
         if is_abc:
-            if add_to_register:
+            if add_to_registry:
                 Registry.abc.add(cls)
             return
 
@@ -278,7 +277,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             supported_domains=_make_wiki_supported_domains(cls.SCRAPE_MAPPER_KEYS),
             supported_paths=cls.SUPPORTED_PATHS,
         )
-        if add_to_register:
+        if add_to_registry:
             Registry.concrete.add(cls)
 
     @final

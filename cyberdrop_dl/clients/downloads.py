@@ -7,8 +7,6 @@ import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, final
 
-from aiolimiter import AsyncLimiter
-
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
 from cyberdrop_dl.constants import FileExt
@@ -37,15 +35,6 @@ _FREE_SPACE_CHECK_PERIOD: int = 5  # Check every 5 chunks
 _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
 
 
-class DownloadSpeedLimiter(AsyncLimiter):
-    __slots__ = ()
-
-    async def acquire(self, amount: float = 1) -> None:
-        if self.max_rate <= 0:
-            return
-        await super().acquire(amount)
-
-
 @final
 class DownloadClient:
     """Low level class that performs the actual HTTP download operations"""
@@ -55,7 +44,7 @@ class DownloadClient:
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
-        self.speed_limiter = DownloadSpeedLimiter(speed_limit, time_period=1)
+        self.speed_limiter = aio.RateLimiter.w_no_burst(speed_limit)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
             self.chunk_size = min(self.chunk_size, speed_limit)
@@ -80,11 +69,10 @@ class DownloadClient:
 
         await asyncio.sleep(self.manager.config.global_settings.rate_limiting_options.total_delay)
 
-        async with self.http_client.request(
+        async with self.http_client.raw_request(
             media_item.real_url,
             headers=media_item.headers,
             impersonate=media_item.domain in _USE_IMPERSONATION,
-            check=False,
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 
@@ -409,22 +397,22 @@ async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
     if media_item.is_segment:
         return False
 
-    is_video = media_item.ext.lower() in FileExt.VIDEO
-    is_audio = media_item.ext.lower() in FileExt.AUDIO
-    if not (is_video or is_audio):
-        return False
-
     duration_limits = config.settings.media_duration_limits.ranges
-    duration: float | None = await _probe_duration(media_item)
-    media_item.duration = duration
-
-    if duration is None:
+    if media_item.ext.lower() in FileExt.VIDEO:
+        limits = duration_limits.video
+    elif media_item.ext.lower() in FileExt.AUDIO:
+        limits = duration_limits.audio
+    else:
         return False
 
-    if is_video:
-        return duration not in duration_limits.video
+    if limits is None:
+        return False
 
-    return duration not in duration_limits.audio
+    media_item.duration = await _probe_duration(media_item)
+    if media_item.duration is None:
+        return False
+
+    return media_item.duration not in limits
 
 
 async def _probe_duration(media_item: MediaItem) -> float | None:

@@ -68,6 +68,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     headers: CIMultiDictProxy[str]
     url: AbsoluteHttpURL
     location: AbsoluteHttpURL | None
+    id: str = dataclasses.field(init=False, default="")
 
     _resp: _ResponseT
     _text: str = ""

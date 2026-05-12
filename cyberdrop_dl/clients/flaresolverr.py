@@ -60,6 +60,7 @@ class Response:
     status: str
     message: str
     solution: Solution | None
+    id: str = dataclasses.field(init=False, default="")
 
     @property
     def ok(self) -> bool:
@@ -181,6 +182,7 @@ class Client:
                 async with self._aiohttp_session.post(self.url, json=params, **timeout) as response:
                     resp_json = await response.json()
                     resp = Response.from_dict(resp_json)
+                    resp.id = str(request_id)
                     logger.debug("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json))
                     return resp
 

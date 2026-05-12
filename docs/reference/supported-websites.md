@@ -37,7 +37,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.7.0
+List of sites supported by cyberdrop-dl-patched as of version 9.8.0
 
 ### 4chan
 
@@ -1583,22 +1583,6 @@ spreadsheets:
   - `/search/<query>`
 - Videos:
   - `/title`
-
-
-### Nekohouse
-
-**Primary URL**: [https://nekohouse.su](https://nekohouse.su)
-
-**Supported Domains**: `nekohouse.*`
-
-**Supported Paths**:
-
-- Direct links:
-  - `/(data|thumbnails)/...`
-- Individual Post:
-  - `/<service>/user/<user_id>/post/<post_id>`
-- Model:
-  - `/<service>/user/<user_id>`
 
 
 ### nHentai

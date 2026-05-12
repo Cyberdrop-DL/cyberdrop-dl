@@ -55,6 +55,10 @@ class CSVLogsManager:
     )
     _has_headers: set[Path] = dataclasses.field(init=False, default_factory=set)
     _ready: bool = dataclasses.field(init=False, default=False)
+    _responses_folder: Path = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self._responses_folder = self.files.main_log.parent / "cdl_responses"
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
@@ -135,7 +139,6 @@ class CSVLogsManager:
 
     def write_response(
         self,
-        folder: Path,
         url: AbsoluteHttpURL,
         response: AbstractResponse[Any],
         exc: Exception | None = None,
@@ -143,7 +146,7 @@ class CSVLogsManager:
         _ = self.task_group.create_task(
             asyncio.to_thread(
                 _write_resp_to_disk,
-                folder,
+                self._responses_folder,
                 url,
                 response,
                 exc,
@@ -219,16 +222,19 @@ def _write_resp_to_disk(
     response: AbstractResponse[Any],
     exc: Exception | None = None,
 ) -> None:
-    file = _prepare_resp_file(folder, url, response.created_at)
+    ext = ".json" if "json" in response.content_type else ".html"
+    file = _prepare_resp_file(folder, url, response.created_at, ext)
     try:
         _ = file.write_text(response.create_report(exc), "utf8")
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning(f"Unable to write response from {url} to disk ({e!r})")
+    else:
+        logger.debug(f"Saved response from {url} to '{file}'")
 
 
-def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime) -> Path:
+def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime, ext: str = ".html") -> Path:
     max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
     log_date = created_at.strftime(constants.LOGS_DATETIME_FORMAT)
     path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
-    filename = f"{path_safe_url[:max_stem_len]}_{log_date}.html"
+    filename = f"{path_safe_url[:max_stem_len]}_{log_date}{ext}"
     return folder / filename

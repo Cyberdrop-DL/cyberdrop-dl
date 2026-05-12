@@ -1,6 +1,7 @@
 ---
 description: These are limiting options for the program
 ---
+
 # Rate Limiting Options
 
 ## `connection_timeout`
@@ -60,7 +61,7 @@ Cyberdrop-DL caches the requests made to any website. This setting controls how 
 
 - An `int` input is assumed to be the number of days
 
-- A  `str` input is expected to be in the format; `<value> <unit>`, ex: `10 days`.
+- A `str` input is expected to be in the format; `<value> <unit>`, ex: `10 days`.
 
 ### Valid `str` units
 
@@ -123,10 +124,10 @@ Some domains have internal limits set by the program, which can not be modified:
 
 | Type            | Default |
 | --------------- | ------- |
-| `PositiveFloat` | `50.0`  |
+| `PositiveFloat` | `25.0`  |
 
 {% hint style="info" %}
-This setting specifies speed and it's interpreted as `<value> / second`. ex: `50` means `50 requests / second`
+This setting specifies speed and it's interpreted as `<value> / second`. ex: `25` means `25 requests / second`
 {% endhint %}
 
 This is the maximum number of requests that can be made by the program per second.
