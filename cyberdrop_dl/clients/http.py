@@ -5,16 +5,15 @@ import contextlib
 import logging
 import platform
 import time
-import uuid
 from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
-from multidict import CIMultiDict
 
 from cyberdrop_dl import aio, cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
+from cyberdrop_dl.clients.request import Request, normalize_impersonation, prepare_headers
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -35,21 +34,6 @@ if TYPE_CHECKING:
 _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
 
 logger = logging.getLogger(__name__)
-
-
-class _LazyRequestLog:
-    def __init__(self, params: Mapping[str, Any]) -> None:
-        self.params: Mapping[str, Any] = params
-
-    def __json__(self) -> dict[str, Any]:
-        params = {k: v for k, v in self.params.items() if v is not None}
-        headers = dict(params.pop("headers")) or None
-        if headers:
-            params.update(headers=headers)
-        return params
-
-    def __str__(self) -> str:
-        return str(self.__json__())
 
 
 class _LazyResponseLog:
@@ -240,77 +224,69 @@ class HTTPClient:
         json: Any = None,
         request_params: dict[str, Any] | None = None,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
-        request_params = request_params or {}
-        request_params["headers"] = headers = _prepare_headers(headers)
-        request_params["data"] = data
-        request_params["json"] = json
 
-        if method == "GET" and (data or json):
-            method = "POST"
+        request = Request(
+            url=url,
+            method=method,
+            data=data,
+            json=json,
+            params=request_params or {},
+            headers=prepare_headers(headers),
+            impersonate=normalize_impersonation(impersonate),
+        )
 
-        impersonate = self.manager.cli_args.impersonate or impersonate
-        if impersonate:
-            if impersonate is True:
-                impersonate = "chrome"
-            request_params["impersonate"] = impersonate
+        if not request.impersonate:
+            _ = request.headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
-        else:
-            _ = headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
-
-        async with self._request(url, method, request_params, impersonate=bool(impersonate)) as resp:
+        async with self._request(request) as resp:
             yield resp
 
     @contextlib.asynccontextmanager
-    async def _request(
-        self,
-        url: AbsoluteHttpURL,
-        method: HttpMethod,
-        request_params: Mapping[str, Any],
-        *,
-        impersonate: bool,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-        request_id = str(uuid.uuid4())
-        logger.debug(
-            "Starting %s request [id=%s] to %s \n%s",
-            method,
-            request_id,
-            url,
-            _LazyRequestLog(request_params),
-        )
+    async def _request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
+        logger.debug("Starting %s request [id=%s]\n%s", request.method, request.id, request)
         exc = None
-        async with self.__request(url, method, request_params, impersonate=impersonate) as resp:
-            resp.id = request_id
-            logger.debug("Finished %s request [id=%s]\n%s", method, request_id, _LazyResponseLog(resp))
+        async with self.__request(request) as resp:
+            resp.id = request.id
+            logger.debug("Finished %s request [id=%s]\n%s", request.method, request.id, _LazyResponseLog(resp))
             try:
                 yield resp
             except Exception as e:
                 exc = e
+                raise
             finally:
                 if self._dump_responses:
-                    self.manager.logs.write_response(url, resp, exc)
+                    self.manager.logs.write_response(request.url, resp, exc)
                 del exc
                 del resp
 
     @contextlib.asynccontextmanager
-    async def __request(
-        self,
-        url: AbsoluteHttpURL,
-        method: HttpMethod,
-        request_params: Mapping[str, Any],
-        *,
-        impersonate: bool,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-
-        if impersonate:
+    async def __request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
+        if request.impersonate:
             async with contextlib.aclosing(
-                await self.curl_session.request(method, str(url), stream=True, **request_params)
+                await self.curl_session.request(
+                    request.method,
+                    str(request.url),
+                    stream=True,
+                    headers=request.headers,
+                    json=request.json,
+                    data=request.data,
+                    impersonate=request.impersonate,
+                    **request.params,
+                )
             ) as curl_resp:
                 yield AbstractResponse.create(curl_resp)
-                self.__sync_session_cookies(url)
+                self.__sync_session_cookies(request.url)
 
             return
 
-        async with self._session.request(method, url, **request_params) as aio_resp:
+        async with self._session.request(
+            request.method,
+            request.url,
+            headers=request.headers,
+            json=request.json,
+            data=request.data,
+            **request.params,
+        ) as aio_resp:
             yield AbstractResponse.create(aio_resp)
 
     async def _flaresolverr_request(
@@ -336,10 +312,6 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
     if check := _JSON_CHECK.get():
         check(await response.json(), response)
         return
-
-
-def _prepare_headers(headers: Mapping[str, str] | None) -> CIMultiDict[str]:
-    return CIMultiDict(headers) if headers else CIMultiDict()
 
 
 class HTTPClientProxy(Protocol):
