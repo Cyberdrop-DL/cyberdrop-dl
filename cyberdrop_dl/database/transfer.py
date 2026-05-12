@@ -7,7 +7,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from cyberdrop_dl.database import Database
+from cyberdrop_dl.database import Database, connect
+from cyberdrop_dl.database.tables.history import fix_referers
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils.filepath import sanitize_filename
@@ -173,6 +174,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
         else:
             new_conn.commit()
 
+    _fix_referers(new_path)
     backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
     db_path.rename(backup_path)
     new_path.rename(db_path)
@@ -186,6 +188,15 @@ def _create_new_database(path: Path) -> None:
             pass
 
     asyncio.run(connect())
+
+
+def _fix_referers(db_path: Path) -> None:
+    async def fix() -> None:
+        async with connect(db_path) as conn:
+            await conn
+            await fix_referers(conn)
+
+    asyncio.run(fix())
 
 
 def _transfer(new_conn: sqlite3.Connection) -> None:
