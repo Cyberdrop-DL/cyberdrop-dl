@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
 import sqlite3
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
+from cyberdrop_dl.utils.filepath import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -140,19 +142,19 @@ def run(db_path: Path, *, force: bool = False) -> None:
         raise FileNotFoundError(f"Database not found: {db_path}")
 
     with sqlite3.connect(db_path) as probe:
-        version = detect_version(probe)
+        old_version = detect_version(probe)
 
-    logger.info("Detected schema version: %s", version)
+    logger.info("Detected schema version: %s", old_version)
 
-    if not force and version == CURRENT_APP_SCHEMA_VERSION:
+    if not force and old_version == CURRENT_APP_SCHEMA_VERSION:
         logger.info(
             "Database is already at the latest schema (%s). Use --force to re-run.",
             CURRENT_APP_SCHEMA_VERSION,
         )
         return
 
-    new_path = db_path.with_name(f"{db_path.stem}.new{db_path.suffix}")
-    new_path.unlink(missing_ok=True)
+    now = sanitize_filename(str(datetime.datetime.now()))
+    new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
 
     try:
         logger.debug("Creating new database at: %s", new_path)
@@ -176,7 +178,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
         new_path.unlink(missing_ok=True)
         raise
 
-    backup_path = _make_backup_path(db_path)
+    backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
     db_path.rename(backup_path)
     new_path.rename(db_path)
 
@@ -190,10 +192,6 @@ def _create_new_database(path: Path) -> None:
             pass
 
     asyncio.run(connect())
-
-
-def _make_backup_path(db_path: Path) -> Path:
-    return db_path.with_name(f"{db_path.stem}.backup{db_path.suffix}")
 
 
 def _run(new_conn: sqlite3.Connection) -> None:
