@@ -145,12 +145,19 @@ class BunkrCrawler(Crawler):
 
     @override
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        if not self._known_good_host:
-            async with self._redirect_lock:
-                if not self._known_good_host:
-                    _ = await self._request_soup_lenient(url)
-        assert self._known_good_host
-        return await super()._get_redirect_url(url.with_host(self._known_good_host))
+        try:
+            return await super()._get_redirect_url(url)
+        except (ClientConnectorError, DDOSGuardError):
+            if self.is_subdomain(url):
+                raise
+
+            if not self._known_good_host:
+                async with self._redirect_lock:
+                    if not self._known_good_host:
+                        _ = await self._request_soup_lenient(url)
+
+            assert self._known_good_host
+            return await super()._get_redirect_url(url.with_host(self._known_good_host))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
