@@ -13,6 +13,18 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://cdn3.bunkr.ru/xteleela-Onlyfans-Pics-qB1XyDRi.zip",
+        "results": [
+            {
+                "url": "ANY",
+                "filename": "xteleela Onlyfans Pics.zip",
+                "referer": "https://bunkr.site/f/xteleela-Onlyfans-Pics-qB1XyDRi.zip",
+                "download_folder": "re:Loose Files (Bunkr)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://bunkr.ax/v/rFicV4QnhSHBE",
         "results": [
             {
