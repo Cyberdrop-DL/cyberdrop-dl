@@ -133,7 +133,7 @@ class BunkrCrawler(Crawler):
             case ["f", _]:
                 return await self.file(scrape_item)
             case [_]:
-                if _is_stream_redirect(scrape_item.url):
+                if _is_stream_redirect(scrape_item.url.host):
                     return await self.follow_redirect(scrape_item)
 
                 if self.is_subdomain(scrape_item.url):
@@ -297,12 +297,12 @@ class BunkrCrawler(Crawler):
         return await self.request_soup(url)
 
 
-def _is_stream_redirect(url: AbsoluteHttpURL) -> bool:
-    first_subdomain = url.host.split(".")[0]
+def _is_stream_redirect(host: str) -> bool:
+    first_subdomain = host.split(".")[0]
     prefix, _, number = first_subdomain.partition("cdn")
     if not prefix and number.isdigit():
         return True
-    return any(part in url.host for part in ("cdn12", "cdn-")) or url.host == "cdn.bunkr.ru"
+    return any(part in host for part in ("cdn12", "cdn-")) or host == "cdn.bunkr.ru"
 
 
 def _override_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
