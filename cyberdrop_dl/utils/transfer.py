@@ -156,32 +156,26 @@ def run(db_path: Path, *, force: bool = False) -> None:
     now = sanitize_filename(str(datetime.datetime.now()))
     new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
 
-    try:
-        logger.debug("Creating new database at: %s", new_path)
-        _create_new_database(new_path)
-        new_conn = sqlite3.connect(new_path)
+    logger.debug("Creating new database at: %s", new_path)
+    _create_new_database(new_path)
+    with sqlite3.connect(new_path) as new_conn:
         new_conn.execute("PRAGMA journal_mode=WAL")
         new_conn.execute("PRAGMA foreign_keys=OFF")
         new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
-
         try:
-            _run(new_conn)
-            new_conn.commit()
+            _transfer(new_conn)
         except Exception:
             new_conn.rollback()
-            raise
-        finally:
             new_conn.close()
-
-    except Exception:
-        logger.exception("Transfer failed - original database has NOT been changed")
-        new_path.unlink(missing_ok=True)
-        raise
+            logger.exception("Transfer failed - original database has NOT been changed")
+            new_path.unlink()
+            raise
+        else:
+            new_conn.commit()
 
     backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
     db_path.rename(backup_path)
     new_path.rename(db_path)
-
     logger.info("Transfer complete. Backup at: %s", backup_path)
     logger.info("Schema version: %s", CURRENT_APP_SCHEMA_VERSION)
 
@@ -194,7 +188,7 @@ def _create_new_database(path: Path) -> None:
     asyncio.run(connect())
 
 
-def _run(new_conn: sqlite3.Connection) -> None:
+def _transfer(new_conn: sqlite3.Connection) -> None:
     old_tables = _get_table_names(new_conn, schema="old")
     new_tables = _get_table_names(new_conn, schema="main")
 
