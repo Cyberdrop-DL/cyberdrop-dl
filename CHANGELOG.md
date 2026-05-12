@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - All HTTP errors being reported as `generator didn't yield` errors
-- Do not override host for stream redirects (Bunkr)
+- Do not override host of stream redirect URLs (Bunkr)
 
 ## [9.8.1] - 2026-05-11
 
