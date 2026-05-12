@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
+import sys
 from pathlib import Path
 
 from cyberdrop_dl.database import Database
@@ -134,86 +135,85 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-class TransferManager:
-    """Create a fresh database with the current schema and transfer all rows from the old database into it."""
+def run(db_path: Path, *, force: bool = False) -> None:
+    if not db_path.exists():
+        raise FileNotFoundError(f"Database not found: {db_path}")
 
-    def __init__(self, db_path: Path) -> None:
-        self.db_path = Path(db_path)
+    with sqlite3.connect(db_path) as probe:
+        version = detect_version(probe)
 
-    def run(self, *, force: bool = False) -> None:
-        if not self.db_path.exists():
-            raise FileNotFoundError(f"Database not found: {self.db_path}")
+    logger.info("Detected schema version: %s", version)
 
-        with sqlite3.connect(self.db_path) as probe:
-            version = detect_version(probe)
-        logger.info("Detected schema version: %s", version)
+    if not force and version == CURRENT_APP_SCHEMA_VERSION:
+        logger.info(
+            "Database is already at the latest schema (%s). Use --force to re-run.",
+            CURRENT_APP_SCHEMA_VERSION,
+        )
+        return
 
-        if not force and version == CURRENT_APP_SCHEMA_VERSION:
-            logger.info(
-                "Database is already at the latest schema (%s). Use --force to re-run.",
-                CURRENT_APP_SCHEMA_VERSION,
-            )
-            return
+    new_path = db_path.with_name(f"{db_path.stem}.new{db_path.suffix}")
+    new_path.unlink(missing_ok=True)
 
-        new_path = self.db_path.with_name(f"{self.db_path.stem}.new{self.db_path.suffix}")
-        new_path.unlink(missing_ok=True)
+    try:
+        logger.debug("Creating new database at: %s", new_path)
+        _create_new_database(new_path)
+        new_conn = sqlite3.connect(new_path)
+        new_conn.execute("PRAGMA journal_mode=WAL")
+        new_conn.execute("PRAGMA foreign_keys=OFF")
+        new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
 
         try:
-            logger.debug("Creating new database at: %s", new_path)
-            asyncio.run(self._create_new_database(new_path))
-
-            new_conn = sqlite3.connect(new_path)
-            new_conn.execute("PRAGMA journal_mode=WAL")
-            new_conn.execute("PRAGMA foreign_keys=OFF")
-            new_conn.execute(f"ATTACH DATABASE '{self.db_path}' AS old")
-
-            try:
-                self._run_transfer(new_conn)
-                new_conn.commit()
-            except Exception:
-                new_conn.rollback()
-                raise
-            finally:
-                new_conn.close()
-
+            _run(new_conn)
+            new_conn.commit()
         except Exception:
-            logger.exception("Transfer failed - original database has NOT been changed")
-            new_path.unlink(missing_ok=True)
+            new_conn.rollback()
             raise
+        finally:
+            new_conn.close()
 
-        backup_path = self._make_backup_path()
-        self.db_path.rename(backup_path)
-        new_path.rename(self.db_path)
+    except Exception:
+        logger.exception("Transfer failed - original database has NOT been changed")
+        new_path.unlink(missing_ok=True)
+        raise
 
-        logger.info("Transfer complete. Backup at: %s", backup_path)
-        logger.info("Schema version: %s", CURRENT_APP_SCHEMA_VERSION)
+    backup_path = _make_backup_path(db_path)
+    db_path.rename(backup_path)
+    new_path.rename(db_path)
 
-    async def _create_new_database(self, path: Path) -> None:
-        """Initialise a fresh database with the current CDL schema."""
+    logger.info("Transfer complete. Backup at: %s", backup_path)
+    logger.info("Schema version: %s", CURRENT_APP_SCHEMA_VERSION)
 
-        db = Database(_db_path=path, ignore_history=True)
-        async with db:
-            pass  # Create the schema and close to initialize the file on disk.
 
-    def _make_backup_path(self) -> Path:
-        stem = self.db_path.stem
-        suffix = self.db_path.suffix
-        return self.db_path.with_name(f"{stem}.backup{suffix}")
+def _create_new_database(path: Path) -> None:
+    async def connect() -> None:
+        async with Database(_db_path=path, ignore_history=True):
+            pass
 
-    def _run_transfer(self, new_conn: sqlite3.Connection) -> None:
-        old_tables = _get_table_names(new_conn, schema="old")
-        new_tables = _get_table_names(new_conn, schema="main")
+    asyncio.run(connect())
 
-        for table in _DIRECT_TRANSFER_TABLES:
-            if table not in new_tables or table in _SKIP_TABLES:
-                continue
 
-            if table == "files" and "files" not in old_tables:
-                _transfer_media_to_files(new_conn)
-            else:
-                _transfer_table(new_conn, table)
+def _make_backup_path(db_path: Path) -> Path:
+    return db_path.with_name(f"{db_path.stem}.backup{db_path.suffix}")
 
-        # Transfer any remaining new tables not listed
-        covered = set(_DIRECT_TRANSFER_TABLES) | _SKIP_TABLES
-        for table in sorted(new_tables - covered):
+
+def _run(new_conn: sqlite3.Connection) -> None:
+    old_tables = _get_table_names(new_conn, schema="old")
+    new_tables = _get_table_names(new_conn, schema="main")
+
+    for table in _DIRECT_TRANSFER_TABLES:
+        if table not in new_tables or table in _SKIP_TABLES:
+            continue
+
+        if table == "files" and "files" not in old_tables:
+            _transfer_media_to_files(new_conn)
+        else:
             _transfer_table(new_conn, table)
+
+    # Transfer any remaining new tables not listed
+    covered = set(_DIRECT_TRANSFER_TABLES) | _SKIP_TABLES
+    for table in sorted(new_tables - covered):
+        _transfer_table(new_conn, table)
+
+
+if __name__ == "__main__":
+    run(Path(sys.argv[1]))

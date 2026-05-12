@@ -19,7 +19,7 @@ from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.updates import check_latest_pypi
 from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
-from cyberdrop_dl.utils.transfer import TransferManager
+from cyberdrop_dl.utils.transfer import run as transfer_db
 
 logger = logging.getLogger("cyberdrop_dl")
 
@@ -161,8 +161,7 @@ def transfer(
     ] = False,
 ) -> None:
     """Migrate an old database to the latest schema version."""
-    manager = TransferManager(db_path)
-    manager.run(force=force)
+    transfer_db(db_path, force=force)
 
 
 def main(args: Sequence[str] | None = None) -> None:
