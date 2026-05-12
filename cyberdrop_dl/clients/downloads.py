@@ -89,8 +89,8 @@ class DownloadClient:
         etag.check(resp.headers)
         await self.http_client.check_http_status(resp)
 
-        if not media_item.is_segment:
-            _check_content_type(_get_content_type(resp.headers), media_item.ext)
+        if not media_item.is_segment and (content_type := _get_content_type(resp.headers)):
+            _check_content_type(content_type, media_item.ext)
 
         media_item.filesize = int(resp.headers.get("Content-Length", "0")) or None
         if not media_item.path:
@@ -364,11 +364,10 @@ def _check_content_type(content_type: str, ext: str) -> str | None:
         raise InvalidContentTypeError(message=msg)
 
 
-def _get_content_type(headers: Mapping[str, str]) -> str:
+def _get_content_type(headers: Mapping[str, str]) -> str | None:
     content_type = headers.get("Content-Type")
     if not content_type:
-        msg = "No content type in response headers"
-        raise InvalidContentTypeError(message=msg)
+        return
 
     override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
     return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type

@@ -92,7 +92,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
                 return BeautifulSoup(self._text, "html.parser").prettify(formatter="html")
 
         if not ("json" in self.content_type or "html" in self.content_type):
-            return f"<{self.content_type} payload>"
+            return f"<{self.content_type or 'application/octet-stream'} payload>"
 
         return self._text
 
