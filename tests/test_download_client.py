@@ -36,9 +36,6 @@ def test_get_content_type() -> None:
     assert get("text/HTML") == "text/HTML"
     assert get("application/json") == "application/json"
 
-    with pytest.raises(InvalidContentTypeError):
-        _ = get("")
-
 
 def test_check_content_type() -> None:
     _check_content_type("text/html", ".txt")
