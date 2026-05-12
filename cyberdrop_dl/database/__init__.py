@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def connect(path: Path) -> aiosqlite.Connection:
-    db_conn = aiosqlite.connect(path, timeout=20)
+async def connect(path: Path) -> aiosqlite.Connection:
+    db_conn = await aiosqlite.connect(path, timeout=20)
     db_conn.row_factory = aiosqlite.Row
     return db_conn
 

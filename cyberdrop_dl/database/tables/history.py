@@ -35,6 +35,7 @@ class HistoryTable:
         await self.db_conn.commit()
         await self.fix_primary_keys()
         await self.add_columns_media()
+        await fix_domains(self.db_conn)
         await fix_referers(self.db_conn)
         await self.db_conn.executescript(create_media_index)
         await self.db_conn.commit()
@@ -290,8 +291,25 @@ class HistoryTable:
             await self.db_conn.commit()
 
 
+async def fix_domains(db_conn: aiosqlite.Connection) -> None:
+    logger.info("Updating old domains")
+    updates = "\n".join(
+        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"
+        for current, old in [
+            ("bunkr", "bunkrr"),
+            ("jpg5.su", "sharex"),
+            ("turbovid", "saint"),
+            ("nudostar.tv", "nudostartv"),
+        ]
+    )
+    await db_conn.executescript(updates)
+    await db_conn.commit()
+
+
 async def fix_referers(db_conn: aiosqlite.Connection):
     from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
+
+    logger.info("Updating old referers")
 
     def try_wrap(fn):
         def call(*args, **kwargs):
@@ -312,10 +330,6 @@ async def fix_referers(db_conn: aiosqlite.Connection):
         await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
 
     updates = (
-        "UPDATE OR REPLACE media SET domain = 'bunkr' WHERE domain = 'bunkrr';"
-        "UPDATE OR REPLACE media SET domain = 'jpg5.su' WHERE domain = 'sharex';"
-        "UPDATE OR REPLACE media SET domain = 'turbovid' WHERE domain = 'saint';"
-        "UPDATE OR REPLACE media SET domain = 'nudostar.tv' WHERE domain = 'nudostartv';"
         "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
         "UPDATE OR REPLACE media SET referer = FIX_JPG5_REFERER(referer) WHERE domain = 'jpg5.su';"
         "UPDATE OR REPLACE media SET referer = FIX_CYBERDROP_REFERER(referer) WHERE domain = 'cyberdrop';"
