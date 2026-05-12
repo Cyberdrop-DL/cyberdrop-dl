@@ -10,8 +10,7 @@ import shutil
 import subprocess
 import uuid
 from fractions import Fraction
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
@@ -19,6 +18,7 @@ from cyberdrop_dl.utils import DictDataclass
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+    from pathlib import Path
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -177,27 +177,37 @@ def _raw_concat(files: Iterable[Path], output: Path) -> None:
             file.unlink()
 
 
-@overload
-async def probe(input: Path, /) -> FFprobeResult: ...
-
-
-@overload
-async def probe(input: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult: ...
-
-
-async def probe(input: Path | AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> FFprobeResult:
-    _check_ffprobe()
-
-    if isinstance(input, Path):
-        assert input.is_absolute()
-        assert not headers
-
+async def probe(input: Path, /) -> FFprobeResult:
+    assert input.is_absolute()
     command = *_FFPROBE_CALL_PREFIX, str(input)
-    if headers:
-        command = (
-            *command,
-            *itertools.chain.from_iterable(("-headers", f"{name}: {value}") for name, value in headers.items()),
-        )
+    return await _probe(command)
+
+
+async def probe_url(
+    input: AbsoluteHttpURL,
+    /,
+    *,
+    headers: Mapping[str, str] | None = None,
+    proxy: AbsoluteHttpURL | None = None,
+    verify: bool = True,
+) -> FFprobeResult:
+
+    def extra_params() -> Generator[str]:
+        if headers:
+            for name, value in headers.items():
+                yield "-headers"
+                yield f"{name}: {value}"
+
+        if proxy:
+            yield "-http_proxy"
+            yield str(proxy)
+
+    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(input), *extra_params()
+    return await _probe(command)
+
+
+async def _probe(command: Sequence[str | Path]) -> FFprobeResult:
+    _check_ffprobe()
     result = await _run_command(command)
     if not result.success:
         return _EMPTY_FFPROBE_RESULT
