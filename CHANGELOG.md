@@ -22,6 +22,62 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.8.1] - 2026-05-11
+
+### Changed
+
+- Do not probe duration of media files unless required by config
+
+### Fixed
+
+- `ffprobe not installed` error on non HLS downloads
+
+### Security
+
+- Force latest version of some transient dependencies to resolve CVE-2026-44431 and CVE-2026-44432
+
+## [9.8.0] - 2026-05-11
+
+### Added
+
+- New `--dump-responses` option to save non binary responses (text/HTML/JSON) to disk
+
+### Changed
+
+- Log downloads requests/responses
+- Log flaresolverr requests/responses
+- Prevent requests bursting at the start of a run
+
+### Deprecated
+
+- `--save-pages-html` will be removed on the next major release
+
+### Removed
+
+- Nekohouse support (No longer exists)
+
+### Fixed
+
+- Parsing of json responses from non Selenium forks of Flaresolverr
+- Flaresolverr session destruction always failing
+- Handle posts with deleted images (TikTok)
+- A single video download error canceling the entire scrape queue (LeakedZone/Hotleak)
+
+## [9.7.0] - 2026-05-07
+
+### Added
+
+- Coomerfans.com support
+
+### Removed
+
+- Using `--impersonate` without any value is no longer supported
+
+### Fixed
+
+- Typer error when using `--impersonate`
+- Do not crash on API errors (pCloud)
+
 ## [9.6.0] - 2026-05-04
 
 ### Changed

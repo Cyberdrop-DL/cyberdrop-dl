@@ -1,8 +1,8 @@
 DOMAIN = "gupload"
 TEST_CASES = [
-    (
-        "https://gupload.xyz/data/e/26011780d54f",
-        [
+    {
+        "url": "https://gupload.xyz/data/e/26011780d54f",
+        "results": [
             {
                 "url": "https://gupload.xyz/data/e/hls/26011780d54f/thumb/thumbnail_grid.jpg",
                 "referer": "https://gupload.xyz/data/e/26011780d54f#thumbnail",
@@ -22,5 +22,5 @@ TEST_CASES = [
                 "album_id": None,
             },
         ],
-    ),
+    }
 ]

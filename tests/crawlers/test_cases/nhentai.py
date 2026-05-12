@@ -1,25 +1,20 @@
 DOMAIN = "nhentai.net"
 TEST_CASES = [
-    (
-        "https://nhentai.net/g/363796/",
-        [
+    {
+        "url": "https://nhentai.net/g/363796/",
+        "results": [
             {
-                "url": r"re:nhentai.net/galleries/1941242/",
+                "url": "re:nhentai.net/galleries/1941242/",
                 "referer": "https://nhentai.net/g/363796",
                 "album_id": "363796",
-                "datetime": 1624512830,
+                "uploaded_at": 1624512830,
             }
         ],
-        25,
-    ),
-    (
-        "https://nhentai.net/artist/tamabi/",
-        [
-            {
-                "url": r"re:nhentai.net/galleries/",
-                "download_folder": r"re:tamabi \[artist\] \(nHentai\)/",
-            }
-        ],
-        8658,
-    ),
+        "count": 25,
+    },
+    {
+        "url": "https://nhentai.net/artist/tamabi/",
+        "results": [{"url": "re:nhentai.net/galleries/", "download_folder": "re:tamabi \\[artist\\] \\(nHentai\\)/"}],
+        "count": 8658,
+    },
 ]

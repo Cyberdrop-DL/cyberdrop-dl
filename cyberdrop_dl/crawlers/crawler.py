@@ -17,13 +17,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
 
-from aiolimiter import AsyncLimiter
 from typing_extensions import deprecated
 
-from cyberdrop_dl import env
-from cyberdrop_dl.clients import HTTPClient, HTTPClientProxy
+from cyberdrop_dl import aio, env
+from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
-from cyberdrop_dl.downloader.downloader import Downloader
+from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
@@ -49,7 +48,7 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
 
@@ -172,16 +171,26 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     @final
     def __init__(self, manager: Manager) -> None:
         self.manager: Manager = manager
-        self.downloader: Downloader = dataclasses.field(init=False)
-        self.client: HTTPClient = dataclasses.field(init=False)
+
         self._startup_lock: asyncio.Lock = asyncio.Lock()
         self._ready: bool = False
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
-
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
+
+        self.downloader: Downloader = Downloader(
+            self.manager,
+            self.DOMAIN,
+            use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
+            download_slots=self._DOWNLOAD_SLOTS,
+        )
+
         self.__post_init__()
+
+    @property
+    def client(self) -> HTTPClient:
+        return self.manager.http_client
 
     def __post_init__(self) -> None:
         """Override in subclasses to add custom init logic
@@ -195,13 +204,8 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         async with self._startup_lock:
             if self._ready:
                 return
-            self.client = self.manager.client_manager.scraper_client
-            self.manager.client_manager.rate_limits[self.DOMAIN] = AsyncLimiter(*self._RATE_LIMIT)
-            if self._DOWNLOAD_SLOTS:
-                self.manager.client_manager.download_slots[self.DOMAIN] = self._DOWNLOAD_SLOTS
-            if self._USE_DOWNLOAD_SERVERS_LOCKS:
-                self.manager.client_manager.download_client.server_locked_domains.add(self.DOMAIN)
-            self.__init_downloader__()
+            self.manager.http_client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
+
             await self.__async_post_init__()
             self._ready = True
 
@@ -236,7 +240,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         cls.SUPPORTED_PATHS = _sort_supported_paths(cls.SUPPORTED_PATHS)  # pyright: ignore[reportConstantRedefinition]
         cls.IS_ABC: bool = is_abc
 
-        add_to_register = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
+        add_to_registry = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
 
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
@@ -244,12 +248,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
             cls.INFO: CrawlerInfo = CrawlerInfo.generic(cls.NAME, cls.SUPPORTED_PATHS)
-            if add_to_register:
+            if add_to_registry:
                 Registry.generic.add(cls)
             return
 
         if is_abc:
-            if add_to_register:
+            if add_to_registry:
                 Registry.abc.add(cls)
             return
 
@@ -273,12 +277,8 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             supported_domains=_make_wiki_supported_domains(cls.SCRAPE_MAPPER_KEYS),
             supported_paths=cls.SUPPORTED_PATHS,
         )
-        if add_to_register:
+        if add_to_registry:
             Registry.concrete.add(cls)
-
-    def __init_downloader__(self) -> None:
-        self.downloader = dl = Downloader(self.manager, self.DOMAIN)
-        dl.startup()
 
     @final
     @staticmethod
@@ -658,7 +658,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     def get_cookie_value(self, name: str) -> str | None:
-        if morsel := self.client.client_manager.cookies.filter_cookies(self.PRIMARY_URL).get(name):
+        if morsel := self.client.cookies.filter_cookies(self.PRIMARY_URL).get(name):
             return morsel.value
 
     @final
@@ -668,7 +668,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         If `url` is `None`, defaults to `self.PRIMARY_URL`
         """
         response_url = url or self.PRIMARY_URL
-        self.client.client_manager.cookies.update_cookies(cookies, response_url)
+        self.client.cookies.update_cookies(cookies, response_url)
 
     @final
     def iter_tags(

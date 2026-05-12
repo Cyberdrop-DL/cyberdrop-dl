@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from importlib.metadata import EntryPoint
 
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
 _GROUP_NAME: Final = "cyberdrop_dl_plugins"

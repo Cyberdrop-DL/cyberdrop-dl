@@ -1,8 +1,8 @@
 DOMAIN = "dirtyship"
 TEST_CASES = [
-    (
-        "https://dirtyship.com/rose-asmr-intimate-ear-licks-and-kisses-patreon-video-leaked",
-        [
+    {
+        "url": "https://dirtyship.com/rose-asmr-intimate-ear-licks-and-kisses-patreon-video-leaked",
+        "results": [
             {
                 "url": "https://cdn11.dirtyship.net/Roseasmrearlickis.mp4",
                 "filename": "Rose ASMR Intimate Ear licks And Kisses Patreon Video Leaked.mp4",
@@ -14,11 +14,11 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (DirtyShip)",
             }
         ],
-        1,
-    ),
-    (
-        "https://dirtyship.com/aftynrose-cuddly-naughty-lingerie-try-on-haul-asmr-video",
-        [
+        "count": 1,
+    },
+    {
+        "url": "https://dirtyship.com/aftynrose-cuddly-naughty-lingerie-try-on-haul-asmr-video",
+        "results": [
             {
                 "url": "https://cdn6.dirtyship.net/cdndirtyship/aftynroselingerietryonhaulv.mp4",
                 "filename": "AftynRose Cuddly & Naughty Lingerie Try On Haul ASMR Video [1080p].mp4",
@@ -30,11 +30,11 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (DirtyShip)",
             }
         ],
-        1,
-    ),
-    (
-        "https://dirtyship.com/tag/aftynrose-2021",
-        [
+        "count": 1,
+    },
+    {
+        "url": "https://dirtyship.com/tag/aftynrose-2021",
+        "results": [
             {
                 "url": "https://cdn10.dirtyship.net/dirtyship/cdn2/aftynroseasmrrelaxtonighv.mp4",
                 "filename": "AftynRose ASMR Relax in My Lap Tonight Video [1080p].mp4",
@@ -96,6 +96,6 @@ TEST_CASES = [
                 "download_folder": "re:AftynRose 2021 [tag] (DirtyShip)",
             },
         ],
-        6,
-    ),
+        "count": 6,
+    },
 ]

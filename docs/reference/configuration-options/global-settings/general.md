@@ -105,9 +105,9 @@ Sensitive data may be exposed using an insecure connection. For your safety, is 
 
 ## `user_agent`
 
-| Type          | Default                                                                            |
-| ------------- | ---------------------------------------------------------------------------------- |
-| `NonEmptyStr` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) Gecko/20100101 Firefox/142.0` |
+| Type          | Default                                                                  |
+| ------------- | ------------------------------------------------------------------------ |
+| `NonEmptyStr` | `Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0` |
 
 The user agent is the signature of your browser. Some sites use it to identify if the requests come from a human or a robot.
 You can google "what is my user agent" to get yours.

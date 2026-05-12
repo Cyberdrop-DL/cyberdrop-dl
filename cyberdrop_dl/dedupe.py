@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.hasher import FileHashes
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
 

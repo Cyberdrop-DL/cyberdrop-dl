@@ -1,8 +1,8 @@
 DOMAIN = "giphy"
 TEST_CASES = [
-    (
-        "https://giphy.com/gifs/grandma-grandmother-offline-granny-B3s64Jh73fIk7qYLB5",
-        [
+    {
+        "url": "https://giphy.com/gifs/grandma-grandmother-offline-granny-B3s64Jh73fIk7qYLB5",
+        "results": [
             {
                 "url": "https://media2.giphy.com/media/B3s64Jh73fIk7qYLB5/giphy.gif",
                 "filename": "Work Vintage [B3s64Jh73fIk7qYLB5].gif",
@@ -14,11 +14,11 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (Giphy)",
             }
         ],
-        1,
-    ),
-    (
-        "https://media2.giphy.com/media/B3s64Jh73fIk7qYLB5/giphy.gif",
-        [
+        "count": 1,
+    },
+    {
+        "url": "https://media2.giphy.com/media/B3s64Jh73fIk7qYLB5/giphy.gif",
+        "results": [
             {
                 "url": "https://media2.giphy.com/media/B3s64Jh73fIk7qYLB5/giphy.gif",
                 "filename": "Work Vintage [B3s64Jh73fIk7qYLB5].gif",
@@ -30,6 +30,6 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (Giphy)",
             }
         ],
-        1,
-    ),
+        "count": 1,
+    },
 ]

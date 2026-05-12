@@ -12,6 +12,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+async def connect(path: Path) -> aiosqlite.Connection:
+    db_conn = await aiosqlite.connect(path, timeout=20)
+    db_conn.row_factory = aiosqlite.Row
+    return db_conn
+
+
 @dataclasses.dataclass(slots=True)
 class Database:
     _db_path: Path
@@ -28,8 +34,7 @@ class Database:
         self.schema = SchemaVersionTable(self)
 
     async def __aenter__(self) -> Self:
-        self._db_conn = await aiosqlite.connect(self._db_path, timeout=20)
-        self._db_conn.row_factory = aiosqlite.Row
+        self._db_conn = await connect(self._db_path)
         await self._pre_allocate()
         await self.history.create()
         await self.hash.create()

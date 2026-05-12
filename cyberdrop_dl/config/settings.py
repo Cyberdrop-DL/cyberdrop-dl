@@ -1,9 +1,11 @@
 # ruff: noqa: RUF012
+import dataclasses
 import logging
 import re
 from datetime import date, datetime, timedelta
+from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -74,6 +76,8 @@ class Files(SettingsGroup):
     dump_json: Annotated[bool, Parameter(alias="-j")] = Field(default=False, validation_alias="j")
     input_file: Annotated[Path, Parameter(alias="-i")] = Field(default=Path("URLs.txt"), validation_alias="i")
     save_pages_html: bool = False
+    dump_responses: bool = False
+    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
 
 class Logs(SettingsGroup):
@@ -143,6 +147,32 @@ class Logs(SettingsGroup):
         return self.__dict__ == other.__dict__
 
 
+@dataclasses.dataclass(slots=True)
+class Range:
+    min: float
+    max: float
+
+    def __post_init__(self) -> None:
+        if not self.max:
+            self.max = float("inf")
+
+    def __contains__(self, value: float, /) -> bool:
+        return self.min <= value <= self.max
+
+    @classmethod
+    def parse(cls, min: float, max: float) -> Self | None:
+        if not min and not max:
+            return None
+        return cls(min, max)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FileSizeRanges:
+    video: Range
+    image: Range
+    other: Range
+
+
 class FileSizeLimits(SettingsGroup):
     maximum_image_size: ByteSizeSerilized = ByteSize(0)
     maximum_other_size: ByteSizeSerilized = ByteSize(0)
@@ -150,6 +180,29 @@ class FileSizeLimits(SettingsGroup):
     minimum_image_size: ByteSizeSerilized = ByteSize(0)
     minimum_other_size: ByteSizeSerilized = ByteSize(0)
     minimum_video_size: ByteSizeSerilized = ByteSize(0)
+
+    @cached_property
+    def ranges(self) -> FileSizeRanges:
+        return FileSizeRanges(
+            video=Range(
+                self.minimum_video_size,
+                self.maximum_video_size,
+            ),
+            image=Range(
+                self.minimum_image_size,
+                self.maximum_image_size,
+            ),
+            other=Range(
+                self.minimum_other_size,
+                self.maximum_other_size,
+            ),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class MediaDurationRanges:
+    video: Range | None
+    audio: Range | None
 
 
 class MediaDurationLimits(SettingsGroup):
@@ -170,6 +223,19 @@ class MediaDurationLimits(SettingsGroup):
         if input_date is None:
             return timedelta(seconds=0)
         return to_timedelta(input_date)
+
+    @cached_property
+    def ranges(self) -> MediaDurationRanges:
+        return MediaDurationRanges(
+            video=Range.parse(
+                self.minimum_video_duration.total_seconds(),
+                self.maximum_video_duration.total_seconds(),
+            ),
+            audio=Range.parse(
+                self.minimum_audio_duration.total_seconds(),
+                self.maximum_audio_duration.total_seconds(),
+            ),
+        )
 
 
 class IgnoreOptions(SettingsGroup):

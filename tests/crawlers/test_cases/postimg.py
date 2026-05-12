@@ -1,40 +1,28 @@
 DOMAIN = "postimg"
 TEST_CASES = [
-    (
-        "https://postimg.cc/XZH6FJ3D",
-        [
+    {
+        "url": "https://postimg.cc/XZH6FJ3D",
+        "results": [
             {
                 "url": "https://i.postimg.cc/MWfnj1bc/miss-xishita-20200413-0065.jpg",
                 "filename": "miss xishita 20200413 0065.jpg",
                 "referer": "https://postimg.cc/XZH6FJ3D",
-                "download_folder": r"re:Loose Files \(PostImg\)",
+                "download_folder": "re:Loose Files \\(PostImg\\)",
             }
         ],
-    ),
-    (
-        "https://postimg.cc/gallery/RmsPQD5",
-        [
+    },
+    {
+        "url": "https://postimg.cc/gallery/RmsPQD5",
+        "results": [
             {
                 "url": "https://i.postimg.cc/LJVp9DWt/DSC02097-JPG.jpg",
                 "filename": "DSC02097 JPG.jpg",
-                "download_folder": r"re:RmsPQD5 (PostImg)",
+                "download_folder": "re:RmsPQD5 (PostImg)",
             },
-            {
-                "url": "https://i.postimg.cc/062qbmgd/DSC02105-JPG.jpg",
-                "filename": "DSC02105 JPG.jpg",
-            },
-            {
-                "url": "https://i.postimg.cc/062qbmg0/DSC02106-JPG.jpg",
-                "filename": "DSC02106 JPG.jpg",
-            },
-            {
-                "url": "https://i.postimg.cc/rdFLKW69/DSC02107-JPG.jpg",
-                "filename": "DSC02107 JPG.jpg",
-            },
-            {
-                "url": "https://i.postimg.cc/xkTScHr4/DSC02108-JPG.jpg",
-                "filename": "DSC02108 JPG.jpg",
-            },
+            {"url": "https://i.postimg.cc/062qbmgd/DSC02105-JPG.jpg", "filename": "DSC02105 JPG.jpg"},
+            {"url": "https://i.postimg.cc/062qbmg0/DSC02106-JPG.jpg", "filename": "DSC02106 JPG.jpg"},
+            {"url": "https://i.postimg.cc/rdFLKW69/DSC02107-JPG.jpg", "filename": "DSC02107 JPG.jpg"},
+            {"url": "https://i.postimg.cc/xkTScHr4/DSC02108-JPG.jpg", "filename": "DSC02108 JPG.jpg"},
             {
                 "url": "https://i.postimg.cc/5HNM6vcs/miss-xishita-20200413-0001.jpg",
                 "filename": "miss xishita 20200413 0001.jpg",
@@ -68,5 +56,5 @@ TEST_CASES = [
                 "filename": "miss xishita 20200413 0065.jpg",
             },
         ],
-    ),
+    },
 ]

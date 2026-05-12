@@ -1,15 +1,15 @@
 DOMAIN = "pornzog"
 TEST_CASES = [
-    (
-        "https://pornzog.com/video/14955010/allison-hopwood-aka-ravenrose/",
-        [
+    {
+        "url": "https://pornzog.com/video/14955010/allison-hopwood-aka-ravenrose/",
+        "results": [
             {
-                "url": r"re:https://privatehomeclips.com/embed/7927427",
+                "url": "re:https://privatehomeclips.com/embed/7927427",
                 "filename": "Allison Hopwood Aka Ravenrose [7927427].mp4",
-                "referer": r"re:https://privatehomeclips.com/embed/7927427",
-                "download_folder": r"re:Loose Files \(HClips\)",
-                "datetime": int,
+                "referer": "re:https://privatehomeclips.com/embed/7927427",
+                "download_folder": "re:Loose Files \\(HClips\\)",
+                "uploaded_at": int,
             }
         ],
-    ),
+    }
 ]

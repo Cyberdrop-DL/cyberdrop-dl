@@ -36,10 +36,73 @@ FLARESOLVERR_RESPONSE_EMPTY_HEADERS = {
     "version": "3.4.6",
 }
 
-
-# ---------------------------------------------------------------------------
-# _infer_content_type_from_body
-# ---------------------------------------------------------------------------
+FLARESOLVER_RESP_JSON = {
+    "status": "ok",
+    "message": "Challenge not detected!",
+    "solution": {
+        "url": "https://www.tikwm.com/api/user/posts?unique_id=kittyasmr2&count=50&cursor=0",
+        "status": 200,
+        "response": {
+            "code": 0,
+            "msg": "success",
+            "processed_time": 0.9642,
+            "data": {
+                "videos": [
+                    {
+                        "video_id": "7637253304178740500",
+                        "region": "CL",
+                        "title": "Esa amiga que solo hace videollamada para admirarse 🐥 créditos: jimenita #humor #comedia #Viral #kdramas #paratii ",
+                        "content_desc": [
+                            "Esa amiga que solo hace videollamada para admirarse 🐥 créditos: jimenita #humor #comedia #Viral #kdramas",
+                            "#paratii ",
+                        ],
+                        "duration": 16,
+                    }
+                ],
+                "cursor": "1745723767416",
+                "hasMore": False,
+            },
+        },
+        "headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-headers": "Content-Type,Content-Length,Accept-Encoding,X-Requested-with, Origin",
+            "access-control-allow-methods": "POST,GET,OPTIONS,DELETE",
+            "access-control-allow-origin": "*",
+            "cf-cache-status": "DYNAMIC",
+            "cf-ray": "9f8a6e819968f0-MIA",
+            "content-encoding": "br",
+            "content-type": "application/json",
+            "date": "Fri, 08 May 2026 18:12:17 GMT",
+            "nel": '{"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}',
+            "server": "cloudflare",
+            "x-limit-request-remaining": "9995",
+            "x-limit-request-reset": "20864",
+        },
+        "cookies": [
+            {
+                "name": "cf_clearance",
+                "value": "m5B4ZLfY9b1yGWFI0mQHveDo7Jnb4e",
+                "domain": ".tikwm.com",
+                "path": "/",
+                "expires": 1809798658.438918,
+                "size": 417,
+                "httpOnly": True,
+                "secure": True,
+                "session": False,
+                "sameSite": "None",
+                "priority": "Medium",
+                "sameParty": False,
+                "sourceScheme": "Secure",
+                "sourcePort": 443,
+                "partitionKey": "https://tikwm.com",
+            }
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    },
+    "startTimestamp": 1778263936203,
+    "endTimestamp": 1778263939479,
+    "version": "3.3.21",
+}
 
 
 def test_infer_content_type_html() -> None:
@@ -64,11 +127,6 @@ def test_infer_content_type_empty_string() -> None:
 
 def test_infer_content_type_only_whitespace() -> None:
     assert _infer_content_type_from_body("   \n\t  ") == ""
-
-
-# ---------------------------------------------------------------------------
-# _parse_cookies
-# ---------------------------------------------------------------------------
 
 
 def test_parse_cookies_complete_cookie() -> None:
@@ -167,9 +225,9 @@ def test_solution_from_dict_cookies_parsed_correctly() -> None:
     assert morsel["secure"] == "TRUE"
 
 
-# ---------------------------------------------------------------------------
-# _FlareSolverrResponse.create (async)
-# ---------------------------------------------------------------------------
+def test_solution_from_dict_json_resp() -> None:
+    solution = Solution.from_dict(FLARESOLVER_RESP_JSON["solution"])
+    assert type(solution.content) is dict
 
 
 async def test_flaresolverr_response_infers_html_from_empty_headers() -> None:
@@ -188,12 +246,22 @@ async def test_flaresolverr_response_reads_text() -> None:
     assert "<html>" in text
 
 
+async def test_flaresolverr_response_from_json_resp() -> None:
+    solution = Solution.from_dict(FLARESOLVER_RESP_JSON["solution"])
+    response = _FlareSolverrResponse.create(solution)
+    assert not response._text
+    assert response.content_type == "application/json"
+    assert response._get_content() == solution.content
+    assert await response.json() == solution.content
+    assert await response.text() == ""
+
+
 async def test_flaresolverr_response_with_explicit_content_type() -> None:
     """When headers contain Content-Type, it should be used instead of inference."""
     solution_data = {
         **FLARESOLVERR_RESPONSE_EMPTY_HEADERS["solution"],
         "headers": {"Content-Type": "application/json"},
-        "response": '{"data": true}',
+        "response": '{"data": True}',
     }
     solution = Solution.from_dict(solution_data)
     response = _FlareSolverrResponse.create(solution)

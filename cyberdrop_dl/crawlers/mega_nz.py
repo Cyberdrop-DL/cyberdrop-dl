@@ -13,12 +13,12 @@ from mega.api import MegaAPI
 from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
-from typing_extensions import override
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
+from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
@@ -60,15 +60,11 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     def password(self) -> str | None:
         return self.manager.config.auth.meganz.password or None
 
-    @override
-    def __init_downloader__(self) -> None:
-        api = MegaAPI(self.manager.client_manager._session)
+    async def __async_post_init__(self) -> None:
+        api = MegaAPI(self.manager.http_client._session)
         api.user_agent = CDL_USER_AGENT
         self.core = MegaCore(api)
-        self.downloader = dl = MegaDownloader(self.manager, self.DOMAIN)  # type: ignore[reportIncompatibleVariableOverride]
-        dl.startup()
-
-    async def __async_post_init__(self) -> None:
+        self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         await self.login(self.PRIMARY_URL)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -156,7 +152,8 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
         try:
-            await self.core.login(self.user, self.password)
+            with show_msg("Login into mega.nz"):
+                await self.core.login(self.user, self.password)
             self._logged_in = True
         except Exception as e:
             self.disabled = True

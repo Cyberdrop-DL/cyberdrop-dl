@@ -3,9 +3,9 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import re
-from collections.abc import Generator, Sequence
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple, NotRequired
+from typing import TYPE_CHECKING, Any, NotRequired
 from unittest import mock
 
 import pytest
@@ -18,7 +18,7 @@ from cyberdrop_dl.utils import parse_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
-    from cyberdrop_dl.managers.manager import Manager
+    from cyberdrop_dl.manager import Manager
 
 
 def _crawler_mock(func: str = "handle_media_item") -> mock._patch[mock.AsyncMock]:
@@ -38,27 +38,25 @@ class Result(TypedDict):
 
 
 @dataclasses.dataclass(slots=True)
-class Config:
-    skip: str | bool = False
-    total: int | None = None
-
-
-_default_config = Config()
-
-TestTuple = tuple[str, list[Result], int, Config]
-
-
-class CrawlerTestCase(NamedTuple):
+class CrawlerTestCase:
     domain: str
-    input_url: str
+    url: str
     results: list[Result]
-    # TODO: deprecated total, move to config
-    total: Sequence[int] | int | None = None
-    config: Config = _default_config
+    description: str | None = None
+    fail: bool | str | int = False
+    xfail: str | None = None
+    skip: str | bool = False
+    count: Sequence[int] | int | None = None
+    options: list[str] | None = None
+    log: str | None = None
+
+    @property
+    def test_id(self) -> str:
+        return f"{self.domain} - {self.url}"
 
 
 _TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
-_TEST_DATA: dict[str, list[TestTuple]] = {}
+_TEST_DATA: dict[str, list[dict[str, Any]]] = {}
 
 
 def _load_test_cases(path: Path) -> None:
@@ -68,16 +66,7 @@ def _load_test_cases(path: Path) -> None:
     module_spec.loader.exec_module(module)
     if module.DOMAIN in _TEST_DATA:
         raise RuntimeError(f"Multiple tests files for {module.DOMAIN}")
-    _TEST_DATA[module.DOMAIN] = list(_fix_test_cases(module.TEST_CASES))
-
-
-def _fix_test_cases(test_cases: list[TestTuple]) -> Generator[TestTuple]:
-    for test_case in test_cases:
-        for result in test_case[1]:
-            if "datetime" in result:
-                result["uploaded_at"] = result.pop("datetime")
-
-        yield test_case
+    _TEST_DATA[module.DOMAIN] = module.TEST_CASES
 
 
 def _load_test_data() -> None:
@@ -90,7 +79,7 @@ def _load_test_data() -> None:
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     _load_test_data()
-    if "crawler_test_case" in metafunc.fixturenames:
+    if "test_case" in metafunc.fixturenames:
         valid_domains = set(_TEST_DATA)
         domains_to_tests: list[str] = getattr(metafunc.config, "test_crawlers_domains", [])
         for domain in domains_to_tests:
@@ -99,16 +88,16 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         all_test_cases: list[CrawlerTestCase] = []
         for domain, test_cases in sorted(_TEST_DATA.items()):
             if domain in domains_to_tests:
-                all_test_cases.extend(CrawlerTestCase(domain, *case) for case in test_cases)
-        metafunc.parametrize("crawler_test_case", all_test_cases, ids=lambda x: f"{x.domain} - {x.input_url}")
+                all_test_cases.extend(
+                    _TEST_CASE_ADAPTER.validate_python({"domain": domain} | case) for case in test_cases
+                )
+        metafunc.parametrize("test_case", all_test_cases, ids=lambda case: case.test_id)
 
 
 @pytest.mark.crawler_test_case
-async def test_crawler(running_manager: Manager, crawler_test_case: CrawlerTestCase) -> None:
-    # Check that this is a valid test case with pydantic
-    test_case = _TEST_CASE_ADAPTER.validate_python(crawler_test_case)
-    if skip := test_case.config.skip:
-        pytest.skip(skip) if isinstance(skip, str) else pytest.skip()
+async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase, request: pytest.FixtureRequest) -> None:
+    if test_case.skip:
+        pytest.skip(reason=test_case.skip if isinstance(test_case.skip, str) else "")
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
@@ -120,30 +109,30 @@ async def test_crawler(running_manager: Manager, crawler_test_case: CrawlerTestC
             assert cls, f"{test_case.domain} is not a valid crawler domain. Test case is invalid"
             crawler = cls(running_manager)
             await crawler.__async_init__()
-            item = ScrapeItem(url=crawler.parse_url(test_case.input_url))
+            item = ScrapeItem(url=crawler.parse_url(test_case.url))
             await crawler.run(item)
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
-    total = test_case.total or len(test_case.results)
+    count = test_case.count or len(test_case.results)
     _assert_n_results(test_case, len(results))
-    if total:
+    if count:
         func.assert_awaited()
         _validate_results(crawler, test_case, results)
 
 
 def _assert_n_results(test_case: CrawlerTestCase, n_results: int) -> None:
-    total = test_case.total or len(test_case.results)
-    if isinstance(total, Sequence):
-        assert n_results in total
+    count = test_case.count or len(test_case.results)
+    if isinstance(count, Sequence):
+        assert n_results in count
     else:
-        assert total == n_results
+        assert count == n_results
 
 
 class _NOT_NONE:  # noqa: N801
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         return other is not None
 
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: object) -> bool:
         return other is None
 
     def __repr__(self) -> str:
@@ -212,13 +201,13 @@ def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
     ],
 )
 async def test_direct_http_crawler(running_manager: Manager, url: str, filename: str) -> None:
-    test_case = CrawlerTestCase(domain="no_crawler", input_url=url, results=[{"url": url, "filename": filename}])
+    test_case = CrawlerTestCase(domain="no_crawler", url=url, results=[{"url": url, "filename": filename}])
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
             crawler = scrape_mapper._direct_http
             await scrape_mapper.run()
-            item = ScrapeItem(url=parse_url(test_case.input_url))
+            item = ScrapeItem(url=parse_url(test_case.url))
             await crawler.fetch(item)
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))

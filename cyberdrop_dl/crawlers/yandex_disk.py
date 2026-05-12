@@ -70,7 +70,7 @@ class YandexDiskCrawler(Crawler):
             return
 
         async with self.request_context():
-            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS, cache_disabled=True)
+            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
         item_info = get_item_info(soup)
         assert is_single_item(item_info)
@@ -87,7 +87,7 @@ class YandexDiskCrawler(Crawler):
 
         scrape_item.url = canonical_url
         async with self.request_context():
-            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS, cache_disabled=True)
+            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
         item_info = get_item_info(soup)
         del soup

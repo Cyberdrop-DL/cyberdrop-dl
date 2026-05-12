@@ -23,7 +23,7 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag"):
     core: TransferItClient
 
     async def __async_post_init__(self) -> None:
-        self.core = TransferItClient(self.manager.client_manager._session)
+        self.core = TransferItClient(self.manager.http_client._session)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

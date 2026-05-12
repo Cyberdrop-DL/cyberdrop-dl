@@ -37,7 +37,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.4.1
+List of sites supported by cyberdrop-dl-patched as of version 9.8.0
 
 ### 4chan
 
@@ -426,6 +426,25 @@ ex: To only download categories from a date range: ,
   - `/<service>/user/<user_id>`
 - Search:
   - `/search?q=...`
+
+
+### CoomerFans
+
+**Primary URL**: [https://coomerfans.com](https://coomerfans.com)
+
+**Supported Domains**: `coomerfans.*`
+
+**Supported Paths**:
+
+- Post:
+  - `/p/<post_id>/...`
+- User:
+  - `/u/<user_id>/...`
+
+
+**Notes**
+
+- `--ignore-coomer-post-content` affects this crawler. All other kemono config options are ignored
 
 
 ### Cyberdrop
@@ -1564,22 +1583,6 @@ spreadsheets:
   - `/search/<query>`
 - Videos:
   - `/title`
-
-
-### Nekohouse
-
-**Primary URL**: [https://nekohouse.su](https://nekohouse.su)
-
-**Supported Domains**: `nekohouse.*`
-
-**Supported Paths**:
-
-- Direct links:
-  - `/(data|thumbnails)/...`
-- Individual Post:
-  - `/<service>/user/<user_id>/post/<post_id>`
-- Model:
-  - `/<service>/user/<user_id>`
 
 
 ### nHentai

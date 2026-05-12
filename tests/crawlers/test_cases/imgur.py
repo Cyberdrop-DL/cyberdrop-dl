@@ -1,8 +1,8 @@
 DOMAIN = "imgur"
 TEST_CASES = [
-    (
-        "https://imgur.com/gallery/something-wholesome-uvh9Obt",
-        [
+    {
+        "url": "https://imgur.com/gallery/something-wholesome-uvh9Obt",
+        "results": [
             {
                 "url": "https://i.imgur.com/rKn1KVv.mp4",
                 "referer": "https://imgur.com/rKn1KVv",
@@ -10,13 +10,13 @@ TEST_CASES = [
                 "filename": "rKn1KVv.mp4",
                 "original_filename": "rKn1KVv.mp4",
                 "album_id": "uvh9Obt",
-                "datetime": 1763735344,
+                "uploaded_at": 1763735344,
             }
         ],
-    ),
-    (
-        "https://imgur.com/a/uvh9Obt",
-        [
+    },
+    {
+        "url": "https://imgur.com/a/uvh9Obt",
+        "results": [
             {
                 "url": "https://i.imgur.com/rKn1KVv.mp4",
                 "referer": "https://imgur.com/rKn1KVv",
@@ -25,10 +25,10 @@ TEST_CASES = [
                 "album_id": "uvh9Obt",
             }
         ],
-    ),
-    (
-        "https://imgur.com/rKn1KVv",
-        [
+    },
+    {
+        "url": "https://imgur.com/rKn1KVv",
+        "results": [
             {
                 "url": "https://i.imgur.com/rKn1KVv.mp4",
                 "referer": "https://imgur.com/rKn1KVv",
@@ -37,10 +37,10 @@ TEST_CASES = [
                 "album_id": None,
             }
         ],
-    ),
-    (
-        "https://imgur.com/gallery/broken-egg-by-huleeb-42gHAIK",
-        [
+    },
+    {
+        "url": "https://imgur.com/gallery/broken-egg-by-huleeb-42gHAIK",
+        "results": [
             {
                 "url": "https://i.imgur.com/moPWbvA.jpeg",
                 "referer": "https://imgur.com/moPWbvA",
@@ -52,10 +52,10 @@ TEST_CASES = [
             {"url": "https://i.imgur.com/KVGXtsa.jpeg"},
             {"url": "https://i.imgur.com/7Em9NEr.jpeg"},
         ],
-    ),
-    (
-        "https://imgur.com/download/rKn1KVv",
-        [
+    },
+    {
+        "url": "https://imgur.com/download/rKn1KVv",
+        "results": [
             {
                 "url": "https://i.imgur.com/rKn1KVv.mp4",
                 "referer": "https://imgur.com/rKn1KVv",
@@ -64,5 +64,5 @@ TEST_CASES = [
                 "album_id": None,
             }
         ],
-    ),
+    },
 ]

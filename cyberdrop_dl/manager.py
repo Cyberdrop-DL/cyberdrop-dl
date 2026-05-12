@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import dataclasses
 import logging
 import os
@@ -11,26 +13,24 @@ from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import __version__, env, ffmpeg, yaml
+from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
 from cyberdrop_dl.cli import CLIargs
+from cyberdrop_dl.clients.downloads import DownloadClient
+from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
-from cyberdrop_dl.logs import capture_logs, log_spacer
-from cyberdrop_dl.managers.client_manager import ClientManager
-from cyberdrop_dl.managers.logs import LogManager
+from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
+from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import get_system_information
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator
     from os import PathLike
 
-    from cyberdrop_dl.progress.dedupe import DedupeStats
-    from cyberdrop_dl.progress.hashing import HashingStats
-    from cyberdrop_dl.progress.scraping.errors import UIError
-    from cyberdrop_dl.progress.sorting import SortStats
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
     from cyberdrop_dl.url_objects import MediaItem
 
@@ -52,10 +52,12 @@ class Manager:
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
-        self.logs: LogManager = LogManager.from_manager(self)
+        self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
+        self.http_client: HTTPClient = HTTPClient(self)
+        self.download_client: DownloadClient = DownloadClient(self)
+
         self.scrape_mapper: ScrapeMapper
         self.database: Database
-        self.client_manager: ClientManager
         self.deduper: Czkawka
         self.sorter: Sorter
 
@@ -71,24 +73,31 @@ class Manager:
             self._config = Config.from_manager(self)
         return self._config
 
-    def resolve_paths(self) -> None:
+    def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
         self.config.settings.resolve_paths()
-        self.logs = LogManager.from_manager(self)
+        self.logs = CSVLogsManager.from_manager(self)
         self.logs.delete_old_logs()
 
-    async def __aenter__(self) -> Self:
-        cache_file = self.appdata.cache_file
-        try:
-            self.cache.update(yaml.load(cache_file))
-        except FileNotFoundError:
-            cache_file.parent.mkdir(exist_ok=True, parents=True)
-            cache_file.touch()
-        return self
-
-    async def __aexit__(self, *_) -> None:
-        self.cache["version"] = __version__
-        yaml.save(self.appdata.cache_file, self.cache)
+    @contextlib.contextmanager
+    def __call__(self) -> Generator[Self]:
+        self.__resolve_paths()
+        self.database = Database(
+            self.appdata.db_file,
+            self.config.settings.runtime_options.ignore_history,
+        )
+        self.deduper = Czkawka.from_manager(self)
+        self.sorter = Sorter.from_manager(self)
+        with (
+            _cache_context(self.appdata.cache_file, self.cache),
+            _enter_context(REFRESH_RATE, self.config.global_settings.ui_options.refresh_rate),
+            _enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
+        ):
+            try:
+                yield self
+            finally:
+                del self.deduper
+                del self.sorter
 
     def add_completed(self, media_item: MediaItem) -> None:
         if media_item.is_segment:
@@ -99,21 +108,7 @@ class Manager:
     def completed_downloads(self) -> list[MediaItem]:
         return self._completed_downloads
 
-    async def async_startup(self) -> None:
-        self._log_config_settings()
-        self.async_db_hash_startup()
-
-        self.client_manager = ClientManager(self)
-
-    def async_db_hash_startup(self) -> None:
-        self.database = Database(
-            self.appdata.db_file,
-            self.config.settings.runtime_options.ignore_history,
-        )
-        self.deduper = Czkawka.from_manager(self)
-        self.sorter = Sorter.from_manager(self)
-
-    def _log_config_settings(self) -> None:
+    def log_config_settings(self) -> None:
         auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}
         config_settings = self.config.settings.model_copy()
         config_settings.runtime_options.deep_scrape = self.config.deep_scrape
@@ -173,100 +168,69 @@ class Manager:
         log_spacer()
 
         with capture_logs() as stream:
-            self._print_stats(stats)
+            self.__print_stats(stats)
 
         return stream.getvalue()
 
-    def _print_stats(self, stats: ScrapeStats) -> None:
+    def __print_stats(self, scrape_stats: ScrapeStats) -> None:
 
-        elapsed = timedelta(seconds=int(time.monotonic() - stats.start_time))
+        elapsed = timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
         total_data_written = ByteSize(self.scrape_mapper.tui.downloads.bytes_downloaded).human_readable(decimal=True)
 
         logger.info("Run Stats:", extra={"color": "cyan"})
         logger.info(f"  Config file: {self.config.source}")
-        logger.info(f"  URLs source: {stats.source}")
-        logger.info(f"  URLs: {stats.count:,}")
-        logger.info(f"  URL groups: {len(stats.unique_groups):,}")
+        logger.info(f"  URLs source: {scrape_stats.source}")
+        logger.info(f"  URLs: {scrape_stats.count:,}")
+        logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
         logger.info(f"  Logs folder: {self.config.settings.logs.log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
-        if stats.domain_stats:
+        if scrape_stats.domain_stats:
             log_spacer()
             logger.info("URLs by domain (includes children):", extra={"color": "cyan"})
 
             def lines():
-                for domain, count in sorted(stats.domain_stats.items()):
+                for domain, count in sorted(scrape_stats.domain_stats.items()):
                     yield f" - {domain}: {count:,}"
 
             logger.info("\n".join(lines()))
 
-        log_spacer()
-        logger.info("Download Stats:", extra={"color": "cyan"})
-        logger.info(f"  Downloaded: {self.scrape_mapper.tui.files.stats.completed:,} files")
-        logger.info(f"  Skipped (by config): {self.scrape_mapper.tui.files.stats.skipped:,} files")
-        logger.info(
-            f"  Skipped (previously downloaded): {self.scrape_mapper.tui.files.stats.previously_completed:,} files"
-        )
-        logger.info(f"  Failed: {self.scrape_mapper.tui.files.stats.failed:,} files")
-
-        log_spacer()
-        logger.info("Unsupported URLs Stats:", extra={"color": "cyan"})
-        logger.info(f"  Sent to Jdownloader: {self.scrape_mapper.tui.scrape_errors.sent_to_jdownloader:,}")
-        logger.info(f"  Skipped: {self.scrape_mapper.tui.scrape_errors.skipped:,}")
-
-        self.print_hashing_stats(self.hasher.stats)
-        self.print_dedupe_stats(self.deduper.stats)
-        self.print_sort_stats(self.sorter.stats)
-        self.print_errors()
-
-    def print_sort_stats(self, stats: SortStats):
-        log_spacer()
-        logger.info("Sort Stats:", extra={"color": "cyan"})
-        logger.info(f"  Audios: {stats.audios:,}")
-        logger.info(f"  Images: {stats.images:,}")
-        logger.info(f"  Videos: {stats.videos:,}")
-        logger.info(f"  Other files: {stats.others:,}")
-
-    def print_errors(self) -> None:
-        _log_errors(
+        stats.print(self.scrape_mapper.tui.files.stats)
+        stats.print(self.scrape_mapper.tui.scrape_errors)
+        stats.print(self.hasher.stats)
+        stats.print(self.deduper.stats)
+        stats.print(self.sorter.stats)
+        stats.print_errors(
             tuple(self.scrape_mapper.tui.scrape_errors),
             tuple(self.scrape_mapper.tui.download_errors),
         )
 
-    def print_hashing_stats(self, stats: HashingStats) -> None:
-        log_spacer()
-        logger.info("Checksum Stats:", extra={"color": "cyan"})
-        logger.info(f"  Newly hashed: {stats.new_hashed:,} files")
-        logger.info(f"  Previously hashed: {stats.prev_hashed:,} files")
+    async def get_cookie_files(self) -> list[Path]:
+        if self.config.settings.browser_cookies.auto_import:
+            assert self.config.settings.browser_cookies.browser
+            cookie_jar = await cookies.extract(self.config.settings.browser_cookies.browser)
+            await cookies.export(
+                cookies.filter(cookie_jar, self.config.settings.browser_cookies.sites),
+                output_path=self.appdata.cookies,
+            )
 
-    def print_dedupe_stats(self, stats: DedupeStats) -> None:
-        log_spacer()
-        logger.info("Dedupe Stats:", extra={"color": "cyan"})
-        logger.info(f"  Deleted (duplicates of previous downloads): {stats.deleted:,} files")
-        logger.info(f"  Errors: {stats.total - stats.deleted:,} files")
+        return await asyncio.to_thread(lambda: sorted(self.appdata.cookies.glob("*.txt")))
 
 
-def _log_errors(scrape_errors: Sequence[UIError], download_errors: Sequence[UIError]) -> None:
-    error_codes = (error.code for error in (*scrape_errors, *download_errors) if error.code is not None)
+@contextlib.contextmanager
+def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
+    try:
+        cache.update(yaml.load(cache_file))
+    except FileNotFoundError:
+        cache_file.parent.mkdir(exist_ok=True, parents=True)
+        cache_file.touch()
 
     try:
-        padding = len(str(max(error_codes)))
-    except ValueError:
-        padding = 0
-
-    for title, errors in (
-        ("Scrape Errors:", scrape_errors),
-        ("Download Errors:", download_errors),
-    ):
-        log_spacer()
-        logger.info(title, extra={"color": "cyan"})
-        if not errors:
-            logger.info(f"  {'None':>{padding}}", extra={"color": "green"})
-            continue
-
-        for error in errors:
-            logger.info(f"  {error.format(padding)}", extra={"color": "red"})
+        yield
+    finally:
+        cache["version"] = __version__
+        yaml.save(cache_file, cache)
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)

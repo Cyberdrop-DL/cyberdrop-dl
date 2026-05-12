@@ -1,8 +1,8 @@
 DOMAIN = "bunkr"
 TEST_CASES = [
-    (
-        "https://bunkr.black/v/bla4XTB1v8aG6",
-        [
+    {
+        "url": "https://bunkr.black/v/bla4XTB1v8aG6",
+        "results": [
             {
                 "url": "re:/AZ-Haul-119-tqLy8ZWy.mp4?n=AZ+Haul+119.mp4",
                 "filename": "AZ Haul 119.mp4",
@@ -10,65 +10,65 @@ TEST_CASES = [
                 "referer": "https://bunkr.site/f/bla4XTB1v8aG6",
             }
         ],
-        1,
-    ),
-    (
-        "https://bunkr.ax/v/rFicV4QnhSHBE",
-        [
+        "count": 1,
+    },
+    {
+        "url": "https://bunkr.ax/v/rFicV4QnhSHBE",
+        "results": [
             {
-                "url": r"re:1df93418-5063-4e1b-851e-9470cb8fc5c6\.mp4",
+                "url": "re:1df93418-5063-4e1b-851e-9470cb8fc5c6\\.mp4",
                 "filename": "MysteriousProd.24.09.06.April.Olsen.Rebel.Rhyder.All.About.Fucking.720p.mp4",
                 "referer": "https://bunkr.site/f/rFicV4QnhSHBE",
                 "album_id": None,
                 "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://get.bunkrr.su/file/41348624",
-        [
+    },
+    {
+        "url": "https://get.bunkrr.su/file/41348624",
+        "results": [
             {
-                "url": r"re:1df93418-5063-4e1b-851e-9470cb8fc5c6\.mp4",
+                "url": "re:1df93418-5063-4e1b-851e-9470cb8fc5c6\\.mp4",
                 "filename": "MysteriousProd.24.09.06.April.Olsen.Rebel.Rhyder.All.About.Fucking.720p.mp4",
                 "referer": "https://get.bunkrr.su/file/41348624",
                 "album_id": None,
                 "uploaded_at": None,
             }
         ],
-    ),
-    (
-        "https://cdn9.bunkr.ru/24578-hd-kEMMY0JH.mp4",
-        [
+    },
+    {
+        "url": "https://cdn9.bunkr.ru/24578-hd-kEMMY0JH.mp4",
+        "results": [
             {
-                "url": r"re:24578-hd-kEMMY0JH.mp4",
+                "url": "re:24578-hd-kEMMY0JH.mp4",
                 "filename": "24578-hd.mp4",
                 "referer": "https://bunkr.site/f/24578-hd-kEMMY0JH.mp4",
             }
         ],
-    ),
-    (
-        "https://bunkr.sk/f/summertimejames-pics--VocHZQ0K.rar",
-        [
+    },
+    {
+        "url": "https://bunkr.sk/f/summertimejames-pics--VocHZQ0K.rar",
+        "results": [
             {
                 "url": "re:/summertimejames-pics--VocHZQ0K.rar?n=summertimejames(pics).rar",
                 "filename": "summertimejames(pics).rar",
                 "referer": "https://bunkr.site/f/summertimejames-pics--VocHZQ0K.rar",
             }
         ],
-    ),
-    (
-        "https://kebab.bunkr.ru/summertimejames-pics--VocHZQ0K.rar",
-        [
+    },
+    {
+        "url": "https://kebab.bunkr.ru/summertimejames-pics--VocHZQ0K.rar",
+        "results": [
             {
                 "url": "re:/summertimejames-pics--VocHZQ0K.rar?n=summertimejames-pics--VocHZQ0K.rar",
                 "filename": "summertimejames-pics--VocHZQ0K.rar",
                 "referer": "https://get.bunkrr.su",
             }
         ],
-    ),
-    (
-        "https://bunkr.cr/a/bFfln2uj",
-        [
+    },
+    {
+        "url": "https://bunkr.cr/a/bFfln2uj",
+        "results": [
             {
                 "url": "re:/Laura-Perea-en-modo-Perra-l0dNCH9E.mp4?n=Laura+Perea+en+modo+Perra.mp4",
                 "filename": "Laura Perea en modo Perra.mp4",
@@ -96,11 +96,11 @@ TEST_CASES = [
                 "filename": "Laura Perea movimeintos Eroticos.mp4",
             },
         ],
-        5,
-    ),
-    (
-        "https://bunkr.cr/a/A3k5ktj4",
-        [
+        "count": 5,
+    },
+    {
+        "url": "https://bunkr.cr/a/A3k5ktj4",
+        "results": [
             {
                 "url": "re:https://c3mb.scdn.st/IMG_2395_sdr-eKRnKxc6.mp4?n=IMG_2395_sdr.mp4",
                 "filename": "IMG_2395_sdr.mp4",
@@ -115,18 +115,9 @@ TEST_CASES = [
                 "url": "re:https://c1fr.scdn.st/Nicol-Loveee-MundoX---Dulces-Mun%CC%83ecas-Traviesas-3-L9Dr07Fl.mp4?n=Nicol+Loveee+MundoX+-+Dulces+Mu%C3%B1ecas+Traviesas+3.mp4",
                 "filename": "Nicol Loveee MundoX - Dulces Muñecas Traviesas 3.mp4",
             },
-            {
-                "url": "re:https://c4ta.scdn.st/IMG_0789-VJJEJJFF.mp4?n=IMG_0789.mp4",
-                "filename": "IMG_0789.mp4",
-            },
-            {
-                "url": "re:https://par1.scdn.st/IMG_0658-v3T9XRib.MOV?n=IMG_0658.MOV",
-                "filename": "IMG_0658.mov",
-            },
-            {
-                "url": "re:https://c4ta.scdn.st/IMG_3422-FiKTxDks.MOV?n=IMG_3422.MOV",
-                "filename": "IMG_3422.mov",
-            },
+            {"url": "re:https://c4ta.scdn.st/IMG_0789-VJJEJJFF.mp4?n=IMG_0789.mp4", "filename": "IMG_0789.mp4"},
+            {"url": "re:https://par1.scdn.st/IMG_0658-v3T9XRib.MOV?n=IMG_0658.MOV", "filename": "IMG_0658.mov"},
+            {"url": "re:https://c4ta.scdn.st/IMG_3422-FiKTxDks.MOV?n=IMG_3422.MOV", "filename": "IMG_3422.mov"},
             {
                 "url": "re:https://c1fr.scdn.st/Nicol-Lovee-aka-Laura-Perea-806756813332-D0iwlxIQ.mp4",
                 "filename": "Nicol Lovee aka Laura Perea 806756813332.mp4",
@@ -156,52 +147,53 @@ TEST_CASES = [
                 "original_filename": "Nicol-Loveee-Shush_1080p.mp4",
             },
         ],
-        11,
-    ),
-    (
-        "https://burger.bunkr.ru/9861917.mp4-PTaiPNai-CaBcktkP.mp4",
-        [
+        "count": 11,
+    },
+    {
+        "url": "https://burger.bunkr.ru/9861917.mp4-PTaiPNai-CaBcktkP.mp4",
+        "results": [
             {
                 "url": "re:/9861917.mp4-PTaiPNai-CaBcktkP.mp4?n=9861917.mp4-PTaiPNai-CaBcktkP.mp4",
                 "filename": "9861917.mp4-PTaiPNai-CaBcktkP.mp4",
                 "referer": "https://get.bunkrr.su",
             }
         ],
-    ),
-    (
-        # paginated
-        "https://bunkr.cr/a/5aZU25Cb",
-        [
+    },
+    {
+        "url": "https://bunkr.cr/a/5aZU25Cb",
+        "description": "paginated",
+        "results": [
             {
                 "url": "ANY",
-                "download_folder": r"re:abbywinters - Elin & Maddie (Girl - Girl Extra Large)",
+                "download_folder": "re:abbywinters - Elin & Maddie (Girl - Girl Extra Large)",
                 "album_id": "5aZU25Cb",
             }
         ],
-        257,
-    ),
-    (
-        "https://bunkr.cr/a/TQAgjP8m",
-        [
+        "count": 257,
+    },
+    {
+        "url": "https://bunkr.cr/a/TQAgjP8m",
+        "results": [
             {
                 "url": "ANY",
-                "download_folder": r"re:NerdballerTV - Videos (2018-2023) [Complete]",
+                "download_folder": "re:NerdballerTV - Videos (2018-2023) [Complete]",
                 "album_id": "TQAgjP8m",
                 "uploaded_at": int,
             }
         ],
-        220,
-    ),
-    (
-        # .org domain redirect to a different domain and discards query params
-        # This test is to make sure CDL does not get stuck in an infinite loop while doing album pagination
-        "https://bunkrrr.org/a/n12rHpzB",
-        [],
-        141,
-    ),
-    (
-        "https://bunkr.ws/a/z5Xt6NqH",
-        [
+        "count": 220,
+    },
+    {
+        "url": "https://bunkrrr.org/a/n12rHpzB",
+        "description": """
+        .org domain redirect to a different domain and discards query params.
+        This test is to make sure CDL does not get stuck in an infinite loop while doing album pagination""",
+        "results": [],
+        "count": 141,
+    },
+    {
+        "url": "https://bunkr.ws/a/z5Xt6NqH",
+        "results": [
             {
                 "url": "https://c1be.scdn.st/acba241d-c1e8-40c3-aa73-94daf75fcd13.jpg?n='%22'.jpg",
                 "filename": ".jpg",
@@ -223,7 +215,7 @@ TEST_CASES = [
                 "original_filename": "filename: !\"#$%&'()*+,-.0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\].mp4",
             },
         ],
-        3,
-    ),
-    ("https://bunkr.ws/a/aJHkJf3L", [], 172),
+        "count": 3,
+    },
+    {"url": "https://bunkr.ws/a/aJHkJf3L", "results": [], "count": 172},
 ]

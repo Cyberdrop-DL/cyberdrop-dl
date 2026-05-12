@@ -175,7 +175,7 @@ class HitomiLaCrawler(Crawler):
     async def _get_servers(self) -> Servers:
         # https://ltn.gold-usergeneratedcontent.net/gg.js
 
-        js_text = await self.request_text(LTN_SERVER / "gg.js", cache_disabled=True)
+        js_text = await self.request_text(LTN_SERVER / "gg.js")
         root, num, default_num = [
             match_int_or_none(pattern, js_text) for pattern in (_REGEX.ROOT, _REGEX.NUM, _REGEX.DEFAULT_NUM)
         ]
