@@ -407,23 +407,27 @@ async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
     if limits is None:
         return False
 
-    media_item.duration = await _probe_duration(media_item)
+    if media_item.duration is None:
+        media_item.duration = _get_duration(await _probe_item(media_item, config))
     if media_item.duration is None:
         return False
 
     return media_item.duration not in limits
 
 
-async def _probe_duration(media_item: MediaItem) -> float | None:
-    if media_item.duration:
-        return media_item.duration
-
+async def _probe_item(media_item: MediaItem, config: Config) -> ffmpeg.FFprobeResult:
     if media_item.downloaded:
-        properties = await ffmpeg.probe(media_item.path)
+        return await ffmpeg.probe(media_item.path)
 
-    else:
-        properties = await ffmpeg.probe(media_item.url, headers=media_item.headers)
+    return await ffmpeg.probe_url(
+        media_item.url,
+        headers=media_item.headers,
+        proxy=config.global_settings.general.proxy,
+        verify=bool(config.global_settings.general.ssl_context),
+    )
 
+
+def _get_duration(properties: ffmpeg.FFprobeResult) -> float | None:
     if properties.format.duration:
         return properties.format.duration
     if properties.video:
