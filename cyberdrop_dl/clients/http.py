@@ -2,27 +2,26 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import dataclasses
 import logging
 import platform
 import time
-import uuid
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
 from multidict import CIMultiDict
 
 from cyberdrop_dl import aio, cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
+from cyberdrop_dl.clients.request import Request, normalize_impersonation
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
     from pathlib import Path
 
     from bs4 import BeautifulSoup
@@ -36,47 +35,6 @@ if TYPE_CHECKING:
 _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
 
 logger = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass(slots=True)
-class _Request:
-    url: AbsoluteHttpURL
-    method: HttpMethod
-    headers: CIMultiDict[str]
-    impersonate: str | Literal[False] | None
-    data: Any
-    json: Any
-    params: dict[str, Any]
-    id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
-
-    def __post_init__(self) -> None:
-        if self.method == "GET" and (self.data or self.json):
-            self.method = "POST"
-
-    @staticmethod
-    def normalize_impersonation(value: str | bool | None) -> str | Literal[False] | None:
-        if value is True:
-            return "chrome"
-        if value is None:
-            return None
-        return value or False
-
-    def __json__(self) -> dict[str, Any]:
-        return dict(self._serialize())
-
-    def _serialize(self) -> Generator[tuple[str, Any]]:
-        yield "url", str(self.url)
-        if self.headers:
-            yield "headers", dict(self.headers)
-        if self.impersonate is not None:
-            yield "impersonate", self.impersonate
-        if self.data is not None:
-            yield "data", self.data
-        if self.json is not None:
-            yield "json", self.json
-
-    def __str__(self) -> str:
-        return str(self.__json__())
 
 
 class _LazyResponseLog:
@@ -268,14 +226,14 @@ class HTTPClient:
         request_params: dict[str, Any] | None = None,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
 
-        request = _Request(
+        request = Request(
             url=url,
             method=method,
             data=data,
             json=json,
             params=request_params or {},
             headers=_prepare_headers(headers),
-            impersonate=_Request.normalize_impersonation(impersonate),
+            impersonate=normalize_impersonation(impersonate),
         )
 
         if not request.impersonate:
@@ -285,7 +243,7 @@ class HTTPClient:
             yield resp
 
     @contextlib.asynccontextmanager
-    async def _request(self, request: _Request) -> AsyncGenerator[AbstractResponse[Any]]:
+    async def _request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
         logger.debug("Starting %s request [id=%s]\n%s", request.method, request.id, request)
         exc = None
         async with self.__request(request) as resp:
@@ -303,7 +261,7 @@ class HTTPClient:
                 del resp
 
     @contextlib.asynccontextmanager
-    async def __request(self, request: _Request) -> AsyncGenerator[AbstractResponse[Any]]:
+    async def __request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
         if request.impersonate:
             async with contextlib.aclosing(
                 await self.curl_session.request(
@@ -313,7 +271,7 @@ class HTTPClient:
                     headers=request.headers,
                     json=request.json,
                     data=request.data,
-                    impersonate=request.impersonate,  # pyright: ignore[reportArgumentType]
+                    impersonate=request.impersonate,
                     **request.params,
                 )
             ) as curl_resp:
