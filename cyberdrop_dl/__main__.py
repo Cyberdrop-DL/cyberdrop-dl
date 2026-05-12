@@ -13,13 +13,13 @@ tracebacks.install_exception_hook()
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.database.transfer import run as transfer_db
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_console_logging, setup_file_logging
 from cyberdrop_dl.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.updates import check_latest_pypi
 from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
-from cyberdrop_dl.utils.transfer import run as transfer_db
 
 logger = logging.getLogger("cyberdrop_dl")
 

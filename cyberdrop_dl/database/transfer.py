@@ -160,7 +160,6 @@ def run(db_path: Path, *, force: bool = False) -> None:
     logger.debug("Creating new database at: %s", new_path)
     _create_new_database(new_path)
     with sqlite3.connect(new_path) as new_conn:
-        new_conn.execute("PRAGMA journal_mode=WAL")
         new_conn.execute("PRAGMA foreign_keys=OFF")
         new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
         try:
