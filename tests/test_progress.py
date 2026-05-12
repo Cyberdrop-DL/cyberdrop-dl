@@ -1,5 +1,7 @@
 import pytest
 
+from cyberdrop_dl import __version__
+from cyberdrop_dl.progress.scraping import ScrapingUI
 from cyberdrop_dl.progress.scraping.errors import UIError
 
 
@@ -33,3 +35,57 @@ def test_ui_error_parsing(name: str, expected_msg: str, expected_code: int | Non
 def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected: str):
     error = UIError(msg, 0, code)
     assert error.format(padding) == expected + ": 0"
+
+
+def test_scraping_json_dump() -> None:
+    ui = ScrapingUI()
+
+    with ui(force=True):
+        with ui.scrape.new("example.com"), ui.downloads.download_file("a file.mp4", "example.com", 200):
+            ui.download_errors.add("450 An Error")
+            dump = ui.__json__()
+            assert dump == {
+                "files": {
+                    "completed": 0,
+                    "previously_completed": 0,
+                    "skipped": 0,
+                    "failed": 0,
+                    "queued": 0,
+                },
+                "scrape_errors": {
+                    "errors": (),
+                    "sent_to_jdownloader": 0,
+                    "skipped": 0,
+                },
+                "download_errors": {
+                    "errors": (
+                        {
+                            "msg": "An Error",
+                            "count": 1,
+                            "code": 450,
+                        },
+                    ),
+                },
+                "scraping": (
+                    {
+                        "url": "example.com",
+                        "elapsed": pytest.approx(0, rel=0.6),
+                    },
+                ),
+                "downloads": (
+                    {
+                        "speed": None,
+                        "size": 200,
+                        "completed": 0,
+                        "hls": False,
+                        "bytes_downloaded": 0,
+                        "description": "(EXAMPLE.COM) a file.mp4",
+                        "eta": None,
+                        "visible": True,
+                    },
+                ),
+                "status": {
+                    "description": f"cyberdrop-dl v{__version__}",
+                    "messages": (),
+                },
+            }
