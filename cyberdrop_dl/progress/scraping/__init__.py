@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
 _PANEL_PADDING: Final = 5
 _STATUS: ContextVar[StatusMessage] = ContextVar("_STATUS")
-_WRITE_JSON: bool = True
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -61,14 +60,11 @@ class ScrapingUI(LiveUI):
     def __rich__(self) -> RenderableType:
         self._emit_jsonl()
         if self.mode is UIOptions.SIMPLE:
-            renderable = Group(self.files.simple, self.status)
-        elif self.mode is UIOptions.ACTIVITY:
-            renderable = self.status
+            return Group(self.files.simple, self.status)
+        if self.mode is UIOptions.ACTIVITY:
+            return self.status
 
-        else:
-            renderable = self._screen
-
-        return renderable
+        return self._screen
 
     def _emit_jsonl(self) -> None:
         if not env.WRITE_JSON_UI:
