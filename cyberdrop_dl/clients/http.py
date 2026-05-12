@@ -285,6 +285,7 @@ class HTTPClient:
                 yield resp
             except Exception as e:
                 exc = e
+                raise
             finally:
                 if self._dump_responses:
                     self.manager.logs.write_response(url, resp, exc)
