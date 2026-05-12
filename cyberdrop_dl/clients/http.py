@@ -10,11 +10,10 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
 
 import aiohttp
-from multidict import CIMultiDict
 
 from cyberdrop_dl import aio, cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
-from cyberdrop_dl.clients.request import Request, normalize_impersonation
+from cyberdrop_dl.clients.request import Request, normalize_impersonation, prepare_headers
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -232,7 +231,7 @@ class HTTPClient:
             data=data,
             json=json,
             params=request_params or {},
-            headers=_prepare_headers(headers),
+            headers=prepare_headers(headers),
             impersonate=normalize_impersonation(impersonate),
         )
 
@@ -313,10 +312,6 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
     if check := _JSON_CHECK.get():
         check(await response.json(), response)
         return
-
-
-def _prepare_headers(headers: Mapping[str, str] | None) -> CIMultiDict[str]:
-    return CIMultiDict(headers) if headers else CIMultiDict()
 
 
 class HTTPClientProxy(Protocol):

@@ -1,32 +1,29 @@
 from __future__ import annotations
 
 import dataclasses
-import logging
 import uuid
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from multidict import CIMultiDict
+
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Mapping
 
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
     from curl_cffi.requests.session import HttpMethod
-    from multidict import CIMultiDict
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-
-logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
 class Request:
     url: AbsoluteHttpURL
-    method: HttpMethod
-    headers: CIMultiDict[str]
-    impersonate: BrowserTypeLiteral | Literal[False] | None
-    data: Any
-    json: Any
-    params: dict[str, Any]
+    method: HttpMethod = "GET"
+    headers: CIMultiDict[str] = dataclasses.field(default_factory=CIMultiDict)
+    impersonate: BrowserTypeLiteral | Literal[False] | None = None
+    data: Any = None
+    json: Any = None
+    params: dict[str, Any] = dataclasses.field(default_factory=dict)
     id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
@@ -57,3 +54,7 @@ def normalize_impersonation(value: str | bool | None, /) -> BrowserTypeLiteral |
     if value is None:
         return None
     return cast("BrowserTypeLiteral", value) or False
+
+
+def prepare_headers(headers: Mapping[str, str] | None) -> CIMultiDict[str]:
+    return CIMultiDict(headers) if headers else CIMultiDict()
