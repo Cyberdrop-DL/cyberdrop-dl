@@ -24,7 +24,8 @@ class Request:
     data: Any = None
     json: Any = None
     params: dict[str, Any] = dataclasses.field(default_factory=dict)
-    id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
+
+    id: str = dataclasses.field(init=False, default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
         if self.method == "GET" and (self.data or self.json):
