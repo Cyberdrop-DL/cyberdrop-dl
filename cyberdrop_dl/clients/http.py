@@ -9,7 +9,7 @@ import time
 import uuid
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self, cast, final
 
 import aiohttp
 from multidict import CIMultiDict
@@ -22,7 +22,7 @@ from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Mapping
+    from collections.abc import AsyncGenerator, Callable, Generator, Mapping
     from pathlib import Path
 
     from bs4 import BeautifulSoup
@@ -43,16 +43,37 @@ class _Request:
     url: AbsoluteHttpURL
     method: HttpMethod
     headers: CIMultiDict[str]
-    impersonate: bool
+    impersonate: str | Literal[False] | None
+    data: Any
+    json: Any
     params: dict[str, Any]
     id: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
 
+    def __post_init__(self) -> None:
+        if self.method == "GET" and (self.data or self.json):
+            self.method = "POST"
+
+    @staticmethod
+    def normalize_impersonation(value: str | bool | None) -> str | Literal[False] | None:
+        if value is True:
+            return "chrome"
+        if value is None:
+            return None
+        return value or False
+
     def __json__(self) -> dict[str, Any]:
-        params = {k: v for k, v in self.params.items() if v is not None}
-        headers = dict(params.pop("headers")) or None
-        if headers:
-            params.update(headers=headers)
-        return params
+        return dict(self._serialize())
+
+    def _serialize(self) -> Generator[tuple[str, Any]]:
+        yield "url", str(self.url)
+        if self.headers:
+            yield "headers", dict(self.headers)
+        if self.impersonate is not None:
+            yield "impersonate", self.impersonate
+        if self.data is not None:
+            yield "data", self.data
+        if self.json is not None:
+            yield "json", self.json
 
     def __str__(self) -> str:
         return str(self.__json__())
@@ -246,7 +267,17 @@ class HTTPClient:
         json: Any = None,
         request_params: dict[str, Any] | None = None,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
-        request = _prepare_request(url, method, data, json, headers, impersonate, request_params)
+
+        request = _Request(
+            url=url,
+            method=method,
+            data=data,
+            json=json,
+            params=request_params or {},
+            headers=_prepare_headers(headers),
+            impersonate=_Request.normalize_impersonation(impersonate),
+        )
+
         if not request.impersonate:
             _ = request.headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
 
@@ -255,7 +286,7 @@ class HTTPClient:
 
     @contextlib.asynccontextmanager
     async def _request(self, request: _Request) -> AsyncGenerator[AbstractResponse[Any]]:
-        logger.debug("Starting %s request [id=%s] to %s \n%s", request.method, request.id, request.url, request)
+        logger.debug("Starting %s request [id=%s]\n%s", request.method, request.id, request)
         exc = None
         async with self.__request(request) as resp:
             resp.id = request.id
@@ -275,14 +306,30 @@ class HTTPClient:
     async def __request(self, request: _Request) -> AsyncGenerator[AbstractResponse[Any]]:
         if request.impersonate:
             async with contextlib.aclosing(
-                await self.curl_session.request(request.method, str(request.url), stream=True, **request.params)
+                await self.curl_session.request(
+                    request.method,
+                    str(request.url),
+                    stream=True,
+                    headers=request.headers,
+                    json=request.json,
+                    data=request.data,
+                    impersonate=request.impersonate,  # pyright: ignore[reportArgumentType]
+                    **request.params,
+                )
             ) as curl_resp:
                 yield AbstractResponse.create(curl_resp)
                 self.__sync_session_cookies(request.url)
 
             return
 
-        async with self._session.request(request.method, request.url, **request.params) as aio_resp:
+        async with self._session.request(
+            request.method,
+            request.url,
+            headers=request.headers,
+            json=request.json,
+            data=request.data,
+            **request.params,
+        ) as aio_resp:
             yield AbstractResponse.create(aio_resp)
 
     async def _flaresolverr_request(
@@ -374,28 +421,3 @@ class HTTPClientProxy(Protocol):
     async def request_text(self, *args, **kwargs) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
-
-
-def _prepare_request(
-    url: AbsoluteHttpURL,
-    method: HttpMethod,
-    data: Any,
-    json: Any,
-    headers: Mapping[str, str] | None,
-    impersonate: str | bool | None,
-    params: dict[str, Any] | None,
-) -> _Request:
-    params = params or {}
-    params["headers"] = headers = _prepare_headers(headers)
-    params["data"] = data
-    params["json"] = json
-
-    if method == "GET" and (data or json):
-        method = "POST"
-
-    if impersonate:
-        if impersonate is True:
-            impersonate = "chrome"
-        params["impersonate"] = impersonate
-
-    return _Request(url=url, method=method, params=params, headers=headers, impersonate=bool(impersonate))
