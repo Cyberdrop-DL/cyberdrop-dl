@@ -28,7 +28,9 @@ def test_chunk_size_is_never_greater_that_speed_limit(manager: Manager, limit: i
 
 def test_get_content_type() -> None:
     def get(value: str) -> str:
-        return _get_content_type(CIMultiDict({"content-type": value}))
+        content_type = _get_content_type(CIMultiDict({"content-type": value}))
+        assert content_type
+        return content_type
 
     assert get("text/vnd.trolltech.linguist") == "video/MP2T"
     assert get("text/HTML") == "text/HTML"
@@ -43,3 +45,7 @@ def test_check_content_type() -> None:
 
     with pytest.raises(InvalidContentTypeError, match="Received 'text/html', was expecting binary payload"):
         _check_content_type("text/html", ".mp4")
+
+
+def test_get_content_type_missing_headers() -> None:
+    assert _get_content_type({}) is None
