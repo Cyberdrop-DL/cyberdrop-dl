@@ -11,7 +11,7 @@ from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients.downloads import filter_by_duration
-from cyberdrop_dl.downloader.hls import download_rendition_group
+from cyberdrop_dl.downloader import hls
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
@@ -177,7 +177,7 @@ class Downloader:
         async with self._download_context(media_item):
             await self._start_hls_download(media_item, m3u8_group)
 
-    async def _start_hls_download(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
+    async def _start_hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
         media_item.path = media_item.download_folder / media_item.filename
         # TODO: register database duration from m3u8 info
         # TODO: compute approx size for UI from the m3u8 info
@@ -187,23 +187,27 @@ class Downloader:
         with self.manager.scrape_mapper.tui.downloads.download_hls(
             media_item.filename,
             media_item.domain,
-            segments=sum(len(m.segments) for m in m3u8_group if m is not None),
+            segments=sum(len(m.segments) for m in rendition if m is not None),
         ):
-            video, audio, _subs = await download_rendition_group(media_item, m3u8_group, self.start_download)
-            if not audio:
-                await aio.move(video, media_item.path)
-            else:
-                # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
-                # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
-                # so we leave them as independent files for now
-                ffmpeg_result = await ffmpeg.merge((video, audio), media_item.path)
+            await self._hls_download(media_item, rendition)
 
-                if not ffmpeg_result.success:
-                    raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
+    async def _hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
+        streams = await hls.download(media_item, rendition, self.start_download)
+        if not streams.audio:
+            await aio.move(streams.video, media_item.path)
 
-            await self.client.process_completed(media_item, self.domain)
-            await self.client.handle_media_item_completion(media_item, downloaded=True)
-            await self.finalize_download(media_item, downloaded=True)
+        else:
+            # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
+            # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
+            # so we leave them as independent files for now
+            ffmpeg_result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
+
+            if not ffmpeg_result.success:
+                raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
+
+        await self.client.process_completed(media_item, self.domain)
+        await self.client.handle_media_item_completion(media_item, downloaded=True)
+        await self.finalize_download(media_item, downloaded=True)
 
     async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
         if downloaded:

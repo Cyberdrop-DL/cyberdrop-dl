@@ -125,7 +125,8 @@ async def _download_segments(segments: Iterable[MediaItem], download_fn: Downloa
     return await aio.map(download, segments, task_limit=_TASK_LIMIT.get())
 
 
-async def download_rendition_group(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
+async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
+    """Download a rendition group"""
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
     async def download(m3u8: M3U8) -> Path:
