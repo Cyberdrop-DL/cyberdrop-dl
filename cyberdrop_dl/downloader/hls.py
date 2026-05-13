@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
     from pathlib import Path
 
-    from cyberdrop_dl.utils.m3u8 import M3U8
+    from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
 logger = logging.getLogger(__name__)
 
@@ -120,3 +120,44 @@ async def _download_segments(
         return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
 
     return await aio.map(download, segments, task_limit=10)
+
+
+async def download_rendition_group(
+    media_item: MediaItem,
+    m3u8_group: Rendition,
+    download_fn: Callable[[MediaItem], Awaitable[bool]],
+) -> tuple[Path, Path | None, Path | None]:
+
+    temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
+
+    async def download(m3u8: M3U8) -> Path:
+        return await download_m3u8(m3u8, temp_dir, media_item, download_fn)
+
+    async def download_subs() -> Path | None:
+        if not m3u8_group.subtitle:
+            return
+        try:
+            subs = await download(m3u8_group.subtitle)
+        except Exception as e:
+            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
+        else:
+            logger.warning(
+                f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"
+            )
+            return subs
+
+    async def download_audio() -> Path | None:
+        if m3u8_group.audio:
+            return await download(m3u8_group.audio)
+
+    async with asyncio.TaskGroup() as tg:
+        video = tg.create_task(download(m3u8_group.video))
+        audio = tg.create_task(download_audio())
+        subs = tg.create_task(download_subs())
+
+    try:
+        await aio.rmdir(temp_dir)
+    except OSError:
+        pass
+
+    return video.result(), audio.result(), subs.result()

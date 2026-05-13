@@ -11,7 +11,7 @@ from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients.downloads import filter_by_duration
-from cyberdrop_dl.downloader.hls import download_m3u8
+from cyberdrop_dl.downloader.hls import download_rendition_group
 from cyberdrop_dl.exceptions import (
     DownloadError,
     DurationError,
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import MediaItem
-    from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
+    from cyberdrop_dl.utils.m3u8 import Rendition
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class Downloader:
             media_item.domain,
             segments=sum(len(m.segments) for m in m3u8_group if m is not None),
         ):
-            video, audio, _subs = await self._download_rendition_group(media_item, m3u8_group)
+            video, audio, _subs = await download_rendition_group(media_item, m3u8_group, self.start_download)
             if not audio:
                 await aio.move(video, media_item.path)
             else:
@@ -204,44 +204,6 @@ class Downloader:
             await self.client.process_completed(media_item, self.domain)
             await self.client.handle_media_item_completion(media_item, downloaded=True)
             await self.finalize_download(media_item, downloaded=True)
-
-    async def _download_rendition_group(
-        self, media_item: MediaItem, m3u8_group: Rendition
-    ) -> tuple[Path, Path | None, Path | None]:
-
-        temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
-
-        async def download(m3u8: M3U8) -> Path:
-            return await download_m3u8(m3u8, temp_dir, media_item, self.start_download)
-
-        async def download_subs() -> Path | None:
-            if not m3u8_group.subtitle:
-                return
-            try:
-                subs = await download(m3u8_group.subtitle)
-            except Exception as e:
-                logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
-            else:
-                logger.warning(
-                    f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"
-                )
-                return subs
-
-        async def download_audio() -> Path | None:
-            if m3u8_group.audio:
-                return await download(m3u8_group.audio)
-
-        async with asyncio.TaskGroup() as tg:
-            video = tg.create_task(download(m3u8_group.video))
-            audio = tg.create_task(download_audio())
-            subs = tg.create_task(download_subs())
-
-        try:
-            await aio.rmdir(temp_dir)
-        except OSError:
-            pass
-
-        return video.result(), audio.result(), subs.result()
 
     async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
         if downloaded:
