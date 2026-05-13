@@ -60,7 +60,7 @@ def _generate_md_rows() -> Generator[str]:
         url = str(info.primary_url).rstrip("/")
         yield f"# {info.site}\n"
         yield f"**Primary URL**: [{url}]({url})\n"
-        yield f"**Supported Domains**: {quoted(info.supported_domains)}\n"
+        yield f"**Supported Domains**: {quoted(info.supported_domains)}".rstrip() + "\n"
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
         yield "**Supported Paths**:\n"
