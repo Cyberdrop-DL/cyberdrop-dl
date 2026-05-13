@@ -25,7 +25,7 @@ from cyberdrop_dl.utils import dates, error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator, Generator, Iterable
     from pathlib import Path
 
     from cyberdrop_dl.clients.downloads import DownloadClient
@@ -231,7 +231,7 @@ class Downloader:
             if await aio.is_file(output):
                 return output
 
-            tasks_results = await self._download_segments(media_item, m3u8, download_folder)
+            tasks_results = await self._download_segments(_create_segments(media_item, m3u8, download_folder))
 
             n_successful = sum(1 for result in tasks_results if result.downloaded)
 
@@ -272,39 +272,11 @@ class Downloader:
             pass
         return video, audio, subtitles
 
-    def _download_segments(self, media_item: MediaItem, m3u8: M3U8, download_folder: Path):
-        padding = max(5, len(str(len(m3u8.segments))))
+    async def _download_segments(self, segments: Iterable[MediaItem]) -> list[SegmentDownloadResult]:
+        async def download(seg_media_item: MediaItem):
+            return SegmentDownloadResult(seg_media_item, await self.start_download(seg_media_item))
 
-        def create_segments() -> Generator[HlsSegment]:
-            for index, segment in enumerate(m3u8.segments, 1):
-                assert segment.uri
-                name = f"{index:0{padding}d}{constants.TempExt.HLS}"
-                yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
-
-        async def download_segment(segment: HlsSegment):
-            # TODO: segments download should bypass the downloads slots limits.
-            # They count as a single download
-            seg_media_item = MediaItem.from_item(
-                media_item,
-                segment.url,
-                media_item.domain,
-                db_path=media_item.db_path,
-                download_folder=download_folder,
-                filename=segment.name,
-                ext=media_item.ext,
-            )
-            seg_media_item.is_segment = True
-            seg_media_item.headers = media_item.headers.copy()
-            return SegmentDownloadResult(
-                seg_media_item,
-                await self.start_download(seg_media_item),
-            )
-
-        return aio.map(
-            download_segment,
-            create_segments(),
-            task_limit=10 if m3u8.media_type == "video" else 50,
-        )
+        return await aio.map(download, segments, task_limit=10)
 
     async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
         if downloaded:
@@ -429,3 +401,29 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
     if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
         return False
     return True
+
+
+def _create_segments(media_item: MediaItem, m3u8: M3U8, download_folder: Path) -> Generator[MediaItem]:
+    for segment in _parse_segments(m3u8):
+        # TODO: segments download should bypass the downloads slots limits.
+        # They count as a single download
+        seg_media_item = MediaItem.from_item(
+            media_item,
+            segment.url,
+            media_item.domain,
+            db_path=media_item.db_path,
+            download_folder=download_folder,
+            filename=segment.name,
+            ext=media_item.ext,
+        )
+        seg_media_item.is_segment = True
+        seg_media_item.headers = media_item.headers.copy()
+        yield seg_media_item
+
+
+def _parse_segments(m3u8: M3U8) -> Generator[HlsSegment]:
+    padding = max(5, len(str(len(m3u8.segments))))
+    for index, segment in enumerate(m3u8.segments, 1):
+        assert segment.uri
+        name = f"{index:0{padding}d}{constants.TempExt.HLS}"
+        yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
