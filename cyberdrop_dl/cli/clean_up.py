@@ -19,7 +19,7 @@ def files(
     ],
     /,
 ) -> None:
-    """Delete partial files (`.cdl_hls`, `.cdl_hsl` and `.part`), empty folders and empty files inside `dir` (recursive)"""
+    """Delete partial (`.cdl_hls` and `.part`) files, empty folders and empty files inside `dir` (recursive)"""
 
     from cyberdrop_dl.utils import _partial_files, delete_empty_files_and_folders
 
@@ -27,7 +27,7 @@ def files(
     logger.info("Deleting partial downloads...")
     for file in _partial_files(dir):
         try:
-            file.unlink(missing_ok=True)
+            file.unlink()
         except OSError as e:
             logger.error(f"Unable to delete '{file}' ({e!r})")
         else:
