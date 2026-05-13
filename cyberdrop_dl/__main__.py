@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import sys
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from cyclopts import CycloptsPanel
 
 from cyberdrop_dl import tracebacks
 from cyberdrop_dl.cli import app
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 tracebacks.install_exception_hook()
 
