@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
 
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
 
+
+_TASK_LIMIT: ContextVar[int] = ContextVar("_TASK_LIMIT", default=10)
 logger = logging.getLogger(__name__)
 
 
@@ -92,6 +95,7 @@ async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: s
     if len(seg_paths) == 1:
         _ = await asyncio.to_thread(seg_paths[0].rename, output)
         return
+
     if media_type == "subtitle":
         await ffmpeg.merge_subs(seg_paths, output)
         return
@@ -102,9 +106,8 @@ async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: s
 
 
 def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
-    n_segmets = len(m3u8.segments)
     real_ext = parse_url(m3u8.segments[0].absolute_uri).suffix
-    if n_segmets > 1:
+    if len(m3u8.segments) > 1:
         if m3u8.media_type == "subtitle":
             suffix = f".{m3u8.media_type}{real_ext}"
         else:
@@ -119,7 +122,7 @@ async def _download_segments(segments: Iterable[MediaItem], download_fn: Downloa
     async def download(seg_media_item: MediaItem):
         return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
 
-    return await aio.map(download, segments, task_limit=10)
+    return await aio.map(download, segments, task_limit=_TASK_LIMIT.get())
 
 
 async def download_rendition_group(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
