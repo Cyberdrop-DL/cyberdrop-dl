@@ -1,38 +1,24 @@
-name: CI
+name: FFmpeg
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "cyberdrop_dl/**/*.py"
-      - "tests/**/*.py"
-      - ".github/workflows/ci.yaml"
   pull_request:
     branches:
       - main
     paths:
-      - "cyberdrop_dl/**/*.py"
+      - "cyberdrop_dl/ffmpeg.py"
       - "cyberdrop_dl/pyproject.toml"
-      - "tests/**/*.py"
-      - ".github/workflows/ci.yaml"
+      - "tests/test_ffmpeg.py"
   workflow_dispatch:
 
 permissions: {}
 
 jobs:
-  test:
-    name: Run pytest
+  test_ffmpeg:
+    name: FFmpeg tests
     permissions:
       contents: read
 
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.12, 3.14]
-      fail-fast: true
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -48,9 +34,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt install ffmpeg -y
           uv sync --all-extras
 
       - name: Run pytest
         timeout-minutes: 10
         run: |
-          uv run pytest --ignore=tests/test_ffmpeg.py -v --cov
+          uv run pytest tests/test_ffmpeg.py -v --cov
