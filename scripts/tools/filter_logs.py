@@ -12,13 +12,15 @@ from alive_progress import alive_it  # type: ignore
 
 LEVELS_TO_INCLUDE = {"WARNING", "ERROR", "CRITICAL"}
 
+LEVEL_AT = 26
+
 
 def filter_log_file(log_file: Path) -> Iterable[str]:
     print(f"Filtering: {log_file.resolve()}")  # noqa: T201
     log_content = log_file.read_text(encoding="utf8")
     last_level = None
     for line in alive_it(log_content.splitlines()):
-        level = line[20:29].strip()
+        level = line[LEVEL_AT : LEVEL_AT + 9].strip()
         if level:
             last_level = level
             if level in LEVELS_TO_INCLUDE:
