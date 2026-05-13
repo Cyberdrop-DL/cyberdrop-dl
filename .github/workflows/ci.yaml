@@ -60,7 +60,7 @@ jobs:
     permissions:
       contents: read
 
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -76,7 +76,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          winget install -e --id Gyan.FFmpeg --accept-source-agreements --accept-package-agreements
+          sudo apt install ffmpeg
           uv sync --all-extras
 
       - name: Run pytest
