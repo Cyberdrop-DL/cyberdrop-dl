@@ -1,18 +1,118 @@
+import contextlib
 import datetime
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from cyberdrop_dl import ffmpeg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-FFPROBE_IS_INSTALLED = bool(ffmpeg.ffprobe_version())
 
-pytestmark = pytest.mark.skipif(not FFPROBE_IS_INSTALLED, reason="ffprobe is not installed")
+@contextlib.contextmanager
+def mock_call() -> Generator[AsyncMock]:
+    with patch("cyberdrop_dl.ffmpeg._run_command", new_callable=AsyncMock) as m:
+        m.return_value = ffmpeg.SubProcessResult(
+            stdout="{}",
+            stderr="",
+            return_code=0,
+        )
+        yield m
+
+
+def last_call_args(mock: AsyncMock) -> list[Any]:
+    return list(mock.call_args.args[0])
+
+
+def get_probe_args(mock: AsyncMock) -> list[Any]:
+    return last_call_args(mock)[len(ffmpeg._FFPROBE_CALL_PREFIX) :]
+
+
+async def test_probe_url_command() -> None:
+    url = AbsoluteHttpURL("https://example.com/stream.m3u8")
+    with mock_call() as m:
+        await ffmpeg.probe_url(url)
+    assert last_call_args(m) == [
+        "ffprobe",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-show_streams",
+        "-show_format",
+        "-print_format",
+        "json",
+        "-tls_verify",
+        "1",
+        "https://example.com/stream.m3u8",
+    ]
+
+
+async def test_probe_url_w_headers() -> None:
+    url = AbsoluteHttpURL("https://example.com/stream.m3u8")
+
+    with mock_call() as m:
+        await ffmpeg.probe_url(
+            url,
+            headers={
+                "Authorization": "Bearer token",
+                "User-Agent": "test",
+            },
+        )
+
+    args = get_probe_args(m)
+    assert args == [
+        "-tls_verify",
+        "1",
+        "https://example.com/stream.m3u8",
+        "-headers",
+        "Authorization: Bearer token",
+        "-headers",
+        "User-Agent: test",
+    ]
+
+
+async def test_probe_url_w_proxy() -> None:
+    url = AbsoluteHttpURL("https://example.com/stream.m3u8")
+    proxy = AbsoluteHttpURL("http://proxy.internal:8080")
+    with mock_call() as m:
+        await ffmpeg.probe_url(url, proxy=proxy)
+
+    args = last_call_args(m)
+    idx = args.index("-http_proxy")
+    assert args[idx + 1] == "http://proxy.internal:8080"
+
+
+async def test_probe_url_w_verify_disabled() -> None:
+    url = AbsoluteHttpURL("https://example.com/stream.m3u8")
+    with mock_call() as m:
+        await ffmpeg.probe_url(url, verify=False)
+
+    args = get_probe_args(m)
+    assert args == ["-tls_verify", "0", "https://example.com/stream.m3u8"]
+
+
+async def test_probe_url_proxy_headers_no_verify() -> None:
+    url = AbsoluteHttpURL("https://example.com/stream.m3u8")
+    proxy = AbsoluteHttpURL("http://proxy:8080")
+    with mock_call() as m:
+        await ffmpeg.probe_url(url, headers={"X-Custom": "value"}, proxy=proxy, verify=False)
+
+    args = get_probe_args(m)
+    assert args == [
+        "-tls_verify",
+        "0",
+        "https://example.com/stream.m3u8",
+        "-headers",
+        "X-Custom: value",
+        "-http_proxy",
+        "http://proxy:8080",
+    ]
 
 
 async def test_ffprobe_video_url() -> None:
-    output = await ffmpeg.probe(
+    output = await ffmpeg.probe_url(
         AbsoluteHttpURL("https://videos.pexels.com/video-files/29691053/12769314_360_640_60fps.mp4")
     )
 
