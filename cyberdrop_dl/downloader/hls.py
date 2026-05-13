@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
     from pathlib import Path
 
+    from m3u8.model import Segment
+
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
@@ -35,22 +37,31 @@ class Streams(NamedTuple):
     subs: Path | None
 
 
-class HlsSegment(NamedTuple):
+class HLSSegment(NamedTuple):
+    idx: int
     part: str
     name: str
     url: AbsoluteHttpURL
 
 
-def _parse_segments(m3u8: M3U8) -> Generator[HlsSegment]:
-    padding = max(5, len(str(len(m3u8.segments))))
-    for index, segment in enumerate(m3u8.segments, 1):
+def _parse_segments(segments: Sequence[Segment]) -> Generator[HLSSegment]:
+    padding = max(5, len(str(len(segments))))
+    for index, segment in enumerate(segments, 1):
         assert segment.uri
-        name = f"{index:0{padding}d}{constants.TempExt.HLS}"
-        yield HlsSegment(segment.title, name, parse_url(segment.absolute_uri))
+        yield HLSSegment(
+            idx=index - 1,
+            part=segment.title,
+            name=f"{index:0{padding}d}{constants.TempExt.HLS}",
+            url=parse_url(segment.absolute_uri),
+        )
 
 
-def _create_segments(media_item: MediaItem, m3u8: M3U8, download_folder: Path) -> Generator[MediaItem]:
-    for segment in _parse_segments(m3u8):
+def _create_media_segments(
+    media_item: MediaItem,
+    segments: Iterable[HLSSegment],
+    download_folder: Path,
+) -> Generator[MediaItem]:
+    for segment in segments:
         # TODO: segments download should bypass the downloads slots limits.
         # They count as a single download
         seg_media_item = MediaItem.from_item(
@@ -80,9 +91,9 @@ async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, down
         return output
 
     results = await _download_segments(
-        _create_segments(
+        _create_media_segments(
             media_item,
-            m3u8,
+            _parse_segments(m3u8.segments),
             download_folder=temp_dir / m3u8.media_type,
         ),
         download_fn=download_fn,
