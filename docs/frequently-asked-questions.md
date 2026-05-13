@@ -28,11 +28,11 @@ You may need to import cookies. Follow the instructions here: [How to extract co
 
 ## I'm trying to report a bug and they ask me for a logs file. Where is this file?
 
-By default, it'll be in `./AppData/configs/<config>/logs/`
+By default, it'll be in `./AppData/configs/Default/logs/`
 
 The `AppData` folder is created inside the folder where you run cyberdrop-dl from
 
-## What does `SCRAPE_FAILURES` and `DOWNLOAD_FAILURES` mean?
+## What does `SCRAPE_ERRORS` and `DOWNLOAD_ERRORS` mean?
 
 Quite simply, almost all of them you see will be HTTP Status codes. Such as: 404 - Not Found (dead link)
 
@@ -72,15 +72,3 @@ This should only appear on macOS, so these instructions are for mac users.
 Go to your applications folder, find the python folder inside of it. Run the `Install Certificates` file in that folder.
 
 Go back to where you are running Cyberdrop-DL and delete the `venv` folder if one exists (if not, don't worry). Then try running the program again.
-
-## A thread/site i follow has new posts but `cyberdrop-dl` is not detecting / downloading them, why?
-
-`cyberdrop-dl` caches requests to made to sites to speed up re-runs and minimize load on those sites. By default, forums are cached for 30 days and any other site is cached for 7 days.
-
-You can run with `--disable-cache` to temporarily disable the cache (CLI only) or change the default values to 0.
-
-See:
-
-[--forum-cache-expire-after](https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/rate-limiting-options#forum_cache_expire_after)
-
-[--file-host-cache-expire-after](https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/rate-limiting-options#file_host_cache_expire_after)
