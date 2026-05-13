@@ -1,6 +1,6 @@
 import pytest
 
-from cyberdrop_dl.__main__ import main
+from cyberdrop_dl.__main__ import run_cdl
 
 
 @pytest.mark.parametrize(
@@ -12,7 +12,7 @@ from cyberdrop_dl.__main__ import main
 )
 def test_command_by_console_output(capsys: pytest.CaptureFixture[str], command: str, text: str) -> None:
     try:
-        main(command.split())
+        run_cdl(command.split())
     except SystemExit:
         pass
     output = capsys.readouterr().out
