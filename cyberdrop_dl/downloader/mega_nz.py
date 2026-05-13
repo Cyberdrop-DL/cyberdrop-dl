@@ -11,9 +11,6 @@ from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker
 from cyberdrop_dl.downloader.http import Downloader
 
 if TYPE_CHECKING:
-    from mega.data_structures import Crypto
-    from yarl import URL
-
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.progress import ProgressHook
@@ -24,7 +21,6 @@ if TYPE_CHECKING:
 class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIssues]
     def __init__(self, manager: Manager) -> None:
         super().__init__(manager)
-        self._decrypt_mapping: dict[URL, tuple[Crypto, int]] = {}
         self._supports_ranges = False
 
     @override
@@ -36,7 +32,7 @@ class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIs
         await check_free_space()
         await self._pre_download_check(media_item)
 
-        crypto, file_size = self._decrypt_mapping.pop(media_item.url)
+        crypto, file_size = media_item.extra_info[media_item.domain]["key"]
         chunk_decryptor = MegaChunker(crypto.key, crypto.iv, crypto.meta_mac)
 
         aiohttp_resp = resp.aiohttp_resp
@@ -76,8 +72,5 @@ class MegaDownloader(Downloader):
         return self._client
 
     @property
-    def max_attempts(self):
+    def max_attempts(self) -> int:
         return 1
-
-    def register(self, url: URL, crypto: Crypto, file_size: int) -> None:
-        self.client._decrypt_mapping[url] = crypto, file_size
