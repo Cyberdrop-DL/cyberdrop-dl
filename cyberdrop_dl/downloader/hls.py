@@ -116,7 +116,7 @@ async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, down
 
 async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: str) -> None:
     if len(seg_paths) == 1:
-        _ = await asyncio.to_thread(seg_paths[0].rename, output)
+        _ = await aio.move(seg_paths[0], output)
         return
 
     if media_type == "subtitle":
