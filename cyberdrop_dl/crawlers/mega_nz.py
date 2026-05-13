@@ -66,7 +66,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         api = MegaAPI(self.manager.http_client._session)
         api.user_agent = CDL_USER_AGENT
         self.core = MegaCore(api)
+        speed_limiter = self.downloader.client.speed_limiter
         self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
+        self.downloader.client.speed_limiter = speed_limiter
         await self.login(self.PRIMARY_URL)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -87,7 +89,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
         scrape_item.url = canonical_url
         full_key = b64_to_a32(public_key)
-        await self._process_file(scrape_item, handle, Crypto.decompose(full_key))
+        await self._process_file(scrape_item, handle, Crypto.decompose(full_key))  # pyright: ignore[reportArgumentType]
 
     @error_handling_wrapper
     async def _process_file(
