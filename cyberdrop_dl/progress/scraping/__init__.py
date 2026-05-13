@@ -59,9 +59,9 @@ class ScrapingUI(LiveUI):
 
     def __rich__(self) -> RenderableType:
         self._emit_jsonl()
-        if self.mode.is_simple:
+        if self.mode is UIOptions.SIMPLE:
             return Group(self.files.simple, self.status)
-        if self.mode.is_activity:
+        if self.mode is UIOptions.ACTIVITY:
             return self.status
 
         return self._screen

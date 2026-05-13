@@ -8,10 +8,7 @@ from contextvars import ContextVar
 from enum import auto
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
-from rich.live import Live
-from rich.markup import escape
 from rich.progress import Progress, Task, TaskID
-from rich.text import Text
 
 from cyberdrop_dl.compat import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
@@ -21,6 +18,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from rich.console import RenderableType
+    from rich.live import Live
+    from rich.text import Text
 
 REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
@@ -36,14 +35,6 @@ class UIOptions(CIStrEnum):
     def is_disabled(self) -> bool:
         return self is UIOptions.DISABLED
 
-    @property
-    def is_simple(self) -> bool:
-        return self is UIOptions.SIMPLE
-
-    @property
-    def is_activity(self) -> bool:
-        return self is UIOptions.ACTIVITY
-
 
 class JsonableRenderableType(Protocol):
     def __rich__(self) -> RenderableType: ...
@@ -53,6 +44,7 @@ class JsonableRenderableType(Protocol):
 
 def create_test_live(renderable: JsonableRenderableType, transient: bool = False, json: bool = True) -> Live:
     from rich.json import JSON
+    from rich.live import Live
 
     if json:
 
@@ -71,6 +63,9 @@ def create_test_live(renderable: JsonableRenderableType, transient: bool = False
 
 
 def hyperlink(file_path: Path, text: str | None = None) -> Text:
+    from rich.markup import escape
+    from rich.text import Text
+
     text = escape(text or str(file_path))
     return Text.from_markup(f"[link={file_path.as_uri()}]{text}[/link]", style="blue")
 
@@ -131,6 +126,8 @@ class LiveUI(ABC):
 
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
+        from rich.live import Live
+
         if self.disabled and not force:
             yield
             return
