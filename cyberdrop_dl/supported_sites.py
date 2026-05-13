@@ -75,8 +75,6 @@ def _generate_md_rows() -> Generator[str]:
             for note in notes:
                 yield f"- {note}"
 
-        yield "\n"
-
 
 def _get_supported_paths_and_notes(crawler_info: CrawlerInfo) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:
     supported_paths: dict[str, tuple[str, ...]] = {}

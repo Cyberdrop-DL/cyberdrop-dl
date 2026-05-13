@@ -31,10 +31,10 @@ def make_supported_sites_markdown_table() -> str:
 
 
 def replace(text: str, marker: str, new_content: str) -> str:
-    start_marker = f"<!-- START_{marker}-->"
+    start_marker = f"<!-- START_{marker} -->"
     start = text.index(start_marker) + len(start_marker)
-    end = text.index(f"<!-- END_{marker}-->")
-    return text[:start] + new_content + text[end:]
+    end = text.index(f"<!-- END_{marker} -->")
+    return text[:start] + "\n" + new_content + "\n" + text[end:]
 
 
 def update_supported_sites() -> None:

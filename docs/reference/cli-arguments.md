@@ -207,6 +207,8 @@ Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
 
 Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
 
+<!-- START_CLI_OVERVIEW -->
+
 ```shell
 Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
 
@@ -405,3 +407,5 @@ Bulk asynchronous downloader for multiple file hosts
 │ --refresh-rate  [default: 10.0]                                                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
+
+<!-- END_CLI_OVERVIEW -->
