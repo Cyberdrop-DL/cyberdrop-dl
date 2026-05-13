@@ -53,4 +53,33 @@ jobs:
       - name: Run pytest
         timeout-minutes: 10
         run: |
-          uv run pytest -v --cov
+          uv run pytest --ignore=tests/test_ffmpeg.py -v --cov
+
+  test_ffmpeg:
+    name: Run ffmpeg tests
+    permissions:
+      contents: read
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+          winget install ffmpeg
+
+      - name: Run pytest
+        timeout-minutes: 10
+        run: |
+          uv run pytest tests/test_ffmpeg.py -v --cov
