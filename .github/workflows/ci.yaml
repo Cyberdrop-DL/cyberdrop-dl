@@ -76,8 +76,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          winget install -e --id Gyan.FFmpeg --accept-source-agreements --accept-package-agreements
           uv sync --all-extras
-          winget install -e --id Gyan.FFmpeg -y
 
       - name: Run pytest
         timeout-minutes: 10
