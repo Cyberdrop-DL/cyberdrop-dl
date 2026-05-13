@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
 
 
-CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("_TASK_LIMIT", default=10)
+CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
 logger = logging.getLogger(__name__)
 
 
@@ -177,7 +177,7 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
             return await download(rendition.audio)
 
     async with asyncio.TaskGroup() as tg:
-        # Keep this priority for the semaphore, subs > audio > video
+        # Keep this priority for the semaphore: subs > audio > video
         subs = tg.create_task(download_subs())
         audio = tg.create_task(download_audio())
         video = tg.create_task(download(rendition.video))
