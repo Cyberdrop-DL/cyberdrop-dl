@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 import logging
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from cyclopts import Parameter
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
-from cyberdrop_dl.manager import AppData, Manager
-from cyberdrop_dl.models.types import HttpURL
+from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
 
 logger = logging.getLogger("cyberdrop_dl")
+
+if TYPE_CHECKING:
+    from cyberdrop_dl.manager import Manager
 
 
 async def _scrape(manager: Manager) -> None:
@@ -97,6 +101,8 @@ def download(
     cli: CLIargs | None = None,
     config: Config | None = None,
 ):
+    from cyberdrop_dl.manager import AppData, Manager
+
     cli = cli or CLIargs()
     cli.links = links
     config = config or Config()
