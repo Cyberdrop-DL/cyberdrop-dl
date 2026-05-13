@@ -214,25 +214,34 @@ class Downloader:
         async def download(m3u8: M3U8) -> Path:
             return await download_m3u8(m3u8, temp_dir, media_item, self.start_download)
 
-        audio = subtitles = None
-        if m3u8_group.subtitle:
+        async def download_subs() -> Path | None:
+            if not m3u8_group.subtitle:
+                return
             try:
-                subtitles = await download(m3u8_group.subtitle)
+                subs = await download(m3u8_group.subtitle)
             except Exception as e:
                 logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
             else:
                 logger.warning(
-                    f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at {subtitles} "
+                    f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"
                 )
+                return subs
 
-        if m3u8_group.audio:
-            audio = await download(m3u8_group.audio)
-        video = await download(m3u8_group.video)
+        async def download_audio() -> Path | None:
+            if m3u8_group.audio:
+                return await download(m3u8_group.audio)
+
+        async with asyncio.TaskGroup() as tg:
+            video = tg.create_task(download(m3u8_group.video))
+            audio = tg.create_task(download_audio())
+            subs = tg.create_task(download_subs())
+
         try:
             await aio.rmdir(temp_dir)
         except OSError:
             pass
-        return video, audio, subtitles
+
+        return video.result(), audio.result(), subs.result()
 
     async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
         if downloaded:
