@@ -22,6 +22,23 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.10.0] - 2026-05-13
+
+### Added
+
+- New `cleanup` subcommand
+- New `--concurrent-segments` option for HLS downloads
+
+### Changed
+
+- Assume binary payload for downloads with missing `Content-Type`
+- Use proxy and ssl config settings for requests made with `ffprobe`
+- The default `--concurrent-segments` changed from 50 (audio and subtitle streams) and 20 (video streams) to 10 for all cases
+
+### Fixed
+
+- `Invalid Content Type -  No content type in response headers` (turbo.cr)
+
 ## [9.9.0] - 2026-05-12
 
 ### Added
