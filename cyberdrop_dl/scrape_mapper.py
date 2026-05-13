@@ -19,6 +19,7 @@ from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
 from cyberdrop_dl.crawlers.http_direct import DirectHttpFile
 from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
 from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler, WordPressMediaCrawler
+from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
@@ -165,6 +166,7 @@ class ScrapeMapper:
         assert not self._done.is_set()
         _ = filepath.MAX_FILE_LEN.set(self.manager.config.global_settings.general.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(self.manager.config.global_settings.general.max_folder_name_length)
+        _ = CONCURRENT_SEGMENTS.set(self.manager.config.global_settings.rate_limiting_options.concurrent_segments)
 
         self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
         if self.manager.config.settings.sorting.sort_downloads:

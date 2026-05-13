@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
 
 
-_TASK_LIMIT: ContextVar[int] = ContextVar("_TASK_LIMIT", default=10)
+CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("_TASK_LIMIT", default=10)
 logger = logging.getLogger(__name__)
 
 
@@ -102,7 +102,7 @@ async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, down
     results = await aio.map(
         download_segment,
         segments,
-        task_limit=_TASK_LIMIT.get(),
+        task_limit=CONCURRENT_SEGMENTS.get(),
     )
 
     n_successful = sum(1 for result in results if result.downloaded)

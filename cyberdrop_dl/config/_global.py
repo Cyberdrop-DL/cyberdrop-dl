@@ -70,6 +70,8 @@ class RateLimiting(SettingsGroup):
 
     connection_timeout: PositiveFloat = 15
     read_timeout: PositiveFloat | None = 300
+    concurrent_segments: PositiveInt = 10
+    """Allow up to N HLS segments to be downloaded concurrently"""
 
     @field_validator("read_timeout", mode="before")
     @classmethod
