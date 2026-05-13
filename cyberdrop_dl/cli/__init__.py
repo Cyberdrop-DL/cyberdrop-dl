@@ -131,6 +131,7 @@ app = App(
 
 
 def register_commands() -> None:
+    from cyberdrop_dl.cli.clean_up import app as cleanup
     from cyberdrop_dl.cli.database import app as database
     from cyberdrop_dl.cli.download import download
     from cyberdrop_dl.cli.show import show
@@ -138,6 +139,7 @@ def register_commands() -> None:
     app.command(database)
     app.command(show)
     app.default(download)
+    app.command(cleanup)
 
 
 register_commands()
