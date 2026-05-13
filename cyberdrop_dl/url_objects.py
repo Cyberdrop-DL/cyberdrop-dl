@@ -120,12 +120,6 @@ CURRENT_URL: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_URL")
 logger = logging.getLogger(__name__)
 
 
-class HlsSegment(NamedTuple):
-    part: str
-    name: str
-    url: AbsoluteHttpURL
-
-
 @dataclass(slots=True, kw_only=True)
 class MediaItem:
     url: AbsoluteHttpURL

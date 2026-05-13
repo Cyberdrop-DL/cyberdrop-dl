@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
-from cyberdrop_dl.url_objects import HlsSegment, MediaItem
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import parse_url
 
 if TYPE_CHECKING:
@@ -33,6 +33,12 @@ class Streams(NamedTuple):
     video: Path
     audio: Path | None
     subs: Path | None
+
+
+class HlsSegment(NamedTuple):
+    part: str
+    name: str
+    url: AbsoluteHttpURL
 
 
 def _parse_segments(m3u8: M3U8) -> Generator[HlsSegment]:
