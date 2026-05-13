@@ -50,7 +50,7 @@ def _create_segments(media_item: MediaItem, m3u8: M3U8, download_folder: Path) -
         yield seg_media_item
 
 
-async def download_m3u8(
+async def _download_m3u8(
     m3u8: M3U8,
     temp_dir: Path,
     media_item: MediaItem,
@@ -124,20 +124,20 @@ async def _download_segments(
 
 async def download_rendition_group(
     media_item: MediaItem,
-    m3u8_group: Rendition,
+    rendition: Rendition,
     download_fn: Callable[[MediaItem], Awaitable[bool]],
 ) -> tuple[Path, Path | None, Path | None]:
 
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
     async def download(m3u8: M3U8) -> Path:
-        return await download_m3u8(m3u8, temp_dir, media_item, download_fn)
+        return await _download_m3u8(m3u8, temp_dir, media_item, download_fn)
 
     async def download_subs() -> Path | None:
-        if not m3u8_group.subtitle:
+        if not rendition.subtitle:
             return
         try:
-            subs = await download(m3u8_group.subtitle)
+            subs = await download(rendition.subtitle)
         except Exception as e:
             logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
         else:
@@ -147,11 +147,11 @@ async def download_rendition_group(
             return subs
 
     async def download_audio() -> Path | None:
-        if m3u8_group.audio:
-            return await download(m3u8_group.audio)
+        if rendition.audio:
+            return await download(rendition.audio)
 
     async with asyncio.TaskGroup() as tg:
-        video = tg.create_task(download(m3u8_group.video))
+        video = tg.create_task(download(rendition.video))
         audio = tg.create_task(download_audio())
         subs = tg.create_task(download_subs())
 
