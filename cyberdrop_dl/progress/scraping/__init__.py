@@ -15,8 +15,7 @@ from rich.console import Group, RenderableType
 from rich.layout import Layout
 
 from cyberdrop_dl import env
-from cyberdrop_dl.cli import UIOptions
-from cyberdrop_dl.progress import LiveUI
+from cyberdrop_dl.progress import LiveUI, UIOptions
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
 from cyberdrop_dl.progress.scraping.files import FileStatsPanel
@@ -24,6 +23,7 @@ from cyberdrop_dl.progress.scraping.panel import ScrapingPanel, StatusMessage
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterator
+
 
 _PANEL_PADDING: Final = 5
 _STATUS: ContextVar[StatusMessage] = ContextVar("_STATUS")
@@ -59,9 +59,9 @@ class ScrapingUI(LiveUI):
 
     def __rich__(self) -> RenderableType:
         self._emit_jsonl()
-        if self.mode is UIOptions.SIMPLE:
+        if self.mode.is_simple:
             return Group(self.files.simple, self.status)
-        if self.mode is UIOptions.ACTIVITY:
+        if self.mode.is_activity:
             return self.status
 
         return self._screen

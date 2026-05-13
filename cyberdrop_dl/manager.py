@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Self
 from pydantic.types import ByteSize
 
 from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
-from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from os import PathLike
 
+    from cyberdrop_dl.cli import CLIargs
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
     from cyberdrop_dl.url_objects import MediaItem
 
@@ -45,6 +45,8 @@ class Manager:
         appdata: AppData | None = None,
         config: Config | None = None,
     ) -> None:
+        from cyberdrop_dl.cli import CLIargs
+
         self.cache: dict[str, Any] = {}
         self._appdata: AppData | None = appdata
         self.cli_args: CLIargs = cli_args or CLIargs()

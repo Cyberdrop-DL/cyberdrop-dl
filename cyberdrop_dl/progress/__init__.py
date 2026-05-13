@@ -5,6 +5,7 @@ import dataclasses
 import sys
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
+from enum import auto
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.live import Live
@@ -12,6 +13,7 @@ from rich.markup import escape
 from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
+from cyberdrop_dl.compat import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
@@ -22,6 +24,25 @@ if TYPE_CHECKING:
 
 REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
+
+
+class UIOptions(CIStrEnum):
+    DISABLED = auto()
+    ACTIVITY = auto()
+    SIMPLE = auto()
+    FULLSCREEN = auto()
+
+    @property
+    def is_disabled(self) -> bool:
+        return self is UIOptions.DISABLED
+
+    @property
+    def is_simple(self) -> bool:
+        return self is UIOptions.SIMPLE
+
+    @property
+    def is_activity(self) -> bool:
+        return self is UIOptions.ACTIVITY
 
 
 class JsonableRenderableType(Protocol):
