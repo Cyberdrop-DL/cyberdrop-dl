@@ -105,7 +105,6 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             raise ScrapeError(410, "File not accessible anymore")
 
         name = self.core.decrypt_attrs(resp._at, crypto.key, handle).name
-
         self._decryption_keys[scrape_item.url] = crypto, resp.size
         file_url = self.parse_url(resp.url)
         filename, ext = self.get_filename_and_ext(name)
@@ -153,7 +152,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     @override
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
-        media_item.extra_info[self.DOMAIN]["key"] = self._decryption_keys.pop(media_item.url)
+        media_item.extra_info.setdefault(self.DOMAIN, {})["key"] = self._decryption_keys.pop(media_item.url)
         await super().handle_media_item(media_item, m3u8)
 
     @error_handling_wrapper
