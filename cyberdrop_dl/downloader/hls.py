@@ -90,13 +90,19 @@ async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, down
     if await aio.is_file(output):
         return output
 
-    results = await _download_segments(
-        _create_media_segments(
-            media_item,
-            _parse_segments(m3u8.segments),
-            download_folder=temp_dir / m3u8.media_type,
-        ),
-        download_fn=download_fn,
+    async def download_segment(seg_media_item: MediaItem) -> SegmentDownloadResult:
+        return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
+
+    segments = _create_media_segments(
+        media_item,
+        _parse_segments(m3u8.segments),
+        download_folder=temp_dir / m3u8.media_type,
+    )
+
+    results = await aio.map(
+        download_segment,
+        segments,
+        task_limit=_TASK_LIMIT.get(),
     )
 
     n_successful = sum(1 for result in results if result.downloaded)
@@ -133,13 +139,6 @@ def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
         suffix = output.suffix + real_ext
 
     return output.with_suffix(suffix)
-
-
-async def _download_segments(segments: Iterable[MediaItem], download_fn: DownloadFn) -> list[SegmentDownloadResult]:
-    async def download(seg_media_item: MediaItem):
-        return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
-
-    return await aio.map(download, segments, task_limit=_TASK_LIMIT.get())
 
 
 async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
