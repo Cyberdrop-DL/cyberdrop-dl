@@ -78,7 +78,13 @@ def _create_media_segments(
         yield seg_media_item
 
 
-async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, download_fn: DownloadFn) -> Path:
+async def _download_m3u8(
+    m3u8: M3U8,
+    temp_dir: Path,
+    media_item: MediaItem,
+    download_fn: DownloadFn,
+    sem: asyncio.BoundedSemaphore,
+) -> Path:
     assert m3u8.media_type
     if not m3u8.segments:
         raise DownloadError(
@@ -102,7 +108,7 @@ async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, down
     results = await aio.map(
         download_segment,
         segments,
-        task_limit=CONCURRENT_SEGMENTS.get(),
+        task_limit=sem,
     )
 
     n_successful = sum(1 for result in results if result.downloaded)
@@ -145,8 +151,10 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
     """Download a rendition group"""
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
+    sem = asyncio.BoundedSemaphore(CONCURRENT_SEGMENTS.get())
+
     async def download(m3u8: M3U8) -> Path:
-        return await _download_m3u8(m3u8, temp_dir, media_item, download_fn)
+        return await _download_m3u8(m3u8, temp_dir, media_item, download_fn, sem)
 
     async def download_subs() -> Path | None:
         if not rendition.subtitle:
