@@ -131,11 +131,11 @@ async def gather(*coros: Awaitable[_T]) -> list[_T]:
 
     AKA: all or nothing"""
 
-    async def run(coro: Awaitable[_R]) -> _R:
+    async def wrap(coro: Awaitable[_R]) -> _R:
         return await coro
 
     async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(run(coro)) for coro in coros]
+        tasks = [tg.create_task(wrap(coro)) for coro in coros]
 
     return [t.result() for t in tasks]
 
@@ -145,7 +145,7 @@ async def map(
     params: Iterable[_T],
     /,
     *,
-    task_limit: int | None = None,
+    task_limit: asyncio.BoundedSemaphore | int | None,
 ) -> list[_R]:
     """Map an async factory over a sequence of arguments with optional concurrency cap.
 
@@ -159,7 +159,7 @@ async def map_tuples(
     params_batched: Iterable[tuple[*_Ts]],
     /,
     *,
-    task_limit: int | None = None,
+    task_limit: asyncio.BoundedSemaphore | int | None = None,
 ) -> list[_R]:
     """Map an async factory over a sequence of arguments with optional concurrency cap.
 
@@ -168,7 +168,11 @@ async def map_tuples(
     if not task_limit:
         return await gather(*(coro_factory(*params) for params in params_batched))
 
-    semaphore = asyncio.BoundedSemaphore(task_limit)
+    if isinstance(task_limit, int):
+        semaphore = asyncio.BoundedSemaphore(task_limit)
+    else:
+        semaphore = task_limit
+
     tasks: list[asyncio.Task[_R]] = []
 
     async def run(coro: Awaitable[_R]) -> _R:
