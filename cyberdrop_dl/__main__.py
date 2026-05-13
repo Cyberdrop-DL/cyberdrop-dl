@@ -2,176 +2,28 @@
 import logging
 import sys
 from collections.abc import Sequence
-from pathlib import Path
-from typing import Annotated
 
-from cyclopts import App, CycloptsPanel, Parameter, validators
+from cyclopts import CycloptsPanel
 
-from cyberdrop_dl import __version__, aio, program_ui, tracebacks, webhook
+from cyberdrop_dl import tracebacks
 
 tracebacks.install_exception_hook()
 
-from cyberdrop_dl.cli import CLIargs
-from cyberdrop_dl.config import Config
-from cyberdrop_dl.database.transfer import run as transfer_db
-from cyberdrop_dl.logs import log_spacer, set_console_level, setup_console_logging, setup_file_logging
-from cyberdrop_dl.manager import AppData, Manager
-from cyberdrop_dl.models.types import HttpURL
-from cyberdrop_dl.scrape_mapper import ScrapeMapper
-from cyberdrop_dl.updates import check_latest_pypi
-from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
+from cyberdrop_dl.cli import app
+from cyberdrop_dl.logs import setup_console_logging
 
 logger = logging.getLogger("cyberdrop_dl")
 
 
-async def _scrape(manager: Manager) -> None:
-    with setup_file_logging(
-        manager.config.settings.logs.main_log,
-        level=manager.config.settings.runtime_options.effective_log_level,
-    ):
-        manager.log_config_settings()
-        log_spacer()
-        async with manager.database:
-            log_spacer()
-            logger.info("Starting CDL...")
-            async with ScrapeMapper(manager)() as scrape_mapper:
-                stats = await scrape_mapper.run()
-
-            log_spacer()
-            await _post_runtime(manager)
-
-            stats_summary = manager.print_stats(stats)
-
-            log_spacer()
-            async with manager.http_client.create_aiohttp_session() as session:
-                await check_latest_pypi(session)
-            log_spacer()
-            logger.info("Closing program...")
-            logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
-
-            if manager.config.settings.logs.webhook:
-                await webhook.send_notification(manager.config.settings.logs.webhook, stats_summary)
-
-            if manager.config.apprise_urls:
-                await apprise.send_notifications(manager.config.apprise_urls, stats_summary)
-
-
-async def _post_runtime(manager: Manager) -> None:
-    """Actions to complete after main runtime, and before UI shutdown."""
-    logger.info("Running Post-Download Processes\n", extra={"color": "green"})
-
-    if (
-        manager.config.settings.dupe_cleanup_options.hashing.enabled
-        and manager.config.settings.dupe_cleanup_options.auto_dedupe
-        and not manager.config.settings.runtime_options.ignore_history
-    ):
-        file_hashes = await manager.hasher.run()
-        await manager.deduper.run(file_hashes)
-
-    if manager.config.settings.sorting.sort_downloads and not manager.cli_args.retry_any:
-        await manager.sorter.run()
-
-    check_partials_and_empty_folders(manager)
-
-    if manager.config.settings.runtime_options.update_last_forum_post:
-        await manager.logs.update_last_forum_post(manager.config.settings.files.input_file)
-
-
-def _main(manager: Manager) -> None:
-    set_console_level(manager.config.settings.runtime_options.effective_console_log_level)
-    try:
-        with manager():
-            if not manager.cli_args.download:
-                program_ui.run(manager)
-            aio.run(_scrape(manager))
-
-    except KeyboardInterrupt:
-        logger.info("Exiting (Ctrl + C) ...")
-
-
-app = App(
-    name="cyberdrop-dl",
-    help="Bulk asynchronous downloader for multiple file hosts",
-    version=__version__,
-    default_parameter=Parameter(negative_iterable=[], json_dict=False, json_list=False),
-    result_action="return_value",
-)
-
-database_app = App(
-    name="cyberdrop-dl database",
-    help="Commands for managing the database",
-    version=__version__,
-)
-
-app.command(database_app, "database")
-
-
-@app.default()
-def download(
-    links: Annotated[
-        tuple[HttpURL, ...],
-        Parameter(
-            help="link(s) to content to download (passing multiple links is supported)",
-        ),
-    ] = (),
-    *,
-    cli: CLIargs | None = None,
-    config: Config | None = None,
-):
-    cli = cli or CLIargs()
-    cli.links = links
-    config = config or Config()
-    appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
-
-    config = Config.create(appdata, cli.config_file).update(config)
-    if cli.retry_all or cli.retry_maintenance:
-        config.settings.runtime_options.ignore_history = True
-
-    if not cli.fullscreen_ui or cli.retry_any or cli.config_file or config.settings.sorting.sort_downloads:
-        cli.download = True
-
-    manager = Manager(cli, appdata, config)
-
-    _main(manager)
-
-
-@app.command()
-def show() -> None:
-    """Show a list of all supported sites"""
-    from cyberdrop_dl import supported_sites
-
-    table = supported_sites.as_rich_table()
-    app.console.print(table)
-
-
-@database_app.command()
-def transfer(
-    db_path: Annotated[
-        Path,
-        Parameter(
-            help="Path to the SQLite database file to migrate",
-            validator=validators.Path(exists=True, file_okay=True, dir_okay=False, ext=".db"),
-        ),
-    ],
-    force: Annotated[
-        bool,
-        Parameter(
-            help="Skip the 'already latest' early-exit check and run all migration steps regardless of detected version"
-        ),
-    ] = False,
-) -> None:
-    """Migrate an old database to the latest schema version."""
-    transfer_db(db_path, force=force)
-
-
-def main(args: Sequence[str] | None = None) -> None:
+def main(args: Sequence[str] | None = None) -> int | None:
     with setup_console_logging():
         try:
             app(args)
+            return 0
         except* ValueError as exc_group:
             msg = "\n" + "\n".join(map(str, exc_group.exceptions))
             app.console.print(CycloptsPanel(msg, title=exc_group.message))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(bool(main()))
