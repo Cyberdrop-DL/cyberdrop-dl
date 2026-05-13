@@ -17,10 +17,10 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
     print(msg)  # noqa: T201
 
 
-def make_supported_sites_markdown_table(title: str) -> str:
+def make_supported_sites_markdown_table() -> str:
     return "".join(
         (
-            title,
+            "# Supported sites",
             "\n\n",
             f"List of sites supported by cyberdrop-dl-patched as of version {__version__}",
             "\n\n",
@@ -30,16 +30,43 @@ def make_supported_sites_markdown_table(title: str) -> str:
     )
 
 
+def replace(text: str, marker: str, new_content: str) -> str:
+    start_marker = f"<!-- START_{marker}-->"
+    start = text.index(start_marker) + len(start_marker)
+    end = text.index(f"<!-- END_{marker}-->")
+    return text[:start] + new_content + text[end:]
+
+
 def update_supported_sites() -> None:
-    title = "# Supported sites"
-    md_table = make_supported_sites_markdown_table(title)
-    current_content = SUPPORTED_SITES_MD.read_text()
-    end = "<!-- END_SUPPORTED_SITES-->"
-    content_before, _, rest = current_content.partition(title)
-    _, _, content_after = rest.partition(end)
-    new_content = f"{content_before}{md_table}{end}{content_after}"
-    write_if_updated(SUPPORTED_SITES_MD, current_content, new_content)
+    new_content = replace(
+        old_content := SUPPORTED_SITES_MD.read_text(),
+        marker="SUPPORTED_SITES",
+        new_content=make_supported_sites_markdown_table(),
+    )
+    write_if_updated(SUPPORTED_SITES_MD, old_content, new_content)
+
+
+def get_help_message() -> str:
+    from rich.console import Console
+
+    from cyberdrop_dl.__main__ import app
+
+    with Console(record=True, width=100) as console:
+        app.help_print([], console=console)
+
+    return console.export_text()
+
+
+def update_cli_overview() -> None:
+    new_overview = f"```shell\n{get_help_message()}```"
+    new_content = replace(
+        old_content := CLI_ARGUMENTS_MD.read_text(),
+        marker="CLI_OVERVIEW",
+        new_content=new_overview,
+    )
+    write_if_updated(CLI_ARGUMENTS_MD, old_content, new_content)
 
 
 if __name__ == "__main__":
+    update_cli_overview()
     update_supported_sites()
