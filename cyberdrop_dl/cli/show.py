@@ -1,7 +1,6 @@
 from cyberdrop_dl.cli import app
 
 
-@app.command()
 def show() -> None:
     """Show a list of all supported sites"""
     from cyberdrop_dl import supported_sites

@@ -140,3 +140,16 @@ app = App(
     default_parameter=Parameter(negative_iterable=[], json_dict=False, json_list=False),
     result_action="return_value",
 )
+
+
+def register_commands() -> None:
+    from cyberdrop_dl.cli.database import app as database
+    from cyberdrop_dl.cli.download import download
+    from cyberdrop_dl.cli.show import show
+
+    app.command(database)
+    app.command(show)
+    app.default(download)
+
+
+register_commands()

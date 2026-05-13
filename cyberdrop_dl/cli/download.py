@@ -3,7 +3,7 @@ from typing import Annotated
 
 from cyclopts import Parameter
 
-from cyberdrop_dl.cli import CLIargs, app
+from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.manager import AppData, Manager
@@ -86,7 +86,6 @@ def _main(manager: Manager) -> None:
         logger.info("Exiting (Ctrl + C) ...")
 
 
-@app.default()
 def download(
     links: Annotated[
         tuple[HttpURL, ...],

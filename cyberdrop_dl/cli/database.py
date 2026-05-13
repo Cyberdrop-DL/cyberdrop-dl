@@ -3,12 +3,10 @@ from typing import Annotated
 
 from cyclopts import App, Parameter, validators
 
-from cyberdrop_dl.cli import app
-
-database_app = App(name="database", help="Commands for managing the database")
+app = App(name="database", help="Commands for managing the database")
 
 
-@database_app.command()
+@app.command()
 def transfer(
     db_path: Annotated[
         Path,
@@ -28,6 +26,3 @@ def transfer(
     from cyberdrop_dl.database.transfer import run as transfer_db
 
     transfer_db(db_path, force=force)
-
-
-app.command(database_app, "database")
