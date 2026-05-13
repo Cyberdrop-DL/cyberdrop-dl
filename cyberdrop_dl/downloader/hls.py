@@ -16,12 +16,20 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
+    DownloadFn = Callable[[MediaItem], Awaitable[bool]]
+
 logger = logging.getLogger(__name__)
 
 
 class SegmentDownloadResult(NamedTuple):
     item: MediaItem
     downloaded: bool
+
+
+class Streams(NamedTuple):
+    video: Path
+    audio: Path | None
+    subs: Path | None
 
 
 def _parse_segments(m3u8: M3U8) -> Generator[HlsSegment]:
@@ -50,12 +58,7 @@ def _create_segments(media_item: MediaItem, m3u8: M3U8, download_folder: Path) -
         yield seg_media_item
 
 
-async def _download_m3u8(
-    m3u8: M3U8,
-    temp_dir: Path,
-    media_item: MediaItem,
-    download_fn: Callable[[MediaItem], Awaitable[bool]],
-):
+async def _download_m3u8(m3u8: M3U8, temp_dir: Path, media_item: MediaItem, download_fn: DownloadFn) -> Path:
     assert m3u8.media_type
     if not m3u8.segments:
         raise DownloadError(
@@ -112,22 +115,14 @@ def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
     return output.with_suffix(suffix)
 
 
-async def _download_segments(
-    segments: Iterable[MediaItem],
-    download_fn: Callable[[MediaItem], Awaitable[bool]],
-) -> list[SegmentDownloadResult]:
+async def _download_segments(segments: Iterable[MediaItem], download_fn: DownloadFn) -> list[SegmentDownloadResult]:
     async def download(seg_media_item: MediaItem):
         return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
 
     return await aio.map(download, segments, task_limit=10)
 
 
-async def download_rendition_group(
-    media_item: MediaItem,
-    rendition: Rendition,
-    download_fn: Callable[[MediaItem], Awaitable[bool]],
-) -> tuple[Path, Path | None, Path | None]:
-
+async def download_rendition_group(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
     async def download(m3u8: M3U8) -> Path:
@@ -160,4 +155,4 @@ async def download_rendition_group(
     except OSError:
         pass
 
-    return video.result(), audio.result(), subs.result()
+    return Streams(video.result(), audio.result(), subs.result())
