@@ -39,7 +39,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.9.0
+List of sites supported by cyberdrop-dl-patched as of version 9.10.0
 
 ### 4chan
 

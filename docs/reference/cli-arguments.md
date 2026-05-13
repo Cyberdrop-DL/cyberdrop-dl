@@ -214,6 +214,7 @@ Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
 Bulk asynchronous downloader for multiple file hosts
 
 ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
+│ cleanup      Perform maintenance tasks                                                           │
 │ database     Commands for managing the database                                                  │
 │ show         Show a list of all supported sites                                                  │
 │ --help (-h)  Display this message and exit.                                                      │
@@ -377,6 +378,8 @@ Bulk asynchronous downloader for multiple file hosts
 │ --rate-limit                         [default: 25]                                               │
 │ --connection-timeout                 [default: 15]                                               │
 │ --read-timeout                       [default: 300]                                              │
+│ --concurrent-segments                Allow up to <N> HLS segments to be downloaded concurrently  │
+│                                      [default: 10]                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
 │ --log-level                          Only log messages of this level or higher to the main log   │
