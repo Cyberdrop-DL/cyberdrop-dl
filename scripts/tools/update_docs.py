@@ -20,6 +20,7 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
 def make_supported_sites_markdown_table() -> str:
     return "".join(
         (
+            "\n",
             "# Supported sites",
             "\n\n",
             f"List of sites supported by cyberdrop-dl-patched as of version {__version__}",
