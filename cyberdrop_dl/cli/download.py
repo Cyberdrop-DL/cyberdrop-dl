@@ -1,26 +1,23 @@
-# ruff: noqa: E402
 import logging
 from typing import Annotated
 
 from cyclopts import Parameter
-
-from cyberdrop_dl import aio, program_ui, tracebacks, webhook
-
-tracebacks.install_exception_hook()
 
 from cyberdrop_dl.cli import CLIargs, app
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.manager import AppData, Manager
 from cyberdrop_dl.models.types import HttpURL
-from cyberdrop_dl.scrape_mapper import ScrapeMapper
-from cyberdrop_dl.updates import check_latest_pypi
-from cyberdrop_dl.utils import apprise, check_partials_and_empty_folders
 
 logger = logging.getLogger("cyberdrop_dl")
 
 
 async def _scrape(manager: Manager) -> None:
+    from cyberdrop_dl import webhook
+    from cyberdrop_dl.scrape_mapper import ScrapeMapper
+    from cyberdrop_dl.updates import check_latest_pypi
+    from cyberdrop_dl.utils import apprise
+
     with setup_file_logging(
         manager.config.settings.logs.main_log,
         level=manager.config.settings.runtime_options.effective_log_level,
@@ -54,6 +51,8 @@ async def _scrape(manager: Manager) -> None:
 
 async def _post_runtime(manager: Manager) -> None:
     """Actions to complete after main runtime, and before UI shutdown."""
+    from cyberdrop_dl.utils import check_partials_and_empty_folders
+
     logger.info("Running Post-Download Processes\n", extra={"color": "green"})
 
     if (
@@ -74,6 +73,8 @@ async def _post_runtime(manager: Manager) -> None:
 
 
 def _main(manager: Manager) -> None:
+    from cyberdrop_dl import aio, program_ui
+
     set_console_level(manager.config.settings.runtime_options.effective_console_log_level)
     try:
         with manager():

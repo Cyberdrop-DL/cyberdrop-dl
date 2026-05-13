@@ -1,21 +1,17 @@
-# ruff: noqa: E402
-import logging
 import sys
 from collections.abc import Sequence
 
 from cyclopts import CycloptsPanel
 
 from cyberdrop_dl import tracebacks
+from cyberdrop_dl.cli import app
 
 tracebacks.install_exception_hook()
 
-from cyberdrop_dl.cli import app
-from cyberdrop_dl.logs import setup_console_logging
-
-logger = logging.getLogger("cyberdrop_dl")
-
 
 def main(args: Sequence[str] | None = None) -> int | None:
+    from cyberdrop_dl.logs import setup_console_logging
+
     with setup_console_logging():
         try:
             app(args)

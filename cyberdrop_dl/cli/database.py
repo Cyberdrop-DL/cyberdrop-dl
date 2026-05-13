@@ -4,7 +4,6 @@ from typing import Annotated
 from cyclopts import App, Parameter, validators
 
 from cyberdrop_dl.cli import app
-from cyberdrop_dl.database.transfer import run as transfer_db
 
 database_app = App(name="database", help="Commands for managing the database")
 
@@ -26,6 +25,8 @@ def transfer(
     ] = False,
 ) -> None:
     """Migrate an old database to the latest schema version."""
+    from cyberdrop_dl.database.transfer import run as transfer_db
+
     transfer_db(db_path, force=force)
 
 
