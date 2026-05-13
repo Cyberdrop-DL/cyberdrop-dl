@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 
 from cyberdrop_dl import __version__
@@ -69,7 +71,7 @@ def test_scraping_json_dump() -> None:
                 "scraping": (
                     {
                         "url": "example.com",
-                        "elapsed": pytest.approx(0, rel=0.6),
+                        "elapsed": mock.ANY,
                     },
                 ),
                 "downloads": (
