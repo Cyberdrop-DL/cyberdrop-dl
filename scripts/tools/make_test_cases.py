@@ -59,7 +59,14 @@ def create_test_files(file: Path) -> None:
     test_files: list[Path] = []
     for domain, cases in all_results.items():
         domain = domain.replace(".", "_")
-        test_cases = [(url, results, len(results)) for url, results in cases.items()]
+        test_cases = [
+            {
+                "url": url,
+                "results": results,
+                "count": len(results),
+            }
+            for url, results in cases.items()
+        ]
         test_file = TEST_FOLDER / f"test_case_{domain}.py"
         _ = test_file.write_text(f"DOMAIN = {domain!r}\nTEST_CASES = {test_cases}")
         test_files.append(test_file)
