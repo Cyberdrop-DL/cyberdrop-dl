@@ -200,6 +200,7 @@ class Downloader:
             # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
             # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
             # so we leave them as independent files for now
+            logger.debug(f"Merging audio and video stream from {media_item.real_url}")
             ffmpeg_result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
 
             if not ffmpeg_result.success:

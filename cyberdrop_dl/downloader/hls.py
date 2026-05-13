@@ -105,6 +105,9 @@ async def _download_m3u8(
         download_folder=temp_dir / m3u8.media_type,
     )
 
+    logger.debug(
+        f"Starting HLS download ({m3u8.media_type}, {len(m3u8.segments):,} segments) for {media_item.real_url}"
+    )
     results = await aio.map(
         download_segment,
         segments,
@@ -112,8 +115,8 @@ async def _download_m3u8(
     )
 
     n_successful = sum(1 for result in results if result.downloaded)
-    if n_successful != (n_segmets := len(m3u8.segments)):
-        msg = f"Download of some segments failed. Successful: {n_successful:,}/{n_segmets:,} "
+    if n_successful != len(m3u8.segments):
+        msg = f"Download of some segments failed. Successful: {n_successful:,}/{len(m3u8.segments):,} "
         raise DownloadError("HLS Seg Error", msg, media_item)
 
     await _merge_segments(tuple(result.item.path for result in results), output, m3u8.media_type)
@@ -174,9 +177,10 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
             return await download(rendition.audio)
 
     async with asyncio.TaskGroup() as tg:
-        video = tg.create_task(download(rendition.video))
-        audio = tg.create_task(download_audio())
+        # Keep this priority for the semaphore, subs > audio > video
         subs = tg.create_task(download_subs())
+        audio = tg.create_task(download_audio())
+        video = tg.create_task(download(rendition.video))
 
     try:
         await aio.rmdir(temp_dir)
