@@ -21,7 +21,7 @@ def make_supported_sites_markdown_table() -> str:
     return "".join(
         (
             "\n",
-            "# Supported sites",
+            "## Supported sites",
             "\n\n",
             f"List of sites supported by cyberdrop-dl-patched as of version {__version__}",
             "\n\n",
@@ -59,11 +59,10 @@ def get_help_message() -> str:
 
 
 def update_cli_overview() -> None:
-    new_overview = f"```shell\n{get_help_message()}```"
     new_content = replace(
         old_content := CLI_ARGUMENTS_MD.read_text(),
         marker="CLI_OVERVIEW",
-        new_content=new_overview,
+        new_content=f"```shell\n{get_help_message()}```",
     )
     write_if_updated(CLI_ARGUMENTS_MD, old_content, new_content)
 
