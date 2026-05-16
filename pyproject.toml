@@ -15,15 +15,14 @@ classifiers = [
     "Programming Language :: Python :: 3.14"
 ]
 dependencies = [
-    "aiodns >=4.0.0; sys_platform != 'android' and sys_platform != 'win32'",
+    "aiodns >=4.0.3; sys_platform != 'android' and sys_platform != 'win32'",
     "aiohttp >=3.13.5",
     "aiolimiter >=1.2.1",
     "aiosqlite>=0.22.1",
-    "async-mega-py >=2.4.0",
-    "backports.zstd; platform_python_implementation == 'CPython' and python_version < '3.14'",
+    "async-mega-py >=2.4.1",
+    "backports.zstd >=1.5.0; implementation_name=='cpython' and python_version < '3.14'",
     "beautifulsoup4 >=4.14.3",
-    "brotli; implementation_name=='cpython' and sys_platform!='ios'",
-    "brotlicffi; implementation_name!='cpython' and sys_platform!='ios'",
+    "brotli >=1.2.0; implementation_name=='cpython' and sys_platform!='ios'",
     "certifi >=2026.4.22",
     "curl-cffi >=0.15; implementation_name == 'cpython' ",
     "cyclopts>=4.11.2",
