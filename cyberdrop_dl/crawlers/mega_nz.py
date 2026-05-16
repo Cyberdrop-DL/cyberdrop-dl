@@ -1,8 +1,6 @@
 """Crawler to download files and folders from mega.nz
 
 This crawler does several CPU intensive operations
-
-It calls checks_complete_by_referer several times even if no request is going to be made, to skip unnecessary compute time
 """
 
 from __future__ import annotations
@@ -18,7 +16,7 @@ from typing_extensions import override
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
-from cyberdrop_dl.exceptions import LoginError, ScrapeError
+from cyberdrop_dl.exceptions import LoginError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import error_handling_wrapper, m3u8
@@ -53,6 +51,11 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     core: MegaCore
     downloader: MegaDownloader
 
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        return AbsoluteHttpURL(MegaCore.ensure_v2_url(super().transform_url(url)))
+
     @property
     def user(self) -> str | None:
         return self.manager.config.auth.meganz.email or None
@@ -75,7 +78,11 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         if not self._logged_in:
             return
 
-        info = self.core.parse_url(scrape_item.url)
+        info = self.core.parse_url(scrape_item.url, check_key=False)
+        if not info.public_key:
+            self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
+            return
+
         if not info.is_folder:
             return await self.file(scrape_item, info.public_handle, info.public_key)
 
