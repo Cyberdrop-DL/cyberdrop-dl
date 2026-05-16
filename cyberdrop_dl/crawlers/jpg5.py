@@ -9,14 +9,16 @@ from cyberdrop_dl.utils import error_handling_wrapper, xor_decrypt
 from ._chevereto import CheveretoCrawler
 
 if TYPE_CHECKING:
+    import yarl
+
     from cyberdrop_dl.crawlers.crawler import RateLimit, SupportedDomains
 
-_CDN: Final = "selti-delivery.ru"
+_CDN: Final = "cuckcapital.cr"
 _DECRYPTION_KEY: Final = b"seltilovessimpcity@simpcityhatesscrapers"
 
 
 class JPG5Crawler(CheveretoCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "selti-delivery.ru", "jpg7.cr", "jpg6.su"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "selti-delivery.ru", "jpg7.cr", "jpg6.su", _CDN
     DOMAIN: ClassVar[str] = "jpg5.su"
     FOLDER_DOMAIN: ClassVar[str] = "JPG5"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://jpg6.su")
@@ -60,9 +62,9 @@ class JPG5Crawler(CheveretoCrawler):
 
     @classmethod
     def parse_url(
-        cls, link_str: str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
+        cls, link_str: yarl.URL | str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
     ) -> AbsoluteHttpURL:
-        if not link_str.startswith("https") and not link_str.startswith("/"):
+        if type(link_str) is str and not link_str.startswith(("https", "/")):
             encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
             link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
         return super().parse_url(link_str, relative_to, trim=trim)
