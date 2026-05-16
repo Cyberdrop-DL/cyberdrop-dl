@@ -22,7 +22,7 @@ class FileditchCrawler(Crawler):
     DOMAIN: ClassVar[str] = "fileditch"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.path != "/file.php":
+        if scrape_item.url.name != "file.php":
             # Some old files are only direct linkable
             return await self.direct_file(scrape_item)
         return await self.file(scrape_item)
