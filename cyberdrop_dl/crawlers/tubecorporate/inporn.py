@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from cyberdrop_dl.crawlers._tubecorporate import TubeCorporateCrawler
+from cyberdrop_dl.crawlers.tubecorporate import TubeCorporateCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
