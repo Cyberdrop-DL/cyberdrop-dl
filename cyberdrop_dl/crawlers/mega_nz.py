@@ -117,7 +117,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=file_url)
 
-    _process_file_task = auto_task_id(_file)
+    _file_task = auto_task_id(_file)
 
     @error_handling_wrapper
     async def folder(
@@ -154,7 +154,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             for part in path.parent.parts[1:]:
                 child_item.add_to_parent_title(part)
 
-            self.create_task(self._process_file_task(child_item, file.id, file._crypto, folder_id=folder_id))
+            self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()
 
     @override
