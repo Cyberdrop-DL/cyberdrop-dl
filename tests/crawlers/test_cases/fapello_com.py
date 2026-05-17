@@ -1,4 +1,4 @@
-DOMAIN = "fapello_com"
+DOMAIN = "fapello.com"
 TEST_CASES = [
     {
         "url": "https://fapello.com/alessandra-ambrosio/6124",
@@ -31,5 +31,15 @@ TEST_CASES = [
             }
         ],
         "count": 1,
+    },
+    {
+        "url": "https://fapello.com/soyloruga",
+        "results": [
+            {
+                "url": "ANY",
+                "download_folder": "re:soyloruga (Fapello.com)",
+            },
+        ],
+        "count": 53,
     },
 ]
