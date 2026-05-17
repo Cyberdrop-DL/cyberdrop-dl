@@ -12,7 +12,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import DictDataclass, css, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import Generator
 
     from bs4 import BeautifulSoup
 
@@ -67,7 +67,7 @@ class YandexDiskCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        async with self.request_context():
+        with self._request_context():
             soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
         item_info = _get_item_info(soup)
@@ -84,7 +84,7 @@ class YandexDiskCrawler(Crawler):
             return
 
         scrape_item.url = canonical_url
-        async with self.request_context():
+        with self._request_context():
             soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
         item_info = _get_item_info(soup)
@@ -113,8 +113,8 @@ class YandexDiskCrawler(Crawler):
         #    new_scrape_item = scrape_item.create_child(subfolder.url)
         #    pass
 
-    @contextlib.asynccontextmanager
-    async def request_context(self) -> AsyncGenerator[None]:
+    @contextlib.contextmanager
+    def _request_context(self) -> Generator[None]:
         try:
             yield
         except DownloadError as e:
@@ -137,7 +137,7 @@ class YandexDiskCrawler(Crawler):
         }
 
         api_url = _DOWNLOAD_API_ENTRYPOINT.with_host(scrape_item.url.host)
-        async with self.request_context():
+        with self._request_context():
             json_resp: dict[str, Any] = await self.request_json(
                 api_url,
                 method="POST",
@@ -206,8 +206,12 @@ class YandexFolder(YandexItem):
             item_info: dict[str, Any] = self.resources[child_id]
             if item_info["type"] != "file":
                 continue  # TODO handle subfolders
-            valid_dict = YandexFile.filter_dict(item_info)
-            yield YandexFile(**valid_dict, parent_folder_public_id=self.public_id, sk=self.sk)
+
+            yield YandexFile.from_dict(
+                YandexFile.filter_dict(item_info),
+                parent_folder_public_id=self.public_id,
+                sk=self.sk,
+            )
 
     @property
     def subfolders(self) -> Generator[YandexFolder]:
@@ -230,8 +234,13 @@ class YandexFolder(YandexItem):
         folder_details = resources[folder_id]
         short_url = AbsoluteHttpURL(folder_details["meta"]["short_url"])
         children_ids: list[str] = folder_details["children"]
-        valid_dict: dict[str, Any] = cls.filter_dict(folder_details)
-        return cls(**valid_dict, resources=resources, sk=sk, short_url=short_url, children_ids=children_ids)
+        return cls.from_dict(
+            cls.filter_dict(folder_details),
+            resources=resources,
+            sk=sk,
+            short_url=short_url,
+            children_ids=children_ids,
+        )
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -256,7 +265,7 @@ class YandexFile(YandexItem):
 
         short_url = AbsoluteHttpURL(file_details["meta"]["short_url"])
         valid_dict: dict[str, Any] = cls.filter_dict(file_details)
-        return cls(**valid_dict, sk=sk, short_url=short_url)
+        return cls.from_dict(valid_dict, sk=sk, short_url=short_url)
 
 
 def _is_single_item(json_resp: dict[str, Any]) -> bool:
