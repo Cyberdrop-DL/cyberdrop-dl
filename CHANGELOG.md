@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+- files.vc support (No longer exists)
+
 ### Fixed
 
 - Do not try to parse upload date (YouJizz)
