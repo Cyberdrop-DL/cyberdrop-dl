@@ -82,8 +82,11 @@ def _extract(soup: BeautifulSoup) -> str:
 
 
 def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, str]]:
-    for script in soup.select("script:-soup-contains('self.__next_f.push(')"):
+    push = "self.__next_f.push("
+    for script in soup.select(f"script:-soup-contains('{push}')"):
         js_text = script.get_text()
+        if not js_text.startswith(push):
+            continue
         raw_data = js_text[js_text.find("(") + 1 : js_text.rfind(")")]
         type, data = json.loads(raw_data)
         type = FlightDataType(type)

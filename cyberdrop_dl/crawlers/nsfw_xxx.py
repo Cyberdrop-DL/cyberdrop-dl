@@ -103,7 +103,7 @@ class NsfwXXXCrawler(Crawler):
         data: dict[str, Any] = post["data"]
         type_: str = content["type"]
 
-        scrape_item.uploaded_at = date = self.parse_date(post["publishedAt"])
+        scrape_item.uploaded_at = date = self.parse_date(post["publishedAt"], "%B %Y")
         title = self.create_separate_post_title(content["title"], str(content["id"]), date)
         scrape_item.setup_as_album(self.create_title(title), album_id=str(content["id"]))
 

@@ -4,8 +4,7 @@ import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
@@ -14,48 +13,47 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://e621.net")
-
 
 class E621Crawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Post": "/posts/...",
-        "Tags": "/posts?tags=...",
-        "Pools": "/pools/...",
+        "Post": "/posts/<post_id>",
+        "Tags": "/posts?tags=<tags>",
+        "Pools": "/pools/<pool_id>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e621.net")
     DOMAIN: ClassVar[str] = "e621.net"
     FOLDER_DOMAIN: ClassVar[str] = "E621"
-    _RATE_LIMIT = 2, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     def __post_init__(self) -> None:
-        self.headers = {"User-Agent": f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)"}
+        self.headers = {
+            "User-Agent": f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)",
+        }
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.query.get("tags"):
-            return await self.tag(scrape_item)
-        if "posts" in scrape_item.url.parts:
-            return await self.file(scrape_item)
-        if "pools" in scrape_item.url.parts:
-            return await self.pool(scrape_item)
-        raise ValueError
+
+        match scrape_item.url.parts[1:]:
+            case ["posts"] if tags := scrape_item.url.query.get("tags"):
+                return await self.tags(scrape_item, tags)
+            case ["posts", post_id]:
+                return await self.post(scrape_item, post_id)
+            case ["pools", pool_id]:
+                return await self.pool(scrape_item, pool_id)
+            case _:
+                raise ValueError
 
     async def _pager(self, scrape_item: ScrapeItem) -> AsyncGenerator[list[dict[str, Any]]]:
-        """Generator for album pages."""
         initial_page = int(scrape_item.url.query.get("page", 1))
-        url = PRIMARY_URL / "posts.json"
+        url = (self.PRIMARY_URL / "posts.json").with_query(tags=scrape_item.url.query["tags"])
         for page in itertools.count(initial_page):
-            url = url.with_query(tags=scrape_item.url.query["tags"], page=page)
-            json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
-            posts: list[dict] = json_resp.get("posts", [])
+            resp: dict[str, Any] = await self.request_json(url.update_query(page=page), headers=self.headers)
+            posts = resp.get("posts", [])
             if not posts:
                 break
             yield posts
 
     @error_handling_wrapper
-    async def tag(self, scrape_item: ScrapeItem) -> None:
-        """Fetches posts from e621 based on tags."""
-        tags = scrape_item.url.query["tags"]
+    async def tags(self, scrape_item: ScrapeItem, tags: str) -> None:
         title = self.create_title(tags.replace("+", " "))
         scrape_item.setup_as_album(title)
 
@@ -65,40 +63,29 @@ class E621Crawler(Crawler):
                     file_url = post["file"]["url"]
                 except KeyError:
                     continue
-                timestamp = self.parse_date(post["created_at"])
-                link = self.parse_url(file_url)
-                new_scrape_item = scrape_item.create_child(link, possible_datetime=timestamp)
-                filename, ext = self.get_filename_and_ext(link.name)
-                await self.handle_file(link, new_scrape_item, filename, ext)
+
+                new_scrape_item = scrape_item.create_child(self.parse_url(file_url))
+                new_scrape_item.uploaded_at = self.parse_iso_date(post["created_at"])
+                self.create_task(self.direct_file(new_scrape_item))
                 scrape_item.add_children()
 
     @error_handling_wrapper
-    async def pool(self, scrape_item: ScrapeItem) -> None:
-        """Fetches posts from an e621 pool."""
-        pool_id = scrape_item.url.name
-        url = PRIMARY_URL / f"pools/{pool_id}.json"
-        json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
-        posts = json_resp.get("post_ids", [])
-        title: str = json_resp.get("name", "Unknown Pool").replace("_", " ")
+    async def pool(self, scrape_item: ScrapeItem, pool_id: str) -> None:
+        url = self.PRIMARY_URL / f"pools/{pool_id}.json"
+        resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
+        posts = resp.get("post_ids", [])
+        title: str = resp.get("name", "Unknown Pool").replace("_", " ")
         scrape_item.setup_as_album(title)
 
         for post_id in posts:
-            url = PRIMARY_URL / f"posts/{post_id}"
+            url = self.PRIMARY_URL / f"posts/{post_id}"
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem) -> None:
-        """Fetches a single post by extracting the ID from the URL."""
-        post_id = scrape_item.url.name
-        url = PRIMARY_URL / f"posts/{post_id}.json"
-        json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
-        try:
-            file_url: str = json_resp["post"]["file"]["url"]
-        except KeyError:
-            raise ScrapeError(422) from None
-
-        link = self.parse_url(file_url)
-        filename, ext = self.get_filename_and_ext(link.name)
-        await self.handle_file(link, scrape_item, filename, ext)
+    async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
+        url = self.PRIMARY_URL / f"posts/{post_id}.json"
+        resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
+        file_url: str = resp["post"]["file"]["url"]
+        await self.direct_file(scrape_item, self.parse_url(file_url))

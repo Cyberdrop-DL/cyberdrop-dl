@@ -39,7 +39,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.10.0
+List of sites supported by cyberdrop-dl-patched as of version 9.10.1
 
 ### 4chan
 
@@ -759,7 +759,8 @@ ex: To only download categories from a date range: ,
 
 **Supported Paths**:
 
-- Direct Links:
+- File:
+  - `/file.php?f=<file_id>`
 
 
 ### Filester
@@ -1326,7 +1327,7 @@ spreadsheets:
 
 **Primary URL**: [https://jpg6.su](https://jpg6.su)
 
-**Supported Domains**: `host.church`, `jpeg.pet`, `jpg.church`, `jpg.fish`, `jpg.fishing`, `jpg.homes`, `jpg.pet`, `jpg1.su`, `jpg2.su`, `jpg3.su`, `jpg4.su`, `jpg5.su`, `jpg6.su`, `jpg7.cr`, `selti-delivery.ru`
+**Supported Domains**: `cuckcapital.cr`, `host.church`, `jpeg.pet`, `jpg.church`, `jpg.fish`, `jpg.fishing`, `jpg.homes`, `jpg.pet`, `jpg1.su`, `jpg2.su`, `jpg3.su`, `jpg4.su`, `jpg5.su`, `jpg6.su`, `jpg7.cr`, `selti-delivery.ru`
 
 **Supported Paths**:
 

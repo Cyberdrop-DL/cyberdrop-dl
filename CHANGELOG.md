@@ -22,6 +22,41 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+- files.vc support (No longer exists)
+
+### Fixed
+
+- Do not try to parse upload date (YouJizz)
+- Date extration (Sex.com)
+- Video extraction from embed URLs (YouJizz)
+- Date extraction (Rule34.xxx)
+- Date extraction (Nsfw.xxx)
+- Date extraction (e621)
+- Chapter info extraction (OmegaScans)
+
+## [9.10.1] - 2026-05-16
+
+### Changed
+
+- Update supported domains (JPG5)
+- Log URLs without public key as password protected (mega.nz)
+
+### Fixed
+
+- `--impersonate` being ignored
+- Infinite redirects on albums (imgbb)
+- Handle URLs with redundant empty parts (Fileditch)
+
 ## [9.10.0] - 2026-05-13
 
 ### Added

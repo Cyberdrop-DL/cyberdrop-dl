@@ -2,34 +2,26 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph
+from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph, parse_url
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator
 
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://www.youjizz.com/")
-JS_SELECTOR = "div#content > script:-soup-contains('var dataEncodings')"
-DATE_SELECTOR = "span.pretty-date"
-
-
-class VideoSource(NamedTuple):
-    resolution: int
-    url: str
-
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class Video:
-    date: str  # Human date
     title: str
-    best_src: VideoSource
+    resolution: Resolution
+    src: AbsoluteHttpURL
 
 
 class YouJizzCrawler(Crawler):
@@ -39,7 +31,7 @@ class YouJizzCrawler(Crawler):
             "/videos/<video_name>",
         )
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.youjizz.com/")
     DOMAIN: ClassVar[str] = "youjizz"
     FOLDER_DOMAIN: ClassVar[str] = "YouJizz"
 
@@ -55,44 +47,46 @@ class YouJizzCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        canonical_url = PRIMARY_URL / "videos" / "embed" / video_id
+        canonical_url = self.PRIMARY_URL / "videos" / "embed" / video_id
         if await self.check_complete_from_referer(canonical_url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-
         scrape_item.url = canonical_url
         video = _parse_video(soup)
-        link = self.parse_url(video.best_src.url)
-        scrape_item.uploaded_at = self.parse_date(video.date)
-        filename, ext = self.get_filename_and_ext(link.name)
+        filename, ext = self.get_filename_and_ext(video.src.name)
         custom_filename = self.create_custom_filename(
-            video.title, ext, file_id=video_id, resolution=video.best_src.resolution
+            video.title,
+            ext,
+            file_id=video_id,
+            resolution=video.resolution,
         )
         await self.handle_file(
-            scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link
+            scrape_item.url,
+            scrape_item,
+            filename,
+            ext,
+            custom_filename=custom_filename,
+            debrid_link=video.src,
         )
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
-    js_text = css.select_text(soup, JS_SELECTOR)
-    encodings_text = extr_text(js_text, "var dataEncodings =", "var encodings").strip().removesuffix(";")
+    js_text = css.select_text(soup, "script:-soup-contains('var dataEncodings')")
+    encodings_text = extr_text(js_text, "var dataEncodings =", "var encodings").removesuffix(";")
     data_encodings = json.loads(encodings_text)
-    return Video(
-        title=open_graph.title(soup),
-        date=css.select_text(soup, DATE_SELECTOR),
-        best_src=_get_best_src(data_encodings),
-    )
+    res, src = max(_parse_formats(data_encodings))
+    return Video(resolution=res, src=src, title=open_graph.title(soup))
 
 
-def _get_best_src(data_encodings: list[dict[str, Any]]) -> VideoSource:
-    def parse() -> Iterable[VideoSource]:
-        for format_info in data_encodings:
-            try:
-                res = int(format_info["quality"])
-            except ValueError:
-                continue
-            if "/_hls/" not in (link_str := format_info["filename"]):
-                yield VideoSource(res, link_str)
+def _parse_formats(data_encodings: list[dict[str, Any]]) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
+    for fmt in data_encodings:
+        if "/_hls/" in fmt["filename"]:
+            continue
 
-    return max(parse())
+        url = parse_url(fmt["filename"])
+        if url.suffix == ".m3u8":
+            continue
+
+        res = Resolution.parse(int(fmt["quality"]))
+        yield res, url
