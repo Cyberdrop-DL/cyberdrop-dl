@@ -35,7 +35,7 @@ class E621Crawler(Crawler):
         if scrape_item.url.query.get("tags"):
             return await self.tag(scrape_item)
         if "posts" in scrape_item.url.parts:
-            return await self.file(scrape_item)
+            return await self.post(scrape_item)
         if "pools" in scrape_item.url.parts:
             return await self.pool(scrape_item)
         raise ValueError
@@ -89,7 +89,7 @@ class E621Crawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem) -> None:
+    async def post(self, scrape_item: ScrapeItem) -> None:
         post_id = scrape_item.url.name
         url = self.PRIMARY_URL / f"posts/{post_id}.json"
         json_resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
