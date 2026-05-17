@@ -21,13 +21,17 @@ class Selector:
 class TurboVidCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
-        "Video": ("/embed/<file_id>", "/d/<file_id>", "/v/<file_id>"),
+        "Video": (
+            "/embed/<file_id>",
+            "/d/<file_id>",
+            "/v/<file_id>",
+        ),
         "Search": "library?q=<query>",
         "Direct links": "/data/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbovid.cr")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbo.cr")
     DOMAIN: ClassVar[str] = "turbovid"
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr", "saint.to", "saint2.su", "saint2.cr")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbovid.cr", "saint.to", "saint2.su", "saint2.cr")
     FOLDER_DOMAIN: ClassVar[str] = "TurboVid"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
