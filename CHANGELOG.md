@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Do not try to parse upload date (YouJizz)
+- Date extration (Sex.com)
 - Video extraction from embed URLs (YouJizz)
 
 ## [9.10.1] - 2026-05-16
