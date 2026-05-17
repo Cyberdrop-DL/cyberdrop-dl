@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
@@ -29,9 +29,9 @@ class XXXBunkerCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://xxxbunker.com")
     DOMAIN: ClassVar[str] = "xxxbunker"
     FOLDER_DOMAIN: ClassVar[str] = "XXXBunker"
-    NEXT_PAGE_SELECTOR = Selector.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
-    _RATE_LIMIT = 1, 6
+    _RATE_LIMIT: ClassVar[RateLimit] = 1, 6
 
     async def __async_post_init__(self) -> None:
         self.update_cookies({"ageconfirm": "True"})
@@ -61,7 +61,11 @@ class XXXBunkerCrawler(Crawler):
         video_id = iframe_url.name
         custom_filename = self.create_custom_filename(title, ".mp4", file_id=video_id)
         await self.handle_file(
-            iframe_url, scrape_item, f"{video_id}.mp4", custom_filename=custom_filename, debrid_link=src
+            iframe_url,
+            scrape_item,
+            f"{video_id}.mp4",
+            custom_filename=custom_filename,
+            debrid_link=src,
         )
 
     @error_handling_wrapper
@@ -70,7 +74,11 @@ class XXXBunkerCrawler(Crawler):
         async for soup in self.web_pager(scrape_item.url):
             if not title:
                 name = name.replace("+", " ")
-                category = {"search": "search", "categories": "category", "favoritevideos": "favorites"}[type_]
+                category = {
+                    "search": "search",
+                    "categories": "category",
+                    "favoritevideos": "favorites",
+                }[type_]
                 title = self.create_title(f"{name} [{category}]")
                 scrape_item.setup_as_album(title)
 
@@ -78,8 +86,8 @@ class XXXBunkerCrawler(Crawler):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _check_video_is_available(soup: BeautifulSoup):
-    soup_text = soup.text
+def _check_video_is_available(soup: BeautifulSoup) -> None:
+    soup_text = soup.get_text()
     if "TRAFFIC VERIFICATION" in soup_text:
         raise ScrapeError(429)
 
