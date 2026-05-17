@@ -1,0 +1,19 @@
+DOMAIN = "fapello_com"
+TEST_CASES = [
+    {
+        "url": "https://fapello.com/alessandra-ambrosio/6124",
+        "results": [
+            {
+                "url": "https://fapello.com/content/a/l/alessandra-ambrosio/7000/alessandra-ambrosio_6124.jpg",
+                "filename": "alessandra-ambrosio_6124.jpg",
+                "debrid_link": None,
+                "original_filename": "alessandra-ambrosio_6124.jpg",
+                "referer": "https://fapello.com/alessandra-ambrosio/6124",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:alessandra-ambrosio (Fapello.com)",
+            }
+        ],
+        "count": 1,
+    }
+]
