@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Infinite redirects on albums (imgbb)
 - Handle URLs with redundant empty parts (Fileditch)
 - Date extraction (Rule34.xxx)
+- Date extraction (e621)
 
 ## [9.10.0] - 2026-05-13
 
