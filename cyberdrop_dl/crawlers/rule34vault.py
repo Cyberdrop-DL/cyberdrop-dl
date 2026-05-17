@@ -8,6 +8,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -20,6 +22,7 @@ class Selector:
 
 
 PRIMARY_URL = AbsoluteHttpURL("https://rule34vault.com")
+_PER_PAGE = 100
 
 
 class Rule34VaultCrawler(Crawler):
@@ -84,13 +87,25 @@ class Rule34VaultCrawler(Crawler):
             if n_images < 30:
                 break
 
+    async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[list[dict[str, Any]]]:
+        params = {"CountTotal": False, "Skip": 0}
+        while True:
+            resp = await self.request_json(url, method="POST", json=params)
+            yield resp["items"]
+
+            if len(resp["items"]) < _PER_PAGE:
+                return
+
+            params["cursor"] = resp.get("cursor")
+            params["Skip"] += params["take"]
+
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, post_id: str) -> None:
         canonical_url = scrape_item.url.with_query(None)
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        post = await self.request_json(self.PRIMARY_URL / "api/v2/post" / post_id)
+        post: dict[str, Any] = await self.request_json(self.PRIMARY_URL / "api/v2/post" / post_id)
         scrape_item.uploaded_at = self.parse_iso_date(post["created"])
         scrape_item.url = canonical_url
         src = _create_src_url(post)
