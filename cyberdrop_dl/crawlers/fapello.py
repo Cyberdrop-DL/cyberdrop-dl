@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Selector:
-    CONTENT = "div[id=content] a"
+    POSTS = "a[href]:has(img)"
     IMAGES = ".main_content .uk-align-center img"
     NEXT_PAGE = 'div[id="next_page"] a'
 
@@ -28,25 +29,26 @@ class FapelloComCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_]:
-                return await self.model(scrape_item)
+            case [model]:
+                return await self.model(scrape_item, model)
             case [model, post_id]:
                 return await self.post(scrape_item, model, int(post_id))
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def model(self, scrape_item: ScrapeItem) -> None:
-        async for soup in self.web_pager(scrape_item.url):
-            for post in soup.select(Selector.CONTENT):
-                link_str: str = css.attr(post, "href")
-                if "javascript" in link_str:
-                    link_str = css.select(post, "iframe", "src")
-
-                link = self.parse_url(link_str)
-                new_scrape_item = scrape_item.create_child(link)
-                self.handle_external_links(new_scrape_item)
+    async def model(self, scrape_item: ScrapeItem, model: str) -> None:
+        api_url = self.PRIMARY_URL / "ajax/model" / model
+        for page in itertools.count(1):
+            soup = await self.request_soup(api_url / f"page-{page}")
+            posts = tuple(css.iselect(soup, Selector.POSTS, "href"))
+            for post in posts:
+                new_scrape_item = scrape_item.create_child(self.parse_url(post))
+                self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
+
+            if len(posts) < 32:
+                break
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, model: str, post_id: int) -> None:
