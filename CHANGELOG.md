@@ -39,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Do not try to parse upload date (YouJizz)
 - Date extration (Sex.com)
 - Video extraction from embed URLs (YouJizz)
+- Date extraction (Rule34.xxx)
+- Date extraction (e621)
+- Chapter info extraction (OmegaScans)
 
 ## [9.10.1] - 2026-05-16
 
@@ -52,9 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--impersonate` being ignored
 - Infinite redirects on albums (imgbb)
 - Handle URLs with redundant empty parts (Fileditch)
-- Date extraction (Rule34.xxx)
-- Date extraction (e621)
-- Chapter info extraction (OmegaScans)
 
 ## [9.10.0] - 2026-05-13
 
