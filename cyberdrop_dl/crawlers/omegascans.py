@@ -41,7 +41,7 @@ class OmegaScansCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Chapter": "/series/<series_name>/<slug>",
         "Series": "/series/<series_name>",
-        "Direct links": "",
+        "Direct links": "/file/....",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://omegascans.org")
     DOMAIN: ClassVar[str] = "omegascans"
@@ -51,7 +51,7 @@ class OmegaScansCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["series", _]:
                 return await self.series(scrape_item)
-            case ["series", _, slug] if "chapter" in slug:
+            case ["series", _, _]:
                 return await self.chapter(scrape_item)
             case ["file", *_]:
                 await self.direct_file(scrape_item)
