@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Date extraction (Nsfw.xxx)
 - Date extraction (e621)
 - Chapter info extraction (OmegaScans)
+- 403 Forbidden when the input URL is a direct file (Turbo.cr)
 
 ## [9.10.1] - 2026-05-16
 
