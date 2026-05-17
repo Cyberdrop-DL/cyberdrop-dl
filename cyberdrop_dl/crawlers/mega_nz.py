@@ -96,10 +96,10 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
         scrape_item.url = canonical_url
         full_key = b64_to_a32(public_key)
-        await self._process_file(scrape_item, handle, Crypto.decompose(full_key))  # pyright: ignore[reportArgumentType]
+        await self._file(scrape_item, handle, Crypto.decompose(full_key))  # pyright: ignore[reportArgumentType]
 
     @error_handling_wrapper
-    async def _process_file(
+    async def _file(
         self,
         scrape_item: ScrapeItem,
         handle: str,
@@ -117,7 +117,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=file_url)
 
-    _process_file_task = auto_task_id(_process_file)
+    _file_task = auto_task_id(_file)
 
     @error_handling_wrapper
     async def folder(
@@ -138,9 +138,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         scrape_item.setup_as_album(title, album_id=handle)
         canonical_url = (self.PRIMARY_URL / "folder" / handle).with_fragment(public_key)
         scrape_item.url = canonical_url
-        await self._process_fs(scrape_item, fs, selected_node)
+        await self._filesystem(scrape_item, fs, selected_node)
 
-    async def _process_fs(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
+    async def _filesystem(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
         folder_id, public_key = scrape_item.url.name, scrape_item.url.fragment
 
         for file in filesystem.files_from(selected_node_id):
@@ -154,7 +154,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             for part in path.parent.parts[1:]:
                 child_item.add_to_parent_title(part)
 
-            self.create_task(self._process_file_task(child_item, file.id, file._crypto, folder_id=folder_id))
+            self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()
 
     @override

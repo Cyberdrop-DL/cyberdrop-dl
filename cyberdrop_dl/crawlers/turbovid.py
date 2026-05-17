@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -21,13 +21,17 @@ class Selector:
 class TurboVidCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
-        "Video": ("/embed/<file_id>", "/d/<file_id>", "/v/<file_id>"),
+        "Video": (
+            "/embed/<file_id>",
+            "/d/<file_id>",
+            "/v/<file_id>",
+        ),
+        "Direct links": "/data/<file_id>.mp4",
         "Search": "library?q=<query>",
-        "Direct links": "/data/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbovid.cr")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbo.cr")
     DOMAIN: ClassVar[str] = "turbovid"
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbo.cr", "saint.to", "saint2.su", "saint2.cr")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("turbovid.cr", "saint.to", "saint2.su", "saint2.cr")
     FOLDER_DOMAIN: ClassVar[str] = "TurboVid"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
@@ -39,10 +43,18 @@ class TurboVidCrawler(Crawler):
                 return await self.album(scrape_item, album_id)
             case ["embed" | "d" | "v", file_id, *_]:
                 return await self.video(scrape_item, file_id)
-            case ["data" | "videos", _, *_]:
-                return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["data", slug] if slug.endswith(suffix := ".mp4") and (video_id := slug.removesuffix(suffix)):
+                return cls.PRIMARY_URL / "d" / video_id
+            case _:
+                return url
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

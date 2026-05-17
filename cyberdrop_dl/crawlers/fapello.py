@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
@@ -10,55 +11,49 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-CONTENT_SELECTOR = "div[id=content] a"
-TITLE_SELECTOR = "h2[class='font-semibold lg:text-2xl text-lg mb-2 mt-4']"
-POST_CONTENT_SELECTOR = "div[class='flex justify-between items-center']"
+class Selector:
+    POSTS = "a[href]:has(img)"
+    IMAGE_OR_VIDEO = ".main_content .uk-align-center [src]"
+    NEXT_PAGE = 'div[id="next_page"] a'
 
-PRIMARY_URL = AbsoluteHttpURL("https://fapello.su/")
 
-
-class FapelloCrawler(Crawler):
+class FapelloComCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Individual Post": "/.../...",
-        "Model": "/...",
+        "Individual Post": "/<model_nam>/<post_id>",
+        "Model": "/<name>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    NEXT_PAGE_SELECTOR: ClassVar[str] = 'div[id="next_page"] a'
-    DOMAIN: ClassVar[str] = "fapello"
-    _RATE_LIMIT = 5, 1
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fapello.com")
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
+    DOMAIN: ClassVar[str] = "fapello.com"
+    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.name:
-            scrape_item.url = scrape_item.url / ""
-        if scrape_item.url.parts[-2].isdigit():
-            return await self.post(scrape_item)
-
-        await self.profile(scrape_item)
+        match scrape_item.url.parts[1:]:
+            case [model]:
+                return await self.model(scrape_item, model)
+            case [model, post_id]:
+                return await self.post(scrape_item, model, int(post_id))
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = self.create_title(css.select_text(soup, TITLE_SELECTOR))
-                scrape_item.setup_as_album(title)
-
-            for post in soup.select(CONTENT_SELECTOR):
-                link_str: str = css.attr(post, "href")
-                if "javascript" in link_str:
-                    link_str = css.select(post, "iframe", "src")
-
-                link = self.parse_url(link_str)
-                new_scrape_item = scrape_item.create_child(link)
-                self.handle_external_links(new_scrape_item)
+    async def model(self, scrape_item: ScrapeItem, model: str) -> None:
+        api_url = self.PRIMARY_URL / "ajax/model" / model
+        for page in itertools.count(1):
+            soup = await self.request_soup(api_url / f"page-{page}")
+            posts = tuple(css.iselect(soup, Selector.POSTS, "href"))
+            for post in posts:
+                new_scrape_item = scrape_item.create_child(self.parse_url(post))
+                self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
-    @error_handling_wrapper
-    async def post(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
+            if len(posts) < 32:
+                break
 
-        content = css.select(soup, POST_CONTENT_SELECTOR)
-        for _, link in self.iter_tags(content, "img, source"):
-            filename, ext = self.get_filename_and_ext(link.name)
-            await self.handle_file(link, scrape_item, filename, ext)
+    @error_handling_wrapper
+    async def post(self, scrape_item: ScrapeItem, model: str, post_id: int) -> None:
+        scrape_item.setup_as_album(self.create_title(model))
+        soup = await self.request_soup(scrape_item.url)
+        for _, link in self.iter_tags(soup, Selector.IMAGE_OR_VIDEO, "src"):
+            self.create_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
