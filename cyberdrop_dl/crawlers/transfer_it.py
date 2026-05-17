@@ -9,7 +9,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from mega import Node
+    from mega.data_structures import Node
     from mega.filesystem import FileSystem
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -39,9 +39,9 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag"):
         root = next(iter(fs))
         title = self.create_title(root.attributes.name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
-        self._process_filesystem(scrape_item, fs, transfer_id)
+        self._filesystem(scrape_item, fs, transfer_id)
 
-    def _process_filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
+    def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
         password = scrape_item.url.query.get("pw") or scrape_item.password
 
         for file in fs.files:
