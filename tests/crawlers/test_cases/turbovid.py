@@ -13,6 +13,18 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
+        "results": [
+            {
+                "url": "re:/data/E-26dWKftfB.mp4",
+                "filename": "E-26dWKftfB.mp4",
+                "referer": "https://turbo.cr/d/E-26dWKftfB",
+                "album_id": None,
+                "uploaded_at": 1749272400,
+            }
+        ],
+    },
+    {
         "url": "https://turbo.cr/embed/E-26dWKftfB",
         "results": [
             {

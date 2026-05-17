@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -26,6 +26,7 @@ class TurboVidCrawler(Crawler):
             "/d/<file_id>",
             "/v/<file_id>",
         ),
+        "Direct links": "/data/<file_id>.mp4",
         "Search": "library?q=<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbo.cr")
@@ -44,6 +45,16 @@ class TurboVidCrawler(Crawler):
                 return await self.video(scrape_item, file_id)
             case _:
                 raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["data", slug] if slug.endswith(suffix := ".mp4") and (video_id := slug.removesuffix(suffix)):
+                return cls.PRIMARY_URL / "d" / video_id
+            case _:
+                return url
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
