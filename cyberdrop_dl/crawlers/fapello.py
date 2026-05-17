@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class Selector:
     POSTS = "a[href]:has(img)"
-    IMAGES = ".main_content .uk-align-center img"
+    IMAGE_OR_VIDEO = ".main_content .uk-align-center [src]"
     NEXT_PAGE = 'div[id="next_page"] a'
 
 
@@ -54,6 +54,6 @@ class FapelloComCrawler(Crawler):
     async def post(self, scrape_item: ScrapeItem, model: str, post_id: int) -> None:
         scrape_item.setup_as_album(self.create_title(model))
         soup = await self.request_soup(scrape_item.url)
-        for _, link in self.iter_tags(soup, Selector.IMAGES, "src"):
+        for _, link in self.iter_tags(soup, Selector.IMAGE_OR_VIDEO, "src"):
             self.create_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()

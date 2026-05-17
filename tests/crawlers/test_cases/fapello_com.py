@@ -15,5 +15,21 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://fapello.com/soyloruga/54",
+        "results": [
+            {
+                "url": "https://cdn.fapello.com/content/s/o/soyloruga/1000/soyloruga_0054.mp4",
+                "filename": "soyloruga_0054.mp4",
+                "debrid_link": None,
+                "original_filename": "soyloruga_0054.mp4",
+                "referer": "https://fapello.com/soyloruga/54",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:soyloruga (Fapello.com)",
+            }
+        ],
+        "count": 1,
+    },
 ]
