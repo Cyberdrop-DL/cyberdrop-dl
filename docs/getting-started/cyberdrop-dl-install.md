@@ -60,7 +60,7 @@ The recommended way to install Cyberdrop-DL is using [`uv`](https://docs.astral.
 {% tab title="macOS / Linux" %}
 
 ```shell
-curl -LsSf https://astral.sh/uv/0.10.11/install.sh | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 {% endtab %}
@@ -68,7 +68,7 @@ curl -LsSf https://astral.sh/uv/0.10.11/install.sh | sh
 {% tab title="Windows" %}
 
 ```shell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/0.10.11/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 {% endtab %}

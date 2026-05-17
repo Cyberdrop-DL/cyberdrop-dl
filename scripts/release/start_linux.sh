@@ -15,9 +15,9 @@ if ! is_installed uv; then
     echo "uv not found, installing..."
 
     if is_installed curl; then
-        curl -LsSf https://astral.sh/uv/0.10.11/install.sh | sh
+        curl -LsSf https://astral.sh/uv/install.sh | sh
     elif is_installed wget; then
-        wget -qO- https://astral.sh/uv/0.10.11/install.sh | sh
+        wget -qO- https://astral.sh/uv/install.sh | sh
     elif is_installed pip; then
         pip install uv
     else

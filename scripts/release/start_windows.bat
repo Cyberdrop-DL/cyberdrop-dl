@@ -16,7 +16,7 @@ if /i "%PROCESSOR_ARCHITECTURE%"=="x86" (
 where uv >nul 2>&1
 if errorlevel 1 (
     echo uv not found, installing...
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/0.10.11/install.ps1 | iex"
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
     if errorlevel 1 (
         echo Error: Failed to install uv.
         pause

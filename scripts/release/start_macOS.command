@@ -14,7 +14,7 @@ is_installed() {
 # curl is always preinstalled on macOS
 if ! is_installed uv; then
     echo "uv not found, installing..."
-    curl -LsSf https://astral.sh/uv/0.10.11/install.sh | sh
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     if [ $? -ne 0 ]; then
         echo "Error: Failed to install uv."
         exit 1

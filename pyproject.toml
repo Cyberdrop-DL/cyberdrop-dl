@@ -73,7 +73,7 @@ Repository = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
 
 [build-system]
 build-backend = "uv_build"
-requires = ["uv_build<=0.10.11"]
+requires = ["uv_build>=0.11.14"]
 
 [dependency-groups]
 dev = [
@@ -81,7 +81,7 @@ dev = [
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
     "pytest>=9.0.3",
-    "ruff==0.15.6"
+    "ruff>=0.15.13"
 ]
 
 [tool.basedpyright]
@@ -185,6 +185,8 @@ spaces_before_inline_comment = 2
 spaces_indent_inline_array = 4
 
 [tool.uv]
+default-groups = "all"
+required-version = ">=0.11.14"
 
 [tool.uv.build-backend]
 module-name = ["cyberdrop_dl"]
