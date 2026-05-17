@@ -27,7 +27,6 @@ class TurboVidCrawler(Crawler):
             "/v/<file_id>",
         ),
         "Search": "library?q=<query>",
-        "Direct links": "/data/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://turbo.cr")
     DOMAIN: ClassVar[str] = "turbovid"
@@ -43,8 +42,6 @@ class TurboVidCrawler(Crawler):
                 return await self.album(scrape_item, album_id)
             case ["embed" | "d" | "v", file_id, *_]:
                 return await self.video(scrape_item, file_id)
-            case ["data" | "videos", _, *_]:
-                return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 
