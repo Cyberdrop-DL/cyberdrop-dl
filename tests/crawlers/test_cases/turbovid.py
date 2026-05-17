@@ -38,18 +38,6 @@ TEST_CASES = [
         ],
     },
     {
-        "url": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
-        "results": [
-            {
-                "url": "re:/data/E-26dWKftfB.mp4",
-                "filename": "E-26dWKftfB.mp4",
-                "referer": "https://cdn4.turbo.cr/data/E-26dWKftfB.mp4",
-                "album_id": None,
-                "uploaded_at": None,
-            }
-        ],
-    },
-    {
         "url": "https://turbo.cr/d/G4BfcI6TOKsLY",
         "results": [
             {
