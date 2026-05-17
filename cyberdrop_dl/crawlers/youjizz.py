@@ -80,13 +80,13 @@ def _parse_video(soup: BeautifulSoup) -> Video:
 
 
 def _parse_formats(data_encodings: list[dict[str, Any]]) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
-    for format_info in data_encodings:
-        if "/_hls/" in format_info["filename"]:
+    for fmt in data_encodings:
+        if "/_hls/" in fmt["filename"]:
             continue
 
-        url = parse_url(format_info["filename"])
+        url = parse_url(fmt["filename"])
         if url.suffix == ".m3u8":
             continue
 
-        res = Resolution.parse(int(format_info["quality"]))
+        res = Resolution.parse(int(fmt["quality"]))
         yield res, url
