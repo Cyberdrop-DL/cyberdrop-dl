@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Pa
 
 from typing_extensions import deprecated
 
-from cyberdrop_dl import aio, env
+from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.http import Downloader
@@ -163,6 +163,9 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
     disabled: bool = False
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(domain={self.DOMAIN!r}, primary_url={self.PRIMARY_URL!r}, disabled={self.disabled!r}, _ready={self._ready!r})>"
 
     @staticmethod
     def __db_path__(url: AbsoluteHttpURL, /) -> str:
@@ -892,6 +895,19 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                     custom_filename=sub_name,
                 )
             )
+
+
+@dataclasses.dataclass(slots=True)
+class CrawlerAPI:
+    crawler: Crawler
+
+    @signature.copy(HTTPClient.request)
+    async def request_text(self, *args, **kwargs) -> str:
+        return await self.crawler.request_text(*args, **kwargs)
+
+    @signature.copy(request_text)
+    async def request_json(self, *args, **kwargs) -> Any:
+        return await self.crawler.request_json(*args, **kwargs)
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
