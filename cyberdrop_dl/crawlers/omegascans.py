@@ -19,10 +19,8 @@ _API_ENTRYPOINT = AbsoluteHttpURL("https://api.omegascans.org/chapter/query")
 
 
 class Selector:
-    DATE = 'h2[class="font-semibold font-sans text-muted-foreground text-xs"]'
     SERIES_ID = "script:-soup-contains('series_id')"
-    DATE_JS = "script:-soup-contains('created')"
-    IMAGE = "p[class*=flex] img"
+    IMAGE = "#content  img.h-auto.object-contain"
 
 
 @dataclasses.dataclass(slots=True)
