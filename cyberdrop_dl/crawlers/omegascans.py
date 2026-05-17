@@ -5,6 +5,7 @@ import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, CrawlerAPI, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper, parse_url
 
@@ -74,7 +75,12 @@ class OmegaScansAPI(CrawlerAPI):
 
     async def chapter(self, series_slug: str, chapter_slug: str) -> Chapter:
         api_url = self.ENTRYPOINT / "chapter" / series_slug / chapter_slug
-        chapter = (await self.request_json(api_url))["chapter"]
+        resp = await self.request_json(api_url)
+        if resp.get("paywall"):
+            raise ScrapeError(
+                402, "This is a premium chapter. You need to be a subscriber or buy this chapter to access its content"
+            )
+        chapter = resp["chapter"]
         return Chapter(
             name=chapter["chapter_name"],
             slug=chapter["chapter_slug"],
