@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Date extration (Sex.com)
 - Video extraction from embed URLs (YouJizz)
 - Date extraction (Rule34.xxx)
+- Date extraction (Nsfw.xxx)
 - Date extraction (e621)
 - Chapter info extraction (OmegaScans)
 
