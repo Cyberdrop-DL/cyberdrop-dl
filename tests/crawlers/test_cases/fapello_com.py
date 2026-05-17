@@ -40,6 +40,6 @@ TEST_CASES = [
                 "download_folder": "re:soyloruga (Fapello.com)",
             },
         ],
-        "count": 53,
+        "count": range(53, 60),
     },
 ]

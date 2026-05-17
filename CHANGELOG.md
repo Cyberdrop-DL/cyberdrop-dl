@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fapello.com support
+
 ### Changed
 
 ### Deprecated
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - files.vc support (No longer exists)
+- fapello.su support (No longer exists)
 
 ### Fixed
 
