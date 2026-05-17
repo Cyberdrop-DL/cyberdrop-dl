@@ -17,9 +17,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-_JS_SELECTOR = "div#content > script:-soup-contains('var dataEncodings')"
-
-
 class Source(NamedTuple):
     resolution: Resolution
     url: AbsoluteHttpURL
@@ -80,7 +77,7 @@ class YouJizzCrawler(Crawler):
 
 
 def _parse_video(soup: BeautifulSoup) -> Video:
-    js_text = css.select_text(soup, _JS_SELECTOR)
+    js_text = css.select_text(soup, "script:-soup-contains('var dataEncodings')")
     encodings_text = extr_text(js_text, "var dataEncodings =", "var encodings").strip().removesuffix(";")
     data_encodings = json.loads(encodings_text)
     return Video(
