@@ -16,7 +16,7 @@ LEVEL_AT = 26
 
 
 def filter_log_file(log_file: Path) -> Iterable[str]:
-    print(f"Filtering: {log_file.resolve()}")  # noqa: T201
+    print(f"Filtering: {log_file.resolve()}")
     log_content = log_file.read_text(encoding="utf8")
     last_level = None
     for line in alive_it(log_content.splitlines()):

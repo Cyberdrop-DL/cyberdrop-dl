@@ -2,11 +2,11 @@ import datetime
 import itertools
 import shutil
 from pathlib import Path
+from typing import Never
 
 import pytest
 
 from cyberdrop_dl.sorter import Sorter, _format_dest, _have_same_content, _move_file
-from typing import Never
 
 DOWNLOADS = Path("/mnt/home/user/downloads/cdl/")
 SORT_DIR = DOWNLOADS.parent / "cdl_sorted"
