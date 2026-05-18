@@ -116,9 +116,9 @@ async def concat(input_files: Iterable[Path], output_file: Path, *, same_folder:
     return result
 
 
-async def _concat(input: Path, output: Path) -> SubProcessResult:
+async def _concat(input_file: Path, /, output: Path) -> SubProcessResult:
     concatenated_file = output.with_suffix(".concat" + output.suffix)
-    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input, *Args.CODEC_COPY, concatenated_file
+    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input_file, *Args.CODEC_COPY, concatenated_file
     result = await _run_command(command)
     if not result.success:
         return result
@@ -177,14 +177,14 @@ def _raw_concat(files: Iterable[Path], output: Path) -> None:
             file.unlink()
 
 
-async def probe(input: Path, /) -> FFprobeResult:
-    assert input.is_absolute()
-    command = *_FFPROBE_CALL_PREFIX, str(input)
+async def probe(file: Path, /) -> FFprobeResult:
+    assert file.is_absolute()
+    command = *_FFPROBE_CALL_PREFIX, str(file)
     return await _probe(command)
 
 
 async def probe_url(
-    input: AbsoluteHttpURL,
+    url: AbsoluteHttpURL,
     /,
     *,
     headers: Mapping[str, str] | None = None,
@@ -202,7 +202,7 @@ async def probe_url(
             yield "-http_proxy"
             yield str(proxy)
 
-    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(input), *extra_params()
+    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(url), *extra_params()
     return await _probe(command)
 
 

@@ -645,7 +645,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     def create_separate_post_title(
         self,
         title: str | None = None,
-        id: str | None = None,
+        id: str | None = None,  # noqa: A002
         date: datetime.datetime | datetime.date | int | None = None,
         /,
     ) -> str:
@@ -797,7 +797,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp | None:
+    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp | None:  # noqa: A002
         return dates.to_timestamp(dates.parse_format(date_or_datetime, format))
 
     @final

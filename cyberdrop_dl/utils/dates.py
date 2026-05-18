@@ -103,7 +103,7 @@ def parse_iso(date_or_datetime: str, /) -> UTCAwareDatetime:
     return _normalize(datetime.datetime.fromisoformat(date_or_datetime))
 
 
-def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:
+def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:  # noqa: A002
     return _normalize(datetime.datetime.strptime(date_or_datetime, format))
 
 
@@ -121,17 +121,4 @@ def to_timestamp(date: datetime.datetime) -> TimeStamp:
 
 
 def from_timestamp(timestamp: int) -> UTCAwareDatetime:
-    return _normalize(datetime.datetime.fromtimestamp(timestamp))
-
-
-def parse(date_or_datetime: str, format: str | None = None, /, *, iso: bool = False) -> datetime.datetime | None:
-    if not date_or_datetime:
-        raise ValueError("Unable to extract date")
-
-    if iso:
-        return parse_iso(date_or_datetime)
-    if format:
-        if format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S"):
-            raise ValueError("Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead")
-        return parse_format(date_or_datetime, format)
-    raise ValueError("iso or format is required")
+    return _normalize(datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC))

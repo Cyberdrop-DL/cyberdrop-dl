@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-from unittest import mock
-
 import pytest
 from bs4 import BeautifulSoup
 
@@ -37,26 +34,13 @@ def _html(string: str) -> str:
 def _post(
     message_body: str = "",
     message_attachments: str = "",
-    id: int = 12345,
+    id: int = 12345,  # noqa: A002
     crawler: xenforo.XenforoCrawler | None = None,
 ) -> _forum.ForumPost:
     crawler = crawler or TEST_CRAWLER
     html = _html(POST_TEMPLATE.format(id=id, message_body=message_body, message_attachments=message_attachments))
     article = BeautifulSoup(html, "html.parser").select("article")[0]
     return _forum.ForumPost.new(article, crawler.SELECTORS.posts)
-
-
-def _item_call(value: Any) -> mock._Call:
-    return mock.call(scrape_item, value)
-
-
-def _any_item_call(value: Any) -> mock._Call:
-    return mock.call(mock.ANY, value)
-
-
-def _amock(func: str = "process_child", crawler: xenforo.XenforoCrawler | None = None) -> mock._patch[mock.AsyncMock]:
-    crawler = crawler or TEST_CRAWLER
-    return mock.patch.object(crawler, func, new_callable=mock.AsyncMock)
 
 
 @pytest.fixture(name="manager")

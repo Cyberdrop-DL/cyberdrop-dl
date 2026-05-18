@@ -230,9 +230,9 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         delete_empty_files_and_folders(sorted_folder)
 
 
-def _partial_files(dir: Path | str) -> Generator[Path]:
+def _partial_files(path: Path | str, /) -> Generator[Path]:
     try:
-        for entry in os.scandir(dir):
+        for entry in os.scandir(path):
             try:
                 if entry.is_dir(follow_symlinks=False):
                     yield from _partial_files(entry.path)

@@ -29,12 +29,12 @@ class MediaType(StrEnum):
 class MediaList(list[Media]):
     def filter_by(
         self,
-        type: MediaType | str | None = None,
+        type_: MediaType | str | None = None,
         group_id: str | None = None,
         language: str | None = None,
         name: str | None = None,
     ) -> Generator[Media]:
-        assert any(value is not None for value in (type, group_id, language, name))
+        assert any(value is not None for value in (type_, group_id, language, name))
         attrs = {name: value for name, value in locals().items() if value is not None and name != "self"}
         for media in self:
             if all(getattr(media, name) == value for name, value in attrs.items()):
@@ -42,12 +42,12 @@ class MediaList(list[Media]):
 
     def filter(
         self,
-        type: MediaType | str | None = None,
+        type_by: MediaType | str | None = None,
         group_id: str | None = None,
         language: str | None = None,
         name: str | None = None,
     ) -> MediaList:
-        return MediaList(self.filter_by(type, group_id, language, name))
+        return MediaList(self.filter_by(type_by, group_id, language, name))
 
     def get_default(self) -> Media | None:
         if self:
@@ -126,11 +126,11 @@ class RenditionDetails:
         media = MediaList(playlist.media)
 
         if audio_group_id := playlist.stream_info.audio:
-            audio = next(media.filter_by(type=MediaType.audio, group_id=audio_group_id))
+            audio = next(media.filter_by(type_=MediaType.audio, group_id=audio_group_id))
             audio_url: AbsoluteHttpURL | None = get_url(audio)
 
         if subtitle_group_id := playlist.stream_info.subtitles:
-            subtitle = next(media.filter_by(type=MediaType.subtitles, group_id=subtitle_group_id))
+            subtitle = next(media.filter_by(type_=MediaType.subtitles, group_id=subtitle_group_id))
             subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)

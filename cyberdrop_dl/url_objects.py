@@ -321,12 +321,12 @@ class ScrapeItem:
         if reset_parent_title:
             self.parent_title = ""
 
-    def setup_as(self, title: str, type: ScrapeItemType, *, album_id: str | None = None) -> None:
+    def setup_as(self, title: str, type_: ScrapeItemType, /, *, album_id: str | None = None) -> None:
         self.part_of_album = True
         if album_id:
             self.album_id = album_id
-        if self.type != type:
-            self.set_type(type)
+        if self.type != type_:
+            self.set_type(type_)
         self.add_to_parent_title(title)
 
     def create_new(
@@ -377,16 +377,16 @@ class ScrapeItem:
         )
 
     def setup_as_album(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FILE_HOST_ALBUM, album_id=album_id)
+        return self.setup_as(title, type_=FILE_HOST_ALBUM, album_id=album_id)
 
     def setup_as_profile(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FILE_HOST_PROFILE, album_id=album_id)
+        return self.setup_as(title, type_=FILE_HOST_PROFILE, album_id=album_id)
 
     def setup_as_forum(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FORUM, album_id=album_id)
+        return self.setup_as(title, type_=FORUM, album_id=album_id)
 
     def setup_as_post(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FORUM_POST, album_id=album_id)
+        return self.setup_as(title, type_=FORUM_POST, album_id=album_id)
 
     @property
     def origin(self) -> AbsoluteHttpURL | None:

@@ -173,14 +173,14 @@ class TwitchAPI:
         self._crawler = crawler
 
     @classmethod
-    def _prepare_query(cls, name: str, variables: dict[str, Any], hash: str) -> dict[str, Any]:
+    def _prepare_query(cls, name: str, variables: dict[str, Any], query_hash: str) -> dict[str, Any]:
         return {
             "operationName": name,
             "variables": variables,
             "extensions": {
                 "persistedQuery": {
                     "version": 1,
-                    "sha256Hash": hash,
+                    "sha256Hash": query_hash,
                 }
             },
         }
@@ -196,9 +196,9 @@ class TwitchAPI:
             json=queries,
         )
 
-    async def _request(self, name: str, variables: dict[str, Any], hash: str) -> dict[str, Any]:
+    async def _request(self, name: str, variables: dict[str, Any], query_hash: str) -> dict[str, Any]:
         """Simplified version to make a single query request"""
-        query = self._prepare_query(name, variables, hash)
+        query = self._prepare_query(name, variables, query_hash)
         return (await self._request_many([query]))[0]
 
     async def video(self, video_id: str) -> dict[str, Any]:

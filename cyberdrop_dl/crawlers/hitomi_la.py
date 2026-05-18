@@ -216,7 +216,7 @@ def get_image_url(servers: Servers, image: Image) -> AbsoluteHttpURL:
     return url_from_hash(servers, image, ext, ext=f".{ext}")
 
 
-def url_from_hash(servers: Servers, image: Image, dir: str, ext: str | None = None) -> AbsoluteHttpURL:
+def url_from_hash(servers: Servers, image: Image, dir_: str, ext: str | None = None) -> AbsoluteHttpURL:
     # https://ltn.gold-usergeneratedcontent.net/common.js
     if ext is None:
         _, ext = get_filename_and_ext(image["name"])
@@ -226,9 +226,9 @@ def url_from_hash(servers: Servers, image: Image, dir: str, ext: str | None = No
     server_num = servers[server_hex_num] + 1
     origin = AbsoluteHttpURL(f"https://{ext[1]}{server_num}.{CONTENT_HOST}")
     path = f"{servers.root}/{server_hex_num}/{image_hash}{ext}"
-    if dir in {"webp", "avif"}:
+    if dir_ in {"webp", "avif"}:
         return origin / path
-    return origin / dir / path
+    return origin / dir_ / path
 
 
 def match_int_or_none(pattern: str, string: str) -> int | None:

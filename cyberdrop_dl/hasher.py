@@ -191,17 +191,17 @@ class Hasher:
         else:
             return hash_value
 
-    async def save_hash_data(self, media_item: MediaItem, hash: str | None) -> None:
-        if not hash:
+    async def save_hash_data(self, media_item: MediaItem, hash_value: str | None) -> None:
+        if not hash_value:
             return
 
         absolute_path = await aio.resolve(media_item.path)
         size = await aio.get_size(media_item.path)
         assert size
         self.hashed_media_items.append(media_item)
-        if hash:
-            media_item.hash = hash
-        self.hashes_dict[hash][size].add(absolute_path)
+        if hash_value:
+            media_item.hash = hash_value
+        self.hashes_dict[hash_value][size].add(absolute_path)
         self._hashed_items.add(media_item.id)
 
     async def run(self) -> FileHashes:

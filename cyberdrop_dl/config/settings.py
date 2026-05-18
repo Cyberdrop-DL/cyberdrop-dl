@@ -160,7 +160,7 @@ class Range:
         return self.min <= value <= self.max
 
     @classmethod
-    def parse(cls, min: float, max: float) -> Self | None:
+    def parse(cls, min: float, max: float) -> Self | None:  # noqa: A002
         if not min and not max:
             return None
         return cls(min, max)

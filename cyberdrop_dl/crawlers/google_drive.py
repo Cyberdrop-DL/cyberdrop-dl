@@ -193,9 +193,6 @@ class GoogleDriveCrawler(Crawler):
         return resp.url, resp.content_disposition.filename
 
 
-def _get_proper_doc_format(doc: str, format: str | None) -> str:
+def _get_proper_doc_format(doc: str, fmt: str | None) -> str:
     valid_formats = _DOC_FORMATS[doc]
-    if format in valid_formats:
-        return format
-
-    return valid_formats[0]
+    return fmt if fmt in valid_formats else valid_formats[0]
