@@ -328,7 +328,7 @@ def _match_date_from_path(url_parts: tuple[str, ...]) -> datetime.datetime | Non
     match url_parts:
         case [year, month, day]:
             try:
-                return datetime.datetime(int(year), int(month), int(day))
+                return datetime.datetime(int(year), int(month), int(day), tzinfo=datetime.UTC)
             except Exception:  # noqa: BLE001
                 return None
 

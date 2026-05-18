@@ -128,7 +128,7 @@ class Logs(SettingsGroup):
             if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
-            if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:
+            if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:  # noqa: DTZ006
                 file.unlink()
 
         delete_empty_files_and_folders(self.log_folder)

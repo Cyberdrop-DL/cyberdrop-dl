@@ -218,7 +218,7 @@ def _format_dest(
     sort_dir: Path,
     **kwargs: object,
 ) -> Path:
-    file_date = datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)
+    file_date = datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)  # noqa: DTZ006
 
     dest, _ = strings.safe_format(
         format_string,

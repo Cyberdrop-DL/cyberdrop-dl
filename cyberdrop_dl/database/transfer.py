@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import logging
 import sqlite3
 import sys
@@ -11,6 +10,7 @@ from cyberdrop_dl.database import Database, connect
 from cyberdrop_dl.database.tables.history import fix_domains, fix_referers
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
+from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 logger = logging.getLogger(__name__)
@@ -155,7 +155,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
         )
         return
 
-    now = sanitize_filename(str(datetime.datetime.now()))
+    now = sanitize_filename(str(dates.now()))
     new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
 
     logger.debug("Creating new database at: %s", new_path)

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 PRIMARY_URL = AbsoluteHttpURL("https://www.pornhub.com")
-MP4_NOT_AVAILABLE_SINCE = datetime.datetime(2025, 6, 25).timestamp()
+MP4_NOT_AVAILABLE_SINCE = datetime.datetime(2025, 6, 25, tzinfo=datetime.UTC).timestamp()
 TOKEN_SELECTOR = css.CssAttributeSelector("input#xsrfToken", "value")
 
 

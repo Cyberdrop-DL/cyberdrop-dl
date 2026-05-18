@@ -72,7 +72,7 @@ elif sys.platform == "darwin" and (MAC_OS_SET_FILE := shutil.which("SetFile") or
     # SetFile is non standard in macOS. Only users that have xcode installed will have SetFile
 
     async def set_creation_time(file: Path, timestamp: float) -> None:
-        time_string = datetime.datetime.fromtimestamp(timestamp).strftime("%m/%d/%Y %H:%M:%S")
+        time_string = from_timestamp(timestamp).strftime("%m/%d/%Y %H:%M:%S")
         process = await asyncio.subprocess.create_subprocess_exec(
             MAC_OS_SET_FILE,
             "-d",
@@ -104,7 +104,7 @@ def parse_iso(date_or_datetime: str, /) -> UTCAwareDatetime:
 
 
 def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:  # noqa: A002
-    return _normalize(datetime.datetime.strptime(date_or_datetime, format))
+    return _normalize(datetime.datetime.strptime(date_or_datetime, format))  # noqa: DTZ007
 
 
 def parse_http(date: str, /) -> TimeStamp:
@@ -120,5 +120,17 @@ def to_timestamp(date: datetime.datetime) -> TimeStamp:
     return TimeStamp(int(date.timestamp()))
 
 
-def from_timestamp(timestamp: int) -> UTCAwareDatetime:
+def from_timestamp(timestamp: float) -> UTCAwareDatetime:
     return _normalize(datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC))
+
+
+def now() -> datetime.datetime:
+    return datetime.datetime.now()  # noqa: DTZ005
+
+
+def now_utc() -> UTCAwareDatetime:
+    return _normalize(now())
+
+
+MIN = _normalize(datetime.datetime.min.replace(tzinfo=datetime.UTC))
+MAX = _normalize(datetime.datetime.max.replace(tzinfo=datetime.UTC))

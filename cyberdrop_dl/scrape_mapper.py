@@ -24,7 +24,7 @@ from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import filepath, get_download_path, remove_trailing_slash
+from cyberdrop_dl.utils import dates, filepath, get_download_path, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
@@ -49,7 +49,7 @@ def _filter_by_date(scrape_item: ScrapeItem, before: datetime.date | None, after
     item_date = scrape_item.completed_at or scrape_item.created_at
     if not item_date:
         return False
-    date = datetime.datetime.fromtimestamp(item_date).date()
+    date = dates.from_timestamp(item_date).date()
     if (after and date < after) or (before and date > before):
         skip = True
 
@@ -538,8 +538,8 @@ async def load_failed_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
 
 
 async def load_all_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    after = manager.cli_args.completed_after or datetime.date.min
-    before = manager.cli_args.completed_before or datetime.date.today()
+    after = manager.cli_args.completed_after or dates.MIN.date()
+    before = manager.cli_args.completed_before or dates.now_utc().date()
     async for rows in manager.database.history.get_all_items(after, before):
         for row in rows:
             yield _create_item_from_row(row)

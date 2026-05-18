@@ -6,7 +6,7 @@ import pytest
 from cyberdrop_dl import csv_logs
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-now = datetime.datetime(2026, 5, 8)
+now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
 
 
 @pytest.mark.parametrize(

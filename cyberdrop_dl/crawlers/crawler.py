@@ -655,7 +655,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
         if isinstance(date, int):
-            date = datetime.datetime.fromtimestamp(date)
+            date = dates.from_timestamp(date)
 
         post_title, _ = safe_format(title_format, id=id, number=id, date=date, title=title)
         return post_title

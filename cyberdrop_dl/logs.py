@@ -21,6 +21,7 @@ from rich.text import Text, TextType
 from typing_extensions import override
 
 from cyberdrop_dl import env
+from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -370,7 +371,7 @@ def _setup_debug_logger() -> Generator[Path | None]:
             )
             raise NotADirectoryError(None, msg, env.DEBUG_LOG_FOLDER)
 
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = dates.now().strftime("%Y%m%d_%H%M%S")
         debug_log_file = debug_log_folder / f"cyberdrop_dl_debug_{now}.log"
 
     debug_log_file = debug_log_file.resolve().absolute()

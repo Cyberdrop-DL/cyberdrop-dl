@@ -1,0 +1,7 @@
+7	DTZ005	call-datetime-now-without-tzinfo
+5	DTZ001	call-datetime-without-tzinfo
+5	DTZ006	call-datetime-fromtimestamp
+1	DTZ007	call-datetime-strptime-without-zone
+1	DTZ011	call-date-today
+1	DTZ901	datetime-min-max
+Found 20 errors.

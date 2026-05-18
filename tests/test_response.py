@@ -15,7 +15,7 @@ def make_resp(content_type: str, url: str = "https://example.com") -> _AIOHTTPRe
         location=None,
         _resp=None,  # pyright: ignore[reportArgumentType]
     )
-    resp.created_at = datetime.datetime.min
+    resp.created_at = datetime.datetime.min.replace(tzinfo=datetime.UTC)
     return resp
 
 
@@ -27,7 +27,7 @@ def test_json_dump_binary_resp() -> None:
     assert json == {
         "url": "https://example.com",
         "status_code": 200,
-        "created_at": "0001-01-01 00:00:00",
+        "created_at": "0001-01-01 00:00:00+00:00",
         "response_headers": {
             "content-type": "application/octet-stream",
         },

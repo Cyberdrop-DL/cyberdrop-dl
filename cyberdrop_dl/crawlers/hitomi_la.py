@@ -5,13 +5,13 @@ import json
 import re
 import struct
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import TYPE_CHECKING, ClassVar, NamedTuple, Required, TypedDict
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils import dates, error_handling_wrapper
 from cyberdrop_dl.utils.filepath import get_filename_and_ext
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ class Servers(defaultdict[int, int]):
             default = 0
         super().__init__(lambda: default)
         self.root = root
-        self.fetch_datetime = datetime.now()
+        self.fetch_datetime = dates.now_utc()
 
 
 class Regex:
@@ -168,7 +168,7 @@ class HitomiLaCrawler(Crawler):
 
     async def get_servers(self) -> Servers:
         async with self._startup_lock:
-            if self._servers is None or (datetime.now() - self._servers.fetch_datetime > SERVERS_EXPIRE_AFTER):
+            if self._servers is None or (dates.now_utc() - self._servers.fetch_datetime > SERVERS_EXPIRE_AFTER):
                 self._servers = await self._get_servers()
         return self._servers
 

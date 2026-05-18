@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -9,7 +9,7 @@ import pytest
 from cyberdrop_dl import scrape_mapper
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils import dates, parse_url
 
 if TYPE_CHECKING:
     import aiosqlite
@@ -35,8 +35,8 @@ def row() -> aiosqlite.Row:
 
 @pytest.fixture
 def row_with_dates(row) -> aiosqlite.Row:
-    row["completed_at"] = datetime.now().isoformat()
-    row["created_at"] = datetime(2023, 1, 1, 10, 0, 0).isoformat()
+    row["completed_at"] = dates.now_utc().isoformat()
+    row["created_at"] = datetime.datetime(2023, 1, 1, 10, 0, 0, 0, tzinfo=datetime.UTC).isoformat()
     return row
 
 
@@ -55,13 +55,13 @@ def test_item_with_completed_at(row_with_dates) -> None:
     row_with_dates["created_at"] = None
 
     item = _create_item_from_row(row_with_dates)
-    expected_timestamp = int(datetime.fromisoformat(completed_at_str).timestamp())
+    expected_timestamp = int(dates.parse_iso(completed_at_str).timestamp())
     assert item.completed_at == expected_timestamp
     assert item.created_at is None
 
 
 def test_item_with_created_at(row) -> None:
-    now = datetime.now()
+    now = dates.now_utc()
     row["created_at"] = now.isoformat()
 
     item = _create_item_from_row(row)
@@ -74,8 +74,8 @@ def test_item_with_both_dates(row_with_dates) -> None:
     created_at_str = row_with_dates["created_at"]
 
     item = _create_item_from_row(row_with_dates)
-    expected_completed_timestamp = int(datetime.fromisoformat(completed_at_str).timestamp())
-    expected_created_timestamp = int(datetime.fromisoformat(created_at_str).timestamp())
+    expected_completed_timestamp = int(dates.parse_iso(completed_at_str).timestamp())
+    expected_created_timestamp = int(dates.parse_iso(created_at_str).timestamp())
     assert item.completed_at == expected_completed_timestamp
     assert item.created_at == expected_created_timestamp
 
