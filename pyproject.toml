@@ -134,10 +134,21 @@ select = [
     "ALL"
 ]
 ignore = [
+    "ANN401",  # any-type
     "COM812",  # missing-trailing-comma
     "D",  # Documantation
     "E501",  # suppress line-too-long, let formatter decide
-    "N806"  # uppercase variables in functions
+    "EM",  # flake8-errmsg
+    "FIX002",  # line-contains-todo
+    "G004",  # logging-f-string
+    "N806",  # uppercase variables in functions
+    "PLC0415",  # import-outside-top-level
+    "PLR2004",  # magic-value-comparison
+    "RET503",  # implicit-return
+    "S101",  # assert
+    "SLF001",  # private-member-access
+    "TD",  # flake8-todos
+    "TRY003"  # raise-vanilla-args
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
