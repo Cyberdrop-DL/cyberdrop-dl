@@ -109,7 +109,7 @@ class PatreonCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def _media(self, scrape_item: ScrapeItem, media: Media):
+    async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
         if media.url.suffix == ".m3u8":
             return await self._m3u8_media(scrape_item, media)
 
@@ -213,7 +213,7 @@ class PatreonCrawler(Crawler):
             return bootstrap["campaign"]["data"]["id"]
 
 
-def _extract_campaign_id(soup: BeautifulSoup):
+def _extract_campaign_id(soup: BeautifulSoup) -> str:
     return extr_text(str(soup), r"{\"value\":{\"campaign\":{\"data\":{\"id\":\"", r"\"")
 
 

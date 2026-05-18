@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -48,6 +49,6 @@ class TwimgCrawler(Crawler):
         await super().handle_media_item(media_item, m3u8)
 
 
-def _make_download_urls(base_url: AbsoluteHttpURL):
+def _make_download_urls(base_url: AbsoluteHttpURL) -> Generator[AbsoluteHttpURL]:
     for name in ("orig", "4096x4096", "large"):
         yield base_url.with_query(format="jpg", name=name)

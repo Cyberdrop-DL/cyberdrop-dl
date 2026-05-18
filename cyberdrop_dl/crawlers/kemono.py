@@ -570,7 +570,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if not partial_post.title or not partial_post.user_name:
             raise ScrapeError(422)
 
-        def files():
+        def files() -> Generator[AbsoluteHttpURL]:
             for selector in (
                 PostSelectors.VIDEOS,
                 PostSelectors.IMAGES,

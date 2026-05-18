@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
@@ -39,7 +40,7 @@ class TNAFlixCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "TNAFlix"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT = 3, 10
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -58,7 +59,7 @@ class TNAFlixCrawler(Crawler):
             return None
 
         soup = await self.request_soup(scrape_item.url)
-        best_format = _get_best_format(soup)
+        best_format = max(_parse_formats(soup))
         link = self.parse_url(best_format.link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.title(soup)
@@ -79,11 +80,8 @@ class TNAFlixCrawler(Crawler):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _get_best_format(soup: BeautifulSoup) -> Format:
-    def parse():
-        for src in soup.select(Selector.VIDEO_SRC):
-            url = css.attr(src, "src")
-            resolution = Resolution.parse(css.attr(src, "size"))
-            yield Format(resolution, url)
-
-    return max(parse())
+def _parse_formats(soup: BeautifulSoup) -> Generator[Format]:
+    for src in soup.select(Selector.VIDEO_SRC):
+        url = css.attr(src, "src")
+        resolution = Resolution.parse(css.attr(src, "size"))
+        yield Format(resolution, url)

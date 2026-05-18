@@ -50,9 +50,11 @@ class HLSParser(ABC):
         rendition: m3u8.RenditionDetails,
         /,
         headers: Mapping[str, str] | None = None,
-    ):
+    ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
 
-        async def resolve(url: AbsoluteHttpURL | None, media_type: Literal["video", "audio", "subtitle"]):
+        async def resolve(
+            url: AbsoluteHttpURL | None, media_type: Literal["video", "audio", "subtitle"]
+        ) -> m3u8.M3U8 | None:
             if not url:
                 return None
             return await self._request_m3u8(url, headers, media_type)

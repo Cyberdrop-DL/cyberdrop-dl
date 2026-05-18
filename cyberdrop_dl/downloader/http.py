@@ -133,7 +133,7 @@ class Downloader:
                 )
 
     @contextlib.asynccontextmanager
-    async def _download_context(self, media_item: MediaItem):
+    async def _download_context(self, media_item: MediaItem) -> AsyncGenerator[None]:
 
         media_item.attempts = 0
         await self.client.mark_incomplete(media_item, self.domain)

@@ -5,6 +5,7 @@ import codecs
 import dataclasses
 import itertools
 import json
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.compat import IntEnum
@@ -297,7 +298,7 @@ def _parse_xplayer_sources(xplayer_sources: dict[str, Any]) -> Iterable[Format]:
 
     seen_urls: set[AbsoluteHttpURL] = set()
 
-    def parse_format(format_dict: dict[str, str], codec: str):
+    def parse_format(format_dict: dict[str, str], codec: str) -> Generator[Format]:
         for key in ("url",):
             url = format_dict.get(key)
             if not url:

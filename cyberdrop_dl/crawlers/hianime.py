@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import bs4
@@ -120,7 +121,7 @@ class HiAnimeCrawler(Crawler):
         return Anime(
             id=anime_id,
             name=css.select_text(anime_soup, Selector.ANIME_NAME),
-            episodes=dict(_parse_episodes_resp(episodes_resp["html"])),
+            episodes={ep.id: ep for ep in _parse_episodes(episodes_resp["html"])},
         )
 
     @error_handling_wrapper
@@ -157,14 +158,13 @@ def _parse_anime_id(slug: str) -> int | None:
             return int(tail)
 
 
-def _parse_episodes_resp(html: str):
+def _parse_episodes(html: str) -> Generator[Episode]:
     episodes_soup = bs4.BeautifulSoup(html, "html.parser")
     for ep_tag in episodes_soup.select(Selector.EPISODES):
-        episode = Episode.from_tag(ep_tag)
-        yield episode.id, episode
+        yield Episode.from_tag(ep_tag)
 
 
-def _parse_server_resp(html: str):
+def _parse_server_resp(html: str) -> Generator[tuple[str, str]]:
     soup = bs4.BeautifulSoup(html, "html.parser")
     for server_type in ("sub", "dub", "raw"):
         if server_tag := soup.select_one(f"div[data-type={server_type}]:-soup-contains('HD-1')"):

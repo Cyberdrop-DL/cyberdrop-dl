@@ -295,7 +295,7 @@ class HTTPClient:
         self,
         url: AbsoluteHttpURL,
         data: Any | None = None,
-    ):
+    ) -> AbstractResponse[Any]:
         """Make a request with FlareSolverr.
 
         Returns an AbstractResponse confirmed to not be a DDOS Guard page, even if flaresolverr fails to detect/solve a challenge"""

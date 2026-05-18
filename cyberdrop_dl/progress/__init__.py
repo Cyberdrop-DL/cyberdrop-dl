@@ -151,7 +151,7 @@ class LiveUI(ABC):
 def strip_markup(text: str) -> str:
     from rich.markup import _parse
 
-    def parse():
+    def parse() -> Generator[str]:
         for _position, plain_text, _tag in _parse(text):
             if plain_text is not None:
                 yield plain_text.replace("\\[", "[")

@@ -5,7 +5,8 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import re
-from typing import TYPE_CHECKING, ClassVar, final
+from collections.abc import AsyncIterator, Generator
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
@@ -218,7 +219,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         sort_by: str = "",
         from_query_param_name: str = "from",
         q: str | None = None,
-    ):
+    ) -> AsyncIterator[BeautifulSoup]:
         page_url = url.with_query(
             mode=mode,
             function=function,
@@ -267,22 +268,27 @@ _find_flashvars = re.compile(r"(\w+):\s*'([^']*)'").findall
 
 def _parse_video_vars(video_vars: str) -> KVSVideo:
     flashvars: dict[str, str] = dict(_find_flashvars(video_vars))
+    resolution, url = max(_parse_formats(flashvars))
+    return KVSVideo(
+        flashvars["video_id"],
+        flashvars.get("video_title", ""),
+        url,
+        resolution,
+    )
+
+
+def _parse_formats(flashvars: dict[str, str]) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
     url_keys = list(filter(_match_video_url_keys, flashvars.keys()))
     license_token = _get_license_token(flashvars["license_code"])
     parse_resolution = Resolution.make_parser()
-
-    def get_formats():
-        for key in url_keys:
-            url_str = flashvars[key]
-            if "/get_file/" not in url_str:
-                continue
-            quality = flashvars.get(f"{key}_text")
-            resolution = Resolution.highest() if quality in {"HQ", "Best Quality"} else parse_resolution(quality)
-            url = _deobfuscate_url(url_str, license_token)
-            yield resolution, url
-
-    resolution, url = max(get_formats())
-    return KVSVideo(flashvars["video_id"], flashvars.get("video_title", ""), url, resolution)
+    for key in url_keys:
+        url_str = flashvars[key]
+        if "/get_file/" not in url_str:
+            continue
+        quality = flashvars.get(f"{key}_text")
+        resolution = Resolution.highest() if quality in {"HQ", "Best Quality"} else parse_resolution(quality)
+        url = _deobfuscate_url(url_str, license_token)
+        yield resolution, url
 
 
 def _get_license_token(license_code: str) -> tuple[int, ...]:

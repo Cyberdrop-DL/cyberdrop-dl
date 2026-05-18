@@ -218,7 +218,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
 
     @final
     @property
-    def max_thread_folder_depth(self):
+    def max_thread_folder_depth(self) -> int | None:
         return self.manager.config.settings.download_options.maximum_thread_folder_depth
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

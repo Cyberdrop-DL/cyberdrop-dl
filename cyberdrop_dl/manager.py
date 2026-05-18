@@ -192,7 +192,7 @@ class Manager:
             log_spacer()
             logger.info("URLs by domain (includes children):", extra={"color": "cyan"})
 
-            def lines():
+            def lines() -> Generator[str]:
                 for domain, count in sorted(scrape_stats.domain_stats.items()):
                     yield f" - {domain}: {count:,}"
 

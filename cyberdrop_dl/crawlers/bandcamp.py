@@ -145,7 +145,7 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
 
 
 def _score(name: str) -> int:
-    def scores():
+    def scores() -> Generator[int]:
         for idx, fmt in enumerate(reversed(USE_FORMATS)):
             if fmt in name.casefold():
                 yield idx

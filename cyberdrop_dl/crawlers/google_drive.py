@@ -98,7 +98,7 @@ class GoogleDriveCrawler(Crawler):
         if file_id := url.query.get("id"):
             return await self.file(scrape_item, file_id)
 
-        def next_to(name: str):
+        def next_to(name: str) -> str | None:
             try:
                 index = url.parts.index(name)
                 return url.parts[index + 1]

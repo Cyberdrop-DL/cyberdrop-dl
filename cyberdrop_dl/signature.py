@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 else:
 
-    def copy(_):
-        def call(y):
-            return y
+    def copy(target: Callable[_P, _R]) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
+        def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
+            return func
 
-        return call
+        return decorator

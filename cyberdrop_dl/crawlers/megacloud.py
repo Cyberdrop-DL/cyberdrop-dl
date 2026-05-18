@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -98,7 +99,7 @@ class MegaCloudCrawler(Crawler):
             # TODO: Add logic to handle encrypted videos
             raise ScrapeError(403, "Video is encrypted")
 
-        def parse_subs():
+        def parse_subs() -> Generator[Subtitle]:
             for track in resp["tracks"]:
                 if track["kind"] != "captions":
                     continue

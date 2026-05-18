@@ -370,7 +370,7 @@ class FFprobeResult:
 
     @staticmethod
     def from_output(ffprobe_output: FFprobeOutput) -> FFprobeResult:
-        def streams():
+        def streams() -> Generator[VideoStream | AudioStream]:
             for stream in ffprobe_output.get("streams", ()):
                 match stream["codec_type"]:
                     case "video":

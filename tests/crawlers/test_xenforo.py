@@ -708,7 +708,9 @@ class TestCheckPostId:
         current_post_id = 100
         scrape_single_forum_post = False
         continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id, current_post_id, scrape_single_forum_post
+            init_post_id,
+            current_post_id,
+            scrape_single_forum_post=scrape_single_forum_post,
         )
         assert continue_scraping is True
         assert scrape_this_post is True

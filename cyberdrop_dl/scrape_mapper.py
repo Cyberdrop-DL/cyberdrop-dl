@@ -131,7 +131,7 @@ class ScrapeMapper:
     def _scrape_queue(self) -> int:
         return sum(crawler.waiting_items for crawler in self._factory)
 
-    def _download_queue(self):
+    def _download_queue(self) -> int:
         total = sum(crawler.downloader.waiting_items for crawler in self._factory)
         self.tui.files.stats.queued = total
         return total
