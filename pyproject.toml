@@ -149,6 +149,7 @@ ignore = [
     "S101",  # assert
     "SLF001",  # private-member-access
     "TD",  # flake8-todos
+    "SIM105", 	# suppressible-exception
     "TRY003",  # raise-vanilla-args
     "TRY400"  # error-instead-of-exception
 ]

@@ -67,10 +67,10 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
         await self._iter_extra_pages(scrape_item, type_, query)
 
     async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
-        if type_ in ("members",):
+        if type_ == "members":
             block_id, from_name = "list_videos_uploaded_videos", "from_videos"
 
-        elif type_ in ("search",):
+        elif type_ == "search":
             block_id, from_name = "custom_list_videos_videos_list_search", "from_videos"
 
         else:

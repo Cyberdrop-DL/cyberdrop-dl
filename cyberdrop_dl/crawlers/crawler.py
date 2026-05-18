@@ -431,7 +431,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         """Finishes handling the file and hands it off to the downloader."""
 
         ext = ext or Path(filename).suffix
-        if self.DOMAIN in ["cyberdrop"]:
+        if self.DOMAIN == "cyberdrop":
             custom_filename = remove_file_id(filename, ext)
 
         download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)

@@ -50,7 +50,7 @@ class CamwhoresTVCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
         await self._iter_extra_pages(scrape_item, type_, query)
 
     async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
-        if type_ in ("search",):
+        if type_ == "search":
             block_id, from_name = "list_videos_videos_list_search_result", "from_videos"
         else:
             block_id, from_name = "list_videos_common_videos_list", "from"

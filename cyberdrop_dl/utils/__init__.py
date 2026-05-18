@@ -320,7 +320,7 @@ def get_system_information() -> dict[str, Any]:
     def get_common_name() -> str:
         system = platform.system()
 
-        if system in ("Linux",):
+        if system == "Linux":
             try:
                 return platform.freedesktop_os_release()["PRETTY_NAME"]
             except OSError:
