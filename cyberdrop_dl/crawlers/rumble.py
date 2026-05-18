@@ -66,10 +66,7 @@ class Video:
             except KeyError:
                 raise ScrapeError(422, f"Video has an unknown format type: {type_}") from None
 
-            if isinstance(format_options, list):
-                pairs = ((None, f) for f in format_options)
-            else:
-                pairs = format_options.items()
+            pairs = ((None, f) for f in format_options) if isinstance(format_options, list) else format_options.items()
 
             is_single_file = type_ is not FormatType.HLS
 

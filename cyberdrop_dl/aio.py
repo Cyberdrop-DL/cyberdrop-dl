@@ -168,10 +168,7 @@ async def map_tuples(
     if not task_limit:
         return await gather(*(coro_factory(*params) for params in params_batched))
 
-    if isinstance(task_limit, int):
-        semaphore = asyncio.BoundedSemaphore(task_limit)
-    else:
-        semaphore = task_limit
+    semaphore = asyncio.BoundedSemaphore(task_limit) if isinstance(task_limit, int) else task_limit
 
     tasks: list[asyncio.Task[_R]] = []
 

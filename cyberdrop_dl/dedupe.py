@@ -89,10 +89,7 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
 
     Any other exception is propagated"""
 
-    if to_trash:
-        coro = asyncio.to_thread(send2trash.send2trash, path)
-    else:
-        coro = aio.unlink(path)
+    coro = asyncio.to_thread(send2trash.send2trash, path) if to_trash else aio.unlink(path)
 
     try:
         await coro

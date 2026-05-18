@@ -1,16 +1,9 @@
-893	D102   	[ ] undocumented-public-method
-584	S101   	[ ] assert
-511	D101   	[ ] undocumented-public-class
-488	COM812 	[*] missing-trailing-comma
-404	D100   	[ ] undocumented-public-module
-404	D103   	[ ] undocumented-public-function
 173	INP001 	[ ] implicit-namespace-package
  39	ANN202 	[-] missing-return-type-private-function
  36	FBT001 	[ ] boolean-type-hint-positional-argument
  33	ANN002 	[ ] missing-type-args
  30	A001   	[ ] builtin-variable-shadowing
  30	ANN201 	[-] missing-return-type-undocumented-public-function
- 29	PT006  	[*] pytest-parametrize-names-wrong-type
  27	ANN003 	[ ] missing-type-kwargs
  25	A002   	[ ] builtin-argument-shadowing
  25	FBT002 	[ ] boolean-default-value-positional-argument
@@ -19,9 +12,6 @@
  19	ANN001 	[ ] missing-type-function-argument
  17	PLW2901	[ ] redefined-loop-name
  16	S311   	[ ] suspicious-non-cryptographic-random-usage
- 15	TRY400 	[*] error-instead-of-exception
- 12	FLY002 	[*] static-join-to-f-string
- 12	PT007  	[*] pytest-parametrize-values-wrong-type
  11	C901   	[ ] complex-structure
  11	SIM108 	[*] if-else-block-instead-of-if-exp
  10	PLR0913	[ ] too-many-arguments
@@ -34,34 +24,25 @@
   7	DTZ005 	[ ] call-datetime-now-without-tzinfo
   7	EXE002 	[ ] shebang-missing-executable-file
   7	PLE1205	[ ] logging-too-many-args
-  7	SIM105 	[*] suppressible-exception
   6	DTZ006 	[ ] call-datetime-fromtimestamp
-  6	FURB171	[*] single-item-membership-test
-  6	PT014  	[*] pytest-duplicate-parametrize-test-cases
   6	PT018  	[-] pytest-composite-assertion
   5	DTZ001 	[ ] call-datetime-without-tzinfo
   5	FBT003 	[ ] boolean-positional-value-in-call
   5	PT011  	[ ] pytest-raises-too-broad
-  5	RET504 	[*] unnecessary-assign
   5	S603   	[ ] subprocess-without-shell-equals-true
   4	ANN206 	[ ] missing-return-type-class-method
   4	ARG003 	[ ] unused-class-method-argument
   4	PLW0603	[ ] global-statement
   4	S112   	[ ] try-except-continue
   4	S608   	[ ] hardcoded-sql-expression
-  4	SIM102 	[-] collapsible-if
-  3	ICN001 	[*] unconventional-import-alias
   3	PLR0912	[ ] too-many-branches
   3	PLR0915	[ ] too-many-statements
-  3	PLW0108	[*] unnecessary-lambda
-  3	PYI018 	[*] unused-private-type-var
   3	S110   	[ ] try-except-pass
   3	SIM103 	[-] needless-bool
   3	TRY301 	[ ] raise-within-try
-  2	PIE810 	[*] multiple-starts-ends-with
   2	PLE0302	[ ] unexpected-special-method-signature
   2	PLW1641	[ ] eq-without-hash
-  2	PT003  	[*] pytest-extraneous-scope-function
+  2	PT001  	[*] pytest-fixture-incorrect-parentheses-style
   2	S105   	[ ] hardcoded-password-string
   2	S314   	[ ] suspicious-xml-element-tree-usage
   2	S607   	[ ] start-process-with-partial-path
@@ -71,14 +52,14 @@
   1	DTZ007 	[ ] call-datetime-strptime-without-zone
   1	DTZ011 	[ ] call-date-today
   1	DTZ901 	[ ] datetime-min-max
-  1	PERF102	[*] incorrect-dict-iterator
+  1	F401   	[*] unused-import
+  1	I001   	[*] unsorted-imports
   1	PLE0604	[ ] invalid-all-object
   1	PLW0642	[ ] self-or-cls-assignment
   1	PT012  	[ ] pytest-raises-with-multiple-statements
   1	PYI006 	[ ] bad-version-info-comparison
-  1	PYI034 	[*] non-self-return-type
   1	PYI047 	[ ] unused-private-type-alias
   1	S605   	[ ] start-process-with-a-shell
   1	TRY004 	[ ] type-check-without-type-error
-Found 822 errors.
-[*] 156 fixable with the `--fix` option.
+Found 715 errors.
+[*] 50 fixable with the `--fix` option.

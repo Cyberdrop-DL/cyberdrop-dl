@@ -339,10 +339,7 @@ class _CurlResponse(AbstractResponse[CurlResponse]):
 
 
 def _parse_headers(url: AbsoluteHttpURL, headers: CIMultiDictProxy[str]) -> tuple[str, AbsoluteHttpURL | None]:
-    if location := headers.get(hdrs.LOCATION):
-        location = parse_url(location, url.origin(), trim=False)
-    else:
-        location = None
+    location = parse_url(location, url.origin(), trim=False) if (location := headers.get(hdrs.LOCATION)) else None
 
     content_type = (headers.get(hdrs.CONTENT_TYPE) or "").lower()
     return content_type, location
