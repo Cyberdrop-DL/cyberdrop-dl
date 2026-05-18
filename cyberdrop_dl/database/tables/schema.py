@@ -42,7 +42,7 @@ class SchemaVersionTable:
 
     async def get_version(self) -> Version | None:
         if not await self.__exists():
-            return
+            return None
         query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
         cursor = await self.db_conn.execute(query)
         result = await cursor.fetchone()

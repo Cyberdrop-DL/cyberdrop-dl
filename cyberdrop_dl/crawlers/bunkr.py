@@ -298,7 +298,7 @@ class BunkrCrawler(Crawler):
 
 
 def _is_stream_redirect(host: str) -> bool:
-    first_subdomain = host.split(".")[0]
+    first_subdomain = host.split(".", maxsplit=1)[0]
     prefix, _, number = first_subdomain.partition("cdn")
     if not prefix and number.isdigit():
         return True

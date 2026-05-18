@@ -37,7 +37,7 @@ class StreamtapeCrawler(Crawler):
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         scrape_item.url = self.PRIMARY_URL / "v" / video_id
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url)
         link = _extract_download_link(soup)

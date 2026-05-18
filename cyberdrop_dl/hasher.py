@@ -130,13 +130,13 @@ class Hasher:
         file = Path(file)
 
         if file.suffix in TempExt:
-            return
+            return None
 
         try:
             if not await aio.get_size(file):
-                return
+                return None
         except IsADirectoryError:
-            return
+            return None
 
         async with self._sem:
             with self._tui.new_file(file):

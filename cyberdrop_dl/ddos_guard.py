@@ -22,7 +22,7 @@ class _Response(Protocol):
 
 async def check_resp(resp: _Response, /) -> None:
     if "html" not in resp.content_type:
-        return
+        return None
 
     return check_html(await resp.text())
 

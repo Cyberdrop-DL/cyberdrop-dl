@@ -9,7 +9,7 @@ def _safe_get_size(path: os.DirEntry[str]) -> int | None:
     try:
         return path.stat(follow_symlinks=False).st_size
     except (OSError, ValueError):
-        return
+        return None
 
 
 def _safe_is_dir(entry: os.DirEntry[str]) -> bool:

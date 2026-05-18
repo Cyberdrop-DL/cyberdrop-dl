@@ -752,7 +752,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                 try:
                     return css.select(soup, selector, "href")
                 except css.SelectorError:
-                    return
+                    return None
 
         while True:
             soup = await self.request_soup(page_url, impersonate=impersonate or None)

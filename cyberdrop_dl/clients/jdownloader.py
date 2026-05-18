@@ -117,7 +117,7 @@ class JDownloader:
                     {
                         "autostart": self.config.autostart,
                         "links": str(url),
-                        "packageName": title if title else "Cyberdrop-DL",
+                        "packageName": title or "Cyberdrop-DL",
                         "destinationFolder": str(download_folder),
                         "overwritePackagizerRules": True,
                     },

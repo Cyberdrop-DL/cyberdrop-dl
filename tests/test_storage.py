@@ -26,9 +26,8 @@ async def test_unsupported_fs_should_not_return_zero(tmp_path: Path) -> None:
         free_space = _psutil._disk_usage(tmp_path)
         assert free_space == -1
 
-    with mock.patch("psutil.disk_usage", side_effect=OSError(None, "another error")):
-        with pytest.raises(OSError):
-            _ = _psutil._disk_usage(tmp_path)
+    with mock.patch("psutil.disk_usage", side_effect=OSError(None, "another error")), pytest.raises(OSError):
+        _ = _psutil._disk_usage(tmp_path)
 
 
 def test_fuse_filesystem_should_not_return_zero(tmp_path: Path) -> None:

@@ -54,7 +54,7 @@ class HLSParser(ABC):
 
         async def resolve(url: AbsoluteHttpURL | None, media_type: Literal["video", "audio", "subtitle"]):
             if not url:
-                return
+                return None
             return await self._request_m3u8(url, headers, media_type)
 
         video, audio, subs = await asyncio.gather(

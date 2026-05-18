@@ -256,7 +256,7 @@ class PixelDrainCrawler(Crawler):
     ) -> None:
         link = file.download_url.with_host(scrape_item.url.origin().host)
         if await self.check_complete_by_hash(link, "sha256", file.hash_sha256):
-            return
+            return None
 
         if "text/plain" in file.mime_type:
             return await self._text(scrape_item, file)

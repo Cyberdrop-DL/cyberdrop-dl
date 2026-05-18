@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_DNS_RESOLVER: type[aiohttp.AsyncResolver] | type[aiohttp.ThreadedResolver] | None = None
+_DNS_RESOLVER: type[aiohttp.AsyncResolver | aiohttp.ThreadedResolver] | None = None
 
 
 async def _get_dns_resolver(
     loop: asyncio.AbstractEventLoop | None = None,
-) -> type[aiohttp.AsyncResolver] | type[aiohttp.ThreadedResolver]:
+) -> type[aiohttp.AsyncResolver | aiohttp.ThreadedResolver]:
     """Test aiodns with a DNS lookup."""
 
     # pycares (the underlying C extension that aiodns uses) installs successfully in most cases,
@@ -46,7 +46,7 @@ async def _get_dns_resolver(
         return aiohttp.AsyncResolver
 
 
-async def choose_dns_resolver() -> type[aiohttp.AsyncResolver] | type[aiohttp.ThreadedResolver]:
+async def choose_dns_resolver() -> type[aiohttp.AsyncResolver | aiohttp.ThreadedResolver]:
     global _DNS_RESOLVER
     if _DNS_RESOLVER is None:
         _DNS_RESOLVER = await _get_dns_resolver()  # pyright: ignore[reportConstantRedefinition]

@@ -89,7 +89,7 @@ class Sorter:
     async def _sort_file(self, folder_name: str, file: Path) -> None:
         ext = file.suffix.lower()
         if ext in TempExt:
-            return
+            return None
 
         try:
             if ext in FileExt.AUDIO:
@@ -289,12 +289,11 @@ def _move_file(
                 except FileExistsError:
                     continue
 
-            else:
-                logger.error("Unable to move '{}'. Giving up after {} attempts", source, max_retries)
-                return
+            logger.error("Unable to move '{}'. Giving up after {} attempts", source, max_retries)
+            return None
     except OSError:
         logger.exception("Unable to move '{}'", source)
-        return
+        return None
 
 
 async def _try_probe(kind: str, file: Path) -> ffmpeg.FFprobeResult | None:

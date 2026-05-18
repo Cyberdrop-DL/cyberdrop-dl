@@ -76,12 +76,12 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in:
-            return
+            return None
 
         info = self.core.parse_url(scrape_item.url, check_key=False)
         if not info.public_key:
             self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
-            return
+            return None
 
         if not info.is_folder:
             return await self.file(scrape_item, info.public_handle, info.public_key)

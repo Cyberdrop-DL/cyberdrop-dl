@@ -285,7 +285,7 @@ async def get_size(path: Path) -> int | None:
     try:
         stat_result = await stat(path)
     except (OSError, ValueError):
-        return
+        return None
     else:
         if not S_ISREG(stat_result.st_mode):
             raise IsADirectoryError(path)

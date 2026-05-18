@@ -110,7 +110,7 @@ def _view_changelog() -> None:
     except Exception as e:
         _CONSOLE.print(_ERROR, "UNABLE TO GET CHANGELOG INFORMATION", repr(e))
         _enter_to_continue()
-        return None
+        return
 
     with _CONSOLE.pager(links=True):
         _CONSOLE.print(Markdown(content, justify="left"))

@@ -82,13 +82,12 @@ class DedupeUI(LiveUI):
 if __name__ == "__main__":
     panel = DedupeUI(folder := Path("/folder1/cdl_downloads"))
 
-    with panel(transient=False):
-        with panel.new_file(folder / "file.txt"):
-            time.sleep(3)
-            panel.stats.deleted += 1
-            with panel.new_file(folder / "subfolder/file2.txt"), panel.new_file(folder / "subfolder/file3.txt"):
-                time.sleep(1)
-                panel.stats.total += 5
-                time.sleep(1)
-            panel.stats.deleted += 15
-            time.sleep(3)
+    with panel(transient=False), panel.new_file(folder / "file.txt"):
+        time.sleep(3)
+        panel.stats.deleted += 1
+        with panel.new_file(folder / "subfolder/file2.txt"), panel.new_file(folder / "subfolder/file3.txt"):
+            time.sleep(1)
+            panel.stats.total += 5
+            time.sleep(1)
+        panel.stats.deleted += 15
+        time.sleep(3)

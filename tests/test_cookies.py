@@ -33,7 +33,7 @@ def make_cookie(
         path=path,
         path_specified=bool(path),
         secure=secure,
-        expires=expires if expires else None,  # filter out "0"
+        expires=expires or None,  # filter out "0"
         discard=expires == 0,
         comment=None,
         comment_url=None,

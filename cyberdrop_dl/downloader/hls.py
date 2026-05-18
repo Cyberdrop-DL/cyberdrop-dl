@@ -161,7 +161,7 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
 
     async def download_subs() -> Path | None:
         if not rendition.subtitle:
-            return
+            return None
         try:
             subs = await download(rendition.subtitle)
         except Exception as e:

@@ -42,52 +42,51 @@ def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected
 def test_scraping_json_dump() -> None:
     ui = ScrapingUI()
 
-    with ui(force=True):
-        with ui.scrape.new("example.com"), ui.downloads.download_file("a file.mp4", "example.com", 200):
-            ui.download_errors.add("450 An Error")
-            dump = ui.__json__()
-            assert dump == {
-                "files": {
+    with ui(force=True), ui.scrape.new("example.com"), ui.downloads.download_file("a file.mp4", "example.com", 200):
+        ui.download_errors.add("450 An Error")
+        dump = ui.__json__()
+        assert dump == {
+            "files": {
+                "completed": 0,
+                "previously_completed": 0,
+                "skipped": 0,
+                "failed": 0,
+                "queued": 0,
+            },
+            "scrape_errors": {
+                "errors": (),
+                "sent_to_jdownloader": 0,
+                "skipped": 0,
+            },
+            "download_errors": {
+                "errors": (
+                    {
+                        "msg": "An Error",
+                        "count": 1,
+                        "code": 450,
+                    },
+                ),
+            },
+            "scraping": (
+                {
+                    "url": "example.com",
+                    "elapsed": mock.ANY,
+                },
+            ),
+            "downloads": (
+                {
+                    "speed": None,
+                    "size": 200,
                     "completed": 0,
-                    "previously_completed": 0,
-                    "skipped": 0,
-                    "failed": 0,
-                    "queued": 0,
+                    "hls": False,
+                    "bytes_downloaded": 0,
+                    "description": "(EXAMPLE.COM) a file.mp4",
+                    "eta": None,
+                    "visible": True,
                 },
-                "scrape_errors": {
-                    "errors": (),
-                    "sent_to_jdownloader": 0,
-                    "skipped": 0,
-                },
-                "download_errors": {
-                    "errors": (
-                        {
-                            "msg": "An Error",
-                            "count": 1,
-                            "code": 450,
-                        },
-                    ),
-                },
-                "scraping": (
-                    {
-                        "url": "example.com",
-                        "elapsed": mock.ANY,
-                    },
-                ),
-                "downloads": (
-                    {
-                        "speed": None,
-                        "size": 200,
-                        "completed": 0,
-                        "hls": False,
-                        "bytes_downloaded": 0,
-                        "description": "(EXAMPLE.COM) a file.mp4",
-                        "eta": None,
-                        "visible": True,
-                    },
-                ),
-                "status": {
-                    "description": f"cyberdrop-dl v{__version__}",
-                    "messages": (),
-                },
-            }
+            ),
+            "status": {
+                "description": f"cyberdrop-dl v{__version__}",
+                "messages": (),
+            },
+        }

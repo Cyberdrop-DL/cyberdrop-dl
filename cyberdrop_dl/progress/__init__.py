@@ -159,7 +159,7 @@ def strip_markup(text: str) -> str:
     return "".join(parse())
 
 
-def truncate_float(value: float | int | None, precision: int = 3) -> float | None:
+def truncate_float(value: float | None, precision: int = 3) -> float | None:
     if value is None:
         return None
     return round(value, precision)

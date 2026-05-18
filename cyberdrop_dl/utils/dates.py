@@ -130,9 +130,8 @@ def parse(date_or_datetime: str, format: str | None = None, /, *, iso: bool = Fa
 
     if iso:
         return parse_iso(date_or_datetime)
-    elif format:
+    if format:
         if format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S"):
             raise ValueError("Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead")
         return parse_format(date_or_datetime, format)
-    else:
-        raise ValueError("iso or format is required")
+    raise ValueError("iso or format is required")

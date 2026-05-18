@@ -367,7 +367,7 @@ def _check_content_type(content_type: str, ext: str) -> str | None:
 def _get_content_type(headers: Mapping[str, str]) -> str | None:
     content_type = headers.get("Content-Type")
     if not content_type:
-        return
+        return None
 
     override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
     return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type

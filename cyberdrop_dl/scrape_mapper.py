@@ -331,11 +331,11 @@ class ScrapeMapper:
         """
 
         if domain in self._crawlers_disabled_at_runtime:
-            return
+            return None
 
-        crawler = next((crawler for crawler in self.crawlers.values() if crawler.DOMAIN == domain), None)
+        crawler = next((crawler for crawler in self.crawlers.values() if domain == crawler.DOMAIN), None)
         if not crawler or crawler.disabled:
-            return
+            return None
 
         crawler.disabled = True
         self._crawlers_disabled_at_runtime.add(domain)
@@ -464,8 +464,7 @@ def register_crawler(
                     raise ValueError(msg)
                 logger.error(msg)
                 continue
-            else:
-                logger.info("Successfully mapped %s to crawler %s", crawler.PRIMARY_URL, crawler.NAME)
+            logger.info("Successfully mapped %s to crawler %s", crawler.PRIMARY_URL, crawler.NAME)
 
         elif other:
             if domain in crawlers_map:
@@ -525,7 +524,7 @@ def _best_match(current_map: dict[str, _T], domain: str) -> _T | None:
     try:
         best_match = max((host for host in current_map if host in domain), key=len)
     except (ValueError, TypeError):
-        return
+        return None
     else:
         current_map[domain] = found = current_map[best_match]
         return found

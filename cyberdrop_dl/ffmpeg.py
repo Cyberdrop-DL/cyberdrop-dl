@@ -226,7 +226,7 @@ def _get_bin_version(bin_path: str) -> str | None:
         ).stdout.decode("utf-8", errors="ignore")
 
     except Exception:
-        return
+        return None
     else:
         return stdout.partition("version")[-1].partition("Copyright")[0].strip()
 
