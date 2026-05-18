@@ -696,7 +696,9 @@ class TestCheckPostId:
         expected_scrape_this_post: bool,
     ) -> None:
         continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id, current_post_id, scrape_single_forum_post
+            init_post_id,
+            current_post_id,
+            scrape_single_forum_post=scrape_single_forum_post,
         )
         assert continue_scraping == expected_continue_scraping
         assert scrape_this_post == expected_scrape_this_post

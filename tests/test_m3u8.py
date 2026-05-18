@@ -189,7 +189,7 @@ def test_m3u8_master2_audio(m3u8_master_content2: str) -> None:
     best = variant.get_best_group()
     assert best.media.filter(group_id="audio")
     assert not best.media.filter(group_id="AUDIO")
-    audios = best.media.filter(type_by="AUDIO")
+    audios = best.media.filter(type="AUDIO")
     assert len(audios) == 1
     assert audios.get_default()
     assert best.media.filter(language="en")
