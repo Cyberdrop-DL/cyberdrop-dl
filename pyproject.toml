@@ -140,6 +140,7 @@ ignore = [
     "E501",  # suppress line-too-long, let formatter decide
     "EM",  # flake8-errmsg
     "FIX002",  # line-contains-todo
+    "FLY002",  # static-join-to-f-string
     "G004",  # logging-f-string
     "N806",  # uppercase variables in functions
     "PLC0415",  # import-outside-top-level
@@ -148,7 +149,8 @@ ignore = [
     "S101",  # assert
     "SLF001",  # private-member-access
     "TD",  # flake8-todos
-    "TRY003"  # raise-vanilla-args
+    "TRY003",  # raise-vanilla-args
+    "TRY400"  # error-instead-of-exception
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
