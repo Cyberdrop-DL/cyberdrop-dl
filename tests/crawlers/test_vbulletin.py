@@ -9,7 +9,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 @pytest.mark.parametrize(
     ("url", "thread_name_and_id", "result", "canonical_url"),
     [
-        [
+        (
             "https://vipergirls.to/threads/2783401-Jodie-Comer/page4",
             "2783401-Jodie-Comer",
             (
@@ -19,8 +19,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
                 None,
             ),
             "https://vipergirls.to/threads/2783401-Jodie-Comer",
-        ],
-        [
+        ),
+        (
             "https://vipergirls.to/threads/9046167-Lacey-Evans/page11?p=222377716&viewfull=1#post222377716",
             "9046167-Lacey-Evans",
             (
@@ -30,7 +30,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
                 222377716,
             ),
             "https://vipergirls.to/threads/9046167-Lacey-Evans",
-        ],
+        ),
     ],
 )
 def test_parse_thread(url: str, thread_name_and_id: str, result: tuple[int, str, int, int], canonical_url: str) -> None:
