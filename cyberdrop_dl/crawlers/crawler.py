@@ -136,15 +136,20 @@ class Registry:
         """Import every module (and sub-package) inside *pkg_name*."""
         for sub_module_info in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
             try:
-                sub_module = importlib.import_module(sub_module_info.name)
+                sub_module = cls._import_path(sub_module_info.name)
             except ImportError as e:
-                yield ImportError(
-                    f"Could not import crawlers from module '{sub_module_info.name}' [{e.msg}]"
-                ).with_traceback(e.__traceback__)
-                continue
+                yield e
+            else:
+                if sub_module_info.ispkg:
+                    yield from cls._import_from(sub_module)
 
-            if sub_module_info.ispkg:
-                yield from cls._import_from(sub_module)
+    @classmethod
+    def _import_path(cls, path: str) -> ModuleType:
+        try:
+            return importlib.import_module(path)
+        except ImportError as e:
+            msg = f"Could not import crawlers from module '{path}' [{e.msg}]"
+            raise ImportError(msg).with_traceback(e.__traceback__) from None
 
 
 class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
