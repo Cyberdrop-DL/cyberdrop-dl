@@ -219,7 +219,5 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
 def test_invalid_crawler_modeles_should_return_import_error() -> None:
     from cyberdrop_dl.crawlers.crawler import Registry
 
-    with pytest.raises(ImportError) as exc_info:
+    with pytest.raises(ImportError, match="Could not import crawlers from module"):
         Registry._import_module("cyberdrop_dl.crawler.fake_crawler_12345")
-
-    assert "Could not import crawlers from module" in exc_info.value.msg
