@@ -180,12 +180,8 @@ def terminal_is_in_portrait() -> bool:
     if aspect_ratio >= 3.2:
         return False
 
-    # Check for mobile device in portrait mode
-    if (aspect_ratio < 1.5 and height >= 40) or (aspect_ratio < 2.3 and width <= 85):
-        return True
-
-    # Assume landscape mode for other cases
-    return False
+    # Check for mobile device in portrait mode, Assume landscape mode for other cases
+    return (aspect_ratio < 1.5 and height >= 40) or (aspect_ratio < 2.3 and width <= 85)
 
 
 @contextlib.contextmanager

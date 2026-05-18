@@ -330,6 +330,4 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
         return False
-    if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
-        return False
-    return True
+    return not (ignore_options.exclude_after and item_date > ignore_options.exclude_after)
