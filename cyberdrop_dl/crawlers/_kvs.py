@@ -58,7 +58,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[RateLimit] = 6, 5
 
-    def __init_subclass__(cls, ensure_trailing_slash: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, ensure_trailing_slash: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if ensure_trailing_slash:
             cls.transform_url = cls.transform_kvs_url

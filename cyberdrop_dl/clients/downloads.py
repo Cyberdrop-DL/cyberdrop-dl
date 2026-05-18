@@ -216,7 +216,7 @@ class DownloadClient:
         if await aio.is_file(media_item.path):
             await self.manager.database.history.add_filesize(domain, media_item)
 
-    async def handle_media_item_completion(self, media_item: MediaItem, downloaded: bool = False) -> None:
+    async def handle_media_item_completion(self, media_item: MediaItem, *, downloaded: bool = False) -> None:
         """Sends to hash client to handle hashing and marks as completed/current download."""
         try:
             media_item.downloaded = downloaded

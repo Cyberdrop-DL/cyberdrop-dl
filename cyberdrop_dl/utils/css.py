@@ -47,7 +47,7 @@ def _select_one(tag: Tag, selector: str) -> Tag:
     return result
 
 
-def select_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str | None = None) -> str:
+def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str | None = None) -> str:
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
     inner_tag = select(tag, selector)
     if decompose:
@@ -78,7 +78,7 @@ def attr(tag: Tag, attribute: str) -> str:
     return result
 
 
-def text(tag: Tag, strip: bool = True) -> str:
+def text(tag: Tag, *, strip: bool = True) -> str:
     return tag.get_text(strip=strip)
 
 

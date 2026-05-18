@@ -11,7 +11,7 @@ import datetime
 import itertools
 import re
 from abc import abstractmethod
-from typing import TYPE_CHECKING, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, final
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -194,7 +194,7 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
     WP_TAGS_ENDPOINT: ClassVar = "/wp-json/wp/v2/tags"
     WP_POSTS_ENDPOINT: ClassVar = "/wp-json/wp/v2/posts"
 
-    def __init_subclass__(cls, is_abc: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, is_abc: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(is_abc=is_abc, **kwargs)
         if is_abc:
             return
@@ -340,7 +340,7 @@ def _get_original_quality_link(link: str) -> str:
     return link
 
 
-def _iter_links(html: HTML, use_regex: bool) -> Iterable[str]:
+def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
     soup = BeautifulSoup(html, "html.parser")
     images = css.iselect(soup, *css.images)
     iframes = css.iselect(soup, *css.iframes)

@@ -49,7 +49,7 @@ class Request:
         return str(self.__json__())
 
 
-def normalize_impersonation(value: str | bool | None, /) -> BrowserTypeLiteral | Literal[False] | None:
+def normalize_impersonation(value: str | bool | None, /) -> BrowserTypeLiteral | Literal[False] | None:  # noqa: FBT001
     if value is True:
         return "chrome"
     if value is None:

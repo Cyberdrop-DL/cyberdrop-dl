@@ -307,7 +307,7 @@ class ScrapeItem:
 
             raise MaxChildrenError(origin=self)
 
-    def reset(self, reset_parents: bool = False, reset_parent_title: bool = False) -> None:
+    def reset(self, *, reset_parents: bool = False, reset_parent_title: bool = False) -> None:
         """Resets `album_id`, `type` and `posible_datetime` back to `None`
 
         Reset `part_of_album` back to `False`

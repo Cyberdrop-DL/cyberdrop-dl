@@ -74,7 +74,7 @@ class BoxDotComCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        if "file or folder link has been removed" in soup.text:
+        if "file or folder link has been removed" in soup.get_text():
             raise ScrapeError(410)
 
         js_text: str = css.select_text(soup, JS_SELECTOR)
@@ -161,8 +161,8 @@ class BoxDotComCrawler(Crawler):
         return dict(sorted(path_mapping.items()))
 
 
-def get_canonical_url(shared_name: str, id: str, is_folder: bool = False) -> AbsoluteHttpURL:
+def get_canonical_url(shared_name: str, share_id: str, *, is_folder: bool = False) -> AbsoluteHttpURL:
     base = AbsoluteHttpURL(f"https://app.box.com/s/{shared_name}")
     if is_folder:
-        return base / "folder" / id
-    return base / "file" / id
+        return base / "folder" / share_id
+    return base / "file" / share_id

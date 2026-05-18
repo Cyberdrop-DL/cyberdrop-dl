@@ -42,7 +42,7 @@ class JsonableRenderableType(Protocol):
     def __json__(self) -> Any: ...
 
 
-def create_test_live(renderable: JsonableRenderableType, transient: bool = False, json: bool = True) -> Live:
+def create_test_live(renderable: JsonableRenderableType, *, transient: bool = False, json: bool = True) -> Live:
     from rich.json import JSON
     from rich.live import Live
 

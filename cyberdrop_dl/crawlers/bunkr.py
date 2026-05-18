@@ -312,7 +312,7 @@ def _override_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url
 
 
-def _parse_api_resp(url: str, timestamp: int, encrypted: bool) -> str:
+def _parse_api_resp(url: str, timestamp: int, *, encrypted: bool) -> str:
     if not encrypted:
         return url
 

@@ -380,7 +380,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     POST_URL_PART_NAME: ClassVar[str]
     PAGE_URL_PART_NAME: ClassVar[str]
 
-    def __init_subclass__(cls, is_abc: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, is_abc: bool = False, **kwargs) -> None:
         super().__init_subclass__(is_abc=is_abc, **kwargs)
         if is_abc:
             return
@@ -688,7 +688,12 @@ def is_confirmation_link(link: AbsoluteHttpURL) -> bool:
     )
 
 
-def check_post_id(init_post_id: int | None, current_post_id: int, scrape_single_forum_post: bool) -> tuple[bool, bool]:
+def check_post_id(
+    init_post_id: int | None,
+    current_post_id: int,
+    *,
+    scrape_single_forum_post: bool,
+) -> tuple[bool, bool]:
     """Checks if the program should scrape the current post.
 
     Returns (continue_scraping, scrape_this_post)"""
@@ -703,7 +708,7 @@ def check_post_id(init_post_id: int | None, current_post_id: int, scrape_single_
     return True, True
 
 
-def pre_process_child(link_str: str, embeds: bool = False) -> str | None:
+def pre_process_child(link_str: str, *, embeds: bool = False) -> str | None:
     assert isinstance(link_str, str)
     if embeds:
         link_str = extract_embed_url(link_str)

@@ -129,12 +129,13 @@ class DownloadError(CDLBaseError):
         status: str | int,
         message: str | None = None,
         origin: ScrapeItem | MediaItem | URL | None = None,
+        *,
         retry: bool = False,
     ) -> None:
         """This error will be thrown when a download fails."""
         ui_failure = create_error_msg(status)
         msg = message
-        self.retry = retry
+        self.retry: bool = retry
         super().__init__(ui_failure, message=msg, status=status, origin=origin)
 
 

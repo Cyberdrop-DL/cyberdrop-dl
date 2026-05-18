@@ -119,7 +119,7 @@ class EpornerCrawler(Crawler):
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def playlist(self, scrape_item: ScrapeItem, from_profile: bool = False) -> None:
+    async def playlist(self, scrape_item: ScrapeItem, *, from_profile: bool = False) -> None:
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title and not from_profile:

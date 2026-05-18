@@ -425,7 +425,7 @@ def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
     return item
 
 
-def get_crawlers_mapping(include_generics: bool = False) -> dict[str, type[Crawler]]:
+def get_crawlers_mapping(*, include_generics: bool = False) -> dict[str, type[Crawler]]:
     from cyberdrop_dl.crawlers.crawler import Registry
 
     Registry.import_all()
@@ -446,6 +446,7 @@ def get_crawlers_mapping(include_generics: bool = False) -> dict[str, type[Crawl
 def register_crawler(
     crawlers_map: dict[str, type[Crawler]],
     crawler: type[Crawler],
+    *,
     from_user: bool | Literal["raise"] = False,
 ) -> None:
 

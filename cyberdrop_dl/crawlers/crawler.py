@@ -549,7 +549,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     async def check_complete_from_referer(
-        self: Crawler, scrape_item: ScrapeItem | AbsoluteHttpURL, any_crawler: bool = False
+        self: Crawler, scrape_item: ScrapeItem | AbsoluteHttpURL, *, any_crawler: bool = False
     ) -> bool:
         """Checks if the scrape item has already been scraped.
 
@@ -581,7 +581,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         return await self.manager.database.history.check_album(self.DOMAIN, album_id)
 
     @final
-    def handle_external_links(self, scrape_item: ScrapeItem, reset: bool = True) -> None:
+    def handle_external_links(self, scrape_item: ScrapeItem, *, reset: bool = True) -> None:
         """Maps external links to the scraper class."""
         if reset:
             scrape_item.reset()
@@ -595,9 +595,9 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     def get_filename_and_ext(
         self,
         filename: str,
+        *,
         forum: bool = False,
         assume_ext: str | None = ".mp4",
-        *,
         mime_type: str | None = None,
     ) -> tuple[str, str]:
         """Wrapper around `utils.get_filename_and_ext`.

@@ -706,6 +706,7 @@ class TestCheckPostId:
         self,
         init_post_id: int,
         current_post_id: int,
+        *,
         scrape_single_forum_post: bool,
         expected_continue_scraping: bool,
         expected_scrape_this_post: bool,
