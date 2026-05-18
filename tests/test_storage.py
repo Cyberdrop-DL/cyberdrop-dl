@@ -11,11 +11,11 @@ from cyberdrop_dl import storage
 from cyberdrop_dl.storage import _psutil
 
 
-def create_partition(path: str):
+def create_partition(path: str) -> _psutil.DiskPartition:
     return _psutil.DiskPartition(Path(path), Path(path), "", "")
 
 
-def find_partition(path: str):
+def find_partition(path: str) -> _psutil.DiskPartition | None:
     return _psutil._find_partition(Path(path))
 
 

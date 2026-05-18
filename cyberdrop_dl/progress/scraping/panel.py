@@ -5,7 +5,7 @@ import contextlib
 import dataclasses
 import itertools
 import random
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from rich.columns import Columns
 from rich.markup import escape
@@ -55,7 +55,7 @@ class StatusMessage:
         del self._messages[msg_id]
         self._cols.renderables[3:] = itertools.chain.from_iterable(self._messages.values())
 
-    def __json__(self):
+    def __json__(self) -> dict[str, Any]:
         return {
             "description": strip_markup(self.description).strip(),
             "messages": tuple(strip_markup(text.plain) for _, text in self._messages.values()),
@@ -114,7 +114,7 @@ class ScrapingPanel(OverFlowPanel):
             with self.new("http://github3.com"):
                 await asyncio.sleep(2)
 
-    def __json__(self):
+    def __json__(self) -> tuple[dict[str, Any], ...]:
         return tuple(
             {
                 "url": strip_markup(task.description),

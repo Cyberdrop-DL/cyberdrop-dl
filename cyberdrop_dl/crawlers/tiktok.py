@@ -45,7 +45,7 @@ class Post(DictDataclass):
     images: list[str] = dataclasses.field(default_factory=list)
     canonical_url: AbsoluteHttpURL = dataclasses.field(default_factory=AbsoluteHttpURL)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         part = "photo" if self.images else "video"
         self.canonical_url = _PRIMARY_URL / str(self.author) / part / self.id
         self.images = self.images or []

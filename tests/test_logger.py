@@ -86,7 +86,7 @@ def test_entering_a_live_disables_console_logging() -> None:
     console.record = True
 
     class DummyLiveUI(LiveUI):
-        def __rich__(self):
+        def __rich__(self) -> str:
             return "In Live"
 
     with console, logs.setup_console_logging():

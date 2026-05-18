@@ -8,7 +8,7 @@ import shutil
 import sys
 import time
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import rich
 from rich.console import Group, RenderableType
@@ -130,7 +130,7 @@ class ScrapingUI(LiveUI):
             except IndexError:
                 break
 
-    def __json__(self):
+    def __json__(self) -> dict[str, Any]:
         return {
             "files": self.files.__json__(),
             "scrape_errors": self.scrape_errors.__json__(),

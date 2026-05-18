@@ -9,6 +9,7 @@ import sys
 import time
 from datetime import timedelta
 from pathlib import Path
+from types import NotImplementedType
 from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
@@ -286,7 +287,7 @@ class AppData:
             db_file=cache / "cyberdrop.db",
         )
 
-    def __truediv__(self, other: PathLike[str]):
+    def __truediv__(self, other: PathLike[str]) -> Path | NotImplementedType:
         try:
             return self.path / other
         except TypeError:

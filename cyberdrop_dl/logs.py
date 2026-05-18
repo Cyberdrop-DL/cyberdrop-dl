@@ -217,6 +217,7 @@ def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
 class NoPaddingLogRender(LogRender):
     _cdl_padding: int = 0
 
+    @override
     def __call__(  # type: ignore[reportIncompatibleMethodOverride]  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
         console: Console,
@@ -227,7 +228,7 @@ class NoPaddingLogRender(LogRender):
         path: str | None = None,
         line_no: int | None = None,
         link_path: str | None = None,
-    ):
+    ) -> Group:
         output = Text(no_wrap=True)
         if self.show_time:
             log_time = log_time or console.get_datetime()
