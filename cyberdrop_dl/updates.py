@@ -18,7 +18,7 @@ async def check_latest_pypi(session: aiohttp.ClientSession) -> None:
     logger.info("Checking for updates...")
     try:
         data = await _request_pypi_info(session)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Unable to get latest version information {e!r}")
     else:
         return _compare_and_log_version(

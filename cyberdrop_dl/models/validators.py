@@ -94,7 +94,7 @@ def to_timedelta(input_date: timedelta | str | int) -> timedelta | str:
         return timedelta(days=input_date)
     try:
         return _str_to_timedelta(input_date)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return input_date  # Let pydantic try to validate this
 
 

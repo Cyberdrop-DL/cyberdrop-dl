@@ -113,7 +113,7 @@ class Client:
     async def aclose(self) -> None:
         try:
             await self._destroy_session()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to destroy flaresolver session ({e}!r)")
 
     async def _ensure_session(self) -> None:

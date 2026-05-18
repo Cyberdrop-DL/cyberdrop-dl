@@ -38,7 +38,7 @@ async def _get_dns_resolver(
         async with aiodns.DNSResolver(loop=loop, timeout=5.0) as resolver:
             _ = await resolver.query_dns("github.com", "A")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver: {e!r}")
         return aiohttp.ThreadedResolver
 

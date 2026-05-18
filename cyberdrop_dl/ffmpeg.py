@@ -225,7 +225,7 @@ def _get_bin_version(bin_path: str) -> str | None:
             stderr=subprocess.DEVNULL,
         ).stdout.decode("utf-8", errors="ignore")
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
     else:
         return stdout.partition("version")[-1].partition("Copyright")[0].strip()
@@ -249,7 +249,7 @@ def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
             for idx, value in enumerate(reversed(rest), 1):
                 seconds += int(value) * 60**idx
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     if seconds > 0:

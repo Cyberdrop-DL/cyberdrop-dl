@@ -721,7 +721,11 @@ class TestCheckPostId:
         scrape_single_forum_post = True
 
         with pytest.raises(AssertionError):
-            _forum.check_post_id(init_post_id, current_post_id, scrape_single_forum_post)
+            _forum.check_post_id(
+                init_post_id,
+                current_post_id,
+                scrape_single_forum_post=scrape_single_forum_post,
+            )
 
 
 # og_post_id = 23549340

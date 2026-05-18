@@ -97,7 +97,7 @@ class CoomerFansCrawler(Crawler):
                 seen.add(link)
                 try:
                     url = self.parse_url(link)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
                 else:
                     if self.DOMAIN not in url.host:

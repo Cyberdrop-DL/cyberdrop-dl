@@ -107,7 +107,7 @@ def _view_changelog() -> None:
     _clear_term()
     try:
         content = changelog()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _CONSOLE.print(_ERROR, "UNABLE TO GET CHANGELOG INFORMATION", repr(e))
         _enter_to_continue()
         return

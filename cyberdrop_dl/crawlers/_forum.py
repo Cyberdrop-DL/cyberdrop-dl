@@ -86,7 +86,7 @@ class ForumPost:
             css.decompose(article, trash)
         try:
             date = datetime.datetime.fromisoformat(css.select(article, *selectors.date))
-        except Exception:
+        except Exception:  # noqa: BLE001
             date = None
 
         id_str = css.attr(article, selectors.id.attribute)
@@ -588,7 +588,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         try:
             if link_str := css.attr(link_obj, self.SELECTORS.posts.links.element):
                 return self.is_attachment(link_str)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
         return False
 
@@ -597,7 +597,7 @@ def iter_links(links: Iterable[Tag], attribute: str) -> Iterable[str]:
     for link_tag in links:
         try:
             yield css.attr(link_tag, attribute)
-        except Exception:
+        except Exception:  # noqa: BLE001
             continue
 
 

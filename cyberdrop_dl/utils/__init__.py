@@ -130,7 +130,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         ui_failure = create_error_msg(422)
         log_msg = str(e).partition("For further information")[0].strip()
         error_log_msg = ErrorLogMessage(ui_failure, log_msg)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         exc_info = e
         error_log_msg = ErrorLogMessage.from_unknown_exc(e)
 

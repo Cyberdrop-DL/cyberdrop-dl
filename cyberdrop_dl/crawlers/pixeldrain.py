@@ -203,7 +203,7 @@ class PixelDrainCrawler(Crawler):
                 fs = await request_fs(path)
                 scrape_item.add_children(0)
                 await walk_filesystem(fs)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.raise_exc(new_scrape_item, e)
 
         async def walk_filesystem(fs: FileSystem) -> None:
@@ -275,7 +275,7 @@ class PixelDrainCrawler(Crawler):
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
             new_scrape_item = scrape_item.create_child(link)
             self.handle_external_links(new_scrape_item)

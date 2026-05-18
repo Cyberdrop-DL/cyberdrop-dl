@@ -410,7 +410,7 @@ def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
         try:
             encoded = "%" in link
             yield AbsoluteHttpURL(link, encoded=encoded)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to parse URL from input file: {link} {e:!r}")
 
 

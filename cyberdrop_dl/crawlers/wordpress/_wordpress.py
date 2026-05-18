@@ -185,7 +185,7 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         for link_str in dict.fromkeys(iterable):
             try:
                 yield self.parse_url(link_str)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
 
@@ -329,7 +329,7 @@ def _match_date_from_path(url_parts: tuple[str, ...]) -> datetime.datetime | Non
         case [year, month, day]:
             try:
                 return datetime.datetime(int(year), int(month), int(day))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return None
 
 
