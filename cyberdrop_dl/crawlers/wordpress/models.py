@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Literal, NewType, TypeVar
+from typing import Annotated, Literal, NewType
 
 from bs4 import BeautifulSoup
 from pydantic import AfterValidator, AliasPath, BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
 from cyberdrop_dl.compat import StrEnum
-
 
 
 def make_soup(string: str) -> BeautifulSoup:
