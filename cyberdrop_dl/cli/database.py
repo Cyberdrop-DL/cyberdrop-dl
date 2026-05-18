@@ -15,6 +15,7 @@ def transfer(
             validator=validators.Path(exists=True, file_okay=True, dir_okay=False, ext=".db"),
         ),
     ],
+    *,
     force: Annotated[
         bool,
         Parameter(
