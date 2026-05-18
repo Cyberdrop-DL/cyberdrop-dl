@@ -151,7 +151,8 @@ ignore = [
     "SLF001",  # private-member-access
     "TD",  # flake8-todos
     "TRY003",  # raise-vanilla-args
-    "TRY400"  # error-instead-of-exception
+    "TRY400",  # error-instead-of-exception
+    "S607"   	# start-process-with-partial-path
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
