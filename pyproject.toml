@@ -147,9 +147,9 @@ ignore = [
     "PLR2004",  # magic-value-comparison
     "RET503",  # implicit-return
     "S101",  # assert
+    "SIM105",  # suppressible-exception
     "SLF001",  # private-member-access
     "TD",  # flake8-todos
-    "SIM105", 	# suppressible-exception
     "TRY003",  # raise-vanilla-args
     "TRY400"  # error-instead-of-exception
 ]
@@ -160,8 +160,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,docs,scripts}/*" = [
     "E402",  # imports not at the top of the file.
-    "T20",  # flake8-print
-    "INP001" # implicit-namespace-package
+    "INP001",  # implicit-namespace-package
+    "PT011",  # pytest-raises-too-broad
+    "T20"  # flake8-print
 ]
 "__init__.py" = ["E402"]  # imports not at the top of the file.
 "tests/crawlers/test_cases/*" = [

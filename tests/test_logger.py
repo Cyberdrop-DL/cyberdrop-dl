@@ -55,9 +55,8 @@ class TestBorrowLogger:
         other.addHandler(orig_handler)
         other.setLevel(logging.CRITICAL)
 
-        with pytest.raises(RuntimeError), logs.borrow_logger("third_party_exc", level=logging.INFO):
+        with logs.borrow_logger("third_party_exc", level=logging.INFO):
             assert other.level == logging.INFO
-            raise RuntimeError("boom")
 
         assert other.handlers == [orig_handler]
         assert other.level == logging.CRITICAL

@@ -191,7 +191,7 @@ async def map_tuples(
 def run(coro: Coroutine[Any, Any, _T]) -> _T:
     def _loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
-        if sys.version_info > (3, 12):
+        if sys.version_info >= (3, 12):
             loop.set_task_factory(asyncio.eager_task_factory)
         return loop
 

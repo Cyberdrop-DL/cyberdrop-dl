@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import uuid
 from fractions import Fraction
-from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
@@ -21,8 +21,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-    _CMD: TypeAlias = Iterable[str | Path]
 
 
 logger = logging.getLogger(__name__)
