@@ -54,9 +54,12 @@ class DDosGuard:
 
     @classmethod
     def check(cls, soup: BeautifulSoup) -> bool:
-        if (title := soup.select_one("title")) and (title_str := title.string):
-            if any(title.casefold() == title_str.casefold() for title in cls.TITLES):
-                return True
+        if (
+            (title := soup.select_one("title"))
+            and (title_str := title.string)
+            and any(title.casefold() == title_str.casefold() for title in cls.TITLES)
+        ):
+            return True
 
         return bool(soup.select_one(cls.SELECTOR))
 

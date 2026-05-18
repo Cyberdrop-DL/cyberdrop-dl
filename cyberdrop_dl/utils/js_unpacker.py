@@ -65,9 +65,8 @@ def _make_decoder(base: int) -> Callable[[str], int]:
     if 2 <= base <= 36:
         return lambda text: int(text, base)
 
-    if 36 < base < 62:
-        if base not in _ALPHABET:
-            _ALPHABET[base] = _ALPHABET[62][:base]
+    if 36 < base < 62 and base not in _ALPHABET:
+        _ALPHABET[base] = _ALPHABET[62][:base]
 
     lookup = {char: idx for idx, char in enumerate(_ALPHABET[base])}
 
