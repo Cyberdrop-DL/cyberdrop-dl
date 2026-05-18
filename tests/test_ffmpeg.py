@@ -121,7 +121,8 @@ async def test_ffprobe_video_url() -> None:
     assert str(output.video.duration) == "10.51"
     assert output.video.codec == "h264"
     assert output.video.bitrate == 4_014_556
-    assert output.video.fps and round(output.video.fps) == 60.0
+    assert output.video.fps
+    assert round(output.video.fps) == 60.0
     assert output.video.width == 360
     assert output.video.height == 640
 

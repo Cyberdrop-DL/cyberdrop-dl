@@ -30,7 +30,8 @@ def find_subclasses_of(domain: str):
 
 def module_path(cls: type):
     spec = importlib.util.find_spec(cls.__module__)
-    assert spec and spec.origin
+    assert spec
+    assert spec.origin
     return hyperlink(Path(spec.origin))
 
 

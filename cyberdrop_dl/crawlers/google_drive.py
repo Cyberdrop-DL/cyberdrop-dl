@@ -187,7 +187,8 @@ class GoogleDriveCrawler(Crawler):
         method = "GET" if export_url.host == _DOCS_URL.host else "POST"
 
         async with self.request(export_url, method=method) as resp:
-            assert resp.ok and "html" not in resp.content_type
+            assert resp.ok
+            assert "html" not in resp.content_type
 
         return resp.url, resp.content_disposition.filename
 

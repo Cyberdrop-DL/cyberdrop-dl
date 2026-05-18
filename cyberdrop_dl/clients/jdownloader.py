@@ -105,7 +105,8 @@ class JDownloader:
     async def send(self, url: AbsoluteHttpURL, title: str, download_path: Path | None = None) -> None:
         """Sends links to JDownloader."""
 
-        assert self._device is not None and self.enabled
+        assert self._device is not None
+        assert self.enabled
         with self._wrap_errors():
             download_folder = self.config.download_dir
             if download_path:

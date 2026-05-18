@@ -61,7 +61,8 @@ _TEST_DATA: dict[str, list[dict[str, Any]]] = {}
 
 def _load_test_cases(path: Path) -> None:
     module_spec = importlib.util.spec_from_file_location(path.stem, path)
-    assert module_spec and module_spec.loader
+    assert module_spec
+    assert module_spec.loader
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
     if module.DOMAIN in _TEST_DATA:
