@@ -204,4 +204,4 @@ def _enter_to_continue() -> None:
 
 
 def _clear_term() -> None:
-    _ = os.system("cls" if os.name == "nt" else "clear")
+    _ = os.system("cls" if os.name == "nt" else "clear")  # noqa: S605
