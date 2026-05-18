@@ -621,8 +621,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             title = f"{title} ({self.FOLDER_DOMAIN})"
 
         # Remove double spaces
-        title = " ".join(title.split(" "))
-        return title
+        return " ".join(title.split(" "))
 
     @final
     def create_separate_post_title(

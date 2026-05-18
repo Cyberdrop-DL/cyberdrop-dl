@@ -413,8 +413,7 @@ def _make_decoder(algo: int, seed: int) -> Callable[[], int]:
             val = _ensure_signed_32int(current_step ^ (current_step << 5))
             val = _ensure_signed_32int(val * _ensure_signed_32int(0x7FEB352D))
             val = _ensure_signed_32int(val ^ ((val & 0xFFFFFFFF) >> 15))
-            val = _ensure_signed_32int(val * _ensure_signed_32int(0x846CA68B))
-            return val
+            return _ensure_signed_32int(val * _ensure_signed_32int(0x846CA68B))
 
     else:
         raise ValueError(f"Unknown crypto algo: {algo}")

@@ -47,8 +47,7 @@ def unpack(source: str) -> str:
         return words_list[decode(word)] or word
 
     content = content.replace("\\\\", "\\").replace("\\'", "'")
-    source = re.sub(r"\b\w+\b", replace, content, flags=re.ASCII)
-    return source
+    return re.sub(r"\b\w+\b", replace, content, flags=re.ASCII)
 
 
 def _parse(source: str) -> tuple[str, int, int, list[str]]:
