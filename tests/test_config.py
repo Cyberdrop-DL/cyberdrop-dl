@@ -131,7 +131,7 @@ class TestMergeDicts:
 
 class TestRuntimeLogsConfig:
     @staticmethod
-    def parse(level: object, console_level: object):
+    def parse(level: object, console_level: object) -> settings.RuntimeOptions:
         return settings.RuntimeOptions.model_validate({"log_level": level, "console_log_level": console_level})
 
     def test_default(self) -> None:

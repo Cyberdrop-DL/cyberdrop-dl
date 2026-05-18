@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 from xml.etree import ElementTree as ET
 
 from typing_extensions import override
