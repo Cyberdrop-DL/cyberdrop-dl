@@ -9,7 +9,6 @@ from pydantic.type_adapter import TypeAdapter
 
 from cyberdrop_dl.compat import StrEnum
 
-_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 def make_soup(string: str) -> BeautifulSoup:

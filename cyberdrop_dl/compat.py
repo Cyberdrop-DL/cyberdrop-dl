@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, TypeVar
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-_T = TypeVar("_T")
 
 
 if sys.version_info < (3, 12):
