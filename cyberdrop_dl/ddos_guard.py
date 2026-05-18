@@ -119,10 +119,12 @@ class Anubis(DDosGuard):
                 for future in as_completed(futures, timeout=timeout):
                     result = future.result()
                     if result is not None:
-                        nonce, hash = result
+                        nonce, checksum = result
                         elapsed = time.monotonic() - start_time
                         executor.shutdown(wait=False, cancel_futures=True)
-                        return _AnubisSolution(challenge.id, nonce, hash, challenge.difficulty, max_workers, elapsed)
+                        return _AnubisSolution(
+                            challenge.id, nonce, checksum, challenge.difficulty, max_workers, elapsed
+                        )
 
             except TimeoutError:
                 pass
@@ -162,9 +164,9 @@ def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tu
     nonce = start
     target = "0" * difficulty
     while True:
-        hash = hashlib.sha256(f"{challenge}{nonce}".encode()).hexdigest()
-        if hash.startswith(target):
-            return nonce, hash
+        checksum = hashlib.sha256(f"{challenge}{nonce}".encode()).hexdigest()
+        if checksum.startswith(target):
+            return nonce, checksum
         nonce += step
 
 

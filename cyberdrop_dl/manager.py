@@ -299,5 +299,5 @@ class AppData:
         return str(self.path)
 
     def mkdirs(self) -> None:
-        for dir in (self.cache, self.configs, self.cookies):
-            dir.mkdir(parents=True, exist_ok=True)
+        for folder in (self.cache, self.configs, self.cookies):
+            folder.mkdir(parents=True, exist_ok=True)

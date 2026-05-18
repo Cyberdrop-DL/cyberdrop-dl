@@ -70,9 +70,9 @@ class Video:
 
             is_single_file = type_ is not FormatType.HLS
 
-            for height, format in pairs:
-                url = parse_url(format["url"])
-                meta = Metadata(**(format.get("meta") or {}))
+            for height, fmt in pairs:
+                url = parse_url(fmt["url"])
+                meta = Metadata(**(fmt.get("meta") or {}))
 
                 if meta.w and meta.h:
                     resolution = Resolution(meta.w, meta.h)

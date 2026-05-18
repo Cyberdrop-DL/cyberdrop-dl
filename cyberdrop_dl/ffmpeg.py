@@ -431,16 +431,16 @@ async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
     program, *cmd = command
 
     if program == "ffmpeg":
-        bin = which_ffmpeg()
+        bin_path = which_ffmpeg()
     elif program == "ffprobe":
-        bin = which_ffprobe()
+        bin_path = which_ffprobe()
     else:
         raise ValueError(f"Unexpected program in command {command}")
 
-    assert bin
+    assert bin_path
     process_id = str(uuid.uuid4())
-    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin, *map(str, cmd)]})
-    process = await asyncio.create_subprocess_exec(bin, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin_path, *map(str, cmd)]})
+    process = await asyncio.create_subprocess_exec(bin_path, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
         stdout=stdout.decode("utf-8", errors="ignore"),

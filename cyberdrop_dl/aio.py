@@ -1,5 +1,6 @@
 """Async versions of builtins and some path operations"""
 
+# ruff: noqa: A001
 from __future__ import annotations
 
 import asyncio

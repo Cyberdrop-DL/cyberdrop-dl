@@ -235,10 +235,10 @@ def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
 
 def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[VideoSource]:
-    for format, formats in sources.items():
+    for fmt, formats in sources.items():
         for name, source in formats.items():
             url = parse_url(source["src"])
-            if format == "hls":
+            if fmt == "hls":
                 resolution = _parse_hls_res(url)
                 fps = 0.0
 
@@ -251,7 +251,7 @@ def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[V
                 fps=fps,
                 url=url,
                 name=name,
-                format=format,
+                format=fmt,
             )
 
 

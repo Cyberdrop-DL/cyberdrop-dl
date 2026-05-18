@@ -118,9 +118,9 @@ class HashTable:
             True if all the record was inserted or updated successfully, False otherwise.
         """
 
-        hash = await self.insert_or_update_hashes(hash_value, hash_type, file)
-        file_ = await self.insert_or_update_file(original_filename, referer, file)
-        return file_ and hash
+        hashed = await self.insert_or_update_hashes(hash_value, hash_type, file)
+        existed = await self.insert_or_update_file(original_filename, referer, file)
+        return existed and hashed
 
     async def insert_or_update_hashes(self, hash_value: str, hash_type: str, file: Path | str) -> bool:
         query = """

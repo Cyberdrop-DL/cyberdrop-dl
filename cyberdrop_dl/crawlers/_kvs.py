@@ -308,7 +308,7 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
     if not is_obfuscated:
         return url
 
-    hash, tail = url.parts[3][:_HASH_LENGTH], url.parts[3][_HASH_LENGTH:]
+    checksum, tail = url.parts[3][:_HASH_LENGTH], url.parts[3][_HASH_LENGTH:]
     indices = list(range(_HASH_LENGTH))
 
     # Swap indices of hash according to the destination calculated from the license token
@@ -319,5 +319,5 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
         indices[src], indices[dest] = indices[dest], indices[src]
 
     new_parts = list(url.parts)
-    new_parts[3] = "".join(hash[index] for index in indices) + tail
+    new_parts[3] = "".join(checksum[index] for index in indices) + tail
     return url.with_path("/".join(new_parts[1:]), keep_query=True, keep_fragment=True)

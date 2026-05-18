@@ -18,7 +18,7 @@ _TEXT_MIMETYPE = "text/plain"
 logger = logging.getLogger(__name__)
 
 
-def open(file_path: Path) -> None:
+def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
 
     cmd = _editor_cmd()

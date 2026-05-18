@@ -88,10 +88,10 @@ def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, s
         if not js_text.startswith(push):
             continue
         raw_data = js_text[js_text.find("(") + 1 : js_text.rfind(")")]
-        type, data = json.loads(raw_data)
-        type = FlightDataType(type)
-        if type is FlightDataType.PAYLOAD:
-            yield type, data
+        data_type, data = json.loads(raw_data)
+        data_type = FlightDataType(data_type)
+        if data_type is FlightDataType.PAYLOAD:
+            yield data_type, data
 
 
 def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:

@@ -85,11 +85,11 @@ class NsfwXXXCrawler(Crawler):
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
-            next: str | None = resp["meta"].get("nextPage")
-            if not next:
+            next_page: str | None = resp["meta"].get("nextPage")
+            if not next_page:
                 break
 
-            api_url = self.parse_url(next)
+            api_url = self.parse_url(next_page)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:

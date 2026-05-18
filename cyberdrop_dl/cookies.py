@@ -44,7 +44,7 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
-def filter(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
+def filter(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:  # noqa: A001
     if not domains:
         yield from cookies
     else:

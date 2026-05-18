@@ -90,11 +90,11 @@ class FilesterCrawler(Crawler):
             return css.select_text(file_details, f"span:-soup-contains({name}) + span")
 
         try:
-            hash, checksum = "sha256", file_attr("SHA-256")
+            hash_algo, checksum = "sha256", file_attr("SHA-256")
         except css.SelectorError:
-            hash, checksum = "md5", file_attr("MD5")
+            hash_algo, checksum = "md5", file_attr("MD5")
 
-        if await self.check_complete_by_hash(scrape_item, hash, checksum):
+        if await self.check_complete_by_hash(scrape_item, hash_algo, checksum):
             return
 
         scrape_item.uploaded_at = self.parse_iso_date(file_attr("Uploaded"))
