@@ -122,5 +122,5 @@ def remove_file_id(filename: str, ext: str) -> str:
         filename, _7z_ext = filename.rsplit("-", 1)
         filename = f"{filename}.{_7z_ext}"
     if not filename.endswith(ext):
-        filename = filename + ext
+        filename += ext
     return filename

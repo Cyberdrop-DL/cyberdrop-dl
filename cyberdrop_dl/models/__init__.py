@@ -39,7 +39,7 @@ class AppriseURL(AliasModel):
 
     def model_post_init(self, *_) -> None:
         if not self.tags.intersection(self._VALID_TAGS):
-            self.tags = self.tags | {"no_logs"}
+            self.tags |= {"no_logs"}
 
         if self.is_os_url:
             self.tags = (self.tags - self._VALID_TAGS) | {"simplified"}

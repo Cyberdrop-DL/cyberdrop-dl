@@ -49,7 +49,7 @@ class LuxureTVCrawler(Crawler):
         scrape_item.setup_as_album(title)
         url = scrape_item.url
         if url.name and not url.name.endswith(".html"):
-            url = url / ""
+            url /= ""
 
         async for soup in self.web_pager(url, impersonate=True):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_THUMBS):

@@ -350,7 +350,7 @@ def _make_decoder(algo: int, seed: int) -> Callable[[], int]:
         def decode_next() -> int:
             nonlocal current_step
 
-            current_step = current_step & 0xFFFFFFFF
+            current_step &= 0xFFFFFFFF
             current_step ^= (current_step << 13) & 0xFFFFFFFF
             current_step ^= (current_step >> 17) & 0xFFFFFFFF
             current_step ^= (current_step << 5) & 0xFFFFFFFF

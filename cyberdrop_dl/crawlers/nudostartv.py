@@ -27,7 +27,7 @@ class NudoStarTVCrawler(Crawler):
         if "models" not in scrape_item.url.parts:
             raise ValueError
         if scrape_item.url.name:
-            scrape_item.url = scrape_item.url / ""
+            scrape_item.url /= ""
         if len(scrape_item.url.parts) > 4:
             return await self.image(scrape_item)
         await self.model(scrape_item)

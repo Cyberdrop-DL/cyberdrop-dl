@@ -216,5 +216,5 @@ def _id(slug: str) -> str:
 def _sort_by_new(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     init_page = int(url.query.get("page") or 1)
     if url.name:
-        url = url / ""
+        url /= ""
     return url.with_query(sort="date_desc", page=init_page)

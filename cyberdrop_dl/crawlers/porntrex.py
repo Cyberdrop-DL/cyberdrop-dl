@@ -51,7 +51,7 @@ class PorntrexCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
-            scrape_item.url = scrape_item.url / ""
+            scrape_item.url /= ""
 
         match scrape_item.url.parts[1:]:
             case ["video", video_id, *_]:

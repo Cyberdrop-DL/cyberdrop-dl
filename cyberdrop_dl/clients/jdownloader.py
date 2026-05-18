@@ -110,7 +110,7 @@ class JDownloader:
         with self._wrap_errors():
             download_folder = self.config.download_dir
             if download_path:
-                download_folder = download_folder / download_path
+                download_folder /= download_path
 
             await asyncio.to_thread(
                 self._device.linkgrabber.add_links,
