@@ -43,9 +43,9 @@ def ifind(nuxt_data: list[Any], attribute: str, *attributes: str) -> Generator[d
             index: int = obj[attribute]
             index_map: dict[str, int] = nuxt_data[index]
             if not isinstance(index_map, dict):
-                raise LookupError
+                raise TypeError
 
-        except LookupError:
+        except (LookupError, TypeError):
             index_map = obj
 
         yield _parse_obj(nuxt_data, index_map)
