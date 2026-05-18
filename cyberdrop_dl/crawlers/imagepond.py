@@ -38,7 +38,6 @@ class File:
         is_archive = bool(soup.select_one(Selector.ARCHIVE))
 
         if is_archive:
-            # source = self.parse_url(scrape_item.url / "download/file")
             assume_ext, source = ".zip", css.select(soup, Selector.DIRECT_DL, "value")
         elif og.video:
             assume_ext, mimetype, source = ".mp4", og.video_type, og.video

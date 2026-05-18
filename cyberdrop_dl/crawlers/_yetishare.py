@@ -78,7 +78,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             node_id = ""
 
         else:
-            # ex:  loadImages('folder', '12345', 1, 0, '', {'searchTerm': "", 'filterUploadedDateRange': ""});
+            # this looks like:  loadImages('folder', '12345', 1, 0, '', {'searchTerm': "", 'filterUploadedDateRange': ""});
             page_type = "folder"
             load_images = extr_text(soup.select(Selector.LOAD_IMAGES)[-1].text, "loadImages(", ");")
             node_id = load_images.replace("'", "").split(",")[1].strip()

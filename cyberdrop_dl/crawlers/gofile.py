@@ -44,11 +44,6 @@ class File(UnlockedNode):
     viruses: NotRequired[bool]
     md5: str
 
-    # parentFolder: str
-    # size: int
-    # downloadCount: int
-    # thumbnail: str
-
 
 class Folder(UnlockedNode):
     type: Literal["folder"]
@@ -57,8 +52,6 @@ class Folder(UnlockedNode):
     children: dict[str, Node]
     password: NotRequired[str]
     passwordStatus: NotRequired[str]
-
-    # isRoot: NotRequired[bool]
 
 
 class GoFileCrawler(Crawler):
@@ -269,7 +262,6 @@ def _has_single_not_nested_file(scrape_item: ScrapeItem, folder: Folder) -> bool
 
 
 def _create_web_token(user_agent: str, brower_lang: str, api_key: str, salt: str) -> str:
-    # "https://gofile.io/dist/js/wt.obf.js"
-    # TODO: Get the salt automatically from the JS code
+    # https://gofile.io/dist/js/wt.obf.js
     token = f"{user_agent}::{brower_lang}::{api_key}::{int(time.time() // 14400)}::{salt}"
     return sha256(token.encode()).hexdigest()

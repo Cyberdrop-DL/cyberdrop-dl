@@ -678,10 +678,10 @@ class TestCheckPostId:
             # init_post_id > current_post_id
             (100, 90, True, True, False),
             (100, 90, False, True, False),
-            # init_post_id == current_post_id
+            # case init_post_id == current_post_id
             (100, 100, True, False, True),
             (100, 100, False, True, True),
-            # init_post_id < current_post_id
+            # case init_post_id < current_post_id
             (100, 110, True, False, False),
             (100, 110, False, True, True),
         ],
@@ -728,7 +728,7 @@ class TestCheckPostId:
             )
 
 
-# og_post_id = 23549340
+# original post_id = 23549340
 POST_TEMPLATE = """
 <article class="message message--post js-post js-inlineModContainer" data-author="" data-content="post-{id}" id="js-post-{id}" itemscope="" itemtype="https://schema.org/Comment" itemid="https://simpcity.su/posts/{id}/">
     <meta itemprop="parentItem" itemscope="" itemid="https://xenforocomunity.com/threads/fanfan.33077/" />

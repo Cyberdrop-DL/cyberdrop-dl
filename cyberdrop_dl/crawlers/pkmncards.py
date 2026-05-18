@@ -53,16 +53,6 @@ class Card:
             return f"#{self.number_str}"
         return f"{self.name} ({self.set.abbr}) #{self.number_str}"
 
-    # Other card properties that we don't use
-    # hp: int = 0
-    # color: str = ""
-    # type: str = ""
-    # text: str = ""
-    # pokemons: tuple[str, ...] = ()
-    # simbols: tuple[str, ...] = ()
-    # ram: int = 0
-    # rarity: str = ""
-
 
 @dataclass(slots=True)
 class SimpleCard:
@@ -113,10 +103,6 @@ class PkmncardsCrawler(Crawler):
             if "series" in scrape_item.url.parts:
                 return await self.series(scrape_item)
 
-        # We can download from this URL but we can't get any metadata
-        # It would be downloaded as a loose file with a random name, so i disabled it
-        # if scrape_item.url.path.startswith("/wp-content/uploads/"):
-        #    return await self.direct_file(scrape_item)
         raise ValueError
 
     @error_handling_wrapper

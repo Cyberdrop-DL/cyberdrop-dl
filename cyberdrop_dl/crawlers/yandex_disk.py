@@ -108,11 +108,6 @@ class YandexDiskCrawler(Crawler):
             if single_file_name:
                 return None
 
-        # TODO: Handle subfolders
-        # #for subfolder in folder.subfolders:
-        #    new_scrape_item = scrape_item.create_child(subfolder.url)
-        #    pass
-
     @contextlib.contextmanager
     def _request_context(self) -> Generator[None]:
         try:

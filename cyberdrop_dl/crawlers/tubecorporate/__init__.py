@@ -29,7 +29,6 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
             "/embed/<video_id>/...",
         )
     }
-    # DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         domains = cls.PRIMARY_URL.host, *cls.SUPPORTED_DOMAINS
