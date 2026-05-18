@@ -101,7 +101,7 @@ class Sorter:
             await self.sort_other(file, folder_name)
 
         except Exception:
-            logger.exception("Unknown error while sorting '{}'", file)
+            logger.exception("Unknown error while sorting '%s'", file)
             self._tui.stats.errors += 1
 
     async def sort_audio(self, file: Path, base_name: str) -> None:
@@ -142,7 +142,7 @@ class Sorter:
                 channels=False,
             )
         except Exception:
-            logger.exception("Unable to get some image properties of '{}'", file)
+            logger.exception("Unable to get some image properties of '%s'", file)
         else:
             width, height = info.width, info.height
             resolution = f"{width}x{height}"
@@ -203,7 +203,7 @@ class Sorter:
         )
         dest = await asyncio.to_thread(_move_file, file, dest, self.incrementer_format)
         if dest:
-            logger.debug("Moved '{}' to '{}'", file, dest)
+            logger.debug("Moved '%s' to '%s'", file, dest)
         else:
             self._tui.stats.errors += 1
         return bool(dest)
@@ -278,7 +278,7 @@ def _move_file(
 
                 new_filename = f"{dest_stem}{incrementer_format.format(i=auto_index)}{dest.suffix}"
                 logger.warning(
-                    "Found name collision when moving '{}' to '{}'. Retring with '{}'",
+                    "Found name collision when moving '%s' to '%s'. Retring with '%s'",
                     source,
                     dest,
                     dest := dest_parent / new_filename,
@@ -289,10 +289,10 @@ def _move_file(
                 except FileExistsError:
                     continue
 
-            logger.error("Unable to move '{}'. Giving up after {} attempts", source, max_retries)
+            logger.error("Unable to move '%s'. Giving up after %s attempts", source, max_retries)
             return None
     except OSError:
-        logger.exception("Unable to move '{}'", source)
+        logger.exception("Unable to move '%s'", source)
         return None
 
 
@@ -300,4 +300,4 @@ async def _try_probe(kind: str, file: Path) -> ffmpeg.FFprobeResult | None:
     try:
         return await ffmpeg.probe(file)
     except (RuntimeError, CalledProcessError, OSError):
-        logger.exception("Unable to get {} properties of '{}'", kind, file)
+        logger.exception("Unable to get %s properties of '%s'", kind, file)
