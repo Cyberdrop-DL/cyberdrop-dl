@@ -131,36 +131,12 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "ASYNC",  # async calls that do not await anything or use blocking methods
-    "B",  # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "COM8",  # flake8-commas linter
-    "E",  # pycodestyle errors
-    "F",  # pyflakes
-    "FA102",  # future annotations
-    "FURB188",  # slice-to-remove-prefix-or-suffix
-    "I",  # isort
-    "N",  # PEP8 naming conventions
-    "PLR1716",  # boolean chained comparison
-    "PTH",  # use pathlib instead of os
-    "Q",  # flake8-quotes
-    "RUF",  # RUF specific fixes
-    "T20",  # flake8-print
-    "TC",  # flake8-type-checking
-    "TID",  # flake8-tidy-imports
-    "UP",  # pyupgrade
-    "W"  # pycodestyle warnings
-]
-extend-safe-fixes = [
-    "TC"  # move import from and to TYPE_CHECKING blocks
+    "ALL"
 ]
 ignore = [
     "COM812",  # missing-trailing-comma
     "E501",  # suppress line-too-long, let formatter decide
     "N806"  # uppercase variables in functions
-]
-unfixable = [
-    "ERA"  # do not autoremove commented out code
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
