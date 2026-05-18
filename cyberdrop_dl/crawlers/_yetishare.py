@@ -232,7 +232,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             raise PasswordProtectedError(message="Incorrect password")
 
 
-def _check_is_available(soup: BeautifulSoup):
+def _check_is_available(soup: BeautifulSoup) -> None:
     if soup.select(Selector.RECAPTCHA):
         raise DDOSGuardError("Google recaptcha found")
 

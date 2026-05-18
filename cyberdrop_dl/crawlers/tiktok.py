@@ -196,7 +196,7 @@ class TikTokCrawler(Crawler):
         post = Post.from_dict(json_data)
         self._handle_post(scrape_item, post)
 
-    def _handle_post(self, scrape_item: ScrapeItem, post: Post):
+    def _handle_post(self, scrape_item: ScrapeItem, post: Post) -> None:
         scrape_item.url = post.canonical_url
         title = self.create_title(post.author.unique_id, post.id)
         scrape_item.add_to_parent_title(title)

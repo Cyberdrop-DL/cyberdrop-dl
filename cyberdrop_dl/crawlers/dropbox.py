@@ -165,7 +165,7 @@ class DropboxCrawler(Crawler):
             payload["voucher"] = resp["next_request_voucher"]
 
     @error_handling_wrapper
-    async def _get_web_token(self, *_):
+    async def _get_web_token(self, *_) -> None:
         async with self.request(self.PRIMARY_URL, method="HEAD"):
             token = self.get_cookie_value("t")
             if not token:

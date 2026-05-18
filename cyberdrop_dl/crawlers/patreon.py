@@ -84,7 +84,7 @@ class PatreonCrawler(Crawler):
         )
 
     @error_handling_wrapper
-    def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]):
+    def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]) -> None:
         if not post["current_user_can_view"]:
             raise ScrapeError(402, "You do not have access to this post")
 
@@ -126,7 +126,7 @@ class PatreonCrawler(Crawler):
 
         await self.handle_file(media.url, scrape_item, name, ext, custom_filename=filename)
 
-    async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media):
+    async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media) -> None:
         m3u8, info = await self.request_m3u8_playlist(media.url)
         filename = self.create_custom_filename(
             media.url.name.removesuffix(".m3u8"),

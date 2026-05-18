@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from cyberdrop_dl.sorter import Sorter, _format_dest, _have_same_content, _move_file
+from typing import Never
 
 DOWNLOADS = Path("/mnt/home/user/downloads/cdl/")
 SORT_DIR = DOWNLOADS.parent / "cdl_sorted"
@@ -141,7 +142,7 @@ class TestMoveFile:
         src.write_text("x")
         dst = tmp_path / "bar.txt"
 
-        def boom(*_, **_k):
+        def boom(*_, **_k) -> Never:
             raise OSError
 
         monkeypatch.setattr(shutil, "move", boom)
