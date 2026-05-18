@@ -103,7 +103,7 @@ class HiAnimeCrawler(Crawler):
             self._animes[anime_id] = anime = await self._request_anime_info(web_url, anime_id)
             return anime
 
-    async def request_json(self, url: AbsoluteHttpURL, *args, **kwargs: Any) -> Any:
+    async def request_json(self, url: AbsoluteHttpURL, *args: Any, **kwargs: Any) -> Any:
         # Sometimes they return HTML in the content type headers, but it is JSON
         headers = kwargs.pop("headers", {}) | {"Accept": "application/json"}
         async with self.request(url, *args, headers=headers, **kwargs) as resp:

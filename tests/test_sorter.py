@@ -142,7 +142,7 @@ class TestMoveFile:
         src.write_text("x")
         dst = tmp_path / "bar.txt"
 
-        def boom(*_, **_k) -> Never:
+        def boom(*_: object, **_k: object) -> Never:
             raise OSError
 
         monkeypatch.setattr(shutil, "move", boom)

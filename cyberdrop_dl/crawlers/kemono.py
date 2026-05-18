@@ -99,7 +99,7 @@ class Post(AliasModel):
     # `Any` to skip validation, but these are `yarl.URL`. We generate them internally so no validation is needed
     soup_attachments: list[Any] = []  # noqa: RUF012
 
-    def model_post_init(self, *_) -> None:
+    def model_post_init(self, *_: object) -> None:
         if date := self.published or self.added:
             self.timestamp = to_timestamp(date)
 

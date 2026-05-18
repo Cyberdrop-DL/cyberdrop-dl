@@ -105,7 +105,7 @@ class ProgressHook:
             raise RuntimeError
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._done:
             raise RuntimeError
         self.done()

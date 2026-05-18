@@ -5,6 +5,8 @@ import itertools
 from typing import TYPE_CHECKING, ClassVar
 from xml.etree import ElementTree as ET
 
+from typing_extensions import override
+
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
 from cyberdrop_dl.exceptions import MaxChildrenError, ScrapeError
 
@@ -55,7 +57,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     VBULLETIN_POST_QUERY_PARAM: ClassVar = "p"
     VBULLETIN_API_ENDPOINT: ClassVar[AbsoluteHttpURL]
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         REQUIRED_FIELDS = ("VBULLETIN_LOGIN_COOKIE_NAME", "VBULLETIN_API_ENDPOINT")
         for field_name in REQUIRED_FIELDS:
@@ -70,7 +72,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             login_url = self.PRIMARY_URL / "login.php"
             await self._login(login_url)
 
-    async def check_login_with_request(self, *_) -> tuple[str, bool]:
+    @override
+    async def check_login_with_request(self, *_: object, **_kwargs: object) -> tuple[str, bool]:
         # TODO: Support login
         return "", False
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -34,7 +34,7 @@ def patch() -> None:
         except Exception:
             return False
 
-    def new_traverse(obj, *args, **kwargs):
+    def new_traverse(obj, *args: Any, **kwargs: Any) -> pretty.Node:
         if is_page_element(obj):
             try:
                 value_repr = truncated_preview(repr(obj))
@@ -45,8 +45,7 @@ def patch() -> None:
 
         return traverse(obj, *args, **kwargs)
 
-    pretty.traverse = new_traverse
-    _original_traverse = traverse
+    pretty.traverse, _original_traverse = new_traverse, traverse
 
 
 def install_exception_hook(*, show_locals: bool = False) -> None:

@@ -111,7 +111,7 @@ class HTTPClient:
         self._download_session = self.create_aiohttp_session()
         return self
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._download_session.close())
             if self._curl_session is not None:
@@ -344,7 +344,10 @@ class HTTPClientProxy(Protocol):
     @signature.copy(HTTPClient.request)
     @contextlib.asynccontextmanager
     async def request(
-        self, *args, impersonate: str | bool | None = None, **kwargs
+        self,
+        *args: Any,
+        impersonate: str | bool | None = None,
+        **kwargs: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         if impersonate is None:
             impersonate = self._IMPERSONATE
@@ -361,16 +364,16 @@ class HTTPClientProxy(Protocol):
             _JSON_CHECK.reset(token)
 
     @signature.copy(request)
-    async def request_json(self, *args, **kwargs) -> Any:
+    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
         async with self.request(*args, **kwargs) as resp:
             return await resp.json()
 
     @signature.copy(request)
-    async def request_soup(self, *args, **kwargs) -> BeautifulSoup:
+    async def request_soup(self, *args: Any, **kwargs: Any) -> BeautifulSoup:
         async with self.request(*args, **kwargs) as resp:
             return await resp.soup()
 
     @signature.copy(request)
-    async def request_text(self, *args, **kwargs) -> str:
+    async def request_text(self, *args: Any, **kwargs: Any) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()

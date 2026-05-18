@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -53,7 +53,7 @@ def test_webdav_parse_propfind() -> None:
 class TestPropFind:
     @staticmethod
     @signature.copy(webdav.create_propfind_xml)
-    def create_propfind_xml(*args, **kwargs) -> ET.Element[str]:
+    def create_propfind_xml(*args: Any, **kwargs: Any) -> ET.Element[str]:
         root = webdav.create_propfind_xml(*args, **kwargs)
         return webdav.update_tags_from_ns(root)
 

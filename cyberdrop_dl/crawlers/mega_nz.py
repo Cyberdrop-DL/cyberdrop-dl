@@ -72,7 +72,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         speed_limiter = self.downloader.client.speed_limiter
         self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         self.downloader.client.speed_limiter = speed_limiter
-        await self.login(self.PRIMARY_URL)
+        await self.login()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in:
@@ -162,15 +162,15 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         media_item.extra_info.setdefault(self.DOMAIN, {})["key"] = self._decryption_keys.pop(media_item.url)
         await super().handle_media_item(media_item, m3u8)
 
-    @error_handling_wrapper
-    async def login(self, *_) -> None:
+    async def login(self) -> None:
         # This takes a really long time (dozens of seconds)
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
-        try:
-            with show_msg("Login into mega.nz"):
-                await self.core.login(self.user, self.password)
-            self._logged_in = True
-        except Exception as e:
-            self.disabled = True
-            raise LoginError(f"[MegaNZ] {e}") from e
+        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
+            try:
+                with show_msg("Login into mega.nz"):
+                    await self.core.login(self.user, self.password)
+            except Exception as e:
+                raise LoginError(f"[MegaNZ] {e}") from e
+            else:
+                self._logged_in = True

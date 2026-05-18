@@ -163,7 +163,7 @@ class DownloadClient:
         if not media_item.partial_file.is_file():
             media_item.partial_file.touch()
 
-    async def _post_download_check(self, media_item: MediaItem, *_) -> None:
+    async def _post_download_check(self, media_item: MediaItem, *_: Any) -> None:
         if not await aio.get_size(media_item.partial_file):
             await aio.unlink(media_item.partial_file, missing_ok=True)
             raise DownloadError(HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")

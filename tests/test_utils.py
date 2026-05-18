@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import platform
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -12,11 +13,11 @@ from cyberdrop_dl.utils.filepath import get_filename_and_ext
 class TestGetFilenameAndExt:
     _file = Path("Cyberdrop-DL.v8.4.0.zip")
 
-    def _ext(self, *args, **kargs) -> str:
-        return get_filename_and_ext(*args, **kargs)[1]
+    def _ext(self, *args: Any, **kwargs: Any) -> str:
+        return get_filename_and_ext(*args, **kwargs)[1]
 
-    def _name(self, *args, **kargs) -> str:
-        return get_filename_and_ext(*args, **kargs)[0]
+    def _name(self, *args: Any, **kwargs: Any) -> str:
+        return get_filename_and_ext(*args, **kwargs)[0]
 
     def test_ext_should_always_be_lowercase(self) -> None:
         exts = [self._ext(self._file.with_suffix(ext).name) for ext in (".zip", ".Zip", ".zIP", ".ziP")]

@@ -42,7 +42,8 @@ class DropboxCrawler(Crawler):
     DOMAIN: ClassVar[str] = "dropbox"
 
     async def __async_post_init__(self) -> None:
-        await self._get_web_token(self.PRIMARY_URL)
+        self._token: str = ""
+        await self._get_web_token()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -164,12 +165,10 @@ class DropboxCrawler(Crawler):
                 break
             payload["voucher"] = resp["next_request_voucher"]
 
-    @error_handling_wrapper
-    async def _get_web_token(self, *_) -> None:
-        async with self.request(self.PRIMARY_URL, method="HEAD"):
-            token = self.get_cookie_value("t")
-            if not token:
-                self.disabled = True
-                msg = "Unable to get token from dropbox. Crawler has been disabled"
-                raise LoginError(msg)
-            self._token = token
+    async def _get_web_token(self) -> None:
+        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get token from dropbox"):
+            async with self.request(self.PRIMARY_URL, method="HEAD"):
+                token = self.get_cookie_value("t")
+                if not token:
+                    raise LoginError
+                self._token = token

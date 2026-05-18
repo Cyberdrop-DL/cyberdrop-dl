@@ -246,7 +246,7 @@ class ScrapeItem:
         self._token = CURRENT_URL.set(self.url)
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         assert self._token
         CURRENT_URL.reset(self._token)
 

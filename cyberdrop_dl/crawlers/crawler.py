@@ -919,11 +919,11 @@ class CrawlerAPI:
     crawler: Crawler
 
     @signature.copy(HTTPClient.request)
-    async def request_text(self, *args, **kwargs) -> str:
+    async def request_text(self, *args: Any, **kwargs: Any) -> str:
         return await self.crawler.request_text(*args, **kwargs)
 
     @signature.copy(request_text)
-    async def request_json(self, *args, **kwargs) -> Any:
+    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
         return await self.crawler.request_json(*args, **kwargs)
 
 

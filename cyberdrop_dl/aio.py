@@ -81,7 +81,7 @@ class AsyncIOWrapper(Generic[AnyStr]):
         self._io = await self._coro
         return self
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         return await asyncio.to_thread(self._io.close)
 
     async def __aiter__(self) -> AsyncIterator[AnyStr]:

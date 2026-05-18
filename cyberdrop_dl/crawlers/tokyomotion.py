@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl import signature
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -131,12 +130,12 @@ class TokioMotionCrawler(Crawler):
             case ["favorite", "photos"]:
                 scrape_item.setup_as_album("favorite")
                 scrape_item.add_to_parent_title("photos")
-                async for soup in self.web_pager(scrape_item.url):
+                async for soup in self._web_pager(scrape_item.url):
                     self._iter_album_images(scrape_item, soup)
 
             case ["photos"]:
                 scrape_item.setup_as_album("photos")
-                async for soup in self.web_pager(scrape_item.url):
+                async for soup in self._web_pager(scrape_item.url):
                     self._iter_album_images(scrape_item, soup)
 
             case ["albums"]:
@@ -162,14 +161,13 @@ class TokioMotionCrawler(Crawler):
 
     @error_handling_wrapper
     async def crawl_children(self, scrape_item: ScrapeItem, selector: str) -> None:
-        async for soup in self.web_pager(scrape_item.url):
+        async for soup in self._web_pager(scrape_item.url):
             for _, new_item in self.iter_children(scrape_item, soup, selector):
                 self.create_task(self.run(new_item))
 
-    @signature.copy(Crawler.web_pager)
-    async def web_pager(self, url: AbsoluteHttpURL, *args, **kwargs) -> AsyncIterator[BeautifulSoup]:
+    async def _web_pager(self, url: AbsoluteHttpURL) -> AsyncIterator[BeautifulSoup]:
         is_fist_page: bool = True
-        async for soup in super().web_pager(url):
+        async for soup in self.web_pager(url):
             if is_fist_page:
                 _check_private(soup)
                 is_fist_page = False
