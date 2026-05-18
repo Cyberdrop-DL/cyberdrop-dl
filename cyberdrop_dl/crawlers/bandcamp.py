@@ -125,7 +125,7 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
         blob = await self._get_page_info(free_download_url, "blob")
         downloads: dict[str, dict[str, str]] = blob["download_items"][0]["downloads"]
 
-        name = max(downloads, key=lambda x: _score(x))
+        name = max(downloads, key=_score)
         download_url = downloads[name]["url"]
         ext_map: dict[str, str] = {fmt["name"]: fmt["file_extension"] for fmt in blob["download_formats"]}
 

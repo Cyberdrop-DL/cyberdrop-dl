@@ -140,7 +140,7 @@ def rstrip_domain(title: str, domain: str) -> str:
             return front.strip()
         return string
 
-    for char in sorted(("|", " - "), key=lambda x: title.rfind(x), reverse=True):
+    for char in sorted(("|", " - "), key=title.rfind, reverse=True):
         title = sanitize(title, char)
 
     return title

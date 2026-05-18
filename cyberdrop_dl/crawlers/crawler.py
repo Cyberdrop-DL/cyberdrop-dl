@@ -81,7 +81,7 @@ _include = _PlaceHolderConfigInclude()
 
 _DB_PATH_BUILDERS: MappingProxyType[str, Callable[[AbsoluteHttpURL], str]] = MappingProxyType(
     {
-        "url": lambda url: str(url),
+        "url": str,
         "name": lambda url: url.name,
         "path": lambda url: url.path,
         "path_qs": lambda url: url.path_qs,
