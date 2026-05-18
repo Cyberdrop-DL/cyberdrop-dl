@@ -38,7 +38,7 @@ class TestGetFilenameAndExt:
         assert ext == expected_ext
         assert filename == name + expected_ext
 
-    @pytest.mark.skipif(platform.system() in ("Windows", "Darwin"), reason="Emojis are stripped on Windows and MacOS")
+    @pytest.mark.skipif(platform.system() in {"Windows", "Darwin"}, reason="Emojis are stripped on Windows and MacOS")
     @pytest.mark.parametrize(
         ("name", "expected_name", "expected_ext"),
         [

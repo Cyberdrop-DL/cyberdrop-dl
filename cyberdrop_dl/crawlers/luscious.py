@@ -58,7 +58,7 @@ class LusciousCrawler(Crawler):
 
         elif operation == "AlbumListWithPeek":
             sorting = query.get("display", "date_newest")
-            filters = [{"name": i, "value": v} for i, v in query.items() if i not in ("page", "display", "q")]
+            filters = [{"name": i, "value": v} for i, v in query.items() if i not in {"page", "display", "q"}]
             data["variables"] = {"input": {"display": sorting, "filters": filters, "page": page}}
 
         self.log.debug(data)

@@ -117,9 +117,9 @@ def _literal_value(string: str) -> Any:
         return int(string)
     if string == "undefined":
         return None
-    if string in ("true", "!0"):
+    if string in {"true", "!0"}:
         return True
-    if string in ("false", "!1"):
+    if string in {"false", "!1"}:
         return False
     return string
 

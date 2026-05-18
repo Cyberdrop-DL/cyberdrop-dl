@@ -99,7 +99,7 @@ def to_timedelta(input_date: timedelta | str | int) -> timedelta | str:
 
 
 def falsy_as(value: _T | Literal[""] | None, default: _T2) -> _T | _T2:
-    if isinstance(value, str) and value.casefold() in ("none", "null"):
+    if isinstance(value, str) and value.casefold() in {"none", "null"}:
         return default
 
     return value or default

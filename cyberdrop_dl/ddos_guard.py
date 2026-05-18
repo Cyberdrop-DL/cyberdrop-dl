@@ -168,7 +168,7 @@ def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tu
         nonce += step
 
 
-if sys.platform not in ("win32", "darwin") and hasattr(os, "sched_getaffinity"):
+if sys.platform not in {"win32", "darwin"} and hasattr(os, "sched_getaffinity"):
 
     def cpu_count() -> int:
         return len(os.sched_getaffinity(0))

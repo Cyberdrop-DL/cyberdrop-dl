@@ -109,7 +109,7 @@ class Logs(SettingsGroup):
         now_file_iso: str = self._created_at.strftime(LOGS_DATETIME_FORMAT)
         now_folder_iso: str = self._created_at.strftime(LOGS_DATE_FORMAT)
         for name, log_file in vars(self).items():
-            if name == "log_folder" or not isinstance(log_file, Path) or log_file.suffix not in (".csv", ".log"):
+            if name == "log_folder" or not isinstance(log_file, Path) or log_file.suffix not in {".csv", ".log"}:
                 continue
 
             log_file = self.log_folder / log_file
@@ -125,7 +125,7 @@ class Logs(SettingsGroup):
             return
 
         for file in self.log_folder.rglob("*"):
-            if file.suffix.lower() not in (".log", ".csv"):
+            if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
             if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:

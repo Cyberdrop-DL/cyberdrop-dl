@@ -230,10 +230,10 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 return await self.post(scrape_item)
             case [service, "user", _] if service in self.SERVICES:
                 return await self.profile(scrape_item)
-            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in ("post", "artist", None):
+            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in {"post", "artist", None}:
                 type_ = type_ or "artist"
                 return await self.favorites(scrape_item, type_)
-            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in ("post", "artist"):
+            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in {"post", "artist"}:
                 return await self.favorites(scrape_item, type_)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)

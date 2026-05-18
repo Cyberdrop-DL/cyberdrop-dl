@@ -77,6 +77,6 @@ def thumbnail_to_img(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     if (new_ext := ".mp4") != url.suffix:
         new_ext = ".jpg"
     url = url.with_suffix(new_ext)
-    new_parts = [p for p in url.parts if p not in ("/", "thumb")]
+    new_parts = [p for p in url.parts if p not in {"/", "thumb"}]
     new_path = "/".join(new_parts)
     return url.with_path(new_path)

@@ -26,7 +26,7 @@ async def _get_dns_resolver(
     # pycares (the underlying C extension that aiodns uses) installs successfully in most cases,
     # but it fails to actually connect to DNS servers on some platforms (e.g., Android).
 
-    if (system := platform.system()) in ("Windows", "Android"):
+    if (system := platform.system()) in {"Windows", "Android"}:
         logger.warning(
             f"Unable to setup asynchronous DNS resolver. Falling back to thread based resolver. Reason: not supported on {system}"
         )

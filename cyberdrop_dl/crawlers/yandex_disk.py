@@ -118,7 +118,7 @@ class YandexDiskCrawler(Crawler):
         try:
             yield
         except DownloadError as e:
-            if e.status in (400, 403):
+            if e.status in {400, 403}:
                 raise DDOSGuardError from None
             raise
 

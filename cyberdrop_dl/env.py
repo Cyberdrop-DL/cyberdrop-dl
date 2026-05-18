@@ -27,7 +27,7 @@ DEBUG_MODE = bool(
     _env("DEBUG_MODE")
     or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
-    or os.getenv("TERM_PROGRAM") in ("vscode", "zed")
+    or os.getenv("TERM_PROGRAM") in {"vscode", "zed"}
 )
 ENABLE_DEBUG_CRAWLERS = (
     _env("ENABLE_DEBUG_CRAWLERS", censor=True) == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda"
@@ -46,5 +46,5 @@ ONEPACE_PREFER_DUB = bool(_env("ONEPACE_PREFER_DUB"))
 
 ALL_VARS = dict(sorted(ALL_VARS.items()))  # pyright: ignore[reportConstantRedefinition]
 ALL_VARS_RESOLVED = dict(
-    sorted((k, v) for k, v in globals().items() if k not in ("os", "hashlib", "ALL_VARS") and not k.startswith("_"))
+    sorted((k, v) for k, v in globals().items() if k not in {"os", "hashlib", "ALL_VARS"} and not k.startswith("_"))
 )

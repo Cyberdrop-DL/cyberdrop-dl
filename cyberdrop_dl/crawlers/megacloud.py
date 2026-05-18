@@ -135,7 +135,7 @@ _ISO639_MAP = {
 
 def _parse_lang_code(name: str, label: str) -> str:
     code = name.split("-", maxsplit=1)[0]
-    if len(code) in (2, 3):
+    if len(code) in {2, 3}:
         return code
 
     label = label.casefold()

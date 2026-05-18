@@ -29,7 +29,7 @@ def remove_emojis_and_symbols(filename: str) -> str:
 
 def sanitize_filename(name: str, sub: str = "") -> str:
     clean_name = re.sub(_SANITIZE_FILENAME_PATTERN, sub, name).strip()
-    if platform.system() in ("Windows", "Darwin"):
+    if platform.system() in {"Windows", "Darwin"}:
         clean_name = remove_emojis_and_symbols(clean_name)
     path = Path(clean_name)
     return path.stem.strip() + path.suffix

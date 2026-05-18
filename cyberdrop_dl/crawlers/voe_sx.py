@@ -242,7 +242,7 @@ def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generato
 
 def _parse_lang_code(name: str, label: str) -> str:
     code = Path(name).stem.rpartition("_")[-1]
-    if len(code) in (2, 3):
+    if len(code) in {2, 3}:
         return code
 
     label = label.casefold()

@@ -321,7 +321,7 @@ class VideoStream(Stream):
         if width and height:
             resolution: str | None = f"{width}x{height}"
 
-        if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in ("0/0", "0", "0.0"):
+        if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
             fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
         defaults = super(VideoStream, cls).validate(stream_info)

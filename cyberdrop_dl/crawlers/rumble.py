@@ -58,7 +58,7 @@ class Video:
     @staticmethod
     def parse_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
         for type_, format_options in formats.items():
-            if type_ in ("audio", "tar", "timeline"):
+            if type_ in {"audio", "tar", "timeline"}:
                 continue
 
             try:

@@ -858,7 +858,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             if _include.audio_codec and audio_codec:
                 yield audio_codec
 
-            if _include.resolution and resolution and resolution not in (Resolution.highest(), Resolution.unknown()):
+            if _include.resolution and resolution and resolution not in {Resolution.highest(), Resolution.unknown()}:
                 res = resolution if type(resolution) is Resolution else Resolution.parse(resolution)
                 if fps and _include.fps:
                     yield res.name + "@" + (str(int(fps)) if fps.is_integer() else f"{fps:.1f}") + "fps"

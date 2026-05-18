@@ -226,7 +226,7 @@ def url_from_hash(servers: Servers, image: Image, dir: str, ext: str | None = No
     server_num = servers[server_hex_num] + 1
     origin = AbsoluteHttpURL(f"https://{ext[1]}{server_num}.{CONTENT_HOST}")
     path = f"{servers.root}/{server_hex_num}/{image_hash}{ext}"
-    if dir in ("webp", "avif"):
+    if dir in {"webp", "avif"}:
         return origin / path
     return origin / dir / path
 
@@ -245,6 +245,6 @@ def parse_query_word(query_word: str) -> NozomiSearchArguments:
     left_side, _, right_side = query_word.partition(":")
     if left_side == "language":
         return NozomiSearchArguments(None, "index", right_side)
-    if left_side in ("female", "male"):
+    if left_side in {"female", "male"}:
         return NozomiSearchArguments("tag", query_word)
     return NozomiSearchArguments(left_side, right_side)
