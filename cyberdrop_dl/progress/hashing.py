@@ -92,7 +92,7 @@ class HashingUI(LiveUI):
 
         return ProgressHook(lambda _: None, lambda: 0, lambda: self._files.remove_task(task_id))
 
-    def add_completed(self, hash_type: Literal["xxh128", "md5", "sha256"]):
+    def add_completed(self, hash_type: Literal["xxh128", "md5", "sha256"]) -> None:
         setattr(self._stats, hash_type, getattr(self._stats, hash_type) + 1)
         if hash_type == "xxh128":
             self.stats.new_hashed += 1

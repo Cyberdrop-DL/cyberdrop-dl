@@ -142,7 +142,7 @@ class CSVLogsManager:
         url: AbsoluteHttpURL,
         response: AbstractResponse[Any],
         exc: Exception | None = None,
-    ):
+    ) -> None:
         _ = self.task_group.create_task(
             asyncio.to_thread(
                 _write_resp_to_disk,

@@ -24,7 +24,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_configure(config: Config):
+def pytest_configure(config: Config) -> None:
     config.test_crawlers_domains = {
         domain for item in config.getoption("--test-crawlers").split(",") if (domain := item.strip())
     }

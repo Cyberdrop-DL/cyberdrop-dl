@@ -306,7 +306,7 @@ async def fix_domains(db_conn: aiosqlite.Connection) -> None:
     await db_conn.commit()
 
 
-async def fix_referers(db_conn: aiosqlite.Connection):
+async def fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
 
     logger.info("Updating old referers")

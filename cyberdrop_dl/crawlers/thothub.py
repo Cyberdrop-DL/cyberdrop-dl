@@ -43,7 +43,7 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
+    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = self._clean_title(css.select_text(soup, Selector.TITLE))
         title = self.create_title(f"{title} [{type_}]")

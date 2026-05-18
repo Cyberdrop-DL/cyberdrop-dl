@@ -34,7 +34,7 @@ def test_ui_error_parsing(name: str, expected_msg: str, expected_code: int | Non
         ("Bad Gateway", 502, 5, "  502 Bad Gateway"),
     ],
 )
-def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected: str):
+def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected: str) -> None:
     error = UIError(msg, 0, code)
     assert error.format(padding) == expected + ": 0"
 

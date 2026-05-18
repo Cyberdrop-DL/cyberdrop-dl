@@ -9,7 +9,7 @@ from cyberdrop_dl.config import Config, settings
 from cyberdrop_dl.config.merge import merge_dicts
 
 
-def test_config_equality():
+def test_config_equality() -> None:
     config1 = Config()
     time.sleep(0.1)
     config2 = Config()
@@ -22,11 +22,11 @@ def test_config_equality():
     assert config1.model_dump() == config2.model_dump()
 
 
-def test_parse_config_from_args():
+def test_parse_config_from_args() -> None:
     assert Config() == Config.parse_args([])
 
 
-def test_parse_config_from_args2():
+def test_parse_config_from_args2() -> None:
     config = Config.model_validate(
         {
             "settings": {
@@ -42,7 +42,7 @@ def test_parse_config_from_args2():
         _ = Config.parse_args(["--i", "test.txt"])
 
 
-def test_logs_equality():
+def test_logs_equality() -> None:
     logs1 = settings.Logs()
     time.sleep(0.1)
     logs2 = settings.Logs()

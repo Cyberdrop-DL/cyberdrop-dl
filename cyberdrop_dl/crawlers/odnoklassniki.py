@@ -76,7 +76,7 @@ class OdnoklassnikiCrawler(Crawler):
                 raise ValueError
 
     @error_handling_wrapper
-    async def channel(self, scrape_item: ScrapeItem, channel_str: str):
+    async def channel(self, scrape_item: ScrapeItem, channel_str: str) -> None:
         soup = await self.request_soup(scrape_item.url, headers=_HEADERS)
 
         channel_id = channel_str.removeprefix("c")
@@ -132,7 +132,7 @@ class OdnoklassnikiCrawler(Crawler):
                 content = await resp.text()
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, video_id: str):
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         mobile_url = AbsoluteHttpURL(f"https://m.ok.ru/video/{video_id}")
         soup = await self.request_soup(mobile_url, headers=_MOBILE_HEADERS)
 
