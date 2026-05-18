@@ -132,7 +132,7 @@ def _is_pydantic_instance(obj: object, /) -> TypeGuard[BaseModel]:
     return hasattr(obj, "model_dump") and not isinstance(obj, type)
 
 
-def dumps(obj: object, /, *, sort_keys: bool = False, indent: int | None = None, **_) -> Any:
+def dumps(obj: object, /, *, sort_keys: bool = False, indent: int | None = None, **_: object) -> Any:
     encoder = _get_encoder(sort_keys=sort_keys, indent=indent)
     return encoder.encode(obj)
 

@@ -28,7 +28,7 @@ class Selector:
     FOLDER_TOTAL_PAGES = "input#rspTotalPages"
 
     LOGIN_FORM = "form#form_login"
-    PASSWORD_PROTECTED = "#folderPasswordForm, #filePassword"
+    PASSWORD_PROTECTED = "#folderPasswordForm, #filePassword"  # noqa: S105
     RECAPTCHA = "form[method=POST] script[src*='/recaptcha/api.js']"
 
 
@@ -46,7 +46,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
     }
     _RATE_LIMIT = 5, 1
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.FOLDERS_API_URL = cls.PRIMARY_URL / "account/ajax/load_files"
         cls.FILE_API_URL = cls.PRIMARY_URL / "account/ajax/file_details"

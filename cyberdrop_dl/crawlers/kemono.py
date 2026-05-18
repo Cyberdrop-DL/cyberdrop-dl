@@ -197,7 +197,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     API_ENTRYPOINT: ClassVar[AbsoluteHttpURL]
     SERVICES: ClassVar[tuple[str, ...]] = ()
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         Crawler._assert_fields_overrides(cls, "SERVICES")
 

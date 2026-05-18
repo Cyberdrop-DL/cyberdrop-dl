@@ -81,7 +81,7 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
     SUPPORTS_THREAD_RECURSION: ClassVar = False
     _RATE_LIMIT = 3, 1
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         assert cls.fetch is WordPressBaseCrawler.fetch
         assert cls.fetch_with_date_range is WordPressBaseCrawler.fetch_with_date_range

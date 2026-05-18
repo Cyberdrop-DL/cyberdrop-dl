@@ -380,7 +380,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     POST_URL_PART_NAME: ClassVar[str]
     PAGE_URL_PART_NAME: ClassVar[str]
 
-    def __init_subclass__(cls, *, is_abc: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, is_abc: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(is_abc=is_abc, **kwargs)
         if is_abc:
             return
