@@ -201,8 +201,16 @@ class HTTPClient:
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
-        self = cast("HTTPClient", self)
-        async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+        self = cast("HTTPClient", self)  # noqa: PLW0642
+        async with self.raw_request(
+            url,
+            method,
+            headers,
+            impersonate=impersonate,
+            data=data,
+            json=data,
+            request_params=request_params,
+        ) as resp:
             try:
                 await self.check_http_status(resp)
             except DDOSGuardError:
