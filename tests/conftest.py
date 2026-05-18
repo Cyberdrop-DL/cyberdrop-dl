@@ -63,13 +63,13 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
     return caplog
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def manager() -> Generator[Manager]:
     with Manager()() as manager:
         yield manager
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 async def running_manager(manager: Manager) -> AsyncGenerator[Manager]:
     async with manager.database:
         yield manager
