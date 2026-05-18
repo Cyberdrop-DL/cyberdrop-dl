@@ -216,7 +216,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
     _validate_results(crawler, test_case, results)
 
 
-def test_invalid_crawler_modeles_should_return_import_error() -> None:
+def test_invalid_crawler_modules_should_raise_import_error() -> None:
     from cyberdrop_dl.crawlers.crawler import Registry
 
     with pytest.raises(ImportError, match="Could not import crawlers from module"):
