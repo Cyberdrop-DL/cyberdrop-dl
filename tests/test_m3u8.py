@@ -80,7 +80,7 @@ def m3u8_master_content2() -> LiteralString:
 
 
 @pytest.mark.parametrize(
-    "url, resolution, name",
+    ("url", "resolution", "name"),
     [
         ("https://example.com/4b4ef277/720p/video.m3u8", (1280, 720), "720p"),
         ("https://example.com/4b4ef277/1920x1080p/video.m3u8", (1920, 1080), "1080p"),
@@ -96,7 +96,7 @@ def test_get_resolution_from_url(url: str, resolution: tuple[int, int], name: st
 
 
 @pytest.mark.parametrize(
-    "url, exception",
+    ("url", "exception"),
     [
         ("https://example.com/780/playlist.m3u8", RuntimeError),
         ("https://example.com", RuntimeError),
@@ -110,7 +110,7 @@ def test_get_resolution_from_url_invalid_url(url: str, exception: type[Exception
 
 
 @pytest.mark.parametrize(
-    "codecs, result",
+    ("codecs", "result"),
     [
         ("avc1.4d401f,mp4a.40.2", ("avc1", "mp4a")),
         ("hvc1.1.6.L93.B0,mp4a.40.2", ("hevc", "mp4a")),

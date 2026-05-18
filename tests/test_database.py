@@ -95,7 +95,7 @@ def test_invalid_date_format(row) -> None:
 
 
 @pytest.mark.parametrize(
-    "url, expected",
+    ("url", "expected"),
     [
         (
             "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642?k=1&autoPlay=1&oa=0&asi=1",

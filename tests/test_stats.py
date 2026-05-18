@@ -9,7 +9,7 @@ from cyberdrop_dl.progress.sorting import SortStats
 
 
 @pytest.mark.parametrize(
-    "scrape_errors, download_errors, expected_msgs",
+    ("scrape_errors", "download_errors", "expected_msgs"),
     [
         (
             ["Client Connector SSL Error", "502 Bad Gateway"],
@@ -75,7 +75,7 @@ def test_stats_of_unknown_obj_raise_not_implemented_error() -> None:
 
 
 @pytest.mark.parametrize(
-    "stats_cls, msg",
+    ("stats_cls", "msg"),
     [
         (DedupeStats, "Dedupe Stats"),
         (HashingStats, "Checksum Stats"),

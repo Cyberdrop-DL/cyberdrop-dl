@@ -136,7 +136,7 @@ async def test_ffprobe_video_url() -> None:
 
 
 @pytest.mark.parametrize(
-    "input, hours, minutes, seconds",
+    ("input", "hours", "minutes", "seconds"),
     [
         # numbers
         (42.5, 0, 0, 42.5),

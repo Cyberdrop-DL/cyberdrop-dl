@@ -187,7 +187,7 @@ def test_parse_thread(url: str, thread_name_and_id: str, result: tuple[int, str,
 
 
 @pytest.mark.parametrize(
-    "link, out",
+    ("link", "out"),
     [
         (
             "https://media.imagepond.net/media/IMG_2153a940fb5680979a52.jpg",
@@ -276,7 +276,7 @@ def test_parse_login_form_no_input_form_should_fail() -> None:
 
 
 @pytest.mark.parametrize(
-    "input_string, expected_output",
+    ("input_string", "expected_output"),
     [
         (
             r"some_text_before \/\/simpcity.su/path/to/resource.mp4 some_text_after",
@@ -893,7 +893,13 @@ def test_is_attachment_empty_string_should_be_false() -> None:
 
 class TestCheckPostId:
     @pytest.mark.parametrize(
-        "init_post_id, current_post_id, scrape_single_forum_post, expected_continue_scraping, expected_scrape_this_post",
+        (
+            "init_post_id",
+            "current_post_id",
+            "scrape_single_forum_post",
+            "expected_continue_scraping",
+            "expected_scrape_this_post",
+        ),
         [
             # init_post_id > current_post_id
             (100, 90, True, True, False),

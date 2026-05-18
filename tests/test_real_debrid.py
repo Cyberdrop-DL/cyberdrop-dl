@@ -5,7 +5,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 @pytest.mark.parametrize(
-    "input_url_str, expected_url_str",
+    ("input_url_str", "expected_url_str"),
     [
         (
             "https://dropbox.com/video/my_video.mp4?rlkey=1234&download=1",
@@ -62,7 +62,7 @@ def test_decode_original_url(input_url_str: str, expected_url_str: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "input_url_str, expected_url_str",
+    ("input_url_str", "expected_url_str"),
     [
         (
             "https://rapidgator.net/folder/5273235/Movie.html?sort=name.desc&page=52",

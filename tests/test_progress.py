@@ -8,7 +8,7 @@ from cyberdrop_dl.progress.scraping.errors import UIError
 
 
 @pytest.mark.parametrize(
-    "name, expected_msg, expected_code",
+    ("name", "expected_msg", "expected_code"),
     [
         ("404 Not Found", "Not Found", 404),
         ("Unknown", "Unknown", None),
@@ -23,7 +23,7 @@ def test_ui_error_parsing(name: str, expected_msg: str, expected_code: int | Non
 
 
 @pytest.mark.parametrize(
-    "msg, code, padding, expected",
+    ("msg", "code", "padding", "expected"),
     [
         ("Not Found", 404, 0, "404 Not Found"),
         ("Unknown", None, 0, "Unknown"),

@@ -4,7 +4,7 @@ from cyberdrop_dl.crawlers import bunkr
 
 
 @pytest.mark.parametrize(
-    "timestamp, url, expected",
+    ("timestamp", "url", "expected"),
     [
         (
             1774897194,

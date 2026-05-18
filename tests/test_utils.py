@@ -27,7 +27,7 @@ class TestGetFilenameAndExt:
         assert self._ext(file) == ".rar"
 
     @pytest.mark.parametrize(
-        "name, mimetype, expected_ext",
+        ("name", "mimetype", "expected_ext"),
         [
             ("archive", "application/zip", ".zip"),
             ("Katalina Kyle, Savanah Storm - What If She Hears Us!", "video/mp4", ".mp4"),
@@ -40,7 +40,7 @@ class TestGetFilenameAndExt:
 
     @pytest.mark.skipif(platform.system() in ("Windows", "Darwin"), reason="Emojis are stripped on Windows and MacOS")
     @pytest.mark.parametrize(
-        "name, expected_name, expected_ext",
+        ("name", "expected_name", "expected_ext"),
         [
             ("Vídeo de verificación [uvfdtpm4c2a]/video.MP4", "Vídeo de verificación [uvfdtpm4c2a]-video.mp4", ".mp4"),
             (
@@ -73,7 +73,7 @@ class TestGetFilenameAndExt:
         assert filename == self._file.name
 
     @pytest.mark.parametrize(
-        "name, expected_name, expected_ext",
+        ("name", "expected_name", "expected_ext"),
         [
             ("img_3763-webp.6091490", "img_3763.webp", ".webp"),
             ("1-gif.5021643", "1.gif", ".gif"),

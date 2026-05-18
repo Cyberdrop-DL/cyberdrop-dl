@@ -184,7 +184,7 @@ def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
 
 
 @pytest.mark.parametrize(
-    "url, filename",
+    ("url", "filename"),
     [
         (
             "https://techdigitalspace.com/wp-content/uploads/2025/11/Valve-Steam-Machine-2.jpg",

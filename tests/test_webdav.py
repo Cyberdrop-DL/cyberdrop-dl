@@ -81,7 +81,7 @@ class TestPropFind:
         assert prop.find("{https://calendarserver.org/ns}getctag") is not None
 
     @pytest.mark.parametrize(
-        "props, extra_ns",
+        ("props", "extra_ns"),
         [
             (("displayname",), None),
             (("displayname",), {}),
