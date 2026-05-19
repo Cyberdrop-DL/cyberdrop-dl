@@ -161,8 +161,8 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
             return None
         try:
             subs = await download(rendition.subtitle)
-        except Exception as e:
-            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
+        except Exception:
+            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping")
         else:
             logger.warning(
                 f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"

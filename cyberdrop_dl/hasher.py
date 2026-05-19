@@ -122,8 +122,8 @@ class Hasher:
                 media_item.path, media_item.original_filename, media_item.referer
             )
             await self.save_hash_data(media_item, hash_value)
-        except Exception as e:
-            logger.exception(f"After hash processing failed: '{media_item.path}' with error {e}")
+        except Exception:
+            logger.exception("After hash processing failed: '%s'", media_item.path)
 
     async def update_db_and_retrive_hash(
         self,
@@ -186,8 +186,8 @@ class Hasher:
                     original_filename,
                     referer,
                 )
-        except Exception as e:
-            logger.exception(f"Error hashing '{file}' : {e}")
+        except Exception:
+            logger.exception("Error hashing '%s'", file)
         else:
             return hash_value
 

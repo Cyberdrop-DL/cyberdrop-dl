@@ -231,8 +231,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via size: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via size")
 
     async def get_all_bunkr_failed_via_hash(self) -> AsyncGenerator[list[Row]]:
         query = """
@@ -246,8 +246,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via hash: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via hash")
 
     async def fix_primary_keys(self) -> None:
         domain_column, *_ = await self._get_media_table_columns()
