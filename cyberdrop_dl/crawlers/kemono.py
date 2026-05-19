@@ -224,7 +224,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if getattr(self, "API_ENTRYPOINT", None):
             await self._get_usernames(self.API_ENTRYPOINT / "creators")
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case [service, "user", _, "post", _] if service in self.SERVICES:
                 return await self.post(scrape_item)

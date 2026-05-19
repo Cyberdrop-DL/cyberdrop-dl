@@ -97,7 +97,7 @@ def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, s
 def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:
     chunks: dict[ChunkID, FlightChunk] = {}
 
-    def revive_str(value: str) -> Any:
+    def revive_str(value: str) -> Any:  # noqa: PLR0911
         if value[0] != "$":
             return value
 

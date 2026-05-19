@@ -53,7 +53,7 @@ def ifind(nuxt_data: list[Any], attribute: str, *attributes: str) -> Generator[d
 
 
 def _parse_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
-    def hydrate(value: Any) -> Any:
+    def hydrate(value: Any) -> Any:  # noqa: PLR0911
         if isinstance(value, list):
             match value:
                 case ["BigInt", val]:

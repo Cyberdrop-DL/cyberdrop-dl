@@ -11,9 +11,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
 
-    class Config(pytest.Config):  # type: ignore
-        test_crawlers_domains: set[str]
-
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
@@ -24,13 +21,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_configure(config: Config) -> None:
+def pytest_configure(config: pytest.Config) -> None:
     config.test_crawlers_domains = {
         domain for item in config.getoption("--test-crawlers").split(",") if (domain := item.strip())
     }
 
 
-def pytest_collection_modifyitems(config: Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """When running with --test-crawlers, disable all other tests"""
     if not config.test_crawlers_domains:
         return

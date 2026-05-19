@@ -16,7 +16,7 @@ def _item(url: str) -> ScrapeItem:
 
 
 manager = Manager()
-scrape_item = _item("https://xenforo.com/community")  # type: ignore
+scrape_item = _item("https://xenforo.com/community")
 crawler_instances = {crawler: crawler(manager) for crawler in crawlers.XF_CRAWLERS}
 TEST_CRAWLER = crawler_instances[crawlers.CelebForumCrawler]
 
@@ -644,7 +644,7 @@ def test_get_post_title_should_strip_new_lines() -> None:
 
 
 def test_is_attachment_should_handle_none() -> None:
-    assert TEST_CRAWLER.is_attachment(None) is False  # type: ignore
+    assert TEST_CRAWLER.is_attachment(None) is False  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize(

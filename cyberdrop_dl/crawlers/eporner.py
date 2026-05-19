@@ -74,7 +74,7 @@ class EpornerCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case [slug, *_] if slug.startswith("video-"):
                 video_id = slug.removeprefix("video-")

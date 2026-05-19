@@ -45,7 +45,7 @@ class _DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, dataclasses.Field[Any]]]
 
 
-def default(obj: object, /) -> Any:
+def default(obj: object, /) -> Any:  # noqa: PLR0911
     if isinstance(obj, datetime.date):
         return obj.isoformat()
     if isinstance(obj, enum.Enum):

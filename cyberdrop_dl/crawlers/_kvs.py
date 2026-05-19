@@ -76,7 +76,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             return url / ""
         return url
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case ["categories" | "tags", _]:
                 return await self.collection(scrape_item)

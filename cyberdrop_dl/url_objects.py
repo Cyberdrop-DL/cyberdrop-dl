@@ -144,8 +144,8 @@ class MediaItem:
     parent_threads: set[AbsoluteHttpURL] = field(default_factory=set)
 
     attempts: int = 0
-    partial_file: Path = None  # type: ignore
-    path: Path = None  # type: ignore
+    partial_file: Path = None  # pyright: ignore[reportAssignmentType]
+    path: Path = None  # pyright: ignore[reportAssignmentType]
     hash: str | None = None
     downloaded: bool = field(default=False)
 

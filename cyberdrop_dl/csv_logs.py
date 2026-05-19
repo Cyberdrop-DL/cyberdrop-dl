@@ -188,7 +188,7 @@ def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:
     with last_post_log.open(encoding="utf8") as f:
         reader = csv.DictReader(f.readlines())
         for row in reader:
-            new_url = base_url = row["url"].strip().removesuffix("/")  # type: ignore
+            new_url = base_url = row["url"].strip().removesuffix("/")
 
             if "https" in new_url and "/post-" in new_url:
                 base_url = new_url.rsplit("/post", 1)[0]

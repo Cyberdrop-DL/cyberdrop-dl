@@ -33,7 +33,7 @@ def _create_subclass(url: AbsoluteHttpURL | str, base_class: type[_CrawlerT]) ->
         "SUPPORTED_DOMAINS": (),
         "FOLDER_DOMAIN": "",
     }
-    return type(class_name, (base_class,), class_attributes)  # type: ignore  # pyright: ignore[reportReturnType]
+    return type(class_name, (base_class,), class_attributes)  # pyright: ignore[reportReturnType]
 
 
 def _make_crawler_name(input_string: str) -> str:
