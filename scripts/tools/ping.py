@@ -35,7 +35,12 @@ async def parse_stderr(process: subprocess.Process) -> str:
 
 async def try_ping(url: AbsoluteHttpURL) -> bool:
     process = await ping(url.host)
-    if process.returncode == 0 or not (stderr := await parse_stderr(process)):
+    if process.returncode == 0:
+        return True
+
+    stderr = await parse_stderr(process)
+    if not stderr:
+        logger.warning("No response from %s but DNS lookup was successful", url)
         return True
 
     logger.error("Unable to ping %s (%s)", url, stderr)
