@@ -70,7 +70,7 @@ class ImagePondCrawler(Crawler):
         ),
         "Direct links": "/media/<slug>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imagepond.net")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.imagepond.net")
     DOMAIN: ClassVar[str] = "imagepond.net"
     FOLDER_DOMAIN: ClassVar[str] = "ImagePond"
     DEFAULT_TRIM_URLS: ClassVar[bool] = False

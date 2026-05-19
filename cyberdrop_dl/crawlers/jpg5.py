@@ -68,8 +68,3 @@ class JPG5Crawler(CheveretoCrawler):
             encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
             link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
         return super().parse_url(link_str, relative_to, trim=trim)
-
-
-def fix_db_referer(referer: str) -> str:
-    url = AbsoluteHttpURL(referer)
-    return str(JPG5Crawler.transform_url(url))

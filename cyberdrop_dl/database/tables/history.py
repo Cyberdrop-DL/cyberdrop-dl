@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import aiosqlite
     from yarl import URL
 
+    from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.url_objects import MediaItem
 
@@ -325,8 +326,8 @@ async def fix_referers(db_conn: aiosqlite.Connection) -> None:
 
     for name, fn in [
         ("FIX_REDGIFS_REFERER", redgifs.fix_db_referer),
-        ("FIX_JPG5_REFERER", jpg5.fix_db_referer),
-        ("FIX_CYBERDROP_REFERER", cyberdrop.fix_db_referer),
+        ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler)),
+        ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler)),
         ("FIX_TURBOVID_REFERER", turbovid.fix_db_referer),
     ]:
         await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
@@ -340,3 +341,11 @@ async def fix_referers(db_conn: aiosqlite.Connection) -> None:
 
     await db_conn.executescript(updates)
     await db_conn.commit()
+
+
+def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:
+    def fix_db_referer(referer: str) -> str:
+        url = crawler.parse_url(referer, trim=False)
+        return str(crawler.transform_url(url))
+
+    return fix_db_referer
