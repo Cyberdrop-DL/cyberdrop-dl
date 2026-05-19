@@ -109,7 +109,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         return title or rest
 
     @classmethod
-    def _collection_title(cls, soup: BeautifulSoup):
+    def _collection_title(cls, soup: BeautifulSoup) -> str:
         return cls._clean_title(css.select_text(soup, Selector.COMMON_VIDEOS_TITLE))
 
     @error_handling_wrapper

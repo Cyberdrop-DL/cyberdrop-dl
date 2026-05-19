@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -284,7 +284,7 @@ class RuntimeOptions(SettingsGroup):
 
     @field_validator("log_level", "console_log_level", mode="before")
     @classmethod
-    def normalize_log_level(cls, value: object):
+    def normalize_log_level(cls, value: object) -> Any:
         value = falsy_as_none(value)
         if type(value) is str:
             try:
