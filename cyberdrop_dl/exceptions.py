@@ -189,6 +189,10 @@ class ScrapeError(CDLBaseError):
         ui_failure = create_error_msg(status)
         super().__init__(ui_failure, message=message, status=status, origin=origin)
 
+    @staticmethod
+    def unsupported() -> ScrapeError:
+        return ScrapeError("Unknown URL path")
+
 
 class InvalidURLError(ScrapeError):
     def __init__(

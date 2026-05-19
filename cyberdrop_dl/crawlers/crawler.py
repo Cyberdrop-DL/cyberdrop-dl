@@ -369,13 +369,15 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
             self._scraped_items.add(url.path_qs)
 
+            if not self.ALLOW_EMPTY_PATH and url.path == "/":
+                self.raise_exc(scrape_item, ScrapeError.unsupported())
+                return
+
             with self.new_task_id(scrape_item.url):
                 try:
-                    if not self.ALLOW_EMPTY_PATH and scrape_item.url.path == "/":
-                        raise ValueError
                     await self.fetch(scrape_item)
                 except ValueError:
-                    self.raise_exc(scrape_item, ScrapeError("Unknown URL path"))
+                    self.raise_exc(scrape_item, ScrapeError.unsupported())
                 except MaxChildrenError as e:
                     self.raise_exc(scrape_item, e)
 

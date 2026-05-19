@@ -61,7 +61,7 @@ class Resource:
 
 
 def parse_propfind(xml_resp: str) -> Generator[Resource]:
-    root = ET.fromstring(xml_resp)
+    root = ET.fromstring(xml_resp)  # noqa: S314
 
     for response in root.iterfind(".//{DAV:}response"):
         href = response.find("{DAV:}href")
@@ -115,7 +115,7 @@ def create_propfind_xml(
 
 
 def update_tags_from_ns(root: ET.Element[str]) -> ET.Element[str]:
-    return ET.fromstring(xml_to_bytes(root))
+    return ET.fromstring(xml_to_bytes(root))  # noqa: S314
 
 
 def xml_to_bytes(root: ET.Element[str]) -> bytes:

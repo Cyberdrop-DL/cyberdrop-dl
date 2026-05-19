@@ -137,9 +137,9 @@ extend-safe-fixes = [
     "TC"  # move import from and to TYPE_CHECKING blocks
 ]
 ignore = [
-    "ANN401",  # any-type
+    "ANN",  # flake8-annotations
     "COM812",  # missing-trailing-comma
-    "D",  # Documantation
+    "D",  # Documentation
     "E501",  # suppress line-too-long, let formatter decide
     "EM",  # flake8-errmsg
     "FIX002",  # line-contains-todo
@@ -148,9 +148,11 @@ ignore = [
     "N806",  # uppercase variables in functions
     "PLC0415",  # import-outside-top-level
     "PLR2004",  # magic-value-comparison
+    "PLW2901",  # redefined-loop-name
     "RET503",  # implicit-return
     "S101",  # assert
     "S110",  # try-except-pass
+    "S311",  # suspicious-non-cryptographic-random-usage
     "S603",  # subprocess-without-shell-equals-true
     "S607",  # start-process-with-partial-path
     "SIM105",  # suppressible-exception

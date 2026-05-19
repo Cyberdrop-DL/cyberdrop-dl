@@ -24,7 +24,7 @@ def test_bs4_are_truncated_on_tracebacks() -> None:
     local_soup = soup
     with Console(record=True, width=None, file=NULL_FILE) as console:
         try:
-            raise ValueError
+            raise ValueError  # noqa: TRY301
         except ValueError:
             traceback = Traceback(show_locals=True)
 
