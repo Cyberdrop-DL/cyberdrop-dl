@@ -263,7 +263,7 @@ def open(
 ) -> AsyncIOWrapper[str]: ...
 
 
-def open(
+def open(  # noqa: PLR0913
     path: Path,
     mode: str = "r",
     buffering: int = -1,

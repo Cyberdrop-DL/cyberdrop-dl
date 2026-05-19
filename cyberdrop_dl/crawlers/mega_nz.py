@@ -150,7 +150,8 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             if await self.check_complete_from_referer(canonical_url):
                 continue
 
-            child_item = scrape_item.create_child(canonical_url, possible_datetime=file.created_at)
+            child_item = scrape_item.create_child(canonical_url)
+            child_item.uploaded_at = file.created_at
             for part in path.parent.parts[1:]:
                 child_item.add_to_parent_title(part)
 

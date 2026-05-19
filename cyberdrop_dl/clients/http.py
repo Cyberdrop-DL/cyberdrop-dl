@@ -188,7 +188,7 @@ class HTTPClient:
         raise DownloadError(status=response.status)
 
     @contextlib.asynccontextmanager
-    async def request(
+    async def request(  # noqa: PLR0913
         self: object,
         url: AbsoluteHttpURL,
         /,
@@ -222,7 +222,7 @@ class HTTPClient:
                 yield resp
 
     @contextlib.asynccontextmanager
-    async def raw_request(
+    async def raw_request(  # noqa: PLR0913
         self,
         url: AbsoluteHttpURL,
         /,

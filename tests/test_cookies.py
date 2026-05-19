@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 now = 1_000_000
 
 
-def make_cookie(
+def make_cookie(  # noqa: PLR0913
     *,
     domain: str,
     name: str,

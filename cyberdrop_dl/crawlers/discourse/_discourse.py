@@ -97,10 +97,8 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     async def process_posts(self, scrape_item: ScrapeItem, topic: Topic) -> None:
         last_post_id = None
         async for post in self.iter_posts(topic):
-            new_scrape_item = scrape_item.create_child(
-                self.PRIMARY_URL / post.path.removeprefix("/"),
-                possible_datetime=to_timestamp(post.created_at),
-            )
+            new_scrape_item = scrape_item.create_child(self.PRIMARY_URL / post.path.removeprefix("/"))
+            new_scrape_item.uploaded_at = to_timestamp(post.created_at)
             await self.post(new_scrape_item, post)
             last_post_id = post.id
             try:

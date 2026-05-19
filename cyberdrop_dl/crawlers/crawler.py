@@ -435,7 +435,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         await self.__write_to_jsonl(media_item)
 
     @final
-    async def handle_file(
+    async def handle_file(  # noqa: PLR0913
         self,
         url: AbsoluteHttpURL,
         scrape_item: ScrapeItem,
@@ -856,7 +856,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         return await self._request_m3u8(url, headers, media_type)
 
     @final
-    def create_custom_filename(
+    def create_custom_filename(  # noqa: PLR0913
         self,
         name: str,  # can be the full name or just the stem
         ext: str,
