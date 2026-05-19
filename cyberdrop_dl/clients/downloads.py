@@ -76,7 +76,7 @@ class DownloadClient:
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 
-    async def _process_response(
+    async def _process_response(  # noqa: C901
         self,
         media_item: MediaItem,
         domain: str,
@@ -243,7 +243,7 @@ class DownloadClient:
         download_dir = self.get_download_dir(media_item)
         return download_dir / media_item.filename
 
-    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: PLR0912, PLR0915
+    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: C901, PLR0912, PLR0915
         """Complicated checker for if a file already exists, and was already downloaded."""
         media_item.path = self.get_file_location(media_item)
         part_suffix = media_item.path.suffix + constants.TempExt.PART

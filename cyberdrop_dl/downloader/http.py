@@ -258,7 +258,7 @@ class Downloader:
         async with _exclusive_lock(media_item):
             return bool(await self.download(media_item))
 
-    async def _download(self, media_item: MediaItem) -> bool | None:
+    async def _download(self, media_item: MediaItem) -> bool | None:  # noqa: C901
         """Downloads the media item."""
         url_as_str = str(media_item.url)
         if url_as_str in _KNOWN_BAD_URLS:

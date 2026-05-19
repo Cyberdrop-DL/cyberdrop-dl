@@ -139,7 +139,7 @@ class PorntrexCrawler(Crawler):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS, new_title_part="albums"):
                 self.create_task(self.run(new_scrape_item))
 
-    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:
+    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901
         if last_page == 1:
             return
         block_id: str = "list_videos_common_videos_list_norm"

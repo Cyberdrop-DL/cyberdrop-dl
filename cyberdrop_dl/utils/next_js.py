@@ -94,7 +94,7 @@ def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, s
             yield data_type, data
 
 
-def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:
+def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:  # noqa: C901
     chunks: dict[ChunkID, FlightChunk] = {}
 
     def revive_str(value: str) -> Any:  # noqa: PLR0911

@@ -176,7 +176,7 @@ class PixelDrainCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:
+    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:  # noqa: C901
         # https://github.com/Fornaxian/pixeldrain_web/blob/8e5ecfc5ce44c0b2b4fafdf9e8201dfc98395e88/svelte/src/filesystem/FilesystemAPI.ts
 
         origin = scrape_item.url.origin()

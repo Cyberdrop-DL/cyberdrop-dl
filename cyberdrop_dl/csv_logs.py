@@ -163,7 +163,7 @@ class CSVLogsManager:
         await asyncio.to_thread(update)
 
 
-def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:
+def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:  # noqa: C901
     log_spacer()
     logger.info("Updating Last Forum Posts...\n")
 
