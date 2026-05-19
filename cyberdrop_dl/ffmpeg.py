@@ -288,7 +288,7 @@ class Stream(DictDataclass):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
-        return cls(**cls.validate(data))
+        return super(Stream, cls).from_dict(cls.validate(data), **overrides)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

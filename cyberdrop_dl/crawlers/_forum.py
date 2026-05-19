@@ -393,10 +393,12 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
+        assert link
         return False
 
     @classmethod
     def thumbnail_to_img(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL | None:
+        assert url
         return None
 
     @classmethod

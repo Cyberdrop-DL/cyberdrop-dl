@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
@@ -58,6 +58,7 @@ class Post(DictDataclass):
             music_info=MusicInfo.from_dict(video["music_info"]),
             id=video.get("id") or video["video_id"],
             play=video.get("play") or video["play_url"],
+            **overrides,
         )
 
 
@@ -86,7 +87,7 @@ class TikTokCrawler(Crawler):
     DOMAIN: ClassVar[str] = "tiktok"
     FOLDER_DOMAIN: ClassVar[str] = "TikTok"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
-    _RATE_LIMIT = 1, 2
+    _RATE_LIMIT: ClassVar[RateLimit] = 1, 2
 
     @property
     def download_audios(self) -> bool:
