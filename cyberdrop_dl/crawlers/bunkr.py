@@ -285,9 +285,8 @@ class BunkrCrawler(Crawler):
             return await self.request_soup(url.with_host(self._known_good_host))
 
         async with self._startup_lock:
-            if url.host not in known_bad_hosts:
-                if soup := await self._try_request_soup(url):
-                    return soup
+            if url.host not in known_bad_hosts and (soup := await self._try_request_soup(url)):
+                return soup
 
             for host in _HOST_OPTIONS - known_bad_hosts:
                 if soup := await self._try_request_soup(url.with_host(host)):
@@ -298,7 +297,7 @@ class BunkrCrawler(Crawler):
 
 
 def _is_stream_redirect(host: str) -> bool:
-    first_subdomain = host.split(".")[0]
+    first_subdomain = host.split(".", maxsplit=1)[0]
     prefix, _, number = first_subdomain.partition("cdn")
     if not prefix and number.isdigit():
         return True
@@ -313,7 +312,7 @@ def _override_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url
 
 
-def _parse_api_resp(url: str, timestamp: int, encrypted: bool) -> str:
+def _parse_api_resp(url: str, timestamp: int, *, encrypted: bool) -> str:
     if not encrypted:
         return url
 

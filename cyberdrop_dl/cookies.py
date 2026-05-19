@@ -44,7 +44,7 @@ _CHROMIUM_BROWSERS = frozenset(
 )
 
 
-def filter(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:
+def filter(cookies: Iterable[Cookie], domains: list[str] | None = None) -> Generator[Cookie]:  # noqa: A001
     if not domains:
         yield from cookies
     else:
@@ -165,9 +165,10 @@ def _read_netscape_file(file: Path) -> MozillaCookieJar | None:
     cookie_jar = MozillaCookieJar(file)
     try:
         cookie_jar.load(ignore_discard=True)
-        return cookie_jar
     except OSError as e:
         logger.error(f"Unable to load cookies from '{file.name}':\n  {e!s}")
+    else:
+        return cookie_jar
 
 
 def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:

@@ -5,7 +5,6 @@ import contextlib
 import copy
 import datetime
 import logging
-from contextvars import ContextVar, Token
 from dataclasses import asdict, dataclass, field
 from enum import IntEnum
 from pathlib import Path
@@ -25,13 +24,13 @@ if TYPE_CHECKING:
 
     class AbsoluteHttpURL(yarl.URL):
         @signature.copy(yarl.URL.__new__)
-        def __new__(cls) -> AbsoluteHttpURL: ...
+        def __new__(cls) -> Self: ...
 
         @signature.copy(yarl.URL.__truediv__)
-        def __truediv__(self) -> AbsoluteHttpURL: ...
+        def __truediv__(self, name: str) -> AbsoluteHttpURL: ...
 
         @signature.copy(yarl.URL.__mod__)
-        def __mod__(self) -> AbsoluteHttpURL: ...
+        def __mod__(self, query: object) -> AbsoluteHttpURL: ...
 
         @property
         def host(self) -> str: ...  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -116,7 +115,6 @@ FILE_HOST_PROFILE = ScrapeItemType.FILE_HOST_PROFILE
 FILE_HOST_ALBUM = ScrapeItemType.FILE_HOST_ALBUM
 
 
-CURRENT_URL: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_URL")
 logger = logging.getLogger(__name__)
 
 
@@ -146,8 +144,8 @@ class MediaItem:
     parent_threads: set[AbsoluteHttpURL] = field(default_factory=set)
 
     attempts: int = 0
-    partial_file: Path = None  # type: ignore
-    path: Path = None  # type: ignore
+    partial_file: Path = None  # pyright: ignore[reportAssignmentType]
+    path: Path = None  # pyright: ignore[reportAssignmentType]
     hash: str | None = None
     downloaded: bool = field(default=False)
 
@@ -185,7 +183,7 @@ class MediaItem:
         return self.path.parent / f"{self.base64_id}.part"
 
     @staticmethod
-    def from_item(
+    def from_item(  # noqa: PLR0913
         origin: ScrapeItem | MediaItem,
         url: AbsoluteHttpURL,
         domain: str,
@@ -240,16 +238,6 @@ class ScrapeItem:
     children_limits: list[int] = field(default_factory=list, init=False)
     password: str | None = field(default=None, init=False)
 
-    _token: Token[AbsoluteHttpURL] | None = field(default=None, init=False)
-
-    def __enter__(self) -> Self:
-        self._token = CURRENT_URL.set(self.url)
-        return self
-
-    def __exit__(self, *_) -> None:
-        assert self._token
-        CURRENT_URL.reset(self._token)
-
     @contextlib.contextmanager
     def track_changes(self) -> Generator[Self]:
         old_url = self.url
@@ -260,7 +248,7 @@ class ScrapeItem:
                 logger.info(f"URL transformation applied: \n  {old_url = !s}\n  new_url = {self.url}")
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(url={self.url!r}, parent_title={self.parent_title!r}, possible_datetime={self.uploaded_at!r}"
+        return f"{type(self).__name__}(url={self.url!r}, parent_title={self.parent_title!r}, uploaded_at={self.uploaded_at!r}"
 
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
@@ -307,7 +295,7 @@ class ScrapeItem:
 
             raise MaxChildrenError(origin=self)
 
-    def reset(self, reset_parents: bool = False, reset_parent_title: bool = False) -> None:
+    def reset(self, *, reset_parents: bool = False, reset_parent_title: bool = False) -> None:
         """Resets `album_id`, `type` and `posible_datetime` back to `None`
 
         Reset `part_of_album` back to `False`
@@ -321,12 +309,12 @@ class ScrapeItem:
         if reset_parent_title:
             self.parent_title = ""
 
-    def setup_as(self, title: str, type: ScrapeItemType, *, album_id: str | None = None) -> None:
+    def setup_as(self, title: str, type_: ScrapeItemType, /, *, album_id: str | None = None) -> None:
         self.part_of_album = True
         if album_id:
             self.album_id = album_id
-        if self.type != type:
-            self.set_type(type)
+        if self.type != type_:
+            self.set_type(type_)
         self.add_to_parent_title(title)
 
     def create_new(
@@ -336,7 +324,6 @@ class ScrapeItem:
         new_title_part: str = "",
         part_of_album: bool = False,
         album_id: str | None = None,
-        possible_datetime: int | None = None,
         add_parent: AbsoluteHttpURL | bool | None = None,
     ) -> Self:
         """Creates a scrape item."""
@@ -355,38 +342,29 @@ class ScrapeItem:
 
         scrape_item.url = url
         scrape_item.part_of_album = part_of_album or scrape_item.part_of_album
-        scrape_item.uploaded_at = possible_datetime or scrape_item.uploaded_at
         scrape_item.album_id = album_id or scrape_item.album_id
         return scrape_item
 
-    def create_child(
-        self,
-        url: AbsoluteHttpURL,
-        *,
-        new_title_part: str = "",
-        album_id: str | None = None,
-        possible_datetime: int | None = None,
-    ) -> Self:
+    def create_child(self, url: AbsoluteHttpURL, *, new_title_part: str = "", album_id: str | None = None) -> Self:
         return self.create_new(
             url,
             part_of_album=True,
             add_parent=True,
             new_title_part=new_title_part,
             album_id=album_id,
-            possible_datetime=possible_datetime,
         )
 
     def setup_as_album(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FILE_HOST_ALBUM, album_id=album_id)
+        return self.setup_as(title, FILE_HOST_ALBUM, album_id=album_id)
 
     def setup_as_profile(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FILE_HOST_PROFILE, album_id=album_id)
+        return self.setup_as(title, FILE_HOST_PROFILE, album_id=album_id)
 
     def setup_as_forum(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FORUM, album_id=album_id)
+        return self.setup_as(title, FORUM, album_id=album_id)
 
     def setup_as_post(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
-        return self.setup_as(title, type=FORUM_POST, album_id=album_id)
+        return self.setup_as(title, FORUM_POST, album_id=album_id)
 
     @property
     def origin(self) -> AbsoluteHttpURL | None:
@@ -409,10 +387,7 @@ class ScrapeItem:
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""
-        self._token, token = None, self._token
-        me = copy.deepcopy(self)
-        self._token = token
-        return me
+        return copy.deepcopy(self)
 
 
 class QueryDatetimeRange(NamedTuple):
@@ -429,9 +404,7 @@ class QueryDatetimeRange(NamedTuple):
         return self
 
     def is_in_range(self, other: datetime.datetime) -> bool:
-        if (self.before and other >= self.before) or (self.after and other <= self.after):
-            return False
-        return True
+        return not ((self.before and other >= self.before) or (self.after and other <= self.after))
 
     def as_query(self) -> dict[str, Any]:
         return {name: value.isoformat() for name, value in self._asdict().items() if value}

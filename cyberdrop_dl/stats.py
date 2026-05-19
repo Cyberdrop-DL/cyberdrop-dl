@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @functools.singledispatch
-def print(stats: object) -> None:
+def print(stats: object) -> None:  # noqa: A001
     raise NotImplementedError(f"Unable to print stats for {stats!r}")
 
 

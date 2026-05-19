@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import platform
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -12,11 +13,11 @@ from cyberdrop_dl.utils.filepath import get_filename_and_ext
 class TestGetFilenameAndExt:
     _file = Path("Cyberdrop-DL.v8.4.0.zip")
 
-    def _ext(self, *args, **kargs) -> str:
-        return get_filename_and_ext(*args, **kargs)[1]
+    def _ext(self, *args: Any, **kwargs: Any) -> str:
+        return get_filename_and_ext(*args, **kwargs)[1]
 
-    def _name(self, *args, **kargs) -> str:
-        return get_filename_and_ext(*args, **kargs)[0]
+    def _name(self, *args: Any, **kwargs: Any) -> str:
+        return get_filename_and_ext(*args, **kwargs)[0]
 
     def test_ext_should_always_be_lowercase(self) -> None:
         exts = [self._ext(self._file.with_suffix(ext).name) for ext in (".zip", ".Zip", ".zIP", ".ziP")]
@@ -27,7 +28,7 @@ class TestGetFilenameAndExt:
         assert self._ext(file) == ".rar"
 
     @pytest.mark.parametrize(
-        "name, mimetype, expected_ext",
+        ("name", "mimetype", "expected_ext"),
         [
             ("archive", "application/zip", ".zip"),
             ("Katalina Kyle, Savanah Storm - What If She Hears Us!", "video/mp4", ".mp4"),
@@ -38,9 +39,9 @@ class TestGetFilenameAndExt:
         assert ext == expected_ext
         assert filename == name + expected_ext
 
-    @pytest.mark.skipif(platform.system() in ("Windows", "Darwin"), reason="Emojis are stripped on Windows and MacOS")
+    @pytest.mark.skipif(platform.system() in {"Windows", "Darwin"}, reason="Emojis are stripped on Windows and MacOS")
     @pytest.mark.parametrize(
-        "name, expected_name, expected_ext",
+        ("name", "expected_name", "expected_ext"),
         [
             ("Vídeo de verificación [uvfdtpm4c2a]/video.MP4", "Vídeo de verificación [uvfdtpm4c2a]-video.mp4", ".mp4"),
             (
@@ -73,7 +74,7 @@ class TestGetFilenameAndExt:
         assert filename == self._file.name
 
     @pytest.mark.parametrize(
-        "name, expected_name, expected_ext",
+        ("name", "expected_name", "expected_ext"),
         [
             ("img_3763-webp.6091490", "img_3763.webp", ".webp"),
             ("1-gif.5021643", "1.gif", ".gif"),

@@ -133,7 +133,7 @@ class Downloader:
                 )
 
     @contextlib.asynccontextmanager
-    async def _download_context(self, media_item: MediaItem):
+    async def _download_context(self, media_item: MediaItem) -> AsyncGenerator[None]:
 
         media_item.attempts = 0
         await self.client.mark_incomplete(media_item, self.domain)
@@ -210,7 +210,7 @@ class Downloader:
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         await self.finalize_download(media_item, downloaded=True)
 
-    async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
+    async def finalize_download(self, media_item: MediaItem, *, downloaded: bool) -> None:
         if downloaded:
             await aio.chmod(media_item.path, 0o666)
             await self.set_file_datetime(media_item, media_item.path)
@@ -258,7 +258,7 @@ class Downloader:
         async with _exclusive_lock(media_item):
             return bool(await self.download(media_item))
 
-    async def _download(self, media_item: MediaItem) -> bool | None:
+    async def _download(self, media_item: MediaItem) -> bool | None:  # noqa: C901
         """Downloads the media item."""
         url_as_str = str(media_item.url)
         if url_as_str in _KNOWN_BAD_URLS:
@@ -269,13 +269,6 @@ class Downloader:
                 media_item.duration = await self.manager.database.history.get_duration(self.domain, media_item)
                 await self.check_file_can_download(media_item)
             downloaded = await self.client.download_file(self.domain, media_item)
-            if downloaded:
-                await aio.chmod(media_item.path, 0o666)
-                if not media_item.is_segment:
-                    await self.set_file_datetime(media_item, media_item.path)
-                    self.manager.scrape_mapper.tui.files.stats.completed += 1
-                    logger.info(f"Download finished: {media_item.url}")
-            return downloaded
 
         except SkipDownloadError as e:
             if not media_item.is_segment:
@@ -304,6 +297,15 @@ class Downloader:
             message = str(e)
             raise DownloadError(ui_message, message, retry=True) from e
 
+        else:
+            if downloaded:
+                await aio.chmod(media_item.path, 0o666)
+                if not media_item.is_segment:
+                    await self.set_file_datetime(media_item, media_item.path)
+                    self.manager.scrape_mapper.tui.files.stats.completed += 1
+                    logger.info(f"Download finished: {media_item.url}")
+            return downloaded
+
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
     ignore_options = config.settings.ignore_options
@@ -330,6 +332,4 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
         return False
-    if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
-        return False
-    return True
+    return not (ignore_options.exclude_after and item_date > ignore_options.exclude_after)

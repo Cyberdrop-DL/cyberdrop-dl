@@ -55,7 +55,7 @@ class TrannyOneCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.VIDEO_TITLE)

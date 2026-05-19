@@ -78,7 +78,7 @@ class RateLimiting(SettingsGroup):
     def parse_timeouts(cls, value: object) -> object | None:
         return falsy_as_none(value)
 
-    def model_post_init(self, *_) -> None:
+    def model_post_init(self, *_: object) -> None:
         self._curl_timeout = self.connection_timeout
         if self.read_timeout is not None:
             self._curl_timeout = self.connection_timeout, self.read_timeout

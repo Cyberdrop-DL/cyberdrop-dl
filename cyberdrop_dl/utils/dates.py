@@ -72,7 +72,7 @@ elif sys.platform == "darwin" and (MAC_OS_SET_FILE := shutil.which("SetFile") or
     # SetFile is non standard in macOS. Only users that have xcode installed will have SetFile
 
     async def set_creation_time(file: Path, timestamp: float) -> None:
-        time_string = datetime.datetime.fromtimestamp(timestamp).strftime("%m/%d/%Y %H:%M:%S")
+        time_string = from_timestamp(timestamp).strftime("%m/%d/%Y %H:%M:%S")
         process = await asyncio.subprocess.create_subprocess_exec(
             MAC_OS_SET_FILE,
             "-d",
@@ -103,8 +103,8 @@ def parse_iso(date_or_datetime: str, /) -> UTCAwareDatetime:
     return _normalize(datetime.datetime.fromisoformat(date_or_datetime))
 
 
-def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:
-    return _normalize(datetime.datetime.strptime(date_or_datetime, format))
+def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:  # noqa: A002
+    return _normalize(datetime.datetime.strptime(date_or_datetime, format))  # noqa: DTZ007
 
 
 def parse_http(date: str, /) -> TimeStamp:
@@ -120,19 +120,17 @@ def to_timestamp(date: datetime.datetime) -> TimeStamp:
     return TimeStamp(int(date.timestamp()))
 
 
-def from_timestamp(timestamp: int) -> UTCAwareDatetime:
-    return _normalize(datetime.datetime.fromtimestamp(timestamp))
+def from_timestamp(timestamp: float) -> UTCAwareDatetime:
+    return _normalize(datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC))
 
 
-def parse(date_or_datetime: str, format: str | None = None, /, *, iso: bool = False) -> datetime.datetime | None:
-    if not date_or_datetime:
-        raise ValueError("Unable to extract date")
+def now() -> datetime.datetime:
+    return datetime.datetime.now()  # noqa: DTZ005
 
-    if iso:
-        return parse_iso(date_or_datetime)
-    elif format:
-        if format == "%Y-%m-%d" or format.startswith("%Y-%m-%d %H:%M:%S"):
-            raise ValueError("Do not use a custom format to parse iso8601 dates. Call parse_iso_date instead")
-        return parse_format(date_or_datetime, format)
-    else:
-        raise ValueError("iso or format is required")
+
+def now_utc() -> UTCAwareDatetime:
+    return _normalize(now())
+
+
+MIN = _normalize(datetime.datetime.min.replace(tzinfo=datetime.UTC))
+MAX = _normalize(datetime.datetime.max.replace(tzinfo=datetime.UTC))

@@ -42,7 +42,7 @@ class JsonableRenderableType(Protocol):
     def __json__(self) -> Any: ...
 
 
-def create_test_live(renderable: JsonableRenderableType, transient: bool = False, json: bool = True) -> Live:
+def create_test_live(renderable: JsonableRenderableType, *, transient: bool = False, json: bool = True) -> Live:
     from rich.json import JSON
     from rich.live import Live
 
@@ -105,7 +105,7 @@ class ProgressHook:
             raise RuntimeError
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._done:
             raise RuntimeError
         self.done()
@@ -151,7 +151,7 @@ class LiveUI(ABC):
 def strip_markup(text: str) -> str:
     from rich.markup import _parse
 
-    def parse():
+    def parse() -> Generator[str]:
         for _position, plain_text, _tag in _parse(text):
             if plain_text is not None:
                 yield plain_text.replace("\\[", "[")
@@ -159,7 +159,7 @@ def strip_markup(text: str) -> str:
     return "".join(parse())
 
 
-def truncate_float(value: float | int | None, precision: int = 3) -> float | None:
+def truncate_float(value: float | None, precision: int = 3) -> float | None:
     if value is None:
         return None
     return round(value, precision)

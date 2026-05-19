@@ -140,10 +140,7 @@ async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: s
 def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
     real_ext = parse_url(m3u8.segments[0].absolute_uri).suffix
     if len(m3u8.segments) > 1:
-        if m3u8.media_type == "subtitle":
-            suffix = f".{m3u8.media_type}{real_ext}"
-        else:
-            suffix = f".{m3u8.media_type}.ts"
+        suffix = f".{m3u8.media_type}{real_ext}" if m3u8.media_type == "subtitle" else f".{m3u8.media_type}.ts"
     else:
         suffix = output.suffix + real_ext
 
@@ -161,11 +158,11 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
 
     async def download_subs() -> Path | None:
         if not rendition.subtitle:
-            return
+            return None
         try:
             subs = await download(rendition.subtitle)
-        except Exception as e:
-            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping. {e!r}")
+        except Exception:
+            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping")
         else:
             logger.warning(
                 f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"

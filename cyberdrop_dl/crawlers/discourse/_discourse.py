@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
-_T = TypeVar("_T")
 _MAX_POSTS_PER_REQUEST = 50
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
@@ -88,7 +87,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     async def forum(self, scrape_item: ScrapeItem, /) -> None:
         raise NotImplementedError
 
-    def parse_thread(self, *args, **kwargs) -> None:
+    def parse_thread(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError
 
     async def thread(self, scrape_item: ScrapeItem, /, thread: Topic) -> None:
@@ -98,10 +97,8 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     async def process_posts(self, scrape_item: ScrapeItem, topic: Topic) -> None:
         last_post_id = None
         async for post in self.iter_posts(topic):
-            new_scrape_item = scrape_item.create_child(
-                self.PRIMARY_URL / post.path.removeprefix("/"),
-                possible_datetime=to_timestamp(post.created_at),
-            )
+            new_scrape_item = scrape_item.create_child(self.PRIMARY_URL / post.path.removeprefix("/"))
+            new_scrape_item.uploaded_at = to_timestamp(post.created_at)
             await self.post(new_scrape_item, post)
             last_post_id = post.id
             try:
@@ -142,7 +139,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
                 try:
                     if link_str:
                         yield self.parse_url(link_str)
-                except Exception:
+                except Exception:  # noqa: BLE001, S112
                     continue
 
         return iter_links()

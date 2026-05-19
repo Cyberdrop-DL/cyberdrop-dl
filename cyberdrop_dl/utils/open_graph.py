@@ -22,7 +22,7 @@ _ALL = _make_selector("")
 
 
 class OpenGraphError(ScrapeError):
-    def __init__(self, property: str | int) -> None:
+    def __init__(self, property: str | int) -> None:  # noqa: A002
         super().__init__(422, f"Page have no {property} [og properties]")
 
 

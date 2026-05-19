@@ -51,7 +51,7 @@ class PorntrexCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
-            scrape_item.url = scrape_item.url / ""
+            scrape_item.url /= ""
 
         match scrape_item.url.parts[1:]:
             case ["video", video_id, *_]:
@@ -139,7 +139,7 @@ class PorntrexCrawler(Crawler):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS, new_title_part="albums"):
                 self.create_task(self.run(new_scrape_item))
 
-    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:
+    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901
         if last_page == 1:
             return
         block_id: str = "list_videos_common_videos_list_norm"

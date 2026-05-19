@@ -48,7 +48,7 @@ class Database:
     async def fetchall(self, query: str, parameters: Iterable[Any] | None = None) -> list[aiosqlite.Row]:
         return await self._db_conn.execute_fetchall(query, parameters)  # pyright: ignore[reportReturnType]
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         await self._db_conn.close()
 
     async def _pre_allocate(self) -> None:

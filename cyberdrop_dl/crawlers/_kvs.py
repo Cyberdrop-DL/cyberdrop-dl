@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import re
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
@@ -14,7 +14,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph, parse_url
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncIterator, Generator, Sequence
 
     from bs4 import BeautifulSoup
 
@@ -58,7 +58,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[RateLimit] = 6, 5
 
-    def __init_subclass__(cls, ensure_trailing_slash: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, ensure_trailing_slash: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if ensure_trailing_slash:
             cls.transform_url = cls.transform_kvs_url
@@ -76,7 +76,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             return url / ""
         return url
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case ["categories" | "tags", _]:
                 return await self.collection(scrape_item)
@@ -99,9 +99,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     def _clean_title(cls, title: str) -> str:
         if title.startswith("New Videos Tagged"):
             title = title.partition("Showing")[0].partition("Tagged with")[-1].strip()
-        elif title.startswith(trash := "New Videos for: "):
-            title = title.partition(trash)[-1]
-        elif title.startswith(trash := "Videos for: "):
+        elif title.startswith(trash := "New Videos for: ") or title.startswith(trash := "Videos for: "):  # noqa: PIE810
             title = title.partition(trash)[-1]
         else:
             title = title.partition("New Videos")[0].strip()
@@ -110,7 +108,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         return title or rest
 
     @classmethod
-    def _collection_title(cls, soup: BeautifulSoup):
+    def _collection_title(cls, soup: BeautifulSoup) -> str:
         return cls._clean_title(css.select_text(soup, Selector.COMMON_VIDEOS_TITLE))
 
     @error_handling_wrapper
@@ -208,7 +206,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         src = self.parse_url(css.select(soup, Selector.PICTURE, "src"))
         await self.direct_file(scrape_item, src)
 
-    async def _ajax_pagination(
+    async def _ajax_pagination(  # noqa: PLR0913
         self,
         url: AbsoluteHttpURL,
         block_id: str,
@@ -220,7 +218,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         sort_by: str = "",
         from_query_param_name: str = "from",
         q: str | None = None,
-    ):
+    ) -> AsyncIterator[BeautifulSoup]:
         page_url = url.with_query(
             mode=mode,
             function=function,
@@ -269,22 +267,27 @@ _find_flashvars = re.compile(r"(\w+):\s*'([^']*)'").findall
 
 def _parse_video_vars(video_vars: str) -> KVSVideo:
     flashvars: dict[str, str] = dict(_find_flashvars(video_vars))
+    resolution, url = max(_parse_formats(flashvars))
+    return KVSVideo(
+        flashvars["video_id"],
+        flashvars.get("video_title", ""),
+        url,
+        resolution,
+    )
+
+
+def _parse_formats(flashvars: dict[str, str]) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
     url_keys = list(filter(_match_video_url_keys, flashvars.keys()))
     license_token = _get_license_token(flashvars["license_code"])
     parse_resolution = Resolution.make_parser()
-
-    def get_formats():
-        for key in url_keys:
-            url_str = flashvars[key]
-            if "/get_file/" not in url_str:
-                continue
-            quality = flashvars.get(f"{key}_text")
-            resolution = Resolution.highest() if quality in ("HQ", "Best Quality") else parse_resolution(quality)
-            url = _deobfuscate_url(url_str, license_token)
-            yield resolution, url
-
-    resolution, url = max(get_formats())
-    return KVSVideo(flashvars["video_id"], flashvars.get("video_title", ""), url, resolution)
+    for key in url_keys:
+        url_str = flashvars[key]
+        if "/get_file/" not in url_str:
+            continue
+        quality = flashvars.get(f"{key}_text")
+        resolution = Resolution.highest() if quality in {"HQ", "Best Quality"} else parse_resolution(quality)
+        url = _deobfuscate_url(url_str, license_token)
+        yield resolution, url
 
 
 def _get_license_token(license_code: str) -> tuple[int, ...]:
@@ -310,7 +313,7 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
     if not is_obfuscated:
         return url
 
-    hash, tail = url.parts[3][:_HASH_LENGTH], url.parts[3][_HASH_LENGTH:]
+    checksum, tail = url.parts[3][:_HASH_LENGTH], url.parts[3][_HASH_LENGTH:]
     indices = list(range(_HASH_LENGTH))
 
     # Swap indices of hash according to the destination calculated from the license token
@@ -321,5 +324,5 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
         indices[src], indices[dest] = indices[dest], indices[src]
 
     new_parts = list(url.parts)
-    new_parts[3] = "".join(hash[index] for index in indices) + tail
+    new_parts[3] = "".join(checksum[index] for index in indices) + tail
     return url.with_path("/".join(new_parts[1:]), keep_query=True, keep_fragment=True)

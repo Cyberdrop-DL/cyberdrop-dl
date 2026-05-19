@@ -10,6 +10,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, json
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -76,7 +78,7 @@ class OdnoklassnikiCrawler(Crawler):
                 raise ValueError
 
     @error_handling_wrapper
-    async def channel(self, scrape_item: ScrapeItem, channel_str: str):
+    async def channel(self, scrape_item: ScrapeItem, channel_str: str) -> None:
         soup = await self.request_soup(scrape_item.url, headers=_HEADERS)
 
         channel_id = channel_str.removeprefix("c")
@@ -132,7 +134,7 @@ class OdnoklassnikiCrawler(Crawler):
                 content = await resp.text()
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, video_id: str):
+    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         mobile_url = AbsoluteHttpURL(f"https://m.ok.ru/video/{video_id}")
         soup = await self.request_soup(mobile_url, headers=_MOBILE_HEADERS)
 
@@ -145,7 +147,7 @@ class OdnoklassnikiCrawler(Crawler):
         if metadata["movie"].get("is_live"):
             raise ScrapeError(422, "Livestreams are not supported")
 
-        resolution, src = _get_best_src(metadata)
+        resolution, src = max(_parse_sources(metadata))
         cdn_url = self.parse_url(src)
         # downloads may fail if we have cdn cookies
         self.client.cookies.clear_domain(cdn_url.host)
@@ -158,25 +160,22 @@ class OdnoklassnikiCrawler(Crawler):
         )
 
 
-def _get_best_src(metadata: dict[str, Any]) -> tuple[Resolution, str]:
-    def parse():
-        for video in metadata["videos"]:
-            if not video["disallowed"]:
-                resolution = Resolution.parse(
-                    {
-                        "ultra": 2160,
-                        "quad": 1440,
-                        "full": 1080,
-                        "hd": 720,
-                        "sd": 480,
-                        "low": 360,
-                        "lowest": 240,
-                        "mobile": 144,
-                    }[video["name"]]
-                )
-                yield resolution, video["url"]
-
-    return max(parse())
+def _parse_sources(metadata: dict[str, Any]) -> Generator[tuple[Resolution, str]]:
+    for video in metadata["videos"]:
+        if not video["disallowed"]:
+            resolution = Resolution.parse(
+                {
+                    "ultra": 2160,
+                    "quad": 1440,
+                    "full": 1080,
+                    "hd": 720,
+                    "sd": 480,
+                    "low": 360,
+                    "lowest": 240,
+                    "mobile": 144,
+                }[video["name"]]
+            )
+            yield resolution, video["url"]
 
 
 def _check_video_is_available(soup: BeautifulSoup) -> None:

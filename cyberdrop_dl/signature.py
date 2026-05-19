@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     import inspect
     from collections.abc import Callable
 
-    def copy(target: Callable[_P, _R]) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
+    def copy(target: Callable[_P, _R], /) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
         def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
             @functools.wraps(func)
             def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 else:
 
-    def copy(_):
-        def call(y):
-            return y
+    def copy(_target: Callable[_P, _R]) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
+        def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
+            return func
 
-        return call
+        return decorator

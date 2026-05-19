@@ -49,7 +49,7 @@ class LuxureTVCrawler(Crawler):
         scrape_item.setup_as_album(title)
         url = scrape_item.url
         if url.name and not url.name.endswith(".html"):
-            url = url / ""
+            url /= ""
 
         async for soup in self.web_pager(url, impersonate=True):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_THUMBS):
@@ -58,7 +58,7 @@ class LuxureTVCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
         scrape_item.uploaded_at = self.parse_iso_date(css.json_ld(soup)["uploadDate"])

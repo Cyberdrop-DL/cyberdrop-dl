@@ -29,7 +29,7 @@ class MediaType(StrEnum):
 class MediaList(list[Media]):
     def filter_by(
         self,
-        type: MediaType | str | None = None,
+        type: MediaType | str | None = None,  # noqa: A002
         group_id: str | None = None,
         language: str | None = None,
         name: str | None = None,
@@ -42,7 +42,7 @@ class MediaList(list[Media]):
 
     def filter(
         self,
-        type: MediaType | str | None = None,
+        type: MediaType | str | None = None,  # noqa: A002
         group_id: str | None = None,
         language: str | None = None,
         name: str | None = None,

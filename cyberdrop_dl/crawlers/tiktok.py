@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
@@ -45,7 +45,7 @@ class Post(DictDataclass):
     images: list[str] = dataclasses.field(default_factory=list)
     canonical_url: AbsoluteHttpURL = dataclasses.field(default_factory=AbsoluteHttpURL)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         part = "photo" if self.images else "video"
         self.canonical_url = _PRIMARY_URL / str(self.author) / part / self.id
         self.images = self.images or []
@@ -58,6 +58,7 @@ class Post(DictDataclass):
             music_info=MusicInfo.from_dict(video["music_info"]),
             id=video.get("id") or video["video_id"],
             play=video.get("play") or video["play_url"],
+            **overrides,
         )
 
 
@@ -86,7 +87,7 @@ class TikTokCrawler(Crawler):
     DOMAIN: ClassVar[str] = "tiktok"
     FOLDER_DOMAIN: ClassVar[str] = "TikTok"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
-    _RATE_LIMIT = 1, 2
+    _RATE_LIMIT: ClassVar[RateLimit] = 1, 2
 
     @property
     def download_audios(self) -> bool:
@@ -157,7 +158,7 @@ class TikTokCrawler(Crawler):
         if await self.check_complete(scrape_item.url, scrape_item.url):
             # The video was downloaded, but the audio may have not
             if not self.download_audios:
-                return
+                return None
 
             if post:
                 return self._handle_post(scrape_item, post)
@@ -196,7 +197,7 @@ class TikTokCrawler(Crawler):
         post = Post.from_dict(json_data)
         self._handle_post(scrape_item, post)
 
-    def _handle_post(self, scrape_item: ScrapeItem, post: Post):
+    def _handle_post(self, scrape_item: ScrapeItem, post: Post) -> None:
         scrape_item.url = post.canonical_url
         title = self.create_title(post.author.unique_id, post.id)
         scrape_item.add_to_parent_title(title)
@@ -263,6 +264,6 @@ class TikTokCrawler(Crawler):
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
         if media_item.ext == ".mp3":
-            media_item.download_folder = media_item.download_folder / "Audios"
+            media_item.download_folder /= "Audios"
 
         await super().handle_media_item(media_item, m3u8)

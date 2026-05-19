@@ -1,29 +1,27 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import json
-from dataclasses import asdict, dataclass, fields
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import DictDataclass, css, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import Generator
 
     from bs4 import BeautifulSoup
 
-    from cyberdrop_dl.downloader.mega_nz import AnyDict
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-JS_SELECTOR = "script#store-prefetch"
-DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://disk.yandex.com.tr/public/api/download-url")
-PRIMARY_URL = AbsoluteHttpURL("https://disk.yandex.com.tr/")
-KEYS_TO_KEEP = "currentResourceId", "resources", "environment"
+_PRIMARY_URL = AbsoluteHttpURL("https://disk.yandex.com.tr/")
+_DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://disk.yandex.com.tr/public/api/download-url")
+_KEYS_TO_KEEP = "currentResourceId", "resources", "environment"
 _DEFAULT_HEADERS = {
     "Accept": "*/*",
     "Accept-Language": "en-US,en;q=0.5",
@@ -52,7 +50,7 @@ class YandexDiskCrawler(Crawler):
 
     DOMAIN: ClassVar[str] = "disk.yandex"
     FOLDER_DOMAIN: ClassVar[str] = "YandexDisk"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -67,13 +65,13 @@ class YandexDiskCrawler(Crawler):
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
-        async with self.request_context():
+        with self._request_context():
             soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
-        item_info = get_item_info(soup)
-        assert is_single_item(item_info)
+        item_info = _get_item_info(soup)
+        assert _is_single_item(item_info)
         item_info["sk"] = item_info["environment"]["sk"]
         item_info["file_url"] = scrape_item.url
         file = YandexFile.from_json(item_info)
@@ -81,17 +79,17 @@ class YandexDiskCrawler(Crawler):
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, folder_id: str, single_file_name: str | None = None) -> None:
-        canonical_url = PRIMARY_URL / "d" / folder_id
+        canonical_url = _PRIMARY_URL / "d" / folder_id
         if single_file_name and await self.check_complete_from_referer(scrape_item.url):
-            return
+            return None
 
         scrape_item.url = canonical_url
-        async with self.request_context():
+        with self._request_context():
             soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
 
-        item_info = get_item_info(soup)
+        item_info = _get_item_info(soup)
         del soup
-        if is_single_item(item_info):
+        if _is_single_item(item_info):
             item_info["sk"] = item_info["environment"]["sk"]
             item_info["file_url"] = scrape_item.url
             file = YandexFile.from_json(item_info)
@@ -108,26 +106,21 @@ class YandexDiskCrawler(Crawler):
             await self._process_file(new_scrape_item, file)
             scrape_item.add_children()
             if single_file_name:
-                return
+                return None
 
-        # TODO: Handle subfolders
-        # #for subfolder in folder.subfolders:
-        #    new_scrape_item = scrape_item.create_child(subfolder.url)
-        #    pass
-
-    @contextlib.asynccontextmanager
-    async def request_context(self) -> AsyncGenerator[None]:
+    @contextlib.contextmanager
+    def _request_context(self) -> Generator[None]:
         try:
             yield
         except DownloadError as e:
-            if e.status in (400, 403):
+            if e.status in {400, 403}:
                 raise DDOSGuardError from None
             raise
 
     @error_handling_wrapper
     async def _process_file(self, scrape_item: ScrapeItem, file: YandexFile) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         referer = str(file.url)
         headers = _DEFAULT_HEADERS | {
@@ -138,8 +131,8 @@ class YandexDiskCrawler(Crawler):
             "X-Retpath-Y": referer,
         }
 
-        api_url = DOWNLOAD_API_ENTRYPOINT.with_host(scrape_item.url.host)
-        async with self.request_context():
+        api_url = _DOWNLOAD_API_ENTRYPOINT.with_host(scrape_item.url.host)
+        with self._request_context():
             json_resp: dict[str, Any] = await self.request_json(
                 api_url,
                 method="POST",
@@ -166,17 +159,17 @@ class YandexDiskCrawler(Crawler):
         await self.handle_file(file.url, scrape_item, filename, ext, debrid_link=link)
 
 
-def get_item_info(soup: BeautifulSoup) -> dict:
-    js_text: str = css.select_text(soup, JS_SELECTOR)
-    info_json: dict[str, AnyDict] = json.loads(js_text)
-    info_json = {k: v for k, v in info_json.items() if k in KEYS_TO_KEEP}
+def _get_item_info(soup: BeautifulSoup) -> dict[str, Any]:
+    js_text: str = css.select_text(soup, "script#store-prefetch")
+    info_json: dict[str, dict[str, Any]] = json.loads(js_text)
+    info_json = {k: v for k, v in info_json.items() if k in _KEYS_TO_KEEP}
     env: dict[str, str] = info_json["environment"]
     info_json["environment"] = {"sk": env["sk"]}  # We don't need any other info from env
     return info_json
 
 
-@dataclass(frozen=True, kw_only=True)
-class YandexItem:
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class YandexItem(DictDataclass):
     name: str
     modified: int
     type: Literal["file", "dir"]
@@ -185,22 +178,15 @@ class YandexItem:
     sk: str
     short_url: AbsoluteHttpURL  # https://yadi.sk/d/<id>
 
-    @classmethod
-    def get_valid_dict(cls, info: dict) -> dict[str, Any]:
-        valid_fields = {f.name for f in fields(cls)}
-        return {k: v for k, v in info.items() if k in valid_fields}
-
     @property
     def post_data(self) -> str:
         return json.dumps({"hash": self.path, "sk": self.sk})
 
-    def with_sk(self, new_sk) -> Self:
-        values = asdict(self)
-        values["sk"] = new_sk
-        return self.__class__(**values)
+    def with_sk(self, new_sk: str) -> Self:
+        return dataclasses.replace(self, sk=new_sk)
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class YandexFolder(YandexItem):
     resources: dict[str, Any]
     children_ids: list[str]
@@ -215,8 +201,12 @@ class YandexFolder(YandexItem):
             item_info: dict[str, Any] = self.resources[child_id]
             if item_info["type"] != "file":
                 continue  # TODO handle subfolders
-            valid_dict = YandexFile.get_valid_dict(item_info)
-            yield YandexFile(**valid_dict, parent_folder_public_id=self.public_id, sk=self.sk)
+
+            yield YandexFile.from_dict(
+                YandexFile.filter_dict(item_info),
+                parent_folder_public_id=self.public_id,
+                sk=self.sk,
+            )
 
     @property
     def subfolders(self) -> Generator[YandexFolder]:
@@ -228,22 +218,27 @@ class YandexFolder(YandexItem):
 
     @cached_property
     def url(self) -> AbsoluteHttpURL:
-        return PRIMARY_URL / "d" / self.id
+        return _PRIMARY_URL / "d" / self.id
 
     @classmethod
-    def from_json(cls, json_resp: dict) -> Self:
-        resources: dict[str, dict] = json_resp["resources"]
+    def from_json(cls, json_resp: dict[str, Any]) -> Self:
+        resources: dict[str, dict[str, Any]] = json_resp["resources"]
         folder_id: str = json_resp["currentResourceId"]
         sk: str = json_resp["environment"]["sk"]
 
         folder_details = resources[folder_id]
         short_url = AbsoluteHttpURL(folder_details["meta"]["short_url"])
         children_ids: list[str] = folder_details["children"]
-        valid_dict: dict[str, Any] = cls.get_valid_dict(folder_details)
-        return cls(**valid_dict, resources=resources, sk=sk, short_url=short_url, children_ids=children_ids)
+        return cls.from_dict(
+            cls.filter_dict(folder_details),
+            resources=resources,
+            sk=sk,
+            short_url=short_url,
+            children_ids=children_ids,
+        )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class YandexFile(YandexItem):
     parent_folder_public_id: str = ""
     file_url: AbsoluteHttpURL | None = None
@@ -251,22 +246,22 @@ class YandexFile(YandexItem):
     @cached_property
     def url(self) -> AbsoluteHttpURL:
         if self.parent_folder_public_id:
-            return PRIMARY_URL / "d" / self.parent_folder_public_id / self.name
+            return _PRIMARY_URL / "d" / self.parent_folder_public_id / self.name
         if self.file_url:
             return self.file_url
         return self.short_url
 
     @classmethod
-    def from_json(cls, json_resp: dict) -> Self:
-        resources: dict[str, dict] = json_resp["resources"]
+    def from_json(cls, json_resp: dict[str, Any]) -> Self:
+        resources: dict[str, dict[str, Any]] = json_resp["resources"]
         assert len(resources) == 1
         file_details = next(iter(resources.items()))[1]
         sk: str = json_resp["environment"]["sk"]
 
         short_url = AbsoluteHttpURL(file_details["meta"]["short_url"])
-        valid_dict: dict[str, Any] = cls.get_valid_dict(file_details)
-        return cls(**valid_dict, sk=sk, short_url=short_url)
+        valid_dict: dict[str, Any] = cls.filter_dict(file_details)
+        return cls.from_dict(valid_dict, sk=sk, short_url=short_url)
 
 
-def is_single_item(json_resp: dict) -> bool:
+def _is_single_item(json_resp: dict[str, Any]) -> bool:
     return len(json_resp["resources"]) == 1 and not bool(json_resp["currentResourceId"])

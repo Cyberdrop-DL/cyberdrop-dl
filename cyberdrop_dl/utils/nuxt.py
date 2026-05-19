@@ -40,19 +40,20 @@ def ifind(nuxt_data: list[Any], attribute: str, *attributes: str) -> Generator[d
     objects = (obj for obj in nuxt_data if isinstance(obj, dict) and all(key in obj for key in attributes))
     for obj in objects:
         try:
-            index: int = obj[attribute]
-            index_map: dict[str, int] = nuxt_data[index]
-            if not isinstance(index_map, dict):
-                raise LookupError
+            index_map: dict[str, int] = nuxt_data[obj[attribute]]
 
         except LookupError:
             index_map = obj
+
+        else:
+            if type(index_map) is not dict:
+                index_map = obj
 
         yield _parse_obj(nuxt_data, index_map)
 
 
 def _parse_obj(nuxt_data: list[Any], index_map: dict[str, int]) -> dict[str, Any]:
-    def hydrate(value: Any) -> Any:
+    def hydrate(value: Any) -> Any:  # noqa: PLR0911
         if isinstance(value, list):
             match value:
                 case ["BigInt", val]:

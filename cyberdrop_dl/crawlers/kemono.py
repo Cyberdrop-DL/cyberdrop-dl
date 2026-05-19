@@ -99,7 +99,7 @@ class Post(AliasModel):
     # `Any` to skip validation, but these are `yarl.URL`. We generate them internally so no validation is needed
     soup_attachments: list[Any] = []  # noqa: RUF012
 
-    def model_post_init(self, *_) -> None:
+    def model_post_init(self, *_: object) -> None:
         if date := self.published or self.added:
             self.timestamp = to_timestamp(date)
 
@@ -197,7 +197,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     API_ENTRYPOINT: ClassVar[AbsoluteHttpURL]
     SERVICES: ClassVar[tuple[str, ...]] = ()
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         Crawler._assert_fields_overrides(cls, "SERVICES")
 
@@ -224,16 +224,16 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if getattr(self, "API_ENTRYPOINT", None):
             await self._get_usernames(self.API_ENTRYPOINT / "creators")
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case [service, "user", _, "post", _] if service in self.SERVICES:
                 return await self.post(scrape_item)
             case [service, "user", _] if service in self.SERVICES:
                 return await self.profile(scrape_item)
-            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in ("post", "artist", None):
+            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in {"post", "artist", None}:
                 type_ = type_ or "artist"
                 return await self.favorites(scrape_item, type_)
-            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in ("post", "artist"):
+            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in {"post", "artist"}:
                 return await self.favorites(scrape_item, type_)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)
@@ -370,8 +370,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             if previous_server := self.__known_attachment_servers.get(path):
                 if previous_server != server:
                     msg = (
-                        f"[{self.NAME}] {path} found with multiple "  #
-                        f"different servers: {server = } {previous_server = } "
+                        f"[{self.NAME}] {path} found with multiple different servers: {server = } {previous_server = } "
                     )
                     self.log.warning(msg)
                 continue
@@ -429,7 +428,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 seen.add(link)
                 try:
                     url = self.parse_url(link)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
                 else:
                     if self.DOMAIN not in url.host:
@@ -571,7 +570,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if not partial_post.title or not partial_post.user_name:
             raise ScrapeError(422)
 
-        def files():
+        def files() -> Generator[AbsoluteHttpURL]:
             for selector in (
                 PostSelectors.VIDEOS,
                 PostSelectors.IMAGES,

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, ClassVar
-from xml.etree import ElementTree
+from typing import TYPE_CHECKING, Any, ClassVar
+from xml.etree import ElementTree as ET
+
+from typing_extensions import override
 
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
 from cyberdrop_dl.exceptions import MaxChildrenError, ScrapeError
@@ -23,11 +25,11 @@ N_POSTS_PER_PAGE = 15
 class Post:
     id: int
     title: str
-    xml: ElementTree.Element[str]
+    xml: ET.Element[str]
     date: datetime.datetime | None = None
 
     @staticmethod
-    def new(element: ElementTree.Element[str]) -> Post:
+    def new(element: ET.Element[str]) -> Post:
         title, id_ = element.attrib["title"], int(element.attrib["id"])
         return Post(id_, title, element)
 
@@ -55,7 +57,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     VBULLETIN_POST_QUERY_PARAM: ClassVar = "p"
     VBULLETIN_API_ENDPOINT: ClassVar[AbsoluteHttpURL]
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         REQUIRED_FIELDS = ("VBULLETIN_LOGIN_COOKIE_NAME", "VBULLETIN_API_ENDPOINT")
         for field_name in REQUIRED_FIELDS:
@@ -70,7 +72,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             login_url = self.PRIMARY_URL / "login.php"
             await self._login(login_url)
 
-    async def check_login_with_request(self, *_) -> tuple[str, bool]:
+    @override
+    async def check_login_with_request(self, *_: object, **_kwargs: object) -> tuple[str, bool]:
         # TODO: Support login
         return "", False
 
@@ -96,7 +99,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
 
         await self.process_posts(scrape_item, thread, root_xml)
 
-    async def process_posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ElementTree.Element[str]) -> None:
+    async def process_posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ET.Element[str]) -> None:
         if thread.page:
             posts = itertools.islice(root_xml.iter("post"), (thread.page - 1) * N_POSTS_PER_PAGE)
         else:
@@ -129,8 +132,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             self.handle_external_links(new_scrap_item)
             scrape_item.add_children()
 
-    async def get_xml(self, url: AbsoluteHttpURL) -> ElementTree.Element[str]:
-        root_xml = ElementTree.XML(await self.request_text(url))
+    async def get_xml(self, url: AbsoluteHttpURL) -> ET.Element[str]:
+        root_xml = ET.XML(await self.request_text(url))
         if error := root_xml.find("error"):
             details = error.attrib["details"]
             error_code = 403 if error.attrib["type"] == "permissions" and "unknown" not in details.casefold() else 422

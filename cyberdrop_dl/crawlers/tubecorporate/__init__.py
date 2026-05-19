@@ -29,7 +29,6 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
             "/embed/<video_id>/...",
         )
     }
-    # DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         domains = cls.PRIMARY_URL.host, *cls.SUPPORTED_DOMAINS
@@ -49,7 +48,7 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         video = await self._request_video(scrape_item.url.origin(), video_id)
         scrape_item.uploaded_at = self.parse_iso_date(video.post_date)

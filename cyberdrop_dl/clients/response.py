@@ -225,17 +225,22 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     __slots__ = ()
 
+    @override
     async def _read(self) -> bytes:
         return self._text.encode()
 
+    @override
     async def _read_text(self, encoding: str | None = None) -> str:
         return self._text
 
+    @override
     async def iter_chunked(self, size: int) -> AsyncIterator[bytes]:
         yield self._text.encode()
 
+    @override
     async def aclose(self) -> None: ...
 
+    @override
     async def _json(self, encoding: str | None = None) -> Any:
         if self._text:
             return json.loads(self._text)
@@ -272,15 +277,19 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
 class _AIOHTTPResponse(AbstractResponse[ClientResponse]):
     __slots__ = ()
 
+    @override
     async def _read(self) -> bytes:
         return await self._resp.read()
 
+    @override
     async def _read_text(self, encoding: str | None = None) -> str:
         return await self._resp.text(encoding)
 
+    @override
     def iter_chunked(self, size: int) -> AsyncIterator[bytes]:
         return self._resp.content.iter_chunked(size)
 
+    @override
     async def aclose(self) -> None:
         self._resp.release()
         await self._resp.wait_for_close()
@@ -304,18 +313,22 @@ class _AIOHTTPResponse(AbstractResponse[ClientResponse]):
 class _CurlResponse(AbstractResponse[CurlResponse]):
     __slots__ = ()
 
+    @override
     async def _read(self) -> bytes:
         return await self._resp.acontent()
 
+    @override
     async def _read_text(self, encoding: str | None = None) -> str:
         if encoding:
             self._resp.encoding = encoding
         return await self._resp.atext()
 
+    @override
     def iter_chunked(self, size: int) -> AsyncIterator[bytes]:
         # Curl does not support size. We get chunks as they come
         return self._resp.aiter_content()
 
+    @override
     async def aclose(self) -> None:
         await self._resp.aclose()
 
@@ -339,10 +352,7 @@ class _CurlResponse(AbstractResponse[CurlResponse]):
 
 
 def _parse_headers(url: AbsoluteHttpURL, headers: CIMultiDictProxy[str]) -> tuple[str, AbsoluteHttpURL | None]:
-    if location := headers.get(hdrs.LOCATION):
-        location = parse_url(location, url.origin(), trim=False)
-    else:
-        location = None
+    location = parse_url(location, url.origin(), trim=False) if (location := headers.get(hdrs.LOCATION)) else None
 
     content_type = (headers.get(hdrs.CONTENT_TYPE) or "").lower()
     return content_type, location

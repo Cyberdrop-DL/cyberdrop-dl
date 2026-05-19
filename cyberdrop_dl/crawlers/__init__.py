@@ -33,15 +33,15 @@ def _create_subclass(url: AbsoluteHttpURL | str, base_class: type[_CrawlerT]) ->
         "SUPPORTED_DOMAINS": (),
         "FOLDER_DOMAIN": "",
     }
-    return type(class_name, (base_class,), class_attributes)  # type: ignore  # pyright: ignore[reportReturnType]
+    return type(class_name, (base_class,), class_attributes)  # pyright: ignore[reportReturnType]
 
 
 def _make_crawler_name(input_string: str) -> str:
     clean_string = re.sub(r"[^a-zA-Z0-9]+", " ", input_string).strip()
     cap_name = clean_string.title().replace(" ", "")
-    assert cap_name and cap_name.isalnum(), (
-        f"Can not generate a valid class name from {input_string}. Needs to be defined as a concrete class"
-    )
+    msg = f"Can not generate a valid class name from {input_string}. Needs to be defined as a concrete class"
+    assert cap_name, msg
+    assert cap_name.isalnum(), msg
     if cap_name[0].isdigit():
         cap_name = "_" + cap_name
     return f"{cap_name}Crawler"

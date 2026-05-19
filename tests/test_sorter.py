@@ -2,6 +2,7 @@ import datetime
 import itertools
 import shutil
 from pathlib import Path
+from typing import Never
 
 import pytest
 
@@ -9,7 +10,7 @@ from cyberdrop_dl.sorter import Sorter, _format_dest, _have_same_content, _move_
 
 DOWNLOADS = Path("/mnt/home/user/downloads/cdl/")
 SORT_DIR = DOWNLOADS.parent / "cdl_sorted"
-MTIME = datetime.datetime(2023, 7, 14, 12, 34, 56).timestamp()
+MTIME = datetime.datetime(2023, 7, 14, 12, 34, 56, tzinfo=datetime.UTC).timestamp()
 
 
 @pytest.mark.parametrize(
@@ -141,7 +142,7 @@ class TestMoveFile:
         src.write_text("x")
         dst = tmp_path / "bar.txt"
 
-        def boom(*_, **_k):
+        def boom(*_: object, **_k: object) -> Never:
             raise OSError
 
         monkeypatch.setattr(shutil, "move", boom)

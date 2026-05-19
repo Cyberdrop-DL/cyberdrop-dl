@@ -52,7 +52,7 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
+    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.TITLE, decompose="span")
         for trash in ("Videos for: ", "Tagged with "):
@@ -66,11 +66,11 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
 
         await self._iter_extra_pages(scrape_item, type_, query)
 
-    async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
-        if type_ in ("members",):
+    async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
+        if type_ == "members":
             block_id, from_name = "list_videos_uploaded_videos", "from_videos"
 
-        elif type_ in ("search",):
+        elif type_ == "search":
             block_id, from_name = "custom_list_videos_videos_list_search", "from_videos"
 
         else:

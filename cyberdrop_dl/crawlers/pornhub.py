@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 PRIMARY_URL = AbsoluteHttpURL("https://www.pornhub.com")
-MP4_NOT_AVAILABLE_SINCE = datetime.datetime(2025, 6, 25).timestamp()
+MP4_NOT_AVAILABLE_SINCE = datetime.datetime(2025, 6, 25, tzinfo=datetime.UTC).timestamp()
 TOKEN_SELECTOR = css.CssAttributeSelector("input#xsrfToken", "value")
 
 
@@ -132,12 +132,12 @@ class PornHubCrawler(Crawler):
         keys = ("age_verified", "accessPH", "accessAgeDisclaimerPH", "accessAgeDisclaimerUK", "expiredEnterModalShown")
         self.update_cookies(dict.fromkeys(keys, 1))
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case ["user" | "channel" | "channels" | "model" | "pornstar" as type_, name, *rest]:
                 profile = Profile.new(type_, name, rest)
                 if profile in self.seen_profiles:
-                    return
+                    return None
                 self.seen_profiles.add(profile)
                 return await self.profile(scrape_item, profile)
             case ["album", album_id]:
@@ -206,7 +206,7 @@ class PornHubCrawler(Crawler):
         album_tag = css.select(soup, _SELECTORS.ALBUM_FROM_PHOTO)
         album_name = css.text(album_tag)
         album_link_str: str = css.attr(album_tag, "href")
-        album_id: str = album_link_str.split("/")[-1]
+        album_id: str = album_link_str.rsplit("/", maxsplit=1)[-1]
         title = self.create_title(album_name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         await self._process_photo(scrape_item, link)

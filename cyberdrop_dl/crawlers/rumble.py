@@ -58,7 +58,7 @@ class Video:
     @staticmethod
     def parse_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
         for type_, format_options in formats.items():
-            if type_ in ("audio", "tar", "timeline"):
+            if type_ in {"audio", "tar", "timeline"}:
                 continue
 
             try:
@@ -66,16 +66,13 @@ class Video:
             except KeyError:
                 raise ScrapeError(422, f"Video has an unknown format type: {type_}") from None
 
-            if isinstance(format_options, list):
-                pairs = ((None, f) for f in format_options)
-            else:
-                pairs = format_options.items()
+            pairs = ((None, f) for f in format_options) if isinstance(format_options, list) else format_options.items()
 
             is_single_file = type_ is not FormatType.HLS
 
-            for height, format in pairs:
-                url = parse_url(format["url"])
-                meta = Metadata(**(format.get("meta") or {}))
+            for height, fmt in pairs:
+                url = parse_url(fmt["url"])
+                meta = Metadata(**(fmt.get("meta") or {}))
 
                 if meta.w and meta.h:
                     resolution = Resolution(meta.w, meta.h)
@@ -197,9 +194,9 @@ class RumbleCrawler(Crawler):
         hls_formats: list[Format] = []
         other_formats: list[Format] = [fmt for fmt in formats if fmt.is_single_file or hls_formats.append(fmt)]
 
-        async def resolve_m3u8(format: Format) -> Format:
-            m3u8, info = await self.request_m3u8_playlist(format.url)
-            return format._replace(
+        async def resolve_m3u8(fmt: Format) -> Format:
+            m3u8, info = await self.request_m3u8_playlist(fmt.url)
+            return fmt._replace(
                 resolution=info.resolution,
                 m3u8=m3u8,
                 bitrate=info.stream_info.bandwidth or 0,

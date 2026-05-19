@@ -6,7 +6,6 @@ import logging
 import queue
 import sys
 from contextvars import ContextVar
-from datetime import datetime
 from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
@@ -21,9 +20,11 @@ from rich.text import Text, TextType
 from typing_extensions import override
 
 from cyberdrop_dl import env
+from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
+    from datetime import datetime
 
     from rich.console import ConsoleRenderable
 
@@ -204,7 +205,7 @@ def _threaded_logger(
 
 
 @contextlib.contextmanager
-def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
+def _enter_context(context_var: ContextVar[_T], value: _T, /) -> Generator[None]:
     token = context_var.set(value)
     try:
         yield
@@ -216,6 +217,7 @@ def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
 class NoPaddingLogRender(LogRender):
     _cdl_padding: int = 0
 
+    @override
     def __call__(  # type: ignore[reportIncompatibleMethodOverride]  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
         console: Console,
@@ -226,7 +228,7 @@ class NoPaddingLogRender(LogRender):
         path: str | None = None,
         line_no: int | None = None,
         link_path: str | None = None,
-    ):
+    ) -> Group:
         output = Text(no_wrap=True)
         if self.show_time:
             log_time = log_time or console.get_datetime()
@@ -321,7 +323,7 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
     import mega
 
     if "pytest" not in sys.modules:
-        logging.captureWarnings(True)
+        logging.captureWarnings(capture=True)
 
     with (
         _setup_debug_logger() as debug_log_file,
@@ -370,7 +372,7 @@ def _setup_debug_logger() -> Generator[Path | None]:
             )
             raise NotADirectoryError(None, msg, env.DEBUG_LOG_FOLDER)
 
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = dates.now().strftime("%Y%m%d_%H%M%S")
         debug_log_file = debug_log_folder / f"cyberdrop_dl_debug_{now}.log"
 
     debug_log_file = debug_log_file.resolve().absolute()

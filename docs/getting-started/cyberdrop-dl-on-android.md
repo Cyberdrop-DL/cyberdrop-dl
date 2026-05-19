@@ -21,7 +21,7 @@ Termux wiki: [https://wiki.termux.com/wiki/Installation](https://wiki.termux.com
 
 Install termux from [F-droid (recommended)](https://f-droid.org/packages/com.termux/) or from the [Google Playstore (restricted version)](https://play.google.com/store/apps/details?id=com.termux):
 
-## 2. Install `cyberdrop-dl-patched`
+## 2. Install `cyberdrop-dl`
 
 Run the following commands inside termux
 
@@ -41,7 +41,7 @@ echo 'alias cyberdrop-dl="cyberdrop-dl --portrait --appdata-folder /sdcard/cyber
 source ~/.bashrc
 ```
 
-## How to update `cyberdrop-dl-patched`?
+## How to update `cyberdrop-dl`?
 
 Run this command inside termux:
 

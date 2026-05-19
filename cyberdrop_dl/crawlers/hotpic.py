@@ -35,9 +35,9 @@ class HotPicCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "album" in scrape_item.url.parts:
             return await self.album(scrape_item)
-        elif "i" in scrape_item.url.parts:
+        if "i" in scrape_item.url.parts:
             return await self.file(scrape_item)
-        elif any(p in scrape_item.url.parts for p in ("uploads", "reddit")):
+        if any(p in scrape_item.url.parts for p in ("uploads", "reddit")):
             return await self.handle_direct_link(scrape_item)
         raise ValueError
 
@@ -77,6 +77,6 @@ def thumbnail_to_img(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     if (new_ext := ".mp4") != url.suffix:
         new_ext = ".jpg"
     url = url.with_suffix(new_ext)
-    new_parts = [p for p in url.parts if p not in ("/", "thumb")]
+    new_parts = [p for p in url.parts if p not in {"/", "thumb"}]
     new_path = "/".join(new_parts)
     return url.with_path(new_path)

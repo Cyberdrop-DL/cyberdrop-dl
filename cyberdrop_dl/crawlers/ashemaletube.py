@@ -75,7 +75,7 @@ class AShemaleTubeCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
     _RATE_LIMIT = 3, 10
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         if any(p in scrape_item.url.parts for p in ("creators", "profiles", "pornstars", "model")):
             if "galleries" in scrape_item.url.parts:
                 return await self.gallery(scrape_item)
@@ -132,8 +132,7 @@ class AShemaleTubeCrawler(Crawler):
             raise ScrapeError(401)
         collection_title: str = title_elem.get_text(strip=True)
         collection_title = collection_title.replace(TITLE_TRASH, "").strip()
-        collection_title = self.create_title(f"{collection_title} [{collection_type}]")
-        return collection_title
+        return self.create_title(f"{collection_title} [{collection_type}]")
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
@@ -162,7 +161,7 @@ class AShemaleTubeCrawler(Crawler):
         video_id: str = scrape_item.url.parts[2]
         canonical_url = PRIMARY_URL / "videos" / video_id
         if await self.check_complete_from_referer(canonical_url):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
 

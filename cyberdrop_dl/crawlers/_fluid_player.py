@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -26,15 +28,15 @@ class Format(NamedTuple):
 
 class FluidPlayerCrawler(Crawler, is_abc=True):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT = 3, 10
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url)
-        best_format = _get_best_format(soup)
+        best_format = max(_parse_formats(soup))
         link = self.parse_url(best_format.link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.title(soup)
@@ -62,14 +64,10 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _get_best_format(soup: BeautifulSoup) -> Format:
+def _parse_formats(soup: BeautifulSoup) -> Generator[Format]:
     parse_resolution = Resolution.make_parser()
-
-    def parse():
-        for src in soup.select(Selector.VIDEO_SRC):
-            url = css.attr(src, "src")
-            quality = css.attr_or_none(src, "title")
-            resolution = parse_resolution(quality)
-            yield Format(resolution, url)
-
-    return max(parse())
+    for src in soup.select(Selector.VIDEO_SRC):
+        url = css.attr(src, "src")
+        quality = css.attr_or_none(src, "title")
+        resolution = parse_resolution(quality)
+        yield Format(resolution, url)

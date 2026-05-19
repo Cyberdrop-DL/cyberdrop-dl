@@ -43,7 +43,7 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
+    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = self._clean_title(css.select_text(soup, Selector.TITLE))
         title = self.create_title(f"{title} [{type_}]")
@@ -54,8 +54,8 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
 
         await self._iter_extra_pages(scrape_item, type_, query)
 
-    async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None):
-        if type_ in ("search",):
+    async def _iter_extra_pages(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
+        if type_ == "search":
             block_id, from_name = "list_videos_videos_list_search_result", "from_videos"
         else:
             block_id, from_name = "list_videos_common_videos_list", "from"

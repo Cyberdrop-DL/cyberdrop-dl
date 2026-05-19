@@ -111,7 +111,7 @@ class HTTPClient:
         self._download_session = self.create_aiohttp_session()
         return self
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._download_session.close())
             if self._curl_session is not None:
@@ -188,20 +188,29 @@ class HTTPClient:
         raise DownloadError(status=response.status)
 
     @contextlib.asynccontextmanager
-    async def request(
+    async def request(  # noqa: PLR0913
         self: object,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
         headers: Mapping[str, str] | None = None,
+        *,
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
-        self = cast("HTTPClient", self)
-        async with self.raw_request(url, method, headers, impersonate, data, json, request_params) as resp:
+        self = cast("HTTPClient", self)  # noqa: PLW0642
+        async with self.raw_request(
+            url,
+            method,
+            headers,
+            impersonate=impersonate,
+            data=data,
+            json=json,
+            request_params=request_params,
+        ) as resp:
             try:
                 await self.check_http_status(resp)
             except DDOSGuardError:
@@ -213,12 +222,13 @@ class HTTPClient:
                 yield resp
 
     @contextlib.asynccontextmanager
-    async def raw_request(
+    async def raw_request(  # noqa: PLR0913
         self,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
         headers: Mapping[str, str] | None = None,
+        *,
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
@@ -293,7 +303,7 @@ class HTTPClient:
         self,
         url: AbsoluteHttpURL,
         data: Any | None = None,
-    ):
+    ) -> AbstractResponse[Any]:
         """Make a request with FlareSolverr.
 
         Returns an AbstractResponse confirmed to not be a DDOS Guard page, even if flaresolverr fails to detect/solve a challenge"""
@@ -344,7 +354,10 @@ class HTTPClientProxy(Protocol):
     @signature.copy(HTTPClient.request)
     @contextlib.asynccontextmanager
     async def request(
-        self, *args, impersonate: str | bool | None = None, **kwargs
+        self,
+        *args: Any,
+        impersonate: str | bool | None = None,
+        **kwargs: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         if impersonate is None:
             impersonate = self._IMPERSONATE
@@ -361,16 +374,16 @@ class HTTPClientProxy(Protocol):
             _JSON_CHECK.reset(token)
 
     @signature.copy(request)
-    async def request_json(self, *args, **kwargs) -> Any:
+    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
         async with self.request(*args, **kwargs) as resp:
             return await resp.json()
 
     @signature.copy(request)
-    async def request_soup(self, *args, **kwargs) -> BeautifulSoup:
+    async def request_soup(self, *args: Any, **kwargs: Any) -> BeautifulSoup:
         async with self.request(*args, **kwargs) as resp:
             return await resp.soup()
 
     @signature.copy(request)
-    async def request_text(self, *args, **kwargs) -> str:
+    async def request_text(self, *args: Any, **kwargs: Any) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()

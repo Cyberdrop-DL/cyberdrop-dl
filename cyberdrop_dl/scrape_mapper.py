@@ -24,7 +24,7 @@ from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import filepath, get_download_path, remove_trailing_slash
+from cyberdrop_dl.utils import dates, filepath, get_download_path, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
@@ -49,7 +49,7 @@ def _filter_by_date(scrape_item: ScrapeItem, before: datetime.date | None, after
     item_date = scrape_item.completed_at or scrape_item.created_at
     if not item_date:
         return False
-    date = datetime.datetime.fromtimestamp(item_date).date()
+    date = dates.from_timestamp(item_date).date()
     if (after and date < after) or (before and date > before):
         skip = True
 
@@ -131,7 +131,7 @@ class ScrapeMapper:
     def _scrape_queue(self) -> int:
         return sum(crawler.waiting_items for crawler in self._factory)
 
-    def _download_queue(self):
+    def _download_queue(self) -> int:
         total = sum(crawler.downloader.waiting_items for crawler in self._factory)
         self.tui.files.stats.queued = total
         return total
@@ -251,10 +251,10 @@ class ScrapeMapper:
 
         try:
             await self._direct_http.fetch(scrape_item)
-            return
-
         except (NoExtensionError, ValueError):
             pass
+        else:
+            return
 
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
@@ -331,11 +331,11 @@ class ScrapeMapper:
         """
 
         if domain in self._crawlers_disabled_at_runtime:
-            return
+            return None
 
-        crawler = next((crawler for crawler in self.crawlers.values() if crawler.DOMAIN == domain), None)
+        crawler = next((crawler for crawler in self.crawlers.values() if domain == crawler.DOMAIN), None)
         if not crawler or crawler.disabled:
-            return
+            return None
 
         crawler.disabled = True
         self._crawlers_disabled_at_runtime.add(domain)
@@ -410,7 +410,7 @@ def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
         try:
             encoded = "%" in link
             yield AbsoluteHttpURL(link, encoded=encoded)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to parse URL from input file: {link} {e:!r}")
 
 
@@ -425,7 +425,7 @@ def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
     return item
 
 
-def get_crawlers_mapping(include_generics: bool = False) -> dict[str, type[Crawler]]:
+def get_crawlers_mapping(*, include_generics: bool = False) -> dict[str, type[Crawler]]:
     from cyberdrop_dl.crawlers.crawler import Registry
 
     Registry.import_all()
@@ -446,6 +446,7 @@ def get_crawlers_mapping(include_generics: bool = False) -> dict[str, type[Crawl
 def register_crawler(
     crawlers_map: dict[str, type[Crawler]],
     crawler: type[Crawler],
+    *,
     from_user: bool | Literal["raise"] = False,
 ) -> None:
 
@@ -464,8 +465,7 @@ def register_crawler(
                     raise ValueError(msg)
                 logger.error(msg)
                 continue
-            else:
-                logger.info("Successfully mapped %s to crawler %s", crawler.PRIMARY_URL, crawler.NAME)
+            logger.info("Successfully mapped %s to crawler %s", crawler.PRIMARY_URL, crawler.NAME)
 
         elif other:
             if domain in crawlers_map:
@@ -525,7 +525,7 @@ def _best_match(current_map: dict[str, _T], domain: str) -> _T | None:
     try:
         best_match = max((host for host in current_map if host in domain), key=len)
     except (ValueError, TypeError):
-        return
+        return None
     else:
         current_map[domain] = found = current_map[best_match]
         return found
@@ -538,8 +538,8 @@ async def load_failed_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
 
 
 async def load_all_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    after = manager.cli_args.completed_after or datetime.date.min
-    before = manager.cli_args.completed_before or datetime.date.today()
+    after = manager.cli_args.completed_after or dates.MIN.date()
+    before = manager.cli_args.completed_before or dates.now_utc().date()
     async for rows in manager.database.history.get_all_items(after, before):
         for row in rows:
             yield _create_item_from_row(row)

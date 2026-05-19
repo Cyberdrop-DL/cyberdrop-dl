@@ -56,7 +56,7 @@ class CloudMailRuCrawler(Crawler):
         node = await self._request_info(path)
         if node["type"] == "file":
             if await self.check_complete_from_referer(scrape_item):
-                return
+                return None
 
             return await self._file(scrape_item, node)
 

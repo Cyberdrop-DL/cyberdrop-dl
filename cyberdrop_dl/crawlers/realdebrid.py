@@ -78,7 +78,7 @@ class RealDebridCrawler(Crawler):
         self.api = RealDebridAPI(self, token)
 
     async def __async_post_init__(self) -> None:
-        await self._get_regexes(_API_ENTRYPOINT)
+        await self._get_regexes()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if "real-debrid" in scrape_item.url.host:
@@ -90,12 +90,11 @@ class RealDebridCrawler(Crawler):
             return await self.folder(scrape_item)
         await self.file(scrape_item)
 
-    @error_handling_wrapper
-    async def _get_regexes(self, *_) -> None:
+    async def _get_regexes(self) -> None:
         if self.disabled:
             return
 
-        with self.disable_on_error("Setup failed. Unable to get URL regex"):
+        with self.catch_errors(_API_ENTRYPOINT), self.disable_on_error("Setup failed. Unable to get URL regex"):
             await self.api.connect()
 
     @error_handling_wrapper

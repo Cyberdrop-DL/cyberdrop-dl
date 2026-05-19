@@ -11,6 +11,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -98,7 +100,7 @@ class MegaCloudCrawler(Crawler):
             # TODO: Add logic to handle encrypted videos
             raise ScrapeError(403, "Video is encrypted")
 
-        def parse_subs():
+        def parse_subs() -> Generator[Subtitle]:
             for track in resp["tracks"]:
                 if track["kind"] != "captions":
                     continue
@@ -134,8 +136,8 @@ _ISO639_MAP = {
 
 
 def _parse_lang_code(name: str, label: str) -> str:
-    code = name.rsplit("-")[0]
-    if len(code) in (2, 3):
+    code = name.split("-", maxsplit=1)[0]
+    if len(code) in {2, 3}:
         return code
 
     label = label.casefold()

@@ -47,8 +47,7 @@ def unpack(source: str) -> str:
         return words_list[decode(word)] or word
 
     content = content.replace("\\\\", "\\").replace("\\'", "'")
-    source = re.sub(r"\b\w+\b", replace, content, flags=re.ASCII)
-    return source
+    return re.sub(r"\b\w+\b", replace, content, flags=re.ASCII)
 
 
 def _parse(source: str) -> tuple[str, int, int, list[str]]:
@@ -66,9 +65,8 @@ def _make_decoder(base: int) -> Callable[[str], int]:
     if 2 <= base <= 36:
         return lambda text: int(text, base)
 
-    if 36 < base < 62:
-        if base not in _ALPHABET:
-            _ALPHABET[base] = _ALPHABET[62][:base]
+    if 36 < base < 62 and base not in _ALPHABET:
+        _ALPHABET[base] = _ALPHABET[62][:base]
 
     lookup = {char: idx for idx, char in enumerate(_ALPHABET[base])}
 

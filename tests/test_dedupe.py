@@ -41,14 +41,18 @@ class TestDeleteFile:
             assert ok is False
 
     async def test_send2trash_raises_other_oserror(self) -> None:
-        with patch("send2trash.send2trash", side_effect=OSError("Permission denied")):
-            with pytest.raises(OSError, match="Permission denied"):
-                await _delete_file(Path("/foo"), to_trash=True)
+        with (
+            patch("send2trash.send2trash", side_effect=OSError("Permission denied")),
+            pytest.raises(OSError, match="Permission denied"),
+        ):
+            await _delete_file(Path("/foo"), to_trash=True)
 
     async def test_aio_unlink_raises_other_oserror(self, txt_file: Path) -> None:
-        with patch("cyberdrop_dl.aio.unlink", side_effect=OSError("Read-only fs")):
-            with pytest.raises(OSError, match="Read-only fs"):
-                await _delete_file(txt_file, to_trash=False)
+        with (
+            patch("cyberdrop_dl.aio.unlink", side_effect=OSError("Read-only fs")),
+            pytest.raises(OSError, match="Read-only fs"),
+        ):
+            await _delete_file(txt_file, to_trash=False)
 
 
 class TestFilterDbMatches:

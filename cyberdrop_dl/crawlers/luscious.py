@@ -58,7 +58,7 @@ class LusciousCrawler(Crawler):
 
         elif operation == "AlbumListWithPeek":
             sorting = query.get("display", "date_newest")
-            filters = [{"name": i, "value": v} for i, v in query.items() if i not in ("page", "display", "q")]
+            filters = [{"name": i, "value": v} for i, v in query.items() if i not in {"page", "display", "q"}]
             data["variables"] = {"input": {"display": sorting, "filters": filters, "page": page}}
 
         self.log.debug(data)
@@ -97,7 +97,7 @@ class LusciousCrawler(Crawler):
                 new_scrape_item = scrape_item.create_child(url=album_url)
                 await self.album(new_scrape_item)
 
-    async def _pager(self, scrape_item: ScrapeItem, is_album: bool = False) -> AsyncGenerator[list[dict[str, Any]]]:
+    async def _pager(self, scrape_item: ScrapeItem, *, is_album: bool = False) -> AsyncGenerator[list[dict[str, Any]]]:
         """Generator for album pages."""
         initial_page = int(scrape_item.url.query.get("page", 1))
         query_name = "PictureListInsideAlbum" if is_album else "AlbumListWithPeek"

@@ -4,7 +4,7 @@ from cyberdrop_dl.crawlers.xhamster import _decode_hex_url, _decrypt_url
 
 
 @pytest.mark.parametrize(
-    "raw_url, expected_output",
+    ("raw_url", "expected_output"),
     [
         (
             "01fe0bef492d94cb623a2e4c49fbe1239f7e1105bda61daecca10c105273f634a5cca31dc107eaa9d731f0ec43f44d54f4439ee517bc9cacc3c439bfe70a4d4f5ff915a90eb50f9237ed3dc29ba5a4f40e7e11de62611932102c92cb47692cad3bd5f8cbe489f42dc4d1c6f776d75a93ea0126e796002457f60174e9224588c7902d5de946f51808a0f9aed4d43d78fd56a085d97e2d817f5a69dec286a568a7700d3fc32ad5786d03df0439b41c9ed76a8b733bdc427f5b374aab206289d7a8be11e0449064d64efc64a41708207b7282",
@@ -50,7 +50,7 @@ def test_decode_hex_url(raw_url: str, expected_output: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "raw_url, expected_output",
+    ("raw_url", "expected_output"),
     [
         (
             "https://video-nss-h.xhcdn.com/064a9271b60d1cb32250a4924d927a9877dde301c6e57479148e493e62,1765044000/media=hls4/multi=256x144:144p,426x240:240p,854x480:480p,1280x720:720p,1920x1080:1080p/028/229/323/_TPL_.h264.mp4.m3u8",

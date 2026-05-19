@@ -67,7 +67,7 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
     assert results == expected_results
 
 
-async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, manager: Manager):
+async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, manager: Manager) -> None:
     manager.config.settings.dupe_cleanup_options.add_md5_hash = True
     manager.config.settings.dupe_cleanup_options.add_sha256_hash = True
     hash_folder = tmp_cwd / "sorted_downloads"

@@ -100,7 +100,7 @@ def download(
     *,
     cli: CLIargs | None = None,
     config: Config | None = None,
-):
+) -> None:
     from cyberdrop_dl.manager import AppData, Manager
 
     cli = cli or CLIargs()

@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -80,7 +80,7 @@ class Files(SettingsGroup):
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
 
-class Logs(SettingsGroup):
+class Logs(SettingsGroup):  # noqa: PLW1641
     download_error_urls: LogPath = Path("Download_Error_URLs.csv")
     last_forum_post: LogPath = Path("Last_Scraped_Forum_Posts.csv")
     log_folder: Path = DEFAULT_APP_STORAGE / "Logs"
@@ -109,7 +109,7 @@ class Logs(SettingsGroup):
         now_file_iso: str = self._created_at.strftime(LOGS_DATETIME_FORMAT)
         now_folder_iso: str = self._created_at.strftime(LOGS_DATE_FORMAT)
         for name, log_file in vars(self).items():
-            if name == "log_folder" or not isinstance(log_file, Path) or log_file.suffix not in (".csv", ".log"):
+            if name == "log_folder" or not isinstance(log_file, Path) or log_file.suffix not in {".csv", ".log"}:
                 continue
 
             log_file = self.log_folder / log_file
@@ -125,10 +125,10 @@ class Logs(SettingsGroup):
             return
 
         for file in self.log_folder.rglob("*"):
-            if file.suffix.lower() not in (".log", ".csv"):
+            if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
-            if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:
+            if (self._created_at - datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:  # noqa: DTZ006
                 file.unlink()
 
         delete_empty_files_and_folders(self.log_folder)
@@ -160,7 +160,7 @@ class Range:
         return self.min <= value <= self.max
 
     @classmethod
-    def parse(cls, min: float, max: float) -> Self | None:
+    def parse(cls, min: float, max: float) -> Self | None:  # noqa: A002
         if not min and not max:
             return None
         return cls(min, max)
@@ -284,7 +284,7 @@ class RuntimeOptions(SettingsGroup):
 
     @field_validator("log_level", "console_log_level", mode="before")
     @classmethod
-    def normalize_log_level(cls, value: object):
+    def normalize_log_level(cls, value: object) -> Any:
         value = falsy_as_none(value)
         if type(value) is str:
             try:

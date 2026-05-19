@@ -47,7 +47,7 @@ def _select_one(tag: Tag, selector: str) -> Tag:
     return result
 
 
-def select_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str | None = None) -> str:
+def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str | None = None) -> str:
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
     inner_tag = select(tag, selector)
     if decompose:
@@ -64,10 +64,7 @@ def attr_or_none(tag: Tag, attribute: str) -> str | None:
             return _parse_srcset(srcset)
         attribute_ = "src"
 
-    if attribute_ == "src":
-        value = tag.get("data-src") or tag.get(attribute_)
-    else:
-        value = tag.get(attribute_)
+    value = tag.get("data-src") or tag.get(attribute_) if attribute_ == "src" else tag.get(attribute_)
     if isinstance(value, list):
         raise SelectorError(f"Expected a single value for {attribute = !r}, got multiple")
     return value
@@ -81,7 +78,7 @@ def attr(tag: Tag, attribute: str) -> str:
     return result
 
 
-def text(tag: Tag, strip: bool = True) -> str:
+def text(tag: Tag, *, strip: bool = True) -> str:
     return tag.get_text(strip=strip)
 
 
@@ -140,7 +137,7 @@ def rstrip_domain(title: str, domain: str) -> str:
             return front.strip()
         return string
 
-    for char in sorted(("|", " - "), key=lambda x: title.rfind(x), reverse=True):
+    for char in sorted(("|", " - "), key=title.rfind, reverse=True):
         title = sanitize(title, char)
 
     return title

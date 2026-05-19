@@ -176,7 +176,7 @@ class PixelDrainCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:
+    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:  # noqa: C901
         # https://github.com/Fornaxian/pixeldrain_web/blob/8e5ecfc5ce44c0b2b4fafdf9e8201dfc98395e88/svelte/src/filesystem/FilesystemAPI.ts
 
         origin = scrape_item.url.origin()
@@ -203,7 +203,7 @@ class PixelDrainCrawler(Crawler):
                 fs = await request_fs(path)
                 scrape_item.add_children(0)
                 await walk_filesystem(fs)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self.raise_exc(new_scrape_item, e)
 
         async def walk_filesystem(fs: FileSystem) -> None:
@@ -256,7 +256,7 @@ class PixelDrainCrawler(Crawler):
     ) -> None:
         link = file.download_url.with_host(scrape_item.url.origin().host)
         if await self.check_complete_by_hash(link, "sha256", file.hash_sha256):
-            return
+            return None
 
         if "text/plain" in file.mime_type:
             return await self._text(scrape_item, file)
@@ -275,7 +275,7 @@ class PixelDrainCrawler(Crawler):
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
-            except Exception:
+            except Exception:  # noqa: BLE001, S112
                 continue
             new_scrape_item = scrape_item.create_child(link)
             self.handle_external_links(new_scrape_item)

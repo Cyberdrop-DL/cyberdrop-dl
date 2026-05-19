@@ -1,5 +1,6 @@
 """Async versions of builtins and some path operations"""
 
+# ruff: noqa: A001
 from __future__ import annotations
 
 import asyncio
@@ -81,7 +82,7 @@ class AsyncIOWrapper(Generic[AnyStr]):
         self._io = await self._coro
         return self
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         return await asyncio.to_thread(self._io.close)
 
     async def __aiter__(self) -> AsyncIterator[AnyStr]:
@@ -168,10 +169,7 @@ async def map_tuples(
     if not task_limit:
         return await gather(*(coro_factory(*params) for params in params_batched))
 
-    if isinstance(task_limit, int):
-        semaphore = asyncio.BoundedSemaphore(task_limit)
-    else:
-        semaphore = task_limit
+    semaphore = asyncio.BoundedSemaphore(task_limit) if isinstance(task_limit, int) else task_limit
 
     tasks: list[asyncio.Task[_R]] = []
 
@@ -193,7 +191,7 @@ async def map_tuples(
 def run(coro: Coroutine[Any, Any, _T]) -> _T:
     def _loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
-        if sys.version_info > (3, 12):
+        if sys.version_info >= (3, 12):
             loop.set_task_factory(asyncio.eager_task_factory)
         return loop
 
@@ -265,7 +263,7 @@ def open(
 ) -> AsyncIOWrapper[str]: ...
 
 
-def open(
+def open(  # noqa: PLR0913
     path: Path,
     mode: str = "r",
     buffering: int = -1,
@@ -285,7 +283,7 @@ async def get_size(path: Path) -> int | None:
     try:
         stat_result = await stat(path)
     except (OSError, ValueError):
-        return
+        return None
     else:
         if not S_ISREG(stat_result.st_mode):
             raise IsADirectoryError(path)

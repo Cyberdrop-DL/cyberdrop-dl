@@ -92,7 +92,7 @@ class HashingUI(LiveUI):
 
         return ProgressHook(lambda _: None, lambda: 0, lambda: self._files.remove_task(task_id))
 
-    def add_completed(self, hash_type: Literal["xxh128", "md5", "sha256"]):
+    def add_completed(self, hash_type: Literal["xxh128", "md5", "sha256"]) -> None:
         setattr(self._stats, hash_type, getattr(self._stats, hash_type) + 1)
         if hash_type == "xxh128":
             self.stats.new_hashed += 1
@@ -101,16 +101,15 @@ class HashingUI(LiveUI):
 if __name__ == "__main__":
     panel = HashingUI(folder := Path("/folder1/cdl_downloads"))
 
-    with panel(transient=False):
-        with panel.new_file(folder / "file.txt"):
-            time.sleep(3)
-            panel.stats.md5 += 1
-            panel.stats.prev_hashed += 1
-            panel.stats.new_hashed += 1
-            with panel.new_file(folder / "subfolder/file2.txt"), panel.new_file(folder / "subfolder/file3.txt"):
-                time.sleep(1)
-                panel.stats.sha256 += 5
-                panel.stats.new_hashed += 5
-                time.sleep(1)
-            panel.stats.xxh128 += 15
-            time.sleep(3)
+    with panel(transient=False), panel.new_file(folder / "file.txt"):
+        time.sleep(3)
+        panel.stats.md5 += 1
+        panel.stats.prev_hashed += 1
+        panel.stats.new_hashed += 1
+        with panel.new_file(folder / "subfolder/file2.txt"), panel.new_file(folder / "subfolder/file3.txt"):
+            time.sleep(1)
+            panel.stats.sha256 += 5
+            panel.stats.new_hashed += 5
+            time.sleep(1)
+        panel.stats.xxh128 += 15
+        time.sleep(3)

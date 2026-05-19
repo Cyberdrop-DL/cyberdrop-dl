@@ -3,19 +3,21 @@ from __future__ import annotations
 import dataclasses
 import logging
 from sqlite3 import IntegrityError, Row
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from .definitions import create_fixed_history, create_history, create_media_index
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Callable
 
     import aiosqlite
     from yarl import URL
 
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.url_objects import MediaItem
+
+    _T = TypeVar("_T")
 
 
 _FETCH_MANY_SIZE: int = 1000
@@ -158,7 +160,7 @@ class HistoryTable:
     async def get_duration(self, domain: str, media_item: MediaItem) -> float | None:
         """Returns the duration from the database."""
         if media_item.is_segment:
-            return
+            return None
 
         url_path = media_item.db_path
         query = "SELECT duration FROM media WHERE domain = ? and url_path = ? LIMIT 1"
@@ -229,8 +231,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via size: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via size")
 
     async def get_all_bunkr_failed_via_hash(self) -> AsyncGenerator[list[Row]]:
         query = """
@@ -244,8 +246,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via hash: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via hash")
 
     async def fix_primary_keys(self) -> None:
         domain_column, *_ = await self._get_media_table_columns()
@@ -292,9 +294,9 @@ class HistoryTable:
 
 
 async def fix_domains(db_conn: aiosqlite.Connection) -> None:
-    logger.info("Updating old domains")
+    logger.info("Updating old database domains")
     updates = "\n".join(
-        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"
+        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
         for current, old in [
             ("bunkr", "bunkrr"),
             ("jpg5.su", "sharex"),
@@ -306,13 +308,13 @@ async def fix_domains(db_conn: aiosqlite.Connection) -> None:
     await db_conn.commit()
 
 
-async def fix_referers(db_conn: aiosqlite.Connection):
+async def fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
 
-    logger.info("Updating old referers")
+    logger.info("Updating old database referers")
 
-    def try_wrap(fn):
-        def call(*args, **kwargs):
+    def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:
+        def call(*args: Any, **kwargs: Any) -> _T:
             try:
                 return fn(*args, **kwargs)
             except BaseException:

@@ -77,7 +77,7 @@ class PixHostCrawler(Crawler):
         await self.direct_file(scrape_item, link)
 
     @classmethod
-    def is_thumbnail(cls, url: AbsoluteHttpURL):
+    def is_thumbnail(cls, url: AbsoluteHttpURL) -> bool:
         return "thumbs" in url.parts and cls.is_subdomain(url)
 
 

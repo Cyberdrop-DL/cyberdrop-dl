@@ -78,12 +78,11 @@ class DictDataclass(Dataclass, Protocol):
 
 
 @contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912
     link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
     error_log_msg = origin = exc_info = None
     link_to_show: yarl.URL | str = ""
     is_segment: bool = getattr(item, "is_segment", False)
-    is_downloader: bool = bool(getattr(self, "log_prefix", False))
     try:
         yield
     except TooManyCrawlerErrors:
@@ -130,15 +129,26 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         ui_failure = create_error_msg(422)
         log_msg = str(e).partition("For further information")[0].strip()
         error_log_msg = ErrorLogMessage(ui_failure, log_msg)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         exc_info = e
         error_log_msg = ErrorLogMessage.from_unknown_exc(e)
 
     if error_log_msg is None or is_segment:
         return
 
-    link_to_show = link_to_show or link
+    _log_error(self, link_to_show or link, item, error_log_msg, exc_info, origin)
+
+
+def _log_error(  # noqa: PLR0913
+    self: _HasManager,
+    link_to_show: yarl.URL | str,
+    item: ScrapeItem | MediaItem | yarl.URL,
+    error_log_msg: ErrorLogMessage,
+    exc_info: Exception | None,
+    origin: ScrapeItem | MediaItem | yarl.URL | Path | None,
+) -> None:
     origin = origin or get_origin(item)
+    is_downloader = bool(getattr(self, "log_prefix", False))
     if is_downloader:
         self, item = cast("Downloader", self), cast("MediaItem", item)
         logger.error(
@@ -151,7 +161,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         return
 
     logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)
-    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)
+    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)  # pyright: ignore[reportArgumentType]
     self.manager.scrape_mapper.tui.scrape_errors.add(error_log_msg.ui_failure)
 
 
@@ -230,9 +240,9 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         delete_empty_files_and_folders(sorted_folder)
 
 
-def _partial_files(dir: Path | str) -> Generator[Path]:
+def _partial_files(path: Path | str, /) -> Generator[Path]:
     try:
-        for entry in os.scandir(dir):
+        for entry in os.scandir(path):
             try:
                 if entry.is_dir(follow_symlinks=False):
                     yield from _partial_files(entry.path)
@@ -320,7 +330,7 @@ def get_system_information() -> dict[str, Any]:
     def get_common_name() -> str:
         system = platform.system()
 
-        if system in ("Linux",):
+        if system == "Linux":
             try:
                 return platform.freedesktop_os_release()["PRETTY_NAME"]
             except OSError:

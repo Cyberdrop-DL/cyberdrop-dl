@@ -178,15 +178,16 @@ def extract_voe_video(soup: BeautifulSoup, origin: AbsoluteHttpURL) -> VoeVideo:
 
 def _load_json(json_content: str) -> Any:
     if not json_content:
-        return
+        return None
 
     try:
         data = json.loads(json_content)
-        if isinstance(data, list) and len(data) == 1:
-            return _decrypt_json(data[0])
-        return data
+        if type(data) is list and len(data) == 1:
+            data = _decrypt_json(data[0])
     except json.JSONDecodeError:
-        return
+        return None
+    else:
+        return data
 
 
 def _decrypt_json(encrypted_json: str) -> Any:
@@ -196,7 +197,7 @@ def _decrypt_json(encrypted_json: str) -> Any:
         try:
             return base64.b64decode(b64_string).decode("utf-8", errors="replace")
         except ValueError:
-            return
+            return None
 
     def shift(string: str, n: int) -> str:
         return "".join(chr(ord(char) - n) for char in string)
@@ -204,15 +205,15 @@ def _decrypt_json(encrypted_json: str) -> Any:
     step_1 = codecs.decode(encrypted_json, "rot13")
     step_2 = b64_decode(step_1)
     if not step_2:
-        return
+        return None
     step_3 = shift(step_2, n=3)
     step_4 = b64_decode(step_3[::-1])
     if not step_4:
-        return
+        return None
     try:
         return json.loads(step_4)
     except json.JSONDecodeError:
-        return
+        return None
 
 
 def _extract_mp4_urls(
@@ -242,7 +243,7 @@ def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generato
 
 def _parse_lang_code(name: str, label: str) -> str:
     code = Path(name).stem.rpartition("_")[-1]
-    if len(code) in (2, 3):
+    if len(code) in {2, 3}:
         return code
 
     label = label.casefold()

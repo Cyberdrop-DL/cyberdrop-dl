@@ -19,16 +19,12 @@ if TYPE_CHECKING:
 
     from pydantic import BaseModel
 
-    def _scanstring(*args, **kwargs) -> tuple[str, int]: ...
-
-    def _py_make_scanner(*args, **kwargs) -> tuple[Any, int]: ...
-
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
 
-else:
-    _scanstring = json.decoder.scanstring
-    _py_make_scanner = json.scanner.py_make_scanner
+
+_scanstring: Callable[..., tuple[str, int]] = json.decoder.scanstring  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+_py_make_scanner: Callable[..., tuple[Any, int]] = json.scanner.py_make_scanner  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
 
 _encoders: dict[tuple[bool, int | None], LenientJSONEncoder] = {}
 _REPLACE_QUOTES_PAIRS = (
@@ -49,7 +45,7 @@ class _DataclassInstance(Protocol):
     __dataclass_fields__: ClassVar[dict[str, dataclasses.Field[Any]]]
 
 
-def default(obj: object, /) -> Any:
+def default(obj: object, /) -> Any:  # noqa: PLR0911
     if isinstance(obj, datetime.date):
         return obj.isoformat()
     if isinstance(obj, enum.Enum):
@@ -85,7 +81,7 @@ class JSDecoder(json.JSONDecoder):
 
 def _verbose(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> _R:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:
             return func(*args, **kwargs)
         except json.JSONDecodeError as e:
@@ -104,7 +100,7 @@ def _get_encoder(*, sort_keys: bool = False, indent: int | None = None) -> Lenie
     return encoder
 
 
-def _parse_js_string(*args, **kwargs) -> tuple[Any, int]:
+def _parse_js_string(*args: Any, **kwargs: Any) -> tuple[Any, int]:
     string, end = _scanstring(*args, **kwargs)
     for quote in ("'", '"'):
         if len(string) > 2 and string.startswith(quote) and string.endswith(quote):
@@ -117,9 +113,9 @@ def _literal_value(string: str) -> Any:
         return int(string)
     if string == "undefined":
         return None
-    if string in ("true", "!0"):
+    if string in {"true", "!0"}:
         return True
-    if string in ("false", "!1"):
+    if string in {"false", "!1"}:
         return False
     return string
 
@@ -136,7 +132,7 @@ def _is_pydantic_instance(obj: object, /) -> TypeGuard[BaseModel]:
     return hasattr(obj, "model_dump") and not isinstance(obj, type)
 
 
-def dumps(obj: object, /, *, sort_keys: bool = False, indent: int | None = None, **_) -> Any:
+def dumps(obj: object, /, *, sort_keys: bool = False, indent: int | None = None, **_: object) -> Any:
     encoder = _get_encoder(sort_keys=sort_keys, indent=indent)
     return encoder.encode(obj)
 

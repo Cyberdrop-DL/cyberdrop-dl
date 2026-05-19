@@ -114,6 +114,6 @@ def _parse_hls_formats(sources: dict[str, str]) -> Generator[Format]:
 
 
 def _parse_mp4_formats(qualites: dict[str, list[dict[str, Any]]]) -> Generator[Format]:
-    for _, sources in qualites.items():
+    for sources in qualites.values():
         for source in sources:
             yield Format.from_dict(source, url=_VIDEO_CDN / source["url"])

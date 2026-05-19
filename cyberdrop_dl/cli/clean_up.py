@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 
 @app.command()
 def files(
-    dir: Annotated[
+    path: Annotated[
         Path,
         Parameter(
-            help="Path to dir to clean up",
+            help="Path of the folder to clean up",
             validator=validators.Path(exists=True, file_okay=False, dir_okay=True),
         ),
     ],
@@ -23,9 +23,9 @@ def files(
 
     from cyberdrop_dl.utils import _partial_files, delete_empty_files_and_folders
 
-    dir = dir.expanduser().resolve().absolute()
+    path = path.expanduser().resolve().absolute()
     logger.info("Deleting partial downloads...")
-    for file in _partial_files(dir):
+    for file in _partial_files(path):
         try:
             file.unlink()
         except OSError as e:
@@ -34,5 +34,5 @@ def files(
             logger.debug(f"Deleted '{file}'")
 
     logger.info("Deleting empty files and folders...")
-    delete_empty_files_and_folders(dir)
+    delete_empty_files_and_folders(path)
     logger.info("DONE!", extra={"color": "green"})

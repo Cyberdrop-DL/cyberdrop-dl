@@ -76,7 +76,7 @@ class DownloadClient:
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 
-    async def _process_response(
+    async def _process_response(  # noqa: C901
         self,
         media_item: MediaItem,
         domain: str,
@@ -163,7 +163,7 @@ class DownloadClient:
         if not media_item.partial_file.is_file():
             media_item.partial_file.touch()
 
-    async def _post_download_check(self, media_item: MediaItem, *_) -> None:
+    async def _post_download_check(self, media_item: MediaItem, *_: Any) -> None:
         if not await aio.get_size(media_item.partial_file):
             await aio.unlink(media_item.partial_file, missing_ok=True)
             raise DownloadError(HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
@@ -216,7 +216,7 @@ class DownloadClient:
         if await aio.is_file(media_item.path):
             await self.manager.database.history.add_filesize(domain, media_item)
 
-    async def handle_media_item_completion(self, media_item: MediaItem, downloaded: bool = False) -> None:
+    async def handle_media_item_completion(self, media_item: MediaItem, *, downloaded: bool = False) -> None:
         """Sends to hash client to handle hashing and marks as completed/current download."""
         try:
             media_item.downloaded = downloaded
@@ -243,7 +243,7 @@ class DownloadClient:
         download_dir = self.get_download_dir(media_item)
         return download_dir / media_item.filename
 
-    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:
+    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: C901, PLR0912, PLR0915
         """Complicated checker for if a file already exists, and was already downloaded."""
         media_item.path = self.get_file_location(media_item)
         part_suffix = media_item.path.suffix + constants.TempExt.PART
@@ -367,7 +367,7 @@ def _check_content_type(content_type: str, ext: str) -> str | None:
 def _get_content_type(headers: Mapping[str, str]) -> str | None:
     content_type = headers.get("Content-Type")
     if not content_type:
-        return
+        return None
 
     override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
     return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -9,7 +9,7 @@ from cyberdrop_dl import signature
 from cyberdrop_dl.utils import webdav
 
 if TYPE_CHECKING:
-    from xml.etree import ElementTree
+    from xml.etree import ElementTree as ET
 
 XML = """<?xml version="1.0"?>
 <d:multistatus
@@ -53,12 +53,12 @@ def test_webdav_parse_propfind() -> None:
 class TestPropFind:
     @staticmethod
     @signature.copy(webdav.create_propfind_xml)
-    def create_propfind_xml(*args, **kwargs) -> ElementTree.Element[str]:
+    def create_propfind_xml(*args: Any, **kwargs: Any) -> ET.Element[str]:
         root = webdav.create_propfind_xml(*args, **kwargs)
         return webdav.update_tags_from_ns(root)
 
     @staticmethod
-    def prop(root: ElementTree.Element[str]) -> ElementTree.Element[str]:
+    def prop(root: ET.Element[str]) -> ET.Element[str]:
         prop = root.find("{DAV:}prop")
         assert prop is not None
         return prop
@@ -81,7 +81,7 @@ class TestPropFind:
         assert prop.find("{https://calendarserver.org/ns}getctag") is not None
 
     @pytest.mark.parametrize(
-        "props, extra_ns",
+        ("props", "extra_ns"),
         [
             (("displayname",), None),
             (("displayname",), {}),

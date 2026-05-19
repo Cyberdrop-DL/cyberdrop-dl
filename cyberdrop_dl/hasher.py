@@ -36,13 +36,13 @@ logger = logging.getLogger(__name__)
 
 def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> str:
     with file.open("rb") as fp:
-        hash = _HASHERS[algorithm]()
+        hasher = _HASHERS[algorithm]()
         buffer = bytearray(_CHUNK_SIZE)
         mem_view = memoryview(buffer)
         while size := fp.readinto(buffer):
-            hash.update(mem_view[:size])
+            hasher.update(mem_view[:size])
 
-    return hash.hexdigest()
+    return hasher.hexdigest()
 
 
 async def hash_directory_scanner(manager: Manager, path: Path) -> None:
@@ -102,8 +102,12 @@ class Hasher:
     async def hash_item(self, media_item: MediaItem) -> None:
         if media_item.is_segment:
             return
-        hash = await self.update_db_and_retrive_hash(media_item.path, media_item.original_filename, media_item.referer)
-        await self.save_hash_data(media_item, hash)
+        hash_value = await self.update_db_and_retrive_hash(
+            media_item.path,
+            media_item.original_filename,
+            referer=media_item.referer,
+        )
+        await self.save_hash_data(media_item, hash_value)
 
     async def hash_item_during_download(self, media_item: MediaItem) -> None:
         if media_item.is_segment:
@@ -114,12 +118,12 @@ class Hasher:
 
         try:
             assert media_item.original_filename
-            hash = await self.update_db_and_retrive_hash(
+            hash_value = await self.update_db_and_retrive_hash(
                 media_item.path, media_item.original_filename, media_item.referer
             )
-            await self.save_hash_data(media_item, hash)
-        except Exception as e:
-            logger.exception(f"After hash processing failed: '{media_item.path}' with error {e}")
+            await self.save_hash_data(media_item, hash_value)
+        except Exception:
+            logger.exception("After hash processing failed: '%s'", media_item.path)
 
     async def update_db_and_retrive_hash(
         self,
@@ -130,25 +134,27 @@ class Hasher:
         file = Path(file)
 
         if file.suffix in TempExt:
-            return
+            return None
 
         try:
             if not await aio.get_size(file):
-                return
+                return None
         except IsADirectoryError:
-            return
+            return None
 
         async with self._sem:
             with self._tui.new_file(file):
                 async with asyncio.TaskGroup() as tg:
                     logger.info("Computing hashes of '%s'", file)
-                    hash = tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, "xxh128"))
+                    xxxhash = tg.create_task(
+                        self._update_db_and_retrive_hash(file, original_filename, referer, "xxh128")
+                    )
                     if self.config.add_md5_hash:
                         tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, "md5"))
                     if self.config.add_sha256_hash:
                         tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, "sha256"))
 
-        return hash.result()
+        return xxxhash.result()
 
     async def _update_db_and_retrive_hash(
         self,
@@ -159,12 +165,12 @@ class Hasher:
     ) -> str | None:
         """Generates hash of a file."""
 
-        hash = await self.manager.database.hash.get_file_hash_exists(file, hash_type)
+        hash_value = await self.manager.database.hash.get_file_hash_exists(file, hash_type)
         try:
-            if not hash:
-                hash = await self.hash_file(file, hash_type)
+            if not hash_value:
+                hash_value = await self.hash_file(file, hash_type)
                 await self.manager.database.hash.insert_or_update_hash_db(
-                    hash,
+                    hash_value,
                     hash_type,
                     file,
                     original_filename,
@@ -174,28 +180,28 @@ class Hasher:
             else:
                 self._tui.stats.prev_hashed += 1
                 await self.manager.database.hash.insert_or_update_hash_db(
-                    hash,
+                    hash_value,
                     hash_type,
                     file,
                     original_filename,
                     referer,
                 )
-        except Exception as e:
-            logger.exception(f"Error hashing '{file}' : {e}")
+        except Exception:
+            logger.exception("Error hashing '%s'", file)
         else:
-            return hash
+            return hash_value
 
-    async def save_hash_data(self, media_item: MediaItem, hash: str | None) -> None:
-        if not hash:
+    async def save_hash_data(self, media_item: MediaItem, hash_value: str | None) -> None:
+        if not hash_value:
             return
 
         absolute_path = await aio.resolve(media_item.path)
         size = await aio.get_size(media_item.path)
         assert size
         self.hashed_media_items.append(media_item)
-        if hash:
-            media_item.hash = hash
-        self.hashes_dict[hash][size].add(absolute_path)
+        if hash_value:
+            media_item.hash = hash_value
+        self.hashes_dict[hash_value][size].add(absolute_path)
         self._hashed_items.add(media_item.id)
 
     async def run(self) -> FileHashes:

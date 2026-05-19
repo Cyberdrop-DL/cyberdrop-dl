@@ -7,6 +7,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
 
@@ -48,6 +50,6 @@ class TwimgCrawler(Crawler):
         await super().handle_media_item(media_item, m3u8)
 
 
-def _make_download_urls(base_url: AbsoluteHttpURL):
+def _make_download_urls(base_url: AbsoluteHttpURL) -> Generator[AbsoluteHttpURL]:
     for name in ("orig", "4096x4096", "large"):
         yield base_url.with_query(format="jpg", name=name)

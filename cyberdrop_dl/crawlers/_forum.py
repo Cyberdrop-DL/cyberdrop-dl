@@ -14,7 +14,7 @@ import dataclasses
 import datetime
 import re
 from abc import abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Protocol, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, final
 
 from bs4 import BeautifulSoup, Tag
 
@@ -86,7 +86,7 @@ class ForumPost:
             css.decompose(article, trash)
         try:
             date = datetime.datetime.fromisoformat(css.select(article, *selectors.date))
-        except Exception:
+        except Exception:  # noqa: BLE001
             date = None
 
         id_str = css.attr(article, selectors.id.attribute)
@@ -218,12 +218,12 @@ class MessageBoardCrawler(Crawler, is_abc=True):
 
     @final
     @property
-    def max_thread_folder_depth(self):
+    def max_thread_folder_depth(self) -> int | None:
         return self.manager.config.settings.download_options.maximum_thread_folder_depth
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in and self.login_required is True:
-            return
+            return None
         scrape_item.url = self.parse_url(str(scrape_item.url))
         if self.is_attachment(scrape_item.url):
             return await self.handle_internal_link(scrape_item)
@@ -304,12 +304,12 @@ class MessageBoardCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def handle_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL) -> None:
         if link == self.PRIMARY_URL:
-            return
+            return None
         if self.is_attachment(link):
             return await self.handle_internal_link(scrape_item, link)
         if self.PRIMARY_URL.host == link.host:
             self.create_task(self.run(scrape_item.create_child(link)))
-            return
+            return None
         new_scrape_item = scrape_item.create_child(link)
         self.handle_external_links(new_scrape_item)
         scrape_item.add_children()
@@ -380,7 +380,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     POST_URL_PART_NAME: ClassVar[str]
     PAGE_URL_PART_NAME: ClassVar[str]
 
-    def __init_subclass__(cls, is_abc: bool = False, **kwargs) -> None:
+    def __init_subclass__(cls, *, is_abc: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(is_abc=is_abc, **kwargs)
         if is_abc:
             return
@@ -393,10 +393,12 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
+        assert link
         return False
 
     @classmethod
     def thumbnail_to_img(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL | None:
+        assert url
         return None
 
     @classmethod
@@ -451,11 +453,8 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             )
             if scrape_this_post:
                 post_url = self.make_post_url(thread, current_post.id)
-                new_scrape_item = scrape_item.create_new(
-                    thread.url,
-                    possible_datetime=current_post.timestamp,
-                    add_parent=post_url,
-                )
+                new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
+                new_scrape_item.uploaded_at = current_post.timestamp
                 self.create_task(self.post(new_scrape_item, current_post))
                 try:
                     scrape_item.add_children()
@@ -500,10 +499,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         return iter_links(valid_links, selector.attribute)
 
     def _images(self, post: ForumPostProtocol) -> Iterable[str]:
-        if self.IGNORE_EMBEDED_IMAGES_SRC:
-            selector = self.SELECTORS.posts.a_tag_w_image
-        else:
-            selector = self.SELECTORS.posts.images
+        selector = self.SELECTORS.posts.a_tag_w_image if self.IGNORE_EMBEDED_IMAGES_SRC else self.SELECTORS.posts.images
         images = css.iselect(post.content, selector.element)
         return iter_links(images, selector.attribute)
 
@@ -535,17 +531,17 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         try:
             return css.select(soup, *self.SELECTORS.next_page)
         except css.SelectorError:
-            return
+            return None
 
     @final
     @error_handling_wrapper
     async def process_child(self, scrape_item: ScrapeItem, link_str: str, *, embeds: bool = False) -> None:
         link_str_ = pre_process_child(link_str, embeds)
         if not link_str_:
-            return
+            return None
         link = await self.get_absolute_link(link_str_)
         if not link:
-            return
+            return None
         if self.is_thumbnail(link):
             link = self.thumbnail_to_img(link)
             if not link:
@@ -553,10 +549,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         await self.handle_link(scrape_item, link)
 
     async def get_absolute_link(self, link: str | AbsoluteHttpURL) -> AbsoluteHttpURL | None:
-        if isinstance(link, str):
-            absolute_link = self.parse_url(clean_link_str(link))
-        else:
-            absolute_link = link
+        absolute_link = self.parse_url(clean_link_str(link)) if isinstance(link, str) else link
         if is_confirmation_link(absolute_link):
             return await self.resolve_confirmation_link(absolute_link)
         return absolute_link
@@ -573,7 +566,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         selector = self.SELECTORS.confirmation_button
         confirm_button = soup.select_one(selector.element)
         if not confirm_button:
-            return
+            return None
 
         link_str: str = css.attr(confirm_button, selector.attribute)
         link_str = link_str.split('" class="link link--internal', 1)[0]
@@ -594,7 +587,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         try:
             if link_str := css.attr(link_obj, self.SELECTORS.posts.links.element):
                 return self.is_attachment(link_str)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
         return False
 
@@ -603,7 +596,7 @@ def iter_links(links: Iterable[Tag], attribute: str) -> Iterable[str]:
     for link_tag in links:
         try:
             yield css.attr(link_tag, attribute)
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
 
 
@@ -694,23 +687,27 @@ def is_confirmation_link(link: AbsoluteHttpURL) -> bool:
     )
 
 
-def check_post_id(init_post_id: int | None, current_post_id: int, scrape_single_forum_post: bool) -> tuple[bool, bool]:
+def check_post_id(
+    init_post_id: int | None,
+    current_post_id: int,
+    *,
+    scrape_single_forum_post: bool,
+) -> tuple[bool, bool]:
     """Checks if the program should scrape the current post.
 
     Returns (continue_scraping, scrape_this_post)"""
     if init_post_id:
         if init_post_id > current_post_id:
             return (True, False)
-        elif init_post_id == current_post_id:
+        if init_post_id == current_post_id:
             return (not scrape_single_forum_post, True)
-        else:
-            return (not scrape_single_forum_post, not scrape_single_forum_post)
+        return (not scrape_single_forum_post, not scrape_single_forum_post)
 
     assert not scrape_single_forum_post  # We should have raised an exception earlier
     return True, True
 
 
-def pre_process_child(link_str: str, embeds: bool = False) -> str | None:
+def pre_process_child(link_str: str, *, embeds: bool = False) -> str | None:
     assert isinstance(link_str, str)
     if embeds:
         link_str = extract_embed_url(link_str)

@@ -56,8 +56,8 @@ class HashTable:
             if row := await cursor.fetchone():
                 return row[0]
 
-        except Exception as e:
-            logger.exception(f"Error checking file: {e}")
+        except Exception:
+            logger.exception("Error checking file")
 
     async def get_files_with_hash_matches(
         self, hash_value: str, size: int, hash_type: str | None = None
@@ -118,9 +118,9 @@ class HashTable:
             True if all the record was inserted or updated successfully, False otherwise.
         """
 
-        hash = await self.insert_or_update_hashes(hash_value, hash_type, file)
-        file_ = await self.insert_or_update_file(original_filename, referer, file)
-        return file_ and hash
+        hashed = await self.insert_or_update_hashes(hash_value, hash_type, file)
+        existed = await self.insert_or_update_file(original_filename, referer, file)
+        return existed and hashed
 
     async def insert_or_update_hashes(self, hash_value: str, hash_type: str, file: Path | str) -> bool:
         query = """
@@ -134,8 +134,8 @@ class HashTable:
             folder = str(full_path.parent)
             await self.db_conn.execute(query, (hash_value, hash_type, folder, download_filename, hash_value))
             await self.db_conn.commit()
-        except Exception as e:
-            logger.exception(f"Error inserting/updating record: {e}")
+        except Exception:
+            logger.exception("Error inserting/updating record")
             return False
         return True
 
@@ -171,8 +171,8 @@ class HashTable:
                 ),
             )
             await self.db_conn.commit()
-        except Exception as e:
-            logger.exception(f"Error inserting/updating record: {e}")
+        except Exception:
+            logger.exception("Error inserting/updating record")
             return False
         return True
 
@@ -195,6 +195,6 @@ class HashTable:
             cursor = await self.db_conn.execute(query, params)
             rows = await cursor.fetchall()
             return [row[0] for row in rows]
-        except Exception as e:
-            logger.exception(f"Error retrieving folder and filename: {e}")
+        except Exception:
+            logger.exception("Error retrieving folder and filename")
             return []

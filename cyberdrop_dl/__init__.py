@@ -3,4 +3,5 @@ import sys
 
 _ = sys.path.pop(0)
 
-__version__ = importlib.metadata.version("cyberdrop-dl-patched")
+__dist_name__ = "cyberdrop-dl-patched"
+__version__ = importlib.metadata.version(__dist_name__)

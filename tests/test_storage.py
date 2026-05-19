@@ -11,11 +11,11 @@ from cyberdrop_dl import storage
 from cyberdrop_dl.storage import _psutil
 
 
-def create_partition(path: str):
+def create_partition(path: str) -> _psutil.DiskPartition:
     return _psutil.DiskPartition(Path(path), Path(path), "", "")
 
 
-def find_partition(path: str):
+def find_partition(path: str) -> _psutil.DiskPartition | None:
     return _psutil._find_partition(Path(path))
 
 
@@ -26,9 +26,8 @@ async def test_unsupported_fs_should_not_return_zero(tmp_path: Path) -> None:
         free_space = _psutil._disk_usage(tmp_path)
         assert free_space == -1
 
-    with mock.patch("psutil.disk_usage", side_effect=OSError(None, "another error")):
-        with pytest.raises(OSError):
-            _ = _psutil._disk_usage(tmp_path)
+    with mock.patch("psutil.disk_usage", side_effect=OSError(None, "another error")), pytest.raises(OSError):
+        _ = _psutil._disk_usage(tmp_path)
 
 
 def test_fuse_filesystem_should_not_return_zero(tmp_path: Path) -> None:

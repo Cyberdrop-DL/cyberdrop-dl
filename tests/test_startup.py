@@ -8,7 +8,7 @@ def test_startup(capsys: pytest.CaptureFixture[str]) -> None:
     # This is just to test that cyberdrop is able to run in the current python version
     msg = "main UI started successfully"
 
-    def main_ui(*_) -> None:
+    def main_ui(*_: object) -> None:
         print(msg)
 
     with pytest.MonkeyPatch.context() as m:

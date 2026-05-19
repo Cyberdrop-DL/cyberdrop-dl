@@ -142,7 +142,7 @@ class CSVLogsManager:
         url: AbsoluteHttpURL,
         response: AbstractResponse[Any],
         exc: Exception | None = None,
-    ):
+    ) -> None:
         _ = self.task_group.create_task(
             asyncio.to_thread(
                 _write_resp_to_disk,
@@ -163,7 +163,7 @@ class CSVLogsManager:
         await asyncio.to_thread(update)
 
 
-def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:
+def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:  # noqa: C901
     log_spacer()
     logger.info("Updating Last Forum Posts...\n")
 
@@ -188,7 +188,7 @@ def _update_last_forum_post(input_file: Path, last_post_log: Path) -> None:
     with last_post_log.open(encoding="utf8") as f:
         reader = csv.DictReader(f.readlines())
         for row in reader:
-            new_url = base_url = row["url"].strip().removesuffix("/")  # type: ignore
+            new_url = base_url = row["url"].strip().removesuffix("/")
 
             if "https" in new_url and "/post-" in new_url:
                 base_url = new_url.rsplit("/post", 1)[0]

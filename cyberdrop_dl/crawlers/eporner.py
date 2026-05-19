@@ -74,7 +74,7 @@ class EpornerCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
             case [slug, *_] if slug.startswith("video-"):
                 video_id = slug.removeprefix("video-")
@@ -119,7 +119,7 @@ class EpornerCrawler(Crawler):
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def playlist(self, scrape_item: ScrapeItem, from_profile: bool = False) -> None:
+    async def playlist(self, scrape_item: ScrapeItem, *, from_profile: bool = False) -> None:
         title: str = ""
         async for soup in self.web_pager(scrape_item.url):
             if not title and not from_profile:
@@ -235,10 +235,10 @@ def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
 
 def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[VideoSource]:
-    for format, formats in sources.items():
+    for fmt, formats in sources.items():
         for name, source in formats.items():
             url = parse_url(source["src"])
-            if format == "hls":
+            if fmt == "hls":
                 resolution = _parse_hls_res(url)
                 fps = 0.0
 
@@ -251,7 +251,7 @@ def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[V
                 fps=fps,
                 url=url,
                 name=name,
-                format=format,
+                format=fmt,
             )
 
 

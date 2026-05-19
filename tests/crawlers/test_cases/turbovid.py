@@ -6,7 +6,19 @@ TEST_CASES = [
             {
                 "url": "re:/data/E-26dWKftfB.mp4",
                 "filename": "E-26dWKftfB.mp4",
-                "referer": "https://turbovid.cr/d/E-26dWKftfB",
+                "referer": "https://turbo.cr/d/E-26dWKftfB",
+                "album_id": None,
+                "uploaded_at": 1749272400,
+            }
+        ],
+    },
+    {
+        "url": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
+        "results": [
+            {
+                "url": "re:/data/E-26dWKftfB.mp4",
+                "filename": "E-26dWKftfB.mp4",
+                "referer": "https://turbo.cr/d/E-26dWKftfB",
                 "album_id": None,
                 "uploaded_at": 1749272400,
             }
@@ -18,7 +30,7 @@ TEST_CASES = [
             {
                 "url": "re:/data/E-26dWKftfB.mp4",
                 "filename": "E-26dWKftfB.mp4",
-                "referer": "https://turbovid.cr/d/E-26dWKftfB",
+                "referer": "https://turbo.cr/d/E-26dWKftfB",
                 "album_id": None,
                 "uploaded_at": 1749272400,
             }
@@ -30,22 +42,10 @@ TEST_CASES = [
             {
                 "url": "re:/data/LM54NzGj8PO.mp4",
                 "filename": "LM54NzGj8PO.mp4",
-                "referer": "https://turbovid.cr/d/LM54NzGj8PO",
+                "referer": "https://turbo.cr/d/LM54NzGj8PO",
                 "download_folder": "re:Qoqsik (TurboVid)",
                 "album_id": "Bls2Yfbxco0",
                 "uploaded_at": 1763269200,
-            }
-        ],
-    },
-    {
-        "url": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
-        "results": [
-            {
-                "url": "re:/data/E-26dWKftfB.mp4",
-                "filename": "E-26dWKftfB.mp4",
-                "referer": "https://cdn4.turbovid.cr/data/E-26dWKftfB.mp4",
-                "album_id": None,
-                "uploaded_at": None,
             }
         ],
     },
@@ -61,5 +61,9 @@ TEST_CASES = [
             }
         ],
     },
-    {"url": "https://turbovid.cr/library?q=mirror", "results": [], "count": range(60, 80)},
+    {
+        "url": "https://turbovid.cr/library?q=mirror",
+        "results": [],
+        "count": range(166, 200),
+    },
 ]

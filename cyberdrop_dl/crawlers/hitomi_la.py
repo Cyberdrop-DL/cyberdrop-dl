@@ -5,13 +5,13 @@ import json
 import re
 import struct
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import TYPE_CHECKING, ClassVar, NamedTuple, Required, TypedDict
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils import dates, error_handling_wrapper
 from cyberdrop_dl.utils.filepath import get_filename_and_ext
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ class Servers(defaultdict[int, int]):
             default = 0
         super().__init__(lambda: default)
         self.root = root
-        self.fetch_datetime = datetime.now()
+        self.fetch_datetime = dates.now_utc()
 
 
 class Regex:
@@ -168,7 +168,7 @@ class HitomiLaCrawler(Crawler):
 
     async def get_servers(self) -> Servers:
         async with self._startup_lock:
-            if self._servers is None or (datetime.now() - self._servers.fetch_datetime > SERVERS_EXPIRE_AFTER):
+            if self._servers is None or (dates.now_utc() - self._servers.fetch_datetime > SERVERS_EXPIRE_AFTER):
                 self._servers = await self._get_servers()
         return self._servers
 
@@ -212,14 +212,11 @@ class HitomiLaCrawler(Crawler):
 
 
 def get_image_url(servers: Servers, image: Image) -> AbsoluteHttpURL:
-    if ALLOW_AVIF and image.get("hasavif"):
-        dir = "avif"
-    else:
-        dir = "webp"
-    return url_from_hash(servers, image, dir, ext=f".{dir}")
+    ext = "avif" if ALLOW_AVIF and image.get("hasavif") else "webp"
+    return url_from_hash(servers, image, ext, ext=f".{ext}")
 
 
-def url_from_hash(servers: Servers, image: Image, dir: str, ext: str | None = None) -> AbsoluteHttpURL:
+def url_from_hash(servers: Servers, image: Image, dir_: str, ext: str | None = None) -> AbsoluteHttpURL:
     # https://ltn.gold-usergeneratedcontent.net/common.js
     if ext is None:
         _, ext = get_filename_and_ext(image["name"])
@@ -229,9 +226,9 @@ def url_from_hash(servers: Servers, image: Image, dir: str, ext: str | None = No
     server_num = servers[server_hex_num] + 1
     origin = AbsoluteHttpURL(f"https://{ext[1]}{server_num}.{CONTENT_HOST}")
     path = f"{servers.root}/{server_hex_num}/{image_hash}{ext}"
-    if dir in ("webp", "avif"):
+    if dir_ in {"webp", "avif"}:
         return origin / path
-    return origin / dir / path
+    return origin / dir_ / path
 
 
 def match_int_or_none(pattern: str, string: str) -> int | None:
@@ -248,6 +245,6 @@ def parse_query_word(query_word: str) -> NozomiSearchArguments:
     left_side, _, right_side = query_word.partition(":")
     if left_side == "language":
         return NozomiSearchArguments(None, "index", right_side)
-    if left_side in ("female", "male"):
+    if left_side in {"female", "male"}:
         return NozomiSearchArguments("tag", query_word)
     return NozomiSearchArguments(left_side, right_side)

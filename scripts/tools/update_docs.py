@@ -14,7 +14,7 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
         msg = f"Updated:'{relative}'"
     else:
         msg = f"Did not change: '{relative}'"
-    print(msg)  # noqa: T201
+    print(msg)
 
 
 def make_supported_sites_markdown_table() -> str:

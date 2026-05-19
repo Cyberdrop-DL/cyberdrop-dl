@@ -14,20 +14,24 @@ if TYPE_CHECKING:
 tracebacks.install_exception_hook()
 
 
-def run_cdl(args: Sequence[str] | None = None) -> int | None:
+def run_cdl(args: Sequence[str] | None = None) -> int:
     from cyberdrop_dl.logs import setup_console_logging
 
     with setup_console_logging():
         try:
             app(args)
-            return 0
+
         except* ValueError as exc_group:
             msg = "\n" + "\n".join(map(str, exc_group.exceptions))
             app.console.print(CycloptsPanel(msg, title=exc_group.message))
+        else:
+            return 0
+
+        return 1
 
 
-def main(args: Sequence[str] | None = None):
-    sys.exit(bool(run_cdl(args)))
+def main(args: Sequence[str] | None = None) -> None:
+    sys.exit(run_cdl(args))
 
 
 if __name__ == "__main__":

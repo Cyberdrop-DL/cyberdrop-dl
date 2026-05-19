@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fapello.com support
+
 ### Changed
 
 ### Deprecated
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - files.vc support (No longer exists)
+- fapello.su support (No longer exists)
 
 ### Fixed
 
@@ -41,8 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video extraction from embed URLs (YouJizz)
 - Date extraction (Rule34.xxx)
 - Date extraction (Rule34vault)
+- Date extraction (Nsfw.xxx)
 - Date extraction (e621)
 - Chapter info extraction (OmegaScans)
+- 403 Forbidden when the input URL is a direct file (Turbo.cr)
 
 ## [9.10.1] - 2026-05-16
 

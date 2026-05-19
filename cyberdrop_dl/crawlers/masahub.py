@@ -31,14 +31,14 @@ class MasahubCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if query := scrape_item.url.query.get("s"):
             return await self.search(scrape_item, query)
-        elif len(scrape_item.url.parts) >= 2:
+        if len(scrape_item.url.parts) >= 2:
             return await self.video(scrape_item)
         raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url)
         link = self.parse_url(Selector.VIDEO_SRC(soup))

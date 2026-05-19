@@ -28,7 +28,7 @@ class Selector:
     FOLDER_TOTAL_PAGES = "input#rspTotalPages"
 
     LOGIN_FORM = "form#form_login"
-    PASSWORD_PROTECTED = "#folderPasswordForm, #filePassword"
+    PASSWORD_PROTECTED = "#folderPasswordForm, #filePassword"  # noqa: S105
     RECAPTCHA = "form[method=POST] script[src*='/recaptcha/api.js']"
 
 
@@ -46,7 +46,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
     }
     _RATE_LIMIT = 5, 1
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.FOLDERS_API_URL = cls.PRIMARY_URL / "account/ajax/load_files"
         cls.FILE_API_URL = cls.PRIMARY_URL / "account/ajax/file_details"
@@ -66,7 +66,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
                 raise ValueError
 
     @error_handling_wrapper
-    async def folder(self, scrape_item: ScrapeItem, folder_id: str, is_shared: bool = False) -> None:
+    async def folder(self, scrape_item: ScrapeItem, folder_id: str, *, is_shared: bool = False) -> None:
         # Make request to update cookies. Access to folders is saved in cookies
         soup = await self.request_soup(scrape_item.url)
 
@@ -78,7 +78,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             node_id = ""
 
         else:
-            # ex:  loadImages('folder', '12345', 1, 0, '', {'searchTerm': "", 'filterUploadedDateRange': ""});
+            # this looks like:  loadImages('folder', '12345', 1, 0, '', {'searchTerm': "", 'filterUploadedDateRange': ""});
             page_type = "folder"
             load_images = extr_text(soup.select(Selector.LOAD_IMAGES)[-1].text, "loadImages(", ");")
             node_id = load_images.replace("'", "").split(",")[1].strip()
@@ -126,7 +126,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url)
         if soup.select_one(Selector.PASSWORD_PROTECTED):
@@ -232,7 +232,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
             raise PasswordProtectedError(message="Incorrect password")
 
 
-def _check_is_available(soup: BeautifulSoup):
+def _check_is_available(soup: BeautifulSoup) -> None:
     if soup.select(Selector.RECAPTCHA):
         raise DDOSGuardError("Google recaptcha found")
 

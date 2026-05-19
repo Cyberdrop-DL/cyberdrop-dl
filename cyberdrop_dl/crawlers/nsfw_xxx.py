@@ -85,11 +85,11 @@ class NsfwXXXCrawler(Crawler):
         while True:
             resp = await self.request_json(api_url)
             yield resp["data"]
-            next: str | None = resp["meta"].get("nextPage")
-            if not next:
+            next_page: str | None = resp["meta"].get("nextPage")
+            if not next_page:
                 break
 
-            api_url = self.parse_url(next)
+            api_url = self.parse_url(next_page)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
@@ -103,7 +103,7 @@ class NsfwXXXCrawler(Crawler):
         data: dict[str, Any] = post["data"]
         type_: str = content["type"]
 
-        scrape_item.uploaded_at = date = self.parse_date(post["publishedAt"])
+        scrape_item.uploaded_at = date = self.parse_date(post["publishedAt"], "%B %Y")
         title = self.create_separate_post_title(content["title"], str(content["id"]), date)
         scrape_item.setup_as_album(self.create_title(title), album_id=str(content["id"]))
 
