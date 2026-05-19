@@ -389,11 +389,11 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             return url.with_host(new_host)
         return url
 
-    @error_handling_wrapper
-    def raise_exc(self, scrape_item: ScrapeItem, exc: type[Exception] | Exception | str) -> None:
-        if isinstance(exc, str):
-            exc = ScrapeError(exc)
-        raise exc
+    def raise_exc(self, scrape_item: ScrapeItem, exc: type[Exception] | Exception | str | int) -> None:
+        with self.catch_errors(scrape_item):
+            if isinstance(exc, (str, int)):
+                exc = ScrapeError(exc)
+            raise exc
 
     @final
     def new_task_id(self, url: AbsoluteHttpURL):

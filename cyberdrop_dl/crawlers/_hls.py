@@ -5,6 +5,8 @@ import dataclasses
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
+from typing_extensions import override
+
 from cyberdrop_dl.utils import m3u8
 
 if TYPE_CHECKING:
@@ -21,13 +23,7 @@ class HLSParser(ABC):
     For multi variant m3u8, the best resolution will be automatically selected"""
 
     @abstractmethod
-    async def request_text(
-        self,
-        url: AbsoluteHttpURL,
-        /,
-        method: Literal["GET"] = "GET",
-        headers: Mapping[str, str] | None = None,
-    ) -> str: ...
+    async def request_text(self, url: AbsoluteHttpURL, /, headers: Mapping[str, str] | None = None) -> str: ...
 
     async def request_m3u8(
         self,
@@ -91,12 +87,7 @@ class SimpleHLSParser(HLSParser):
 
     _session: aiohttp.ClientSession
 
-    async def request_text(
-        self,
-        url: AbsoluteHttpURL,
-        /,
-        method: Literal["GET"] = "GET",
-        headers: Mapping[str, str] | None = None,
-    ) -> str:
+    @override
+    async def request_text(self, url: AbsoluteHttpURL, /, headers: Mapping[str, str] | None = None) -> str:
         async with self._session.get(url, headers=headers) as resp:
             return await resp.text()

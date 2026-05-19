@@ -31,8 +31,8 @@ class FapelloComCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case [model]:
                 return await self.model(scrape_item, model)
-            case [model, post_id]:
-                return await self.post(scrape_item, model, int(post_id))
+            case [model, _post_id]:
+                return await self.post(scrape_item, model)
             case _:
                 raise ValueError
 
@@ -51,7 +51,7 @@ class FapelloComCrawler(Crawler):
                 break
 
     @error_handling_wrapper
-    async def post(self, scrape_item: ScrapeItem, model: str, post_id: int) -> None:
+    async def post(self, scrape_item: ScrapeItem, model: str) -> None:
         scrape_item.setup_as_album(self.create_title(model))
         soup = await self.request_soup(scrape_item.url)
         for _, link in self.iter_tags(soup, Selector.IMAGE_OR_VIDEO, "src"):

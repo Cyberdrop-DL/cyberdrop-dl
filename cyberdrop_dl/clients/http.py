@@ -208,7 +208,7 @@ class HTTPClient:
             headers,
             impersonate=impersonate,
             data=data,
-            json=data,
+            json=json,
             request_params=request_params,
         ) as resp:
             try:
