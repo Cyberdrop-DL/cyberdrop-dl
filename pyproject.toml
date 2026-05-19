@@ -147,12 +147,13 @@ ignore = [
     "PLR2004",  # magic-value-comparison
     "RET503",  # implicit-return
     "S101",  # assert
+    "S603",  # subprocess-without-shell-equals-true
+    "S607",  # start-process-with-partial-path
     "SIM105",  # suppressible-exception
     "SLF001",  # private-member-access
     "TD",  # flake8-todos
     "TRY003",  # raise-vanilla-args
-    "TRY400",  # error-instead-of-exception
-    "S607"   	# start-process-with-partial-path
+    "TRY400"  # error-instead-of-exception
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
