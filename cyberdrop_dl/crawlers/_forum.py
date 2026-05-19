@@ -14,7 +14,7 @@ import dataclasses
 import datetime
 import re
 from abc import abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Protocol, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, final
 
 from bs4 import BeautifulSoup, Tag
 

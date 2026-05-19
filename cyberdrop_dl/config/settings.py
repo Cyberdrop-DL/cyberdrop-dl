@@ -80,7 +80,7 @@ class Files(SettingsGroup):
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
 
-class Logs(SettingsGroup):
+class Logs(SettingsGroup):  # noqa: PLW1641
     download_error_urls: LogPath = Path("Download_Error_URLs.csv")
     last_forum_post: LogPath = Path("Last_Scraped_Forum_Posts.csv")
     log_folder: Path = DEFAULT_APP_STORAGE / "Logs"

@@ -129,7 +129,7 @@ def _assert_n_results(test_case: CrawlerTestCase, n_results: int) -> None:
         assert count == n_results
 
 
-class _NOT_NONE:  # noqa: N801
+class _NOT_NONE:  # noqa: N801, PLW1641
     def __eq__(self, other: object) -> bool:
         return other is not None
 

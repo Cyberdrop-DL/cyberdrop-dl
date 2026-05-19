@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class Selector:
     BAIT_LINK = "#ideoooolink"
-    JS_TOKEN = "script:-soup-contains(ideoooolink)"
+    JS_TOKEN = "script:-soup-contains(ideoooolink)"  # noqa: S105
 
 
 class StreamtapeCrawler(Crawler):
