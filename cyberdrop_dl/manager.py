@@ -9,7 +9,6 @@ import sys
 import time
 from datetime import timedelta
 from pathlib import Path
-from types import NotImplementedType
 from typing import TYPE_CHECKING, Any, Self
 
 from pydantic.types import ByteSize
@@ -30,6 +29,7 @@ from cyberdrop_dl.utils import get_system_information
 if TYPE_CHECKING:
     from collections.abc import Generator
     from os import PathLike
+    from types import NotImplementedType
 
     from cyberdrop_dl.cli import CLIargs
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats

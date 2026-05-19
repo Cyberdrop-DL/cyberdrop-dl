@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -12,6 +11,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

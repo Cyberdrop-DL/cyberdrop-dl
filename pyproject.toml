@@ -133,6 +133,9 @@ target-version = "py311"
 select = [
     "ALL"
 ]
+extend-safe-fixes = [
+    "TC"  # move import from and to TYPE_CHECKING blocks
+]
 ignore = [
     "ANN401",  # any-type
     "COM812",  # missing-trailing-comma

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -8,6 +7,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
 

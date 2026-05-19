@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import bs4
@@ -15,6 +14,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

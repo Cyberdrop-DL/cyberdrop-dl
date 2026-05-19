@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import datetime
 import importlib
 import logging
 import pkgutil
@@ -41,6 +40,7 @@ from cyberdrop_dl.utils.filepath import compose_filename, get_filename_and_ext, 
 from cyberdrop_dl.utils.strings import safe_format
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterable, Mapping
     from types import ModuleType
 

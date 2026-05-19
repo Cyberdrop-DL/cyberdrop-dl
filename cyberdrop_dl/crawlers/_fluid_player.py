@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
@@ -8,6 +7,8 @@ from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem

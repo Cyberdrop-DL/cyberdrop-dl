@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from collections.abc import Callable
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
@@ -10,7 +9,7 @@ from .definitions import create_fixed_history, create_history, create_media_inde
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Callable
 
     import aiosqlite
     from yarl import URL

@@ -29,11 +29,11 @@ class Result(TypedDict):
     # Simplified version of media_item
     url: str
     filename: NotRequired[str | type]
-    debrid_link: NotRequired[str | None | type]
+    debrid_link: NotRequired[str | type | None]
     original_filename: NotRequired[str | type]
     referer: NotRequired[str | type]
-    album_id: NotRequired[str | None | type]
-    uploaded_at: NotRequired[int | None | type]
+    album_id: NotRequired[str | type | None]
+    uploaded_at: NotRequired[int | type | None]
     download_folder: NotRequired[str | type]
 
 

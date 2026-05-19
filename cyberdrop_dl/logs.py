@@ -6,7 +6,6 @@ import logging
 import queue
 import sys
 from contextvars import ContextVar
-from datetime import datetime
 from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
@@ -25,6 +24,7 @@ from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
+    from datetime import datetime
 
     from rich.console import ConsoleRenderable
 
