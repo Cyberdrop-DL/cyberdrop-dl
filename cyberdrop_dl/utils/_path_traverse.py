@@ -60,6 +60,7 @@ def delete_empty_files_and_folders_in_place(dirname: Path | str) -> bool:
         return False
     try:
         os.rmdir(dirname)  # noqa: PTH106
-        return True
     except OSError:
         return False
+    else:
+        return True

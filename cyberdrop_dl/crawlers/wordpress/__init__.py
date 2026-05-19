@@ -185,7 +185,7 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         for link_str in dict.fromkeys(iterable):
             try:
                 yield self.parse_url(link_str)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S112
                 continue
 
 

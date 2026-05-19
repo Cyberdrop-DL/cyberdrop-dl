@@ -50,9 +50,10 @@ _FFPROBE_CALL_PREFIX = (
 def is_installed() -> bool:
     try:
         _check()
-        return True
     except RuntimeError:
         return False
+    else:
+        return True
 
 
 def _check() -> None:

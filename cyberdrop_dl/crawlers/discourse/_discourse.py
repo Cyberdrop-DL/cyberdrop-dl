@@ -141,7 +141,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
                 try:
                     if link_str:
                         yield self.parse_url(link_str)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001, S112
                     continue
 
         return iter_links()

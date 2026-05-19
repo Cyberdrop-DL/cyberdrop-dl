@@ -93,7 +93,6 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
 
     try:
         await coro
-        return True
     except FileNotFoundError:
         return False
     except OSError as e:
@@ -101,6 +100,8 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
         if "file not found" in str(e).casefold():
             return False
         raise
+    else:
+        return True
 
 
 def _filter_db_matches(db_matches: Iterable[sqlite3.Row], base_dir: Path) -> Generator[Path]:

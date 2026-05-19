@@ -275,7 +275,7 @@ class PixelDrainCrawler(Crawler):
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S112
                 continue
             new_scrape_item = scrape_item.create_child(link)
             self.handle_external_links(new_scrape_item)

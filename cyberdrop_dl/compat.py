@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-
 if sys.version_info < (3, 12):
     _EnumMemberT = TypeVar("_EnumMemberT", bound=enum.Enum)
 
@@ -21,9 +20,10 @@ if sys.version_info < (3, 12):
                 return True
             try:
                 cls(member)
-                return True
             except ValueError:
                 return False
+            else:
+                return True
 
         def __iter__(cls: type[_EnumMemberT]) -> Iterator[_EnumMemberT]:  # type: ignore[reportGeneralTypeIssues]  # pyright: ignore[reportGeneralTypeIssues]
             return (cls._member_map_[name] for name in cls._member_names_)  # type: ignore[reportReturnType]  # pyright: ignore[reportReturnType]

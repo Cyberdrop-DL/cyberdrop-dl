@@ -5,6 +5,7 @@ import logging
 import sqlite3
 import sys
 from pathlib import Path
+from typing import LiteralString
 
 from cyberdrop_dl.database import Database, connect
 from cyberdrop_dl.database.tables.history import fix_domains, fix_referers
@@ -16,9 +17,9 @@ from cyberdrop_dl.utils.filepath import sanitize_filename
 logger = logging.getLogger(__name__)
 
 
-def _get_table_names(conn: sqlite3.Connection, schema: str = "main") -> set[str]:
-    rows = conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'").fetchall()
-    return {r[0] for r in rows}
+def _get_table_names(conn: sqlite3.Connection, schema: LiteralString = "main") -> set[str]:
+    cursor = conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")  # noqa: S608
+    return {r[0] for r in cursor.fetchall()}
 
 
 def _get_column_names(conn: sqlite3.Connection, table: str, schema: str = "main") -> set[str]:
@@ -98,7 +99,7 @@ def _transfer_table(new_conn: sqlite3.Connection, table: str) -> None:
     select_sql = ", ".join(select_exprs)
 
     logger.info("_transfer_table: old.%s -> %s", table, table)
-    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"')
+    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"')  # noqa: S608
 
 
 def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
@@ -127,7 +128,7 @@ def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
             CAST(strftime('%s', "created_at") AS INTEGER)
         FROM old."media"
         WHERE "download_path" IS NOT NULL
-        """
+        """  # noqa: S608
     )
 
 

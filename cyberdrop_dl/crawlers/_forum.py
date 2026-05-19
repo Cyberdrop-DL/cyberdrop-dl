@@ -599,7 +599,7 @@ def iter_links(links: Iterable[Tag], attribute: str) -> Iterable[str]:
     for link_tag in links:
         try:
             yield css.attr(link_tag, attribute)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112
             continue
 
 

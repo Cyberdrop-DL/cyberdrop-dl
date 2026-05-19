@@ -162,6 +162,9 @@ ignore = [
     "TRY400"  # error-instead-of-exception
 ]
 
+[tool.ruff.lint.flake8-boolean-trap]
+extend-allowed-calls = ["cyberdrop_dl.logs._enter_context"]
+
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.override".msg = "Use typing_extensions.override instead."
 

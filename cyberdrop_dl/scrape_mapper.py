@@ -251,10 +251,10 @@ class ScrapeMapper:
 
         try:
             await self._direct_http.fetch(scrape_item)
-            return
-
         except (NoExtensionError, ValueError):
             pass
+        else:
+            return
 
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")

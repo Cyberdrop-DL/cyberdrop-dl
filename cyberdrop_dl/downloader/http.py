@@ -269,13 +269,6 @@ class Downloader:
                 media_item.duration = await self.manager.database.history.get_duration(self.domain, media_item)
                 await self.check_file_can_download(media_item)
             downloaded = await self.client.download_file(self.domain, media_item)
-            if downloaded:
-                await aio.chmod(media_item.path, 0o666)
-                if not media_item.is_segment:
-                    await self.set_file_datetime(media_item, media_item.path)
-                    self.manager.scrape_mapper.tui.files.stats.completed += 1
-                    logger.info(f"Download finished: {media_item.url}")
-            return downloaded
 
         except SkipDownloadError as e:
             if not media_item.is_segment:
@@ -303,6 +296,15 @@ class Downloader:
 
             message = str(e)
             raise DownloadError(ui_message, message, retry=True) from e
+
+        else:
+            if downloaded:
+                await aio.chmod(media_item.path, 0o666)
+                if not media_item.is_segment:
+                    await self.set_file_datetime(media_item, media_item.path)
+                    self.manager.scrape_mapper.tui.files.stats.completed += 1
+                    logger.info(f"Download finished: {media_item.url}")
+            return downloaded
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:

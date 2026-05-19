@@ -182,11 +182,12 @@ def _load_json(json_content: str) -> Any:
 
     try:
         data = json.loads(json_content)
-        if isinstance(data, list) and len(data) == 1:
-            return _decrypt_json(data[0])
-        return data
+        if type(data) is list and len(data) == 1:
+            data = _decrypt_json(data[0])
     except json.JSONDecodeError:
         return None
+    else:
+        return data
 
 
 def _decrypt_json(encrypted_json: str) -> Any:

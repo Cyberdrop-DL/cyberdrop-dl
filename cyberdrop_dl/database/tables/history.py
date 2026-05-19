@@ -294,9 +294,9 @@ class HistoryTable:
 
 
 async def fix_domains(db_conn: aiosqlite.Connection) -> None:
-    logger.info("Updating old domains")
+    logger.info("Updating old database domains")
     updates = "\n".join(
-        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"
+        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
         for current, old in [
             ("bunkr", "bunkrr"),
             ("jpg5.su", "sharex"),
@@ -311,7 +311,7 @@ async def fix_domains(db_conn: aiosqlite.Connection) -> None:
 async def fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
 
-    logger.info("Updating old referers")
+    logger.info("Updating old database referers")
 
     def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:
         def call(*args: Any, **kwargs: Any) -> _T:

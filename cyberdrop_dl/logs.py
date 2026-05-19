@@ -205,7 +205,7 @@ def _threaded_logger(
 
 
 @contextlib.contextmanager
-def _enter_context(context_var: ContextVar[_T], value: _T) -> Generator[None]:
+def _enter_context(context_var: ContextVar[_T], value: _T, /) -> Generator[None]:
     token = context_var.set(value)
     try:
         yield
@@ -323,7 +323,7 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
     import mega
 
     if "pytest" not in sys.modules:
-        logging.captureWarnings(True)
+        logging.captureWarnings(capture=True)
 
     with (
         _setup_debug_logger() as debug_log_file,
