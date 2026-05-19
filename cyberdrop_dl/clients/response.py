@@ -241,7 +241,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     async def aclose(self) -> None: ...
 
     @override
-    def _json(self, encoding: str | None = None) -> Any:
+    async def _json(self, encoding: str | None = None) -> Any:
         if self._text:
             return json.loads(self._text)
 
