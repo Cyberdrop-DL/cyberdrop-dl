@@ -53,7 +53,7 @@ def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str |
     if decompose:
         for trash in inner_tag.select(decompose):
             trash.decompose()
-    return text(inner_tag, strip)
+    return text(inner_tag, strip=strip)
 
 
 def attr_or_none(tag: Tag, attribute: str) -> str | None:

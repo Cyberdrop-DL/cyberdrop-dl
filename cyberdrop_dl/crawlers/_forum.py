@@ -449,7 +449,9 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         for article in soup.select(self.SELECTORS.posts.article):
             current_post = ForumPost.new(article, self.SELECTORS.posts)
             continue_scraping, scrape_this_post = check_post_id(
-                thread.post_id, current_post.id, self.scrape_single_forum_post
+                thread.post_id,
+                current_post.id,
+                scrape_single_forum_post=self.scrape_single_forum_post,
             )
             if scrape_this_post:
                 post_url = self.make_post_url(thread, current_post.id)
@@ -536,7 +538,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     @final
     @error_handling_wrapper
     async def process_child(self, scrape_item: ScrapeItem, link_str: str, *, embeds: bool = False) -> None:
-        link_str_ = pre_process_child(link_str, embeds)
+        link_str_ = pre_process_child(link_str, embeds=embeds)
         if not link_str_:
             return None
         link = await self.get_absolute_link(link_str_)
