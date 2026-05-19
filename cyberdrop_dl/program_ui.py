@@ -34,7 +34,7 @@ _changelog: str = ""
 
 
 def changelog() -> str:
-    global _changelog
+    global _changelog  # noqa: PLW0603
     if not _changelog:
         _changelog = asyncio.run(_fetch_changelog())
 

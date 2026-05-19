@@ -147,6 +147,7 @@ ignore = [
     "PLR2004",  # magic-value-comparison
     "RET503",  # implicit-return
     "S101",  # assert
+    "S110",  # try-except-pass
     "S603",  # subprocess-without-shell-equals-true
     "S607",  # start-process-with-partial-path
     "SIM105",  # suppressible-exception
