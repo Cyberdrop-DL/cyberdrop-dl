@@ -799,12 +799,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp | None:  # noqa: A002
+    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp:  # noqa: A002
         return dates.to_timestamp(dates.parse_format(date_or_datetime, format))
 
     @final
     @classmethod
-    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp | None:
+    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp:
         return dates.to_timestamp(dates.parse_iso(date_or_datetime))
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:

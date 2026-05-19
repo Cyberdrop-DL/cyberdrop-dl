@@ -190,7 +190,7 @@ class XhamsterCrawler(Crawler):
             initials = await self._get_window_initials(next_page_url)
             images = initials["photosGalleryModel"]["photos"]
 
-    def _handle_img(self, scrape_item: ScrapeItem, img: dict[str, Any], results: dict[str, int]) -> None:
+    def _handle_img(self, scrape_item: ScrapeItem, img: dict[str, Any], results: dict[str, bool]) -> None:
         src, page_url = self.parse_url(img["imageURL"]), self.parse_url(img["pageURL"])
         if self.check_album_results(src, results):
             return
