@@ -26,7 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Replace fapello.su with fapello.com
+- Replaced fapello.su with fapello.com. Existing database entries will be ignored
+- Updated domain to xbunker.cc (Xbunkr)
+- Updated domain to www.imagepond.net (Imagepond)
+- Updated domain to turbo.cr (TurboVid)
 
 ### Removed
 
