@@ -39,7 +39,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.10.1
+List of sites supported by cyberdrop-dl-patched as of version 9.10.2
 
 ### 4chan
 
@@ -596,11 +596,11 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - Pools:
-  - `/pools/...`
+  - `/pools/<pool_id>`
 - Post:
-  - `/posts/...`
+  - `/posts/<post_id>`
 - Tags:
-  - `/posts?tags=...`
+  - `/posts?tags=<tags>`
 
 
 ### eFukt
@@ -737,18 +737,18 @@ ex: To only download categories from a date range: ,
 - base crawler: Xenforo
 
 
-### Fapello
+### Fapello.com
 
-**Primary URL**: [https://fapello.su](https://fapello.su)
+**Primary URL**: [https://fapello.com](https://fapello.com)
 
-**Supported Domains**: `fapello.*`
+**Supported Domains**: `fapello.com`
 
 **Supported Paths**:
 
 - Individual Post:
-  - `/.../...`
+  - `/<model_nam>/<post_id>`
 - Model:
-  - `/...`
+  - `/<name>`
 
 
 ### Fileditch
@@ -775,17 +775,6 @@ ex: To only download categories from a date range: ,
   - `/d/<slug>`
 - Folder:
   - `/f/<slug>`
-
-
-### FilesVC
-
-**Primary URL**: [https://files.vc](https://files.vc)
-
-**Supported Domains**: `files.vc`
-
-**Supported Paths**:
-
-- Direct Links:
 
 
 ### Flickr
@@ -1161,7 +1150,7 @@ spreadsheets:
 
 ### ImagePond
 
-**Primary URL**: [https://imagepond.net](https://imagepond.net)
+**Primary URL**: [https://www.imagepond.net](https://www.imagepond.net)
 
 **Supported Domains**: `imagepond.net`
 
@@ -1294,20 +1283,6 @@ spreadsheets:
 - Thumbnail:
   - `/t/...`
   - `/u/t/`
-
-
-### IncestFlix
-
-**Primary URL**: [https://www.incestflix.com](https://www.incestflix.com)
-
-**Supported Domains**: `incestflix.*`
-
-**Supported Paths**:
-
-- Tag:
-  - `/tag/...`
-- Video:
-  - `/watch/...`
 
 
 ### InPorn
@@ -1699,10 +1674,11 @@ spreadsheets:
 **Supported Paths**:
 
 - Chapter:
-  - `/series/.../...`
-- Direct Links:
+  - `/series/<series_name>/<slug>`
+- Direct links:
+  - `/file/....`
 - Series:
-  - `/series/...`
+  - `/series/<series_name>`
 
 
 ### OneDrive
@@ -2187,7 +2163,7 @@ spreadsheets:
 
 **Primary URL**: [https://sex.com](https://sex.com)
 
-**Supported Domains**: `sex.*`
+**Supported Domains**: `sex.com`
 
 **Supported Paths**:
 
@@ -2466,7 +2442,7 @@ spreadsheets:
 
 ### TurboVid
 
-**Primary URL**: [https://turbovid.cr](https://turbovid.cr)
+**Primary URL**: [https://turbo.cr](https://turbo.cr)
 
 **Supported Domains**: `saint.to`, `saint2.cr`, `saint2.su`, `turbo.cr`, `turbovid.cr`
 
@@ -2475,7 +2451,7 @@ spreadsheets:
 - Album:
   - `/a/<album_id>`
 - Direct links:
-  - `/data/...`
+  - `/data/<file_id>.mp4`
 - Search:
   - `library?q=<query>`
 - Video:
@@ -2784,7 +2760,7 @@ ex: To only download categories from a date range: ,
 
 ### XBunker
 
-**Primary URL**: [https://xbunker.nu](https://xbunker.nu)
+**Primary URL**: [https://xbunker.cc](https://xbunker.cc)
 
 **Supported Domains**: `xbunker.*`
 
