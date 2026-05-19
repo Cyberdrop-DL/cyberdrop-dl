@@ -175,6 +175,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     FOLDER_DOMAIN: ClassVar[str] = ""
     DOMAIN: ClassVar[str]
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
+    _FORUM: ClassVar[bool] = False
 
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
@@ -598,7 +599,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self,
         filename: str,
         *,
-        forum: bool = False,
         assume_ext: str | None = ".mp4",
         mime_type: str | None = None,
     ) -> tuple[str, str]:
@@ -607,10 +607,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, mime_type, xenforo=forum)
+            return get_filename_and_ext(filename, mime_type, xenforo=self._FORUM)
         except NoExtensionError:
             if self.allow_no_extension and assume_ext:
-                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=forum)
+                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=self._FORUM)
             raise
 
     @final
