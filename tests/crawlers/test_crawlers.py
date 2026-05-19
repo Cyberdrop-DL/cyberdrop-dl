@@ -96,7 +96,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
 
 @pytest.mark.crawler_test_case
-async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase, request: pytest.FixtureRequest) -> None:
+async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> None:
     if test_case.skip:
         pytest.skip(reason=test_case.skip if isinstance(test_case.skip, str) else "")
 
