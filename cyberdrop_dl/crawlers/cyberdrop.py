@@ -83,8 +83,3 @@ class CyberdropCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(name)
         link = self.parse_url(auth["url"])
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
-
-
-def fix_db_referer(referer: str) -> str:
-    url = AbsoluteHttpURL(referer)
-    return str(CyberdropCrawler.transform_url(url))
