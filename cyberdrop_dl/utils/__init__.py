@@ -78,12 +78,11 @@ class DictDataclass(Dataclass, Protocol):
 
 
 @contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: PLR0912
     link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
     error_log_msg = origin = exc_info = None
     link_to_show: yarl.URL | str = ""
     is_segment: bool = getattr(item, "is_segment", False)
-    is_downloader: bool = bool(getattr(self, "log_prefix", False))
     try:
         yield
     except TooManyCrawlerErrors:
@@ -137,8 +136,19 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     if error_log_msg is None or is_segment:
         return
 
-    link_to_show = link_to_show or link
+    _log_error(self, link_to_show or link, item, error_log_msg, exc_info, origin)
+
+
+def _log_error(  # noqa: PLR0913
+    self: _HasManager,
+    link_to_show: yarl.URL | str,
+    item: ScrapeItem | MediaItem | yarl.URL,
+    error_log_msg: ErrorLogMessage,
+    exc_info: Exception | None,
+    origin: ScrapeItem | MediaItem | yarl.URL | Path | None,
+) -> None:
     origin = origin or get_origin(item)
+    is_downloader = bool(getattr(self, "log_prefix", False))
     if is_downloader:
         self, item = cast("Downloader", self), cast("MediaItem", item)
         logger.error(
@@ -151,7 +161,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         return
 
     logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)
-    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)
+    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)  # pyright: ignore[reportArgumentType]
     self.manager.scrape_mapper.tui.scrape_errors.add(error_log_msg.ui_failure)
 
 

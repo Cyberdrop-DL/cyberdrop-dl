@@ -97,33 +97,36 @@ def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, s
 def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:
     chunks: dict[ChunkID, FlightChunk] = {}
 
+    def revive_str(value: str) -> Any:
+        if value[0] != "$":
+            return value
+
+        if value == "$":
+            return ""
+
+        match value[1]:
+            case "$":
+                return value[2:]
+            case "@" | "L":
+                chunk_id = value[2:]
+                return revive(chunks[chunk_id])
+            case "u":
+                return None
+            case "D":
+                return value[2:]
+            case "n":
+                return int(value[2:])
+            case _:
+                return value[1:]
+
     def revive(value: Any) -> Any:
         if not value:
             return value
 
         if isinstance(value, str):
-            if value[0] != "$":
-                return value
+            return revive_str(value)
 
-            if value == "$":
-                return ""
-
-            match value[1]:
-                case "$":
-                    return value[2:]
-                case "@" | "L":
-                    chunk_id = value[2:]
-                    return revive(chunks[chunk_id])
-                case "u":
-                    return None
-                case "D":
-                    return value[2:]
-                case "n":
-                    return int(value[2:])
-                case _:
-                    return value[1:]
-
-        elif isinstance(value, list):
+        if isinstance(value, list):
             for idx, obj in enumerate(value):
                 value[idx] = revive(obj)
 
