@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-from cyberdrop_dl import __version__
+from cyberdrop_dl import __dist_name__, __version__
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-_PYPI_JSON_URL = "https://pypi.org/pypi/cyberdrop-dl-patched/json"
+_PYPI_JSON_URL = f"https://pypi.org/pypi/{__dist_name__}/json"
 logger = logging.getLogger(__name__)
 
 

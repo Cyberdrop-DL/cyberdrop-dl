@@ -35,7 +35,7 @@ For instructions, see:
 If you downloaded the start scripts, just open the start script with the name of the OS you are using. For a manual install, execute the program with this command:
 
 ```shell
-cyberdrop-dl-patched
+cyberdrop-dl
 ```
 
 On the main screen, you can use the 'Edit URLs' option to add the URLs for the files you wish to download, them select the `download` option. That's it!

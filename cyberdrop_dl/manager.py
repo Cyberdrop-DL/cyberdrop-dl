@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, final
 
 from pydantic.types import ByteSize
 
@@ -20,6 +20,7 @@ from cyberdrop_dl.config import Config
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
+from cyberdrop_dl.dependencies import ALL_DEPENDENCIES
 from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@final
 class Manager:
     def __init__(
         self,
@@ -112,57 +114,13 @@ class Manager:
         return self._completed_downloads
 
     def log_config_settings(self) -> None:
-        auth = {site: all(credentials.values()) for site, credentials in self.config.auth.model_dump().items()}
-        config_settings = self.config.settings.model_copy()
-        config_settings.runtime_options.deep_scrape = self.config.deep_scrape
-
         logger.info(f"Running cyberdrop-dl v{__version__}")
-
-        logger.debug(
-            {
-                "System": get_system_information(),
-                "Config file": self.config.source,
-                "URLs file": self.config.settings.files.input_file,
-                "Apprise URLs": tuple(url.format(dump_secret=False) for url in self.config.apprise_urls),
-                "Download folder": self.config.settings.files.download_folder,
-                "Database file": self.appdata.db_file,
-                "CLI options": self.cli_args.model_dump(mode="json"),
-                "Auth": auth,
-                "Settings": config_settings.model_dump(mode="json"),
-                "Global settings": self.config.global_settings.model_dump(mode="json"),
-                "Enviroment": env.ALL_VARS,
-                "Enviroment resolved": env.ALL_VARS_RESOLVED,
-                "argv": tuple(sys.argv[1:]),
-            }
-        )
-
-        if ffmpeg.is_installed():
-            logger.debug(
-                {
-                    "ffmpeg": {
-                        "binary": ffmpeg.which_ffmpeg(),
-                        "version": ffmpeg.version(),
-                    },
-                    "ffprobe": {
-                        "binary": ffmpeg.which_ffprobe(),
-                        "version": ffmpeg.ffprobe_version(),
-                    },
-                }
-            )
-
-        try:
-            db_size = self.appdata.db_file.stat().st_size
-        except FileNotFoundError:
-            db_size = 0
-
-        logger.debug("Database size: %s", ByteSize(db_size).human_readable(decimal=True))
-
-        if not ffmpeg.is_installed():
-            msg = "ffmpeg is not installed. HLS downloads will fail"
-            if os.name == "nt":
-                msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
-
-            logger.warning(msg)
+        _log_enviroment()
+        _log_cli_args(self.cli_args)
+        _log_config(self.config)
+        _log_ffmpeg()
+        _log_database(self.appdata.db_file)
+        _log_dependencies()
 
     def print_stats(self, stats: ScrapeStats) -> str:
         if not self.cli_args.print_stats:
@@ -302,3 +260,65 @@ class AppData:
     def mkdirs(self) -> None:
         for folder in (self.cache, self.configs, self.cookies):
             folder.mkdir(parents=True, exist_ok=True)
+
+
+def _log_dependencies() -> None:
+    if not env.DEBUG_MODE:
+        return
+    logger.debug({"dependencies": ALL_DEPENDENCIES})
+
+
+def _log_database(path: Path) -> None:
+    try:
+        db_size = path.stat().st_size
+    except FileNotFoundError:
+        db_size = 0
+
+    logger.debug("Database file: %s (%s)", path, ByteSize(db_size).human_readable(decimal=True))
+
+
+def _log_enviroment() -> None:
+    logger.debug(
+        {
+            "System": get_system_information(),
+            "Enviroment": env.ALL_VARS,
+            "Enviroment resolved": env.ALL_VARS_RESOLVED,
+            "argv": sys.argv[1:],
+        }
+    )
+
+
+def _log_cli_args(cli_args: CLIargs) -> None:
+    logger.debug({"CLI options": cli_args.model_dump(mode="json")})
+
+
+def _log_config(config: Config) -> None:
+    auth = {site: all(credentials.values()) for site, credentials in config.auth.model_dump().items()}
+    logger.debug(
+        {
+            "Config file": config.source,
+            "URLs file": config.settings.files.input_file,
+            "Apprise URLs": tuple(url.format(dump_secret=False) for url in config.apprise_urls),
+            "Download folder": config.settings.files.download_folder,
+            "Auth": auth,
+            "Settings": config.settings.model_dump(mode="json"),
+            "Global settings": config.global_settings.model_dump(mode="json"),
+        }
+    )
+
+
+def _log_ffmpeg() -> None:
+    if not ffmpeg.is_installed():
+        msg = "ffmpeg is not installed. HLS downloads will fail"
+        if os.name == "nt":
+            msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
+
+        logger.warning(msg)
+        return
+
+    logger.debug(
+        {
+            "ffmpeg": {"binary": ffmpeg.which_ffmpeg(), "version": ffmpeg.version()},
+            "ffprobe": {"binary": ffmpeg.which_ffprobe(), "version": ffmpeg.ffprobe_version()},
+        }
+    )
