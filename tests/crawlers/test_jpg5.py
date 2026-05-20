@@ -17,7 +17,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
         ),
         (
             "http://simp4.jpg5.su/images3/Screenshot",
-            "http://simp4.cuckcapital.cr/images3/Screenshot",
+            "http://simp4.jpg5.su/images3/Screenshot",
         ),
     ],
 )
