@@ -53,12 +53,12 @@ class Collection(WordPressModel):
 
 
 class Category(Collection):
-    taxonomy: Literal["category"] = "category"
+    taxonomy: Literal["category"] = "category"  # pyright: ignore[reportIncompatibleVariableOverride]
     _type: ColletionType = ColletionType.CATEGORY
 
 
 class Tag(Category):
-    taxonomy: Literal["post_tag"] = "post_tag"
+    taxonomy: Literal["post_tag"] = "post_tag"  # pyright: ignore[reportIncompatibleVariableOverride]
     _type: ColletionType = ColletionType.TAG
 
 
