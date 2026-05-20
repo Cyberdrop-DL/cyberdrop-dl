@@ -39,8 +39,8 @@ class AvailablePost(Post):
     user_id: int
     path: str = Field(validation_alias="post_url")
     link_counts: list[LinkCounts] = []
-    hidden: Literal[False]
-    deleted_at: None
+    hidden: Literal[False]  # pyright: ignore[reportIncompatibleVariableOverride]
+    deleted_at: None  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class PostStream(BaseModel):
