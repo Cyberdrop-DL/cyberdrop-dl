@@ -90,6 +90,7 @@ dev = [
 ignore = ["cyberdrop_dl/dependencies/browser_cookie3.py"]
 include = ["cyberdrop_dl", "scripts", "tests"]
 reportExplicitAny = false
+reportImplicitAbstractClass = false
 reportImplicitOverride = "hint"
 reportImplicitStringConcatenation = false
 reportImportCycles = "warning"
