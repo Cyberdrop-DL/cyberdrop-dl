@@ -248,13 +248,14 @@ class MessageBoardCrawler(Crawler, is_abc=True):
             case _:
                 raise ValueError
 
-    def is_attachment(self, link: AbsoluteHttpURL | str) -> bool:
+    @classmethod
+    def is_attachment(cls, link: AbsoluteHttpURL | str) -> bool:
         if not link:
             return False
         if isinstance(link, str):
-            link = self.parse_url(link)
-        by_parts = len(link.parts) > 2 and any(p in link.parts for p in self.ATTACHMENT_URL_PARTS)
-        by_host = any(host in link.host for host in self.ATTACHMENT_HOSTS)
+            link = cls.parse_url(link)
+        by_parts = len(link.parts) > 2 and any(p in link.parts for p in cls.ATTACHMENT_URL_PARTS)
+        by_host = any(host in link.host for host in cls.ATTACHMENT_HOSTS)
         return by_parts or by_host
 
     @final
