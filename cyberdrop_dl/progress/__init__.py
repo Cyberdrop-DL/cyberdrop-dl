@@ -96,10 +96,6 @@ class ProgressHook:
 
     _done: bool = dataclasses.field(init=False, default=False)
 
-    @property
-    def speed(self) -> float:
-        return self.get_speed()
-
     def __enter__(self) -> Self:
         if self._done:
             raise RuntimeError

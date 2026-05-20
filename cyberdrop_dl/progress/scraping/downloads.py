@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
+    from rich.panel import Panel
 
 _current_hls_task: ContextVar[TaskID] = ContextVar("_current_hls_task")
 _HLS_TASK_FIELD_NAME: Final = "HLS"
@@ -123,6 +124,14 @@ class DownloadsPanel(OverFlowPanel):
         )
         self._hls_progress: Final[DictProgress] = DictProgress("")
         self._total_bytes = 0
+
+    @override
+    def __rich__(self) -> Panel:  # pyright: ignore[reportIncompatibleMethodOverride]
+        panel = super().__rich__()
+        total_speed = _total_speed(self._progress.tasks)
+        formatted_speed = _format_speed(total_speed).rjust(6)
+        panel.subtitle = f"Total: [white]{formatted_speed}"
+        return panel
 
     @contextlib.contextmanager
     def download_hls(
@@ -298,6 +307,10 @@ def _format_speed(speed: float | None) -> str:
     if speed == 0:
         return "----"
     return f"{filesize.decimal(int(speed))}/s"
+
+
+def _total_speed(tasks: Iterable[Task]) -> float:
+    return sum(_task_speed(t.fields.get(_HLS_TASK_FIELD_NAME, t)) or 0 for t in tasks)
 
 
 if __name__ == "__main__":
