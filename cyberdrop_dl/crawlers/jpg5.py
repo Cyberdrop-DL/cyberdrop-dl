@@ -59,10 +59,16 @@ class JPG5Crawler(CheveretoCrawler):
     def parse_url(
         cls, link_str: yarl.URL | str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
     ) -> AbsoluteHttpURL:
-        if type(link_str) is str and not link_str.startswith(("https:", "http:", "/")):
-            encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
-            link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
+        if type(link_str) is str:
+            link_str = _decode_url(link_str)
         return _fix_cdn(super().parse_url(link_str, relative_to, trim=trim))
+
+
+def _decode_url(url: str) -> str:
+    if url.startswith(("https:", "http:", "/")):
+        return url
+    encrypted_url = bytes.fromhex(base64.b64decode(url).decode())
+    return xor_decrypt(encrypted_url, _DECRYPTION_KEY)
 
 
 def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
