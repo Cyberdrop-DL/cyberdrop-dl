@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
-- Date filtering based on URL params for Wordpress posts will be removed on the next major release
+- Posts filtering by date based on URL params will be removed on the next major release (Wordpress)
 
 ### Removed
 

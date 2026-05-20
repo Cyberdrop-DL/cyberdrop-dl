@@ -9,9 +9,6 @@ jobs:
   typecheck:
     runs-on: ubuntu-slim
     timeout-minutes: 10
-    strategy:
-      matrix:
-        python-version: ["3.11"]
 
     steps:
       - uses: actions/checkout@v6.0.2
@@ -21,7 +18,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           enable-cache: false
 
       - name: Install dependencies
@@ -31,4 +28,4 @@ jobs:
       - name: Run basedpyright
         timeout-minutes: 5
         run: |
-          uvx basedpyright cyberdrop_dl --level error
+          uvx basedpyright --level error cyberdrop_dl
