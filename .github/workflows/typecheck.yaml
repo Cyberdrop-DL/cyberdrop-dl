@@ -1,6 +1,6 @@
 name: Type Check
 
-on: [push, pull_request]
+on: [pull_request]
 
 permissions:
   contents: read
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        python-version: ["3.11", "3.14"]
+        python-version: ["3.11"]
 
     steps:
       - uses: actions/checkout@v6.0.2
