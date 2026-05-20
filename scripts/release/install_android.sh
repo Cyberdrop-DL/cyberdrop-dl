@@ -3,7 +3,7 @@ termux-setup-storage
 pkg upgrade -y
 pkg install rust which micro libjpeg-turbo python uv -y
 
-# Make sure maturin knows we are building ON Android, not FOR Android
+# Making sure maturin knows we are building ON Android, not FOR Android
 ANDROID_API_LEVEL=24
 export ANDROID_API_LEVEL
 
