@@ -44,10 +44,14 @@ class DownloadClient:
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            self.chunk_size = min(self.chunk_size, speed_limit)
+            self.chunk_size = min(
+                self.chunk_size,
+                speed_limit // self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads,
+            )
 
     @property
     def http_client(self) -> HTTPClient:

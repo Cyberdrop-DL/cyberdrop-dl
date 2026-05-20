@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
 
+from pydantic.types import ByteSize
+
 from cyberdrop_dl import aio, plugins, storage
 from cyberdrop_dl.clients.jdownloader import JDownloader
 from cyberdrop_dl.constants import BlockedDomains
@@ -172,6 +174,9 @@ class ScrapeMapper:
         if self.manager.config.settings.sorting.sort_downloads:
             self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
+        logger.debug(
+            "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
+        )
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
         self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!
