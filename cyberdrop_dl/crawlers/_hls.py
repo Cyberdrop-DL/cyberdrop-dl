@@ -88,6 +88,6 @@ class SimpleHLSParser(HLSParser):
     _session: aiohttp.ClientSession
 
     @override
-    async def request_text(self, url: AbsoluteHttpURL, /, headers: Mapping[str, str] | None = None) -> str:
+    async def request_text(self, url: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> str:
         async with self._session.get(url, headers=headers) as resp:
             return await resp.text()

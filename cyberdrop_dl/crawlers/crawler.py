@@ -175,6 +175,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     FOLDER_DOMAIN: ClassVar[str] = ""
     DOMAIN: ClassVar[str]
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
+    _FORUM: ClassVar[bool] = False
 
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
@@ -598,7 +599,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self,
         filename: str,
         *,
-        forum: bool = False,
         assume_ext: str | None = ".mp4",
         mime_type: str | None = None,
     ) -> tuple[str, str]:
@@ -607,10 +607,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, mime_type, xenforo=forum)
+            return get_filename_and_ext(filename, mime_type, xenforo=self._FORUM)
         except NoExtensionError:
             if self.allow_no_extension and assume_ext:
-                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=forum)
+                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=self._FORUM)
             raise
 
     @final
@@ -799,12 +799,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp | None:  # noqa: A002
+    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp:  # noqa: A002
         return dates.to_timestamp(dates.parse_format(date_or_datetime, format))
 
     @final
     @classmethod
-    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp | None:
+    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp:
         return dates.to_timestamp(dates.parse_iso(date_or_datetime))
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:

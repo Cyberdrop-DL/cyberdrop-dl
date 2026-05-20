@@ -74,14 +74,10 @@ class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
     PAGE_URL_PART_NAME: ClassVar[str] = "page"
     IGNORE_EMBEDED_IMAGES_SRC: ClassVar[bool] = True
     LOGIN_USER_COOKIE_NAME: ClassVar[str] = "xf_user"
+    _FORUM: ClassVar[bool] = True
     # Attachments hosts should technically be defined on each specific Crawler, but they do no harm here
     ATTACHMENT_HOSTS = "smgmedia", "attachments.f95zone"
     login_required = True
-
-    def get_filename_and_ext(self, filename: str) -> tuple[str, str]:
-        # The `forum` keyword is misleading now. It only works for Xenforo sites, not every forum
-        # TODO: Change `forum` parameter to `xenforo`
-        return super().get_filename_and_ext(filename, forum=True)
 
     @error_handling_wrapper
     async def xf_login(self, login_url: AbsoluteHttpURL, session_cookie: str, username: str, password: str) -> None:

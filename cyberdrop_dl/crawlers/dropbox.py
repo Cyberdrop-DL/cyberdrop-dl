@@ -48,7 +48,7 @@ class DropboxCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["s" | "sh", _, *_]:
-                return await self.follow_redirect(scrape_item)
+                return await self.follow_db_redirect(scrape_item)
             case ["scl", "fi", _, *_]:
                 return await self.file(scrape_item)
             case ["scl", "fo", link_key, secure_hash]:
@@ -59,14 +59,14 @@ class DropboxCrawler(Crawler):
                 raise ValueError
 
     @error_handling_wrapper
-    async def follow_redirect(self, scrape_item: ScrapeItem) -> None:
+    async def follow_db_redirect(self, scrape_item: ScrapeItem) -> None:
         async with self.request(scrape_item.url) as resp:
             if "s" in resp.url.parts or "sh" in resp.url.parts:
                 if "error_pages/no_access" in await resp.text():
                     raise ScrapeError(401)
                 raise ScrapeError(422, "Infinite redirect")
         scrape_item.url = resp.url
-        await self.fetch(scrape_item)
+        self.create_task(self.run(scrape_item))
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, link_key: str, secure_hash: str) -> None:

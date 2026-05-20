@@ -103,6 +103,6 @@ class TurboVidCrawler(Crawler):
         return name, self.parse_url(resp["url"])
 
 
-def fix_db_referer(referer: str) -> str:
+def fix_turbovid_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer.replace("/embed/", "/d/"))
     return str(TurboVidCrawler.transform_url(url))

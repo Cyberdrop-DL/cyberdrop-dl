@@ -2,21 +2,18 @@
 
 Reference: https://developer.wordpress.org/rest-api/reference/#rest-api-developer-endpoint-reference
 """
-# ruff: noqa: RUF009
 
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import itertools
 import re
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
 
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import QueryDatetimeRange
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
@@ -27,12 +24,12 @@ from .models import HTML, Category, CategorySequence, ColletionType, Post, PostS
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable, Iterable
 
-    from pydantic.type_adapter import TypeAdapter
+    import yarl
 
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
-_ModelT = TypeVar("_ModelT", bound=BaseModel)
+
 _POST_PER_REQUEST = 100
 _HTTP_URL_REGEX = re.compile(
     r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,12}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)"
@@ -40,20 +37,18 @@ _HTTP_URL_REGEX = re.compile(
 _EXT_REGEX = re.compile(r"\d{2,}x\d{2,}(\.\w+)?")
 
 
-Selector = css.CssAttributeSelector
+_Selector = css.CssAttributeSelector
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
-class Selectors:
+class Selector:
     POST_TITLE: str = "#content .single-post-title"
     POST_CONTENT: str = "#content .entry-content"
-    POST_ID: Selector = Selector("[id*='post-']", "id")
-    IMG: Selector = Selector("img[class*='wp-image']", "srcset")
-    POST_LINK_FROM_PAGE: Selector = Selector(".post a[href]", "href")
-    NEXT_PAGE: Selector = Selector("a.page-numbers.next", "href")
+    POST_ID: _Selector = _Selector("[id*='post-']", "id")
+    IMG: _Selector = _Selector("img[class*='wp-image']", "srcset")
+    POST_LINK_FROM_PAGE: _Selector = _Selector(".post a[href]", "href")
+    NEXT_PAGE: _Selector = _Selector("a.page-numbers.next", "href")
 
 
-_SELECTORS = Selectors()
 _POST_ID_REGEX = re.compile(r"(?:postid-|post-)(\d+)")
 
 
@@ -77,9 +72,9 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         `/category/<category_slug>?before=<date>`""",
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
-    WP_USE_REGEX: ClassVar = True
-    SUPPORTS_THREAD_RECURSION: ClassVar = False
-    _RATE_LIMIT = 3, 1
+    WP_USE_REGEX: ClassVar[bool] = True
+    SUPPORTS_THREAD_RECURSION: ClassVar[bool] = False
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -124,14 +119,14 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
 
     @abstractmethod
     async def category_or_tag(
-        self, scrape_item: ScrapeItem, colletion_type: ColletionType, date_range: QueryDatetimeRange | None = None
+        self, scrape_item: ScrapeItem, /, colletion_type: ColletionType, date_range: QueryDatetimeRange | None = None
     ) -> None: ...
 
     @abstractmethod
-    async def post(self, scrape_item: ScrapeItem) -> None: ...
+    async def post(self, scrape_item: ScrapeItem, /) -> None: ...
 
     @abstractmethod
-    async def all_posts(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None: ...
+    async def all_posts(self, scrape_item: ScrapeItem, /, date_range: QueryDatetimeRange | None = None) -> None: ...
 
     @final
     async def filter_post(
@@ -167,15 +162,22 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         scrape_item.add_children()
 
     async def handle_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        for link in self.iter_parse_url(_iter_links(post.content, self.WP_USE_REGEX)):
+        for link in self.iter_parse_url(_iter_links(post.content, use_regex=self.WP_USE_REGEX)):
             if link:
                 await self.handle_link(scrape_item, link)
 
     @classmethod
-    def parse_url(cls, link: str) -> AbsoluteHttpURL:
+    def parse_url(
+        cls,
+        url: yarl.URL | str,
+        /,
+        relative_to: AbsoluteHttpURL | None = None,
+        *,
+        trim: bool | None = None,
+    ) -> AbsoluteHttpURL:
         # TODO: handle more domains and move it to the base crawler
-        link = _get_original_quality_link(link)
-        url = super().parse_url(link)
+        link = _get_original_quality_link(str(url))
+        url = super().parse_url(link, relative_to, trim=trim)
         if url.host == "ouo.io" and (redirect_url := url.query.get("s")):
             return super().parse_url(redirect_url)
         return url
@@ -190,9 +192,9 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
 
 
 class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
-    WP_CATEGORIES_ENDPOINT: ClassVar = "/wp-json/wp/v2/categories"
-    WP_TAGS_ENDPOINT: ClassVar = "/wp-json/wp/v2/tags"
-    WP_POSTS_ENDPOINT: ClassVar = "/wp-json/wp/v2/posts"
+    WP_CATEGORIES_ENDPOINT: ClassVar[str] = "/wp-json/wp/v2/categories"
+    WP_TAGS_ENDPOINT: ClassVar[str] = "/wp-json/wp/v2/tags"
+    WP_POSTS_ENDPOINT: ClassVar[str] = "/wp-json/wp/v2/posts"
 
     def __init_subclass__(cls, *, is_abc: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(is_abc=is_abc, **kwargs)
@@ -203,21 +205,23 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         cls.WP_API_POSTS_URL = cls.PRIMARY_URL / cls.WP_POSTS_ENDPOINT.removeprefix("/")
 
     @error_handling_wrapper
-    async def category_or_tag(
+    async def category_or_tag(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, scrape_item: ScrapeItem, colletion_type: ColletionType, date_range: QueryDatetimeRange | None = None
     ) -> None:
         if colletion_type is ColletionType.CATEGORY:
             model, api_url = CategorySequence, self.WP_API_CATEGORIES_URL.with_query(slug=scrape_item.url.name)
         else:
             model, api_url = TagSequence, self.WP_API_TAGS_URL.with_query(slug=scrape_item.url.name)
-        collections = await self.__make_request(model, api_url)
+
+        collections = model.validate_json(await self.request_text(api_url))
         if not collections:
             raise ScrapeError(404)
         await self.__handle_collection(scrape_item, collections[0], date_range)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem) -> None:
-        posts = await self.__make_request(PostSequence, self.WP_API_POSTS_URL.with_query(slug=scrape_item.url.name))
+        api_url = self.WP_API_POSTS_URL.with_query(slug=scrape_item.url.name)
+        posts = PostSequence.validate_json(await self.request_text(api_url))
         if not posts:
             raise ScrapeError(404)
         return await self.handle_post(scrape_item, posts[0], is_single_post=True)
@@ -230,14 +234,6 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         scrape_item.setup_as_profile(self.create_title("Posts"))
         async for post in self.post_pager(api_url):
             await self.filter_post(scrape_item, post)
-
-    async def __make_request(
-        self, model_cls: TypeAdapter[_ModelT] | type[_ModelT], api_url: AbsoluteHttpURL
-    ) -> _ModelT:
-        json_text = await self.request_text(api_url)
-        if callable(model_cls):
-            return model_cls.model_validate_json(json_text)
-        return model_cls.validate_json(json_text)
 
     async def __handle_collection(
         self, scrape_item: ScrapeItem, collection: Category | Tag, date_range: QueryDatetimeRange | None = None
@@ -255,7 +251,7 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         for page in itertools.count(init_page or 1):
             n_post = 0
             api_url = url.update_query(per_page=_POST_PER_REQUEST, page=page)
-            for post in await self.__make_request(PostSequence, api_url):
+            for post in PostSequence.validate_json(await self.request_text(api_url)):
                 n_post += 1
                 yield post
             if n_post < _POST_PER_REQUEST:
@@ -292,7 +288,7 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
         return await self.handle_post(scrape_item, post, is_single_post=True)
 
     def parse_post(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> Post:
-        title = open_graph.get_title(soup) or css.select_text(soup, _SELECTORS.POST_TITLE)
+        title = open_graph.get_title(soup) or css.select_text(soup, Selector.POST_TITLE)
         date = open_graph.get("published_time", soup) or _match_date_from_path(scrape_item.url.parts[1:4])
         data = {
             "id": get_post_id(soup),
@@ -300,7 +296,7 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
             "title": title,
             "date_gmt": date,
             "link": str(scrape_item.url),
-            "content": str(css.select(soup, _SELECTORS.POST_CONTENT)),
+            "content": str(css.select(soup, Selector.POST_CONTENT)),
         }
         return Post.model_validate(data, by_name=True)
 
@@ -311,7 +307,7 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
 
     async def post_url_pager(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None:
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.POST_LINK_FROM_PAGE.element):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.POST_LINK_FROM_PAGE.element):
                 if (
                     date_range
                     and (date_from_path := _match_date_from_path(new_scrape_item.url.parts[1:]))
@@ -331,6 +327,8 @@ def _match_date_from_path(url_parts: tuple[str, ...]) -> datetime.datetime | Non
                 return datetime.datetime(int(year), int(month), int(day), tzinfo=datetime.UTC)
             except Exception:  # noqa: BLE001
                 return None
+        case _:
+            return None
 
 
 def _get_original_quality_link(link: str) -> str:
@@ -351,7 +349,7 @@ def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
 
 
 def get_post_id(soup: BeautifulSoup) -> int:
-    id_text = _SELECTORS.POST_ID(soup)
+    id_text = Selector.POST_ID(soup)
     if match := _POST_ID_REGEX.search(id_text):
         post_id = match.group(1)
         for trash in ("post", "id", "-"):

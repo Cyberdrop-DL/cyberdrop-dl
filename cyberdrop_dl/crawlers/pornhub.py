@@ -81,7 +81,7 @@ class Media(TypedDict):
     width: int
     format: Literal["hls", "mp4"]
     videoUrl: str
-    quality: str | list
+    quality: str | list[str]
 
 
 class Format(NamedTuple):

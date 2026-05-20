@@ -248,13 +248,14 @@ class MessageBoardCrawler(Crawler, is_abc=True):
             case _:
                 raise ValueError
 
-    def is_attachment(self, link: AbsoluteHttpURL | str) -> bool:
+    @classmethod
+    def is_attachment(cls, link: AbsoluteHttpURL | str) -> bool:
         if not link:
             return False
         if isinstance(link, str):
-            link = self.parse_url(link)
-        by_parts = len(link.parts) > 2 and any(p in link.parts for p in self.ATTACHMENT_URL_PARTS)
-        by_host = any(host in link.host for host in self.ATTACHMENT_HOSTS)
+            link = cls.parse_url(link)
+        by_parts = len(link.parts) > 2 and any(p in link.parts for p in cls.ATTACHMENT_URL_PARTS)
+        by_host = any(host in link.host for host in cls.ATTACHMENT_HOSTS)
         return by_parts or by_host
 
     @final
@@ -449,7 +450,9 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         for article in soup.select(self.SELECTORS.posts.article):
             current_post = ForumPost.new(article, self.SELECTORS.posts)
             continue_scraping, scrape_this_post = check_post_id(
-                thread.post_id, current_post.id, self.scrape_single_forum_post
+                thread.post_id,
+                current_post.id,
+                scrape_single_forum_post=self.scrape_single_forum_post,
             )
             if scrape_this_post:
                 post_url = self.make_post_url(thread, current_post.id)
@@ -536,7 +539,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     @final
     @error_handling_wrapper
     async def process_child(self, scrape_item: ScrapeItem, link_str: str, *, embeds: bool = False) -> None:
-        link_str_ = pre_process_child(link_str, embeds)
+        link_str_ = pre_process_child(link_str, embeds=embeds)
         if not link_str_:
             return None
         link = await self.get_absolute_link(link_str_)

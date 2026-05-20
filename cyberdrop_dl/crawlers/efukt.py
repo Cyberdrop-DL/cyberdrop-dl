@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
-from cyberdrop_dl.utils.dates import to_timestamp
+from cyberdrop_dl.utils import css, dates, error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -67,10 +65,8 @@ class EfuktCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
 
         date_str = css.select_text(soup, _SELECTORS.DATE).split(" ", 1)[-1]
-        datetime = self._parse_date(date_str, "%m/%d/%y")
-        if not datetime:
-            raise ScrapeError(422)
-        scrape_item.uploaded_at = to_timestamp(datetime)
+        date = dates.parse_format(date_str, "%m/%d/%y")
+        scrape_item.uploaded_at = dates.to_timestamp(date)
 
         if is_image_or_gif(scrape_item.url):
             link = self.parse_url(css.select(soup, _SELECTORS.IMAGE, "src"))
@@ -80,7 +76,7 @@ class EfuktCrawler(Crawler):
         item_id = scrape_item.url.query.get("id") or scrape_item.url.name.partition("_")[0]
         title = Path(css.select_text(soup, _SELECTORS.TITLE)).as_posix().replace("/", "-")
         filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(f"{datetime.date().isoformat()} {title}", ext, file_id=item_id)
+        custom_filename = self.create_custom_filename(f"{date.date().isoformat()} {title}", ext, file_id=item_id)
         # Video links expire, but the path is always the same, only query params change
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link)
 

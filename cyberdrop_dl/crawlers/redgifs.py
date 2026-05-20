@@ -160,7 +160,7 @@ def _canonical_url(name_or_id: str) -> AbsoluteHttpURL:
     return PRIMARY_URL / "watch" / _id(name_or_id)
 
 
-def fix_db_referer(referer: str) -> str:
+def fix_redgifs_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer)
     name = url.name or url.parent.name
     return str(_canonical_url(name))

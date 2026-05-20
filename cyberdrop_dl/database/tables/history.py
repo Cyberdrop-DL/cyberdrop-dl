@@ -318,17 +318,17 @@ async def fix_referers(db_conn: aiosqlite.Connection) -> None:
         def call(*args: Any, **kwargs: Any) -> _T:
             try:
                 return fn(*args, **kwargs)
-            except BaseException:
+            except Exception:
                 logger.exception(f"{fn.__name__} failed")
                 raise
 
         return call
 
     for name, fn in [
-        ("FIX_REDGIFS_REFERER", redgifs.fix_db_referer),
+        ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer),
         ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler)),
         ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler)),
-        ("FIX_TURBOVID_REFERER", turbovid.fix_db_referer),
+        ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer),
     ]:
         await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
 
@@ -348,4 +348,5 @@ def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:
         url = crawler.parse_url(referer, trim=False)
         return str(crawler.transform_url(url))
 
+    fix_db_referer.__name__ = f"fix_{crawler.DOMAIN}_referer"
     return fix_db_referer

@@ -8,6 +8,7 @@ from cyberdrop_dl.utils import css
 from .xenforo import XenforoCrawler
 
 if TYPE_CHECKING:
+    import yarl
     from bs4 import Tag
 
 
@@ -17,8 +18,15 @@ class TitsInTopsCrawler(XenforoCrawler):
     FOLDER_DOMAIN: ClassVar[str] = "TitsInTops"
 
     @classmethod
-    def parse_url(cls, link: str) -> AbsoluteHttpURL:
-        return super().parse_url(_query_to_path(link))
+    def parse_url(
+        cls,
+        url: yarl.URL | str,
+        /,
+        relative_to: AbsoluteHttpURL | None = None,
+        *,
+        trim: bool | None = None,
+    ) -> AbsoluteHttpURL:
+        return super().parse_url(_query_to_path(str(url)), relative_to, trim=trim)
 
     def is_username_or_attachment(self, link_obj: Tag) -> bool:
         text = css.text(link_obj)

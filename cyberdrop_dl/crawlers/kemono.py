@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Generator
 from datetime import datetime  # noqa: TC003
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, Literal, NamedTuple, ParamSpec
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, NamedTuple, ParamSpec
 
 from pydantic import BeforeValidator, Field
 
@@ -321,7 +321,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     @fallback_if_no_api
     @error_handling_wrapper
-    async def favorites(self, scrape_item: ScrapeItem, type_: Literal["post", "artist"]) -> None:
+    async def favorites(self, scrape_item: ScrapeItem, type_: str) -> None:
         if not self.session_cookie:
             msg = "No session cookie found in the config file, cannot scrape favorites"
             raise ScrapeError(401, msg)
@@ -366,7 +366,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             if not server:
                 continue
 
-            path = attach.get("path")
+            path = attach.get("path", "")
             if previous_server := self.__known_attachment_servers.get(path):
                 if previous_server != server:
                     msg = (

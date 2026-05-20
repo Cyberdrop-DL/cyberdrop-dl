@@ -51,7 +51,7 @@ _parse_node_resp = TypeAdapter(Node).validate_python
 
 
 class PCloudCrawler(Crawler):
-    SUPPORTED_DOMAINS: SupportedDomains = "e.pc.cd", "pc.cd", "pcloud"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "e.pc.cd", "pc.cd", "pcloud"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Public File or folder": (
             "?code=<share_code>",

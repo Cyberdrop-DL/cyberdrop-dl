@@ -52,19 +52,27 @@ class JPG5Crawler(CheveretoCrawler):
     async def direct_file(
         self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
-        link = url or scrape_item.url
-
-        if self.is_subdomain(link) and not link.host.endswith(_CDN):
-            server, *_ = link.host.rsplit(".", 2)
-            link = link.with_host(f"{server}.{_CDN}")
-
+        link = _fix_cdn(url or scrape_item.url)
         await super().direct_file(scrape_item, link, assume_ext)
 
     @classmethod
     def parse_url(
         cls, link_str: yarl.URL | str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool | None = None
     ) -> AbsoluteHttpURL:
-        if type(link_str) is str and not link_str.startswith(("https", "/")):
-            encrypted_url = bytes.fromhex(base64.b64decode(link_str).decode())
-            link_str = xor_decrypt(encrypted_url, _DECRYPTION_KEY)
-        return super().parse_url(link_str, relative_to, trim=trim)
+        if type(link_str) is str:
+            link_str = _decode_url(link_str)
+        return _fix_cdn(super().parse_url(link_str, relative_to, trim=trim))
+
+
+def _decode_url(url: str) -> str:
+    if url.startswith(("https:", "http:", "/")):
+        return url
+    encrypted_url = bytes.fromhex(base64.b64decode(url).decode())
+    return xor_decrypt(encrypted_url, _DECRYPTION_KEY)
+
+
+def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if JPG5Crawler.is_subdomain(url) and not url.host.endswith(_CDN):
+        server, *_ = url.host.rsplit(".", 2)
+        return url.with_host(f"{server}.{_CDN}")
+    return url
