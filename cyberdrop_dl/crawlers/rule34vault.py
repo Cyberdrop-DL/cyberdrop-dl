@@ -42,7 +42,7 @@ class Rule34VaultCrawler(Crawler):
             case ["playlists", playlist_id]:
                 return await self.playlist(scrape_item, playlist_id)
             case [tag]:
-                return await self.tag(scrape_item, tag)
+                return await self.tags(scrape_item, tag)
             case _:
                 raise ValueError
 
@@ -68,18 +68,15 @@ class Rule34VaultCrawler(Crawler):
                 break
 
     @error_handling_wrapper
-    async def tags(self, scrape_item: ScrapeItem) -> None:
+    async def tags(self, scrape_item: ScrapeItem, tag: str) -> None:
         init_page = int(scrape_item.url.query.get("page") or 1)
-        title: str = ""
+        title = self.create_title(tag)
+        scrape_item.setup_as_album(title)
+
         for page in itertools.count(init_page):
-            url = scrape_item.url.with_query(page=page)
+            soup = await self.request_soup(scrape_item.url.with_query(page=page))
+
             n_images = 0
-            soup = await self.request_soup(url)
-
-            if not title:
-                title = self.create_title(scrape_item.url.parts[1])
-                scrape_item.setup_as_album(title)
-
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.CONTENT):
                 n_images += 1
                 self.create_task(self.run(new_scrape_item))

@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Crash trying to decode non https URLs from the database (jpg5)
 - Wordpress support
+- Date extraction (Rule34vault)
 
 ## [9.10.3] - 2026-05-19
 
@@ -60,7 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video extraction from embed URLs (YouJizz)
 - Date extraction (Sex.com)
 - Date extraction (Rule34.xxx)
-- Date extraction (Rule34vault)
 - Date extraction (Nsfw.xxx)
 - Date extraction (e621)
 - Chapter info extraction (OmegaScans)
