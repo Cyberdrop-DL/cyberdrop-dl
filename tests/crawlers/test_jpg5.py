@@ -41,7 +41,14 @@ def test_fix_cdn(url: str, expected: str) -> None:
             "MWIxMTE4MDQxYTU2NDA1OTE2MWExZTE5NWI1ZTAwMWMxNzEyMjMxMjE5MDQwNDAyMDU1YTFhMWE0ZTFkMDgxMjE0MDYwMTUyNWYxNzE3MTExNjA2MGQ1OTE5MDUwMTFkNDgwMzFhMGE1ZDQwNTIwZjQ1MWM3MDE2NWE1ZDQxMDcwZDQwMWQ1ZDU3MTIwNzVkMTkxMzE1",
             "https://simp6.cuckcapital.cr/images3/rebeca-pink-pic001f1e0e301dd4d56fb.jpg",
         ),
-        ("https://jpg6.su/img/Nv7ZaLE", "https://jpg6.su/img/Nv7ZaLE"),
+        (
+            "http://simp4.jpg5.su/images3/Screenshot",
+            "http://simp4.cuckcapital.cr/images3/Screenshot",
+        ),
+        (
+            "https://jpg6.su/img/Nv7ZaLE",
+            "https://jpg6.su/img/Nv7ZaLE",
+        ),
         (
             "https://jpg6.su/img/960x1280-90c58bc6682426b5ff88266b8ec5a647.N3gCSXD",
             "https://jpg6.su/img/960x1280-90c58bc6682426b5ff88266b8ec5a647.N3gCSXD",
