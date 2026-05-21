@@ -80,12 +80,7 @@ class ArchiveOrgAPI(CrawlerAPI):
         return await self._request(self.crawler.PRIMARY_URL / "metadata" / identifier)
 
     async def item(self, identifier: str) -> Item:
-        metadata = await self.metadata(identifier)
-        return Item.from_dict(
-            metadata["metadata"],
-            server=metadata["server"],
-            files=tuple(_parse_files(metadata["files"])),
-        )
+        return _parse_item(await self.metadata(identifier))
 
     async def _request(self, url: AbsoluteHttpURL) -> dict[str, Any]:
         resp = await self.request_json(url, headers={"User-Agent": CDL_USER_AGENT, "Accept-Encoding": "deflate, gzip"})
@@ -94,6 +89,14 @@ class ArchiveOrgAPI(CrawlerAPI):
         if error := resp.get("error"):
             raise ScrapeError(422, str(error))
         return resp
+
+
+@dataclasses.dataclass(slots=True)
+class Item(DictDataclass):
+    identifier: str
+    mediatype: str
+    files: tuple[File, ...]
+    title: str
 
 
 @dataclasses.dataclass(slots=True)
@@ -113,19 +116,17 @@ class File(DictDataclass):
         self.name = self.path.name
 
 
-@dataclasses.dataclass(slots=True)
-class Item(DictDataclass):
-    identifier: str
-    mediatype: str
-    files: tuple[File, ...]
-    title: str
-    server: str
-    addeddate: str
-
-
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
     for file_info in files:
         if file_info["source"] == "derivative" or "mtime" not in file_info:
             continue
 
         yield File.from_dict(file_info, mtime=int(file_info["mtime"]), size=int(file_info["size"]))
+
+
+def _parse_item(metadata: dict[str, Any]) -> Item:
+    return Item.from_dict(
+        metadata["metadata"],
+        server=metadata["server"],
+        files=tuple(_parse_files(metadata["files"])),
+    )
