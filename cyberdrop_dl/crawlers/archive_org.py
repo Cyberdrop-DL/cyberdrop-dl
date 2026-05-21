@@ -51,7 +51,7 @@ class ArchiveOrgCrawler(Crawler):
     @error_handling_wrapper
     async def item(self, scrape_item: ScrapeItem, identifier: str, subpath: str | None = None) -> None:
         item = await self.api.item(identifier)
-        scrape_item.setup_as_album(self.create_title(item.title))
+        scrape_item.setup_as_album(self.create_title(item.title), album_id=identifier)
 
         for file in _filter_files(item.files, subpath):
             url = self.PRIMARY_URL / "details" / identifier / file.path
