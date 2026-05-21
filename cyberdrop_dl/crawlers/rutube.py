@@ -1,8 +1,3 @@
-"""
-https://archive.org/developers/bots.html#user-agent-requirements
-https://archive.org/developers/metadata-schema/index.html#public-files-fields
-"""
-
 from __future__ import annotations
 
 import dataclasses
