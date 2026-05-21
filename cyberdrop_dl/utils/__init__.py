@@ -68,7 +68,7 @@ def _fields(cls: type) -> tuple[str, ...]:
 class DictDataclass(Dataclass, Protocol):
     @classmethod
     def filter_dict(cls, data: dict[str, Any], /) -> dict[str, Any]:
-        return {name: data.get(name) for name in _fields(cls)}
+        return {name: data[name] for name in _fields(cls) if name in data}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
