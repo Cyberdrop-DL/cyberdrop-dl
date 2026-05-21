@@ -16,15 +16,21 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
 class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Item": "/details/<identifier>",
-        "File": "/details/<identifier>/<name>",
+        "Item": (
+            "/details/<identifier>",
+            "/download/<identifier>",
+        ),
+        "Files": (
+            "/details/<identifier>/<subpath>",
+            "/download/<identifier>/<subpath>",
+        ),
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://archive.org")
@@ -33,10 +39,9 @@ class ArchiveOrgCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["details", identifier]:
-                return await self.item(scrape_item, identifier)
-            case ["details", identifier, file_name]:
-                return await self.file(scrape_item, identifier, file_name)
+            case ["details" | "download", identifier, *rest]:
+                subpath = "/".join(rest) if rest else None
+                return await self.item(scrape_item, identifier, subpath)
             case _:
                 raise ValueError
 
@@ -44,26 +49,19 @@ class ArchiveOrgCrawler(Crawler):
         self.api: ArchiveOrgAPI = ArchiveOrgAPI(self)
 
     @error_handling_wrapper
-    async def item(self, scrape_item: ScrapeItem, identifier: str) -> None:
+    async def item(self, scrape_item: ScrapeItem, identifier: str, subpath: str | None = None) -> None:
         item = await self.api.item(identifier)
         scrape_item.setup_as_album(self.create_title(item.title))
-        for file in item.files:
-            new_item = scrape_item.create_child(scrape_item.url / file.name)
-            self.create_task(self._file(new_item, file, identifier))
+
+        for file in _filter_files(item.files, subpath):
+            url = self.PRIMARY_URL / "details" / identifier / file.path
+            new_item = scrape_item.create_child(url)
+            self.create_task(self._file(new_item, identifier, file))
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, identifier: str, name: str) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
-            return
-        item = await self.api.item(identifier)
-        scrape_item.setup_as_album(self.create_title(item.title))
-        file = next(f for f in item.files if f.name.replace(" ", "+") == name)
-        await self._file(scrape_item, file, identifier)
-
-    @error_handling_wrapper
-    async def _file(self, scrape_item: ScrapeItem, file: File, identifier: str) -> None:
-        url = self.PRIMARY_URL / "download" / identifier / file.name
+    async def _file(self, scrape_item: ScrapeItem, identifier: str, file: File) -> None:
+        url = self.PRIMARY_URL / "download" / identifier / file.path
         if await self.check_complete_by_hash(url, "md5", file.md5):
             return
 
@@ -113,7 +111,7 @@ class File(DictDataclass):
     suffix: str = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        # Name is actually the full relative path to this file ex: /photos/feb/castle.png
+        # Name is actually the full relative path to this file ex: /photos/feb/image.png
         self.path = self.name
         path = Path(self.name)
         self.name, self.suffix = path.name, path.suffix
@@ -122,7 +120,7 @@ class File(DictDataclass):
 
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
     for file_info in files:
-        if file_info["source"] == "derivative" or "mtime" not in file_info:
+        if "mtime" not in file_info:
             continue
 
         file = File.from_dict(file_info)
@@ -136,3 +134,10 @@ def _parse_item(metadata: dict[str, Any]) -> Item:
         server=metadata["server"],
         files=tuple(_parse_files(metadata["files"])),
     )
+
+
+def _filter_files(files: Iterable[File], subpath: str | None) -> Iterable[File]:
+    if not subpath:
+        return files
+
+    return (f for f in files if f.path.startswith(subpath) or f.path.replace(" ", "+").startswith(subpath))
