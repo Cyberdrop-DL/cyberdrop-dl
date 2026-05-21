@@ -25,9 +25,7 @@ class Video:
 
 
 class YTboobCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": "/video/<slug>",
-    }
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/video/<slug>"}
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://ytboob.com")
     DOMAIN: ClassVar[str] = "ytboob.com"
@@ -36,7 +34,6 @@ class YTboobCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case [_]:
                 return await self.video(scrape_item)
-
             case _:
                 raise ValueError
 
@@ -51,12 +48,13 @@ class YTboobCrawler(Crawler):
         filename = self.create_custom_filename(video.title, ext := ".mp4")
         await self.handle_file(video.src, scrape_item, video.title, ext, custom_filename=filename)
         _, ext = self.get_filename_and_ext(video.thumbnail.name)
-        filename = self.create_custom_filename(video.title + ".thumb", ext)
+        filename = self.create_custom_filename(video.title, ext, file_id="thumbnail")
         await self.handle_file(
             video.thumbnail,
             scrape_item,
-            filename,
+            video.thumbnail.name,
             ext,
+            custom_filename=filename,
             referer=scrape_item.url.with_fragment("thumbnail"),
         )
 
