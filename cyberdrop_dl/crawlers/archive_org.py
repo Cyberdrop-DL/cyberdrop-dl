@@ -67,7 +67,7 @@ class ArchiveOrgCrawler(Crawler):
         if await self.check_complete_by_hash(url, "md5", file.md5):
             return
 
-        for part in file.path.parts[:-1]:
+        for part in Path(file.path).parts[:-1]:
             scrape_item.add_to_parent_title(part)
 
         scrape_item.uploaded_at = file.mtime
@@ -109,11 +109,15 @@ class File(DictDataclass):
     md5: str
     crc32: str
     sha1: str
-    path: Path = dataclasses.field(init=False)
+    path: str = dataclasses.field(init=False)
+    suffix: str = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self.path = Path(self.name)
-        self.name = self.path.name
+        # Name is actually the full relative path to this file ex: /photos/feb/castle.png
+        self.path = self.name
+        path = Path(self.name)
+        self.name, self.suffix = path.name, path.suffix
+        self.mtime, self.size = int(self.mtime), int(self.size)
 
 
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
@@ -121,7 +125,9 @@ def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
         if file_info["source"] == "derivative" or "mtime" not in file_info:
             continue
 
-        yield File.from_dict(file_info, mtime=int(file_info["mtime"]), size=int(file_info["size"]))
+        file = File.from_dict(file_info)
+        if file.suffix not in {".torrent", ".sqlite"}:
+            yield file
 
 
 def _parse_item(metadata: dict[str, Any]) -> Item:
