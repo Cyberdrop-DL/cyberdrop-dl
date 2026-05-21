@@ -40,8 +40,8 @@ class ArchiveOrgCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["details" | "download", identifier, *rest]:
-                subpath = "/".join(rest) if rest else None
-                return await self.item(scrape_item, identifier, subpath)
+                base_path = "/".join(rest) if rest else None
+                return await self.item(scrape_item, identifier, base_path)
             case _:
                 raise ValueError
 
@@ -49,11 +49,11 @@ class ArchiveOrgCrawler(Crawler):
         self.api: ArchiveOrgAPI = ArchiveOrgAPI(self)
 
     @error_handling_wrapper
-    async def item(self, scrape_item: ScrapeItem, identifier: str, subpath: str | None = None) -> None:
+    async def item(self, scrape_item: ScrapeItem, identifier: str, base_path: str | None = None) -> None:
         item = await self.api.item(identifier)
         scrape_item.setup_as_album(self.create_title(item.title), album_id=identifier)
 
-        for file in _filter_files(item.files, subpath):
+        for file in _filter_files(base_path, item.files):
             url = self.PRIMARY_URL / "details" / identifier / file.path
             new_item = scrape_item.create_child(url)
             self.create_task(self._file(new_item, identifier, file))
@@ -136,8 +136,12 @@ def _parse_item(metadata: dict[str, Any]) -> Item:
     )
 
 
-def _filter_files(files: Iterable[File], subpath: str | None) -> Iterable[File]:
-    if not subpath:
-        return files
+def _filter_files(basepath: str | None, files: Iterable[File]) -> Iterable[File]:
+    return (f for f in files if _is_subpath(basepath, f.path))
 
-    return (f for f in files if f.path.startswith(subpath) or f.path.replace(" ", "+").startswith(subpath))
+
+def _is_subpath(basepath: str | None, path: str) -> bool:
+    if not basepath:
+        return True
+
+    return path.startswith(basepath) or path.replace(" ", "+").startswith(basepath)
