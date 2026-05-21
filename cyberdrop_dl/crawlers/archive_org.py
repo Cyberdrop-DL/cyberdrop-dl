@@ -38,6 +38,9 @@ class ArchiveOrgCrawler(Crawler):
     _RATE_LIMIT: ClassVar[RateLimit] = 3, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
+        if scrape_item.url.host == "web.archive.org":
+            raise ValueError
+
         match scrape_item.url.parts[1:]:
             case ["details" | "download", identifier, *rest]:
                 base_path = "/".join(rest) if rest else None
