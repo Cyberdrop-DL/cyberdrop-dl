@@ -21,33 +21,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@dataclasses.dataclass(slots=True)
-class File(DictDataclass):
-    name: str
-    source: str
-    format: str
-    mtime: int
-    size: int
-    md5: str
-    crc32: str
-    sha1: str
-    path: Path = dataclasses.field(init=False)
-
-    def __post_init__(self) -> None:
-        self.path = Path(self.name)
-        self.name = self.path.name
-
-
-@dataclasses.dataclass(slots=True)
-class Item(DictDataclass):
-    identifier: str
-    mediatype: str
-    files: tuple[File, ...]
-    title: str
-    server: str
-    addeddate: str
-
-
 class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": "/details/<identifier>",
@@ -75,11 +48,14 @@ class ArchiveOrgCrawler(Crawler):
         item = await self.api.item(identifier)
         scrape_item.setup_as_album(self.create_title(item.title))
         for file in item.files:
-            self.create_task(self._file(scrape_item.copy(), file, identifier))
+            new_item = scrape_item.create_child(scrape_item.url / file.name)
+            self.create_task(self._file(new_item, file, identifier))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, identifier: str, name: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
         item = await self.api.item(identifier)
         scrape_item.setup_as_album(self.create_title(item.title))
         file = next(f for f in item.files if f.name.replace(" ", "+") == name)
@@ -118,6 +94,33 @@ class ArchiveOrgAPI(CrawlerAPI):
         if error := resp.get("error"):
             raise ScrapeError(422, str(error))
         return resp
+
+
+@dataclasses.dataclass(slots=True)
+class File(DictDataclass):
+    name: str
+    source: str
+    format: str
+    mtime: int
+    size: int
+    md5: str
+    crc32: str
+    sha1: str
+    path: Path = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self.path = Path(self.name)
+        self.name = self.path.name
+
+
+@dataclasses.dataclass(slots=True)
+class Item(DictDataclass):
+    identifier: str
+    mediatype: str
+    files: tuple[File, ...]
+    title: str
+    server: str
+    addeddate: str
 
 
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
