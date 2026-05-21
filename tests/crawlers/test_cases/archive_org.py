@@ -1,4 +1,4 @@
-DOMAIN = "archive_org"
+DOMAIN = "archive.org"
 TEST_CASES = [
     {
         "url": "https://archive.org/details/science-fiction-theatre-season-2/2-05+When+a+Camera+Fails.mp4",
@@ -15,6 +15,18 @@ TEST_CASES = [
             }
         ],
         "count": 1,
+    },
+    {
+        "url": "https://archive.org/details/irelandthemakingofarepublic",
+        "description": "Original files (.mov) are private",
+        "results": [
+            {
+                "url": "ANY",
+                "filename": r"re:^(?!.*\.mov$).*",
+                "album_id": "irelandthemakingofarepublic",
+            },
+        ],
+        "count": 65,
     },
     {
         "url": "https://archive.org/download/Anime_Campuran",

@@ -132,7 +132,7 @@ class File(DictDataclass):
         path = Path(self.name)
         self.name, self.suffix = path.name, path.suffix
         self.mtime, self.size = int(self.mtime), int(self.size)
-        self.private = self.private == "true"  # pyright: ignore[reportUnnecessaryComparison]
+        self.private = str(self.private).lower() == "true"
 
 
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
