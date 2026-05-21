@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
-from cyberdrop_dl.crawlers.crawler import Crawler, CrawlerAPI, RateLimit, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
@@ -48,7 +48,7 @@ class ArchiveOrgCrawler(Crawler):
             case _:
                 raise ValueError
 
-    async def __async_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         self.api: ArchiveOrgAPI = ArchiveOrgAPI(self)
 
     @error_handling_wrapper
@@ -83,7 +83,7 @@ class ArchiveOrgCrawler(Crawler):
         await self.handle_file(url, scrape_item, file.name, ext, custom_filename=filename, metadata=file)
 
 
-class ArchiveOrgAPI(CrawlerAPI):
+class ArchiveOrgAPI(API):
     async def metadata(self, identifier: str) -> dict[str, Any]:
         return await self._request(self.crawler.PRIMARY_URL / "metadata" / identifier)
 
@@ -103,8 +103,8 @@ class ArchiveOrgAPI(CrawlerAPI):
 class Item(DictDataclass):
     identifier: str
     mediatype: str
-    files: tuple[File, ...]
     title: str
+    files: tuple[File, ...]
 
     @property
     def is_collection(self) -> bool:
@@ -135,6 +135,17 @@ class File(DictDataclass):
         self.private = str(self.private).lower() == "true"
 
 
+def _filter_files(basepath: str | None, files: Iterable[File]) -> Iterable[File]:
+    return (f for f in files if _is_subpath(basepath, f.path))
+
+
+def _is_subpath(basepath: str | None, path: str) -> bool:
+    if not basepath:
+        return True
+
+    return path.startswith(basepath) or path.replace(" ", "+").startswith(basepath)
+
+
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
     for file_info in files:
         if "mtime" not in file_info:
@@ -148,17 +159,5 @@ def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
 def _parse_item(metadata: dict[str, Any]) -> Item:
     return Item.from_dict(
         metadata["metadata"],
-        server=metadata["server"],
         files=tuple(_parse_files(metadata["files"])),
     )
-
-
-def _filter_files(basepath: str | None, files: Iterable[File]) -> Iterable[File]:
-    return (f for f in files if _is_subpath(basepath, f.path))
-
-
-def _is_subpath(basepath: str | None, path: str) -> bool:
-    if not basepath:
-        return True
-
-    return path.startswith(basepath) or path.replace(" ", "+").startswith(basepath)
