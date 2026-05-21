@@ -6,6 +6,7 @@ https://archive.org/developers/metadata-schema/index.html#public-files-fields
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
@@ -30,6 +31,11 @@ class File(DictDataclass):
     md5: str
     crc32: str
     sha1: str
+    path: Path = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self.path = Path(self.name)
+        self.name = self.path.name
 
 
 @dataclasses.dataclass(slots=True)
@@ -45,6 +51,7 @@ class Item(DictDataclass):
 class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": "/details/<identifier>",
+        "File": "/details/<identifier>/<name>",
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://archive.org")
@@ -55,24 +62,37 @@ class ArchiveOrgCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["details", identifier]:
                 return await self.item(scrape_item, identifier)
+            case ["details", identifier, file_name]:
+                return await self.file(scrape_item, identifier, file_name)
             case _:
                 raise ValueError
 
     async def __async_post_init__(self) -> None:
         self.api: ArchiveOrgAPI = ArchiveOrgAPI(self)
 
+    @error_handling_wrapper
     async def item(self, scrape_item: ScrapeItem, identifier: str) -> None:
         item = await self.api.item(identifier)
         scrape_item.setup_as_album(self.create_title(item.title))
         for file in item.files:
-            self.create_task(self._file(scrape_item.copy(), file, item.identifier))
+            self.create_task(self._file(scrape_item.copy(), file, identifier))
             scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def file(self, scrape_item: ScrapeItem, identifier: str, name: str) -> None:
+        item = await self.api.item(identifier)
+        scrape_item.setup_as_album(self.create_title(item.title))
+        file = next(f for f in item.files if f.name.replace(" ", "+") == name)
+        await self._file(scrape_item, file, identifier)
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: File, identifier: str) -> None:
         url = self.PRIMARY_URL / "download" / identifier / file.name
         if await self.check_complete_by_hash(url, "md5", file.md5):
             return
+
+        for part in file.path.parts[:-1]:
+            scrape_item.add_to_parent_title(part)
 
         scrape_item.uploaded_at = file.mtime
         filename, ext = self.get_filename_and_ext(file.name)
