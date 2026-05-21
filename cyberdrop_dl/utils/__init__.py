@@ -61,7 +61,7 @@ _FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
 def _fields(cls: type) -> tuple[str, ...]:
     if fields := _FIELDS_CACHE.get(cls):
         return fields
-    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls))
+    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls) if f.init)
     return fields
 
 
