@@ -50,7 +50,11 @@ class ArchiveOrgCrawler(Crawler):
 
     @error_handling_wrapper
     async def item(self, scrape_item: ScrapeItem, identifier: str, base_path: str | None = None) -> None:
+        identifier = identifier.replace("+", " ")
         item = await self.api.item(identifier)
+        if item.is_collection:
+            raise ScrapeError(422, "Collections are not supported")
+
         scrape_item.setup_as_album(self.create_title(item.title), album_id=identifier)
 
         for file in _filter_files(base_path, item.files):
@@ -64,6 +68,9 @@ class ArchiveOrgCrawler(Crawler):
         url = self.PRIMARY_URL / "download" / identifier / file.path
         if await self.check_complete_by_hash(url, "md5", file.md5):
             return
+
+        if file.private:
+            raise ScrapeError(401)
 
         for part in Path(file.path).parts[:-1]:
             scrape_item.add_to_parent_title(part)
@@ -96,6 +103,10 @@ class Item(DictDataclass):
     files: tuple[File, ...]
     title: str
 
+    @property
+    def is_collection(self) -> bool:
+        return self.mediatype == "collection"
+
 
 @dataclasses.dataclass(slots=True)
 class File(DictDataclass):
@@ -107,6 +118,8 @@ class File(DictDataclass):
     md5: str
     crc32: str
     sha1: str
+    private: bool = False
+
     path: str = dataclasses.field(init=False)
     suffix: str = dataclasses.field(init=False)
 
@@ -116,6 +129,7 @@ class File(DictDataclass):
         path = Path(self.name)
         self.name, self.suffix = path.name, path.suffix
         self.mtime, self.size = int(self.mtime), int(self.size)
+        self.private = self.private == "true"  # pyright: ignore[reportUnnecessaryComparison]
 
 
 def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
