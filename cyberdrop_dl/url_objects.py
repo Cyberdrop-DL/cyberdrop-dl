@@ -224,9 +224,21 @@ class MediaItem:
 class Folders(Sequence[str]):
     _folders: list[str] = field(init=False, default_factory=list)
 
+    @overload
+    def __getitem__(self, i: SupportsIndex, /) -> str: ...
+
+    @overload
+    def __getitem__(self, s: slice[SupportsIndex | None], /) -> list[str]: ...
+
+    def __getitem__(self, other: SupportsIndex | slice[SupportsIndex | None], /) -> str | list[str]:
+        return self._folders[other]
+
+    def __len__(self) -> int:
+        return len(self._folders)
+
     @property
     def last_domain(self) -> str | None:
-        for folder in reversed(self):
+        for folder in reversed(self._folders):
             if folder.endswith(")") and " (" in folder:
                 return folder.rpartition(" (")[-1]
 
@@ -251,18 +263,6 @@ class Folders(Sequence[str]):
             self._folders.pop()
         except IndexError:
             pass
-
-    @overload
-    def __getitem__(self, i: SupportsIndex, /) -> str: ...
-
-    @overload
-    def __getitem__(self, s: slice[SupportsIndex | None], /) -> list[str]: ...
-
-    def __getitem__(self, other: SupportsIndex | slice[SupportsIndex | None], /) -> str | list[str]:
-        return self._folders[other]
-
-    def __len__(self) -> int:
-        return len(self._folders)
 
     def clear(self) -> None:
         self._folders.clear()
