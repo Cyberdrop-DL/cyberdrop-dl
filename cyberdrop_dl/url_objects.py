@@ -5,11 +5,10 @@ import contextlib
 import copy
 import datetime
 import logging
-from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, SupportsIndex, overload
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, overload
 
 import yarl
 
@@ -220,54 +219,6 @@ class MediaItem:
         return me
 
 
-@dataclass(slots=True)
-class Folders(Sequence[str]):
-    _folders: list[str] = field(init=False, default_factory=list)
-
-    @overload
-    def __getitem__(self, i: SupportsIndex, /) -> str: ...
-
-    @overload
-    def __getitem__(self, s: slice[SupportsIndex | None], /) -> list[str]: ...
-
-    def __getitem__(self, other: SupportsIndex | slice[SupportsIndex | None], /) -> str | list[str]:
-        return self._folders[other]
-
-    def __len__(self) -> int:
-        return len(self._folders)
-
-    @property
-    def last_domain(self) -> str | None:
-        for folder in reversed(self._folders):
-            if folder.endswith(")") and " (" in folder:
-                return folder.rpartition(" (")[-1]
-
-        return None
-
-    def append(self, folder: str) -> None:
-        if not folder:
-            return
-
-        folder = sanitize_folder(folder)
-        if folder.endswith(")") and " (" in folder:
-            last_domain = self.last_domain
-            if last_domain:
-                og_folder, _, current_domain = folder.rpartition(" (")
-                if last_domain == current_domain:
-                    folder = og_folder
-
-        self._folders.append(folder)
-
-    def pop(self) -> None:
-        try:
-            self._folders.pop()
-        except IndexError:
-            pass
-
-    def clear(self) -> None:
-        self._folders.clear()
-
-
 @dataclass(kw_only=True, slots=True)
 class ScrapeItem:
     url: AbsoluteHttpURL
@@ -275,7 +226,7 @@ class ScrapeItem:
     album_id: str | None = None
     uploaded_at: int | None = None
     retry_path: Path | None = None
-    folders: Folders = field(init=False, default_factory=Folders)
+    folders: list[str] = field(init=False, default_factory=list)
     download_folder: Path = Path("downloads")
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
@@ -310,6 +261,10 @@ class ScrapeItem:
     def add_to_parent_title(self, folder: str, /) -> None:
         if not folder or self.retry_path:
             return
+
+        folder = sanitize_folder(folder)
+        if _has_domain(folder) and (last_domain := _extract_last_domain(self.folders)):
+            folder = _remove_domain_if_duplicate(folder, last_domain)
 
         self.folders.append(folder)
 
@@ -456,3 +411,22 @@ def _date_from_query_param(url: AbsoluteHttpURL, query_param: str) -> datetime.d
 
     if value := url.query.get(query_param):
         return parse_iso(value)
+
+
+def _has_domain(folder: str) -> bool:
+    return folder.endswith(")") and " (" in folder
+
+
+def _remove_domain_if_duplicate(folder: str, last_domain: str) -> str:
+    og_folder, _, current_domain = folder.rpartition(" (")
+    if last_domain == current_domain:
+        return og_folder
+    return folder
+
+
+def _extract_last_domain(folders: list[str]) -> str | None:
+    for folder in reversed(folders):
+        if folder.endswith(")") and " (" in folder:
+            return folder.rpartition(" (")[-1]
+
+    return None
