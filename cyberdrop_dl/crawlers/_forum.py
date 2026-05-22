@@ -286,10 +286,10 @@ class MessageBoardCrawler(Crawler, is_abc=True):
             return
         n_parents = len(scrape_item.parent_threads)
         if n_parents > self.max_thread_folder_depth:
-            scrape_item.parent_title = scrape_item.parent_title.rsplit("/", 1)[0]
+            scrape_item.folders.pop()
             if not self.separate_posts:
                 return
-            scrape_item.parent_title = scrape_item.parent_title.rsplit("/", 1)[0]
+            scrape_item.folders.pop()
 
     @final
     def stop_thread_recursion(self, scrape_item: ScrapeItem) -> bool:

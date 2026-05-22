@@ -222,7 +222,7 @@ class MediaItem:
 
 @dataclass(slots=True)
 class Folders(Sequence[str]):
-    _folders: list[str]
+    _folders: list[str] = field(init=False, default_factory=list)
 
     @property
     def last_domain(self) -> str | None:
@@ -247,7 +247,10 @@ class Folders(Sequence[str]):
         self._folders.append(folder)
 
     def pop(self) -> None:
-        _ = self._folders.pop()
+        try:
+            self._folders.pop()
+        except IndexError:
+            pass
 
     @overload
     def __getitem__(self, i: SupportsIndex, /) -> str: ...
@@ -261,15 +264,18 @@ class Folders(Sequence[str]):
     def __len__(self) -> int:
         return len(self._folders)
 
+    def clear(self) -> None:
+        self._folders.clear()
+
 
 @dataclass(kw_only=True, slots=True)
 class ScrapeItem:
     url: AbsoluteHttpURL
-    parent_title: str = ""
     part_of_album: bool = False
     album_id: str | None = None
     uploaded_at: int | None = None
     retry_path: Path | None = None
+    folders: Folders = field(init=False, default_factory=Folders)
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
     parent_threads: set[AbsoluteHttpURL] = field(default_factory=set, init=False)
@@ -291,32 +297,20 @@ class ScrapeItem:
                 logger.info(f"URL transformation applied: \n  {old_url = !s}\n  new_url = {self.url}")
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(url={self.url!r}, parent_title={self.parent_title!r}, uploaded_at={self.uploaded_at!r}"
+        return f"{type(self).__name__}(url={self.url!r}, folders={self.folders!r}, uploaded_at={self.uploaded_at!r}"
 
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
 
-    def add_to_parent_title(self, title: str) -> None:
-        """Adds a title to the parent title."""
+    @property
+    def parent_title(self) -> str:
+        return "/".join(self.folders)
 
-        if not title or self.retry_path:
+    def add_to_parent_title(self, folder: str, /) -> None:
+        if not folder or self.retry_path:
             return
 
-        title = sanitize_folder(title)
-        if title.endswith(")") and " (" in title:
-            for part in reversed(self.parent_title.split("/")):
-                if part.endswith(")") and " (" in part:
-                    last_domain_suffix = part.rpartition(" (")[-1]
-                    break
-            else:
-                last_domain_suffix = None
-
-            if last_domain_suffix:
-                og_title, _, domain_suffix = title.rpartition(" (")
-                if last_domain_suffix == domain_suffix:
-                    title = og_title
-
-        self.parent_title = (self.parent_title + "/" + title) if self.parent_title else title
+        self.folders.append(folder)
 
     def set_type(self, scrape_item_type: ScrapeItemType | None, _: Manager | None = None) -> None:
         self.type = scrape_item_type
@@ -350,7 +344,7 @@ class ScrapeItem:
             self.parents = []
             self.parent_threads = set()
         if reset_parent_title:
-            self.parent_title = ""
+            self.folders.clear()
 
     def setup_as(self, title: str, type_: ScrapeItemType, /, *, album_id: str | None = None) -> None:
         self.part_of_album = True
@@ -422,11 +416,11 @@ class ScrapeItem:
     def create_download_path(self, domain: str) -> Path:
         if self.retry_path:
             return self.retry_path
-        if self.parent_title and self.part_of_album:
-            return Path(self.parent_title)
-        if self.parent_title:
-            return Path(self.parent_title) / f"Loose Files ({domain})"
-        return Path(f"Loose Files ({domain})")
+        if not self.folders:
+            return Path(f"Loose Files ({domain})")
+        if self.part_of_album:
+            return Path(*self.folders)
+        return Path(*self.folders) / f"Loose Files ({domain})"
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""

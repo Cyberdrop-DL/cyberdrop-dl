@@ -47,7 +47,7 @@ class OneManagerCrawler(Crawler, is_abc=True):
         try:
             soup = await self.request_soup(scrape_item.url)
         except InvalidContentTypeError:  # This is a file, not HTML
-            scrape_item.parent_title = scrape_item.parent_title.rsplit("/", 1)[0]
+            scrape_item.folders.pop()
             link = scrape_item.url
             scrape_item.url = link.parent
             return await self._file(scrape_item, link)

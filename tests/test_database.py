@@ -142,7 +142,7 @@ def test_create_db_path(url: str, expected: str) -> None:
 
 class TestGetDownloadPath:
     def test_loose_file(self, item: ScrapeItem) -> None:
-        assert not item.parent_title
+        assert not item.folders
         assert not item.part_of_album
         assert not item.retry_path
         download_path = item.create_download_path("cyberdrop")

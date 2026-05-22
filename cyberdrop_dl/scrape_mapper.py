@@ -101,7 +101,7 @@ class ScrapeStats:
 
     def update(self, item: ScrapeItem) -> None:
         self.count += 1
-        if item.parent_title:
+        if item.folders:
             self.groups.append(item.parent_title)
 
 
