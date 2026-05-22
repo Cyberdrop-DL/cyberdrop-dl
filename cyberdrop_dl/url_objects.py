@@ -15,7 +15,7 @@ import yarl
 from cyberdrop_dl.utils.filepath import sanitize_folder
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Generator, Sequence
 
     import aiohttp
 
@@ -419,14 +419,17 @@ def _has_domain(folder: str) -> bool:
 
 def _remove_domain_if_duplicate(folder: str, last_domain: str) -> str:
     og_folder, _, current_domain = folder.rpartition(" (")
-    if last_domain == current_domain:
+    if last_domain == current_domain[:-1]:
         return og_folder
     return folder
 
 
-def _extract_last_domain(folders: list[str]) -> str | None:
+def _extract_last_domain(folders: Sequence[str]) -> str | None:
     for folder in reversed(folders):
-        if folder.endswith(")") and " (" in folder:
-            return folder.rpartition(" (")[-1]
+        if folder.endswith(")"):
+            try:
+                return folder[folder.rindex("(") + 1 : -1]
+            except IndexError:
+                pass
 
     return None
