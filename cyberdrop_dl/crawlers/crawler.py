@@ -462,7 +462,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         """Write general metadata (not specific to a single file) to json output"""
 
         filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
-        download_folder = scrape_item.create_full_download_path(self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         url = AbsoluteHttpURL(scrape_item.url.with_scheme("metadata"))
         media_item = MediaItem.from_item(
             scrape_item,
@@ -495,7 +495,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if self.DOMAIN == "cyberdrop":
             custom_filename = remove_file_id(filename, ext)
 
-        download_folder = scrape_item.create_full_download_path(self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item,
             url,

@@ -265,7 +265,7 @@ class ScrapeMapper:
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
-            download_folder = scrape_item.create_full_download_path("jdownloader")
+            download_folder = scrape_item.compose_download_path("jdownloader")
             relative_download_dir = download_folder.relative_to(self.manager.config.settings.files.download_folder)
             try:
                 await self._jdownloader.send(

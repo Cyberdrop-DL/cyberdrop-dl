@@ -414,7 +414,7 @@ class ScrapeItem:
         if self.parents:
             return self.parents[-1]
 
-    def create_download_path(self, domain: str) -> Path:
+    def relative_download_path(self, domain: str) -> Path:
         if self.retry_path:
             return self.retry_path
         if not self.folders:
@@ -423,8 +423,8 @@ class ScrapeItem:
             return Path(*self.folders)
         return Path(*self.folders) / f"Loose Files ({domain})"
 
-    def create_full_download_path(self, domain: str) -> Path:
-        return self.download_folder / self.create_download_path(domain)
+    def compose_download_path(self, domain: str) -> Path:
+        return self.download_folder / self.relative_download_path(domain)
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""
