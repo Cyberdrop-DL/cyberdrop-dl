@@ -5,10 +5,11 @@ import contextlib
 import copy
 import datetime
 import logging
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, overload
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, SupportsIndex, overload
 
 import yarl
 
@@ -217,6 +218,48 @@ class MediaItem:
         for name in ("fallbacks", "is_segment"):
             del me[name]
         return me
+
+
+@dataclass(slots=True)
+class Folders(Sequence[str]):
+    _folders: list[str]
+
+    @property
+    def last_domain(self) -> str | None:
+        for folder in reversed(self):
+            if folder.endswith(")") and " (" in folder:
+                return folder.rpartition(" (")[-1]
+
+        return None
+
+    def append(self, folder: str) -> None:
+        if not folder:
+            return
+
+        folder = sanitize_folder(folder)
+        if folder.endswith(")") and " (" in folder:
+            last_domain = self.last_domain
+            if last_domain:
+                og_folder, _, current_domain = folder.rpartition(" (")
+                if last_domain == current_domain:
+                    folder = og_folder
+
+        self._folders.append(folder)
+
+    def pop(self) -> None:
+        _ = self._folders.pop()
+
+    @overload
+    def __getitem__(self, i: SupportsIndex, /) -> str: ...
+
+    @overload
+    def __getitem__(self, s: slice[SupportsIndex | None], /) -> list[str]: ...
+
+    def __getitem__(self, other: SupportsIndex | slice[SupportsIndex | None], /) -> str | list[str]:
+        return self._folders[other]
+
+    def __len__(self) -> int:
+        return len(self._folders)
 
 
 @dataclass(kw_only=True, slots=True)
