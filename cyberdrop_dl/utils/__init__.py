@@ -201,13 +201,6 @@ def error_handling_wrapper(
     return wrapper
 
 
-def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) -> Path:
-    """Returns the path to the download folder."""
-    download_dir = manager.config.settings.files.download_folder
-
-    return download_dir / scrape_item.create_download_path(domain)
-
-
 def delete_empty_files_and_folders(path: Path) -> None:
     """walks and removes in place"""
 

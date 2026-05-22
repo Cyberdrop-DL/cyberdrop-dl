@@ -276,6 +276,7 @@ class ScrapeItem:
     uploaded_at: int | None = None
     retry_path: Path | None = None
     folders: Folders = field(init=False, default_factory=Folders)
+    download_folder: Path = Path("downloads")
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
     parent_threads: set[AbsoluteHttpURL] = field(default_factory=set, init=False)
@@ -421,6 +422,9 @@ class ScrapeItem:
         if self.part_of_album:
             return Path(*self.folders)
         return Path(*self.folders) / f"Loose Files ({domain})"
+
+    def create_full_download_path(self, domain: str) -> Path:
+        return self.download_folder / self.create_download_path(domain)
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""

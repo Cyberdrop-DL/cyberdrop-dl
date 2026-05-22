@@ -26,7 +26,7 @@ from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import dates, filepath, get_download_path, remove_trailing_slash
+from cyberdrop_dl.utils import dates, filepath, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
@@ -226,6 +226,7 @@ class ScrapeMapper:
 
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
+                item.download_folder = self.manager.config.settings.files.download_folder
                 if self._should_scrape(item):
                     if item_limit and stats.count >= item_limit:
                         break
@@ -264,7 +265,7 @@ class ScrapeMapper:
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
-            download_folder = get_download_path(self.manager, scrape_item, "jdownloader")
+            download_folder = scrape_item.create_full_download_path("jdownloader")
             relative_download_dir = download_folder.relative_to(self.manager.config.settings.files.download_folder)
             try:
                 await self._jdownloader.send(
