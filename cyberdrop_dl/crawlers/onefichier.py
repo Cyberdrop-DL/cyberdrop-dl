@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4.element import Tag
-
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -56,12 +53,13 @@ class OneFichierCrawler(Crawler):
             case _:
                 raise ValueError
 
+    @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url.update_query(lg="en"))
         if soup.select_one(Selector.PREMIUM_REQUIRED):
             raise ScrapeError(401)
 
-        form = parse_form(css.select(soup, "form"))
+        form = css.parse_form(css.select(soup, "form"))
         if "pass" in form.inputs:
             if not scrape_item.password:
                 raise PasswordProtectedError
@@ -70,8 +68,14 @@ class OneFichierCrawler(Crawler):
         name = css.select_text(soup, Selector.FILENAME)
         filename, ext = self.get_filename_and_ext(name)
         async with self.downloader._semaphore:
-            src = await self._request_download(scrape_item.url, form.inputs)
-            await self.handle_file(scrape_item.url, scrape_item, name, ext, custom_filename=filename, debrid_link=src)
+            await self.handle_file(
+                scrape_item.url,
+                scrape_item,
+                name,
+                ext,
+                custom_filename=filename,
+                debrid_link=await self._request_download(scrape_item.url, form.inputs),
+            )
 
     async def _request_download(self, url: AbsoluteHttpURL, data: dict[str, str | None]) -> AbsoluteHttpURL:
         data.pop("save", None)
@@ -84,21 +88,3 @@ class OneFichierCrawler(Crawler):
             raise ScrapeError(509, "Free download is temporarily disabled. Try again later")
 
         return self.parse_url(css.select(soup, Selector.DL_LINK, "href"))
-
-
-@dataclasses.dataclass(slots=True)
-class HTMLForm:
-    method: str
-    action: str
-    inputs: dict[str, str | None]
-
-
-def parse_form(form: Tag, /) -> HTMLForm:
-    inputs: dict[str, str | None] = {}
-    for elem in css.iselect(form, "input"):
-        name = css.attr(elem, "name")
-        inputs[name] = css.attr_or_none(elem, "value")
-
-    method = css.attr(form, "method").upper()
-    action = css.attr(form, "action")
-    return HTMLForm(method, action, inputs)
