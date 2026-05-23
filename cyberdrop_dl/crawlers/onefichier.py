@@ -47,6 +47,10 @@ class OneFichierCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://1fichier.com")
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
 
+    @override
+    async def __async_post_init__(self) -> None:
+        self.update_cookies({"LG": "en"})
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [] | [""] if _get_file_id(scrape_item.url.query):
@@ -99,7 +103,7 @@ class OneFichierCrawler(Crawler):
         if not self.client.ssl_context:
             data["dl_no_ssl"] = "on"
 
-        soup = await self.request_soup(url.update_query(lg="en"), method="POST", data=data)
+        soup = await self.request_soup(url, method="POST", data=data or None)
         if soup.select_one(Selector.NO_FREE_DOWNLOAD):
             raise ScrapeError(509, "Free download is temporarily disabled. Try again later")
 
