@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from typing_extensions import override
+
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -46,12 +50,18 @@ class OneFichierCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [""] if (file_id := scrape_item.url.query_string).isalnum():
-                if not 5 <= len(file_id) <= 20:
-                    raise ValueError
+            case [] | [""] if _get_file_id(scrape_item.url.query):
                 return await self.file(scrape_item)
             case _:
                 raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        if file_id := _get_file_id(url.query):
+            return url.with_query(file_id)
+        return url
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
@@ -88,3 +98,11 @@ class OneFichierCrawler(Crawler):
             raise ScrapeError(509, "Free download is temporarily disabled. Try again later")
 
         return self.parse_url(css.select(soup, Selector.DL_LINK, "href"))
+
+
+def _get_file_id(query: Mapping[str, str]) -> str | None:
+    for name, value in query.items():
+        if not value and name.isalnum() and 5 <= len(name) <= 20:
+            return name
+
+    return None
