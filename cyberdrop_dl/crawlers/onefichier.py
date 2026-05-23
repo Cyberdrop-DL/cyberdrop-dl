@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class Selector:
     NO_FREE_DOWNLOAD = ".ct_warn:-soup-contains('Free download is temporarily limited due to high demand')"
-    DL_LINK = "a:-soup-contains-own-('Start your download')"
+    DL_LINK = "a:-soup-contains-own('Start your download')"
     FILENAME = "table td.normal span[style='font-weight:bold']"
     PREMIUM_REQUIRED = (
         ".ct_warn:-soup-contains-own('The owner of this file has reserved access to the subscribers of our services')"
@@ -44,7 +44,6 @@ class OneFichierCrawler(Crawler):
     }
     ALLOW_EMPTY_PATH: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "1fichier"
-    FOLDER_DOMAIN: ClassVar[str] = "1fichier"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://1fichier.com")
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
 
@@ -59,23 +58,22 @@ class OneFichierCrawler(Crawler):
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
-        if file_id := _get_file_id(url.query):
-            return url.with_query(file_id)
-        return url
+        match url.parts[1:]:
+            case [] | [""] if file_id := _get_file_id(url.query):
+                return url.with_query(file_id)
+            case _:
+                return url
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url.update_query(lg="en"))
-        if soup.select_one(Selector.PREMIUM_REQUIRED):
-            raise ScrapeError(401)
-
-        form = css.parse_form(css.select(soup, "form"))
-        if "pass" in form.inputs:
+        name, password_protected = await self._request_file(scrape_item.url)
+        if password_protected:
             if not scrape_item.password:
                 raise PasswordProtectedError
-            form.inputs["pass"] = scrape_item.password
+            password = scrape_item.password
+        else:
+            password = None
 
-        name = css.select_text(soup, Selector.FILENAME)
         filename, ext = self.get_filename_and_ext(name)
         async with self.downloader._semaphore:
             await self.handle_file(
@@ -84,15 +82,23 @@ class OneFichierCrawler(Crawler):
                 name,
                 ext,
                 custom_filename=filename,
-                debrid_link=await self._request_download(scrape_item.url, form.inputs),
+                debrid_link=await self._request_download(scrape_item.url, password),
             )
 
-    async def _request_download(self, url: AbsoluteHttpURL, data: dict[str, str | None]) -> AbsoluteHttpURL:
-        data.pop("save", None)
+    async def _request_file(self, url: AbsoluteHttpURL) -> tuple[str, bool]:
+        soup = await self.request_soup(url.update_query(lg="en"))
+        if soup.select_one(Selector.PREMIUM_REQUIRED):
+            raise ScrapeError(401)
+
+        name = css.select_text(soup, Selector.FILENAME)
+        password_protected = "pass" in css.parse_form(css.select(soup, "form")).inputs
+        return name, password_protected
+
+    async def _request_download(self, url: AbsoluteHttpURL, password: str | None) -> AbsoluteHttpURL:
+        data = {"pass": password} if password else {}
         if not self.client.ssl_context:
             data["dl_no_ssl"] = "on"
-        else:
-            del data["dl_no_ssl"]
+
         soup = await self.request_soup(url.update_query(lg="en"), method="POST", data=data)
         if soup.select_one(Selector.NO_FREE_DOWNLOAD):
             raise ScrapeError(509, "Free download is temporarily disabled. Try again later")
@@ -101,7 +107,8 @@ class OneFichierCrawler(Crawler):
 
 
 def _get_file_id(query: Mapping[str, str]) -> str | None:
-    for name, value in query.items():
+    if query:
+        name, value = next(iter(query.items()))
         if not value and name.isalnum() and 5 <= len(name) <= 20:
             return name
 
