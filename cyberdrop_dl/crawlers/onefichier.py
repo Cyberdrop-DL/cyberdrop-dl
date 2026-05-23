@@ -17,10 +17,11 @@ if TYPE_CHECKING:
 
 class Selector:
     NO_FREE_DOWNLOAD = ".ct_warn:-soup-contains('Free download is temporarily limited due to high demand')"
+    RATE_LIMITED = ".ct_warn:-soup-contains('You must wait')"
     DL_LINK = "a:-soup-contains-own('Start your download')"
     FILENAME = "table td.normal span[style='font-weight:bold']"
     PREMIUM_REQUIRED = (
-        ".ct_warn:-soup-contains-own('The owner of this file has reserved access to the subscribers of our services')"
+        ".ct_warn:-soup-contains('The owner of this file has reserved access to the subscribers of our services')"
     )
 
 
@@ -80,6 +81,9 @@ class OneFichierCrawler(Crawler):
 
         filename, ext = self.get_filename_and_ext(name)
         async with self.downloader._semaphore:
+            if self.disabled:
+                return
+
             await self.handle_file(
                 scrape_item.url,
                 scrape_item,
@@ -93,6 +97,10 @@ class OneFichierCrawler(Crawler):
         soup = await self.request_soup(url.update_query(lg="en"))
         if soup.select_one(Selector.PREMIUM_REQUIRED):
             raise ScrapeError(401)
+
+        with self.disable_on_error("Rate limited"):
+            if tag := soup.select_one(Selector.RATE_LIMITED):
+                raise ScrapeError(509, css.text(tag))
 
         name = css.select_text(soup, Selector.FILENAME)
         password_protected = "pass" in css.parse_form(css.select(soup, "form")).inputs
