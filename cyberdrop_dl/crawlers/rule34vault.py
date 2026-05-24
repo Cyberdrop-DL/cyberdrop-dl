@@ -19,7 +19,7 @@ class Rule34VaultCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": "/post/<post_id>",
         "Playlist": "/playlists/view/<playlist_id>",
-        "Tag": "/<tag1>|<tags2>...",
+        "Tags": "/<tag1>|<tags2>...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rule34vault.com")
     DOMAIN: ClassVar[str] = "rule34vault"
@@ -125,7 +125,8 @@ class R34VaultAPI(API):
     async def _pager(
         self, url: AbsoluteHttpURL, cursor: str | None, **params: Any
     ) -> AsyncGenerator[list[dict[str, Any]]]:
-        params = {"CountTotal": False, "Skip": 0, "take": 100} | (params)
+        per_page = 100
+        params = {"CountTotal": False, "Skip": 0, "take": per_page} | params
         if cursor:
             params["cursor"] = cursor
 
@@ -133,7 +134,7 @@ class R34VaultAPI(API):
             resp = await self.request_json(url, method="POST", json=params)
             yield resp["items"]
 
-            if len(resp["items"]) < 100:
+            if len(resp["items"]) < per_page:
                 return
 
             params["cursor"] = resp.get("cursor")
