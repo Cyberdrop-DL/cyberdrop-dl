@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import re
 import struct
 from collections import defaultdict
 from datetime import timedelta
-from typing import TYPE_CHECKING, ClassVar, NamedTuple, Required, TypedDict
+from typing import TYPE_CHECKING, ClassVar, Required, TypedDict
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import dates, error_handling_wrapper
+from cyberdrop_dl.utils import error_handling_wrapper
 from cyberdrop_dl.utils.filepath import get_filename_and_ext
 
 if TYPE_CHECKING:
@@ -28,35 +29,30 @@ CONTENT_HOST = "gold-usergeneratedcontent.net"
 LTN_SERVER = AbsoluteHttpURL(f"https://ltn.{CONTENT_HOST}/")
 PRIMARY_URL = AbsoluteHttpURL("https://hitomi.la")
 VIDEOS_SERVER = AbsoluteHttpURL(f"https://streaming.{CONTENT_HOST}/")
-SERVERS_EXPIRE_AFTER = timedelta(minutes=40)
 
 
-class NozomiSearchArguments(NamedTuple):
+@dataclasses.dataclass(slots=True)
+class SearchArgs:
     area: str | None
     tag: str
     language: str = "all"
 
     @property
     def url(self) -> AbsoluteHttpURL:
+        name = f"{self.tag}-{self.language}.nozomi"
         if self.area:
-            return LTN_SERVER / "n" / self.area / f"{self.tag}-{self.language}.nozomi"
-        return LTN_SERVER / "n" / f"{self.tag}-{self.language}.nozomi"
+            return LTN_SERVER / "n" / self.area / name
+        return LTN_SERVER / "n" / name
 
 
 class Servers(defaultdict[int, int]):
+    _EXPIRES_AFTER: ClassVar[timedelta] = timedelta(minutes=40)
+
     def __init__(self, root: int, default: int | None = None) -> None:
         if default is None:
             default = 0
         super().__init__(lambda: default)
-        self.root = root
-        self.fetch_datetime = dates.now_utc()
-
-
-class Regex:
-    ROOT = r"b: '(.+)'"
-    CASES = r"case (\d+):"
-    DEFAULT_NUM = r"var o = (\d+)"
-    NUM = r"o = (\d+); break;"
+        self.root: int = root
 
 
 class Image(TypedDict, total=False):
@@ -76,36 +72,35 @@ class Gallery(TypedDict, total=False):
     videofilename: str
 
 
-_REGEX = Regex()
-
-
 class HitomiLaCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Gallery": tuple(f"/{g}/..." for g in GALLERY_PARTS),
-        "Collection": tuple(f"/{g}/..." for g in COLLECTION_PARTS),
+        "Gallery": tuple(f"/{g}/<slug>" for g in GALLERY_PARTS),
+        "Collection": tuple(f"/{g}/<slug>" for g in COLLECTION_PARTS),
         "Search": "/search.html?<query>",
     }
-    PRIMARY_URL: ClassVar = PRIMARY_URL
-    DOMAIN: ClassVar = "hitomi.la"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    DOMAIN: ClassVar[str] = "hitomi.la"
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 3, 1
 
     def __post_init__(self) -> None:
         self._semaphore = asyncio.Semaphore(3)
-        self.headers = {"Referer": str(PRIMARY_URL), "Origin": str(PRIMARY_URL)}
         self._servers = aio.cached(self._servers)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if any(p in scrape_item.url.parts for p in GALLERY_PARTS):
-            return await self.gallery(scrape_item)
-        if any(p in scrape_item.url.parts for p in COLLECTION_PARTS):
-            return await self.collection(scrape_item)
-        if scrape_item.url.name == "search.html" and scrape_item.url.query_string:
-            return await self.search(scrape_item)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case [part, _]:
+                if part in GALLERY_PARTS:
+                    return await self.gallery(scrape_item)
+                if part in COLLECTION_PARTS:
+                    return await self.collection(scrape_item, part)
+                raise ValueError
+            case ["search.html"] if scrape_item.url.query:
+                return await self.search(scrape_item, scrape_item.url.query_string)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem) -> None:
-        colletion_type = scrape_item.url.parts[1]
+    async def collection(self, scrape_item: ScrapeItem, colletion_type: str) -> None:
         name, _, language = scrape_item.url.name.removesuffix(".html").partition("-")
 
         if name == "index":
@@ -116,21 +111,19 @@ class HitomiLaCrawler(Crawler):
             nozomi_url = LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
 
         scrape_item.setup_as_profile(title)
-        async with self.request(nozomi_url, headers=self.headers) as response:
-            content = await response.read()
+        nozomi = await self._request_nozomi(nozomi_url)
 
-        for gallery_id in decode_nozomi_response(content):
-            new_scrape_item = scrape_item.create_child(PRIMARY_URL / f"galleries/{gallery_id}.html")
-            # await immediately to prevent overwhelming the downloader
-            # there could be thousands of galleries in the result
-            await self.run(new_scrape_item)
+        for idx, gallery_id in enumerate(nozomi, 1):
+            new_item = scrape_item.create_child(self.PRIMARY_URL / f"galleries/{gallery_id}.html")
+            self.create_task(self.run(new_item))
             scrape_item.add_children()
+            if idx % 300:
+                await asyncio.sleep(0)
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        search_query = scrape_item.url.query_string
+    async def search(self, scrape_item: ScrapeItem, search_query: str) -> None:
         scrape_item.setup_as_profile(self.create_title(f"{search_query} [search]"))
-        gallery_sets = [gallery_set async for gallery_set in self.get_gallery_sets_from_query(search_query)]
+        gallery_sets = [gallery_set async for gallery_set in self._request_galleries(search_query)]
         if not gallery_sets:
             raise ScrapeError(204)
 
@@ -139,19 +132,25 @@ class HitomiLaCrawler(Crawler):
             await self.run(new_scrape_item)
             scrape_item.add_children()
 
-    async def get_gallery_sets_from_query(self, search_query: str) -> AsyncGenerator[set[int]]:
+    async def _request_nozomi(self, url: AbsoluteHttpURL) -> tuple[int, ...]:
+        async with self.request(url, headers={"Referer": str(PRIMARY_URL), "Origin": str(PRIMARY_URL)}) as response:
+            content = await response.read()
+
+        return _decode_nozomi_resp(content)
+
+    async def _request_galleries(self, search_query: str) -> AsyncGenerator[set[int]]:
         # https://ltn.gold-usergeneratedcontent.net/search.js
         # This is partial implementation. Only parses tagged words, ex `female:dark_skin`
         # Free form query searches are ignored
-        for nozomi_search_args in (parse_query_word(word) for word in search_query.split(" ") if ":" in word):
-            async with self.request(nozomi_search_args.url, headers=self.headers) as response:
-                content = await response.read()
-            yield set(decode_nozomi_response(content))
+        words = (parse_query_word(word) for word in search_query.split(" ") if ":" in word)
+        for nozomi_search_args in words:
+            nozomi = await self._request_nozomi(nozomi_search_args.url)
+            yield set(nozomi)
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
         gallery_id = scrape_item.url.name.split("-")[-1].removesuffix(".html")
-        gallery = await self.get_gallery(gallery_id)
+        gallery = await self._request_gallery(gallery_id)
         if gallery["blocked"]:
             raise ScrapeError(403)
 
@@ -162,26 +161,16 @@ class HitomiLaCrawler(Crawler):
         scrape_item.uploaded_at = self.parse_iso_date(date_str)
         await self.process_gallery(scrape_item, gallery)
 
-    async def get_gallery(self, gallery_id: str) -> Gallery:
+    async def _request_gallery(self, gallery_id: str) -> Gallery:
         gallery_url = LTN_SERVER / f"galleries/{gallery_id}.js"
         js_text = await self.request_text(gallery_url, headers=self.headers)
         return json.loads(js_text.split("=", 1)[-1])
 
     async def _servers(self) -> Servers:
         # https://ltn.gold-usergeneratedcontent.net/gg.js
-
-        js_text = await self.request_text(LTN_SERVER / "gg.js")
-        root, num, default_num = [
-            match_int_or_none(pattern, js_text) for pattern in (_REGEX.ROOT, _REGEX.NUM, _REGEX.DEFAULT_NUM)
-        ]
-        assert root is not None
-        assert num is not None
-        servers = Servers(root, default_num)
-
-        for case in (match.group(1) for match in re.finditer(_REGEX.CASES, js_text)):
-            servers[int(case)] = num
-
-        return servers
+        gg_url = LTN_SERVER / "gg.js"
+        js_text = await self.request_text(gg_url)
+        return _decode_servers(js_text)
 
     async def process_gallery(self, scrape_item: ScrapeItem, gallery: Gallery) -> None:
         servers = await self._servers()
@@ -226,20 +215,34 @@ def url_from_hash(servers: Servers, image: Image, dir_: str, ext: str | None = N
     return origin / dir_ / path
 
 
-def match_int_or_none(pattern: str, string: str) -> int | None:
+def _re_int_or_none(pattern: str, string: str) -> int | None:
     if match := re.search(pattern, string):
         return int(match.group(1).removesuffix("/"))
 
 
-def decode_nozomi_response(data: bytes) -> tuple[int, ...]:
+def _decode_nozomi_resp(data: bytes) -> tuple[int, ...]:
     return struct.unpack(f">{(len(data) / 4):.0f}I", data)
 
 
-def parse_query_word(query_word: str) -> NozomiSearchArguments:
+def parse_query_word(query_word: str) -> SearchArgs:
     query_word = query_word.replace("_", " ")
     left_side, _, right_side = query_word.partition(":")
     if left_side == "language":
-        return NozomiSearchArguments(None, "index", right_side)
+        return SearchArgs(None, "index", right_side)
     if left_side in {"female", "male"}:
-        return NozomiSearchArguments("tag", query_word)
-    return NozomiSearchArguments(left_side, right_side)
+        return SearchArgs("tag", query_word)
+    return SearchArgs(left_side, right_side)
+
+
+def _decode_servers(js_text: str) -> Servers:
+    root = _re_int_or_none(r"b: '(.+)'", js_text)
+    num = _re_int_or_none(r"o = (\d+); break;", js_text)
+    default_num = _re_int_or_none(r"var o = (\d+)", js_text)
+
+    assert root is not None
+    assert num is not None
+    servers = Servers(root, default_num)
+
+    for case in (match.group(1) for match in re.finditer(r"case (\d+):", js_text)):
+        servers[int(case)] = num
+    return servers
