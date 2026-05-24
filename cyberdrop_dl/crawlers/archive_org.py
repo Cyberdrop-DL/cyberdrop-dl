@@ -88,7 +88,11 @@ class ArchiveOrgAPI(API):
         return await self._request(self.crawler.PRIMARY_URL / "metadata" / identifier)
 
     async def item(self, identifier: str) -> Item:
-        return _parse_item(await self.metadata(identifier))
+        metadata = await self.metadata(identifier)
+        return Item.from_dict(
+            metadata["metadata"],
+            files=tuple(_parse_files(metadata["files"])),
+        )
 
     async def _request(self, url: AbsoluteHttpURL) -> dict[str, Any]:
         resp = await self.request_json(url, headers={"User-Agent": CDL_USER_AGENT, "Accept-Encoding": "deflate, gzip"})
@@ -154,10 +158,3 @@ def _parse_files(files: list[dict[str, Any]]) -> Generator[File]:
         file = File.from_dict(file_info)
         if file.suffix not in {".torrent", ".sqlite"}:
             yield file
-
-
-def _parse_item(metadata: dict[str, Any]) -> Item:
-    return Item.from_dict(
-        metadata["metadata"],
-        files=tuple(_parse_files(metadata["files"])),
-    )
