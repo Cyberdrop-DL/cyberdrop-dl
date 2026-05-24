@@ -21,9 +21,9 @@ class Video:
 
 class YTboobCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/video/<slug>"}
-
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://ytboob.com")
     DOMAIN: ClassVar[str] = "ytboob.com"
+    FOLDER_DOMAIN: ClassVar[str] = "YTboob"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

@@ -11,7 +11,7 @@ TEST_CASES = [
                 "referer": "https://ytboob.com/masaz-blotny-adam-szuka-ewy",
                 "album_id": None,
                 "uploaded_at": 1779351067,
-                "download_folder": "re:Loose Files (Ytboob.com)",
+                "download_folder": "re:Loose Files (YTboob)",
             },
             {
                 "url": "https://ytboob.com/wp-content/uploads/2026/05/1tjbhmq.jpg",
@@ -21,7 +21,7 @@ TEST_CASES = [
                 "referer": "https://ytboob.com/masaz-blotny-adam-szuka-ewy#thumbnail",
                 "album_id": None,
                 "uploaded_at": 1779351067,
-                "download_folder": "re:Loose Files (Ytboob.com)",
+                "download_folder": "re:Loose Files (YTboob)",
             },
         ],
         "count": 2,
