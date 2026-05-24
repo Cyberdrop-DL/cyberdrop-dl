@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
     from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
@@ -525,9 +526,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         }
 
     @final
-    async def _download(self, media_item: MediaItem, m3u8: m3u8.Rendition | None) -> None:
+    async def _download(self, media_item: MediaItem, m3u8: m3u8.Rendition | None, *, skip: bool = False) -> None:
         try:
-            if SKIP_DOWNLOAD.get():
+            if skip or SKIP_DOWNLOAD.get():
                 return
             if m3u8:
                 await self.downloader.download_hls(media_item, m3u8)
@@ -564,32 +565,22 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return downloaded
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
+        self.manager.scrape_mapper.create_download_task(
+            self._download(
+                media_item,
+                m3u8,
+                skip=await self.__should_skip(media_item),
+            )
+        )
+
+    async def __should_skip(self, media_item: MediaItem) -> bool:
         if await self.check_complete(media_item.url, media_item.referer):
             if media_item.album_id:
                 await self.manager.database.history.set_album_id(self.DOMAIN, media_item)
-            return
+            return True
 
-        if await self.check_skip_by_config(media_item):
+        if _should_skip_by_config(media_item, self.manager.config):
             self.manager.scrape_mapper.tui.files.stats.skipped += 1
-            return
-
-        self.manager.scrape_mapper.create_download_task(self._download(media_item, m3u8))
-
-    @final
-    async def check_skip_by_config(self, media_item: MediaItem) -> bool:
-        media_host = media_item.url.host
-        ignore_options = self.manager.config.settings.ignore_options
-
-        if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
-            logger.info(f"Download skipped {media_item.url} due to skip_hosts config")
-            return True
-
-        if (hosts := ignore_options.only_hosts) and not any(host in media_host for host in hosts):
-            logger.info(f"Download skipped {media_item.url} due to only_hosts config")
-            return True
-
-        if (regex := ignore_options.filename_regex_filter) and re.search(regex, media_item.filename):
-            logger.info(f"Download skipped {media_item.url} due to filename regex filter config")
             return True
 
         return False
@@ -1037,3 +1028,22 @@ def auto_task_id(
             return await func(self, scrape_item, *args, **kwargs)
 
     return wrapper
+
+
+def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
+    media_host = media_item.url.host
+    ignore_options = config.settings.ignore_options
+
+    if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
+        logger.info(f"Download skipped {media_item.url} due to skip_hosts config")
+        return True
+
+    if (hosts := ignore_options.only_hosts) and not any(host in media_host for host in hosts):
+        logger.info(f"Download skipped {media_item.url} due to only_hosts config")
+        return True
+
+    if (regex := ignore_options.filename_regex_filter) and re.search(regex, media_item.filename):
+        logger.info(f"Download skipped {media_item.url} due to filename regex filter config")
+        return True
+
+    return False
