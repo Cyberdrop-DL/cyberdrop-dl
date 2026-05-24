@@ -25,9 +25,6 @@ if TYPE_CHECKING:
 
 
 ALLOW_AVIF = False
-
-_GALLERY_PARTS = "cg", "doujinshi", "galleries", "gamecg", "imageset", "manga", "reader", "anime"
-_COLLECTION_PARTS = "artist", "character", "group", "series", "tag", "type"
 _CONTENT_HOST = "gold-usergeneratedcontent.net"
 _LTN_SERVER = AbsoluteHttpURL(f"https://ltn.{_CONTENT_HOST}/")
 _VIDEOS_SERVER = AbsoluteHttpURL(f"https://streaming.{_CONTENT_HOST}/")
@@ -35,8 +32,31 @@ _VIDEOS_SERVER = AbsoluteHttpURL(f"https://streaming.{_CONTENT_HOST}/")
 
 class HitomiLaCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Gallery": tuple(f"/{g}/<slug>" for g in _GALLERY_PARTS),
-        "Collection": tuple(f"/{g}/<slug>" for g in _COLLECTION_PARTS),
+        "Gallery": tuple(
+            f"/{g}/<name>-<gallery_id>.html"
+            for g in (
+                "cg",
+                "doujinshi",
+                "galleries",
+                "gamecg",
+                "imageset",
+                "manga",
+                "reader",
+                "anime",
+            )
+        ),
+        "Collection": tuple(
+            f"/{g}/<slug>"
+            for g in (
+                "artist",
+                "character",
+                "group",
+                "series",
+                "tag",
+                "type",
+            )
+        ),
+        "Index": "/index-<language>.html",
         "Search": "/search.html?<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hitomi.la")
@@ -49,30 +69,51 @@ class HitomiLaCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [part, slug]:
-                if part in _GALLERY_PARTS:
-                    gallery_id = slug.split("-")[-1].removesuffix(".html")
-                    return await self.gallery(scrape_item, gallery_id)
-                if part in _COLLECTION_PARTS:
-                    return await self.collection(scrape_item, part)
-                raise ValueError
+            case ["cg" | "doujinshi" | "galleries" | "gamecg" | "imageset" | "manga" | "reader" | "anime", slug]:
+                gallery_id = slug.split("-", 1)[-1].removesuffix(".html")
+                return await self.gallery(scrape_item, gallery_id)
+
+            case ["artist", "character", "group", "series", "tag", "type" as type_, slug]:
+                name, lang = _parse_slug(slug)
+                return await self.collection(scrape_item, name, lang, colletion_type=type_)
+
             case ["search.html"] if scrape_item.url.query:
                 return await self.search(scrape_item, scrape_item.url.query_string)
+
+            case [slug]:
+                match _parse_slug(slug):
+                    case ["index", language]:
+                        return await self.index(scrape_item, language)
+                    case _:
+                        raise ValueError
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem, colletion_type: str) -> None:
-        name, _, language = scrape_item.url.name.removesuffix(".html").partition("-")
+    async def search(self, scrape_item: ScrapeItem, search_query: str) -> None:
+        scrape_item.setup_as_profile(self.create_title(f"{search_query} [search]"))
+        sets = await self.api.search(search_query)
+        if not sets:
+            raise ScrapeError(204)
 
-        if name == "index":
-            title = f"{name} [{language}]"
-            nozomi_url = _LTN_SERVER / f"{name}-{language}.nozomi"
-        else:
-            title = f"{name} [{colletion_type}][{language}]"
-            nozomi_url = _LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
+        await self._iter_galleries(scrape_item, sets)
+
+    @error_handling_wrapper
+    async def index(self, scrape_item: ScrapeItem, language: str) -> None:
+        title = f"index [{language}]"
+        nozomi_url = _LTN_SERVER / f"index-{language}.nozomi"
+        scrape_item.setup_as_profile(self.create_title(title))
+        await self._nozomi(scrape_item, nozomi_url)
+
+    @error_handling_wrapper
+    async def collection(self, scrape_item: ScrapeItem, name: str, language: str, *, colletion_type: str) -> None:
+        title = f"{name} [{colletion_type}][{language}]"
+        nozomi_url = _LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
 
         scrape_item.setup_as_profile(self.create_title(title))
+        await self._nozomi(scrape_item, nozomi_url)
+
+    async def _nozomi(self, scrape_item: ScrapeItem, nozomi_url: AbsoluteHttpURL) -> None:
         async with self.api.iter_nozomi(nozomi_url) as groups:
             async for group in groups:
                 await self._iter_galleries(scrape_item, group)
@@ -84,15 +125,6 @@ class HitomiLaCrawler(Crawler):
             scrape_item.add_children()
             if idx % 30:
                 await asyncio.sleep(0)
-
-    @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, search_query: str) -> None:
-        scrape_item.setup_as_profile(self.create_title(f"{search_query} [search]"))
-        sets = await self.api.search(search_query)
-        if not sets:
-            raise ScrapeError(204)
-
-        await self._iter_galleries(scrape_item, sets)
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
@@ -296,3 +328,10 @@ def _parse_gallery(js_text: str) -> Gallery:
         gallery,
         files=tuple(map(Image.from_dict, gallery["files"])),
     )
+
+
+def _parse_slug(slug: str) -> tuple[str, str]:
+    name, _, language = slug.removesuffix(".html").partition("-")
+    if not language:
+        raise ValueError
+    return name, language
