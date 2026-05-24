@@ -141,7 +141,7 @@ class HTTPClient:
             impersonate="chrome",
             verify=bool(self.ssl_context),
             proxy=proxy_or_none,
-            timeout=self.manager.config.global_settings.rate_limiting_options._curl_timeout,
+            timeout=self.manager.config.global_settings.rate_limiting_options.curl_timeout,
             max_redirects=8,
             cookies={cookie.key: cookie.value for cookie in self.cookies},
         )
@@ -151,7 +151,7 @@ class HTTPClient:
             headers={"User-Agent": self.manager.config.global_settings.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.manager.config.global_settings.rate_limiting_options._aiohttp_timeout,
+            timeout=self.manager.config.global_settings.rate_limiting_options.aiohttp_timeout,
             proxy=self.manager.config.global_settings.general.proxy,
             connector=tcp.create_connector(self.ssl_context),
             requote_redirect_url=False,

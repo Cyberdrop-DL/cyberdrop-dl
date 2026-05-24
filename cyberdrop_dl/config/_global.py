@@ -78,11 +78,15 @@ class RateLimiting(SettingsGroup):
     def parse_timeouts(cls, value: object) -> object | None:
         return falsy_as_none(value)
 
-    def model_post_init(self, *_: object) -> None:
-        self._curl_timeout = self.connection_timeout
-        if self.read_timeout is not None:
-            self._curl_timeout = self.connection_timeout, self.read_timeout
-        self._aiohttp_timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(
+    @property
+    def curl_timeout(self) -> float | tuple[float, float]:
+        if self.read_timeout is None:
+            return self.connection_timeout
+        return self.connection_timeout, self.read_timeout
+
+    @property
+    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
+        return aiohttp.ClientTimeout(
             total=None,
             sock_connect=self.connection_timeout,
             sock_read=self.read_timeout,
