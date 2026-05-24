@@ -8,7 +8,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -41,16 +41,12 @@ class Rule34VaultCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-
         playlist = await self.api.playlist(playlist_id)
         title = self.create_title(f"{playlist.title} [playlist]", album_id=playlist_id)
         scrape_item.setup_as_album(title, album_id=playlist_id)
 
-        async for items in self.api.playlist_posts(playlist_id, cursor=scrape_item.url.query.get("cursor")):
-            for post in map(Post.from_dict, items):
-                new_item = scrape_item.create_child(self.PRIMARY_URL / "post" / str(post.id))
-                self.create_task(self._post(new_item, post))
-                scrape_item.add_children()
+        async for posts in self.api.playlist_posts(playlist_id, cursor=scrape_item.url.query.get("cursor")):
+            self._iter_posts(scrape_item, posts)
 
     @error_handling_wrapper
     async def tags(self, scrape_item: ScrapeItem, *tags: str) -> None:
@@ -58,11 +54,14 @@ class Rule34VaultCrawler(Crawler):
         title = self.create_title(",".join(tags) + " [tags]")
         scrape_item.setup_as_album(title)
 
-        async for items in self.api.tags(tags, cursor=scrape_item.url.query.get("cursor")):
-            for post in map(Post.from_dict, items):
-                new_item = scrape_item.create_child(self.PRIMARY_URL / "post" / str(post.id))
-                self.create_task(self._post(new_item, post))
-                scrape_item.add_children()
+        async for posts in self.api.tags(tags, cursor=scrape_item.url.query.get("cursor")):
+            self._iter_posts(scrape_item, posts)
+
+    def _iter_posts(self, scrape_item: ScrapeItem, posts: Iterable[dict[str, Any]]) -> None:
+        for post in map(Post.from_dict, posts):
+            new_item = scrape_item.create_child(self.PRIMARY_URL / "post" / str(post.id))
+            self.create_task(self._post(new_item, post))
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
@@ -106,7 +105,8 @@ class R34VaultAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rule34vault.com/api/v2")
 
     async def post(self, post_id: str) -> Post:
-        post = await self.request_json(self.ENTRYPOINT / "post" / post_id)
+        api_url = self.ENTRYPOINT / "post" / post_id
+        post = await self.request_json(api_url)
         return Post.from_dict(post)
 
     async def playlist(self, playlist_id: str) -> Playlist:
