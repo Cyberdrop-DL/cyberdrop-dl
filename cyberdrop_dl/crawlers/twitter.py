@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 _API_URL = AbsoluteHttpURL("https://api.fxtwitter.com")
 
 
-class TwitterCrawler(Crawler):
+class TwitterCrawler(Crawler, is_debug=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Tweet": "/<handle>/status/<tweet_id>",
     }

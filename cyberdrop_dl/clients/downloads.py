@@ -44,10 +44,17 @@ class DownloadClient:
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            self.chunk_size = min(self.chunk_size, speed_limit)
+            upper_limit = int(
+                speed_limit / 1.5 / self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+            )
+            self.chunk_size = min(
+                self.chunk_size,
+                upper_limit,
+            )
 
     @property
     def http_client(self) -> HTTPClient:
@@ -148,11 +155,11 @@ class DownloadClient:
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
             async for chunk in resp.iter_chunked(self.chunk_size):
+                n_bytes = len(chunk)
+                await self.speed_limiter.acquire(n_bytes)
                 await check_free_space()
-                chunk_size = len(chunk)
-                await self.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
-                hook.advance(chunk_size)
+                hook.advance(n_bytes)
                 check_download_speed()
 
         await self._post_download_check(media_item)

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
-class HLSParser(ABC):
+class HLSMixin(ABC):
     """Class to fetch and parse HTTP live streams
 
     For multi variant m3u8, the best resolution will be automatically selected"""
@@ -80,7 +80,7 @@ class HLSParser(ABC):
 
 
 @dataclasses.dataclass(slots=True)
-class SimpleHLSParser(HLSParser):
+class SimpleHLSParser(HLSMixin):
     """A simple parser that does not depend on the manager.
 
     DO NOT USE. This is only for testing"""

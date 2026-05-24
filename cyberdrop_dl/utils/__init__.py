@@ -61,14 +61,14 @@ _FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
 def _fields(cls: type) -> tuple[str, ...]:
     if fields := _FIELDS_CACHE.get(cls):
         return fields
-    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls))
+    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls) if f.init)
     return fields
 
 
 class DictDataclass(Dataclass, Protocol):
     @classmethod
     def filter_dict(cls, data: dict[str, Any], /) -> dict[str, Any]:
-        return {name: data.get(name) for name in _fields(cls)}
+        return {name: data[name] for name in _fields(cls) if name in data}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
@@ -199,13 +199,6 @@ def error_handling_wrapper(
             return result
 
     return wrapper
-
-
-def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) -> Path:
-    """Returns the path to the download folder."""
-    download_dir = manager.config.settings.files.download_folder
-
-    return download_dir / scrape_item.create_download_path(domain)
 
 
 def delete_empty_files_and_folders(path: Path) -> None:

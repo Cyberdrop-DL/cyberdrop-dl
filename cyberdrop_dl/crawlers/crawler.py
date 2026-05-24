@@ -14,13 +14,13 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Generic, Literal, ParamSpec, Self, final
 
-from typing_extensions import deprecated
+from typing_extensions import TypeVar, deprecated
 
 from cyberdrop_dl import aio, env, signature
-from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
-from cyberdrop_dl.crawlers._hls import HLSParser
+from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
+from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
@@ -30,7 +30,6 @@ from cyberdrop_dl.utils import (
     dates,
     error_handling_context,
     error_handling_wrapper,
-    get_download_path,
     is_absolute_http_url,
     is_blob_or_svg,
     m3u8,
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,9 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
-class Crawler(HTTPClientProxy, HLSParser, ABC):
+class Crawler(HTTPMixin, HLSMixin, ABC):
+    DOMAIN: ClassVar[str]
+    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -173,7 +175,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     DEFAULT_TRIM_URLS: ClassVar[bool] = True
     FOLDER_DOMAIN: ClassVar[str] = ""
-    DOMAIN: ClassVar[str]
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
@@ -302,6 +303,45 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if add_to_registry:
             Registry.concrete.add(cls)
 
+    @signature.copy(HTTPClient.request)
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        *args: Any,
+        impersonate: str | bool | None = None,
+        **kwargs: Any,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        if impersonate is None:
+            impersonate = self._IMPERSONATE
+
+        with self.client.json_context(self.__json_resp_check__):
+            async with (
+                self.client.rate_limits[self.DOMAIN],
+                self.client.global_rate_limiter,
+                self.client.request(*args, impersonate=impersonate, **kwargs) as resp,
+            ):
+                yield resp
+
+    @classmethod
+    def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
+        """Custom check for JSON responses.
+
+        This method is called automatically by the `HttpClient` when a JSON response is received from `cls.DOMAIN`
+        and it was **NOT** successful (`4xx` or `5xx` HTTP code).
+
+        Override this method in subclasses to raise a custom `ScrapeError` instead of the default HTTP error
+
+        Example:
+            ```python
+            if isinstance(json, dict) and json.get("status") == "error":
+                raise ScrapeError(422, f"API error: {json['message']}")
+            ```
+
+        IMPORTANT:
+            Cases were the response **IS** successful (200, OK) but the JSON indicates an error
+            should be handled by the crawler itself
+        """
+
     @final
     @staticmethod
     def _assert_fields_overrides(subclass: type[Crawler], *fields: str) -> None:
@@ -422,7 +462,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         """Write general metadata (not specific to a single file) to json output"""
 
         filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
-        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         url = AbsoluteHttpURL(scrape_item.url.with_scheme("metadata"))
         media_item = MediaItem.from_item(
             scrape_item,
@@ -448,6 +488,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         m3u8: m3u8.Rendition | None = None,
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
+        frag: str | None = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
 
@@ -455,7 +496,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if self.DOMAIN == "cyberdrop":
             custom_filename = remove_file_id(filename, ext)
 
-        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item,
             url,
@@ -471,6 +512,8 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             media_item.metadata = metadata
         if referer:
             media_item.referer = referer
+        if frag:
+            media_item.referer = media_item.referer.with_fragment(frag)
         media_item.headers.update(self._prepare_headers(scrape_item))
         await self.handle_media_item(media_item, m3u8)
 
@@ -916,17 +959,18 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             )
 
 
+_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
+
+_CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
+
+
 @dataclasses.dataclass(slots=True)
-class CrawlerAPI:
-    crawler: Crawler
+class API(HTTPMixin, Generic[_CrawlerT_generic]):
+    crawler: _CrawlerT_generic
 
-    @signature.copy(HTTPClient.request)
-    async def request_text(self, *args: Any, **kwargs: Any) -> str:
-        return await self.crawler.request_text(*args, **kwargs)
-
-    @signature.copy(request_text)
-    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
-        return await self.crawler.request_json(*args, **kwargs)
+    @signature.copy(Crawler.request)
+    def request(self, *args: Any, **kwargs: Any):
+        return self.crawler.request(*args, **kwargs)
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
@@ -970,9 +1014,6 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTup
 
     path_pairs = ((key, try_sort(value)) for key, value in supported_paths.items())
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
-
-
-_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 
 def auto_task_id(

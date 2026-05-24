@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import html
 import json
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast, overload
@@ -26,6 +27,13 @@ class CssAttributeSelector(NamedTuple):
 
     def text(self, tag: Tag) -> str:
         return select_text(tag, self.element)
+
+
+@dataclasses.dataclass(slots=True)
+class HTMLForm:
+    method: str
+    action: str
+    inputs: dict[str, str | None]
 
 
 class JsonLD(dict[str, Any]):
@@ -162,9 +170,18 @@ def json_ld(soup: Tag, /, contains: str | None = None) -> JsonLD:
     return cast("JsonLD", ld_json)
 
 
+def parse_form(form: Tag, /) -> HTMLForm:
+    inputs: dict[str, str | None] = {}
+    for elem in iselect(form, "input"):
+        name = attr(elem, "name")
+        inputs[name] = attr_or_none(elem, "value")
+
+    method = attr(form, "method").upper()
+    action = attr(form, "action")
+    return HTMLForm(method, action, inputs)
+
+
 unescape = html.unescape
-
-
 iframes = CssAttributeSelector("iframe", "src")
 images = CssAttributeSelector("img", "srcset")
 links = CssAttributeSelector(":any-link", "href")

@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
 
+from pydantic.types import ByteSize
+
 from cyberdrop_dl import aio, plugins, storage
 from cyberdrop_dl.clients.jdownloader import JDownloader
 from cyberdrop_dl.constants import BlockedDomains
@@ -24,7 +26,7 @@ from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import dates, filepath, get_download_path, remove_trailing_slash
+from cyberdrop_dl.utils import dates, filepath, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
@@ -99,7 +101,7 @@ class ScrapeStats:
 
     def update(self, item: ScrapeItem) -> None:
         self.count += 1
-        if item.parent_title:
+        if item.folders:
             self.groups.append(item.parent_title)
 
 
@@ -172,6 +174,9 @@ class ScrapeMapper:
         if self.manager.config.settings.sorting.sort_downloads:
             self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
+        logger.debug(
+            "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
+        )
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
         self.tui.mode = self.manager.cli_args.ui
         ## IMPORTANT: Order of each context matters!
@@ -221,6 +226,7 @@ class ScrapeMapper:
 
             async for item in items:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
+                item.download_folder = self.manager.config.settings.files.download_folder
                 if self._should_scrape(item):
                     if item_limit and stats.count >= item_limit:
                         break
@@ -259,7 +265,7 @@ class ScrapeMapper:
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
-            download_folder = get_download_path(self.manager, scrape_item, "jdownloader")
+            download_folder = scrape_item.compose_download_path("jdownloader")
             relative_download_dir = download_folder.relative_to(self.manager.config.settings.files.download_folder)
             try:
                 await self._jdownloader.send(

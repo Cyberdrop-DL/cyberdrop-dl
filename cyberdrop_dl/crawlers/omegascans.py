@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from typing_extensions import override
 
-from cyberdrop_dl.crawlers.crawler import Crawler, CrawlerAPI, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper, parse_url
@@ -72,7 +72,7 @@ class OmegaScansCrawler(Crawler):
             scrape_item.add_children()
 
 
-class OmegaScansAPI(CrawlerAPI):
+class OmegaScansAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.omegascans.org")
 
     async def chapter(self, series_slug: str, chapter_slug: str) -> Chapter:

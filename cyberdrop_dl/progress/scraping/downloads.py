@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
+    from rich.panel import Panel
 
 _current_hls_task: ContextVar[TaskID] = ContextVar("_current_hls_task")
 _HLS_TASK_FIELD_NAME: Final = "HLS"
@@ -70,8 +71,9 @@ class AutoWidthTextColumn(TextColumn):
 class AutoTransferSpeedColumn(TransferSpeedColumn):
     @override
     def render(self, task: Task) -> Text:
-        real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
-        return super().render(real_task)
+        task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
+        speed = _task_speed(task)
+        return Text(_format_speed(speed), style="progress.data.speed")
 
 
 class AutoDownloadColumn(DownloadColumn):
@@ -83,33 +85,12 @@ class AutoDownloadColumn(DownloadColumn):
         if hls_task is None:
             return super().render(task)
 
-        downloaded_bytes = self._format_bytes(int(hls_task.completed))
+        downloaded_bytes = _format_bytes(int(hls_task.completed), binary=self.binary_units)
         completed_segs = int(task.completed)
         total_segs = "?" if task.total is None else f"{int(task.total):,}"
         total_width = len(str(total_segs))
         download_status = f"{downloaded_bytes} ({completed_segs:>{total_width},}/{total_segs})"
         return Text(download_status, style="progress.download", justify="right")
-
-    def _format_bytes(self, n_bytes: int) -> str:
-        multiplier, unit = self._select_bytes_units(n_bytes)
-        precision = 0 if multiplier == 1 else 1
-        normalized_n_bytes = n_bytes / multiplier
-        n_bytes_str = f"{normalized_n_bytes:,.{precision}f}"
-        return f"{n_bytes_str} {unit}"
-
-    def _select_bytes_units(self, size: int) -> tuple[int, str]:
-        if self.binary_units:
-            return filesize.pick_unit_and_suffix(
-                size,
-                ["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
-                1024,
-            )
-
-        return filesize.pick_unit_and_suffix(
-            size,
-            ["bytes", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
-            1000,
-        )
 
 
 @final
@@ -143,6 +124,14 @@ class DownloadsPanel(OverFlowPanel):
         )
         self._hls_progress: Final[DictProgress] = DictProgress("")
         self._total_bytes = 0
+
+    @override
+    def __rich__(self) -> Panel:  # pyright: ignore[reportIncompatibleMethodOverride]
+        panel = super().__rich__()
+        total_speed = _total_speed(self._progress.tasks)
+        formatted_speed = _format_speed(total_speed).rjust(6)
+        panel.subtitle = f"Total: [white]{formatted_speed}"
+        return panel
 
     @contextlib.contextmanager
     def download_hls(
@@ -190,7 +179,7 @@ class DownloadsPanel(OverFlowPanel):
             self._remove_task(task)
 
         def get_speed() -> float:
-            return task.finished_speed or task.speed or 0
+            return _task_speed(task) or 0
 
         return ProgressHook(advance, get_speed, on_exit)
 
@@ -206,7 +195,7 @@ class DownloadsPanel(OverFlowPanel):
             self._progress.advance(segments_task_id, 1)
 
         def get_speed() -> float:
-            return hls_task.finished_speed or hls_task.speed or 0
+            return _task_speed(hls_task) or 0
 
         return ProgressHook(advance, get_speed, on_exit)
 
@@ -274,7 +263,7 @@ class DownloadsPanel(OverFlowPanel):
 def _dump_task(task: Task) -> dict[str, Any]:
     real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
     return {
-        "speed": truncate_float(real_task.finished_speed or real_task.speed),
+        "speed": truncate_float(_task_speed(real_task)),
         "size": task.total,
         "completed": task.completed,
         "hls": _HLS_TASK_FIELD_NAME in task.fields,
@@ -283,6 +272,45 @@ def _dump_task(task: Task) -> dict[str, Any]:
         "eta": task.time_remaining,
         "visible": task.visible,
     }
+
+
+def _format_bytes(n_bytes: int, *, binary: bool) -> str:
+    multiplier, unit = _select_bytes_units(n_bytes, binary=binary)
+    precision = 0 if multiplier == 1 else 1
+    normalized_n_bytes = n_bytes / multiplier
+    n_bytes_str = f"{normalized_n_bytes:,.{precision}f}"
+    return f"{n_bytes_str} {unit}"
+
+
+def _select_bytes_units(size: int, *, binary: bool) -> tuple[int, str]:
+    if binary:
+        return filesize.pick_unit_and_suffix(
+            size,
+            ["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
+            1024,
+        )
+
+    return filesize.pick_unit_and_suffix(
+        size,
+        ["bytes", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
+        1000,
+    )
+
+
+def _task_speed(task: Task) -> float | None:
+    return 0 if task.finished else task.speed
+
+
+def _format_speed(speed: float | None) -> str:
+    if speed is None:
+        return "?"
+    if speed == 0:
+        return "----"
+    return f"{filesize.decimal(int(speed))}/s"
+
+
+def _total_speed(tasks: Iterable[Task]) -> float:
+    return sum(_task_speed(t.fields.get(_HLS_TASK_FIELD_NAME, t)) or 0 for t in tasks)
 
 
 if __name__ == "__main__":
