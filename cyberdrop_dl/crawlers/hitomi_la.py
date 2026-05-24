@@ -7,7 +7,7 @@ import re
 import struct
 from collections import defaultdict
 from datetime import timedelta
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
@@ -17,7 +17,7 @@ from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 from cyberdrop_dl.utils.filepath import get_filename_and_ext
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Generator, Iterable, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -198,7 +198,7 @@ class HitomiAPI(API):
     async def gallery(self, gallery_id: str) -> Gallery:
         url = _LTN_SERVER / f"galleries/{gallery_id}.js"
         js_text = await self.request_text(url, headers=self.headers)
-        gallery = Gallery.from_dict(json.loads(js_text.split("=", 1)[-1]))
+        gallery = _parse_gallery(js_text)
         if gallery.blocked:
             raise ScrapeError(403)
         return gallery
@@ -207,7 +207,7 @@ class HitomiAPI(API):
         # https://ltn.gold-usergeneratedcontent.net/search.js
         # This is partial implementation. Only parses tagged words, ex `female:dark_skin`
         # Free form query searches are ignored
-        search_args = tuple(_parse_search_query(word) for word in search_query.split(" ") if ":" in word)
+        search_args = tuple(_parse_search_query(search_query))
         first, *rest = await aio.map(self.nozomi, (a.url for a in search_args), task_limit=None)
         return sorted(set(first).intersection(*rest), reverse=True)
 
@@ -245,14 +245,20 @@ def _decode_nozomi_resp(data: bytes) -> tuple[int, ...]:
     return struct.unpack(f">{(len(data) / 4):.0f}I", data)
 
 
-def _parse_search_query(query_word: str) -> SearchArgs:
-    query_word = query_word.replace("_", " ")
-    left_side, _, right_side = query_word.partition(":")
-    if left_side == "language":
-        return SearchArgs(None, "index", right_side)
-    if left_side in {"female", "male"}:
-        return SearchArgs("tag", query_word)
-    return SearchArgs(left_side, right_side)
+def _parse_search_query(query_string: str) -> Generator[SearchArgs]:
+    for word in query_string.split(" "):
+        if ":" not in word:
+            continue
+
+        word = word.replace("_", " ")
+        left_side, _, right_side = word.partition(":")
+
+        if left_side == "language":
+            yield SearchArgs(None, "index", right_side)
+        elif left_side in {"female", "male"}:
+            yield SearchArgs("tag", word)
+        else:
+            yield SearchArgs(left_side, right_side)
 
 
 def _decode_servers(js_text: str) -> Servers:
@@ -267,3 +273,11 @@ def _decode_servers(js_text: str) -> Servers:
     for case in (match.group(1) for match in re.finditer(r"case (\d+):", js_text)):
         servers[int(case)] = num
     return servers
+
+
+def _parse_gallery(js_text: str) -> Gallery:
+    gallery: dict[str, Any] = json.loads(js_text.partition("=")[-1])
+    return Gallery.from_dict(
+        gallery,
+        files=tuple(map(Image.from_dict, gallery["files"])),
+    )
