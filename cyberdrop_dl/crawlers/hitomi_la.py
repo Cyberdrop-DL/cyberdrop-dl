@@ -8,7 +8,6 @@ import json
 import re
 import struct
 from collections import defaultdict
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
@@ -173,8 +172,6 @@ class HitomiLaCrawler(Crawler):
 
 
 class Servers(defaultdict[int, int]):
-    _EXPIRES_AFTER: ClassVar[timedelta] = timedelta(minutes=40)
-
     def __init__(self, root: int, default: int | None = None) -> None:
         if default is None:
             default = 0
@@ -222,7 +219,7 @@ class HitomiAPI(API):
     }
 
     def __post_init__(self) -> None:
-        self.servers = aio.cached(self.servers)
+        self.servers = aio.cached(self.servers, ttl=40 * 60)
 
     async def servers(self) -> Servers:
         # https://ltn.gold-usergeneratedcontent.net/gg.js
@@ -246,7 +243,7 @@ class HitomiAPI(API):
 
         results = await self.nozomi(first.url)
         if others:
-            rest = await aio.map(self.nozomi, (a.url for a in others), task_limit=5)
+            rest = await aio.map(self.nozomi, (s.url for s in others), task_limit=5)
             results = set(results).intersection(*rest)
 
         return sorted(results, reverse=True)
@@ -261,8 +258,7 @@ class HitomiAPI(API):
 
     async def nozomi(self, url: AbsoluteHttpURL) -> tuple[int, ...]:
         async with self.iter_nozomi(url) as groups:
-            galleries = [chunk async for chunk in groups]
-            return tuple(itertools.chain.from_iterable(galleries))
+            return tuple(itertools.chain.from_iterable([chunk async for chunk in groups]))
 
 
 def _build_src_url(servers: Servers, image: Image) -> AbsoluteHttpURL:
