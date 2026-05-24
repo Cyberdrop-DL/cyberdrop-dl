@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Pa
 from typing_extensions import deprecated
 
 from cyberdrop_dl import aio, env, signature
-from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
+from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
 from cyberdrop_dl.crawlers._hls import HLSParser
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
@@ -161,7 +162,9 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
-class Crawler(HTTPClientProxy, HLSParser, ABC):
+class Crawler(HTTPMixin, HLSParser, ABC):
+    DOMAIN: ClassVar[str]
+    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -173,7 +176,6 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     DEFAULT_TRIM_URLS: ClassVar[bool] = True
     FOLDER_DOMAIN: ClassVar[str] = ""
-    DOMAIN: ClassVar[str]
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
@@ -301,6 +303,45 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         )
         if add_to_registry:
             Registry.concrete.add(cls)
+
+    @signature.copy(HTTPClient.request)
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        *args: Any,
+        impersonate: str | bool | None = None,
+        **kwargs: Any,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        if impersonate is None:
+            impersonate = self._IMPERSONATE
+
+        with self.client.json_context(self.__json_resp_check__):
+            async with (
+                self.client.rate_limits[self.DOMAIN],
+                self.client.global_rate_limiter,
+                self.client.request(*args, impersonate=impersonate, **kwargs) as resp,
+            ):
+                yield resp
+
+    @classmethod
+    def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
+        """Custom check for JSON responses.
+
+        This method is called automatically by the `HttpClient` when a JSON response is received from `cls.DOMAIN`
+        and it was **NOT** successful (`4xx` or `5xx` HTTP code).
+
+        Override this method in subclasses to raise a custom `ScrapeError` instead of the default HTTP error
+
+        Example:
+            ```python
+            if isinstance(json, dict) and json.get("status") == "error":
+                raise ScrapeError(422, f"API error: {json['message']}")
+            ```
+
+        IMPORTANT:
+            Cases were the response **IS** successful (200, OK) but the JSON indicates an error
+            should be handled by the crawler itself
+        """
 
     @final
     @staticmethod
@@ -917,16 +958,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
 
 @dataclasses.dataclass(slots=True)
-class CrawlerAPI:
+class API(HTTPMixin):
     crawler: Crawler
 
-    @signature.copy(HTTPClient.request)
-    async def request_text(self, *args: Any, **kwargs: Any) -> str:
-        return await self.crawler.request_text(*args, **kwargs)
-
-    @signature.copy(request_text)
-    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
-        return await self.crawler.request_json(*args, **kwargs)
+    @signature.copy(Crawler.request)
+    def request(self, *args: Any, **kwargs: Any):
+        return self.crawler.request(*args, **kwargs)
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:

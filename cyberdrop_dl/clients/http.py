@@ -5,9 +5,10 @@ import contextlib
 import logging
 import platform
 import time
+from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, Self, cast, final
 
 import aiohttp
 
@@ -314,6 +315,14 @@ class HTTPClient:
         flaresolverr.verify_solution(self.manager.config.global_settings.general.user_agent, solution)
         return AbstractResponse.create(solution)
 
+    @contextlib.contextmanager
+    def json_context(self, check: Callable[[Any, AbstractResponse[Any]], None], /):
+        token = _JSON_CHECK.set(check)
+        try:
+            yield
+        finally:
+            _JSON_CHECK.reset(token)
+
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
@@ -324,54 +333,10 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-class HTTPClientProxy(Protocol):
-    DOMAIN: ClassVar[str]
-    _IMPERSONATE: ClassVar[str | bool | None] = None
-
-    @property
-    def client(self) -> HTTPClient: ...
-
-    @classmethod
-    def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
-        """Custom check for JSON responses.
-
-        This method is called automatically by the `HttpClient` when a JSON response is received from `cls.DOMAIN`
-        and it was **NOT** successful (`4xx` or `5xx` HTTP code).
-
-        Override this method in subclasses to raise a custom `ScrapeError` instead of the default HTTP error
-
-        Example:
-            ```python
-            if isinstance(json, dict) and json.get("status") == "error":
-                raise ScrapeError(422, f"API error: {json['message']}")
-            ```
-
-        IMPORTANT:
-            Cases were the response **IS** successful (200, OK) but the JSON indicates an error
-            should be handled by the crawler itself
-        """
-
+class HTTPMixin(ABC):
+    @abstractmethod
     @signature.copy(HTTPClient.request)
-    @contextlib.asynccontextmanager
-    async def request(
-        self,
-        *args: Any,
-        impersonate: str | bool | None = None,
-        **kwargs: Any,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-        if impersonate is None:
-            impersonate = self._IMPERSONATE
-
-        token = _JSON_CHECK.set(self.__json_resp_check__)
-        try:
-            async with (
-                self.client.global_rate_limiter,
-                self.client.rate_limits[self.DOMAIN],
-                self.client.request(*args, impersonate=impersonate, **kwargs) as resp,
-            ):
-                yield resp
-        finally:
-            _JSON_CHECK.reset(token)
+    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]: ...  # pyright: ignore[reportPrivateUsage]
 
     @signature.copy(request)
     async def request_json(self, *args: Any, **kwargs: Any) -> Any:
