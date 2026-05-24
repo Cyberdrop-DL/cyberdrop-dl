@@ -32,7 +32,7 @@ class Rule34VaultCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["post", post_id]:
                 return await self.post(scrape_item, post_id)
-            case ["playlists", playlist_id]:
+            case ["playlists", "view", playlist_id]:
                 return await self.playlist(scrape_item, playlist_id)
             case [tags]:
                 return await self.tags(scrape_item, *tags.split(r"|"))

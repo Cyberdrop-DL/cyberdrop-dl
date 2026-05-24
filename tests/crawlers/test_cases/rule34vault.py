@@ -17,6 +17,17 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://rule34vault.com/playlists/view/283077",
+        "results": [
+            {
+                "url": "ANY",
+                "album_id": "283077",
+                "download_folder": "re:하츠네 미쿠 [playlist] (Rule34Vault)",
+            },
+        ],
+        "count": 33,
+    },
+    {
         "url": "https://rule34vault.com/sarahvividart%7Calien",
         "results": [
             {
