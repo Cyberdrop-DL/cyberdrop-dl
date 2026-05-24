@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#1",
                 "filename": "01.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/1081/d960709a54b9720019d01814b4b237cf163a35f5882c3822cd321d7d8162b394.webp",
+                "debrid_link": "NOT_NONE",
                 "original_filename": "01.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#1",
                 "album_id": "3953685",
@@ -16,7 +16,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#2",
                 "filename": "02.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/1306/9ee64f8f20c72d908d7f82252178e3487410f0afa5285dc475a0cef071d261a5.webp",
                 "original_filename": "02.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#2",
                 "album_id": "3953685",
@@ -26,7 +25,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#3",
                 "filename": "03.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3101/a62fd95a9b55663b268423fc4530cfeca6f2d261f0d63bd821d1fb2300cf41dc.webp",
                 "original_filename": "03.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#3",
                 "album_id": "3953685",
@@ -36,7 +34,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#4",
                 "filename": "04.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/2770/1c4652e0aed6c2955af38bd2474b081a3e65ab1b1c3098daa872152c4728ad2a.webp",
                 "original_filename": "04.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#4",
                 "album_id": "3953685",
@@ -46,7 +43,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#5",
                 "filename": "05.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/185/72a4a2d5d09119af9e4262ca4b70b1fc06189a4cc1f2daa217e42ed0fe613b90.webp",
                 "original_filename": "05.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#5",
                 "album_id": "3953685",
@@ -56,7 +52,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#6",
                 "filename": "06.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3971/eeb72935491f43fa8875c82eb85fc0347c8ed1fa188994e3fb20dca34bea283f.webp",
                 "original_filename": "06.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#6",
                 "album_id": "3953685",
@@ -66,7 +61,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#7",
                 "filename": "07.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/1598/2986e31c1be7ff997808f049cd00f5104e7edc2d04b1d7706474662b3186a3e6.webp",
                 "original_filename": "07.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#7",
                 "album_id": "3953685",
@@ -76,7 +70,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#8",
                 "filename": "08.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3239/360e42ee08b75979c7fcfc124ae10d813775b62258ff720eb8f4ef667399fa7c.webp",
                 "original_filename": "08.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#8",
                 "album_id": "3953685",
@@ -86,7 +79,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#9",
                 "filename": "09.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/2881/2ee5d28c7d231825df325e73150d3e7655ce2e0cdda643344de9c18aa815b41b.webp",
                 "original_filename": "09.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#9",
                 "album_id": "3953685",
@@ -96,7 +88,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#10",
                 "filename": "10.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3377/ae8bed818bbfc5acecac92c9af02a351295e5833511a50301a7a33498250231d.webp",
                 "original_filename": "10.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#10",
                 "album_id": "3953685",
@@ -106,7 +97,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#11",
                 "filename": "11.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/1948/50509f2259c09f044c57f184834c5206680dff42134ccde2c26be280f00e19c7.webp",
                 "original_filename": "11.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#11",
                 "album_id": "3953685",
@@ -116,7 +106,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#12",
                 "filename": "12.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/1879/b27ed7f8767762675289b0489732b45c5a21deb4ac89b8aedcc3c4b67f8ef577.webp",
                 "original_filename": "12.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#12",
                 "album_id": "3953685",
@@ -126,7 +115,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#13",
                 "filename": "13.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/160/e6ca0ec5be6eab75c322db2ba5d38fb66564185a5b19aceff4bb37e54fd5ea00.webp",
                 "original_filename": "13.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#13",
                 "album_id": "3953685",
@@ -136,7 +124,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#14",
                 "filename": "14.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/1325/43cd95b0a475d93f1dbc6be7d5cebcbc8a4fd265d500df7444f5e0aeb81e22d5.webp",
                 "original_filename": "14.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#14",
                 "album_id": "3953685",
@@ -146,7 +133,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#15",
                 "filename": "15.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3932/7362740d34e7ad0b95ae62639242b8ec188a8bb8032d1c2d2c7c31ecacec75cf.webp",
                 "original_filename": "15.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#15",
                 "album_id": "3953685",
@@ -156,7 +142,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#16",
                 "filename": "16.webp",
-                "debrid_link": "https://w2.gold-usergeneratedcontent.net/1779606002/2487/54111a4005cfdd0bf09faa4668394972348f879c6a111a7e7f4c7c7672afbb79.webp",
                 "original_filename": "16.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#16",
                 "album_id": "3953685",
@@ -166,7 +151,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#17",
                 "filename": "17.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/1353/aea2cadd8cd8b1f45833d4cda69bca185e975742bb960ed10bfa7f48b5009495.webp",
                 "original_filename": "17.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#17",
                 "album_id": "3953685",
@@ -176,7 +160,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#18",
                 "filename": "18.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/3423/794eeeb98ed427d9fa04ccae8c731f4279729b0493179fb5016855cbb48e75fd.webp",
                 "original_filename": "18.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#18",
                 "album_id": "3953685",
@@ -186,7 +169,6 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#19",
                 "filename": "19.webp",
-                "debrid_link": "https://w1.gold-usergeneratedcontent.net/1779606002/2355/1052d55dfdb9d6720c4d81c01729197fadc99b36ac27a058f870f653b2f88339.webp",
                 "original_filename": "19.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#19",
                 "album_id": "3953685",
@@ -195,5 +177,18 @@ TEST_CASES = [
             },
         ],
         "count": 19,
-    }
+    },
+    {
+        "url": "https://hitomi.la/artist/tamabi-all.html",
+        "results": [
+            {
+                "url": "ANY",
+                "debrid_link": "NOT_NONE",
+                "album_id": "NOT_NONE",
+                "uploaded_at": int,
+                "download_folder": "re:tamabi [artist][all] (Hitomi.la)/",
+            },
+        ],
+        "count": range(13569, 15000),
+    },
 ]
