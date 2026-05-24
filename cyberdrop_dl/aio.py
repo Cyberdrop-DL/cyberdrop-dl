@@ -87,7 +87,11 @@ class _CachedValue(Generic[_T]):
         return time.monotonic() - self.created_at >= self.ttl
 
 
-def cached(*, ttl: float | None) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], CoroutineType[Any, Any, _T]]]:
+def cached(
+    *, ttl: float | None = None
+) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], CoroutineType[Any, Any, _T]]]:
+    if ttl is None:
+        return _perpertual_cache
 
     def make_decorator(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
         lock = asyncio.Lock()
@@ -107,6 +111,27 @@ def cached(*, ttl: float | None) -> Callable[[Callable[[], Awaitable[_T]]], Call
         return call
 
     return make_decorator
+
+
+def _perpertual_cache(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
+    lock = asyncio.Lock()
+    cached_value: _T | Sentinel = _MISSING
+
+    @functools.wraps(fn)
+    async def call() -> _T:
+        nonlocal cached_value
+        if cached_value is not _MISSING:
+            return cast("_T", cached_value)
+
+        async with lock:
+            if cached_value is not _MISSING:
+                return cast("_T", cached_value)
+
+            cached_value = await fn()
+
+        return cached_value
+
+    return call
 
 
 @dataclasses.dataclass(slots=True, eq=False)
