@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
     from curl_cffi.requests.session import HttpMethod
 
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -126,25 +127,9 @@ class HTTPClient:
             await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-
-        loop = asyncio.get_running_loop()
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=CurlCffiWarning)
-            acurl = AsyncCurl(loop=loop)
-
-        proxy_or_none = str(proxy) if (proxy := self.manager.config.global_settings.general.proxy) else None
-
-        return AsyncSession(
-            loop=loop,
-            async_curl=acurl,
-            impersonate="chrome",
-            verify=bool(self.ssl_context),
-            proxy=proxy_or_none,
-            timeout=self.manager.config.global_settings.rate_limiting_options.curl_timeout,
-            max_redirects=8,
-            cookies={cookie.key: cookie.value for cookie in self.cookies},
-        )
+        session = _create_curl_session(self.manager.config)
+        session.cookies = {cookie.key: cookie.value for cookie in self.cookies}
+        return session
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
@@ -342,3 +327,21 @@ class HTTPMixin(ABC):
     async def request_text(self, *args: Any, **kwargs: Any) -> str:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
+
+
+def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
+    loop = asyncio.get_running_loop()
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=CurlCffiWarning)
+        acurl = AsyncCurl(loop=loop)
+
+    return AsyncSession(
+        loop=loop,
+        async_curl=acurl,
+        impersonate="chrome",
+        verify=bool(config.global_settings.general.ssl_context),
+        proxy=str(proxy) if (proxy := config.global_settings.general.proxy) else None,
+        timeout=config.global_settings.rate_limiting_options.curl_timeout,
+        max_redirects=8,
+    )
