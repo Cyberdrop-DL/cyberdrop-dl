@@ -55,15 +55,15 @@ class YTboobCrawler(Crawler):
             video.thumbnail.name,
             ext,
             custom_filename=filename,
-            referer=scrape_item.url.with_fragment("thumbnail"),
+            frag="thumbnail",
         )
 
     async def _request_video(self, url: AbsoluteHttpURL) -> Video:
         soup = await self.request_soup(url)
-        props: dict[str, Any] = next(p for p in css.json_ld(soup)["@graph"] if p.get("@type") == "Article")
+        article: dict[str, Any] = next(p for p in css.json_ld(soup)["@graph"] if p.get("@type") == "Article")
         return Video(
-            thumbnail=self.parse_url(props["thumbnailUrl"]),
-            uploaded_at=self.parse_iso_date(props["datePublished"]),
+            thumbnail=self.parse_url(article["thumbnailUrl"]),
+            uploaded_at=self.parse_iso_date(article["datePublished"]),
             src=self.parse_url(css.select(soup, "video-js source", "src")),
-            title=css.unescape(props["headline"]),
+            title=css.unescape(article["headline"]),
         )
