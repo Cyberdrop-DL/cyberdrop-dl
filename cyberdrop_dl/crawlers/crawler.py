@@ -488,6 +488,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         m3u8: m3u8.Rendition | None = None,
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
+        frag: str | None = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
 
@@ -511,6 +512,8 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
         if referer:
             media_item.referer = referer
+        if frag:
+            media_item.referer = media_item.referer.with_fragment(frag)
         media_item.headers.update(self._prepare_headers(scrape_item))
         await self.handle_media_item(media_item, m3u8)
 
