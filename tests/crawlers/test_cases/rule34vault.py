@@ -15,5 +15,15 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://rule34vault.com/sarahvividart%7Calien",
+        "results": [
+            {
+                "url": "ANY",
+                "download_folder": "re:sarahvividart,alien [tags] (Rule34Vault)",
+            },
+        ],
+        "count": range(50, 60),
+    },
 ]
