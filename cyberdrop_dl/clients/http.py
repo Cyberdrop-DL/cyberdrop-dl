@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import time
 import warnings
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast, final
 
 import aiohttp
 from curl_cffi.aio import AsyncCurl
@@ -24,6 +25,7 @@ from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
+    import ssl
     from collections.abc import AsyncGenerator, Callable, Mapping
     from pathlib import Path
 
@@ -62,12 +64,35 @@ class RequestDoneCallback(Protocol):
 
 
 @final
+@dataclasses.dataclass(slots=True)
 class HTTPClient:
-    def __init__(self, manager: Manager) -> None:
-        self.impersonate = manager.cli_args.impersonate
-        self.config = manager.config
-        self.ssl_context = tcp.create_ssl_context(self.config.global_settings.general.ssl_context)
-        self.rate_limits: dict[str, aio.RateLimiter] = {}
+    config: Config
+    impersonate: (
+        Literal[
+            "chrome",
+            "edge",
+            "safari",
+            "safari_ios",
+            "chrome_android",
+            "firefox",
+        ]
+        | None
+    ) = None
+    request_done_callback: RequestDoneCallback | None = None
+
+    rate_limits: dict[str, aio.RateLimiter] = dataclasses.field(init=False, default_factory=dict)
+    global_rate_limiter: aio.RateLimiter = dataclasses.field(init=False)
+    global_download_limiter: asyncio.Semaphore = dataclasses.field(init=False)
+
+    _ssl_context: ssl.SSLContext | Literal[False] = dataclasses.field(init=False)
+    _cookies: aiohttp.CookieJar | None = dataclasses.field(init=False, default=None)
+    _flaresolverr: flaresolverr.Client | None = dataclasses.field(init=False, default=None)
+    _curl_session: AsyncSession[CurlResponse] | None = dataclasses.field(init=False, default=None)
+    _session: aiohttp.ClientSession = dataclasses.field(init=False)
+    _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self._ssl_context = tcp.create_ssl_context(self.config.global_settings.general.ssl_context)
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(
             self.config.global_settings.rate_limiting_options.rate_limit
         )
@@ -75,15 +100,13 @@ class HTTPClient:
             self.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
 
-        self._cookies: aiohttp.CookieJar | None = None
-        self.request_done_callback: RequestDoneCallback | None = None
+    @staticmethod
+    def from_manager(manager: Manager) -> HTTPClient:
+        client = HTTPClient(config=manager.config, impersonate=manager.cli_args.impersonate)
         if manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses:
-            self.request_done_callback = manager.logs.write_response
+            client.request_done_callback = manager.logs.write_response
 
-        self._flaresolverr: flaresolverr.Client | None = None
-        self._curl_session: AsyncSession[CurlResponse] | None = None
-        self._session: aiohttp.ClientSession
-        self._download_session: aiohttp.ClientSession
+        return client
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -146,7 +169,7 @@ class HTTPClient:
             cookie_jar=self.cookies,
             timeout=self.config.global_settings.rate_limiting_options.aiohttp_timeout,
             proxy=self.config.global_settings.general.proxy,
-            connector=tcp.create_connector(self.ssl_context),
+            connector=tcp.create_connector(self._ssl_context),
             requote_redirect_url=False,
         )
 

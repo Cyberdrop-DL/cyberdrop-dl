@@ -58,7 +58,7 @@ class Manager:
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
         self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
-        self.http_client: HTTPClient = HTTPClient(self)
+        self.http_client: HTTPClient = HTTPClient.from_manager(self)
         self.download_client: DownloadClient = DownloadClient(self)
 
         self.scrape_mapper: ScrapeMapper

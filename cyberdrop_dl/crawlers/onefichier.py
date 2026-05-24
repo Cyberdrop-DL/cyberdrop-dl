@@ -108,7 +108,7 @@ class OneFichierCrawler(Crawler):
 
     async def _request_download(self, url: AbsoluteHttpURL, password: str | None) -> AbsoluteHttpURL:
         data = {"pass": password} if password else {}
-        if not self.client.ssl_context:
+        if not self.manager.config.global_settings.general.ssl_context:
             data["dl_no_ssl"] = "on"
 
         soup = await self.request_soup(url, method="POST", data=data or None)
