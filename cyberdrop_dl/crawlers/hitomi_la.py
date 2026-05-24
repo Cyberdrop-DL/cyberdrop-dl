@@ -108,7 +108,6 @@ class HitomiLaCrawler(Crawler):
     async def collection(self, scrape_item: ScrapeItem, name: str, language: str, *, colletion_type: str) -> None:
         title = f"{name} [{colletion_type}][{language}]"
         nozomi_url = _LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
-
         scrape_item.setup_as_profile(self.create_title(title))
         await self._nozomi(scrape_item, nozomi_url)
 
@@ -117,8 +116,8 @@ class HitomiLaCrawler(Crawler):
             async for group in groups:
                 await self._iter_galleries(scrape_item, group)
 
-    async def _iter_galleries(self, scrape_item: ScrapeItem, sets: Iterable[int]) -> None:
-        for idx, gallery_id in enumerate(sets, 1):
+    async def _iter_galleries(self, scrape_item: ScrapeItem, groups: Iterable[int]) -> None:
+        for idx, gallery_id in enumerate(groups, 1):
             new_item = scrape_item.create_child(self.PRIMARY_URL / f"galleries/{gallery_id}.html")
             self.create_task(self.run(new_item))
             scrape_item.add_children()

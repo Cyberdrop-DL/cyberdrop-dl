@@ -968,6 +968,7 @@ _CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
 class API(HTTPMixin, Generic[_CrawlerT_generic]):
     crawler: _CrawlerT_generic
 
+    @final
     def __init__(self, crawler: _CrawlerT_generic) -> None:
         self.crawler = crawler
         self.__post_init__()
