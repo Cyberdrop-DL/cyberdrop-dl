@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final
 import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
 from bs4 import BeautifulSoup
+from curl_cffi.requests.models import Response as CurlResponse
 from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
 from typing_extensions import TypeVar, override
@@ -22,13 +23,6 @@ from cyberdrop_dl.utils import parse_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-
-    from curl_cffi.requests.models import Response as CurlResponse
-
-
-else:
-
-    class CurlResponse: ...
 
 
 _ResponseT = TypeVar(
@@ -119,13 +113,16 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
     @classmethod
     def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | _FlareSolverrResponse | _CurlResponse:
-        if isinstance(resp, ClientResponse):
-            return _AIOHTTPResponse.create(resp)
+        try:
+            cls_ = {
+                ClientResponse: _AIOHTTPResponse,
+                FlaresolverrSolution: _FlareSolverrResponse,
+                CurlResponse: _CurlResponse,
+            }[type(resp)]
+        except LookupError:
+            raise TypeError(resp) from None
 
-        if isinstance(resp, FlaresolverrSolution):
-            return _FlareSolverrResponse.create(resp)
-
-        return _CurlResponse.create(resp)
+        return cls_.create(resp)  # pyright: ignore[reportArgumentType]
 
     @final
     @under_cached_property

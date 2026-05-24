@@ -3,21 +3,24 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import platform
 import time
+import warnings
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Self, cast, final
 
 import aiohttp
+from curl_cffi.aio import AsyncCurl
+from curl_cffi.requests import AsyncSession
+from curl_cffi.utils import CurlCffiWarning
 
 from cyberdrop_dl import aio, cookies, ddos_guard, signature
 from cyberdrop_dl.clients import flaresolverr, tcp
 from cyberdrop_dl.clients.request import Request, normalize_impersonation, prepare_headers
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
@@ -25,7 +28,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from bs4 import BeautifulSoup
-    from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
     from curl_cffi.requests.session import HttpMethod
 
@@ -124,18 +126,6 @@ class HTTPClient:
             await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-        try:
-            from curl_cffi.aio import AsyncCurl
-            from curl_cffi.requests import AsyncSession
-            from curl_cffi.utils import CurlCffiWarning
-        except ImportError as e:
-            msg = (
-                f"curl_cffi is required to scrape this URL but a dependency it's not available on {platform.system()}.\n"
-                f"See: https://github.com/lexiforest/curl_cffi/issues/74#issuecomment-1849365636\n{e!r}"
-            )
-            raise ScrapeError("Missing Dependency", msg) from e
-
-        import warnings
 
         loop = asyncio.get_running_loop()
 
