@@ -964,12 +964,20 @@ _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 _CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
 
 
-@dataclasses.dataclass(slots=True)
 class API(HTTPMixin, Generic[_CrawlerT_generic]):
     crawler: _CrawlerT_generic
 
+    def __init__(self, crawler: _CrawlerT_generic) -> None:
+        self.crawler = crawler
+        self.__post_init__()
+
+    def __post_init__(self): ...
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(crawler={self.crawler!r})"
+
     @signature.copy(Crawler.request)
-    def request(self, *args: Any, **kwargs: Any):
+    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]:  # pyright: ignore[reportPrivateUsage]
         return self.crawler.request(*args, **kwargs)
 
 

@@ -45,7 +45,6 @@ class HitomiLaCrawler(Crawler):
     def __post_init__(self) -> None:
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self.api: HitomiAPI = HitomiAPI(self)
-        self.api.servers = aio.cached(self.api.servers)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -182,7 +181,13 @@ class Gallery(DictDataclass):
 
 
 class HitomiAPI(API):
-    headers: ClassVar[Mapping[str, str]] = {"Referer": str(_PRIMARY_URL), "Origin": str(_PRIMARY_URL)}
+    headers: ClassVar[Mapping[str, str]] = {
+        "Referer": str(_PRIMARY_URL),
+        "Origin": str(_PRIMARY_URL),
+    }
+
+    def __post_init__(self) -> None:
+        self.servers = aio.cached(self.servers)
 
     async def servers(self) -> Servers:
         # https://ltn.gold-usergeneratedcontent.net/gg.js
@@ -248,13 +253,6 @@ def _parse_search_query(query_word: str) -> SearchArgs:
     if left_side in {"female", "male"}:
         return SearchArgs("tag", query_word)
     return SearchArgs(left_side, right_side)
-
-
-def _build_nozomi_url(name: str, language: str, colletion_type: str) -> AbsoluteHttpURL:
-    if name == "index":
-        return _LTN_SERVER / f"{name}-{language}.nozomi"
-
-    return _LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
 
 
 def _decode_servers(js_text: str) -> Servers:
