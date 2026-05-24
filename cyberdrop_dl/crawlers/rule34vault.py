@@ -12,12 +12,14 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
+_CDN = AbsoluteHttpURL("https://r34xyz.b-cdn.net")
+
 
 class Rule34VaultCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Post": "/post/...",
-        "Playlist": "/playlists/view/...",
-        "Tag": "/...",
+        "Post": "/post/<post_id>",
+        "Playlist": "/playlists/view/<playlist_id>",
+        "Tag": "/<tag1>|<tags2>...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rule34vault.com")
     DOMAIN: ClassVar[str] = "rule34vault"
@@ -90,7 +92,7 @@ class Post(DictDataclass):
 
     @property
     def src(self) -> AbsoluteHttpURL:
-        return Rule34VaultCrawler.PRIMARY_URL / f"posts/{self.id // 1000}/{self.id}/{self.id}{self.suffix}"
+        return _CDN / f"posts/{self.id // 1000}/{self.id}/{self.id}{self.suffix}"
 
 
 @dataclasses.dataclass(slots=True)
