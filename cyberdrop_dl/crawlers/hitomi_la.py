@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
+import itertools
 import json
 import re
 import struct
@@ -17,7 +19,7 @@ from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 from cyberdrop_dl.utils.filepath import get_filename_and_ext
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Mapping
+    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -28,7 +30,6 @@ _GALLERY_PARTS = "cg", "doujinshi", "galleries", "gamecg", "imageset", "manga", 
 _COLLECTION_PARTS = "artist", "character", "group", "series", "tag", "type"
 _CONTENT_HOST = "gold-usergeneratedcontent.net"
 _LTN_SERVER = AbsoluteHttpURL(f"https://ltn.{_CONTENT_HOST}/")
-_PRIMARY_URL = AbsoluteHttpURL("https://hitomi.la")
 _VIDEOS_SERVER = AbsoluteHttpURL(f"https://streaming.{_CONTENT_HOST}/")
 
 
@@ -38,12 +39,12 @@ class HitomiLaCrawler(Crawler):
         "Collection": tuple(f"/{g}/<slug>" for g in _COLLECTION_PARTS),
         "Search": "/search.html?<query>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hitomi.la")
     DOMAIN: ClassVar[str] = "hitomi.la"
     _RATE_LIMIT: ClassVar[tuple[float, float]] = 3, 1
+    _SCRAPE_SLOTS: ClassVar[int] = 3
 
     def __post_init__(self) -> None:
-        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self.api: HitomiAPI = HitomiAPI(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -72,15 +73,16 @@ class HitomiLaCrawler(Crawler):
             nozomi_url = _LTN_SERVER / colletion_type / f"{name}-{language}.nozomi"
 
         scrape_item.setup_as_profile(self.create_title(title))
-        sets = await self.api.nozomi(nozomi_url)
-        await self._iter_galleries(scrape_item, sets)
+        async with self.api.iter_nozomi(nozomi_url) as groups:
+            async for group in groups:
+                await self._iter_galleries(scrape_item, group)
 
     async def _iter_galleries(self, scrape_item: ScrapeItem, sets: Iterable[int]) -> None:
         for idx, gallery_id in enumerate(sets, 1):
             new_item = scrape_item.create_child(self.PRIMARY_URL / f"galleries/{gallery_id}.html")
             self.create_task(self.run(new_item))
             scrape_item.add_children()
-            if idx % 300:
+            if idx % 30:
                 await asyncio.sleep(0)
 
     @error_handling_wrapper
@@ -95,7 +97,6 @@ class HitomiLaCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
         gallery = await self.api.gallery(gallery_id)
-
         scrape_item.url = self.PRIMARY_URL / "galleries" / gallery_id
         title = self.create_title(f"{gallery.title} [{gallery.type}]", gallery.id)
         scrape_item.setup_as_album(title, album_id=gallery.id)
@@ -126,6 +127,8 @@ class HitomiLaCrawler(Crawler):
                 referer=web_url,
             )
             scrape_item.add_children()
+            if idx % 30:
+                await asyncio.sleep(0.02)
 
     @error_handling_wrapper
     async def _video(self, scrape_item: ScrapeItem, gallery: Gallery) -> None:
@@ -182,8 +185,8 @@ class Gallery(DictDataclass):
 
 class HitomiAPI(API):
     headers: ClassVar[Mapping[str, str]] = {
-        "Referer": str(_PRIMARY_URL),
-        "Origin": str(_PRIMARY_URL),
+        "Referer": "https://hitomi.la",
+        "Origin": "https://hitomi.la",
     }
 
     def __post_init__(self) -> None:
@@ -207,15 +210,27 @@ class HitomiAPI(API):
         # https://ltn.gold-usergeneratedcontent.net/search.js
         # This is partial implementation. Only parses tagged words, ex `female:dark_skin`
         # Free form query searches are ignored
-        search_args = tuple(_parse_search_query(search_query))
-        first, *rest = await aio.map(self.nozomi, (a.url for a in search_args), task_limit=None)
-        return sorted(set(first).intersection(*rest), reverse=True)
+        first, *others = tuple(_parse_search_query(search_query))
+
+        results = await self.nozomi(first.url)
+        if others:
+            rest = await aio.map(self.nozomi, (a.url for a in others), task_limit=5)
+            results = set(results).intersection(*rest)
+
+        return sorted(results, reverse=True)
+
+    async def _iter_nozomi(self, url: AbsoluteHttpURL) -> AsyncGenerator[tuple[int, ...]]:
+        async with self.request(url, headers=self.headers) as response:
+            async for chunk in response.iter_chunked(1024):
+                yield _decode_nozomi_resp(chunk)
+
+    def iter_nozomi(self, url: AbsoluteHttpURL) -> contextlib.aclosing[AsyncGenerator[tuple[int, ...]]]:
+        return contextlib.aclosing(self._iter_nozomi(url))
 
     async def nozomi(self, url: AbsoluteHttpURL) -> tuple[int, ...]:
-        async with self.request(url, headers=self.headers) as response:
-            content = await response.read()
-
-        return _decode_nozomi_resp(content)
+        async with self.iter_nozomi(url) as groups:
+            galleries = [chunk async for chunk in groups]
+            return tuple(itertools.chain.from_iterable(galleries))
 
 
 def _build_src_url(servers: Servers, image: Image) -> AbsoluteHttpURL:

@@ -180,6 +180,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
+    _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
     disabled: bool = False
 
@@ -199,7 +200,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
-        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
 
         self.downloader: Downloader = Downloader(
             self.manager,
