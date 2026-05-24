@@ -14,9 +14,9 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Generic, Literal, ParamSpec, Self, final
 
-from typing_extensions import deprecated
+from typing_extensions import TypeVar, deprecated
 
 from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
@@ -959,9 +959,14 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             )
 
 
+_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
+
+_CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
+
+
 @dataclasses.dataclass(slots=True)
-class API(HTTPMixin):
-    crawler: Crawler
+class API(HTTPMixin, Generic[_CrawlerT_generic]):
+    crawler: _CrawlerT_generic
 
     @signature.copy(Crawler.request)
     def request(self, *args: Any, **kwargs: Any):
@@ -1009,9 +1014,6 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTup
 
     path_pairs = ((key, try_sort(value)) for key, value in supported_paths.items())
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
-
-
-_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 
 def auto_task_id(

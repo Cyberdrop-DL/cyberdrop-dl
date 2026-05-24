@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, CrawlerAPI, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
@@ -94,7 +94,7 @@ class RutubeCrawler(Crawler):
         )
 
 
-class RutubeAPI(CrawlerAPI):
+class RutubeAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rutube.ru/api")
 
     async def play_options(self, video_id: str) -> dict[str, Any]:
