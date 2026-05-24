@@ -8,7 +8,7 @@ import warnings
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Self, cast, final
+from typing import TYPE_CHECKING, Any, Protocol, Self, cast, final
 
 import aiohttp
 from curl_cffi.aio import AsyncCurl
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 class _LazyResponseLog:
     def __init__(self, response: AbstractResponse[Any]) -> None:
-        self.response = response
+        self.response: AbstractResponse[Any] = response
 
     def __json__(self) -> dict[str, Any]:
         resp = self.response.__json__()
@@ -55,23 +55,31 @@ class _LazyResponseLog:
         return str(self.__json__())
 
 
+class RequestDoneCallback(Protocol):
+    def __call__(
+        self, url: AbsoluteHttpURL, response: AbstractResponse[Any], exc: Exception | None = None, /
+    ) -> None: ...
+
+
 @final
 class HTTPClient:
     def __init__(self, manager: Manager) -> None:
-        self.manager = manager
-        self.ssl_context = tcp.create_ssl_context(self.manager.config.global_settings.general.ssl_context)
+        self.impersonate = manager.cli_args.impersonate
+        self.config = manager.config
+        self.ssl_context = tcp.create_ssl_context(self.config.global_settings.general.ssl_context)
         self.rate_limits: dict[str, aio.RateLimiter] = {}
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(
-            self.manager.config.global_settings.rate_limiting_options.rate_limit
+            self.config.global_settings.rate_limiting_options.rate_limit
         )
         self.global_download_limiter = asyncio.Semaphore(
-            self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+            self.config.global_settings.rate_limiting_options.max_simultaneous_downloads
         )
 
         self._cookies: aiohttp.CookieJar | None = None
-        self._dump_responses: bool = (
-            manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses
-        )
+        self.request_done_callback: RequestDoneCallback | None = None
+        if manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses:
+            self.request_done_callback = manager.logs.write_response
+
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
         self._session: aiohttp.ClientSession
@@ -92,7 +100,7 @@ class HTTPClient:
 
     @property
     def flaresolverr(self) -> flaresolverr.Client | None:
-        if self._flaresolverr is None and (url := self.manager.config.global_settings.general.flaresolverr):
+        if self._flaresolverr is None and (url := self.config.global_settings.general.flaresolverr):
             self._flaresolverr = flaresolverr.Client(url, self._session)
         return self._flaresolverr
 
@@ -127,17 +135,17 @@ class HTTPClient:
             await self._session.close()
 
     def _create_curl_session(self) -> AsyncSession[CurlResponse]:
-        session = _create_curl_session(self.manager.config)
+        session = _create_curl_session(self.config)
         session.cookies = {cookie.key: cookie.value for cookie in self.cookies}
         return session
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
-            headers={"User-Agent": self.manager.config.global_settings.general.user_agent},
+            headers={"User-Agent": self.config.global_settings.general.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.manager.config.global_settings.rate_limiting_options.aiohttp_timeout,
-            proxy=self.manager.config.global_settings.general.proxy,
+            timeout=self.config.global_settings.rate_limiting_options.aiohttp_timeout,
+            proxy=self.config.global_settings.general.proxy,
             connector=tcp.create_connector(self.ssl_context),
             requote_redirect_url=False,
         )
@@ -218,11 +226,11 @@ class HTTPClient:
             json=json,
             params=request_params or {},
             headers=prepare_headers(headers),
-            impersonate=normalize_impersonation(self.manager.cli_args.impersonate or impersonate),
+            impersonate=normalize_impersonation(self.impersonate or impersonate),
         )
 
         if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", self.manager.config.global_settings.general.user_agent)
+            _ = request.headers.setdefault("User-Agent", self.config.global_settings.general.user_agent)
 
         async with self._request(request) as resp:
             yield resp
@@ -240,8 +248,8 @@ class HTTPClient:
                 exc = e
                 raise
             finally:
-                if self._dump_responses:
-                    self.manager.logs.write_response(request.url, resp, exc)
+                if self.request_done_callback:
+                    self.request_done_callback(request.url, resp, exc)
                 del exc
                 del resp
 
@@ -287,7 +295,7 @@ class HTTPClient:
         assert self.flaresolverr
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
-        flaresolverr.verify_solution(self.manager.config.global_settings.general.user_agent, solution)
+        flaresolverr.verify_solution(self.config.global_settings.general.user_agent, solution)
         return AbstractResponse.create(solution)
 
     @contextlib.contextmanager
