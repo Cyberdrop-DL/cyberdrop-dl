@@ -77,48 +77,48 @@ class RateLimiter(AsyncLimiter):
 @dataclasses.dataclass(slots=True, frozen=True)
 class _CachedValue(Generic[_T]):
     value: _T
-    ttl: float | None
+    ttl: float
     created_at: float = dataclasses.field(init=False, default_factory=time.monotonic)
 
     @property
-    def is_expired(self) -> bool:
-        if self.ttl is None:
-            return False
+    def has_expired(self) -> bool:
         return time.monotonic() - self.created_at >= self.ttl
 
 
-def cached(
+def cache_wrapper(
     *, ttl: float | None = None
 ) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], CoroutineType[Any, Any, _T]]]:
+
+    return lambda x: cached(x, ttl=ttl)
+
+
+def cached(fn: Callable[[], Awaitable[_T]], *, ttl: float | None = None) -> Callable[[], CoroutineType[Any, Any, _T]]:
     if ttl is None:
-        return _perpertual_cache
+        return _perpetual_cache(fn)
 
-    def make_decorator(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
-        lock = asyncio.Lock()
-        cached_value: _CachedValue[_T] | None = None
+    lock = asyncio.Lock()
+    cached_value: _CachedValue[_T] | None = None
 
-        @functools.wraps(fn)
-        async def call() -> _T:
-            nonlocal cached_value
-            async with lock:
-                if cached_value is not None and not cached_value.is_expired:
-                    return cached_value.value
+    @functools.wraps(fn)
+    async def wrapper() -> _T:
+        nonlocal cached_value
+        async with lock:
+            if cached_value is not None and not cached_value.has_expired:
+                return cached_value.value
 
-                cached_value = _CachedValue(await fn(), ttl=ttl)
+            cached_value = _CachedValue(await fn(), ttl=ttl)
 
-            return cached_value.value
+        return cached_value.value
 
-        return call
-
-    return make_decorator
+    return wrapper
 
 
-def _perpertual_cache(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
+def _perpetual_cache(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
     lock = asyncio.Lock()
     cached_value: _T | Sentinel = _MISSING
 
     @functools.wraps(fn)
-    async def call() -> _T:
+    async def wrapper() -> _T:
         nonlocal cached_value
         if cached_value is not _MISSING:
             return cast("_T", cached_value)
@@ -131,7 +131,7 @@ def _perpertual_cache(fn: Callable[[], Awaitable[_T]]) -> Callable[[], Coroutine
 
         return cached_value
 
-    return call
+    return wrapper
 
 
 @dataclasses.dataclass(slots=True, eq=False)
