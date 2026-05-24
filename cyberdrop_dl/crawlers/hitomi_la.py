@@ -8,6 +8,7 @@ from collections import defaultdict
 from datetime import timedelta
 from typing import TYPE_CHECKING, ClassVar, NamedTuple, Required, TypedDict
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -91,7 +92,7 @@ class HitomiLaCrawler(Crawler):
     def __post_init__(self) -> None:
         self._semaphore = asyncio.Semaphore(3)
         self.headers = {"Referer": str(PRIMARY_URL), "Origin": str(PRIMARY_URL)}
-        self._servers: Servers | None = None
+        self._servers = aio.cached(self._servers)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if any(p in scrape_item.url.parts for p in GALLERY_PARTS):
@@ -166,13 +167,7 @@ class HitomiLaCrawler(Crawler):
         js_text = await self.request_text(gallery_url, headers=self.headers)
         return json.loads(js_text.split("=", 1)[-1])
 
-    async def get_servers(self) -> Servers:
-        async with self._startup_lock:
-            if self._servers is None or (dates.now_utc() - self._servers.fetch_datetime > SERVERS_EXPIRE_AFTER):
-                self._servers = await self._get_servers()
-        return self._servers
-
-    async def _get_servers(self) -> Servers:
+    async def _servers(self) -> Servers:
         # https://ltn.gold-usergeneratedcontent.net/gg.js
 
         js_text = await self.request_text(LTN_SERVER / "gg.js")
@@ -189,7 +184,7 @@ class HitomiLaCrawler(Crawler):
         return servers
 
     async def process_gallery(self, scrape_item: ScrapeItem, gallery: Gallery) -> None:
-        servers = await self.get_servers()
+        servers = await self._servers()
         gallery_reader_url = PRIMARY_URL / f"reader/{gallery['id']}.html"
         results = await self.get_album_results(gallery["id"])
 
