@@ -1,6 +1,9 @@
 import logging
 import os
+from collections.abc import Generator
 from pathlib import Path
+
+from cyberdrop_dl.constants import TempExt
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,24 @@ def _safe_delete(entry: os.DirEntry[str]) -> bool:
     else:
         logger.debug(f"Deleted '{entry.path}'")
         return True
+
+
+def partial_files(path: Path | str, /) -> Generator[Path]:
+    try:
+        for entry in os.scandir(path):
+            if _safe_is_dir(entry):
+                yield from partial_files(entry.path)
+                continue
+
+            suffix = entry.name.rpartition(".")[-1]
+            if f".{suffix}" in TempExt:
+                yield Path(entry.path)
+    except OSError:
+        return
+
+
+def has_partial_files(path: Path) -> bool:
+    return bool(next(partial_files(path), False))
 
 
 def delete_empty_files_and_folders_in_place(dirname: Path | str) -> bool:

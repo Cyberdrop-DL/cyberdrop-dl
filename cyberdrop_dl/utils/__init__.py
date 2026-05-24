@@ -7,12 +7,10 @@ import functools
 import inspect
 import itertools
 import logging
-import os
 import platform
 import re
 import sys
 from http import HTTPStatus
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, ParamSpec, Protocol, Self, TypeVar, cast, overload
 
 import yarl
@@ -21,7 +19,6 @@ from mega.errors import MegaNzError
 from pydantic import ValidationError
 from typing_extensions import TypeIs
 
-from cyberdrop_dl.constants import TempExt
 from cyberdrop_dl.exceptions import (
     CDLBaseError,
     ErrorLogMessage,
@@ -30,9 +27,11 @@ from cyberdrop_dl.exceptions import (
     create_error_msg,
     get_origin,
 )
+from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
+    from pathlib import Path
 
     from cyberdrop_dl.downloader.http import Downloader
     from cyberdrop_dl.manager import Manager
@@ -214,13 +213,14 @@ def delete_empty_files_and_folders(path: Path) -> None:
 def check_partials_and_empty_folders(manager: Manager) -> None:
     download_folder = manager.config.settings.files.download_folder
 
-    _check_for_partial_files(download_folder)
+    logger.info("Checking for partial downloads...")
+    if has_partial_files(download_folder):
+        logger.warning("There are partial downloads in the downloads folder")
+
     settings = manager.config.settings.runtime_options
     if settings.delete_partial_files:
         logger.info("Deleting partial downloads...")
-        for file in _partial_files(download_folder):
-            logger.debug(f"Deleting '{file}'")
-            file.unlink(missing_ok=True)
+        delete_partial_files(download_folder)
 
     if settings.skip_check_for_empty_folders:
         return
@@ -233,28 +233,14 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         delete_empty_files_and_folders(sorted_folder)
 
 
-def _partial_files(path: Path | str, /) -> Generator[Path]:
-    try:
-        for entry in os.scandir(path):
-            try:
-                if entry.is_dir(follow_symlinks=False):
-                    yield from _partial_files(entry.path)
-                    continue
-            except OSError:
-                pass
-
-            suffix = entry.name.rpartition(".")[-1]
-            if f".{suffix}" in TempExt:
-                yield Path(entry.path)
-    except OSError:
-        return
-
-
-def _check_for_partial_files(path: Path) -> None:
-    logger.info("Checking for partial downloads...")
-    has_partial_files = next(_partial_files(path), None)
-    if has_partial_files:
-        logger.warning("There are partial downloads in the downloads folder")
+def delete_partial_files(path: Path) -> None:
+    for file in partial_files(path):
+        try:
+            file.unlink()
+        except OSError as e:
+            logger.error(f"Unable to delete '{file}' ({e!r})")
+        else:
+            logger.debug(f"Deleted '{file}'")
 
 
 def extr_text(text: str, /, start: str, end: str) -> str:
