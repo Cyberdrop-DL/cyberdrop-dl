@@ -20,7 +20,7 @@ from typing_extensions import deprecated
 
 from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
-from cyberdrop_dl.crawlers._hls import HLSParser
+from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
@@ -162,7 +162,7 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
-class Crawler(HTTPMixin, HLSParser, ABC):
+class Crawler(HTTPMixin, HLSMixin, ABC):
     DOMAIN: ClassVar[str]
     _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
