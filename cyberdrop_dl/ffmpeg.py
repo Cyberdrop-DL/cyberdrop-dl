@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import functools
 import itertools
 import json
@@ -13,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
-from cyberdrop_dl.utils import DictDataclass, dataclasses
+from cyberdrop_dl.utils import DictDataclass
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
@@ -298,7 +299,7 @@ class AudioStream(Stream):
 
     @classmethod
     def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
-        defaults = super().validate(stream_info)
+        defaults = super(AudioStream, cls).validate(stream_info)
         sample_rate = int(float(stream_info.get("sample_rate", 0))) or None
         return defaults | {"sample_rate": sample_rate}
 
@@ -322,7 +323,7 @@ class VideoStream(Stream):
         if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
             fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
-        defaults = super().validate(stream_info)
+        defaults = super(VideoStream, cls).validate(stream_info)
         return defaults | {"width": width, "height": height, "fps": fps, "resolution": resolution}
 
 

@@ -27,7 +27,7 @@ from cyberdrop_dl.exceptions import (
     get_origin,
 )
 from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
-from cyberdrop_dl.utils.dataclasses import DictDataclass as DictDataclass
+from cyberdrop_dl.utils.serialization import DictDataclass as DictDataclass
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator

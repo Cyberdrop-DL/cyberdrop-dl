@@ -45,12 +45,3 @@ class DictDataclass(_DataClass, Protocol):
         if overrides:
             data.update(overrides)
         return cls(**cls.filter_dict(data))
-
-
-dataclass = dataclasses.dataclass
-field = dataclasses.field
-fields = dataclasses.fields
-asdict = dataclasses.asdict
-astuple = dataclasses.astuple
-replace = dataclasses.replace
-is_dataclass = dataclasses.is_dataclass
