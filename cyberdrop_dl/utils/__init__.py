@@ -51,15 +51,35 @@ logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
+def group_exceptions(message: str | None = None) -> Generator[None]:
+    try:
+        yield
+    except ExceptionGroup as e:
+        raise ExceptionGroup(message or _exc_group_msg(e), e.exceptions) from None
+
+
+def _exc_group_msg(e: ExceptionGroup) -> str:
+    if "unhandled errors in a TaskGroup" not in e.message:
+        return e.message
+
+    first = e.exceptions[0]
+    return getattr(first, "ui_failure", None) or str(first)
+
+
+@contextlib.contextmanager
 def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912
     link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
     error_log_msg = origin = exc_info = None
     link_to_show: yarl.URL | str = ""
     is_segment: bool = getattr(item, "is_segment", False)
     try:
-        yield
+        with group_exceptions():
+            yield
     except TooManyCrawlerErrors:
         return
+    except ExceptionGroup as e:
+        error_log_msg = ErrorLogMessage(_exc_group_msg(e), str(e))
+        exc_info = e.with_traceback(None)
     except CDLBaseError as e:
         error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
         origin = e.origin
