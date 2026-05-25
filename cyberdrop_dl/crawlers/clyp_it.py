@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import env
@@ -12,6 +13,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.url_objects import ScrapeItem
+
+_PREMIUM_SUB_RELEASE_DATE = datetime.datetime(2017, 1, 1, tzinfo=datetime.UTC).timestamp()
+# Approx date from https://web.archive.org/web/20170520211342/https://clyp.it/premium-pricing
 
 
 class ClypItCrawler(Crawler):
@@ -53,8 +57,11 @@ class ClypItCrawler(Crawler):
 
     async def _audio(self, scrape_item: ScrapeItem, audio: Audio) -> None:
         scrape_item.setup_as_profile(self.create_title(audio.user.full_name, audio.user.id))
-        src = await self.api.wav(audio.id) or audio.mp3
-        scrape_item.uploaded_at = self.parse_iso_date(audio.created_at)
+        scrape_item.uploaded_at = date = self.parse_iso_date(audio.created_at)
+        src = audio.mp3
+        if date > _PREMIUM_SUB_RELEASE_DATE:
+            src = await self.api.wav(audio.id, token=scrape_item.url.query.get("token")) or src
+
         _, ext = self.get_filename_and_ext(src.name)
         filename = self.create_custom_filename(audio.title, ext, file_id=audio.id)
         await self.handle_file(src, scrape_item, audio.title, ext, custom_filename=filename, metadata=audio)
@@ -69,6 +76,7 @@ class ClypItCrawler(Crawler):
 
 
 class ClypItAPI(API):
+    # docs: https://clyp.it/api
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.clyp.it")
 
     async def audio(self, audio_id: str, token: str | None) -> Audio:
@@ -80,10 +88,13 @@ class ClypItAPI(API):
         audios = map(_parse_audio, playlist["AudioFiles"])
         return next(a for a in audios if a.id == audio_id)
 
-    async def wav(self, audio_id: str) -> AbsoluteHttpURL | None:
+    async def wav(self, audio_id: str, token: str | None) -> AbsoluteHttpURL | None:
         if env.CLYPIT_PREFER_MP3:
             return None
-        text = await self.request_text(self.crawler.PRIMARY_URL / audio_id)
+        url = self.crawler.PRIMARY_URL / audio_id
+        if token:
+            url = url.with_query(token=token)
+        text = await self.request_text(url)
         try:
             src = extr_text(text, 'var wavStreamUrl = "', '";')
         except ValueError:
