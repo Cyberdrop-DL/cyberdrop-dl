@@ -15,5 +15,18 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://soundgasm.net/u/viviame",
+        "results": [
+            {
+                "url": "re:https://media.soundgasm.net/sounds/",
+                "debrid_link": None,
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:viviame (Soundgasm)",
+            },
+        ],
+        "count": range(48, 60),
+    },
 ]

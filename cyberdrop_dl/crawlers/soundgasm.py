@@ -15,6 +15,7 @@ _CDN = AbsoluteHttpURL("https://media.soundgasm.net")
 class SoundGasmCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Audio": "/u/<user>/<slug>",
+        "User": "/u/<user>",
     }
     DOMAIN: ClassVar[str] = "soundgasm"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://soundgasm.net")
@@ -24,8 +25,18 @@ class SoundGasmCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["u", user, _]:
                 return await self.audio(scrape_item, user)
+            case ["u", user]:
+                return await self.user(scrape_item)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem) -> None:
+        scrape_item.setup_as_profile("")
+        soup = await self.request_soup(scrape_item.url)
+
+        for _, new_item in self.iter_children(scrape_item, soup, ".sound-details a"):
+            self.create_task(self.run(new_item))
 
     @error_handling_wrapper
     async def audio(self, scrape_item: ScrapeItem, user: str) -> None:
