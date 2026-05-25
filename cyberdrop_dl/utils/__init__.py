@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import contextlib
-import dataclasses
 import functools
 import inspect
 import itertools
@@ -11,7 +10,7 @@ import platform
 import re
 import sys
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, ParamSpec, Protocol, Self, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, Protocol, TypeVar, cast, overload
 
 import yarl
 from aiohttp import ClientConnectorError, TooManyRedirects
@@ -28,6 +27,7 @@ from cyberdrop_dl.exceptions import (
     get_origin,
 )
 from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
+from cyberdrop_dl.utils.dataclasses import DictDataclass as DictDataclass
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
@@ -47,33 +47,7 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
-class Dataclass(Protocol):
-    __dataclass_fields__: ClassVar[dict[str, Any]]
-
-
 logger = logging.getLogger(__name__)
-
-
-_FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
-
-
-def _fields(cls: type) -> tuple[str, ...]:
-    if fields := _FIELDS_CACHE.get(cls):
-        return fields
-    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls) if f.init)
-    return fields
-
-
-class DictDataclass(Dataclass, Protocol):
-    @classmethod
-    def filter_dict(cls, data: dict[str, Any], /) -> dict[str, Any]:
-        return {name: data[name] for name in _fields(cls) if name in data}
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
-        if overrides:
-            data.update(overrides)
-        return cls(**cls.filter_dict(data))
 
 
 @contextlib.contextmanager
