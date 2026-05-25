@@ -43,6 +43,7 @@ PIXELDRAIN_PROXY = _env("PIXELDRAIN_PROXY")
 BANDCAMP_FORMATS = _env("BANDCAMP_FORMATS")
 ENABLE_TWITTER = bool(_env("ENABLE_TWITTER"))
 ONEPACE_PREFER_DUB = bool(_env("ONEPACE_PREFER_DUB"))
+CLYPIT_PREFER_MP3 = bool(_env("CLYPIT_PREFER_MP3"))
 
 ALL_VARS = dict(sorted(ALL_VARS.items()))  # pyright: ignore[reportConstantRedefinition]
 ALL_VARS_RESOLVED = dict(
