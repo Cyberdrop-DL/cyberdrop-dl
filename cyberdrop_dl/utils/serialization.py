@@ -28,7 +28,7 @@ def _fields(cls: type[_DataClass]) -> tuple[str, ...]:
 
 
 def filter_data(cls: type[_DataClassT], data: Mapping[str, Any], /) -> dict[str, Any]:
-    return {name: value for name in _fields(cls) if (value := data.get(name, _MISSING)) if not _MISSING}
+    return {name: value for name in _fields(cls) if (value := data.get(name, _MISSING)) is not _MISSING}
 
 
 def deserealize(cls: type[_DataClassT], data: dict[str, Any], /, **overrides: Any) -> _DataClassT:
@@ -38,7 +38,7 @@ def deserealize(cls: type[_DataClassT], data: dict[str, Any], /, **overrides: An
 
 
 class DictDataclass(_DataClass, Protocol):
-    filter_dict = classmethod(filter_data)
+    filter_dict = classmethod(filter_data)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     @classmethod
     def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
