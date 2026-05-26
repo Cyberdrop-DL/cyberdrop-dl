@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     import aiohttp
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
+
+logger = logging.getLogger(__name__)
 
 
 class HLSMixin(ABC):
@@ -36,7 +39,9 @@ class HLSMixin(ABC):
     ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails | None]:
         m3u8_obj = await self._request_m3u8(url, headers)
         if m3u8_obj.is_variant:
+            logger.info("Selecting best rendition from %s", url)
             rendition = m3u8.select_best_rendition(m3u8_obj, only=only, exclude=exclude)
+            logger.info("Selected best rendition for %s:\n%s", url, rendition)
             return await self._resolve_rendition(rendition, headers)
         m3u8_obj.media_type = "video"
         return m3u8.Rendition(m3u8_obj, None, None), None

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from datetime import timedelta
 from enum import StrEnum
 from functools import cached_property
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
+
+logger = logging.getLogger(__name__)
 
 
 class MediaType(StrEnum):
@@ -107,6 +110,9 @@ class RenditionDetails:
     media: MediaList
     urls: MediaURLs
 
+    def __json__(self) -> dict[str, Any]:
+        return {"stream": dataclasses.asdict(self.stream_info), "urls": self.urls._asdict()}
+
     @staticmethod
     def new(playlist: Playlist) -> RenditionDetails:
         assert playlist.uri
@@ -161,13 +167,27 @@ class M3U8(_M3U8):
         return timedelta(seconds=total_duration)
 
 
+class _LazyRenditionLog:
+    def __init__(self, groups: list[RenditionDetails]) -> None:
+        self.groups = groups
+
+    def __json__(self) -> tuple[dict[str, Any], ...]:
+        return tuple(rendition.__json__() for rendition in self.groups)
+
+    def __str__(self) -> str:
+        return str(self.__json__())
+
+
+@dataclasses.dataclass(slots=True)
 class VariantM3U8Parser:
     """Parses groups inside a variant M3U8"""
 
-    def __init__(self, m3u8: M3U8) -> None:
-        assert m3u8.is_variant
-        self._m3u8 = m3u8
-        self.groups = sorted((RenditionDetails.new(playlist) for playlist in m3u8.playlists), reverse=True)
+    _m3u8: M3U8
+    groups: list[RenditionDetails] = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        assert self._m3u8.is_variant
+        self.groups = sorted((RenditionDetails.new(playlist) for playlist in self._m3u8.playlists), reverse=True)
 
     def get_rendition_groups(
         self, only: Iterable[str] = (), *, exclude: Iterable[str] = ()
@@ -188,6 +208,7 @@ class VariantM3U8Parser:
             yield group
 
     def get_best_group(self, only: Iterable[str] = (), *, exclude: Iterable[str] = ()) -> RenditionDetails:
+        logger.debug("Available renditions from %s:\n%s", self._m3u8.base_uri, _LazyRenditionLog(self.groups))
         return next(self.get_rendition_groups(only=only, exclude=exclude))
 
 
