@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 TEST_HTML = (Path(__file__).parent / "nextjsv13.html").read_text()
-soup = BeautifulSoup(TEST_HTML, "html.parser")
+TEST_SOUP = BeautifulSoup(TEST_HTML, "html.parser")
 
 
 def test_extract_raw_pushes() -> None:
@@ -40,11 +40,11 @@ def test_decode_push(push: str, expected_type: next_js._FlightType, expected_val
 
 def test_extract_flight_data_remove_undefined() -> None:
     assert "$undefined" in TEST_HTML
-    assert "$undefined" not in next_js.extract_flight_data(soup)
+    assert "$undefined" not in next_js.extract_flight_data(TEST_SOUP)
 
 
 def test_parse() -> None:
-    flight_data = next_js.extract_flight_data(soup)
+    flight_data = next_js.extract_flight_data(TEST_SOUP)
     chunks = next_js.parse(flight_data)
     assert len(chunks) == 111
     for value in chunks.values():

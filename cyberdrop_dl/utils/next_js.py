@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 _ChunkID: TypeAlias = str
 FlightData = NewType("FlightData", str)
-_DECODE_ERROR = "<ERROR>"
 NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
 # Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
 
