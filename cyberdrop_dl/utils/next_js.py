@@ -1,103 +1,126 @@
 from __future__ import annotations
 
+import base64
 import dataclasses
-import json
 import re
 from collections.abc import Generator
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any, NewType, TypeAlias
+
+from _typeshed import StrEnum
+from bs4 import BeautifulSoup
+
+from cyberdrop_dl.utils import css, json
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
 
-    from bs4 import BeautifulSoup
+_ChunkID: TypeAlias = str
+FlightData = NewType("FlightData", str)
+NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
+# Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
 
-ChunkID: TypeAlias = str
+
+class _Flight(StrEnum):
+    INIT = "(self.__next_f=self.__next_f||[]).push("
+    PUSH = "self.__next_f.push("
 
 
-class FlightDataType(IntEnum):
+class _FlightType(IntEnum):
     BOOTSTRAP = 0
     PAYLOAD = 1
     FORM_STATE = 2
     BINARY = 3
 
 
-@dataclasses.dataclass(slots=True, order=True)
-class FlightChunk:
-    index: int = dataclasses.field(init=False)
-    id: ChunkID
-    marker: str | None
+_Push = tuple[_FlightType, str]
 
-    raw_data: str
-    data: Any = dataclasses.field(init=False)
-    hints: list[str] = dataclasses.field(init=False)
-    resolved: bool = False
+
+@dataclasses.dataclass(slots=True, order=True)
+class _RawChunk:
+    id: _ChunkID
+    marker: str | None
+    data: str
+
+
+@dataclasses.dataclass(slots=True, order=True)
+class _FlightChunk:
+    index: int = dataclasses.field(init=False)
+    id: _ChunkID
+    marker: str | None
+    data: str
+
+    decoded_data: Any = dataclasses.field(init=False)  # pyright: ignore[reportAny]
+    resolved: bool = dataclasses.field(init=False, default=False)
 
     def __post_init__(self) -> None:
         self.index = int(self.id, base=16)
-        self.data, *self.hints = self.raw_data.split("\n:H")
+        self.decoded_data = self.data
 
 
-# Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
-NextJSFlight = dict[ChunkID, list[dict[str, Any]]]
+def _extract_raw_pushes(soup: BeautifulSoup) -> Generator[str]:
+    def clean(push: str) -> str:
+        return push.strip("\n").strip()
 
-
-_find_chunks = re.compile(r'^(?<![0-9A-Za-z:"])([0-9a-f]+):([A-Z]{0,2})(["\[\{]|null)', re.MULTILINE).finditer
-
-
-def ifind(next_flight: NextJSFlight, *attrs: str) -> Generator[dict[str, Any]]:
-    """Yield every object within `next_flight` that have the required `attrs`."""
-    needed = frozenset(attrs)
-
-    def walk(obj: Any) -> Generator[dict[str, Any]]:
-        if isinstance(obj, dict):
-            if needed.issubset(obj):
-                yield obj
-            else:
-                for v in obj.values():
-                    yield from walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                yield from walk(v)
-
-    for ele in next_flight.values():
-        yield from walk(ele)
-
-
-def find(next_flight: NextJSFlight, *attrs: str) -> dict[str, Any]:
-    """Get the first object within `next_flight` that have the required `attrs`."""
-    return next(ifind(next_flight, *attrs))
-
-
-def extract(soup: BeautifulSoup) -> NextJSFlight:
-    return parse(_extract(soup))
-
-
-def parse(flight_data: str) -> NextJSFlight:
-    return {chunk.id: chunk.data for chunk in _parse_chunks(flight_data)}
-
-
-def _extract(soup: BeautifulSoup) -> str:
-    return "".join((data for _, data in _get_flight_chunks(soup)))
-
-
-def _get_flight_chunks(soup: BeautifulSoup) -> Generator[tuple[FlightDataType, str]]:
-    push = "self.__next_f.push("
-    for script in soup.select(f"script:-soup-contains('{push}')"):
-        js_text = script.get_text()
-        if not js_text.startswith(push):
+    patterns = (_Flight.INIT, _Flight.PUSH)
+    for script in css.iselect(soup, "script"):
+        content = script.get_text(strip=True).strip()
+        if not content:
             continue
-        raw_data = js_text[js_text.find("(") + 1 : js_text.rfind(")")]
-        data_type, data = json.loads(raw_data)
-        data_type = FlightDataType(data_type)
-        if data_type is FlightDataType.PAYLOAD:
-            yield data_type, data
+        for pattern in patterns:
+            if content.startswith(pattern):
+                yield clean(content[len(pattern) : -1])
 
 
-def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:  # noqa: C901
-    chunks: dict[ChunkID, FlightChunk] = {}
+def _decode_push(raw_push: str) -> _Push:
+    push: list[Any] = json.loads(raw_push)  # pyright: ignore[reportAny]
+    match push:
+        case [_FlightType.BOOTSTRAP]:
+            return _FlightType.BOOTSTRAP, "<INIT>"
+        case [_FlightType.PAYLOAD | _FlightType.FORM_STATE as type_, value]:
+            return _FlightType(type_), value
+        case [_FlightType.BINARY, value]:
+            return _FlightType.BINARY, base64.b64decode(value.encode()).decode()
+        case _:
+            raise RuntimeError(f"Invalid NextJS push found: {push!r}")
 
-    def revive_str(value: str) -> Any:  # noqa: PLR0911
+
+def _extract_flight_data(raw_pushes: Iterable[str]) -> Generator[str]:
+    found_init: bool = False
+    for flight_type, data in map(_decode_push, raw_pushes):
+        if flight_type is _FlightType.BOOTSTRAP:
+            if found_init:
+                raise RuntimeError("NextJS data was initialized multiple times")
+            found_init = True
+
+        elif flight_type is _FlightType.PAYLOAD:
+            if not found_init:
+                raise RuntimeError("Found NextJS push without initialized array")
+            yield data
+
+
+def _parse_raw_chunks(flight_data: FlightData) -> Generator[_RawChunk]:
+    for line in flight_data.splitlines():
+        if line.startswith(":HL"):
+            continue
+        m = re.match("^([0-9a-f]+):(T[0-9A-Fa-f]+,|[A-SU-Z]{0,1})", line)
+        assert m
+        chunk_id, marker = m.groups()
+        data = line[m.end() :].strip()
+        if marker.startswith("T"):
+            lenght = int(marker[1:-1], 16)
+            data, rest = data[:lenght], FlightData(data[lenght:])
+            yield _RawChunk(chunk_id, "T", data)
+            if rest:
+                yield from _parse_raw_chunks(rest)
+        else:
+            yield _RawChunk(chunk_id, marker or None, data)
+
+
+def _parse_chunks(flight_data: FlightData) -> Generator[_FlightChunk]:  # noqa: C901
+    chunks: dict[_ChunkID, _FlightChunk] = {}
+
+    def revive_str(value: str) -> Any:  # noqa: PLR0911  # pyright: ignore[reportAny]
         if value[0] != "$":
             return value
 
@@ -134,39 +157,75 @@ def _parse_chunks(flight_data: str) -> Generator[FlightChunk]:  # noqa: C901
             for key, obj in value.items():
                 value[key] = revive(obj)
 
-        elif isinstance(value, FlightChunk):
+        elif isinstance(value, _FlightChunk):
             initialize(value)
-            return value.data
+            return value.decoded_data
 
         return value
 
-    def initialize(chunk: FlightChunk) -> None:
+    def initialize(chunk: _FlightChunk) -> None:
         if chunk.resolved:
             return
         try:
-            raw_value = json.loads(chunk.data) if isinstance(chunk.data, str) else chunk.data
-        except json.decoder.JSONDecodeError:
-            chunk.data = "ERROR"
+            raw_value = json.loads(chunk.decoded_data) if isinstance(chunk.decoded_data, str) else chunk.decoded_data
+        except json.JSONDecodeError:
+            chunk.decoded_data = "<ERROR>"
         else:
-            chunk.data = revive(raw_value)
+            chunk.decoded_data = revive(raw_value)
         finally:
             chunk.resolved = True
 
-    flight_data = flight_data.replace('"$undefined"', "null")
-    matches = tuple(_find_chunks(flight_data))
-
-    for idx, match in enumerate(matches):
-        chunk_id, marker, delimiter = match.groups()
-        try:
-            end = matches[idx + 1].start()
-        except IndexError:
-            end = -1
-
-        data = flight_data[match.end() - 1 : end].strip()
-        chunks[chunk_id] = chunk = FlightChunk(chunk_id, marker=marker or None, raw_data=data)
-        if delimiter == "null":
-            chunk.data = None
+    for chunk in _parse_raw_chunks(flight_data):
+        chunks[chunk.id] = _FlightChunk(chunk.id, marker=chunk.marker or None, data=chunk.data)
 
     for chunk in sorted(chunks.values()):
         initialize(chunk)
         yield chunk
+
+
+def extract_flight_data(soup: BeautifulSoup) -> FlightData:
+    return FlightData("".join(_extract_flight_data(_extract_raw_pushes(soup))).replace('"$undefined"', "null"))
+
+
+def ifind(next_flight: NextJSFlight, attr: str, *attrs: str) -> Generator[dict[str, Any]]:
+    """Yield every object within `next_flight` that have the required `attrs`."""
+    needed = frozenset([attr, *attrs])
+
+    def walk(obj: object) -> Generator[dict[str, Any]]:
+        if isinstance(obj, dict):
+            if needed.issubset(obj):
+                yield obj
+            else:
+                for v in obj.values():
+                    yield from walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                yield from walk(v)
+
+    for ele in next_flight.values():
+        yield from walk(ele)
+
+
+def find(next_flight: NextJSFlight, attr: str, *attrs: str) -> dict[str, Any]:
+    """Get the first object within `next_flight` that have the required `attrs`."""
+    return next(ifind(next_flight, attr, *attrs))
+
+
+def extract(soup: BeautifulSoup) -> NextJSFlight:
+    return parse(extract_flight_data(soup))
+
+
+def parse(flight_data: FlightData, /) -> NextJSFlight:
+    return {chunk.id: chunk.decoded_data for chunk in _parse_chunks(flight_data)}  # pyright: ignore[reportAny]
+
+
+if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
+    file = Path(sys.argv[1])
+    soup = BeautifulSoup(file.read_text(), "html.parser")
+    flight_data = extract_flight_data(soup)
+    Path("flight_data.txt").write_text(flight_data)
+    data = parse(flight_data)
+    Path(" flight_data_decoded.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))

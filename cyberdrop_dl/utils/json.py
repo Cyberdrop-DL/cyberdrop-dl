@@ -79,6 +79,9 @@ class JSDecoder(json.JSONDecoder):
         self.scan_once = _py_make_scanner(self)
 
 
+JSONDecodeError = json.JSONDecodeError
+
+
 def _verbose(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
