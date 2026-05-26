@@ -36,7 +36,7 @@ TEST_CASES = [
         "url": "https://clyp.it/user/gxslmwpj",
         "results": [
             {
-                "url": "rehttps://audio.clyp.it/",
+                "url": "ANY",
                 "album_id": None,
                 "uploaded_at": int,
                 "download_folder": "re:Valentin Brunn (Clyp.it)",

@@ -111,9 +111,8 @@ class ClypItAPI(API):
         while True:
             resp = await self.request_json(url)
             yield map(_parse_audio, resp["Data"])
-            try:
-                next_page: str = resp["Paging"]["Next"]
-            except IndexError:
+            next_page: str | None = resp.get("Paging").get("Next")
+            if not next_page:
                 break
             url = self.crawler.parse_url(next_page)
 
