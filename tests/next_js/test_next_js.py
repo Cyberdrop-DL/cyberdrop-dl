@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import aiohttp
 import pytest
@@ -9,15 +8,20 @@ from bs4 import BeautifulSoup
 
 from cyberdrop_dl.utils import next_js
 
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-
 TEST_HTML = (Path(__file__).parent / "nextjsv13.html").read_text()
 TEST_SOUP = BeautifulSoup(TEST_HTML, "html.parser")
 
 
+@pytest.fixture(name="next_data", scope="module")
+async def onepace_flight_data() -> next_js.NextJSFlight:
+    async with aiohttp.ClientSession() as session:
+        resp = await session.get("https://onepace.net/en/watch")
+        soup = BeautifulSoup(await resp.text(), "html.parser")
+        return next_js.extract(soup)
+
+
 def test_extract_raw_pushes() -> None:
-    pushes = list(next_js._extract_raw_pushes(soup))
+    pushes = list(next_js._extract_raw_pushes(TEST_SOUP))
     assert len(pushes) == 26
     for push in pushes:
         chunk_id, _, data = push[1:-1].partition(",")
@@ -51,22 +55,13 @@ def test_parse() -> None:
         assert value != next_js._Magic.ERROR
 
 
-@pytest.fixture(name="soup", scope="module")
-async def onepace_soup() -> AsyncGenerator[BeautifulSoup]:
-    async with aiohttp.ClientSession() as session:
-        resp = await session.get("https://onepace.net/en/watch")
-        yield BeautifulSoup(await resp.text(), "html.parser")
-
-
-def test_next_js_parser(soup: BeautifulSoup) -> None:
-    next_data = next_js.extract(soup)
+def test_next_js_parser(next_data: next_js.NextJSFlight) -> None:
     assert isinstance(next_data, dict)
     assert next_data["1"] == "Sreact.fragment"
     assert len(next_data) > 10
 
 
-def test_next_js_find(soup: BeautifulSoup) -> None:
-    next_data = next_js.extract(soup)
+def test_next_js_find(next_data: next_js.NextJSFlight) -> None:
     episode_keys = "slug", "title", "playlistGroups"
     ep = next_js.find(next_data, *episode_keys)
     assert isinstance(ep, dict)
