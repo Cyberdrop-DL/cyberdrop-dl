@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl.utils import next_js
@@ -17,4 +18,27 @@ def test_extract_raw_pushes() -> None:
         assert data == data.strip()
 
 
-def test_decode_push(push: str, extecte) -> None: ...
+@pytest.mark.parametrize(
+    ("push", "expected_type", "expected_value"),
+    [
+        ("[0]", next_js._FlightType.BOOTSTRAP, "<INIT>"),
+        ('[1,"1:$Sreact.fragment"]', next_js._FlightType.PAYLOAD, "1:$Sreact.fragment"),
+    ],
+)
+def test_decode_push(push: str, expected_type: next_js._FlightType, expected_value: object) -> None:
+    push_type, value = next_js._decode_push(push)
+    assert push_type is expected_type
+    assert value == expected_value
+
+
+def test_extract_flight_data_remove_undefined() -> None:
+    assert "$undefined" in TEST_HTML
+    assert "$undefined" not in next_js.extract_flight_data(soup)
+
+
+def test_parse() -> None:
+    flight_data = next_js.extract_flight_data(soup)
+    chunks = next_js.parse(flight_data)
+    assert len(chunks) == 111
+    for value in chunks.values():
+        assert value != next_js._MagicString.ERROR

@@ -4,7 +4,7 @@ import base64
 import dataclasses
 import re
 from collections.abc import Generator
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING, Any, NewType, TypeAlias, final
 
 from bs4 import BeautifulSoup
@@ -16,10 +16,16 @@ if TYPE_CHECKING:
 
 _ChunkID: TypeAlias = str
 FlightData = NewType("FlightData", str)
+_DECODE_ERROR = "<ERROR>"
 NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
 # Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
 
 _match_init_push = re.compile(r"\(self\.__next_f\s?=\s?self\.__next_f\s?\|\|\s?\[\]\)\.push\((\[.+?\])\)").match
+
+
+class _MagicString(StrEnum):
+    ERROR = "<ERROR>"
+    INIT = "<INIT>"
 
 
 class _FlightType(IntEnum):
@@ -54,10 +60,15 @@ class LazyChunk:
     reference: _ChunkID
 
 
+def _split_push(push: str) -> tuple[str, str, str]:
+    chunk_id, sep, data = push[1:-1].partition(",")
+    return chunk_id.strip(), sep, data.strip().rstrip(",").strip()
+
+
 def _dedent_push(push: str) -> str:
     push = push.strip()
     if push.startswith(("{", "[")) and push.endswith(("}", "]")):
-        parts = filter(None, map(str.strip, push[1:-1].partition(",")))
+        parts = filter(None, _split_push(push))
         push = "".join((push[0], *parts, push[-1]))
     return push
 
@@ -81,7 +92,7 @@ def _decode_push(raw_push: str) -> _Push:
     push: list[Any] = json.loads(raw_push)  # pyright: ignore[reportAny]
     match push:
         case [_FlightType.BOOTSTRAP]:
-            return _FlightType.BOOTSTRAP, "<INIT>"
+            return _FlightType.BOOTSTRAP, _MagicString.INIT
         case [_FlightType.PAYLOAD | _FlightType.FORM_STATE as type_, value]:
             return _FlightType(type_), value
         case [_FlightType.BINARY, value]:
@@ -146,24 +157,26 @@ def _revive_str(value: str) -> str | int | None | LazyChunk:  # noqa: PLR0911
             return value[1:]
 
 
-def _revive(value: object, chunks: Mapping[_ChunkID, _FlightChunk]) -> Any:
+def _revive(value: object, /, chunks: Mapping[_ChunkID, _FlightChunk]) -> Any:  # noqa: PLR0911
     if not value:
         return value
 
     match value:
         case str():
-            result = _revive_str(value)
-            if type(result) is LazyChunk:
-                return _revive(chunks[result.reference], chunks)
-            return result
+            obj = _revive_str(value)
+            if type(obj) is LazyChunk:
+                return _revive(chunks[obj.reference], chunks)
+            return obj
 
         case list():
             for idx, obj in enumerate(value):
                 value[idx] = _revive(obj, chunks)
+            return value
 
         case dict():
             for key, obj in value.items():
                 value[key] = _revive(obj, chunks)
+            return value
 
         case _FlightChunk():
             _initialize(value, chunks)
@@ -173,13 +186,13 @@ def _revive(value: object, chunks: Mapping[_ChunkID, _FlightChunk]) -> Any:
             return value
 
 
-def _initialize(chunk: _FlightChunk, chunks: Mapping[_ChunkID, _FlightChunk]) -> None:
+def _initialize(chunk: _FlightChunk, /, chunks: Mapping[_ChunkID, _FlightChunk]) -> None:
     if chunk.resolved:
         return
     try:
         raw_value = json.loads(chunk.decoded_data) if isinstance(chunk.decoded_data, str) else chunk.decoded_data
     except json.JSONDecodeError:
-        chunk.decoded_data = "<ERROR>"
+        chunk.decoded_data = _MagicString.ERROR
     else:
         chunk.decoded_data = _revive(raw_value, chunks)
     finally:
@@ -229,6 +242,15 @@ def parse(flight_data: FlightData, /) -> NextJSFlight:
     return {chunk.id: chunk.decoded_data for chunk in _hidrate_chunks(_parse_raw_chunks(flight_data))}  # pyright: ignore[reportAny]
 
 
+def remove_unused_tags(file: Path) -> None:
+    soup = BeautifulSoup(file.read_text(), "html.parser")
+    for tag in soup.find_all():
+        if tag.name.lower() not in {"script", "html", "body"}:
+            tag.decompose()
+
+    file.write_text(soup.prettify())
+
+
 if __name__ == "__main__":
     import sys
     from pathlib import Path
@@ -238,4 +260,4 @@ if __name__ == "__main__":
     flight_data = extract_flight_data(soup)
     Path("flight_data.txt").write_text(flight_data)
     data = parse(flight_data)
-    Path(" flight_data_decoded.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    Path("flight_data_decoded.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))
