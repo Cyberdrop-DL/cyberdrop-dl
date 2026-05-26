@@ -7,7 +7,6 @@ from collections.abc import Generator
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, NewType, TypeAlias
 
-from _typeshed import StrEnum
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl.utils import css, json
@@ -20,10 +19,7 @@ FlightData = NewType("FlightData", str)
 NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
 # Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
 
-
-class _Flight(StrEnum):
-    INIT = "(self.__next_f=self.__next_f||[]).push("
-    PUSH = "self.__next_f.push("
+_match_init_push = re.compile(r"\(self\.__next_f\s?=\s?self\.__next_f\s?\|\|\s?\[\]\)\.push\((\[.+?\])\)").match
 
 
 class _FlightType(IntEnum):
@@ -58,18 +54,27 @@ class _FlightChunk:
         self.decoded_data = self.data
 
 
-def _extract_raw_pushes(soup: BeautifulSoup) -> Generator[str]:
-    def clean(push: str) -> str:
-        return push.strip("\n").strip()
+def _dedent_push(push: str) -> str:
+    push = push.strip()
+    if push.startswith(("{", "[")) and push.endswith(("}", "]")):
+        parts = filter(None, map(str.strip, push[1:-1].partition(",")))
+        push = "".join((push[0], *parts, push[-1]))
+    return push
 
-    patterns = (_Flight.INIT, _Flight.PUSH)
-    for script in css.iselect(soup, "script"):
+
+def _extract_raw_pushes(soup: BeautifulSoup) -> Generator[str]:
+    push = "self.__next_f.push("
+    for script in css.iselect(soup, "script:-soup-contains-own('self.__next_f')"):
         content = script.get_text(strip=True).strip()
-        if not content:
-            continue
-        for pattern in patterns:
-            if content.startswith(pattern):
-                yield clean(content[len(pattern) : -1])
+        if m := _match_init_push(content):
+            yield _dedent_push(m.group(1))
+        else:
+            try:
+                start = content.index(push) + len(push)
+            except ValueError:
+                continue
+
+            yield _dedent_push(content[start : content.rindex(")")])
 
 
 def _decode_push(raw_push: str) -> _Push:
