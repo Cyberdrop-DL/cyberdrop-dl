@@ -1,3 +1,7 @@
+"""Utils to parse Next.JS v13 Flight Data
+
+We only parse a subset of the spec (w/ regex instead of a state machine) and discard any non Payload chunk"""
+
 from __future__ import annotations
 
 import base64
@@ -23,7 +27,7 @@ NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
 _match_init_push = re.compile(r"\(self\.__next_f\s?=\s?self\.__next_f\s?\|\|\s?\[\]\)\.push\((\[.+?\])\)").match
 
 
-class _MagicString(StrEnum):
+class _Magic(StrEnum):
     ERROR = "<ERROR>"
     INIT = "<INIT>"
 
@@ -92,7 +96,7 @@ def _decode_push(raw_push: str) -> _Push:
     push: list[Any] = json.loads(raw_push)  # pyright: ignore[reportAny]
     match push:
         case [_FlightType.BOOTSTRAP]:
-            return _FlightType.BOOTSTRAP, _MagicString.INIT
+            return _FlightType.BOOTSTRAP, _Magic.INIT
         case [_FlightType.PAYLOAD | _FlightType.FORM_STATE as type_, value]:
             return _FlightType(type_), value
         case [_FlightType.BINARY, value]:
@@ -192,7 +196,7 @@ def _initialize(chunk: _FlightChunk, /, chunks: Mapping[_ChunkID, _FlightChunk])
     try:
         raw_value = json.loads(chunk.decoded_data) if isinstance(chunk.decoded_data, str) else chunk.decoded_data
     except json.JSONDecodeError:
-        chunk.decoded_data = _MagicString.ERROR
+        chunk.decoded_data = _Magic.ERROR
     else:
         chunk.decoded_data = _revive(raw_value, chunks)
     finally:
@@ -200,9 +204,9 @@ def _initialize(chunk: _FlightChunk, /, chunks: Mapping[_ChunkID, _FlightChunk])
 
 
 def _hidrate_chunks(raw_chunks: Iterable[_FlightChunk]) -> Generator[_FlightChunk]:
-    chunks = {chunk.id: chunk for chunk in sorted(raw_chunks)}
-    for chunk in chunks.values():
-        _initialize(chunk, chunks)
+    chunks_map = {chunk.id: chunk for chunk in sorted(raw_chunks)}
+    for chunk in chunks_map.values():
+        _initialize(chunk, chunks_map)
         yield chunk
 
 

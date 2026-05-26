@@ -48,7 +48,7 @@ def test_parse() -> None:
     chunks = next_js.parse(flight_data)
     assert len(chunks) == 111
     for value in chunks.values():
-        assert value != next_js._MagicString.ERROR
+        assert value != next_js._Magic.ERROR
 
 
 @pytest.fixture(name="soup", scope="module")
