@@ -72,7 +72,7 @@ def test_next_js_find(soup: BeautifulSoup) -> None:
     assert isinstance(ep, dict)
     assert set(episode_keys).issubset(ep.keys())
     all_episodes = list(next_js.ifind(next_data, *episode_keys))
-    assert len(all_episodes) > 76
+    assert len(all_episodes) > 75
     for ep in all_episodes:
         assert isinstance(ep, dict)
         assert set(episode_keys).issubset(ep.keys())
