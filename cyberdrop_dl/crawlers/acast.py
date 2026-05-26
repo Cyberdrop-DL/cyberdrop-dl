@@ -11,14 +11,14 @@ from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 class ACastCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Show": "/<show_id>",
-        "Episode": "/<show_id>/<episode_id>",
+        "Episode": "/<show_id>/episodes/<episode_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.acast.com")
     DOMAIN: ClassVar[str] = "acast.com"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [show, episode_id]:
+            case [show, "episodes", episode_id]:
                 return await self.episode(scrape_item, show, episode_id)
             case [show]:
                 return await self.show(scrape_item, show)
@@ -48,11 +48,10 @@ class ACastCrawler(Crawler):
 
     @error_handling_wrapper
     async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
-        title = f"S{ep.season}E{ep.episode} - {ep.title}"
         src = self.parse_url(ep.url)
         scrape_item.uploaded_at = self.parse_iso_date(ep.publishDate)
         _, ext = self.get_filename_and_ext(src.name)
-        filename = self.create_custom_filename(title, ext)
+        filename = self.create_custom_filename(ep.full_name, ext)
         await self.handle_file(src, scrape_item, filename, ext, metadata=ep)
 
 
@@ -62,10 +61,26 @@ class Episode(DictDataclass):
     title: str
     url: str
     publishDate: str  # noqa: N815
-    season: int
-    episode: int
     link: str
+    episodeType: str  # noqa: N815
+    season: int | None = None
+    episode: int | None = None
     show: str = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        if self.episode is None and self.season is not None and self.episodeType == "full":
+            self.episode = 0
+        if self.episode is not None:
+            assert self.season is not None
+
+    @property
+    def full_name(self) -> str:
+        if self.season is None:
+            return self.title
+        if self.episodeType != "full":
+            return f"S{self.season:02} {self.episodeType} - {self.title}"
+        assert self.episode is not None
+        return f"S{self.season:02}E{self.episode:02} - {self.title}"
 
 
 @dataclasses.dataclass(slots=True)
