@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rutube support
 - Acast support
 - Soundgasm support
+- Clyp.it support
 
 ### Changed
 
