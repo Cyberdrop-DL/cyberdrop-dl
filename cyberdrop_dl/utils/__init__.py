@@ -26,7 +26,10 @@ from cyberdrop_dl.exceptions import (
     create_error_msg,
     get_origin,
 )
-from cyberdrop_dl.utils._dataclasses import DictDataclass, deserialize, filter_data, type_adapter
+from cyberdrop_dl.utils._dataclasses import DictDataclass as DictDataclass
+from cyberdrop_dl.utils._dataclasses import deserialize as deserialize
+from cyberdrop_dl.utils._dataclasses import filter_data as filter_data
+from cyberdrop_dl.utils._dataclasses import type_adapter as type_adapter
 from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
 
 if TYPE_CHECKING:
@@ -45,7 +48,7 @@ if TYPE_CHECKING:
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
-_ = DictDataclass, deserialize, filter_data, type_adapter
+
 
 logger = logging.getLogger(__name__)
 

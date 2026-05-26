@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
+from cyberdrop_dl.utils import deserialize, error_handling_wrapper
 
 
 class ACastCrawler(Crawler):
@@ -32,7 +32,7 @@ class ACastCrawler(Crawler):
     async def show(self, scrape_item: ScrapeItem, show_id: str) -> None:
         show = await self.api.show(show_id)
         scrape_item.setup_as_album(self.create_title(show.title))
-        for ep in map(Episode.from_dict, show.episodes):
+        for ep in (deserialize(Episode, e) for e in show.episodes):
             ep.show = show.title
             new_item = scrape_item.create_child(self.parse_url(ep.link))
             self.create_task(self._episode(new_item, ep))
@@ -42,6 +42,7 @@ class ACastCrawler(Crawler):
     async def episode(self, scrape_item: ScrapeItem, show: str, episode_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
+
         episode = await self.api.episode(show, episode_id)
         scrape_item.setup_as_album(self.create_title(episode.show))
         await self._episode(scrape_item, episode)
@@ -56,7 +57,7 @@ class ACastCrawler(Crawler):
 
 
 @dataclasses.dataclass(slots=True)
-class Episode(DictDataclass):
+class Episode:
     id: str
     title: str
     url: str
@@ -84,7 +85,7 @@ class Episode(DictDataclass):
 
 
 @dataclasses.dataclass(slots=True)
-class Show(DictDataclass):
+class Show:
     title: str
     episodes: list[dict[str, Any]]
 
@@ -95,11 +96,11 @@ class ACastAPI(API):
     async def episode(self, show: str, episode_id: str) -> Episode:
         api_url = self.ENTRYPOINT / "shows" / show / "episodes" / episode_id
         resp = await self.request_json(api_url.with_query(showInfo="true"))
-        ep = Episode.from_dict(resp)
+        ep = deserialize(Episode, resp)
         ep.show = resp["show"]["title"]
         return ep
 
     async def show(self, show: str) -> Show:
         api_url = self.ENTRYPOINT / "shows" / show
         resp = await self.request_json(api_url)
-        return Show.from_dict(resp)
+        return deserialize(Show, resp)
