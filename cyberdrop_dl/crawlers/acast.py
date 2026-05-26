@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import deserialize, error_handling_wrapper
+from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils._dataclasses import DictDataclass
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class ACastCrawler(Crawler):
@@ -32,8 +36,7 @@ class ACastCrawler(Crawler):
     async def show(self, scrape_item: ScrapeItem, show_id: str) -> None:
         show = await self.api.show(show_id)
         scrape_item.setup_as_album(self.create_title(show.title))
-        for ep in (deserialize(Episode, e) for e in show.episodes):
-            ep.show = show.title
+        for ep in show.episodes:
             new_item = scrape_item.create_child(self.parse_url(ep.link))
             self.create_task(self._episode(new_item, ep))
             scrape_item.add_children()
@@ -44,7 +47,7 @@ class ACastCrawler(Crawler):
             return
 
         episode = await self.api.episode(show, episode_id)
-        scrape_item.setup_as_album(self.create_title(episode.show))
+        scrape_item.setup_as_album(self.create_title(episode.show_title))
         await self._episode(scrape_item, episode)
 
     @error_handling_wrapper
@@ -57,16 +60,16 @@ class ACastCrawler(Crawler):
 
 
 @dataclasses.dataclass(slots=True)
-class Episode:
+class Episode(DictDataclass):
     id: str
     title: str
     url: str
     publishDate: str  # noqa: N815
     link: str
     episodeType: str  # noqa: N815
+    show_title: str
     season: int | None = None
     episode: int | None = None
-    show: str = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         if self.episode is None and self.season is not None and self.episodeType == "full":
@@ -87,7 +90,7 @@ class Episode:
 @dataclasses.dataclass(slots=True)
 class Show:
     title: str
-    episodes: list[dict[str, Any]]
+    episodes: Iterable[Episode]
 
 
 class ACastAPI(API):
@@ -96,11 +99,11 @@ class ACastAPI(API):
     async def episode(self, show: str, episode_id: str) -> Episode:
         api_url = self.ENTRYPOINT / "shows" / show / "episodes" / episode_id
         resp = await self.request_json(api_url.with_query(showInfo="true"))
-        ep = deserialize(Episode, resp)
-        ep.show = resp["show"]["title"]
-        return ep
+        return Episode.from_dict(resp, show_title=resp["show"]["title"])
 
     async def show(self, show: str) -> Show:
         api_url = self.ENTRYPOINT / "shows" / show
         resp = await self.request_json(api_url)
-        return deserialize(Show, resp)
+        return Show(
+            title := resp["title"], episodes=(Episode.from_dict(ep, show_title=title) for ep in resp["episodes"])
+        )
