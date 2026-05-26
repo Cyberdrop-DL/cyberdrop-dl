@@ -71,7 +71,7 @@ class GoFileCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "GoFile"
     _RATE_LIMIT: ClassVar[RateLimit] = 4, 10
 
-    _SALT: ClassVar[str] = "5d4f7g8sd45fsd"
+    _SALT: ClassVar[str] = "g4f8fd9f12h14g"
     _BROWSER_LANG: ClassVar[str] = "en-US"
 
     def __post_init__(self) -> None:
