@@ -17,6 +17,7 @@ class WhypItCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Audio": "/tracks/<id>/...",
         "User": "/users/<id>/<name>",
+        "Collection": "/collections/<collection_id>/<name>",
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://whyp.it")
