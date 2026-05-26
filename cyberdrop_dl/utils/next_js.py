@@ -5,14 +5,14 @@ import dataclasses
 import re
 from collections.abc import Generator
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, NewType, TypeAlias
+from typing import TYPE_CHECKING, Any, NewType, TypeAlias, final
 
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl.utils import css, json
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Generator, Iterable, Mapping
 
 _ChunkID: TypeAlias = str
 FlightData = NewType("FlightData", str)
@@ -32,13 +32,7 @@ class _FlightType(IntEnum):
 _Push = tuple[_FlightType, str]
 
 
-@dataclasses.dataclass(slots=True, order=True)
-class _RawChunk:
-    id: _ChunkID
-    marker: str | None
-    data: str
-
-
+@final
 @dataclasses.dataclass(slots=True, order=True)
 class _FlightChunk:
     index: int = dataclasses.field(init=False)
@@ -52,6 +46,12 @@ class _FlightChunk:
     def __post_init__(self) -> None:
         self.index = int(self.id, base=16)
         self.decoded_data = self.data
+
+
+@final
+@dataclasses.dataclass(slots=True)
+class LazyChunk:
+    reference: _ChunkID
 
 
 def _dedent_push(push: str) -> str:
@@ -104,87 +104,92 @@ def _extract_flight_data(raw_pushes: Iterable[str]) -> Generator[str]:
             yield data
 
 
-def _parse_raw_chunks(flight_data: FlightData) -> Generator[_RawChunk]:
+def _parse_raw_chunks(flight_data: FlightData) -> Generator[_FlightChunk]:
     for line in flight_data.splitlines():
         if line.startswith(":HL"):
             continue
         m = re.match("^([0-9a-f]+):(T[0-9A-Fa-f]+,|[A-SU-Z]{0,1})", line)
         assert m
         chunk_id, marker = m.groups()
+        marker = marker or None
         data = line[m.end() :].strip()
-        if marker.startswith("T"):
+        if marker and marker.startswith("T"):
             lenght = int(marker[1:-1], 16)
             data, rest = data[:lenght], FlightData(data[lenght:])
-            yield _RawChunk(chunk_id, "T", data)
+            yield _FlightChunk(chunk_id, "T", data)
             if rest:
                 yield from _parse_raw_chunks(rest)
         else:
-            yield _RawChunk(chunk_id, marker or None, data)
+            yield _FlightChunk(chunk_id, marker, data)
 
 
-def _parse_chunks(flight_data: FlightData) -> Generator[_FlightChunk]:  # noqa: C901
-    chunks: dict[_ChunkID, _FlightChunk] = {}
-
-    def revive_str(value: str) -> Any:  # noqa: PLR0911  # pyright: ignore[reportAny]
-        if value[0] != "$":
-            return value
-
-        if value == "$":
-            return ""
-
-        match value[1]:
-            case "$":
-                return value[2:]
-            case "@" | "L":
-                chunk_id = value[2:]
-                return revive(chunks[chunk_id])
-            case "u":
-                return None
-            case "D":
-                return value[2:]
-            case "n":
-                return int(value[2:])
-            case _:
-                return value[1:]
-
-    def revive(value: Any) -> Any:
-        if not value:
-            return value
-
-        if isinstance(value, str):
-            return revive_str(value)
-
-        if isinstance(value, list):
-            for idx, obj in enumerate(value):
-                value[idx] = revive(obj)
-
-        elif isinstance(value, dict):
-            for key, obj in value.items():
-                value[key] = revive(obj)
-
-        elif isinstance(value, _FlightChunk):
-            initialize(value)
-            return value.decoded_data
-
+def _revive_str(value: str) -> str | int | None | LazyChunk:  # noqa: PLR0911
+    if value[0] != "$":
         return value
 
-    def initialize(chunk: _FlightChunk) -> None:
-        if chunk.resolved:
-            return
-        try:
-            raw_value = json.loads(chunk.decoded_data) if isinstance(chunk.decoded_data, str) else chunk.decoded_data
-        except json.JSONDecodeError:
-            chunk.decoded_data = "<ERROR>"
-        else:
-            chunk.decoded_data = revive(raw_value)
-        finally:
-            chunk.resolved = True
+    if value == "$":
+        return ""
 
-    for chunk in _parse_raw_chunks(flight_data):
-        chunks[chunk.id] = _FlightChunk(chunk.id, marker=chunk.marker or None, data=chunk.data)
+    match value[1]:
+        case "$":
+            return value[2:]
+        case "@" | "L":
+            chunk_id = value[2:]
+            return LazyChunk(chunk_id)
+        case "u":
+            return None
+        case "D":
+            return value[2:]
+        case "n":
+            return int(value[2:])
+        case _:
+            return value[1:]
 
-    for chunk in sorted(chunks.values()):
-        initialize(chunk)
+
+def _revive(value: object, chunks: Mapping[_ChunkID, _FlightChunk]) -> Any:
+    if not value:
+        return value
+
+    match value:
+        case str():
+            result = _revive_str(value)
+            if type(result) is LazyChunk:
+                return _revive(chunks[result.reference], chunks)
+            return result
+
+        case list():
+            for idx, obj in enumerate(value):
+                value[idx] = _revive(obj, chunks)
+
+        case dict():
+            for key, obj in value.items():
+                value[key] = _revive(obj, chunks)
+
+        case _FlightChunk():
+            _initialize(value, chunks)
+            return value.decoded_data
+
+        case _:
+            return value
+
+
+def _initialize(chunk: _FlightChunk, chunks: Mapping[_ChunkID, _FlightChunk]) -> None:
+    if chunk.resolved:
+        return
+    try:
+        raw_value = json.loads(chunk.decoded_data) if isinstance(chunk.decoded_data, str) else chunk.decoded_data
+    except json.JSONDecodeError:
+        chunk.decoded_data = "<ERROR>"
+    else:
+        chunk.decoded_data = _revive(raw_value, chunks)
+    finally:
+        chunk.resolved = True
+
+
+def _hidrate_chunks(raw_chunks: Iterable[_FlightChunk]) -> Generator[_FlightChunk]:
+    chunks = {chunk.id: chunk for chunk in sorted(raw_chunks)}
+    for chunk in chunks.values():
+        _initialize(chunk, chunks)
         yield chunk
 
 
@@ -221,7 +226,7 @@ def extract(soup: BeautifulSoup) -> NextJSFlight:
 
 
 def parse(flight_data: FlightData, /) -> NextJSFlight:
-    return {chunk.id: chunk.decoded_data for chunk in _parse_chunks(flight_data)}  # pyright: ignore[reportAny]
+    return {chunk.id: chunk.decoded_data for chunk in _hidrate_chunks(_parse_raw_chunks(flight_data))}  # pyright: ignore[reportAny]
 
 
 if __name__ == "__main__":

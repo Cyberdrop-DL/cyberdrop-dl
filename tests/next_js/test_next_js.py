@@ -9,5 +9,12 @@ soup = BeautifulSoup(TEST_HTML, "html.parser")
 
 
 def test_extract_raw_pushes() -> None:
-    result = list(next_js._extract_raw_pushes(soup))
-    assert len(result) == 26
+    pushes = list(next_js._extract_raw_pushes(soup))
+    assert len(pushes) == 26
+    for push in pushes:
+        chunk_id, _, data = push[1:-1].partition(",")
+        assert chunk_id == chunk_id.strip()
+        assert data == data.strip()
+
+
+def test_decode_push(push: str, extecte) -> None: ...
