@@ -100,8 +100,11 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     except MegaNzError as e:
         if code := getattr(e, "code", None):
             if http_code := {
+                -4: HTTPStatus.TOO_MANY_REQUESTS,
+                -8: HTTPStatus.GONE,
                 -9: HTTPStatus.GONE,
                 -16: HTTPStatus.FORBIDDEN,
+                -17: 509,
                 -24: 509,
                 -401: 509,
             }.get(code):
@@ -111,7 +114,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         else:
             ui_failure = "MegaNZ Error"
 
-        error_log_msg = ErrorLogMessage(ui_failure, str(e))
+        error_log_msg = ErrorLogMessage(ui_failure, f"{ui_failure} {e!s}")
 
     except TimeoutError as e:
         error_log_msg = ErrorLogMessage("Timeout", repr(e))
