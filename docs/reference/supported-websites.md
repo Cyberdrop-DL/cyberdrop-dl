@@ -39,7 +39,19 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.10.2
+List of sites supported by cyberdrop-dl-patched as of version 9.12.0
+
+### 1fichier
+
+**Primary URL**: [https://1fichier.com](https://1fichier.com)
+
+**Supported Domains**: `1fichier.com`, `alterupload.com`, `cjoint.net`, `desfichiers.com`, `dfichiers.com`, `dl4free.com`, `megadl.fr`, `mesfichiers.org`, `piecejointe.net`, `pjointe.com`, `tenvoi.com`
+
+**Supported Paths**:
+
+- File:
+  - `?<file_id>`
+
 
 ### 4chan
 
@@ -65,6 +77,20 @@ List of sites supported by cyberdrop-dl-patched as of version 9.10.2
 
 - Album:
   - `/comics/album/...`
+
+
+### Acast.com
+
+**Primary URL**: [https://www.acast.com](https://www.acast.com)
+
+**Supported Domains**: `acast.com`
+
+**Supported Paths**:
+
+- Episode:
+  - `/<show_id>/episodes/<episode_id>`
+- Show:
+  - `/<show_id>`
 
 
 ### AllPornComix
@@ -121,6 +147,22 @@ List of sites supported by cyberdrop-dl-patched as of version 9.10.2
   - `/search/...`
 - Video:
   - `/video/<video_id>/...`
+
+
+### Archive.org
+
+**Primary URL**: [https://archive.org](https://archive.org)
+
+**Supported Domains**: `archive.org`
+
+**Supported Paths**:
+
+- Files:
+  - `/details/<identifier>/<subpath>`
+  - `/download/<identifier>/<subpath>`
+- Item:
+  - `/details/<identifier>`
+  - `/download/<identifier>`
 
 
 ### ArchiveBate
@@ -318,7 +360,7 @@ ex: To only download categories from a date range: ,
 
 **Primary URL**: [https://catbox.moe](https://catbox.moe)
 
-**Supported Domains**: `files.catbox.moe`, `litter.catbox.moe`
+**Supported Domains**: `files.catbox.moe`, `files.fatbox.moe`, `litter.catbox.moe`, `litter.fatbox.moe`
 
 **Supported Paths**:
 
@@ -406,6 +448,20 @@ ex: To only download categories from a date range: ,
   - `/<jwt_access_token>/iframe`
   - `/<jwt_access_token>/watch`
   - `/embed/___.js?video=<jwt_access_token>`
+
+
+### Clyp.it
+
+**Primary URL**: [https://clyp.it](https://clyp.it)
+
+**Supported Domains**: `clyp.it`
+
+**Supported Paths**:
+
+- Audio:
+  - `/<audio_id>`
+- User:
+  - `/user/<user_id>`
 
 
 ### Coomer
@@ -1037,21 +1093,23 @@ spreadsheets:
 **Supported Paths**:
 
 - Collection:
-  - `/artist/...`
-  - `/character/...`
-  - `/group/...`
-  - `/series/...`
-  - `/tag/...`
-  - `/type/...`
+  - `/artist/<slug>`
+  - `/character/<slug>`
+  - `/group/<slug>`
+  - `/series/<slug>`
+  - `/tag/<slug>`
+  - `/type/<slug>`
 - Gallery:
-  - `/anime/...`
-  - `/cg/...`
-  - `/doujinshi/...`
-  - `/galleries/...`
-  - `/gamecg/...`
-  - `/imageset/...`
-  - `/manga/...`
-  - `/reader/...`
+  - `/anime/<name>-<gallery_id>.html`
+  - `/cg/<name>-<gallery_id>.html`
+  - `/doujinshi/<name>-<gallery_id>.html`
+  - `/galleries/<name>-<gallery_id>.html`
+  - `/gamecg/<name>-<gallery_id>.html`
+  - `/imageset/<name>-<gallery_id>.html`
+  - `/manga/<name>-<gallery_id>.html`
+  - `/reader/<name>-<gallery_id>.html`
+- Index:
+  - `/index-<language>.html`
 - Search:
   - `/search.html?<query>`
 
@@ -1395,6 +1453,20 @@ spreadsheets:
   - `/<model_id>`
 - Video:
   - `/<model_id>/video/<video_id>`
+
+
+### Livestreamfails.com
+
+**Primary URL**: [https://livestreamfails.com](https://livestreamfails.com)
+
+**Supported Domains**: `livestreamfails.com`
+
+**Supported Paths**:
+
+- Clip:
+  - `/clip/<video_id>`
+- Streamer:
+  - `/streamer/<streamer_id>`
 
 
 ### Luscious
@@ -2044,11 +2116,11 @@ spreadsheets:
 **Supported Paths**:
 
 - Playlist:
-  - `/playlists/view/...`
+  - `/playlists/view/<playlist_id>`
 - Post:
-  - `/post/...`
-- Tag:
-  - `/...`
+  - `/post/<post_id>`
+- Tags:
+  - `/<tag1>|<tags2>...`
 
 
 ### Rule34Video
@@ -2096,11 +2168,11 @@ spreadsheets:
 **Supported Paths**:
 
 - Playlist:
-  - `/playlists/view/...`
+  - `/playlists/view/<playlist_id>`
 - Post:
-  - `/post/...`
-- Tag:
-  - `/...`
+  - `/post/<post_id>`
+- Tags:
+  - `/<tag1>|<tags2>...`
 
 
 ### Rumble
@@ -2121,6 +2193,19 @@ spreadsheets:
   - `<video_id>-<video-title>.html`
 
 
+### Rutube
+
+**Primary URL**: [https://rutube.ru](https://rutube.ru)
+
+**Supported Domains**: `rutube.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/play/embed/<id>`
+  - `/video/<id>`
+
+
 ### Scrolller
 
 **Primary URL**: [https://scrolller.com](https://scrolller.com)
@@ -2130,7 +2215,7 @@ spreadsheets:
 **Supported Paths**:
 
 - Subreddit:
-  - `/r/...`
+  - `/r/<subreddit>`
 
 
 ### SendNow
@@ -2190,6 +2275,20 @@ spreadsheets:
 **Notes**
 
 - base crawler: Xenforo
+
+
+### Soundgasm
+
+**Primary URL**: [https://soundgasm.net](https://soundgasm.net)
+
+**Supported Domains**: `soundgasm.*`
+
+**Supported Paths**:
+
+- Audio:
+  - `/u/<user>/<slug>`
+- User:
+  - `/u/<user>`
 
 
 ### SpankBang
@@ -2481,18 +2580,6 @@ spreadsheets:
   - `?video=<vod_id>`
 
 
-### Twitter
-
-**Primary URL**: [https://x.com](https://x.com)
-
-**Supported Domains**: `twitter.com`, `x.com`
-
-**Supported Paths**:
-
-- Tweet:
-  - `/<handle>/status/<tweet_id>`
-
-
 ### TwitterImages
 
 **Primary URL**: [https://twimg.com](https://twimg.com)
@@ -2678,6 +2765,22 @@ spreadsheets:
   - `wetransfer.com/downloads/<file_id>/<recipient_id>/<security_hash>`
 - Short Link:
   - `we.tl/<short_file_id>`
+
+
+### Whyp.it
+
+**Primary URL**: [https://whyp.it](https://whyp.it)
+
+**Supported Domains**: `whyp.it`
+
+**Supported Paths**:
+
+- Audio:
+  - `/tracks/<id>/...`
+- Collection:
+  - `/collections/<collection_id>/<name>`
+- User:
+  - `/users/<id>/<name>`
 
 
 ### WordPressHTML
@@ -2951,6 +3054,34 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/videos/<video_name>`
   - `/videos/embed/<video_id>`
+
+
+### YTboob
+
+**Primary URL**: [https://ytboob.com](https://ytboob.com)
+
+**Supported Domains**: `ytboob.com`
+
+**Supported Paths**:
+
+- Video:
+  - `/video/<slug>`
+
+
+### Yurivan
+
+**Primary URL**: [https://www.yurivan.com](https://www.yurivan.com)
+
+**Supported Domains**: `yurivan.*`
+
+**Supported Paths**:
+
+- Chapter:
+  - `/story/<story_id>/read?chapter<chapter_id>`
+- Story:
+  - `/story/<story_id>`
+- Video:
+  - `/story/<story_id>/chapter/1`
 
 
 
