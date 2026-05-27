@@ -98,6 +98,8 @@ class LivestreamFailsAPI(API):
         url = url.update_query(querySort="new")
         while True:
             resp = await self.request_json(url)
+            if not resp:
+                break
             last_id: str = resp[-1]["id"]
             yield map(_parse_video, resp)
             if len(resp) < 20:
