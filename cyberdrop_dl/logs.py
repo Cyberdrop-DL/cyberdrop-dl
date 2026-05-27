@@ -161,6 +161,12 @@ class LogHandler(RichHandler):
 
         return message_text
 
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            return super().emit(record)
+        except Exception:  # noqa: BLE001
+            self.handleError(record)
+
 
 class BareQueueHandler(QueueHandler):
     """Sends the log record to the queue as is.
