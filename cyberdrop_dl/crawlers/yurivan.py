@@ -43,11 +43,11 @@ class YuriVanCrawler(Crawler):
             video_props = css.json_ld(soup, "VideoObject")
         except css.SelectorError:
             scrape_item.setup_as_album("")
-            self._images(scrape_item, story_id, soup)
+            self._chapters(scrape_item, story_id, soup)
         else:
             await self._video(scrape_item, video_props)
 
-    def _images(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup):
+    def _chapters(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup):
         selector = f"a[href*='/story/{story_id}/read?chapter=']"
         for _, new_item in self.iter_children(scrape_item, soup, selector):
             self.create_task(self.run(new_item))
@@ -59,14 +59,14 @@ class YuriVanCrawler(Crawler):
         m3u8_url = thumb.with_name("playlist.m3u8")
         name: str = props["name"]
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
-        custom_filename = self.create_custom_filename(
+        filename = self.create_custom_filename(
             name,
             ext := ".mp4",
             resolution=info.resolution,
             video_codec=info.codecs.video,
             audio_codec=info.codecs.audio,
         )
-        await self.handle_file(m3u8_url, scrape_item, name, ext, m3u8=m3u8, custom_filename=custom_filename)
+        await self.handle_file(m3u8_url, scrape_item, name, ext, m3u8=m3u8, custom_filename=filename)
 
     @error_handling_wrapper
     async def chapter(self, scrape_item: ScrapeItem, story_id: str, chapter_id: int) -> None:
@@ -78,9 +78,10 @@ class YuriVanCrawler(Crawler):
 
         chapter = story.chapters[chapter_idx]
         scrape_item.add_to_parent_title(self.create_title(chapter.title))
-        for page in chapter.pages:
-            await self.direct_file(scrape_item, page.url)
-            scrape_item.add_children()
+        async with self.new_task_group(scrape_item) as tg:
+            for page in chapter.pages:
+                tg.create_task(self.direct_file(scrape_item, page.url))
+                scrape_item.add_children()
 
 
 @dataclasses.dataclass(slots=True)
