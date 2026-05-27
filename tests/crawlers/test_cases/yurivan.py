@@ -1,6 +1,22 @@
 DOMAIN = "yurivan"
 TEST_CASES = [
     {
+        "url": "https://www.yurivan.com/story/32cbf138-f76d-447f-86f2-352977b461e2/chapter/1",
+        "results": [
+            {
+                "url": "re:/d616da37-4b88-4bdf-9106-697df8195393/playlist.m3u8",
+                "filename": "Leatherman 4 — Episode 4 [hevc][mp4a][1080p].mp4",
+                "debrid_link": None,
+                "original_filename": "Leatherman 4 — Episode 4",
+                "referer": "https://www.yurivan.com/story/32cbf138-f76d-447f-86f2-352977b461e2/chapter/1",
+                "album_id": None,
+                "uploaded_at": 1778058102,
+                "download_folder": "re:Loose Files (Yurivan)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://www.yurivan.com/story/e5a3eecf-a920-44e9-80da-b09ace8aafb8/read?chapter=1",
         "results": [
             {
