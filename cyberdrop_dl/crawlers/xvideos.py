@@ -217,8 +217,11 @@ class XVideosCrawler(Crawler):
                 raise ScrapeError(json_resp["code"])
 
             per_page = json_resp.get("nb_per_page") or per_page
-            videos: list[dict[str, str]] = json_resp["videos"]
+            videos: list[dict[str, str]] | dict[str, Any] = json_resp["videos"]
+            if type(videos) is dict:
+                videos = [videos]
             for video in videos:
+                assert type(video) is dict
                 if new_part == "videos":
                     slug = video["u"].rpartition("/")[-1]
                     url = scrape_item.url.origin() / f"video.{video['eid']}" / slug
