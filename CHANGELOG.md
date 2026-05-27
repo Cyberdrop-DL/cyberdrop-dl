@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Date extraction (Rule34vault)
 - `--json` output missing files skipped by host or filename regex
 - Update website salt (Gofile)
+- Episode parsing (OnePace)
 
 ### Security
 
