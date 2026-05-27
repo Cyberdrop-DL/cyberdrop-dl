@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import dataclasses
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import deserialize, error_handling_wrapper, next_js
+from cyberdrop_dl.utils import css, deserialize, error_handling_wrapper, next_js
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class YuriVanCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Chapter": "/story/<story_id>/read?chapter<chapter_id>",
+        "Video": "/story/<story_id>/chapter/1",
         "Story": "/story/<story_id>",
     }
     DOMAIN: ClassVar[str] = "yurivan"
@@ -28,22 +29,44 @@ class YuriVanCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["story", story_id]:
-                return await self.story(scrape_item, story_id)
             case ["story", story_id, "read"] if chapter := scrape_item.url.query.get("chapter"):
                 return await self.chapter(scrape_item, story_id, int(chapter))
+            case ["story", story_id, *_]:
+                return await self.story(scrape_item, story_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def story(self, scrape_item: ScrapeItem, story_id: str) -> None:
-        scrape_item.setup_as_album("")
         soup = await self.request_soup(scrape_item.url)
+        try:
+            video_props = css.json_ld(soup, "VideoObject")
+        except css.SelectorError:
+            scrape_item.setup_as_album("")
+            self._images(scrape_item, story_id, soup)
+        else:
+            await self._video(scrape_item, video_props)
 
-        selector = f"a[href*='/story/{story_id}/read']"
+    def _images(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup):
+        selector = f"a[href*='/story/{story_id}/read?chapter=']"
         for _, new_item in self.iter_children(scrape_item, soup, selector):
             self.create_task(self.run(new_item))
             scrape_item.add_children()
+
+    async def _video(self, scrape_item: ScrapeItem, props: dict[str, Any]) -> None:
+        scrape_item.uploaded_at = self.parse_iso_date(props["uploadDate"])
+        thumb = self.parse_url(props["thumbnailUrl"])
+        m3u8_url = thumb.with_name("playlist.m3u8")
+        name: str = props["name"]
+        m3u8, info = await self.request_m3u8_playlist(m3u8_url)
+        custom_filename = self.create_custom_filename(
+            name,
+            ext := ".mp4",
+            resolution=info.resolution,
+            video_codec=info.codecs.video,
+            audio_codec=info.codecs.audio,
+        )
+        await self.handle_file(m3u8_url, scrape_item, name, ext, m3u8=m3u8, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def chapter(self, scrape_item: ScrapeItem, story_id: str, chapter_id: int) -> None:
