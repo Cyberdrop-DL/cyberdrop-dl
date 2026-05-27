@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Soundgasm support
 - Clyp.it support
 - Livestreamfails support
+- Yurivan support
 - Fatbox proxy support (Catbox)
 
 ### Changed
