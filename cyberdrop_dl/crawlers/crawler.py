@@ -25,16 +25,7 @@ from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
-from cyberdrop_dl.utils import (
-    css,
-    dates,
-    error_handling_context,
-    error_handling_wrapper,
-    is_absolute_http_url,
-    is_blob_or_svg,
-    m3u8,
-    parse_url,
-)
+from cyberdrop_dl.utils import css, dates, error_handling_context, is_absolute_http_url, is_blob_or_svg, m3u8, parse_url
 from cyberdrop_dl.utils.filepath import compose_filename, get_filename_and_ext, remove_file_id
 from cyberdrop_dl.utils.strings import safe_format
 
@@ -816,14 +807,14 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
                 break
             page_url = self.parse_url(page_url_str, relative_to=relative_to, trim=trim)
 
-    @error_handling_wrapper
     async def direct_file(
         self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
-        link = url or scrape_item.url
-        filename, ext = self.get_filename_and_ext(link.name or link.parent.name, assume_ext=assume_ext)
-        await self.handle_file(link, scrape_item, filename, ext)
+        url = url or scrape_item.url
+        with self.catch_errors(url):
+            filename, ext = self.get_filename_and_ext(url.name or url.parent.name, assume_ext=assume_ext)
+            await self.handle_file(url, scrape_item, filename, ext)
 
     @final
     @contextlib.asynccontextmanager
@@ -847,13 +838,13 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return resp.url
 
     @final
-    @error_handling_wrapper
     async def follow_redirect(self, scrape_item: ScrapeItem) -> None:
-        redirect = await self._get_redirect_url(scrape_item.url)
-        if scrape_item.url == redirect:
-            raise ScrapeError(422, "Infinite redirect")
-        scrape_item.url = redirect
-        self.create_task(self.run(scrape_item))
+        with self.catch_errors(scrape_item):
+            redirect = await self._get_redirect_url(scrape_item.url)
+            if scrape_item.url == redirect:
+                raise ScrapeError(422, "Infinite redirect")
+            scrape_item.url = redirect
+            self.create_task(self.run(scrape_item))
 
     async def request_m3u8_playlist(
         self,

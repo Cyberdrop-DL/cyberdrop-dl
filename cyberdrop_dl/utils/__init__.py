@@ -52,6 +52,12 @@ _R = TypeVar("_R")
 
 logger = logging.getLogger(__name__)
 
+_ERROR_WRAPPER_ATTR = "__cdl_error_wrapped__"
+
+
+def is_error_wrapped(method: object) -> bool:
+    return getattr(method, _ERROR_WRAPPER_ATTR, False)
+
 
 @contextlib.contextmanager
 def group_exceptions(message: str | None = None) -> Generator[None]:
@@ -188,6 +194,7 @@ def error_handling_wrapper(
             with error_handling_context(self, item):
                 return await func(self, item, *args, **kwargs)
 
+        setattr(async_wrapper, _ERROR_WRAPPER_ATTR, True)
         return async_wrapper
 
     @functools.wraps(func)
@@ -197,6 +204,7 @@ def error_handling_wrapper(
             assert not inspect.isawaitable(result)
             return result
 
+    setattr(wrapper, _ERROR_WRAPPER_ATTR, True)
     return wrapper
 
 
