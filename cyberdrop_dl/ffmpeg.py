@@ -277,7 +277,7 @@ class Stream(DictDataclass):
     tags: Tags
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         info = cls.filter_dict(stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         return info | {
@@ -288,7 +288,7 @@ class Stream(DictDataclass):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
+    def from_dict(cls, data: Mapping[str, Any], /, **overrides: Any) -> Self:
         return super(Stream, cls).from_dict(cls.validate(data), **overrides)
 
 
@@ -298,7 +298,7 @@ class AudioStream(Stream):
     codec_type: Literal["audio"] = "audio"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         defaults = super(AudioStream, cls).validate(stream_info)
         sample_rate = int(float(stream_info.get("sample_rate", 0))) or None
         return defaults | {"sample_rate": sample_rate}
@@ -313,7 +313,7 @@ class VideoStream(Stream):
     codec_type: Literal["video"] = "video"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         width = int(float(stream_info.get("width", 0))) or None
         height = int(float(stream_info.get("height", 0))) or None
         resolution = fps = None

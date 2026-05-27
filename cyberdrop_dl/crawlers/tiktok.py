@@ -10,7 +10,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
@@ -51,7 +51,7 @@ class Post(DictDataclass):
         self.images = self.images or []
 
     @classmethod
-    def from_dict(cls, video: dict[str, Any], /, **overrides: Any) -> Self:
+    def from_dict(cls, video: Mapping[str, Any], /, **overrides: Any) -> Self:
         return super(Post, cls).from_dict(
             video,
             author=Author.from_dict(video["author"]),
