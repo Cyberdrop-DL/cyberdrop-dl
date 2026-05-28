@@ -87,7 +87,7 @@ class ScrapingPanel(OverFlowPanel):
 
     @contextlib.contextmanager
     def new(self, url: object) -> Generator[None]:
-        task = self._add_task(escape(str(url).encode().decode("ascii", errors="ignore")))
+        task = self._add_task(url)
         try:
             yield
         finally:
