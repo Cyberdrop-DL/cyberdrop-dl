@@ -45,50 +45,50 @@ def test_scraping_json_dump() -> None:
     with ui(force=True), ui.scrape.new("example.com"), ui.downloads.download_file("a file.mp4", "example.com", 200):
         ui.download_errors.add("450 An Error")
         dump = ui.__json__()
-        assert dump == {
-            "files": {
+        assert dump["files"] == {
+            "completed": 0,
+            "previously_completed": 0,
+            "skipped": 0,
+            "failed": 0,
+            "queued": 0,
+        }
+        assert dump["scrape_errors"] == {
+            "errors": (),
+            "sent_to_jdownloader": 0,
+            "skipped": 0,
+        }
+        assert dump["download_errors"] == {
+            "errors": (
+                {
+                    "msg": "An Error",
+                    "count": 1,
+                    "code": 450,
+                },
+            ),
+        }
+        assert dump["scraping"] == (
+            {
+                "url": "example.com",
+                "elapsed": mock.ANY,
+            },
+        )
+        assert dump["downloads"] == (
+            {
+                "speed": None,
+                "size": 200,
                 "completed": 0,
-                "previously_completed": 0,
-                "skipped": 0,
-                "failed": 0,
-                "queued": 0,
+                "hls": False,
+                "bytes_downloaded": 0,
+                "domain": "EXAMPLE.COM",
+                "description": "a file.mp4",
+                "eta": None,
+                "visible": True,
             },
-            "scrape_errors": {
-                "errors": (),
-                "sent_to_jdownloader": 0,
-                "skipped": 0,
-            },
-            "download_errors": {
-                "errors": (
-                    {
-                        "msg": "An Error",
-                        "count": 1,
-                        "code": 450,
-                    },
-                ),
-            },
-            "scraping": (
-                {
-                    "url": "example.com",
-                    "elapsed": mock.ANY,
-                },
-            ),
-            "downloads": (
-                {
-                    "speed": None,
-                    "size": 200,
-                    "completed": 0,
-                    "hls": False,
-                    "bytes_downloaded": 0,
-                    "description": "(EXAMPLE.COM) a file.mp4",
-                    "eta": None,
-                    "visible": True,
-                },
-            ),
-            "status": {
-                "description": f"cyberdrop-dl v{__version__}",
-                "messages": (),
-            },
+        )
+
+        assert dump["status"] == {
+            "description": f"cyberdrop-dl v{__version__}",
+            "messages": (),
         }
 
 
