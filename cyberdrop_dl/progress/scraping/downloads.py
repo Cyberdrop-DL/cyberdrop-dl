@@ -149,11 +149,13 @@ class DownloadsPanel(OverFlowPanel):
 
         assert domain
         task_id = self._hls_progress.add_task("", total=None, visible=False)
-        segments_task = self._add_task(
-            _escape_filename(filename), segments, fields={_DOMAIN_TASK_FIELD_NAME: domain.upper()}
-        )
         bytes_task = self._hls_progress[task_id]
-        self._progress.update(segments_task.id, HLS=bytes_task)
+        segments_task = self._add_task(
+            _escape_filename(filename),
+            segments,
+            fields={_DOMAIN_TASK_FIELD_NAME: domain.upper(), _HLS_TASK_FIELD_NAME: bytes_task},
+        )
+
         token = _current_hls_task.set(segments_task.id)
         try:
             yield
