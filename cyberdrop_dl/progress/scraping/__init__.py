@@ -108,8 +108,8 @@ class ScrapingUI(LiveUI):
 
         vertical.split_column(
             Layout(self.files, name="files", size=9),
-            Layout(self.scrape_errors, name="scrape_errors"),
-            Layout(self.download_errors, name="download_errors"),
+            Layout(self.scrape_errors, name="scrape_errors", minimum_size=4),
+            Layout(self.download_errors, name="download_errors", minimum_size=4),
             *bottom,
         )
 
