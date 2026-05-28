@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Do not crash on HTTP errors from individual photos (Flickr)
+- Do not crash on HTTP errors from individual files (Google Drive)
+
 ### Security
 
 ## [9.12.0] - 2026-05-27
