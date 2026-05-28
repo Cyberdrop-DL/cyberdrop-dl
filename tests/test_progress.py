@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.progress.scraping import ScrapingUI
+from cyberdrop_dl.progress.scraping import ScrapingUI, downloads
 from cyberdrop_dl.progress.scraping.errors import UIError
 
 
@@ -90,3 +90,15 @@ def test_scraping_json_dump() -> None:
                 "messages": (),
             },
         }
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected"),
+    [
+        ("a video[avc1][1080p].mp4", "a video[avc1][1080p].mp4"),
+        ("丸の内OLレイナ [12345].mp4", "OL [12345].mp4"),
+    ],
+)
+def test_download_file_escaping(filename: str, expected: str) -> None:
+    result = downloads._escape_filename(filename)
+    assert result == expected
