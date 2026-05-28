@@ -79,7 +79,6 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         assert cls.fetch is WordPressBaseCrawler.fetch
-        assert cls.fetch_with_date_range is WordPressBaseCrawler.fetch_with_date_range
 
     @final
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -87,7 +86,20 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         scrape_item.url = scrape_item.url.with_query(None)
         if date_range:
             self.log.info(f"Scraping {scrape_item.url} with date range: {date_range.as_query()}")
-        return await self.fetch_with_date_range(scrape_item, date_range)
+        match scrape_item.url.parts[1:]:
+            case ["posts"]:
+                return await self.all_posts(scrape_item, date_range)
+            case [ColletionType.CATEGORY.value, _]:
+                return await self.category_or_tag(scrape_item, ColletionType.CATEGORY, date_range)
+            case [ColletionType.TAG.value, _]:
+                return await self.category_or_tag(scrape_item, ColletionType.TAG, date_range)
+            case ["wp-json", *_]:
+                raise ValueError
+            case _:
+                if _match_date_from_path(scrape_item.url.parts[1:]):
+                    # TODO: Handle this
+                    raise ValueError
+                return await self.post(scrape_item)
 
     @property
     @final
@@ -99,23 +111,6 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
     @final
     def is_attachment(url: AbsoluteHttpURL) -> bool:
         return "wp-content" in url.parts and bool(url.suffix)
-
-    @final
-    async def fetch_with_date_range(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None) -> None:
-        match scrape_item.url.parts[1:]:
-            case ["posts"]:
-                return await self.all_posts(scrape_item, date_range)
-            case [ColletionType.CATEGORY.value, _]:
-                return await self.category_or_tag(scrape_item, ColletionType.CATEGORY, date_range)
-            case [ColletionType.TAG.value, _]:
-                return await self.category_or_tag(scrape_item, ColletionType.TAG, date_range)
-            case ["wp-json", *_]:
-                raise ValueError
-
-        if _ := _match_date_from_path(scrape_item.url.parts[1:]):
-            # TODO: Handle this
-            raise ValueError
-        return await self.post(scrape_item)
 
     @abstractmethod
     async def category_or_tag(
@@ -129,18 +124,18 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
     async def all_posts(self, scrape_item: ScrapeItem, /, date_range: QueryDatetimeRange | None = None) -> None: ...
 
     @final
-    async def filter_post(
+    async def _filter_post(
         self, scrape_item: ScrapeItem, post: Post, date_range: QueryDatetimeRange | None = None
     ) -> None:
         if date_range and not date_range.is_in_range(post.date_gmt):
             self.log.info(f"Skipping post {post.link} as it is out of date range. Post date: {[post.date_gmt]}")
             return
         new_scrape_item = scrape_item.create_child(self.parse_url(post.link))
-        await self.handle_post(new_scrape_item, post)
+        await self._handle_post(new_scrape_item, post)
         scrape_item.add_children()
 
     @final
-    async def handle_post(self, scrape_item: ScrapeItem, post: Post, *, is_single_post: bool = False) -> None:
+    async def _handle_post(self, scrape_item: ScrapeItem, post: Post, *, is_single_post: bool = False) -> None:
         post_id = str(post.id)
         title = self.create_separate_post_title(post.title, post_id, post.date_gmt.date())
         if is_single_post:
@@ -149,10 +144,10 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         scrape_item.uploaded_at = to_timestamp(post.date_gmt)
         if post.thumbnail:
             await self.direct_file(scrape_item, self.parse_url(post.thumbnail))
-        return await self.handle_post_content(scrape_item, post)
+        return await self._post_content(scrape_item, post)
 
     @final
-    async def handle_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL) -> None:
+    async def _handle_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL) -> None:
         if self.is_attachment(link):
             return await self.direct_file(scrape_item, link)
         if self.PRIMARY_URL.host == link.host:
@@ -161,10 +156,10 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         self.handle_external_links(new_scrape_item)
         scrape_item.add_children()
 
-    async def handle_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
+    async def _post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
         for link in self.iter_parse_url(_iter_links(post.content, use_regex=self.WP_USE_REGEX)):
             if link:
-                await self.handle_link(scrape_item, link)
+                await self._handle_link(scrape_item, link)
 
     @classmethod
     def parse_url(
@@ -216,7 +211,7 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         collections = model.validate_json(await self.request_text(api_url))
         if not collections:
             raise ScrapeError(404)
-        await self.__handle_collection(scrape_item, collections[0], date_range)
+        await self.__collection(scrape_item, collections[0], date_range)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem) -> None:
@@ -224,7 +219,7 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         posts = PostSequence.validate_json(await self.request_text(api_url))
         if not posts:
             raise ScrapeError(404)
-        return await self.handle_post(scrape_item, posts[0], is_single_post=True)
+        return await self._handle_post(scrape_item, posts[0], is_single_post=True)
 
     @error_handling_wrapper
     async def all_posts(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None:
@@ -232,10 +227,10 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         if date_range:
             api_url = api_url.update_query(date_range.as_query())
         scrape_item.setup_as_profile(self.create_title("Posts"))
-        async for post in self.post_pager(api_url):
-            await self.filter_post(scrape_item, post)
+        async for post in self._post_pager(api_url):
+            await self._filter_post(scrape_item, post)
 
-    async def __handle_collection(
+    async def __collection(
         self, scrape_item: ScrapeItem, collection: Category | Tag, date_range: QueryDatetimeRange | None = None
     ) -> None:
         title = self.create_title(f"{collection.description or collection.slug} [{collection._type}]")
@@ -244,10 +239,10 @@ class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
         api_url = self.WP_API_POSTS_URL.with_query({collection._type: collection.id})
         if date_range:
             api_url = api_url.update_query(date_range.as_query())
-        async for post in self.post_pager(api_url):
-            await self.filter_post(scrape_item, post)
+        async for post in self._post_pager(api_url):
+            await self._filter_post(scrape_item, post)
 
-    async def post_pager(self, url: AbsoluteHttpURL, init_page: int | None = None) -> AsyncIterable[Post]:
+    async def _post_pager(self, url: AbsoluteHttpURL, init_page: int | None = None) -> AsyncIterable[Post]:
         for page in itertools.count(init_page or 1):
             n_post = 0
             api_url = url.update_query(per_page=_POST_PER_REQUEST, page=page)
@@ -284,10 +279,10 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem) -> None:
         soup = await self.__make_request(scrape_item.url)
-        post = self.parse_post(scrape_item, soup)
-        return await self.handle_post(scrape_item, post, is_single_post=True)
+        post = self._parse_post(scrape_item, soup)
+        return await self._handle_post(scrape_item, post, is_single_post=True)
 
-    def parse_post(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> Post:
+    def _parse_post(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> Post:
         title = open_graph.get_title(soup) or css.select_text(soup, Selector.POST_TITLE)
         date = open_graph.get("published_time", soup) or _match_date_from_path(scrape_item.url.parts[1:4])
         data = {
