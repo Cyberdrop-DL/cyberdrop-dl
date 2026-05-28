@@ -209,7 +209,6 @@ def error_handling_wrapper(
             assert not inspect.isawaitable(result)
             return result
 
-    setattr(wrapper, _ERROR_WRAPPER_ATTR, True)
     return mark_as_safe(wrapper)
 
 
