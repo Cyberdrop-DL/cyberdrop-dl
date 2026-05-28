@@ -9,15 +9,12 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.progress import Task, TaskID
 
-from cyberdrop_dl.progress import DictProgress
+from cyberdrop_dl.progress import Color, DictProgress
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from rich.progress import ProgressColumn, Task, TaskID
-
-_COLOR: str = "plum3"
-_COLOR2: str = "yellow"
 
 
 def _plural(ammount: int, unit: str) -> str:
@@ -40,12 +37,12 @@ class OverFlow:
         return ""
 
     def __str__(self) -> str:
-        overflow = f"[{_COLOR}]... and {self.count:,} other {_plural(self.count, self.unit)}"
+        overflow = f"[{Color.PLUM}]... and {self.count:,} other {_plural(self.count, self.unit)}"
         if self.count > 0 and self.queued > 0:
-            return overflow + f"[{_COLOR2}] ({self.queued:,} queued)"
+            return overflow + f"[{Color.YELLOW}] ({self.queued:,} queued)"
 
         if self.queued > 0:
-            return f"[{_COLOR2}] ... and {self.queued:,} {_plural(self.queued, self.unit)} queued"
+            return f"[{Color.YELLOW}] ... and {self.queued:,} {_plural(self.queued, self.unit)} queued"
 
         if self.count > 0:
             return overflow
@@ -94,7 +91,7 @@ class OverFlowPanel:
     ) -> Task:
         visible = self._visible_rows < self.max_rows
         task_id = self._progress.add_task(
-            f"[{_COLOR}]{escape(str(description))}",
+            escape(str(description)),
             total=total,
             visible=visible,
             completed=completed,

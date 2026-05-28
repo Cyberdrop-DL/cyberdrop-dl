@@ -26,7 +26,7 @@ from rich.table import Column
 from rich.text import Text
 from typing_extensions import override
 
-from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
+from cyberdrop_dl.progress import Color, DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
@@ -104,7 +104,7 @@ class DownloadsPanel(OverFlowPanel):
     def __init__(self, max_rows: int = 6) -> None:
         super().__init__(
             SpinnerColumn("dots3"),
-            TextColumn("[blue]({task.fields[" + _DOMAIN_TASK_FIELD_NAME + "]})"),
+            TextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _DOMAIN_TASK_FIELD_NAME + "]})"),
             AutoWidthTextColumn(
                 "[progress.description]{task.description}",
                 table_column=Column(justify="left", no_wrap=True),

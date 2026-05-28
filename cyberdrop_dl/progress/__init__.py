@@ -25,6 +25,11 @@ REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
 
 
+class Color:
+    PLUM: str = "plum3"
+    YELLOW: str = "yellow"
+
+
 class UIOptions(CIStrEnum):
     DISABLED = auto()
     ACTIVITY = auto()
