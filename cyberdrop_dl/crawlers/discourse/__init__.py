@@ -111,7 +111,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
         if last_post_id:
             topic_url = self.PRIMARY_URL / topic.path.removeprefix("/")
             post_url = topic_url / str(last_post_id)
-            await self.write_last_forum_post(topic_url, post_url)
+            await self._write_last_forum_post(topic_url, post_url)
 
     async def iter_posts(self, topic: Topic) -> AsyncIterable[AvailablePost]:
         for offset in itertools.count(topic.init_post_number - 1, _MAX_POSTS_PER_REQUEST):

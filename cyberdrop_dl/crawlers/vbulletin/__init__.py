@@ -70,7 +70,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     async def __async_post_init__(self) -> None:
         if not self._logged_in:
             login_url = self.PRIMARY_URL / "login.php"
-            await self._login(login_url)
+            await self.login(login_url)
 
     @override
     async def check_login_with_request(self, *_: object, **_kwargs: object) -> tuple[str, bool]:
@@ -81,7 +81,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
         # TODO: Handle more URLs
         if self.login_required and not self._logged_in:
             return
-        await self.fetch_thread(scrape_item)
+        await self._fetch_thread(scrape_item)
 
     async def process_thread(self, scrape_item: ScrapeItem, thread: Thread) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title: str = ""
@@ -122,7 +122,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
 
         if last_post_id:
             last_post_url = thread.url.update_query({self.VBULLETIN_POST_QUERY_PARAM: str(last_post_id)})
-            await self.write_last_forum_post(thread.url, last_post_url)
+            await self._write_last_forum_post(thread.url, last_post_url)
 
     async def post(self, scrape_item: ScrapeItem, post: Post) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title = self.create_separate_post_title(post.title, str(post.id), None)

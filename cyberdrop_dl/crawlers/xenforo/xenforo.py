@@ -97,9 +97,9 @@ class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
             self.update_cookies(cookies)
 
         credentials = {"login": username, "password": password, "_xfRedirect": str(self.PRIMARY_URL)}
-        await self.xf_try_login(login_url, credentials, retries=5)
+        await self._xf_try_login(login_url, credentials, retries=5)
 
-    async def xf_try_login(
+    async def _xf_try_login(
         self,
         login_url: AbsoluteHttpURL,
         credentials: dict[str, str],

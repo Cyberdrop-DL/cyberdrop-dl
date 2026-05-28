@@ -184,27 +184,18 @@ class MessageBoardCrawler(Crawler, is_abc=True):
     @abstractmethod
     async def thread(self, scrape_item: ScrapeItem, /, thread: ThreadProtocol) -> None: ...
 
-    async def forum(self, scrape_item: ScrapeItem) -> None:
-        # Subclasses can define custom logic for this method.
-        # They would need to also override `fetch` since the default fetch does not take this method into account
-        raise NotImplementedError
-
     async def resolve_confirmation_link(self, url: AbsoluteHttpURL, /) -> AbsoluteHttpURL | None:
         # Not every forum has confirmation link so overriding this method is optional
         # Implementation of this method MUST return `None` instead of raising an error
         raise NotImplementedError
 
     async def __async_post_init__(self) -> None:
-        await self.login()
-
-    @final
-    async def login(self) -> None:
         if self.login_required is None:
             return
 
         if not self._logged_in:
             login_url = self.PRIMARY_URL / "login"
-            await self._login(login_url)
+            await self.login(login_url)
 
     @final
     @property
@@ -228,22 +219,22 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         if self.is_attachment(scrape_item.url):
             return await self.handle_internal_link(scrape_item)
         if is_confirmation_link(scrape_item.url):
-            return await self.follow_confirmation_link(scrape_item)
+            return await self._follow_confirmation_link(scrape_item)
 
-        await self.fetch_thread(scrape_item)
+        await self._fetch_thread(scrape_item)
 
-    async def fetch_thread(self, scrape_item: ScrapeItem) -> None:
+    async def _fetch_thread(self, scrape_item: ScrapeItem) -> None:
         thread_part_index = len(self.PRIMARY_URL.parts)
         # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1165#issuecomment-3086739753
         if self.PRIMARY_URL.parts[-1] == "":
             thread_part_index -= 1
         match scrape_item.url.parts[thread_part_index:]:
             case [thread_part, thread_name_and_id, *_] if thread_part in self.THREAD_PART_NAMES:
-                self.check_thread_recursion(scrape_item)
+                self._check_thread_recursion(scrape_item)
                 thread = self.parse_thread(scrape_item.url, thread_name_and_id)
                 return await self.thread(scrape_item, thread)
             case ["goto" | "posts", _, *_]:
-                self.check_thread_recursion(scrape_item)
+                self._check_thread_recursion(scrape_item)
                 return await self.follow_redirect(scrape_item)
             case _:
                 raise ValueError
@@ -259,7 +250,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         return by_parts or by_host
 
     @final
-    async def follow_confirmation_link(self, scrape_item: ScrapeItem) -> None:
+    async def _follow_confirmation_link(self, scrape_item: ScrapeItem) -> None:
         url = await self.resolve_confirmation_link(scrape_item.url)
         if url:  # If there was an error, this will be None
             scrape_item.url = url
@@ -267,7 +258,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
             return self.handle_external_links(scrape_item)
 
     @final
-    def check_thread_recursion(self, scrape_item: ScrapeItem) -> None:
+    def _check_thread_recursion(self, scrape_item: ScrapeItem) -> None:
         if self.stop_thread_recursion(scrape_item):
             parents = f"{len(scrape_item.parent_threads)} parent thread(s)"
             msg = (
@@ -278,10 +269,10 @@ class MessageBoardCrawler(Crawler, is_abc=True):
             )
             raise MaxChildrenError(msg)
 
-        self.limit_nexted_thread_folders(scrape_item)
+        self._limit_nexted_thread_folders(scrape_item)
 
     @final
-    def limit_nexted_thread_folders(self, scrape_item: ScrapeItem) -> None:
+    def _limit_nexted_thread_folders(self, scrape_item: ScrapeItem) -> None:
         if self.max_thread_folder_depth is None:
             return
         n_parents = len(scrape_item.parent_threads)
@@ -325,7 +316,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         await self.handle_file(link, new_scrape_item, filename, ext)
 
     @final
-    async def write_last_forum_post(self, thread_url: AbsoluteHttpURL, last_post_url: AbsoluteHttpURL | None) -> None:
+    async def _write_last_forum_post(self, thread_url: AbsoluteHttpURL, last_post_url: AbsoluteHttpURL | None) -> None:
         if not last_post_url or last_post_url == thread_url:
             return
         self.manager.logs.write_last_post_log(last_post_url)
@@ -334,7 +325,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
     # TODO: Define an unified workflow for crawlers to perform and check login
     @final
     @error_handling_wrapper
-    async def _login(self, login_url: AbsoluteHttpURL) -> None:
+    async def login(self, login_url: AbsoluteHttpURL) -> None:
         session_cookie = self.get_cookie_value(self.LOGIN_USER_COOKIE_NAME)
         msg = f"No cookies found for {self.FOLDER_DOMAIN}"
         if not session_cookie and self.login_required:
@@ -422,9 +413,9 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             raise ScrapeError("User Error", msg)
 
         self.scraped_threads.add(thread.url)
-        await self.process_thread(scrape_item, thread)
+        await self._thread(scrape_item, thread)
 
-    async def process_thread(self, scrape_item: ScrapeItem, thread: ThreadProtocol) -> None:
+    async def _thread(self, scrape_item: ScrapeItem, thread: ThreadProtocol) -> None:
         title: str = ""
         last_post_url = thread.url
         async for soup in self.thread_pager(scrape_item):
@@ -436,13 +427,13 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                     raise
                 scrape_item.add_to_parent_title(title)
 
-            continue_scraping, last_post_url = self.process_thread_page(scrape_item, thread, soup)
+            continue_scraping, last_post_url = self._thread_page(scrape_item, thread, soup)
             if not continue_scraping:
                 break
 
-        await self.write_last_forum_post(thread.url, last_post_url)
+        await self._write_last_forum_post(thread.url, last_post_url)
 
-    def process_thread_page(
+    def _thread_page(
         self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup
     ) -> tuple[bool, AbsoluteHttpURL]:
         continue_scraping = False
@@ -576,6 +567,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         new_link = self.parse_url(link_str)
         return await self.get_absolute_link(new_link)
 
+    @error_handling_wrapper
     async def handle_internal_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL | None = None) -> None:
         link = link or scrape_item.url
         slug = link.name or link.parent.name
