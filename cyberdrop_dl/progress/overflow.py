@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections import deque
-from typing import TYPE_CHECKING, ClassVar, Final, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, final
 
 from rich.console import Group
 from rich.markup import escape
@@ -12,7 +12,7 @@ from rich.progress import Task, TaskID
 from cyberdrop_dl.progress import DictProgress
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from rich.progress import ProgressColumn, Task, TaskID
 
@@ -83,13 +83,22 @@ class OverFlowPanel:
         return self._panel
 
     @final
-    def _add_task(self, description: object, total: float | None = None, /, *, completed: int = 0) -> Task:
+    def _add_task(
+        self,
+        description: object,
+        total: float | None = None,
+        /,
+        *,
+        completed: int = 0,
+        fields: Mapping[str, Any] | None = None,
+    ) -> Task:
         visible = self._visible_rows < self.max_rows
         task_id = self._progress.add_task(
             f"[{_COLOR}]{escape(str(description))}",
             total=total,
             visible=visible,
             completed=completed,
+            **(fields or {}),
         )
         if visible:
             self._visible_rows += 1
