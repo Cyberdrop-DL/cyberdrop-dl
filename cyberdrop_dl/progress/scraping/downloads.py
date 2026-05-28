@@ -26,7 +26,15 @@ from rich.table import Column
 from rich.text import Text
 from typing_extensions import override
 
-from cyberdrop_dl.progress import Color, DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
+from cyberdrop_dl.progress import (
+    Color,
+    DictProgress,
+    DisabledInPortraitMixin,
+    ProgressHook,
+    create_test_live,
+    strip_markup,
+    truncate_float,
+)
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
@@ -93,6 +101,12 @@ class AutoDownloadColumn(DownloadColumn):
         return Text(download_status, style="progress.download", justify="right")
 
 
+class AutoTimeRemainingColumn(DisabledInPortraitMixin, TimeRemainingColumn): ...
+
+
+class AutoTextColumn(DisabledInPortraitMixin, TextColumn): ...
+
+
 @final
 class DownloadsPanel(OverFlowPanel):
     unit: ClassVar[str] = "file"
@@ -104,7 +118,7 @@ class DownloadsPanel(OverFlowPanel):
     def __init__(self, max_rows: int = 6) -> None:
         super().__init__(
             SpinnerColumn("dots3"),
-            TextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _DOMAIN_TASK_FIELD_NAME + "]})"),
+            AutoTextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _DOMAIN_TASK_FIELD_NAME + "]})"),
             AutoWidthTextColumn(
                 "[progress.description]{task.description}",
                 table_column=Column(justify="left", no_wrap=True),
@@ -115,8 +129,8 @@ class DownloadsPanel(OverFlowPanel):
             AutoDownloadColumn(table_column=Column(justify="right", no_wrap=True)),
             "•",
             AutoTransferSpeedColumn(table_column=Column(justify="right", no_wrap=True, min_width=11)),
-            "•",
-            TimeRemainingColumn(
+            AutoTextColumn("•"),
+            AutoTimeRemainingColumn(
                 compact=True,
                 elapsed_when_finished=True,
                 table_column=Column(justify="right", no_wrap=True),

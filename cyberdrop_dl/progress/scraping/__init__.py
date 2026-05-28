@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import dataclasses
 import json
-import shutil
 import sys
 import time
 from contextvars import ContextVar
@@ -15,7 +14,7 @@ from rich.console import Group, RenderableType
 from rich.layout import Layout
 
 from cyberdrop_dl import env
-from cyberdrop_dl.progress import LiveUI, UIOptions
+from cyberdrop_dl.progress import LiveUI, UIOptions, is_terminal_in_portrait
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
 from cyberdrop_dl.progress.scraping.files import FileStatsPanel
@@ -38,7 +37,7 @@ class Screen:
         return iter((self.horizontal, self.vertical))
 
     def __rich__(self) -> Layout:
-        return self.vertical if terminal_is_in_portrait() else self.horizontal
+        return self.vertical if is_terminal_in_portrait() else self.horizontal
 
 
 @dataclasses.dataclass(slots=True)
@@ -165,23 +164,6 @@ class ScrapingUI(LiveUI):
 
         with show_msg("final msg"):
             await asyncio.sleep(3)
-
-
-def terminal_is_in_portrait() -> bool:
-
-    if env.PORTRAIT_MODE:
-        return True
-
-    terminal_size = shutil.get_terminal_size()
-    width, height = terminal_size.columns, terminal_size.lines
-    aspect_ratio = width / height
-
-    # High aspect ratios are likely to be in landscape mode
-    if aspect_ratio >= 3.2:
-        return False
-
-    # Check for mobile device in portrait mode, Assume landscape mode for other cases
-    return (aspect_ratio < 1.5 and height >= 40) or (aspect_ratio < 2.3 and width <= 85)
 
 
 @contextlib.contextmanager
