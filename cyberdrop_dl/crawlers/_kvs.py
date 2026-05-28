@@ -127,7 +127,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
         title = self.create_title(title)
         scrape_item.setup_as_album(title)
-        await self.iter_videos(scrape_item)
+        await self._iter_videos(scrape_item)
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:
@@ -139,13 +139,13 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         scrape_item.setup_as_profile(title)
 
         if soup.select_one(Selector.PUBLIC_VIDEOS):
-            await self.iter_videos(scrape_item, "public_videos")
+            await self._iter_videos(scrape_item, "public_videos")
         if soup.select_one(Selector.FAVOURITE_VIDEOS):
-            await self.iter_videos(scrape_item, "favourite_videos")
+            await self._iter_videos(scrape_item, "favourite_videos")
         if soup.select_one(Selector.PRIVATE_VIDEOS):
-            await self.iter_videos(scrape_item, "private_videos")
+            await self._iter_videos(scrape_item, "private_videos")
 
-    async def iter_videos(self, scrape_item: ScrapeItem, video_category: str = "") -> None:
+    async def _iter_videos(self, scrape_item: ScrapeItem, video_category: str = "") -> None:
         url = scrape_item.url / video_category if video_category else scrape_item.url
         async for soup in self.web_pager(url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):

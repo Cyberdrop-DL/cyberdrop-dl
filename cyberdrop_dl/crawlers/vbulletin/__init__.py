@@ -9,6 +9,7 @@ from typing_extensions import override
 
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
 from cyberdrop_dl.exceptions import MaxChildrenError, ScrapeError
+from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
     import datetime
@@ -83,23 +84,24 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             return
         await self._fetch_thread(scrape_item)
 
-    async def process_thread(self, scrape_item: ScrapeItem, thread: Thread) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+    @override
+    async def _thread(self, scrape_item: ScrapeItem, thread: Thread) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title: str = ""
         if thread.post_id and self.scrape_single_forum_post:
             api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_POST_QUERY_PARAM: str(thread.post_id)})
         else:
             api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_THREAD_QUERY_PARAM: str(thread.id)})
 
-        root_xml = await self.get_xml(api_url)
+        root_xml = _parse_xml(await self.request_text(api_url))
         if (thread_element := root_xml.find("thread")) is not None:
             title = self.create_title(thread_element.attrib["title"], thread_id=thread.id)
             scrape_item.setup_as_forum(title)
         else:
             raise ScrapeError(422)
 
-        await self.process_posts(scrape_item, thread, root_xml)
+        await self._posts(scrape_item, thread, root_xml)
 
-    async def process_posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ET.Element[str]) -> None:
+    async def _posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ET.Element[str]) -> None:
         if thread.page:
             posts = itertools.islice(root_xml.iter("post"), (thread.page - 1) * _N_POSTS_PER_PAGE)
         else:
@@ -124,6 +126,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             last_post_url = thread.url.update_query({self.VBULLETIN_POST_QUERY_PARAM: str(last_post_id)})
             await self._write_last_forum_post(thread.url, last_post_url)
 
+    @override
+    @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post: Post) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title = self.create_separate_post_title(post.title, str(post.id), None)
         scrape_item.setup_as_post(title)
@@ -132,10 +136,11 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             self.handle_external_links(new_scrap_item)
             scrape_item.add_children()
 
-    async def get_xml(self, url: AbsoluteHttpURL) -> ET.Element[str]:
-        root_xml = ET.XML(await self.request_text(url))
-        if error := root_xml.find("error"):
-            details = error.attrib["details"]
-            error_code = 403 if error.attrib["type"] == "permissions" and "unknown" not in details.casefold() else 422
-            raise ScrapeError(error_code, message=details)
-        return root_xml
+
+def _parse_xml(content: str) -> ET.Element[str]:
+    root_xml = ET.XML(content)
+    if error := root_xml.find("error"):
+        details = error.attrib["details"]
+        error_code = 403 if error.attrib["type"] == "permissions" and "unknown" not in details.casefold() else 422
+        raise ScrapeError(error_code, message=details)
+    return root_xml

@@ -92,11 +92,7 @@ class VoeSxCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["e", video_id]:
-                return await self.embed(scrape_item, video_id)
-            case [video_id, "download"]:
-                return await self.embed(scrape_item, video_id)
-            case [video_id]:
+            case ["e", video_id] | [video_id, "download"] | [video_id]:
                 return await self.embed(scrape_item, video_id)
             case _:
                 raise ValueError
@@ -112,7 +108,7 @@ class VoeSxCrawler(Crawler):
             text = await resp.text()
             if match := _find_js_redirect(text):
                 scrape_item.url = self.parse_url(match.group(1), origin)
-                self.create_task(self.redirect(scrape_item))
+                self.create_task(self._redirect(scrape_item))
                 return
 
         soup = await resp.soup()
@@ -153,7 +149,7 @@ class VoeSxCrawler(Crawler):
 
         self.handle_subs(scrape_item, custom_filename, video.subtitles)
 
-    redirect = auto_task_id(fetch)
+    _redirect = auto_task_id(fetch)
 
 
 def extract_voe_video(soup: BeautifulSoup, origin: AbsoluteHttpURL) -> VoeVideo:

@@ -88,6 +88,7 @@ class PornPicsCrawler(Crawler):
                 filename, ext = self.get_filename_and_ext(new_scrape_item.url.name)
                 await self.handle_file(new_scrape_item.url, new_scrape_item, filename, ext)
 
+    @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
         scrape_item.album_id = scrape_item.url.parts[-2]
         await self.direct_file(scrape_item)

@@ -64,7 +64,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     def password(self) -> str | None:
         return self.manager.config.auth.meganz.password or None
 
-    async def __async_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         self._decryption_keys: dict[AbsoluteHttpURL, tuple[Crypto, int]] = {}
         api = MegaAPI(self.manager.http_client._session)
         api.user_agent = CDL_USER_AGENT
@@ -72,7 +72,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         speed_limiter = self.downloader.client.speed_limiter
         self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         self.downloader.client.speed_limiter = speed_limiter
-        await self.login()
+
+    async def __async_post_init__(self) -> None:
+        await self._login()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in:
@@ -163,7 +165,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         media_item.extra_info.setdefault(self.DOMAIN, {})["key"] = self._decryption_keys.pop(media_item.url)
         await super().handle_media_item(media_item, m3u8)
 
-    async def login(self) -> None:
+    async def _login(self) -> None:
         # This takes a really long time (dozens of seconds)
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login

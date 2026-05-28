@@ -48,23 +48,26 @@ class NsfwXXXCrawler(Crawler):
             case _:
                 raise ValueError
 
+    @error_handling_wrapper
     async def subreddit(self, scrape_item: ScrapeItem, subreddit: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/source/r" / subreddit
         await self._collection(scrape_item, api_url)
 
+    @error_handling_wrapper
     async def category(self, scrape_item: ScrapeItem, name: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/category" / name
         await self._collection(scrape_item, api_url)
 
+    @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         api_url = (self.PRIMARY_URL / "api/v1/search").with_query(q=query)
         await self._collection(scrape_item, api_url, query)
 
+    @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
         api_url = self.PRIMARY_URL / "api/v1/user" / username
         await self._collection(scrape_item, api_url, f"@{username}")
 
-    @error_handling_wrapper
     async def _collection(self, scrape_item: ScrapeItem, api_url: AbsoluteHttpURL, name: str | None = None) -> None:
         title: str = ""
         type_ = api_url.parts[3]

@@ -126,11 +126,11 @@ class PorntrexCrawler(Crawler):
         for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
             self.create_task(self.run(new_scrape_item))
 
-        await self.proccess_additional_pages(scrape_item, last_page)
+        await self._ajax_pagination(scrape_item, last_page)
 
         if "models" in scrape_item.url.parts:
             # Additional album pages
-            await self.proccess_additional_pages(scrape_item, last_page, block_id="list_albums_common_albums_list")
+            await self._ajax_pagination(scrape_item, last_page, block_id="list_albums_common_albums_list")
 
         elif "members" in scrape_item.url.parts:
             albums_url = scrape_item.url / "albums"
@@ -139,7 +139,7 @@ class PorntrexCrawler(Crawler):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS, new_title_part="albums"):
                 self.create_task(self.run(new_scrape_item))
 
-    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901
+    async def _ajax_pagination(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901
         if last_page == 1:
             return
         block_id: str = "list_videos_common_videos_list_norm"

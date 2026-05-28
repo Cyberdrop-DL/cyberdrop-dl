@@ -27,7 +27,7 @@ class SendVidCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "SendVid"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        scrape_item.url = self.get_streaming_url(scrape_item.url)
+        scrape_item.url = _get_streaming_url(scrape_item.url)
         await self.video(scrape_item)
 
     @error_handling_wrapper
@@ -43,11 +43,9 @@ class SendVidCrawler(Crawler):
         except AssertionError:
             raise ScrapeError(422, "Couldn't find video source") from None
         link = self.parse_url(link_str)
-        await self.handle_direct_link(scrape_item, link, title)
+        await self._video(scrape_item, link, title)
 
-    async def handle_direct_link(
-        self, scrape_item: ScrapeItem, link: AbsoluteHttpURL | None = None, title: str = ""
-    ) -> None:
+    async def _video(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL | None = None, title: str = "") -> None:
         link = link or scrape_item.url
         canonical_url = link.with_query(None)
 
@@ -61,14 +59,15 @@ class SendVidCrawler(Crawler):
             canonical_url, scrape_item, filename, ext, debrid_link=link, custom_filename=custom_filename
         )
 
-    def get_streaming_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        if is_cdn(url):
-            video_id = url.name.split(".", 1)[0]
-            return PRIMARY_URL.with_path(video_id)
 
-        if "embed" in url.parts:
-            return url.with_path(url.path.replace("/embed/", "/"), keep_query=True, keep_fragment=True)
-        return url
+def _get_streaming_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if is_cdn(url):
+        video_id = url.name.split(".", 1)[0]
+        return PRIMARY_URL.with_path(video_id)
+
+    if "embed" in url.parts:
+        return url.with_path(url.path.replace("/embed/", "/"), keep_query=True, keep_fragment=True)
+    return url
 
 
 def is_cdn(url: AbsoluteHttpURL) -> bool:

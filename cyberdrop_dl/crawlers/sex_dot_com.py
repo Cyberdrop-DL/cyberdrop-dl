@@ -55,7 +55,7 @@ class SexDotComCrawler(Crawler):
         return (await self.request_json(data_url))["media"]
 
     @error_handling_wrapper
-    async def handle_media(self, scrape_item: ScrapeItem, item: dict[str, Any] | None) -> None:
+    async def _media(self, scrape_item: ScrapeItem, item: dict[str, Any] | None) -> None:
         real_item = item or await self.get_media(scrape_item)
         relative_url = real_item["relativeUrl"]
         canonical_url = _SHORTS_URL / relative_url
@@ -82,10 +82,11 @@ class SexDotComCrawler(Crawler):
     async def profile(self, scrape_item: ScrapeItem) -> None:
         async for json_data in self.shorts_profile_paginator(scrape_item):
             for item in json_data["page"]["items"]:
-                await self.handle_media(scrape_item, item["media"])
+                await self._media(scrape_item, item["media"])
 
+    @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem) -> None:
         username = scrape_item.url.parts[2]
         title = self.create_title(username)
         scrape_item.setup_as_album(title)
-        await self.handle_media(scrape_item, None)
+        await self._media(scrape_item, None)

@@ -127,7 +127,7 @@ class PkmncardsCrawler(Crawler):
                 download_url = self.parse_url(link_str)
                 simple_card = create_simple_card(title, download_url)
                 new_scrape_item = scrape_item.create_child(card_page_url)
-                self.create_task(self.handle_simple_card(new_scrape_item, simple_card))
+                self.create_task(self._simple_card(new_scrape_item, simple_card))
                 scrape_item.add_children()
 
     @error_handling_wrapper
@@ -155,7 +155,7 @@ class PkmncardsCrawler(Crawler):
         custom_filename = self.create_custom_filename(card.full_name, ext)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
-    async def handle_simple_card(self, scrape_item: ScrapeItem, simple_card: SimpleCard) -> None:
+    async def _simple_card(self, scrape_item: ScrapeItem, simple_card: SimpleCard) -> None:
         @error_handling_wrapper
         async def get_card_set(self, scrape_item: ScrapeItem) -> CardSet:
             soup = await self.request_soup(scrape_item.url)

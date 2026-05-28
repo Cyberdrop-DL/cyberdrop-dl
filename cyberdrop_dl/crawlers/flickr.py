@@ -58,6 +58,7 @@ class FlickrCrawler(Crawler):
                 self.create_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
+    @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return

@@ -49,6 +49,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     def is_attachment(cls, link: AbsoluteHttpURL | str) -> bool:
         return "uploads" in AbsoluteHttpURL(link).parts
 
+    @error_handling_wrapper
     async def handle_internal_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL | None = None) -> None:
         link = link or scrape_item.url
         if len(link.parts) < 5 and not link.suffix:
@@ -92,6 +93,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     def parse_thread(cls, url: AbsoluteHttpURL, thread_name_and_id: str) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         raise NotImplementedError
 
+    @error_handling_wrapper
     async def thread(self, scrape_item: ScrapeItem, /, thread: Topic) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         await self.topic(scrape_item, thread)
 
@@ -124,6 +126,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
                 if topic.init_post_number != 1 and self.scrape_single_forum_post:
                     return
 
+    @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, /, post: AvailablePost) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title = self.create_separate_post_title(post.title, str(post.id), post.created_at)
         scrape_item.setup_as_post(title)

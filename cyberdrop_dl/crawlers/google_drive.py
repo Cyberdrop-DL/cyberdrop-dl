@@ -130,6 +130,7 @@ class GoogleDriveCrawler(Crawler):
             if index % 200 == 0:
                 await asyncio.sleep(0)
 
+    @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str = "", doc: str | None = None) -> None:
         version = int(file_id[0])
         if version not in _KNOWN_FILE_ID_VERSIONS:

@@ -274,7 +274,7 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
     ) -> None:
         title = self.create_title(f"{collection.description or collection.slug} [{collection._type}]")
         scrape_item.setup_as_profile(title)
-        await self.post_url_pager(scrape_item, date_range)
+        await self._post_pager(scrape_item, date_range)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem) -> None:
@@ -298,9 +298,9 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
     @error_handling_wrapper
     async def all_posts(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None:
         scrape_item.setup_as_profile(self.create_title("Posts"))
-        await self.post_url_pager(scrape_item, date_range)
+        await self._post_pager(scrape_item, date_range)
 
-    async def post_url_pager(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None:
+    async def _post_pager(self, scrape_item: ScrapeItem, date_range: QueryDatetimeRange | None = None) -> None:
         async for soup in self.web_pager(scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.POST_LINK_FROM_PAGE.element):
                 if (

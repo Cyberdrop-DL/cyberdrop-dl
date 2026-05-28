@@ -43,13 +43,12 @@ class CloudflareStreamCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["embed", _] if video_id := scrape_item.url.query.get("video"):
-                return await self.video(scrape_item, video_id)
+                pass
             case [video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                pass
             case _:
                 raise ValueError
 
-    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         # https://developers.cloudflare.com/stream/viewing-videos/securing-your-stream/
         try:
             jwt = JSONWebToken.decode(video_id)
@@ -63,10 +62,10 @@ class CloudflareStreamCrawler(Crawler):
                 return None
 
         scrape_item.url = _DEFAULT_VIDEO_CDN / video_id
-        return await self._video(scrape_item, video_id, token)
+        return await self.video(scrape_item, video_id, token)
 
     @error_handling_wrapper
-    async def _video(self, scrape_item: ScrapeItem, video_id: str, token: str | None) -> None:
+    async def video(self, scrape_item: ScrapeItem, video_id: str, token: str | None) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
 
