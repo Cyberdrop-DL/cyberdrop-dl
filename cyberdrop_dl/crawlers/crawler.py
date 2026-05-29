@@ -391,7 +391,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return
 
         async with self._semaphore:
-            with scrape_item.track_changes():
+            with scrape_item.track_changes:
                 scrape_item.url = url = self.transform_url(scrape_item.url)
 
             if url.path_qs in self._scraped_items:

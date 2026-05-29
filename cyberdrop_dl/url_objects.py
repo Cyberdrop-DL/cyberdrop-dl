@@ -237,6 +237,7 @@ class ScrapeItem:
     _children_count: int = field(default=0, init=False)
     _children_limit: int = field(default=0, init=False)
 
+    @property
     @contextlib.contextmanager
     def track_changes(self) -> Generator[Self]:
         old_url = self.url

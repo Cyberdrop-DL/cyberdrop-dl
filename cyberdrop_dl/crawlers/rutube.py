@@ -45,7 +45,7 @@ class RutubeCrawler(Crawler):
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:
         video = await self._request_video(embed_id)
-        with scrape_item.track_changes():
+        with scrape_item.track_changes:
             scrape_item.url = self.PRIMARY_URL / "video" / video.id
 
         if await self.check_complete_from_referer(scrape_item.url):
