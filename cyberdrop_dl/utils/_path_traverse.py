@@ -66,7 +66,7 @@ def delete_empty_files_and_folders_in_place(dirname: Path | str) -> bool:
                 deleted = delete_empty_files_and_folders_in_place(entry.path)
                 if not deleted:
                     has_non_empty_subfolders = True
-            elif _safe_get_size(entry) == 0:
+            elif not entry.name.startswith(".") and _safe_get_size(entry) == 0:
                 deleted = _safe_delete(entry)
                 if not deleted:
                     has_non_empty_files = True
