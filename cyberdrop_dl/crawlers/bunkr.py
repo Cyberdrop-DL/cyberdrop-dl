@@ -118,8 +118,8 @@ class BunkrCrawler(Crawler):
         try:
             cdn = _extract_js_vars(soup)["jsCDN"]
         except css.SelectorError:
-            reinforced_url = self.parse_url(css.select(soup, Selector.DOWNLOAD_BTN, "href"))
-            file_id = reinforced_url.name
+            reinforced_url = css.select(soup, Selector.DOWNLOAD_BTN, "href")
+            file_id = self.parse_url(reinforced_url).name
             source = await self.api.source(file_id)
             src = source.url
         else:
@@ -182,11 +182,11 @@ class BunkrCrawler(Crawler):
 
 
 class BunkrAPI(API):
-    async def source(self, file_id: str) -> FileInfo:
+    async def source(self, file_id: str) -> Source:
         reinforced_url = _REINFORCED_URL / file_id
         soup = await self.request_soup(reinforced_url)
         js_vars = _extract_js_vars(soup)
-        return deserialize(FileInfo, js_vars)
+        return deserialize(Source, js_vars)
 
     async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
         api_url = _SIGN_API.with_query(path=src.path)
@@ -195,7 +195,7 @@ class BunkrAPI(API):
 
 
 @dataclasses.dataclass(slots=True)
-class FileInfo:
+class Source:
     ogname: str
     jsCDN: str  # noqa: N815
     jsType: str  # noqa: N815
