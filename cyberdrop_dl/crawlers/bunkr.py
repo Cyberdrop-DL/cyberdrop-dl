@@ -119,8 +119,8 @@ class BunkrCrawler(Crawler):
         except css.SelectorError:
             reinforced_url = self.parse_url(css.select(soup, Selector.DOWNLOAD_BTN, "href"))
             file_id = reinforced_url.name
-            info = await self.api.info(file_id)
-            src = info.src
+            source = await self.api.source(file_id)
+            src = source.url
         else:
             src = self.parse_url(cdn)
 
@@ -130,8 +130,8 @@ class BunkrCrawler(Crawler):
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
-        info = await self.api.info(file_id)
-        await self._file(scrape_item, info.src, info.ogname)
+        source = await self.api.source(file_id)
+        await self._file(scrape_item, source.url, source.ogname)
 
     async def _file(self, scrape_item: ScrapeItem, src: AbsoluteHttpURL, filename: str | None = None) -> None:
         src = await self.api.sign(src)
@@ -181,7 +181,7 @@ class BunkrCrawler(Crawler):
 
 
 class BunkrAPI(API):
-    async def info(self, file_id: str) -> FileInfo:
+    async def source(self, file_id: str) -> FileInfo:
         reinforced_url = _REINFORCED_URL / file_id
         soup = await self.request_soup(reinforced_url)
         js_vars = _extract_js_vars(soup)
@@ -200,10 +200,10 @@ class FileInfo:
     jsType: str  # noqa: N815
     jsSlug: str  # noqa: N815
     signUrl: str  # noqa: N815
-    src: AbsoluteHttpURL = dataclasses.field(init=False)
+    url: AbsoluteHttpURL = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self.src = parse_url(self.jsCDN) / "storage/media" / self.jsSlug
+        self.url = parse_url(self.jsCDN) / "storage/media" / self.jsSlug
 
 
 @dataclasses.dataclass(slots=True)
