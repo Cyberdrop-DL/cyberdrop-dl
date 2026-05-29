@@ -44,6 +44,7 @@ class BunkrCrawler(Crawler):
             "/f/<slug>",
             "/d/<slug>",
         ),
+        "Stream redirect": "/<slug>",
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.site")
