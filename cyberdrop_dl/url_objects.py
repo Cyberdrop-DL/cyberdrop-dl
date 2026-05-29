@@ -360,14 +360,9 @@ class ScrapeItem:
         if self.parents:
             return self.parents[-1]
 
-    def relative_download_path(self, domain: str) -> Path:
-        if self.retry_path:
-            return self.retry_path
-        if not self.folders:
-            return Path(f"Loose Files ({domain})")
-        if self.part_of_album:
-            return Path(*self.folders)
-        return Path(*self.folders) / f"Loose Files ({domain})"
+    @property
+    def is_loose_file(self) -> bool:
+        return not self.folders or not self.part_of_album
 
     @property
     def path(self) -> Path:
@@ -376,7 +371,12 @@ class ScrapeItem:
         return Path(*self.folders)
 
     def compose_download_path(self, domain: str) -> Path:
-        return self.download_folder / self.relative_download_path(domain)
+        if self.retry_path:
+            return self.retry_path
+        path = self.download_folder / self.path
+        if self.is_loose_file:
+            path = path / f"Loose Files ({domain})"
+        return path
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""

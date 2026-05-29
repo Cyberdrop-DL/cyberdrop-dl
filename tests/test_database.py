@@ -145,23 +145,24 @@ class TestGetDownloadPath:
         assert not item.folders
         assert not item.part_of_album
         assert not item.retry_path
-        download_path = item.relative_download_path("cyberdrop")
-        assert download_path == Path("Loose Files (cyberdrop)")
+        assert item.path == Path()
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/Loose Files (cyberdrop)")
 
     def test_loose_file_with_parent(self, item: ScrapeItem) -> None:
         item.add_to_parent_title("a/sub/folder")
-        download_path = item.relative_download_path("cyberdrop")
-        assert download_path == Path("a-sub-folder/Loose Files (cyberdrop)")
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/a-sub-folder/Loose Files (cyberdrop)")
 
     def test_album_file(self, item: ScrapeItem) -> None:
         item.add_to_parent_title("a/sub/folder")
         item.part_of_album = True
-        download_path = item.relative_download_path("cyberdrop")
-        assert download_path == Path("a-sub-folder")
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/a-sub-folder")
 
     def test_retry_path(self, item: ScrapeItem) -> None:
         item.add_to_parent_title("a/sub/folder")
         item.part_of_album = True
         item.retry_path = retry_path = Path("a/retry/path")
-        download_path = item.relative_download_path("cyberdrop")
+        download_path = item.compose_download_path("cyberdrop")
         assert download_path == retry_path
