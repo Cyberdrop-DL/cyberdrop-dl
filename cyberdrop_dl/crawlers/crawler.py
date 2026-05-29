@@ -22,11 +22,7 @@ from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
-from cyberdrop_dl.exceptions import (
-    MaxChildrenError,
-    NoExtensionError,
-    ScrapeError,
-)
+from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import css, dates, error_handling_context, is_absolute_http_url, is_blob_or_svg, m3u8, parse_url

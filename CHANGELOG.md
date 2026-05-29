@@ -50,26 +50,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reject downloads if the final download path is outside the config download folder (path traversal)
 - The following extensions have been hardcoded to always be rejected:
 
-1. ".bat"
-2. ".com"
-3. ".exe"
-4. ".hta"
-5. ".inf"
-6. ".jar"
-7. ".js"
-8. ".lnk"
-9. ".msc"
-10. ".msi"
-11. ".ps1"
-12. ".ps2"
-13. ".psc1"
-14. ".psc2"
-15. ".sh"
-16. ".scf"
-17. ".vb"
-18. ".vbs"
-19. ".wsc"
-20. ".wsh"
+1. `.bat`
+2. `.com`
+3. `.exe`
+4. `.hta`
+5. `.inf`
+6. `.jar`
+7. `.js`
+8. `.lnk`
+9. `.msc`
+10. `.msi`
+11. `.ps1`
+12. `.ps2`
+13. `.psc1`
+14. `.psc2`
+15. `.sh`
+16. `.scf`
+17. `.vb`
+18. `.vbs`
+19. `.wsc`
+20. `.wsh`
 
 ## [9.12.0] - 2026-05-27
 
