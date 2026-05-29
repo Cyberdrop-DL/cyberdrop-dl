@@ -89,7 +89,6 @@ class DangerousExtensionError(FileNameError):
     def __init__(self, filename: str) -> None:
         super().__init__("Dangerous File Extension", message=filename)
 
-
 class NoExtensionError(FileNameError):
     def __init__(self, filename: str | None = None, *, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
         """This error will be thrown when no extension is given for a file."""

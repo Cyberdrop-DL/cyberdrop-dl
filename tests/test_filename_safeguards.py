@@ -15,7 +15,7 @@ def test_path_inside_dl_folder_are_ok(tmp_path: Path) -> None:
     check_path_traversal(dl, dl / "a/b")
 
 
-def test_dot_files_raise_exception(tmp_path: Path) -> None:
+def test_path_travesal_attempts_raise_exception(tmp_path: Path) -> None:
     dl = tmp_path / "downloads"
     dl.mkdir()
 
@@ -26,7 +26,7 @@ def test_dot_files_raise_exception(tmp_path: Path) -> None:
         check_path_traversal(dl, Path("a/../b"))
 
 
-def test_symlinks_outside_dl_path_raise_error(tmp_path: Path) -> None:
+def test_symlinks_outside_dl_path_raises_error(tmp_path: Path) -> None:
     """A symlink that points outside the download folder must be rejected."""
     dl = tmp_path / "downloads"
     dl.mkdir()
@@ -75,6 +75,7 @@ def test_dot_files_are_rejected(filename: str) -> None:
         "archive.tar.gz",
         "script.py",
         "README",
+        "video.mp4",
     ],
 )
 def test_known_exceptions_are_accepted(filename: str) -> None:
