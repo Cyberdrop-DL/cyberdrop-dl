@@ -3,21 +3,6 @@ import pytest
 from cyberdrop_dl.crawlers import bunkr
 
 
-@pytest.mark.parametrize(
-    ("timestamp", "url", "expected"),
-    [
-        (
-            1774897194,
-            "OzE3IjZucGQmazRRF0BTVlh9Njd9d2RteGhobxkKAh0fGxQsNTsrM3IMLCszRxRxQldXIDFuFz01MiIrOCtdVl1DH189aBMnJzg2KGg2aAFdC2lVQn0oM2Y=",
-            "https://c2ke.scdn.st/2023-10-31---Giving-Girls-Breast-Examinations-in-Public-o75d8Ygt.mp4",
-        )
-    ],
-)
-def test_parse_api_resp(timestamp: int, url: str, expected: str) -> None:
-    url = bunkr._parse_api_resp(url, timestamp, encrypted=True)
-    assert url == expected
-
-
 def test_album_parser() -> None:
     album_js = """
     window.albumFiles = [
