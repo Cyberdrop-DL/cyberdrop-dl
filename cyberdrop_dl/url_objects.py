@@ -15,9 +15,7 @@ import yarl
 from cyberdrop_dl.utils.filepath import sanitize_folder
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Sequence
-
-    import aiohttp
+    from collections.abc import Generator, Sequence
 
     from cyberdrop_dl import signature
     from cyberdrop_dl.manager import Manager
@@ -134,9 +132,6 @@ class MediaItem:
     debrid_link: AbsoluteHttpURL | None = None
     duration: float | None = None
     is_segment: bool = False
-    fallbacks: Callable[[aiohttp.ClientResponse, int], AbsoluteHttpURL] | list[AbsoluteHttpURL] | None = field(
-        default=None
-    )
     album_id: str | None = None
     uploaded_at: int | None = None
 
@@ -214,7 +209,7 @@ class MediaItem:
         me = asdict(self)
         if self.hash:
             me["hash"] = f"xxh128:{self.hash}"
-        for name in ("fallbacks", "is_segment"):
+        for name in ("is_segment",):
             del me[name]
         return me
 
