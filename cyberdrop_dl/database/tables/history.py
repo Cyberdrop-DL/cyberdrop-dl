@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
+import time
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
@@ -9,7 +11,7 @@ from .definitions import create_fixed_history, create_history, create_media_inde
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator, Callable
+    from collections.abc import AsyncGenerator, Callable, Generator
 
     import aiosqlite
     from yarl import URL
@@ -301,24 +303,22 @@ async def apply_updates(db_conn: aiosqlite.Connection) -> None:
 
 
 async def fix_domains(db_conn: aiosqlite.Connection) -> None:
-    logger.info("Updating old database domains")
-    updates = "\n".join(
-        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
-        for current, old in [
-            ("bunkr", "bunkrr"),
-            ("jpg5.su", "sharex"),
-            ("turbovid", "saint"),
-            ("nudostar.tv", "nudostartv"),
-        ]
-    )
-    await db_conn.executescript(updates)
-    await db_conn.commit()
+    with _timed_update("old database domains"):
+        updates = "\n".join(
+            f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
+            for current, old in [
+                ("bunkr", "bunkrr"),
+                ("jpg5.su", "sharex"),
+                ("turbovid", "saint"),
+                ("nudostar.tv", "nudostartv"),
+            ]
+        )
+        await db_conn.executescript(updates)
+        await db_conn.commit()
 
 
 async def fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
-
-    logger.info("Updating old database referers")
+    from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
 
     def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:
         def call(*args: Any, **kwargs: Any) -> _T:
@@ -330,23 +330,31 @@ async def fix_referers(db_conn: aiosqlite.Connection) -> None:
 
         return call
 
-    for name, fn in [
-        ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer),
-        ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler)),
-        ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler)),
-        ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer),
-    ]:
-        await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
+    updates = ""
+    with _timed_update("old database referers"):
+        for fn_name, fn, domain in [
+            ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
+            ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler), "jpg5.su"),
+            ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
+            ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
+            ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
+        ]:
+            await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
+            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
 
-    updates = (
-        "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
-        "UPDATE OR REPLACE media SET referer = FIX_JPG5_REFERER(referer) WHERE domain = 'jpg5.su';"
-        "UPDATE OR REPLACE media SET referer = FIX_CYBERDROP_REFERER(referer) WHERE domain = 'cyberdrop';"
-        "UPDATE OR REPLACE media SET referer = FIX_TURBOVID_REFERER(referer) WHERE domain = 'turbovid';"
-    )
+        await db_conn.executescript(updates)
+        await db_conn.commit()
 
-    await db_conn.executescript(updates)
-    await db_conn.commit()
+
+@contextlib.contextmanager
+def _timed_update(name: str) -> Generator[None]:
+    start = time.monotonic()
+    logger.info(f"Updating {name}")
+    try:
+        yield
+    finally:
+        took = time.monotonic() - start
+        logger.info(f"Finished {name} update after {took:0.2f} seconds")
 
 
 def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:

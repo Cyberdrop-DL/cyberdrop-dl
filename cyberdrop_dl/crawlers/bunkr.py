@@ -43,6 +43,7 @@ class BunkrCrawler(Crawler):
         "File": (
             "/f/<slug>",
             "/d/<slug>",
+            "/i/<slug>",
         ),
         "Stream redirect": "/<slug>",
     }
@@ -52,6 +53,21 @@ class BunkrCrawler(Crawler):
     _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
     _known_good_host: ClassVar[str | None] = None
+
+    @staticmethod
+    @override
+    def __db_path__(url: AbsoluteHttpURL, /) -> str:
+        return "/" + url.name
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["v" | "d" | "i", js_slug]:
+                return url.origin() / "f" / js_slug
+            case _:
+                return url
 
     def __post_init__(self) -> None:
         self.api: BunkrAPI = BunkrAPI(self)
@@ -64,7 +80,7 @@ class BunkrCrawler(Crawler):
                 return await self.reinforced_file(scrape_item, file_id)
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
-            case ["v" | "d", _]:
+            case ["v" | "d" | "i", _]:
                 return await self.follow_redirect(scrape_item)
             case ["f", _]:
                 return await self.file(scrape_item)
@@ -255,3 +271,11 @@ def _extract_js_vars(soup: BeautifulSoup) -> dict[str, str]:
 
 def _fix_encoding(val: str) -> str:
     return val.replace(r"\/", "/")
+
+
+def fix_db_referer(referer: str) -> str:
+    url = AbsoluteHttpURL(referer)
+    if BunkrCrawler.is_subdomain(url):
+        return str(url)
+
+    return str(BunkrCrawler.transform_url(url).with_host(BunkrCrawler.PRIMARY_URL.host))

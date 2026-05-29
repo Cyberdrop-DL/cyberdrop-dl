@@ -115,7 +115,7 @@ def test_invalid_date_format(row) -> None:
         ),
         (
             "https://c.bunkr-cache.se/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
-            "/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
+            "/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
         ),
         (
             "https://e-hentai.network/h/1bb8b499a5a1a21f9e25e2c42513f310c20e83a9-115314-1280-720-wbp/keystamp=1763995200-3f6832af21;fileindex=169742365;xres=1280/1_2.webp",

@@ -1,6 +1,7 @@
 import pytest
 
 from cyberdrop_dl.crawlers import bunkr
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 def test_album_parser() -> None:
@@ -88,3 +89,21 @@ def test_is_stream_redirect(host: str) -> None:
 )
 def test_is_not_stream_redirect(host: str) -> None:
     assert not bunkr._is_stream_redirect(host)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://c5bu-b.cdn.cr/storage/media/--------------------------------------------------Yd6RpuQ8.mp4?token=2e5afd9aeb9c1&ex=1780065095&n=%E5%A5%BD%.mp4",
+            "/--------------------------------------------------Yd6RpuQ8.mp4",
+        ),
+        (
+            "https://kebab.bunkr.cr/12345-5670.mp4",
+            "/12345-5670.mp4",
+        ),
+    ],
+)
+def test_db_path(url: str, expected: str) -> None:
+    result = bunkr.BunkrCrawler.__db_path__(AbsoluteHttpURL(url))
+    assert result == expected
