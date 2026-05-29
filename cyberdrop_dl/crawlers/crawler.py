@@ -1069,5 +1069,5 @@ def _check_dangerous_filename(filename: str) -> None:
     if filename.startswith("."):
         raise FileNameError("Dot file", message=f"Dot files are restricted: {filename}")
 
-    if Path(filename).suffix in FileExt.DANGEROUS:
+    if Path(filename).suffix.lower() in FileExt.DANGEROUS:
         raise FileNameError("Dangerous File Extension", message=filename)

@@ -184,6 +184,7 @@ class FileExt:
             ".ps2",
             ".psc1",
             ".psc2",
+            ".sh",
             ".scf",
             ".vb",
             ".vbs",
