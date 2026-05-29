@@ -302,7 +302,6 @@ class ScrapeItem:
         self,
         url: AbsoluteHttpURL,
         *,
-        new_title_part: str = "",
         part_of_album: bool = False,
         album_id: str | None = None,
         add_parent: AbsoluteHttpURL | bool | None = None,
@@ -318,22 +317,13 @@ class ScrapeItem:
             assert is_absolute_http_url(new_parent)
             scrape_item.parents.append(new_parent)
 
-        if new_title_part:
-            scrape_item.append_folder(new_title_part)
-
         scrape_item.url = url
         scrape_item.part_of_album = part_of_album or scrape_item.part_of_album
         scrape_item.album_id = album_id or scrape_item.album_id
         return scrape_item
 
-    def create_child(self, url: AbsoluteHttpURL, *, new_title_part: str = "", album_id: str | None = None) -> Self:
-        return self.create_new(
-            url,
-            part_of_album=True,
-            add_parent=True,
-            new_title_part=new_title_part,
-            album_id=album_id,
-        )
+    def create_child(self, url: AbsoluteHttpURL) -> Self:
+        return self.create_new(url, part_of_album=True, add_parent=True)
 
     def setup_as_album(self: ScrapeItem, title: str, *, album_id: str | None = None) -> None:
         return self.setup_as(title, FILE_HOST_ALBUM, album_id=album_id)

@@ -150,7 +150,8 @@ class XVideosCrawler(Crawler):
 
             for gallery_id in galleries:
                 url = scrape_item.url / part / gallery_id.removeprefix("f-")
-                new_scrape_item = scrape_item.create_child(url, new_title_part="photos")
+                new_scrape_item = scrape_item.create_child(url)
+                new_scrape_item.append_folder("photos")
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
@@ -227,7 +228,8 @@ class XVideosCrawler(Crawler):
                     url = scrape_item.url.origin() / f"video.{video['eid']}" / slug
                 else:
                     url = self.parse_url(video["url"], scrape_item.url.origin())
-                new_scrape_item = scrape_item.create_child(url, new_title_part=new_part)
+                new_scrape_item = scrape_item.create_child(url)
+                new_scrape_item.append_folder(new_part)
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
