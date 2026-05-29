@@ -42,7 +42,7 @@ class HistoryTable:
     async def apply_updates(self) -> None:
         await self.fix_primary_keys()
         await self.add_columns_media()
-        await apply_updates(self.db_conn)
+        await apply_fixes(self.db_conn)
 
     async def delete_invalid_rows(self) -> None:
         query = "DELETE FROM media WHERE download_filename = '' "
@@ -295,14 +295,14 @@ class HistoryTable:
             await self.db_conn.commit()
 
 
-async def apply_updates(db_conn: aiosqlite.Connection) -> None:
-    await fix_domains(db_conn)
-    await fix_referers(db_conn)
+async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
+    await _fix_domains(db_conn)
+    await _fix_referers(db_conn)
     await db_conn.executescript(create_media_index)
     await db_conn.commit()
 
 
-async def fix_domains(db_conn: aiosqlite.Connection) -> None:
+async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
     with _timed_update("old database domains"):
         updates = "\n".join(
             f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
@@ -317,7 +317,7 @@ async def fix_domains(db_conn: aiosqlite.Connection) -> None:
         await db_conn.commit()
 
 
-async def fix_referers(db_conn: aiosqlite.Connection) -> None:
+async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
 
     def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:

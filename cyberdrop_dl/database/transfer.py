@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import LiteralString
 
 from cyberdrop_dl.database import Database, connect
-from cyberdrop_dl.database.tables.history import fix_domains, fix_referers
+from cyberdrop_dl.database.tables.history import apply_fixes
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils import dates
@@ -197,8 +197,7 @@ def _apply_fixes(db_path: Path) -> None:
     async def fix() -> None:
         conn = await connect(db_path)
         try:
-            await fix_domains(conn)
-            await fix_referers(conn)
+            await apply_fixes(conn)
         finally:
             await conn.close()
 
