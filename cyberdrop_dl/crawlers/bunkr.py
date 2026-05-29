@@ -106,28 +106,28 @@ class BunkrCrawler(Crawler):
 
         soup = await self._request_soup_lenient(scrape_item.url)
         if soup.select_one(Selector.SERVER_UNDER_MAINTENANCE):
-            raise ScrapeError("Bunkr Maintenance", message="Server under maintenance")
+            raise ScrapeError("Bunkr Maintenance", "Server under maintenance")
 
         filename = open_graph.title(soup)
-        if cdn := _extract_js_vars(soup).get("jsCDN"):
-            src = self.parse_url(cdn)
-        else:
+        try:
+            cdn = _extract_js_vars(soup)["jsCDN"]
+        except css.SelectorError:
             reinforced_url = self.parse_url(css.select(soup, Selector.DOWNLOAD_BTN, "href"))
             file_id = reinforced_url.name
             info = await self.api.info(file_id)
             src = info.src
+        else:
+            src = self.parse_url(cdn)
 
-        src = await self.api.sign(src)
         await self._file(scrape_item, src, filename)
 
     @error_handling_wrapper
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         info = await self.api.info(file_id)
-        src = await self.api.sign(info.src)
-        await self._file(scrape_item, src, info.ogname)
+        await self._file(scrape_item, info.src, info.ogname)
 
-    @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, src: AbsoluteHttpURL, filename: str | None = None) -> None:
+        src = await self.api.sign(src)
         name = src.query.get("n") or filename or src.name
         src = src.update_query(n=name)
         filename, ext = self.get_filename_and_ext(name, assume_ext=".mp4")
@@ -180,7 +180,7 @@ class FileInfo:
     jsType: str  # noqa: N815
     jsSlug: str  # noqa: N815
     signUrl: str  # noqa: N815
-    src: AbsoluteHttpURL
+    src: AbsoluteHttpURL = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.src = parse_url(self.jsCDN) / "storage/media" / self.jsSlug
@@ -196,7 +196,7 @@ class BunkrAPI(API):
     async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
         api_url = _SIGN_API.with_query(path=src.path)
         resp = await self.request_json(api_url)
-        return src.with_query(ex=resp["ex"], token=resp["token"])
+        return src.with_query(token=resp["token"], ex=resp["ex"])
 
 
 def _is_stream_redirect(host: str) -> bool:
@@ -209,4 +209,8 @@ def _is_stream_redirect(host: str) -> bool:
 
 def _extract_js_vars(soup: BeautifulSoup) -> dict[str, str]:
     script = css.select_text(soup, Selector.JS_VARS)
-    return {k: v.strip("\"'") for k, v in _find_js_vars(script)}
+    return {k: _fix_encoding(v).strip("\"'") for k, v in _find_js_vars(script)}
+
+
+def _fix_encoding(val: str) -> str:
+    return val.replace(r"\/", "/")
