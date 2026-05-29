@@ -310,7 +310,7 @@ async def fix_domains(db_conn: aiosqlite.Connection) -> None:
 
 
 async def fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
+    from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
 
     logger.info("Updating old database referers")
 
@@ -324,20 +324,16 @@ async def fix_referers(db_conn: aiosqlite.Connection) -> None:
 
         return call
 
-    for name, fn in [
-        ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer),
-        ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler)),
-        ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler)),
-        ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer),
+    updates = ""
+    for fn_name, fn, domain in [
+        ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
+        ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler), "jpg5.su"),
+        ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
+        ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
+        ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
     ]:
-        await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
-
-    updates = (
-        "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
-        "UPDATE OR REPLACE media SET referer = FIX_JPG5_REFERER(referer) WHERE domain = 'jpg5.su';"
-        "UPDATE OR REPLACE media SET referer = FIX_CYBERDROP_REFERER(referer) WHERE domain = 'cyberdrop';"
-        "UPDATE OR REPLACE media SET referer = FIX_TURBOVID_REFERER(referer) WHERE domain = 'turbovid';"
-    )
+        await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
+        updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
 
     await db_conn.executescript(updates)
     await db_conn.commit()

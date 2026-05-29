@@ -36,7 +36,7 @@ class Selector:
     JS_VARS = "script:-soup-contains-own('var jsCDN')"
 
 
-class BunkrCrawler(Crawler):
+class BunkrCrawler(Crawler, db_path="name"):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Video": "/v/<slug>",
@@ -255,3 +255,10 @@ def _extract_js_vars(soup: BeautifulSoup) -> dict[str, str]:
 
 def _fix_encoding(val: str) -> str:
     return val.replace(r"\/", "/")
+
+
+def fix_db_referer(referer: str) -> str:
+    url = AbsoluteHttpURL(referer)
+    if BunkrCrawler.is_subdomain(url):
+        return str(url)
+    return str(url.with_host(BunkrCrawler.PRIMARY_URL.host))
