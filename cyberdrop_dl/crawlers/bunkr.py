@@ -128,6 +128,8 @@ class BunkrCrawler(Crawler):
 
     @error_handling_wrapper
     async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
         info = await self.api.info(file_id)
         await self._file(scrape_item, info.src, info.ogname)
 

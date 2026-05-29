@@ -108,7 +108,7 @@ TEST_CASES = [
                 "debrid_link": None,
                 "referer": "re:https://bunkr.site/f/",
                 "album_id": "A3k5ktj4",
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:Nicol Loveee (Bunkr)",
             },
         ],
@@ -128,12 +128,13 @@ TEST_CASES = [
     },
     {
         "url": "https://bunkr.cr/a/TQAgjP8m",
+        "description": "weird unicode in file names",
         "results": [
             {
                 "url": "ANY",
                 "download_folder": "re:NerdballerTV - Videos (2018-2023) [Complete]",
                 "album_id": "TQAgjP8m",
-                "uploaded_at": None,
+                "uploaded_at": int,
             }
         ],
         "count": 220,
