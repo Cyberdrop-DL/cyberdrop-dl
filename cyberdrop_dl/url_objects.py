@@ -261,9 +261,6 @@ class ScrapeItem:
 
     def _set_type(self, scrape_item_type: ScrapeItemType | None, _: Manager | None = None) -> None:
         self.type = scrape_item_type
-        self.reset_childen()
-
-    def reset_childen(self) -> None:
         self.children = self.children_limit = 0
         if self.type is None:
             return
@@ -284,9 +281,9 @@ class ScrapeItem:
 
         Reset `part_of_album` back to `False`
         """
-        self.album_id = self.uploaded_at = self.type = None
+        self.album_id = self.uploaded_at = None
+        self._set_type(None)
         self.part_of_album = False
-        self.reset_childen()
         if reset_parents:
             self.parents = []
             self.parent_threads = set()
