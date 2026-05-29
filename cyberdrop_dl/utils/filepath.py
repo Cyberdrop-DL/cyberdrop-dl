@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from pathlib import Path
 
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
+from cyberdrop_dl.exceptions import FileNameError, InvalidExtensionError, NoExtensionError, PathTraversalError
 
 _ALLOWED_FILEPATH_PUNCTUATION = " .-_!#$%'()+,;=@[]^{}~"
 _SANITIZE_FILENAME_PATTERN = r'[<>:"/\\|?*\']'
@@ -124,3 +124,20 @@ def remove_file_id(filename: str, ext: str) -> str:
     if not filename.endswith(ext):
         filename += ext
     return filename
+
+
+def check_path_traversal(download_folder: Path, folder: Path) -> None:
+    parts = folder.parts
+    if "." in parts or ".." in parts:
+        raise PathTraversalError(folder)
+
+    if not folder.resolve().is_relative_to(download_folder):
+        raise PathTraversalError(folder)
+
+
+def check_dangerous_filename(filename: str) -> None:
+    if filename.startswith("."):
+        raise FileNameError("Dot file", message=f"Dot files are restricted: {filename}")
+
+    if Path(filename).suffix.lower() in FileExt.DANGEROUS:
+        raise FileNameError("Dangerous File Extension", message=filename)

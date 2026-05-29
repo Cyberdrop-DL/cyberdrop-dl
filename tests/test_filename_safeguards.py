@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from cyberdrop_dl.crawlers.crawler import _check_dangerous_filename, _check_path_traversal
 from cyberdrop_dl.exceptions import FileNameError, PathTraversalError
+from cyberdrop_dl.utils.filepath import check_dangerous_filename, check_path_traversal
 
 
 def test_path_inside_dl_folder_are_ok(tmp_path: Path) -> None:
@@ -11,8 +11,8 @@ def test_path_inside_dl_folder_are_ok(tmp_path: Path) -> None:
     sub = dl / "a" / "b"
     sub.mkdir(parents=True)
 
-    _check_path_traversal(dl, sub)
-    _check_path_traversal(dl, dl / "a/b")
+    check_path_traversal(dl, sub)
+    check_path_traversal(dl, dl / "a/b")
 
 
 def test_dot_files_raise_exception(tmp_path: Path) -> None:
@@ -20,10 +20,10 @@ def test_dot_files_raise_exception(tmp_path: Path) -> None:
     dl.mkdir()
 
     with pytest.raises(PathTraversalError):
-        _check_path_traversal(dl, Path("a/./b"))
+        check_path_traversal(dl, Path("a/./b"))
 
     with pytest.raises(PathTraversalError):
-        _check_path_traversal(dl, Path("a/../b"))
+        check_path_traversal(dl, Path("a/../b"))
 
 
 def test_symlinks_outside_dl_path_raise_error(tmp_path: Path) -> None:
@@ -37,7 +37,7 @@ def test_symlinks_outside_dl_path_raise_error(tmp_path: Path) -> None:
     symlink.symlink_to(outside)
 
     with pytest.raises(PathTraversalError):
-        _check_path_traversal(dl, symlink)
+        check_path_traversal(dl, symlink)
 
 
 def test_traversal_paths_should_raise_error(tmp_path: Path) -> None:
@@ -46,10 +46,10 @@ def test_traversal_paths_should_raise_error(tmp_path: Path) -> None:
     dl.mkdir()
 
     with pytest.raises(PathTraversalError):
-        _check_path_traversal(dl, Path(".."))
+        check_path_traversal(dl, Path(".."))
 
     with pytest.raises(PathTraversalError):
-        _check_path_traversal(dl, dl / ".." / "etc")
+        check_path_traversal(dl, dl / ".." / "etc")
 
 
 @pytest.mark.parametrize(
@@ -63,7 +63,7 @@ def test_traversal_paths_should_raise_error(tmp_path: Path) -> None:
 )
 def test_dot_files_are_rejected(filename: str) -> None:
     with pytest.raises(FileNameError) as exc:
-        _check_dangerous_filename(filename)
+        check_dangerous_filename(filename)
     assert exc.value.ui_failure == "Dot file"
     assert filename in str(exc.value)
 
@@ -78,7 +78,7 @@ def test_dot_files_are_rejected(filename: str) -> None:
     ],
 )
 def test_known_exceptions_are_accepted(filename: str) -> None:
-    _check_dangerous_filename(filename)
+    check_dangerous_filename(filename)
 
 
 @pytest.mark.parametrize(
@@ -93,6 +93,6 @@ def test_known_exceptions_are_accepted(filename: str) -> None:
 )
 def test_dangerous_extensions_are_rejected(filename: str) -> None:
     with pytest.raises(FileNameError) as exc:
-        _check_dangerous_filename(filename)
+        check_dangerous_filename(filename)
     assert exc.value.ui_failure == "Dangerous File Extension"
     assert exc.value.message == filename
