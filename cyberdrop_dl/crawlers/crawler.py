@@ -53,6 +53,7 @@ SupportedPaths = dict[str, OneOrTuple[str]]
 SupportedDomains = OneOrTuple[str]
 RateLimit = tuple[float, float]
 SKIP_DOWNLOAD: ContextVar[bool] = ContextVar("SKIP_DOWNLOAD", default=False)
+ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
 
 
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
@@ -369,10 +370,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return self.manager.config.deep_scrape
 
     @property
-    def allow_no_extension(self) -> bool:
-        return not self.manager.config.settings.ignore_options.exclude_files_with_no_extension
-
-    @property
     def separate_posts(self) -> bool:
         return self.manager.config.settings.download_options.separate_posts
 
@@ -621,8 +618,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self.handle_external_links(scrape_item, reset=False)
 
     @final
+    @classmethod
     def get_filename_and_ext(
-        self,
+        cls,
         filename: str,
         *,
         assume_ext: str | None = ".mp4",
@@ -633,10 +631,10 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, mime_type, xenforo=self._FORUM)
+            return get_filename_and_ext(filename, mime_type, xenforo=cls._FORUM)
         except NoExtensionError:
-            if self.allow_no_extension and assume_ext:
-                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=self._FORUM)
+            if ALLOW_NO_EXT.get() and assume_ext:
+                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=cls._FORUM)
             raise
 
     @final

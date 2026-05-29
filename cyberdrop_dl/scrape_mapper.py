@@ -17,6 +17,7 @@ from cyberdrop_dl.clients.jdownloader import JDownloader
 from cyberdrop_dl.constants import BlockedDomains
 from cyberdrop_dl.crawlers import create_crawlers
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
+from cyberdrop_dl.crawlers.crawler import ALLOW_NO_EXT
 from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
 from cyberdrop_dl.crawlers.http_direct import DirectHttpFile
 from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
@@ -166,13 +167,15 @@ class ScrapeMapper:
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
         assert not self._done.is_set()
-        _ = filepath.MAX_FILE_LEN.set(self.manager.config.global_settings.general.max_file_name_length)
-        _ = filepath.MAX_FOLDER_LEN.set(self.manager.config.global_settings.general.max_folder_name_length)
-        _ = CONCURRENT_SEGMENTS.set(self.manager.config.global_settings.rate_limiting_options.concurrent_segments)
+        config = self.manager.config
+        _ = filepath.MAX_FILE_LEN.set(config.global_settings.general.max_file_name_length)
+        _ = filepath.MAX_FOLDER_LEN.set(config.global_settings.general.max_folder_name_length)
+        _ = CONCURRENT_SEGMENTS.set(config.global_settings.rate_limiting_options.concurrent_segments)
+        _ = ALLOW_NO_EXT.set(not config.settings.ignore_options.exclude_files_with_no_extension)
 
-        self.manager.config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
-        if self.manager.config.settings.sorting.sort_downloads:
-            self.manager.config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+        config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
+        if config.settings.sorting.sort_downloads:
+            config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
             "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
@@ -183,7 +186,7 @@ class ScrapeMapper:
         with self.tui():
             async with (
                 self.manager.http_client,
-                storage.monitor(self.manager.config.global_settings.general.required_free_space),
+                storage.monitor(config.global_settings.general.required_free_space),
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
             ):
