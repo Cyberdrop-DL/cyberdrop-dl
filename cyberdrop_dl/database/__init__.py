@@ -36,9 +36,13 @@ class Database:
     async def __aenter__(self) -> Self:
         self._db_conn = await connect(self._db_path)
         await self._pre_allocate()
+        await self.schema.create()
         await self.history.create()
         await self.hash.create()
-        await self.schema.create()
+        if not self.schema.up_to_date:
+            await self.history.apply_updates()
+            await self.schema.update()
+
         return self
 
     async def fetchone(self, query: str, parameters: Iterable[Any] | None = None) -> aiosqlite.Row | None:

@@ -32,9 +32,14 @@ CURRENT_APP_SCHEMA_VERSION = Version(9, 10, 3)
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True)
 class SchemaVersionTable:
     _database: Database
+    _up_to_date: bool = False
+
+    @property
+    def up_to_date(self) -> bool:
+        return self._up_to_date
 
     @property
     def db_conn(self) -> aiosqlite.Connection:
@@ -70,8 +75,10 @@ class SchemaVersionTable:
         version = await self.get_version()
         logger.info(f"Database reports installed version: {version!s}")
         if version is not None and version >= CURRENT_APP_SCHEMA_VERSION:
+            self._up_to_date = True
             return
 
+    async def update(self) -> None:
         # TODO: on v9, raise SystemExit if db version is None or older than 8.0.0
         logger.info(f"Updating database version to {CURRENT_APP_SCHEMA_VERSION!s}")
         await self.__update_schema_version()

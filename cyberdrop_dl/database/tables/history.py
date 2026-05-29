@@ -36,12 +36,11 @@ class HistoryTable:
     async def create(self) -> None:
         await self.db_conn.execute(create_history)
         await self.db_conn.commit()
+
+    async def apply_updates(self) -> None:
         await self.fix_primary_keys()
         await self.add_columns_media()
-        await fix_domains(self.db_conn)
-        await fix_referers(self.db_conn)
-        await self.db_conn.executescript(create_media_index)
-        await self.db_conn.commit()
+        await apply_updates(self.db_conn)
 
     async def delete_invalid_rows(self) -> None:
         query = "DELETE FROM media WHERE download_filename = '' "
@@ -292,6 +291,13 @@ class HistoryTable:
         if script:
             await self.db_conn.executescript(script)
             await self.db_conn.commit()
+
+
+async def apply_updates(db_conn: aiosqlite.Connection) -> None:
+    await fix_domains(db_conn)
+    await fix_referers(db_conn)
+    await db_conn.executescript(create_media_index)
+    await db_conn.commit()
 
 
 async def fix_domains(db_conn: aiosqlite.Connection) -> None:
