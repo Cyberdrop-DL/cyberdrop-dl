@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import json
 import re
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from aiohttp import ClientConnectorError
 from typing_extensions import override
@@ -14,6 +15,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, deserialize, error_handling_wrapper, open_graph, parse_url
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -27,7 +30,7 @@ known_bad_hosts: set[str] = set()
 
 
 class Selector:
-    ALBUM_FILES = "#galleryGrid a[href]"
+    ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BTN = "a.btn.ic-download-01"
     SERVER_UNDER_MAINTENANCE = "h2:-soup-contains('Server under maintenance')"
     JS_VARS = "script:-soup-contains-own('var jsCDN')"
@@ -51,6 +54,7 @@ class BunkrCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: BunkrAPI = BunkrAPI(self)
+        self._parse_files = _make_album_parser()
         self._redirect_lock: asyncio.Lock = asyncio.Lock()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -92,9 +96,10 @@ class BunkrCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=album_id)
 
         origin = scrape_item.url.origin()
-        for url in css.iselect(soup, Selector.ALBUM_FILES, "href"):
-            web_url = self.parse_url(url, origin)
+        for file in self._parse_files(css.select_text(soup, Selector.ALBUM_FILES)):
+            web_url = origin / "f" / file.slug
             new_item = scrape_item.create_child(web_url)
+            new_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
             self.create_task(self.run(new_item))
             scrape_item.add_children()
 
@@ -173,6 +178,19 @@ class BunkrCrawler(Crawler):
         return await self.request_soup(url)
 
 
+class BunkrAPI(API):
+    async def info(self, file_id: str) -> FileInfo:
+        reinforced_url = _REINFORCED_URL / file_id
+        soup = await self.request_soup(reinforced_url)
+        js_vars = _extract_js_vars(soup)
+        return deserialize(FileInfo, js_vars)
+
+    async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        api_url = _SIGN_API.with_query(path=src.path)
+        resp = await self.request_json(api_url)
+        return src.with_query(token=resp["token"], ex=resp["ex"])
+
+
 @dataclasses.dataclass(slots=True)
 class FileInfo:
     ogname: str
@@ -186,17 +204,37 @@ class FileInfo:
         self.src = parse_url(self.jsCDN) / "storage/media" / self.jsSlug
 
 
-class BunkrAPI(API):
-    async def info(self, file_id: str) -> FileInfo:
-        reinforced_url = _REINFORCED_URL / file_id
-        soup = await self.request_soup(reinforced_url)
-        js_vars = _extract_js_vars(soup)
-        return deserialize(FileInfo, js_vars)
+@dataclasses.dataclass(slots=True)
+class File:
+    id: int
+    name: str
+    original: str | None
+    slug: str
+    type: str
+    extension: str
+    size: int
+    timestamp: str
+    thumbnail: str
+    cdnEndpoint: str  # noqa: N815
 
-    async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        api_url = _SIGN_API.with_query(path=src.path)
-        resp = await self.request_json(api_url)
-        return src.with_query(token=resp["token"], ex=resp["ex"])
+
+def _make_album_parser() -> Callable[[str], Generator[File]]:
+    translation_map = {f" {field.name}: ": f'"{field.name}": ' for field in dataclasses.fields(File)}
+    pattern = re.compile("|".join(sorted(translation_map.keys(), key=len, reverse=True)))
+
+    def translate(text: str) -> str:
+        return pattern.sub(lambda m: translation_map[m.group(0)], text.replace("\\'", "'")).strip()
+
+    def decode(content: str) -> Generator[File]:
+        file: dict[str, Any]
+        for file in json.loads(content):
+            yield File(**file)
+
+    def parse(album_js: str) -> Generator[File]:
+        content = translate(album_js[album_js.find("=") + 1 : album_js.rfind("];")])
+        return decode(content.rstrip(",") + "]")
+
+    return parse
 
 
 def _is_stream_redirect(host: str) -> bool:
