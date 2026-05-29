@@ -110,7 +110,10 @@ async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> 
             assert cls, f"{test_case.domain} is not a valid crawler domain. Test case is invalid"
             crawler = cls(running_manager)
             await crawler.__async_init__()
-            item = ScrapeItem(url=crawler.parse_url(test_case.url))
+            item = ScrapeItem(
+                url=crawler.parse_url(test_case.url),
+                download_folder=running_manager.config.settings.files.download_folder,
+            )
             await crawler.run(item)
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
@@ -208,7 +211,10 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
             crawler = scrape_mapper._direct_http
             await scrape_mapper.run()
-            item = ScrapeItem(url=parse_url(test_case.url))
+            item = ScrapeItem(
+                url=parse_url(test_case.url),
+                download_folder=running_manager.config.settings.files.download_folder,
+            )
             await crawler.fetch(item)
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
