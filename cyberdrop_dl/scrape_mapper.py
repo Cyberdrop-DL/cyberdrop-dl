@@ -103,7 +103,7 @@ class ScrapeStats:
     def update(self, item: ScrapeItem) -> None:
         self.count += 1
         if item.folders:
-            self.groups.append(item.parent_title)
+            self.groups.append("/".join(item.folders))
 
 
 @dataclasses.dataclass(slots=True)
@@ -273,7 +273,7 @@ class ScrapeMapper:
             try:
                 await self._jdownloader.send(
                     scrape_item.url,
-                    scrape_item.parent_title,
+                    scrape_item.path.as_posix(),
                     relative_download_dir,
                 )
 

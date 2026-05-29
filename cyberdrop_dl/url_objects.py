@@ -249,10 +249,6 @@ class ScrapeItem:
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
 
-    @property
-    def parent_title(self) -> str:
-        return "/".join(self.folders)
-
     def add_to_parent_title(self, folder: str, /) -> None:
         if not folder or self.retry_path:
             return
@@ -372,6 +368,12 @@ class ScrapeItem:
         if self.part_of_album:
             return Path(*self.folders)
         return Path(*self.folders) / f"Loose Files ({domain})"
+
+    @property
+    def path(self) -> Path:
+        if self.retry_path:
+            return self.retry_path
+        return Path(*self.folders)
 
     def compose_download_path(self, domain: str) -> Path:
         return self.download_folder / self.relative_download_path(domain)
