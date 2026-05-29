@@ -226,13 +226,16 @@ class ScrapeItem:
 
     parents: list[AbsoluteHttpURL] = field(default_factory=list, init=False)
     parent_threads: set[AbsoluteHttpURL] = field(default_factory=set, init=False)
-    children: int = field(default=0, init=False)
-    children_limit: int = field(default=0, init=False)
+
     type: ScrapeItemType | None = field(default=None, init=False)
     completed_at: int | None = field(default=None, init=False)
     created_at: int | None = field(default=None, init=False)
     children_limits: list[int] = field(default_factory=list, init=False)
+
     password: str | None = field(default=None, init=False)
+
+    _children_count: int = field(default=0, init=False)
+    _children_limit: int = field(default=0, init=False)
 
     @contextlib.contextmanager
     def track_changes(self) -> Generator[Self]:
@@ -265,17 +268,17 @@ class ScrapeItem:
 
     def _set_type(self, scrape_item_type: ScrapeItemType | None, _: Manager | None = None) -> None:
         self.type = scrape_item_type
-        self.children = self.children_limit = 0
+        self._children_count = self._children_limit = 0
         if self.type is None:
             return
         try:
-            self.children_limit = self.children_limits[self.type]
+            self._children_limit = self.children_limits[self.type]
         except (IndexError, TypeError):
             pass
 
     def add_children(self, number: int = 1) -> None:
-        self.children += number
-        if self.children_limit and self.children >= self.children_limit:
+        self._children_count += number
+        if self._children_limit and self._children_count >= self._children_limit:
             from cyberdrop_dl.exceptions import MaxChildrenError
 
             raise MaxChildrenError(origin=self)
