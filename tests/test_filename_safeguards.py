@@ -97,3 +97,15 @@ def test_dangerous_extensions_are_rejected(filename: str) -> None:
         check_dangerous_filename(filename)
     assert exc.value.ui_failure == "Dangerous File Extension"
     assert exc.value.message == filename
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "f/video.mp4",
+        r"f\\payload.mp4",
+    ],
+)
+def test_filenames_w_separators_are_rejected(filename: str) -> None:
+    with pytest.raises(FileNameError):
+        check_dangerous_filename(filename)
