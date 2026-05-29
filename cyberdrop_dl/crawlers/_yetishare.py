@@ -90,7 +90,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
         if not is_shared:
             title = css.page_title(soup, self.DOMAIN).removesuffix("Folder").strip()
-            scrape_item.add_to_parent_title(self.create_title(title, folder_id))
+            scrape_item.append_folder(self.create_title(title, folder_id))
 
         for page in itertools.count(1):
             ajax_soup = await self._get_soup_from_ajax_api(

@@ -50,7 +50,7 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag"):
             canonical_url = scrape_item.url.with_fragment(file.id)
             new_scrape_item = scrape_item.create_child(canonical_url)
             for part in path.parent.parts[1:]:
-                new_scrape_item.add_to_parent_title(part)
+                new_scrape_item.append_folder(part)
 
             dl_link = self.core.create_download_url(transfer_id, file, password)
             self.create_task(self._file(new_scrape_item, file, dl_link))

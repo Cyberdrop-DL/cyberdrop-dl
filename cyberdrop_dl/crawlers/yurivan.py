@@ -77,7 +77,7 @@ class YuriVanCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=story_id)
 
         chapter = story.chapters[chapter_idx]
-        scrape_item.add_to_parent_title(self.create_title(chapter.title))
+        scrape_item.append_folder(self.create_title(chapter.title))
         async with self.new_task_group(scrape_item) as tg:
             for page in chapter.pages:
                 tg.create_task(self.direct_file(scrape_item, page.url))

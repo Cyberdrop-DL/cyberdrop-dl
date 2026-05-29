@@ -200,7 +200,7 @@ class TikTokCrawler(Crawler):
     def _handle_post(self, scrape_item: ScrapeItem, post: Post) -> None:
         scrape_item.url = post.canonical_url
         title = self.create_title(post.author.unique_id, post.id)
-        scrape_item.add_to_parent_title(title)
+        scrape_item.append_folder(title)
         post_title = self.create_separate_post_title(post.title, post.id, post.create_time)
         scrape_item.setup_as_album(post_title, album_id=post.id)
         scrape_item.uploaded_at = post.create_time

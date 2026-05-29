@@ -117,7 +117,7 @@ class DropboxCrawler(Crawler):
             if "folder" not in resp:
                 return await self.file(scrape_item)
             folder_name: str = resp["folder"]["filename"]
-            scrape_item.add_to_parent_title(self.create_title(folder_name))
+            scrape_item.append_folder(self.create_title(folder_name))
 
             for entry, token in zip(resp["entries"], resp["share_tokens"], strict=True):
                 node = Node.from_dict(token | entry)

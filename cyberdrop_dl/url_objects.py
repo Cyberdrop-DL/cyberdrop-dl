@@ -249,7 +249,7 @@ class ScrapeItem:
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
 
-    def add_to_parent_title(self, folder: str, /) -> None:
+    def append_folder(self, folder: str, /) -> None:
         if not folder or self.retry_path:
             return
 
@@ -259,7 +259,7 @@ class ScrapeItem:
 
         self.folders.append(folder)
 
-    def set_type(self, scrape_item_type: ScrapeItemType | None, _: Manager | None = None) -> None:
+    def _set_type(self, scrape_item_type: ScrapeItemType | None, _: Manager | None = None) -> None:
         self.type = scrape_item_type
         self.reset_childen()
 
@@ -298,8 +298,8 @@ class ScrapeItem:
         if album_id:
             self.album_id = album_id
         if self.type != type_:
-            self.set_type(type_)
-        self.add_to_parent_title(title)
+            self._set_type(type_)
+        self.append_folder(title)
 
     def create_new(
         self,
@@ -322,7 +322,7 @@ class ScrapeItem:
             scrape_item.parents.append(new_parent)
 
         if new_title_part:
-            scrape_item.add_to_parent_title(new_title_part)
+            scrape_item.append_folder(new_title_part)
 
         scrape_item.url = url
         scrape_item.part_of_album = part_of_album or scrape_item.part_of_album

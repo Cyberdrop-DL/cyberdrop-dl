@@ -62,7 +62,7 @@ class OneManagerCrawler(Crawler, is_abc=True):
         for folder in css.iselect(table, Selector.FOLDER):
             link = scrape_item.url / css.select(folder, Selector.FOLDER_LINK, "href")
             new_item = scrape_item.create_child(link)
-            new_item.add_to_parent_title(link.name)
+            new_item.append_folder(link.name)
             self.create_task(self.run(new_item))
             scrape_item.add_children()
 
@@ -81,7 +81,7 @@ class OneManagerCrawler(Crawler, is_abc=True):
     def _init_item(self, scrape_item: ScrapeItem) -> None:
         scrape_item.setup_as_album(self.FOLDER_DOMAIN, album_id=self.DOMAIN)
         for part in scrape_item.url.parts[1:]:
-            scrape_item.add_to_parent_title(part)
+            scrape_item.append_folder(part)
 
         # smugle url as as sentinel
         scrape_item.parent_threads.add(self.PRIMARY_URL)

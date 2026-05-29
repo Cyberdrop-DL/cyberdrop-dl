@@ -84,7 +84,7 @@ class GirlsReleasedCrawler(Crawler):
         api_base = self.PRIMARY_URL / "api/0.3/sets/site" / domain
         if model_id and model_name:
             api_base = api_base / "model" / model_id
-            scrape_item.add_to_parent_title(f"{model_name} [model]")
+            scrape_item.append_folder(f"{model_name} [model]")
 
         await self._pagination(scrape_item, api_base)
 

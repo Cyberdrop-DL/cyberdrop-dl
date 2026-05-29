@@ -155,7 +155,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             child_item = scrape_item.create_child(canonical_url)
             child_item.uploaded_at = file.created_at
             for part in path.parent.parts[1:]:
-                child_item.add_to_parent_title(part)
+                child_item.append_folder(part)
 
             self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()

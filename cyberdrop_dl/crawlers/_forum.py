@@ -311,7 +311,7 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         link = link or scrape_item.url
         filename, ext = self.get_filename_and_ext(link.name)
         new_scrape_item = scrape_item.copy()
-        new_scrape_item.add_to_parent_title("Attachments")
+        new_scrape_item.append_folder("Attachments")
         new_scrape_item.part_of_album = True
         await self.handle_file(link, new_scrape_item, filename, ext)
 
@@ -425,7 +425,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                 except ScrapeError as e:
                     self.log.debug("Got an unprocessable soup", exc_info=e)
                     raise
-                scrape_item.add_to_parent_title(title)
+                scrape_item.append_folder(title)
 
             continue_scraping, last_post_url = self._thread_page(scrape_item, thread, soup)
             if not continue_scraping:
@@ -463,7 +463,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     async def post(self, scrape_item: ScrapeItem, post: ForumPostProtocol) -> None:
         scrape_item.setup_as_post("")
         post_title = self.create_separate_post_title(None, str(post.id), post.date)
-        scrape_item.add_to_parent_title(post_title)
+        scrape_item.append_folder(post_title)
         seen = set()
         stats: dict[str, int] = {}
 

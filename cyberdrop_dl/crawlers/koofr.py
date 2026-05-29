@@ -78,7 +78,7 @@ class KooFrCrawler(Crawler, db_path="path_qs_frag"):
 
                 url = scrape_item.url.update_query(path=node.path)
                 new_scrape_item = scrape_item.create_child(url)
-                new_scrape_item.add_to_parent_title(node.name)
+                new_scrape_item.append_folder(node.name)
                 tg.create_task(self._walk_folder(new_scrape_item, content_id, node.path))
 
     @error_handling_wrapper

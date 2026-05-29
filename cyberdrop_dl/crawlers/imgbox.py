@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.url_objects import FILE_HOST_ALBUM, AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
 PRIMARY_URL = AbsoluteHttpURL("https://imgbox.com")
@@ -35,12 +35,10 @@ class ImgBoxCrawler(Crawler):
     async def album(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        if "The specified gallery could not be found" in soup.text:
+        if "The specified gallery could not be found" in soup.get_text():
             raise ScrapeError(404)
 
         album_id = scrape_item.url.parts[2]
-
-        scrape_item.set_type(FILE_HOST_ALBUM, self.manager)
         title = css.select(soup, ALBUM_TITLE_SELECTOR).get_text(strip=True).rsplit(" - ", 1)[0]
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)

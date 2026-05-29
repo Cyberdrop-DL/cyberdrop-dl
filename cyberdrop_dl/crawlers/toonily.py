@@ -51,7 +51,7 @@ class ToonilyCrawler(Crawler):
 
         if scrape_item.type != FILE_HOST_PROFILE:
             series_title = self.create_title(series_name)
-            scrape_item.add_to_parent_title(series_title)
+            scrape_item.append_folder(series_title)
 
         scrape_item.setup_as_album(chapter_title)
         iso_date = css.json_ld(soup)["@graph"][0]["datePublished"]

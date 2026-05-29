@@ -179,7 +179,7 @@ class MotherlessCrawler(Crawler):
             scrape_item.parents.append(parent_url)
             title = self.create_title(parent_title, parent_id)
             scrape_item.setup_as_album(title, album_id=parent_id)
-            scrape_item.add_to_parent_title(f"{media_info.type.capitalize()}s")
+            scrape_item.append_folder(f"{media_info.type.capitalize()}s")
 
         return media_info
 
