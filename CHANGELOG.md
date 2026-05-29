@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switch to new downloads API (Bunkr)
 - Bunkr uses a new download URL format. All existing database entries are invalid
 - `--deep-scrape` no longer has any effect on Bunkr
+- Exclude dotfiles from empty files cleanup check
 
 ### Deprecated
 
