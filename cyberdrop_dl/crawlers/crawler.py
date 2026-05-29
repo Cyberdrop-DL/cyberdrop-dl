@@ -956,11 +956,19 @@ class API(HTTPMixin, Generic[_CrawlerT_generic]):
     def __post_init__(self): ...
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(crawler={self.crawler!r})"
+        return f"{type(self).__name__}(crawler={self.crawler.__name__!r})"
 
     @signature.copy(Crawler.request)
     def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]:  # pyright: ignore[reportPrivateUsage]
         return self.crawler.request(*args, **kwargs)
+
+    @property
+    def parse_url(self):
+        return self.crawler.parse_url
+
+    @property
+    def PRIMARY_URL(self) -> AbsoluteHttpURL:  # noqa: N802
+        return self.crawler.PRIMARY_URL
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
