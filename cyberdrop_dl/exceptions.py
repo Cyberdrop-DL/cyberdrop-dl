@@ -82,7 +82,15 @@ class InvalidContentTypeError(CDLBaseError):
         super().__init__(ui_failure, message=message, origin=origin)
 
 
-class NoExtensionError(CDLBaseError):
+class FileNameError(CDLBaseError): ...
+
+
+class DangerousExtensionError(FileNameError):
+    def __init__(self, filename: str) -> None:
+        super().__init__("Dangerous File Extension", message=filename)
+
+
+class NoExtensionError(FileNameError):
     def __init__(self, filename: str | None = None, *, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
         """This error will be thrown when no extension is given for a file."""
         ui_failure = "No File Extension"
@@ -97,6 +105,13 @@ class InvalidExtensionError(NoExtensionError):
         """This error will be thrown when no extension is given for a file."""
         super().__init__(filename=filename, origin=origin)
         self.ui_failure = "Invalid File Extension"
+
+
+class PathTraversalError(CDLBaseError):
+    def __init__(self, path: Path) -> None:
+        ui_failure = "Path Traversal"
+        msg = f"Download path '{path}' is outside destination download path"
+        super().__init__(ui_failure, message=msg)
 
 
 class PasswordProtectedError(CDLBaseError):

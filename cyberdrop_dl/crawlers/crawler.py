@@ -20,9 +20,16 @@ from typing_extensions import TypeVar, deprecated
 
 from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
+from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
-from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
+from cyberdrop_dl.exceptions import (
+    FileNameError,
+    MaxChildrenError,
+    NoExtensionError,
+    PathTraversalError,
+    ScrapeError,
+)
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import css, dates, error_handling_context, is_absolute_http_url, is_blob_or_svg, m3u8, parse_url
@@ -505,6 +512,10 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if frag:
             media_item.referer = media_item.referer.with_fragment(frag)
         media_item.headers.update(self._prepare_headers(scrape_item))
+        if not scrape_item.retry_path:
+            _check_path_traversal(self.manager.config.settings.files.download_folder, media_item.download_folder)
+
+        _check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
@@ -1043,3 +1054,20 @@ def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
         return True
 
     return False
+
+
+def _check_path_traversal(download_folder: Path, folder: Path) -> None:
+    parts = folder.parts
+    if "." in parts or ".." in parts:
+        raise PathTraversalError(folder)
+
+    if not folder.resolve().is_relative_to(download_folder):
+        raise PathTraversalError(folder)
+
+
+def _check_dangerous_filename(filename: str) -> None:
+    if filename.startswith("."):
+        raise FileNameError("Dot file", message=f"Dot files are restricted: {filename}")
+
+    if Path(filename).suffix in FileExt.DANGEROUS:
+        raise FileNameError("Dangerous File Extension", message=filename)
