@@ -94,7 +94,7 @@ class PatreonCrawler(Crawler):
 
         scrape_item.uploaded_at = date = self.parse_iso_date(post["published_at"])
         post_title = self.create_separate_post_title(post["title"], post["id"], date)
-        scrape_item.append_folder(post_title)
+        scrape_item.append_folders(post_title)
 
         self.create_task(self.write_metadata(scrape_item, f"post_{post['id']}", post))
         for media in self._parse_media(post, included):

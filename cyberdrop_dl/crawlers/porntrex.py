@@ -137,7 +137,7 @@ class PorntrexCrawler(Crawler):
             soup = await self.request_soup(albums_url)
 
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
-                new_scrape_item.append_folder("albums")
+                new_scrape_item.append_folders("albums")
                 self.create_task(self.run(new_scrape_item))
 
     async def _ajax_pagination(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901

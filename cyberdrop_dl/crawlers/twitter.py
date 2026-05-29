@@ -41,7 +41,7 @@ class TwitterCrawler(Crawler, is_debug=True):
         name = tweet["author"]["screen_name"]
         post_title = self.create_separate_post_title(None, tweet["id"], scrape_item.uploaded_at)
         scrape_item.setup_as_profile(self.create_title(f"@{name}"))
-        scrape_item.append_folder(post_title)
+        scrape_item.append_folders(post_title)
 
         await self.write_metadata(scrape_item, tweet["id"], tweet)
 

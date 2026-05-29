@@ -42,7 +42,7 @@ class WhypItCrawler(Crawler):
     async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
         collection = await self.api.collection(collection_id)
         scrape_item.setup_as_profile(self.create_title(collection.user))
-        scrape_item.append_folder(self.create_title(collection.title, collection_id))
+        scrape_item.append_folders(self.create_title(collection.title, collection_id))
         await self.write_metadata(scrape_item, f"collection {collection_id}", collection.metadata)
         async for tracks in self.api.collection_tracks(collection_id, collection.token):
             self._iter_tracks(scrape_item, tracks)

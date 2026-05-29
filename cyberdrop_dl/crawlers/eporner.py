@@ -116,7 +116,7 @@ class EpornerCrawler(Crawler):
             url = canonical_url / part
             async for soup in self.web_pager(url):
                 for _, new_scrape_item in self.iter_children(scrape_item, soup, selector):
-                    new_scrape_item.append_folder(name)
+                    new_scrape_item.append_folders(name)
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper

@@ -383,7 +383,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         scrape_item.setup_as_album(title, album_id=post.user_id)
         scrape_item.uploaded_at = post.timestamp
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
-        scrape_item.append_folder(post_title)
+        scrape_item.append_folders(post_title)
         self.__handle_post(scrape_item, post)
 
     async def _handle_discord_post(self, scrape_item: ScrapeItem, post: DiscordPost) -> None:
@@ -392,9 +392,9 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         channel_name = next(c.name for c in server.channels if c.id == post.channel_id)
         scrape_item.setup_as_album(title, album_id=server.id)
         scrape_item.uploaded_at = post.timestamp
-        scrape_item.append_folder(f"#{channel_name}")
+        scrape_item.append_folders(f"#{channel_name}")
         post_title = self.create_separate_post_title(None, post.id, post.timestamp)
-        scrape_item.append_folder(post_title)
+        scrape_item.append_folders(post_title)
         self.__handle_post(scrape_item, post)
 
     _handle_discord_post_task = auto_task_id(_handle_discord_post)

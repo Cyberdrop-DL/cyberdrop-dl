@@ -121,7 +121,7 @@ class BoxDotComCrawler(Crawler):
             link = get_canonical_url(shared_name, item.id)
             new_scrape_item = scrape_item.create_child(link)
             for part in path.parts:
-                new_scrape_item.append_folder(part)
+                new_scrape_item.append_folders(part)
             await self.file(new_scrape_item, shared_name, item)
             scrape_item.add_children()
 

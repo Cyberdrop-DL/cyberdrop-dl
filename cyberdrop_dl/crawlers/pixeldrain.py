@@ -219,7 +219,7 @@ class PixelDrainCrawler(Crawler):
                         continue
 
                     for part in node.path.split("/")[2:-1]:
-                        new_scrape_item.append_folder(part)
+                        new_scrape_item.append_folders(part)
 
                     self.create_task(self._file_task(new_scrape_item, node))
 

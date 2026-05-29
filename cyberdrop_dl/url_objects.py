@@ -249,7 +249,11 @@ class ScrapeItem:
     def __post_init__(self) -> None:
         self.password = self.url.query.get("password")
 
-    def append_folder(self, folder: str, /) -> None:
+    def append_folders(self, *folders: str) -> None:
+        for folder in folders:
+            self._append_folder(folder)
+
+    def _append_folder(self, folder: str, /) -> None:
         if not folder or self.retry_path:
             return
 
@@ -296,7 +300,7 @@ class ScrapeItem:
             self.album_id = album_id
         if self.type != type_:
             self._set_type(type_)
-        self.append_folder(title)
+        self.append_folders(title)
 
     def create_new(
         self,

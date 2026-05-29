@@ -373,7 +373,7 @@ async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
         for url in urls:
             item = ScrapeItem(url=url)
             if group_name:
-                item.append_folder(group_name)
+                item.append_folders(group_name)
                 item.part_of_album = True
             yield item
 

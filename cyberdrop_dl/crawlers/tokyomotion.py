@@ -120,7 +120,7 @@ class TokioMotionCrawler(Crawler):
         match scrape_item.url.parts[3:]:
             case ["favorite", "videos"]:
                 scrape_item.setup_as_album("favorite")
-                scrape_item.append_folder("videos")
+                scrape_item.append_folders("videos")
                 return await self.crawl_children(scrape_item, Selector.VIDEO)
 
             case ["videos"]:
@@ -129,7 +129,7 @@ class TokioMotionCrawler(Crawler):
 
             case ["favorite", "photos"]:
                 scrape_item.setup_as_album("favorite")
-                scrape_item.append_folder("photos")
+                scrape_item.append_folders("photos")
                 async for soup in self._web_pager(scrape_item.url):
                     self._iter_album_images(scrape_item, soup)
 

@@ -65,7 +65,7 @@ class OmegaScansCrawler(Crawler):
     async def chapter(self, scrape_item: ScrapeItem, series_slug: str, chapter_slug: str) -> None:
         chapter = await self.api.chapter(series_slug, chapter_slug)
         scrape_item.setup_as_album(self.create_title(chapter.series_title))
-        scrape_item.append_folder(chapter.name)
+        scrape_item.append_folders(chapter.name)
         scrape_item.uploaded_at = self.parse_iso_date(chapter.created_at)
         for img in chapter.images:
             self.create_task(self.direct_file(scrape_item, img))

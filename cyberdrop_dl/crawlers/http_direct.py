@@ -28,7 +28,7 @@ class DirectHttpFile(Crawler, is_generic=True):
         if ext not in FileExt.MEDIA:
             raise ValueError
 
-        scrape_item.append_folder("Loose Files")
+        scrape_item.append_folders("Loose Files")
         scrape_item.part_of_album = True
         await self.handle_file(
             scrape_item.url,

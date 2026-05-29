@@ -51,7 +51,7 @@ class EightMusesCrawler(Crawler):
             is_new_album = image["itemtype"] == "https://schema.org/ImageGallery"
             new_album_id = f"{scrape_item.album_id}/{tile_title.replace(' ', '-')}"
             new_scrape_item = scrape_item.create_child(tile_link)
-            new_scrape_item.append_folder(tile_title)
+            new_scrape_item.append_folders(tile_title)
             new_scrape_item.album_id = new_album_id
             if is_new_album:
                 await self.album(new_scrape_item)

@@ -102,7 +102,7 @@ class PCloudCrawler(Crawler):
             url = scrape_item.url.update_query(file_id=file._id)
             new_scrape_item = scrape_item.create_child(url)
             for parent in parents:
-                new_scrape_item.append_folder(parent)
+                new_scrape_item.append_folders(parent)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
 

@@ -76,7 +76,7 @@ class ArchiveOrgCrawler(Crawler):
             raise ScrapeError(401)
 
         for part in Path(file.path).parts[:-1]:
-            scrape_item.append_folder(part)
+            scrape_item.append_folders(part)
 
         scrape_item.uploaded_at = file.mtime
         filename, ext = self.get_filename_and_ext(file.name)
