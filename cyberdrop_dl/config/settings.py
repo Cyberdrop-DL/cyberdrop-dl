@@ -224,6 +224,15 @@ class MediaDurationLimits(SettingsGroup):
             return timedelta(seconds=0)
         return to_timedelta(input_date)
 
+    @property
+    def needs_ffmpeg(self) -> bool:
+        return bool(
+            self.minimum_video_duration
+            or self.maximum_video_duration
+            or self.minimum_audio_duration
+            or self.maximum_audio_duration
+        )
+
     @cached_property
     def ranges(self) -> MediaDurationRanges:
         return MediaDurationRanges(
@@ -320,6 +329,10 @@ class Sorting(SettingsGroup):
     sorted_image: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     sorted_other: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     sorted_video: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
+
+    @property
+    def needs_ffmpeg(self) -> bool:
+        return bool(self.sort_downloads and (self.sorted_audio or self.sorted_image or self.sorted_video))
 
     @field_validator("sort_incrementer_format", mode="after")
     @classmethod

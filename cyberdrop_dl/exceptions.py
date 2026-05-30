@@ -286,3 +286,6 @@ class ErrorLogMessage:
         ui_failure = create_error_msg(e_status) if e_status else "Unknown"
         log_msg = _format_error(ui_failure, e_message or str(e))
         return ErrorLogMessage(ui_failure, log_msg)
+
+
+class ConfigRuntimeErrorsGroup(ExceptionGroup): ...
