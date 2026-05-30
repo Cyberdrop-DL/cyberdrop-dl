@@ -7,7 +7,7 @@ from cyclopts import Parameter
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.exceptions import ConfigRuntimeErrorsGroup
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
 
@@ -135,4 +135,4 @@ def _check_ffmpeg(config: Config) -> None:
         errors.append(exc)
 
     if errors:
-        raise ConfigRuntimeErrorsGroup("Some config options are impossible to fulfill", errors)
+        raise CDLConfigRuntimeErrorsGroup("Some config options are impossible to fulfill", errors)

@@ -20,7 +20,7 @@ from rich.text import Text, TextType
 from typing_extensions import override
 
 from cyberdrop_dl import env
-from cyberdrop_dl.exceptions import ConfigRuntimeErrorsGroup
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
@@ -352,7 +352,7 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
         logger.info(f"Debug log file: {debug_log_file}")
         try:
             yield
-        except ConfigRuntimeErrorsGroup as e:
+        except CDLConfigRuntimeErrorsGroup as e:
             with _enter_context(_LOG_TO_CONSOLE, False):
                 logger.critical("Unrecoverable error", exc_info=e.with_traceback(None))
             raise

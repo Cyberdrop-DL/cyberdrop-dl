@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from cyberdrop_dl import tracebacks
 from cyberdrop_dl.cli import app
-from cyberdrop_dl.exceptions import ConfigRuntimeErrorsGroup
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -38,7 +38,7 @@ def run_cdl(args: Sequence[str] | None = None) -> int:
         try:
             app(args)
 
-        except ConfigRuntimeErrorsGroup as exc_group:
+        except CDLConfigRuntimeErrorsGroup as exc_group:
             tb = tracebacks.from_exception(exc_group, chain_traceback=False)
             app.console.print(_error_panel(tb, title="Invalid Config"))
         else:
