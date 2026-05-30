@@ -7,6 +7,7 @@ from cyclopts import Parameter
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.exceptions import ConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
 
@@ -27,6 +28,7 @@ async def _scrape(manager: Manager) -> None:
         level=manager.config.settings.runtime_options.effective_log_level,
     ):
         manager.log_config_settings()
+        _check_ffmpeg(manager.config)
         log_spacer()
         async with manager.database:
             log_spacer()
@@ -118,3 +120,19 @@ def download(
     manager = Manager(cli, appdata, config)
 
     _main(manager)
+
+
+def _check_ffmpeg(config: Config) -> None:
+    errors: list[Exception] = []
+    if config.settings.sorting.needs_ffmpeg:
+        exc = RuntimeError("Sorting media files requires 'ffmpeg' to be installed")
+        exc.add_note("Disable sorting or install ffmpeg")
+        errors.append(exc)
+
+    if config.settings.media_duration_limits.needs_ffmpeg:
+        exc = RuntimeError("Filtering files by duration requires 'ffmpeg' to be installed")
+        exc.add_note("Disable media duration limits or install ffmpeg")
+        errors.append(exc)
+
+    if errors:
+        raise ConfigRuntimeErrorsGroup("Some config options are impossible to fulfill", errors)

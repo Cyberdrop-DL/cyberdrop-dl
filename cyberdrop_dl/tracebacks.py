@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from rich.pretty import Node
+    from rich.traceback import Traceback
 
 _original_traverse = None
 
@@ -58,3 +59,9 @@ def install_exception_hook(*, show_locals: bool = False) -> None:
         max_frames=30,
         show_locals=show_locals,
     )
+
+
+def from_exception(exc: Exception, *, chain_traceback: bool = True) -> Traceback:
+    from rich.traceback import Traceback
+
+    return Traceback.from_exception(type(exc), exc, None if not chain_traceback else exc.__traceback__)
