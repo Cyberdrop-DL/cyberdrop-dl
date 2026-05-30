@@ -72,10 +72,7 @@ class DDosGuard:
     @classmethod
     def may_be_challenge(cls, resp: _Response) -> bool:
         server = resp.headers.get("server")
-        if not server or not server.casefold().startswith("ddos-guard"):
-            return False
-
-        return resp.status_code == 403
+        return bool(server and server.casefold().startswith("ddos-guard"))
 
     @classmethod
     def check(cls, soup: BeautifulSoup) -> bool:
@@ -107,14 +104,12 @@ class CloudFlareTurnstile(DDosGuard):
     @override
     def may_be_challenge(cls, resp: _Response) -> bool:
         server = resp.headers.get("server")
-        if not server or not server.casefold().startswith("cloudflare"):
-            return False
+        return bool(server and server.casefold().startswith("cloudflare"))
 
-        if resp.status_code not in (403, 503):
-            return False
-
-        mitigated = resp.headers.get("cf-mitigated")
-        return bool(mitigated and mitigated.casefold() == "challenge")
+    @classmethod
+    @override
+    def check(cls, soup: BeautifulSoup) -> bool:
+        return super().check(soup) and bool(soup.select_one("script[src*='challenges.cloudflare.com/turnstile/v']"))
 
 
 class Anubis(DDosGuard):
