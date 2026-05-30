@@ -62,15 +62,10 @@ class DDosGuard:
     TITLES = "Just a moment...", "DDoS-Guard"
     SELECTOR = ", ".join(
         (
-            "#cf-challenge-running",
             "#ddg-captcha",
-            ".ray_id",
-            ".attack-box",
-            "#cf-please-wait",
             "#challenge-spinner",
             "#trk_jschal_js",
             "#turnstile-wrapper",
-            ".lds-ring",
         )
     )
 
@@ -100,6 +95,8 @@ class CloudFlareTurnstile(DDosGuard):
         (
             "captchawrapper",
             "cf-turnstile",
+            "#cf-challenge-running",
+            "#cf-please-wait",
             "iframe[id^='cf-chl-']",
             "iframe script:-soup-contains('_cf_chl_opt')",
             "script:-soup-contains('Dont open Developer Tools')",
