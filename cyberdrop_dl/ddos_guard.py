@@ -38,16 +38,19 @@ async def check_resp(resp: _Response, /) -> None:
     if "html" not in resp.content_type:
         return
 
-    posibilities = [cls for cls in (DDosGuard, CloudFlareTurnstile, Anubis) if cls.may_be_challenge(resp)]
-    if not posibilities:
+    mitigations: list[type[DDosGuard]] = []
+    for cls in (DDosGuard, CloudFlareTurnstile, Anubis):
+        if not cls.may_be_challenge(resp):
+            continue
+        if cls._is_challenge(resp):
+            raise DDOSGuardError(f"{cls.__name__} anti-bot protection detected")
+        mitigations.append(cls)
+
+    if not mitigations:
         return
 
-    for protection in posibilities:
-        if protection._is_challenge(resp):  # pyright: ignore[reportPrivateUsage]
-            raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
-
     soup = _soup(await resp.text())
-    check_soup(soup, posibilities)
+    check_soup(soup, mitigations)
 
 
 def check_html(html: str) -> None:
@@ -80,7 +83,7 @@ class DDosGuard:
 
     @final
     @classmethod
-    def is_challenge(cls, resp: _Response) -> bool:
+    def is_confirmed_challenge(cls, resp: _Response) -> bool:
         return cls.may_be_challenge(resp) and cls._is_challenge(resp)
 
     @classmethod

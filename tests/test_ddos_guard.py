@@ -122,9 +122,9 @@ def test_may_by_challenge(
         ({"server": "ddos-guard", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, False),
     ],
 )
-def test_is_challenge(
+def test_is_confirmed_challenge(
     headers: dict[str, str], status_code: int, cls: type[ddos_guard.DDosGuard], *, expected: bool
 ) -> None:
 
     resp = DummyResponse(prepare_headers(headers), status_code)
-    assert cls.is_challenge(resp) is expected
+    assert cls.is_confirmed_challenge(resp) is expected
