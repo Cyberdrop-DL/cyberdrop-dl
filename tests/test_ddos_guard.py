@@ -85,7 +85,7 @@ class DummyResponse:
     [
         ({}, 403, ddos_guard.DDosGuard, False),
         ({"server": "ddos-guard"}, 403, ddos_guard.DDosGuard, True),
-        ({"server": "ddos-guard"}, 200, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 200, ddos_guard.DDosGuard, True),
         ({"server": "ddos-guard"}, 403, ddos_guard.Anubis, False),
         (
             {
@@ -98,7 +98,7 @@ class DummyResponse:
         ({"server": "ddos-guard"}, 403, ddos_guard.CloudFlareTurnstile, False),
         ({"server": "cloudflare", "cf-mitigated": "challenge"}, 403, ddos_guard.CloudFlareTurnstile, True),
         ({}, 403, ddos_guard.CloudFlareTurnstile, False),
-        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, False),
+        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, True),
     ],
 )
 def test_may_by_challenge(

@@ -42,6 +42,10 @@ async def check_resp(resp: _Response, /) -> None:
     if not posibilities:
         return
 
+    for protection in posibilities:
+        if protection.is_challenge(resp):
+            raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
+
     soup = _soup(await resp.text())
     check_soup(soup, posibilities)
 
@@ -75,6 +79,11 @@ class DDosGuard:
         return bool(server and server.casefold().startswith("ddos-guard"))
 
     @classmethod
+    def is_challenge(cls, resp: _Response) -> bool:
+        assert resp is not None
+        return False
+
+    @classmethod
     def check(cls, soup: BeautifulSoup) -> bool:
         if (
             (title := soup.select_one("title"))
@@ -105,6 +114,12 @@ class CloudFlareTurnstile(DDosGuard):
     def may_be_challenge(cls, resp: _Response) -> bool:
         server = resp.headers.get("server")
         return bool(server and server.casefold().startswith("cloudflare"))
+
+    @classmethod
+    @override
+    def is_challenge(cls, resp: _Response) -> bool:
+        mitigated = resp.headers.get("cf-mitigated")
+        return bool(mitigated and mitigated.casefold() == "challenge")
 
     @classmethod
     @override
