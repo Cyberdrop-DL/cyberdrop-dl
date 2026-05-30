@@ -39,7 +39,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.12.0
+List of sites supported by cyberdrop-dl-patched as of version 9.13.0
 
 ### 1fichier
 
@@ -306,20 +306,21 @@ ex: To only download categories from a date range: ,
 
 - Album:
   - `/a/<album_id>`
-- Direct Links:
 - File:
-  - `/<slug>`
   - `/d/<slug>`
   - `/f/<slug>`
+  - `/i/<slug>`
+- Stream redirect:
+  - `/<slug>`
 - Video:
   - `/v/<slug>`
 
 
-### Bunkr-Albums.io
+### Bunkr-Albums
 
-**Primary URL**: [https://bunkr-albums.io](https://bunkr-albums.io)
+**Primary URL**: [https://balbums.st](https://balbums.st)
 
-**Supported Domains**: `bunkr-albums.io`
+**Supported Domains**: `balbums.st`, `bunkr-albums.io`
 
 **Supported Paths**:
 
