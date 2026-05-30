@@ -1,3 +1,5 @@
+import dataclasses
+
 import pytest
 from bs4 import BeautifulSoup
 
@@ -63,3 +65,34 @@ async def test_solve_anubis_challenge() -> None:
 async def test_ddos_response_should_raise_ddos_guard_error() -> None:
     with pytest.raises(DDOSGuardError):
         ddos_guard.check_html(anubis_html)
+
+
+@dataclasses.dataclass(slots=True)
+class DummyResponse:
+    headers: dict[str, str] = dataclasses.field(default_factory=dict)
+    status_code: int = 403
+    _text: str = ""
+    content_type: str = "html"
+
+    async def text(self) -> str:
+        return self._text
+
+
+@pytest.mark.parametrize(
+    ("headers", "status_code", "cls", "expected"),
+    [
+        ({}, 403, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 403, ddos_guard.DDosGuard, True),
+        ({"server": "ddos-guard"}, 200, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 403, ddos_guard.Anubis, True),
+        ({"server": "ddos-guard"}, 403, ddos_guard.CloudFlareTurnstile, False),
+        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 403, ddos_guard.CloudFlareTurnstile, True),
+        ({}, 403, ddos_guard.CloudFlareTurnstile, False),
+        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, False),
+    ],
+)
+def test_may_by_challenge(
+    headers: dict[str, str], status_code: int, cls: type[ddos_guard.DDosGuard], *, expected: bool
+) -> None:
+    resp = DummyResponse(headers, status_code)
+    assert cls.may_be_challenge(resp) is expected
