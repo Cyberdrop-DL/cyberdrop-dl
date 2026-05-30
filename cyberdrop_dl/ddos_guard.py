@@ -6,33 +6,51 @@ import hashlib
 import json
 import os
 import sys
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import yarl
 from bs4 import BeautifulSoup
+from typing_extensions import override
 
 from cyberdrop_dl.exceptions import DDOSGuardError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
 
 
 class _Response(Protocol):
     @property
     def content_type(self) -> str: ...
+    @property
+    def headers(self) -> Mapping[str, str]: ...
+    def status_code(self) -> int: ...
     async def text(self) -> str: ...
+
+
+def _soup(html: str) -> BeautifulSoup:
+    return BeautifulSoup(html, "html.parser")
 
 
 async def check_resp(resp: _Response, /) -> None:
     if "html" not in resp.content_type:
-        return None
+        return
 
-    return check_html(await resp.text())
+    posibilities = [cls for cls in {DDosGuard, CloudFlareTurnstile, Anubis} if cls.may_be_challenge(resp)]
+    if not posibilities:
+        return
+
+    soup = _soup(await resp.text())
+    check_soup(soup, posibilities)
 
 
 def check_html(html: str) -> None:
-    check_soup(BeautifulSoup(html, "html.parser"))
+    check_soup(_soup(html))
 
 
-def check_soup(soup: BeautifulSoup) -> None:
-    for protection in (DDosGuard, CloudFlareTurnstile, Anubis):
+def check_soup(soup: BeautifulSoup, /, posibilities: Iterable[type[DDosGuard]] | None = None) -> None:
+    if posibilities is None:
+        posibilities = (DDosGuard, CloudFlareTurnstile, Anubis)
+    for protection in posibilities:
         if protection.check(soup):
             raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
 
@@ -42,6 +60,7 @@ class DDosGuard:
     SELECTOR = ", ".join(
         (
             "#cf-challenge-running",
+            "#ddg-captcha",
             ".ray_id",
             ".attack-box",
             "#cf-please-wait",
@@ -51,6 +70,14 @@ class DDosGuard:
             ".lds-ring",
         )
     )
+
+    @classmethod
+    def may_be_challenge(cls, resp: _Response) -> bool:
+        server = resp.headers.get("server")
+        if not server or not server.casefold().startswith("ddos-guard"):
+            return False
+
+        return resp.status_code == 403
 
     @classmethod
     def check(cls, soup: BeautifulSoup) -> bool:
@@ -70,10 +97,24 @@ class CloudFlareTurnstile(DDosGuard):
         (
             "captchawrapper",
             "cf-turnstile",
-            "script[src*='challenges.cloudflare.com/turnstile']",
+            "iframe[id^='cf-chl-']",
+            "iframe script:-soup-contains('_cf_chl_opt')",
             "script:-soup-contains('Dont open Developer Tools')",
         )
     )
+
+    @classmethod
+    @override
+    def may_be_challenge(cls, resp: _Response) -> bool:
+        server = resp.headers.get("server")
+        if not server or not server.casefold().startswith("cloudflare"):
+            return False
+
+        if resp.status_code not in (403, 503):
+            return False
+
+        mitigated = resp.headers.get("cf-mitigated")
+        return bool(mitigated and mitigated.casefold() == "challenge")
 
 
 class Anubis(DDosGuard):
@@ -85,6 +126,11 @@ class Anubis(DDosGuard):
             "p:-soup-contains-own(the administrator of this website has set up Anubis to protect the server against the scourge of AI)",
         ),
     )
+
+    @classmethod
+    @override
+    def may_be_challenge(cls, resp: _Response) -> bool:
+        return True
 
     @classmethod
     def parse_challenge(cls, soup: BeautifulSoup) -> _AnubisChallenge | None:
