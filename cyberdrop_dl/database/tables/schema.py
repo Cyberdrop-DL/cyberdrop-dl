@@ -71,14 +71,14 @@ class SchemaVersionTable:
         await self.db_conn.commit()
 
     async def create(self) -> None:
-        logger.info(f"Expected database schema version: {CURRENT_APP_SCHEMA_VERSION!s}")
+        logger.info(f"Expected database schema: {CURRENT_APP_SCHEMA_VERSION!s}")
         version = await self.get_version()
-        logger.info(f"Database reports installed version: {version!s}")
+        logger.info(f"Current database schema: {version!s}")
         # TODO: on v10, raise SystemExit if db version is None or older than 8.0.0
         if version is not None and version >= CURRENT_APP_SCHEMA_VERSION:
             self._up_to_date = True
 
     async def update(self) -> None:
-        logger.info(f"Updating database version to {CURRENT_APP_SCHEMA_VERSION!s}")
         await self.__update_schema_version()
+        logger.info(f"Updated database schema to {CURRENT_APP_SCHEMA_VERSION!s}")
         self._up_to_date = True

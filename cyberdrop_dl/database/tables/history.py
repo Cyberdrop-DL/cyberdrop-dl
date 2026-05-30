@@ -40,6 +40,7 @@ class HistoryTable:
         await self.db_conn.commit()
 
     async def apply_updates(self) -> None:
+        logger.info("Applying database updates. This could take a while...")
         await self.fix_primary_keys()
         await self.add_columns_media()
         await apply_fixes(self.db_conn)
@@ -354,7 +355,7 @@ def _timed_update(name: str) -> Generator[None]:
         yield
     finally:
         took = time.monotonic() - start
-        logger.info(f"Finished {name} update after {took:0.2f} seconds")
+        logger.info(f"Finished update of {name}. Took: {took:0.2f} seconds")
 
 
 def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:
