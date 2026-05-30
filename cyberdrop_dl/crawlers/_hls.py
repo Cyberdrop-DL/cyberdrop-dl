@@ -3,11 +3,14 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
 
+from cyberdrop_dl import ffmpeg
+from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.utils import m3u8
 
 if TYPE_CHECKING:
@@ -18,6 +21,16 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 logger = logging.getLogger(__name__)
+
+
+def check_ffmpeg_is_installed() -> None:
+    if ffmpeg.is_installed():
+        return
+    msg = "ffmpeg is not installed and it is required for HLS downloads"
+    if os.name == "nt":
+        msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
+
+    raise DownloadError("FFmpeg Not Installed", msg)
 
 
 class HLSMixin(ABC):
@@ -80,6 +93,7 @@ class HLSMixin(ABC):
         headers: Mapping[str, str] | None = None,
         media_type: Literal["video", "audio", "subtitle"] | None = None,
     ) -> m3u8.M3U8:
+        check_ffmpeg_is_installed()
         content = await self.request_text(url, headers=headers)
         return m3u8.M3U8(content, url.parent, media_type)
 
