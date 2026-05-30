@@ -38,7 +38,7 @@ async def check_resp(resp: _Response, /) -> None:
     if "html" not in resp.content_type:
         return
 
-    posibilities = [cls for cls in {DDosGuard, CloudFlareTurnstile, Anubis} if cls.may_be_challenge(resp)]
+    posibilities = [cls for cls in (DDosGuard, CloudFlareTurnstile, Anubis) if cls.may_be_challenge(resp)]
     if not posibilities:
         return
 
