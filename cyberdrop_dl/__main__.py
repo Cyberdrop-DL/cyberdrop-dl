@@ -17,7 +17,7 @@ tracebacks.install_exception_hook()
 
 
 def _error_panel(message: RenderableType, title: str = "Error") -> Panel:
-    # Similar to the default cyclopts panel
+    # Based on the default cyclopts panel
     from rich import box
     from rich.panel import Panel
 
