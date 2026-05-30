@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Hard fail if any config option requires `ffmpeg` and `ffmpeg` is not installed
+- Hard fail if any config option requires `ffmpeg` but `ffmpeg` is not installed
 
 ### Deprecated
 
