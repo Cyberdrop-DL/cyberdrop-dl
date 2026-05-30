@@ -5,8 +5,10 @@ import time
 import pytest
 from cyclopts.exceptions import UnknownOptionError
 
+import cyberdrop_dl.cli.download
 from cyberdrop_dl.config import Config, settings
 from cyberdrop_dl.config.merge import merge_dicts
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 
 
 def test_config_equality() -> None:
@@ -148,3 +150,21 @@ class TestRuntimeLogsConfig:
             config = self.parse(a, b)
             assert config.effective_log_level == a
             assert config.effective_console_log_level == a
+
+
+def test_default_config_does_not_need_ffmpeg() -> None:
+    cyberdrop_dl.cli.download._check_ffmpeg(Config())
+
+
+def test_media_durations_need_ffmpeg() -> None:
+    config = Config.parse_args(["--maximum-video-duration", "20 seconds"])
+    duration = config.settings.media_duration_limits.maximum_video_duration
+    assert duration
+    assert duration.total_seconds() == 20
+    assert config.settings.media_duration_limits.needs_ffmpeg
+    with pytest.raises(CDLConfigRuntimeErrorsGroup) as exc:
+        cyberdrop_dl.cli.download._check_ffmpeg(config)
+
+    assert len(exc.value.exceptions) == 1
+    assert type(exc.value.exceptions[0]) is RuntimeError
+    assert str(exc.value.exceptions[0]) == "Filtering files by duration requires 'ffmpeg' to be installed"

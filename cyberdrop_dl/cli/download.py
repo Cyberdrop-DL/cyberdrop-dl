@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 async def _scrape(manager: Manager) -> None:
-    from cyberdrop_dl import webhook
+    from cyberdrop_dl import ffmpeg, webhook
     from cyberdrop_dl.scrape_mapper import ScrapeMapper
     from cyberdrop_dl.updates import check_latest_pypi
     from cyberdrop_dl.utils import apprise
@@ -28,7 +28,9 @@ async def _scrape(manager: Manager) -> None:
         level=manager.config.settings.runtime_options.effective_log_level,
     ):
         manager.log_config_settings()
-        _check_ffmpeg(manager.config)
+        if not ffmpeg.is_installed():
+            _check_ffmpeg(manager.config)
+
         log_spacer()
         async with manager.database:
             log_spacer()
