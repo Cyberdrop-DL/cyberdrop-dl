@@ -107,3 +107,24 @@ def test_may_by_challenge(
 
     resp = DummyResponse(prepare_headers(headers), status_code)
     assert cls.may_be_challenge(resp) is expected
+
+
+@pytest.mark.parametrize(
+    ("headers", "status_code", "cls", "expected"),
+    [
+        ({}, 403, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 403, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 200, ddos_guard.DDosGuard, False),
+        ({"server": "ddos-guard"}, 403, ddos_guard.Anubis, False),
+        ({"server": "ddos-guard"}, 403, ddos_guard.CloudFlareTurnstile, False),
+        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 403, ddos_guard.CloudFlareTurnstile, True),
+        ({"server": "cloudflare", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, True),
+        ({"server": "ddos-guard", "cf-mitigated": "challenge"}, 200, ddos_guard.CloudFlareTurnstile, False),
+    ],
+)
+def test_is_challenge(
+    headers: dict[str, str], status_code: int, cls: type[ddos_guard.DDosGuard], *, expected: bool
+) -> None:
+
+    resp = DummyResponse(prepare_headers(headers), status_code)
+    assert cls.is_challenge(resp) is expected

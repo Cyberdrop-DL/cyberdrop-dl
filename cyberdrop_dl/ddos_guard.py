@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import sys
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, final
 
 import yarl
 from bs4 import BeautifulSoup
@@ -43,7 +43,7 @@ async def check_resp(resp: _Response, /) -> None:
         return
 
     for protection in posibilities:
-        if protection.is_challenge(resp):
+        if protection._is_challenge(resp):  # pyright: ignore[reportPrivateUsage]
             raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
 
     soup = _soup(await resp.text())
@@ -78,8 +78,13 @@ class DDosGuard:
         server = resp.headers.get("server")
         return bool(server and server.casefold().startswith("ddos-guard"))
 
+    @final
     @classmethod
     def is_challenge(cls, resp: _Response) -> bool:
+        return cls.may_be_challenge(resp) and cls._is_challenge(resp)
+
+    @classmethod
+    def _is_challenge(cls, resp: _Response) -> bool:
         assert resp is not None
         return False
 
@@ -117,7 +122,7 @@ class CloudFlareTurnstile(DDosGuard):
 
     @classmethod
     @override
-    def is_challenge(cls, resp: _Response) -> bool:
+    def _is_challenge(cls, resp: _Response) -> bool:
         mitigated = resp.headers.get("cf-mitigated")
         return bool(mitigated and mitigated.casefold() == "challenge")
 
