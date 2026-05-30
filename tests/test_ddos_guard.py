@@ -2,8 +2,10 @@ import dataclasses
 
 import pytest
 from bs4 import BeautifulSoup
+from multidict import CIMultiDict
 
 from cyberdrop_dl import ddos_guard
+from cyberdrop_dl.clients.request import prepare_headers
 from cyberdrop_dl.exceptions import DDOSGuardError
 
 anubis_html = """
@@ -69,7 +71,7 @@ async def test_ddos_response_should_raise_ddos_guard_error() -> None:
 
 @dataclasses.dataclass(slots=True)
 class DummyResponse:
-    headers: dict[str, str] = dataclasses.field(default_factory=dict)
+    headers: CIMultiDict[str]
     status_code: int = 403
     _text: str = ""
     content_type: str = "html"
@@ -84,7 +86,15 @@ class DummyResponse:
         ({}, 403, ddos_guard.DDosGuard, False),
         ({"server": "ddos-guard"}, 403, ddos_guard.DDosGuard, True),
         ({"server": "ddos-guard"}, 200, ddos_guard.DDosGuard, False),
-        ({"server": "ddos-guard"}, 403, ddos_guard.Anubis, True),
+        ({"server": "ddos-guard"}, 403, ddos_guard.Anubis, False),
+        (
+            {
+                "set-cookie": "techaro.lol-anubis-auth=; Path=/; Expires=Sat, 30 May 2026 11:53:24 GMT; Max-Age=0; Secure; SameSite=None"
+            },
+            200,
+            ddos_guard.Anubis,
+            True,
+        ),
         ({"server": "ddos-guard"}, 403, ddos_guard.CloudFlareTurnstile, False),
         ({"server": "cloudflare", "cf-mitigated": "challenge"}, 403, ddos_guard.CloudFlareTurnstile, True),
         ({}, 403, ddos_guard.CloudFlareTurnstile, False),
@@ -94,5 +104,6 @@ class DummyResponse:
 def test_may_by_challenge(
     headers: dict[str, str], status_code: int, cls: type[ddos_guard.DDosGuard], *, expected: bool
 ) -> None:
-    resp = DummyResponse(headers, status_code)
+
+    resp = DummyResponse(prepare_headers(headers), status_code)
     assert cls.may_be_challenge(resp) is expected

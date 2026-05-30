@@ -15,14 +15,16 @@ from typing_extensions import override
 from cyberdrop_dl.exceptions import DDOSGuardError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable
+
+    from multidict import MultiDict
 
 
 class _Response(Protocol):
     @property
     def content_type(self) -> str: ...
     @property
-    def headers(self) -> Mapping[str, str]: ...
+    def headers(self) -> MultiDict[str]: ...
     @property
     def status_code(self) -> int: ...
     async def text(self) -> str: ...
@@ -131,7 +133,10 @@ class Anubis(DDosGuard):
     @classmethod
     @override
     def may_be_challenge(cls, resp: _Response) -> bool:
-        return True
+        for cookie in resp.headers.getall("Set-Cookie", ()):
+            if "-anubis-cookie-verification" in cookie or "-anubis-auth" in cookie:
+                return True
+        return False
 
     @classmethod
     def parse_challenge(cls, soup: BeautifulSoup) -> _AnubisChallenge | None:
