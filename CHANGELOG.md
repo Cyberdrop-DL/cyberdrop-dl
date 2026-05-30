@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Some false positive DDos-Guard detections
+- Some false positive DDoS-Guard detections
 
 ### Security
 
