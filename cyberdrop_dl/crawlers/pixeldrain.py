@@ -15,6 +15,8 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import basic_auth, error_handling_wrapper, type_adapter
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -278,11 +280,16 @@ class PixelDrainCrawler(Crawler):
     _file_task = auto_task_id(error_handling_wrapper(_file))
 
 
-class PixelDrainAPI(API[PixelDrainCrawler]):
+class PixelDrainAPI(API):
     def __post_init__(self) -> None:
-        self.headers: dict[str, str] = {}
         if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
-            self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+            self.headers = {"Authorization": basic_auth("Cyberdrop-DL", api_key)}
+        else:
+            self.headers: Mapping[str, str] = {}
+
+    @property
+    def logged_in(self) -> bool:
+        return bool(self.headers)
 
     async def file(self, file_id: str) -> File:
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id / "info"
