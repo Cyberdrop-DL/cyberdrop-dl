@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import dataclasses
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from pydantic import BaseModel
+from typing_extensions import override
 
 from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import basic_auth, error_handling_wrapper
+from cyberdrop_dl.utils import basic_auth, error_handling_wrapper, type_adapter
 
 if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -24,33 +25,41 @@ _PIXELDRAIN_PROXY = AbsoluteHttpURL(env.PIXELDRAIN_PROXY) if env.PIXELDRAIN_PROX
 _CURRENT_ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_ORIGIN")
 
 
-class File(BaseModel):
+@dataclasses.dataclass(slots=True)
+class File:
     id: str
     name: str
     date_upload: str
     mime_type: str
     hash_sha256: str
+    url: AbsoluteHttpURL = dataclasses.field(init=False)
 
-    @property
-    def download_url(self) -> AbsoluteHttpURL:
-        return (_PRIMARY_URL / "api/file" / self.id).with_query("download")
+    def __post_init__(self) -> None:
+        self.url = (_PRIMARY_URL / "api/file" / self.id).with_query("download")
 
 
-class Folder(BaseModel):
+@dataclasses.dataclass(slots=True)
+class Folder:
     id: str
     title: str
     files: list[File]
 
 
-class Node(BaseModel):
-    id: str | None = None
+@dataclasses.dataclass(slots=True)
+class Node:
     type: Literal["file", "dir"]
     path: str
     name: str
     modified: str
     sha256_sum: str
+    id: str | None = None
     file_type: str = ""
+    url: AbsoluteHttpURL = dataclasses.field(init=False)
 
+    def __post_init__(self) -> None:
+        self.url = (_PRIMARY_URL / "api/filesystem" / self.path.removeprefix("/")).with_query("attach")
+
+    # Properties so we can process a Node as a normal File
     @property
     def mime_type(self) -> str:
         return self.file_type
@@ -63,12 +72,9 @@ class Node(BaseModel):
     def hash_sha256(self) -> str:
         return self.sha256_sum
 
-    @property
-    def download_url(self) -> AbsoluteHttpURL:
-        return (_PRIMARY_URL / "api/filesystem" / self.path.removeprefix("/")).with_query("attach")
 
-
-class FileSystem(BaseModel):
+@dataclasses.dataclass(slots=True)
+class FileSystem:
     children: list[Node]
     base_index: int
     path: list[Node]
@@ -111,14 +117,17 @@ class PixelDrainCrawler(Crawler):
         self.api: PixelDrainAPI = PixelDrainAPI(self)
 
     @classmethod
+    @override
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
         if not json_resp["success"]:
             msg = f"{json_resp['message']} ({json_resp['value']})"
             raise ScrapeError(resp.status, msg)
 
+    @override
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return super()._prepare_headers(scrape_item) | self.api.headers
 
+    @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         _CURRENT_ORIGIN.set(scrape_item.url.origin())
         if scrape_item.url.host in _BYPASS_HOSTS:
@@ -135,6 +144,7 @@ class PixelDrainCrawler(Crawler):
                 raise ValueError
 
     @classmethod
+    @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         match url.parts[1:]:
             case ["api", "file", id_]:
@@ -165,7 +175,7 @@ class PixelDrainCrawler(Crawler):
         assert scrape_item.album_id
         results = await self.get_album_results(scrape_item.album_id)
         for file in files:
-            if self.check_album_results(file.download_url, results):
+            if self.check_album_results(file.url, results):
                 continue
 
             url = _CURRENT_ORIGIN.get() / "u" / file.id
@@ -206,7 +216,7 @@ class PixelDrainCrawler(Crawler):
                 new_scrape_item = scrape_item.create_child(url)
 
                 if node.type == "file":
-                    if self.check_album_results(node.download_url, results):
+                    if self.check_album_results(node.url, results):
                         continue
 
                     subfolders = node.path.split("/")[2:-1]
@@ -244,16 +254,16 @@ class PixelDrainCrawler(Crawler):
     async def _file(
         self, scrape_item: ScrapeItem, file: File | Node, debrid_link: AbsoluteHttpURL | None = None
     ) -> None:
-        link = file.download_url.with_host(_CURRENT_ORIGIN.get().host)
+        src = file.url.with_host(_CURRENT_ORIGIN.get().host)
         if "text/plain" in file.mime_type:
             return await self.text(scrape_item, file)
 
-        if await self.check_complete_by_hash(link, "sha256", file.hash_sha256):
+        if await self.check_complete_by_hash(src, "sha256", file.hash_sha256):
             return None
 
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
-        await self.handle_file(link, scrape_item, file.name, ext, debrid_link=debrid_link, custom_filename=filename)
+        await self.handle_file(src, scrape_item, file.name, ext, debrid_link=debrid_link, custom_filename=filename)
 
     @error_handling_wrapper
     async def text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
@@ -282,7 +292,7 @@ class PixelDrainAPI(API[PixelDrainCrawler]):
     async def file(self, file_id: str) -> File:
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id / "info"
         resp = await self._request(api_url)
-        return File.model_validate_json(resp)
+        return type_adapter(File).validate_json(resp)
 
     async def text(self, file_id: str) -> str:
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id
@@ -291,12 +301,12 @@ class PixelDrainAPI(API[PixelDrainCrawler]):
     async def list(self, list_id: str) -> Folder:
         api_url = _CURRENT_ORIGIN.get() / "api/list" / list_id
         resp = await self._request(api_url)
-        return Folder.model_validate_json(resp)
+        return type_adapter(Folder).validate_json(resp)
 
     async def filesystem(self, path: str) -> FileSystem:
         api_url = (_CURRENT_ORIGIN.get() / "api/filesystem" / path.removeprefix("/")).with_query("stat")
         resp = await self._request(api_url)
-        return FileSystem.model_validate_json(resp)
+        return type_adapter(FileSystem).validate_json(resp)
 
     async def _request(self, api_url: AbsoluteHttpURL) -> str:
         return await self.request_text(api_url, headers=self.headers)

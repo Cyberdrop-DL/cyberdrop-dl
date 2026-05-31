@@ -41,7 +41,7 @@ def deserialize(cls: type[_DataClassT], data: Mapping[str, Any], /, **overrides:
     return cls(**data)
 
 
-def type_adapter(cls: type[_DataClassT]) -> TypeAdapter[type[_DataClassT]]:
+def type_adapter(cls: type[_DataClassT]) -> TypeAdapter[_DataClassT]:
     """Get a type adapter for this class.
 
     Type adapters are cached. Multiple calls return the same adapter"""
