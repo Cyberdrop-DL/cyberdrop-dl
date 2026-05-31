@@ -103,7 +103,9 @@ class Downloader:
         except AttributeError:
             pass
         else:
-            assert sem._waiters is None, "Can't change download limits. Downloader is already in use"
+            if not (sem._waiters is None and sem._value == self._download_slots):
+                raise RuntimeError("Can't change download limits. Downloader is already in use")
+
         upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
         self._download_slots = min(new_limit or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._download_slots)
