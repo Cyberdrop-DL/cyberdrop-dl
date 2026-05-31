@@ -74,19 +74,39 @@ class Downloader:
     manager: Manager
     domain: str
     log_prefix: str = "Download"
-    download_slots: int | None = None
     use_server_lock: bool = False
 
-    waiting_items: int = dataclasses.field(init=False, default=0)
-
+    _download_slots: int | None = None
+    _waiting_items: int = dataclasses.field(init=False, default=0)
     _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
     _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
     _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
-    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(init=False, default_factory=aio.WeakAsyncLocks)
+    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(
+        init=False, default_factory=aio.WeakAsyncLocks, repr=False
+    )
 
     def __post_init__(self) -> None:
+        self.download_slots = self._download_slots
+
+    @property
+    def waiting_items(self) -> int:
+        return self._waiting_items
+
+    @property
+    def download_slots(self) -> int | None:
+        return self._download_slots
+
+    @download_slots.setter
+    def download_slots(self, new_limit: int | None) -> None:
+        try:
+            sem = self._semaphore
+        except AttributeError:
+            pass
+        else:
+            assert sem._waiters is None, "Can't change download limits. Downloader is already in use"
         upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
-        self._semaphore = asyncio.Semaphore(min(self.download_slots or upper_limit, upper_limit))
+        self._download_slots = min(new_limit or upper_limit, upper_limit)
+        self._semaphore = asyncio.Semaphore(self._download_slots)
 
     @property
     def client(self) -> DownloadClient:
@@ -141,7 +161,7 @@ class Downloader:
             yield
             return
 
-        self.waiting_items += 1
+        self._waiting_items += 1
 
         server = (media_item.debrid_link or media_item.url).host
         async with (
@@ -150,7 +170,7 @@ class Downloader:
             self.manager.http_client.global_download_limiter,
         ):
             self._processed_items.add(media_item.db_path)
-            self.waiting_items -= 1
+            self._waiting_items -= 1
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
