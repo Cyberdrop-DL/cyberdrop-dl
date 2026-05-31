@@ -222,7 +222,7 @@ class AppData:
             return cls(
                 path=path,
                 cache=cache,
-                congifs=configs,
+                configs=configs,
                 cookies=path / "Cookies",
                 config_file=configs / "Default" / "settings.yaml",
                 cache_file=cache / "cache.yaml",
