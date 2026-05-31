@@ -108,9 +108,7 @@ class PixelDrainCrawler(Crawler):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
 
     def __post_init__(self) -> None:
-        self._headers: dict[str, str] = {}
-        if api_key := self.manager.config.auth.pixeldrain.api_key:
-            self._headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+        self.api: PixelDrainAPI = PixelDrainAPI(self)
 
     @classmethod
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
@@ -119,10 +117,7 @@ class PixelDrainCrawler(Crawler):
             raise ScrapeError(resp.status, msg)
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
-        return super()._prepare_headers(scrape_item) | self._headers
-
-    async def _api_request(self, api_url: AbsoluteHttpURL) -> str:
-        return await self.request_text(api_url, headers=self._headers)
+        return super()._prepare_headers(scrape_item) | self.api.headers
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         _CURRENT_ORIGIN.set(scrape_item.url.origin())
@@ -153,14 +148,12 @@ class PixelDrainCrawler(Crawler):
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, list_id: str) -> None:
-        origin = scrape_item.url.origin()
-        api_url = origin / "api/list" / list_id
-        folder = Folder.model_validate_json(await self._api_request(api_url))
+        folder = await self.api.list(list_id)
         title = self.create_title(folder.title, list_id)
         scrape_item.setup_as_album(title, album_id=list_id)
 
         try:
-            files = self._filter_files(folder.files, scrape_item.url.fragment)
+            files = _filter_files(folder.files, scrape_item.url.fragment)
         except (ValueError, IndexError):
             msg = f"Unable to parse item index in {scrape_item.url}. Falling back to downloading the entire folder"
             self.log.warning(msg)
@@ -171,34 +164,19 @@ class PixelDrainCrawler(Crawler):
     async def _files(self, scrape_item: ScrapeItem, files: list[File]) -> None:
         assert scrape_item.album_id
         results = await self.get_album_results(scrape_item.album_id)
-        origin = scrape_item.url.origin()
         for file in files:
             if self.check_album_results(file.download_url, results):
                 continue
 
-            url = origin / "u" / file.id
+            url = _CURRENT_ORIGIN.get() / "u" / file.id
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
 
-    def _filter_files(self, files: list[File], fragment: str) -> list[File]:
-        if fragment.startswith(prefix := "item="):
-            item_idx = int(fragment.removeprefix(prefix))
-            return [files[item_idx]]
-        return files
-
     @error_handling_wrapper
-    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:  # noqa: C901
+    async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:
         # https://github.com/Fornaxian/pixeldrain_web/blob/8e5ecfc5ce44c0b2b4fafdf9e8201dfc98395e88/svelte/src/filesystem/FilesystemAPI.ts
-
-        origin = scrape_item.url.origin()
-
-        async def request_fs(path: str) -> FileSystem:
-            api_url = (origin / "api/filesystem" / path.removeprefix("/")).with_query("stat")
-            content = await self._api_request(api_url)
-            return FileSystem.model_validate_json(content)
-
-        fs = await request_fs(path)
+        fs = await self.api.filesystem(path)
         base_node = fs.path[fs.base_index]
         root = fs.path[0]
         assert root.id
@@ -208,89 +186,88 @@ class PixelDrainCrawler(Crawler):
         if base_node.type == "file":
             fs.children = [base_node]
 
-        results = await self.get_album_results(root.id)
+        await self._filesystem(scrape_item, fs, root.id)
 
-        async def walk_task(new_scrape_item: ScrapeItem, path: str) -> None:
-            try:
-                fs = await request_fs(path)
+    async def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, root_id: str) -> None:
+        results = await self.get_album_results(root_id)
+
+        async def subfolder(new_item: ScrapeItem, path: str) -> None:
+            with self.catch_errors(new_item):
+                fs = await self.api.filesystem(path)
                 scrape_item.add_children(0)
-                await walk_filesystem(fs)
-            except Exception as e:  # noqa: BLE001
-                self.raise_exc(new_scrape_item, e)
+                walk_filesystem(fs)
 
-        async def walk_filesystem(fs: FileSystem) -> None:
+        def walk_filesystem(fs: FileSystem) -> None:
             for node in fs.children:
                 if node.name == ".search_index.gz":
                     continue
 
-                url = origin / "d" / node.path.removeprefix("/")
+                url = _CURRENT_ORIGIN.get() / "d" / node.path.removeprefix("/")
                 new_scrape_item = scrape_item.create_child(url)
 
                 if node.type == "file":
                     if self.check_album_results(node.download_url, results):
                         continue
 
-                    for part in node.path.split("/")[2:-1]:
-                        new_scrape_item.append_folders(part)
-
+                    subfolders = node.path.split("/")[2:-1]
+                    new_scrape_item.append_folders(*subfolders)
                     self.create_task(self._file_task(new_scrape_item, node))
 
                 elif node.type == "dir":
-                    self.create_task(walk_task(new_scrape_item, node.path))
+                    self.create_task(subfolder(new_scrape_item, node.path))
 
                 else:
                     self.raise_exc(new_scrape_item, f"Unknown node type: {node.type}")
 
                 scrape_item.add_children()
 
-        await walk_filesystem(fs)
+        walk_filesystem(fs)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         debrid_link = None
         if scrape_item.url.host in _BYPASS_HOSTS:
             debrid_link = scrape_item.url
+            _CURRENT_ORIGIN.set(_PRIMARY_URL)
             scrape_item.url = _PRIMARY_URL / "u" / file_id
 
         elif _PIXELDRAIN_PROXY:
             debrid_link = _PIXELDRAIN_PROXY / file_id
 
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        api_url = scrape_item.url.origin() / "api/file" / file_id / "info"
-        file = File.model_validate_json(await self._api_request(api_url))
+        file = await self.api.file(file_id)
         await self._file(scrape_item, file, debrid_link)
 
     @error_handling_wrapper
     async def _file(
         self, scrape_item: ScrapeItem, file: File | Node, debrid_link: AbsoluteHttpURL | None = None
     ) -> None:
-        link = file.download_url.with_host(scrape_item.url.origin().host)
+        link = file.download_url.with_host(_CURRENT_ORIGIN.get().host)
+        if "text/plain" in file.mime_type:
+            return await self.text(scrape_item, file)
+
         if await self.check_complete_by_hash(link, "sha256", file.hash_sha256):
             return None
-
-        if "text/plain" in file.mime_type:
-            return await self._text(scrape_item, file)
 
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
         await self.handle_file(link, scrape_item, file.name, ext, debrid_link=debrid_link, custom_filename=filename)
 
     @error_handling_wrapper
-    async def _text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
+    async def text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
         assert file.id
         scrape_item.setup_as_album(self.create_title(file.name, file.id))
-        api_url = scrape_item.url.origin() / "api/file" / file.id
-        text = await self._api_request(api_url)
+        text = await self.api.text(file.id)
 
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
             except Exception:  # noqa: BLE001, S112
                 continue
-            new_scrape_item = scrape_item.create_child(link)
-            self.handle_external_links(new_scrape_item)
+            new_item = scrape_item.create_child(link)
+            self.handle_external_links(new_item)
             scrape_item.add_children()
 
     _file_task = auto_task_id(_file)
@@ -298,23 +275,35 @@ class PixelDrainCrawler(Crawler):
 
 class PixelDrainAPI(API[PixelDrainCrawler]):
     def __post_init__(self) -> None:
-        self._headers: dict[str, str] = {}
+        self.headers: dict[str, str] = {}
         if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
-            self._headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+            self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
 
     async def file(self, file_id: str) -> File:
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id / "info"
-        resp = await self._api_request(api_url)
+        resp = await self._request(api_url)
         return File.model_validate_json(resp)
 
     async def text(self, file_id: str) -> str:
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id
-        return await self._api_request(api_url)
+        return await self._request(api_url)
 
     async def list(self, list_id: str) -> Folder:
         api_url = _CURRENT_ORIGIN.get() / "api/list" / list_id
-        resp = await self._api_request(api_url)
+        resp = await self._request(api_url)
         return Folder.model_validate_json(resp)
 
-    async def _api_request(self, api_url: AbsoluteHttpURL) -> str:
-        return await self.request_text(api_url, headers=self._headers)
+    async def filesystem(self, path: str) -> FileSystem:
+        api_url = (_CURRENT_ORIGIN.get() / "api/filesystem" / path.removeprefix("/")).with_query("stat")
+        resp = await self._request(api_url)
+        return FileSystem.model_validate_json(resp)
+
+    async def _request(self, api_url: AbsoluteHttpURL) -> str:
+        return await self.request_text(api_url, headers=self.headers)
+
+
+def _filter_files(files: list[File], fragment: str) -> list[File]:
+    if fragment.startswith(prefix := "item="):
+        item_idx = int(fragment.removeprefix(prefix))
+        return [files[item_idx]]
+    return files
