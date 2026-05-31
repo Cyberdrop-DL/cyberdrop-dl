@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import BaseModel
 
 from cyberdrop_dl import env
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import basic_auth, error_handling_wrapper
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 _PRIMARY_URL = AbsoluteHttpURL("https://pixeldrain.com")
 _BYPASS_HOSTS = "pd.cybar.xyz", "pd.1drv.eu.org"
 _PIXELDRAIN_PROXY = AbsoluteHttpURL(env.PIXELDRAIN_PROXY) if env.PIXELDRAIN_PROXY else None
+_CURRENT_ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_ORIGIN")
 
 
 class File(BaseModel):
@@ -123,6 +125,7 @@ class PixelDrainCrawler(Crawler):
         return await self.request_text(api_url, headers=self._headers)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
+        _CURRENT_ORIGIN.set(scrape_item.url.origin())
         if scrape_item.url.host in _BYPASS_HOSTS:
             return await self.file(scrape_item, scrape_item.url.name)
 
@@ -156,16 +159,19 @@ class PixelDrainCrawler(Crawler):
         title = self.create_title(folder.title, list_id)
         scrape_item.setup_as_album(title, album_id=list_id)
 
-        files = folder.files
-        if scrape_item.url.fragment.startswith(prefix := "item="):
-            try:
-                item_idx = int(scrape_item.url.fragment.removeprefix(prefix))
-                files = [files[item_idx]]
-            except (ValueError, IndexError):
-                msg = f"Unable to parse item index in folder {scrape_item.url}. Falling back to downloading the entire folder"
-                self.log.warning(msg)
+        try:
+            files = self._filter_files(folder.files, scrape_item.url.fragment)
+        except (ValueError, IndexError):
+            msg = f"Unable to parse item index in {scrape_item.url}. Falling back to downloading the entire folder"
+            self.log.warning(msg)
+            files = folder.files
 
-        results = await self.get_album_results(list_id)
+        await self._files(scrape_item, files)
+
+    async def _files(self, scrape_item: ScrapeItem, files: list[File]) -> None:
+        assert scrape_item.album_id
+        results = await self.get_album_results(scrape_item.album_id)
+        origin = scrape_item.url.origin()
         for file in files:
             if self.check_album_results(file.download_url, results):
                 continue
@@ -174,6 +180,12 @@ class PixelDrainCrawler(Crawler):
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
+
+    def _filter_files(self, files: list[File], fragment: str) -> list[File]:
+        if fragment.startswith(prefix := "item="):
+            item_idx = int(fragment.removeprefix(prefix))
+            return [files[item_idx]]
+        return files
 
     @error_handling_wrapper
     async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:  # noqa: C901
@@ -282,3 +294,27 @@ class PixelDrainCrawler(Crawler):
             scrape_item.add_children()
 
     _file_task = auto_task_id(_file)
+
+
+class PixelDrainAPI(API[PixelDrainCrawler]):
+    def __post_init__(self) -> None:
+        self._headers: dict[str, str] = {}
+        if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
+            self._headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+
+    async def file(self, file_id: str) -> File:
+        api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id / "info"
+        resp = await self._api_request(api_url)
+        return File.model_validate_json(resp)
+
+    async def text(self, file_id: str) -> str:
+        api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id
+        return await self._api_request(api_url)
+
+    async def list(self, list_id: str) -> Folder:
+        api_url = _CURRENT_ORIGIN.get() / "api/list" / list_id
+        resp = await self._api_request(api_url)
+        return Folder.model_validate_json(resp)
+
+    async def _api_request(self, api_url: AbsoluteHttpURL) -> str:
+        return await self.request_text(api_url, headers=self._headers)
