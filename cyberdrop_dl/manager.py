@@ -207,6 +207,27 @@ class AppData:
 
     @classmethod
     def default(cls) -> Self:
+        if sys.platform == "linux":
+            base_path = Path(os.getenv("XDG_CONFIG_HOME", default="~/.config")).expanduser().resolve()
+            if not base_path.is_dir():
+                logger.warning("On Linux but $XDG_CONFIG_HOME (or fallback ~/.config) is not a directory!")
+                return cls.from_path(Path.cwd())
+            path = base_path / "cyberdrop-dl"
+            base_cache = Path(os.getenv("XDG_CACHE_HOME", default="~/.cache")).expanduser().resolve()
+            if not base_cache.is_dir():
+                logger.warning("On Linux but $XDG_CACHE_HOME (or fallback ~/.cache) is not a directory!")
+                return cls.from_path(Path.cwd())
+            cache = base_cache / "cyberdrop-dl"
+            configs = path / "Configs"
+            return cls(
+                path=path,
+                cache=cache,
+                congifs=configs,
+                cookies=path / "Cookies",
+                config_file=configs / "Default" / "settings.yaml",
+                cache_file=cache / "cache.yaml",
+                db_file=cache / "cyberdrop.db",
+            )
         return cls.from_path(Path.cwd())
 
     @staticmethod
