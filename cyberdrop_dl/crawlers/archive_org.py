@@ -85,7 +85,7 @@ class ArchiveOrgCrawler(Crawler):
 
 class ArchiveOrgAPI(API):
     async def metadata(self, identifier: str) -> dict[str, Any]:
-        return await self._request(self.crawler.PRIMARY_URL / "metadata" / identifier)
+        return await self._request(self.PRIMARY_URL / "metadata" / identifier)
 
     async def item(self, identifier: str) -> Item:
         metadata = await self.metadata(identifier)

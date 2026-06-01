@@ -6,7 +6,6 @@ import dataclasses
 import logging
 import time
 import warnings
-from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast, final
@@ -339,10 +338,10 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-class HTTPMixin(ABC):
-    @abstractmethod
+class HTTPMixin:
     @signature.copy(HTTPClient.request)
-    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]: ...  # pyright: ignore[reportPrivateUsage]
+    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]:
+        raise NotImplementedError
 
     @signature.copy(request)
     async def request_json(self, *args: Any, **kwargs: Any) -> Any:

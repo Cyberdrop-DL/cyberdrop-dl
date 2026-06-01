@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import dataclasses
-from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
 
 from typing_extensions import override
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
 
 
 _PRIMARY_URL = AbsoluteHttpURL("https://pixeldrain.com")
-_CURRENT_ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_ORIGIN")
 
 
 @final
@@ -146,8 +144,6 @@ class PixelDrainCrawler(Crawler):
 
     @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        _CURRENT_ORIGIN.set(scrape_item.url.origin())
-
         match scrape_item.url.parts[1:]:
             case ["u", file_id]:
                 return await self.file(scrape_item, file_id)
@@ -194,7 +190,7 @@ class PixelDrainCrawler(Crawler):
             if self.check_album_results(_build_download_url(file), results):
                 continue
 
-            url = _CURRENT_ORIGIN.get() / "u" / file.id
+            url = self.origin / "u" / file.id
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
@@ -229,7 +225,7 @@ class PixelDrainCrawler(Crawler):
                 if node.name == ".search_index.gz":
                     continue
 
-                url = _CURRENT_ORIGIN.get() / "d" / node.path.removeprefix("/")
+                url = self.origin / "d" / node.path.removeprefix("/")
                 new_scrape_item = scrape_item.create_child(url)
 
                 if node.type == "file":
@@ -262,7 +258,7 @@ class PixelDrainCrawler(Crawler):
         if "text/plain" in file.mime_type:
             return await self.text(scrape_item, file)
 
-        src = _build_download_url(file).with_host(_CURRENT_ORIGIN.get().host)
+        src = _build_download_url(file).with_host(self.origin.host)
         if await self.check_complete_by_hash(src, "sha256", file.hash_sha256):
             return None
 
@@ -291,7 +287,7 @@ class PixelDrainCrawler(Crawler):
 class PixelDrainAPI(API):
     def __post_init__(self) -> None:
         self.headers: dict[str, str] = {}
-        if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
+        if api_key := self.config.auth.pixeldrain.api_key:
             self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
 
     @property
@@ -299,21 +295,21 @@ class PixelDrainAPI(API):
         return bool(self.headers)
 
     async def file(self, file_id: str) -> File:
-        api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id / "info"
+        api_url = self.origin / "api/file" / file_id / "info"
         resp = await self._request(api_url)
         return type_adapter(File).validate_json(resp)
 
     async def text(self, file_id: str) -> str:
-        api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id
+        api_url = self.origin / "api/file" / file_id
         return await self._request(api_url)
 
     async def folder(self, list_id: str) -> Folder:
-        api_url = _CURRENT_ORIGIN.get() / "api/list" / list_id
+        api_url = self.origin / "api/list" / list_id
         resp = await self._request(api_url)
         return type_adapter(Folder).validate_json(resp)
 
     async def filesystem(self, path: str) -> FileSystem:
-        api_url = (_CURRENT_ORIGIN.get() / "api/filesystem" / path.removeprefix("/")).with_query("stat")
+        api_url = (self.origin / "api/filesystem" / path.removeprefix("/")).with_query("stat")
         resp = await self._request(api_url)
         return type_adapter(FileSystem).validate_json(resp)
 

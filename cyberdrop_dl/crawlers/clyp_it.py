@@ -91,7 +91,7 @@ class ClypItAPI(API):
     async def wav(self, audio_id: str, token: str | None) -> AbsoluteHttpURL | None:
         if env.CLYPIT_PREFER_MP3:
             return None
-        url = self.crawler.PRIMARY_URL / audio_id
+        url = self.PRIMARY_URL / audio_id
         if token:
             url = url.with_query(token=token)
         text = await self.request_text(url)
@@ -100,7 +100,7 @@ class ClypItAPI(API):
         except ValueError:
             return None
         else:
-            return self.crawler.parse_url(src)
+            return self.parse_url(src)
 
     def user_uploads(self, user_id: str) -> AsyncGenerator[map[Audio]]:
         api_url = self.ENTRYPOINT / "User" / user_id / "Uploads"
@@ -114,7 +114,7 @@ class ClypItAPI(API):
             next_page: str | None = resp.get("Paging").get("Next")
             if not next_page:
                 break
-            url = self.crawler.parse_url(next_page)
+            url = self.parse_url(next_page)
 
 
 @dataclasses.dataclass(slots=True)

@@ -60,6 +60,7 @@ SupportedDomains = OneOrTuple[str]
 RateLimit = tuple[float, float]
 SKIP_DOWNLOAD: ContextVar[bool] = ContextVar("SKIP_DOWNLOAD", default=False)
 ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
+ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
 
 
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
@@ -375,6 +376,11 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def deep_scrape(self) -> bool:
         return self.manager.config.deep_scrape
 
+    @final
+    @property
+    def origin(self) -> AbsoluteHttpURL:
+        return ORIGIN.get()
+
     @property
     def separate_posts(self) -> bool:
         return self.manager.config.settings.download_options.separate_posts
@@ -438,6 +444,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def new_task_id(self, url: AbsoluteHttpURL):
         """Creates a new task_id (shows the URL in the UI and logs)"""
         self.log.info(f"Scraping {url}")
+        _ = ORIGIN.set(url.origin())
         return self.manager.scrape_mapper.tui.scrape.new(url)
 
     @final
@@ -954,30 +961,27 @@ _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 _CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
 
 
-class API(HTTPMixin, Generic[_CrawlerT_generic]):
-    crawler: _CrawlerT_generic
+class API(HTTPMixin, ABC, Generic[_CrawlerT_generic]):
+    _crawler: _CrawlerT_generic
 
     @final
     def __init__(self, crawler: _CrawlerT_generic) -> None:
-        self.crawler = crawler
+        self._crawler = crawler
+        self.PRIMARY_URL: Final = crawler.PRIMARY_URL
+        self.parse_url: Final = crawler.parse_url
+        self.request: Final = crawler.request
+        self.config: Final = crawler.manager.config
         self.__post_init__()
 
-    def __post_init__(self): ...
+    def __post_init__(self) -> None: ...
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(crawler={self.crawler.__name__!r})"
+        return f"{type(self).__name__}(crawler={self._crawler.__name__!r})"
 
-    @signature.copy(Crawler.request)
-    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]:  # pyright: ignore[reportPrivateUsage]
-        return self.crawler.request(*args, **kwargs)
-
+    @final
     @property
-    def parse_url(self):
-        return self.crawler.parse_url
-
-    @property
-    def PRIMARY_URL(self) -> AbsoluteHttpURL:  # noqa: N802
-        return self.crawler.PRIMARY_URL
+    def origin(self) -> AbsoluteHttpURL:
+        return ORIGIN.get()
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
