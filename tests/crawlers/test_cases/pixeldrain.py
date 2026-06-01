@@ -1,6 +1,12 @@
 DOMAIN = "pixeldrain"
 TEST_CASES = [
     {
+        "url": "https://evil-pixeldrain.net/u/QMMLJjmb",
+        "description": "URLs from non whitelisted domains should be ignored",
+        "results": [],
+        "count": 0,
+    },
+    {
         "url": "https://pixeldrain.net/u/QMMLJjmb",
         "results": [
             {

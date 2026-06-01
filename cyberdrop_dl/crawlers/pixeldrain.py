@@ -145,6 +145,8 @@ class PixelDrainCrawler(Crawler):
 
     @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
+        if self.origin.host not in self.SUPPORTED_DOMAINS:
+            raise ValueError
         match scrape_item.url.parts[1:]:
             case ["u", file_id]:
                 return await self.file(scrape_item, file_id)
