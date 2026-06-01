@@ -15,8 +15,6 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import basic_auth, error_handling_wrapper, type_adapter
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -38,7 +36,7 @@ class File:
 
 
 @dataclasses.dataclass(slots=True)
-class List:
+class Folder:
     id: str
     title: str
     files: list[File]
@@ -135,7 +133,7 @@ class PixelDrainCrawler(Crawler):
             case ["u", file_id]:
                 return await self.file(scrape_item, file_id)
             case ["l", folder_id]:
-                return await self.list(scrape_item, folder_id)
+                return await self.folder(scrape_item, folder_id)
             case ["d", *path] if path:
                 return await self.filesystem(scrape_item, "/".join(path))
             case _:
@@ -156,8 +154,8 @@ class PixelDrainCrawler(Crawler):
                 return url
 
     @error_handling_wrapper
-    async def list(self, scrape_item: ScrapeItem, list_id: str) -> None:
-        folder = await self.api.list(list_id)
+    async def folder(self, scrape_item: ScrapeItem, list_id: str) -> None:
+        folder = await self.api.folder(list_id)
         title = self.create_title(folder.title, list_id)
         scrape_item.setup_as_album(title, album_id=list_id)
 
@@ -287,7 +285,7 @@ class PixelDrainAPI(API):
         if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
             self.headers = {"Authorization": basic_auth("Cyberdrop-DL", api_key)}
         else:
-            self.headers: Mapping[str, str] = {}
+            self.headers: dict[str, str] = {}
 
     @property
     def logged_in(self) -> bool:
@@ -302,10 +300,10 @@ class PixelDrainAPI(API):
         api_url = _CURRENT_ORIGIN.get() / "api/file" / file_id
         return await self._request(api_url)
 
-    async def list(self, list_id: str) -> List:
+    async def folder(self, list_id: str) -> Folder:
         api_url = _CURRENT_ORIGIN.get() / "api/list" / list_id
         resp = await self._request(api_url)
-        return type_adapter(List).validate_json(resp)
+        return type_adapter(Folder).validate_json(resp)
 
     async def filesystem(self, path: str) -> FileSystem:
         api_url = (_CURRENT_ORIGIN.get() / "api/filesystem" / path.removeprefix("/")).with_query("stat")
@@ -323,7 +321,7 @@ def _filter_files(files: list[File], fragment: str) -> list[File]:
     return files
 
 
-def _build_download_url(self: File | Node) -> AbsoluteHttpURL:
-    if type(self) is File:
-        return (_PRIMARY_URL / "api/file" / self.id).with_query("download")
-    return (_PRIMARY_URL / "api/filesystem" / self.path.removeprefix("/")).with_query("attach")
+def _build_download_url(file: File | Node) -> AbsoluteHttpURL:
+    if type(file) is File:
+        return (_PRIMARY_URL / "api/file" / file.id).with_query("download")
+    return (_PRIMARY_URL / "api/filesystem" / file.path.removeprefix("/")).with_query("attach")
