@@ -960,7 +960,7 @@ _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 
 class API(HTTPMixin, ABC):
-    # We inherit from ABC to force type checkers to recognise attributes defined in __post_init__ as if were defined in __init__
+    # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
     @final
     def __init__(
         self,
