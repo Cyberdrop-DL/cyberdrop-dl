@@ -282,10 +282,9 @@ class PixelDrainCrawler(Crawler):
 
 class PixelDrainAPI(API):
     def __post_init__(self) -> None:
+        self.headers: dict[str, str] = {}
         if api_key := self.crawler.manager.config.auth.pixeldrain.api_key:
-            self.headers = {"Authorization": basic_auth("Cyberdrop-DL", api_key)}
-        else:
-            self.headers: dict[str, str] = {}
+            self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
 
     @property
     def logged_in(self) -> bool:
