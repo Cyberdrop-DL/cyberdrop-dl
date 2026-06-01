@@ -81,6 +81,7 @@ class PixelDrainCrawler(Crawler):
         "pixeldrain.biz",
         "pixeldrain.tech",
         "pixeldrain.dev",
+        *_BYPASS_HOSTS,
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
