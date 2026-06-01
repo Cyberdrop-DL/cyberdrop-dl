@@ -111,6 +111,8 @@ class PixelDrainCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: PixelDrainAPI = PixelDrainAPI(self)
+        if self.api.logged_in:
+            self.downloader.download_slots = None
 
     @classmethod
     @override

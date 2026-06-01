@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Hard fail if any config option requires `ffmpeg` but `ffmpeg` is not installed
+- Disable hardcoded max concurrent downloads (2) if an API key is provided by the user (PixelDrain)
 
 ### Deprecated
 
