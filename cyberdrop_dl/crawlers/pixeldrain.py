@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 
 _PRIMARY_URL = AbsoluteHttpURL("https://pixeldrain.com")
-_BYPASS_HOSTS = "pd.cybar.xyz", "pd.1drv.eu.org"
 _CURRENT_ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("_CURRENT_ORIGIN")
 
 
@@ -72,6 +71,31 @@ class FileSystem:
     path: list[Node]
 
 
+class PixelDrainProxyCrawler(Crawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"File": "/<file_id>"}
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "pd.cybar.xyz", "pd.1drv.eu.org"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pd.1drv.eu.org")
+    DOMAIN: ClassVar[str] = "pixeldrain-proxy"
+
+    @override
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["u", _]:
+                return self.handle_external_links(scrape_item)
+            case _:
+                raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url).with_host("pixeldrain.com")
+        match url.parts[1:]:
+            case [file_id]:
+                return url.origin() / "u" / file_id
+            case _:
+                return url
+
+
 class PixelDrainCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
         "pixeldrain.com",
@@ -81,7 +105,6 @@ class PixelDrainCrawler(Crawler):
         "pixeldrain.biz",
         "pixeldrain.tech",
         "pixeldrain.dev",
-        *_BYPASS_HOSTS,
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
@@ -124,8 +147,6 @@ class PixelDrainCrawler(Crawler):
     @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         _CURRENT_ORIGIN.set(scrape_item.url.origin())
-        if scrape_item.url.host in _BYPASS_HOSTS:
-            return await self.file(scrape_item, scrape_item.url.name)
 
         match scrape_item.url.parts[1:]:
             case ["u", file_id]:
@@ -148,8 +169,6 @@ class PixelDrainCrawler(Crawler):
                 return url.origin() / "l" / list_id
             case ["api", "filesystem", *rest] if rest:
                 return (url.origin() / "d").joinpath(*rest)
-            case [file_id] if url.host in _BYPASS_HOSTS:
-                return cls.PRIMARY_URL / "u" / file_id
             case _:
                 return url
 
