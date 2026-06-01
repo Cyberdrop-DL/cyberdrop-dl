@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Some false positive DDoS-Guard detections
+- URLs extraction from text files in a filesystem (PixelDrain)
 
 ### Security
 

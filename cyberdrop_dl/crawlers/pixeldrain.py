@@ -257,10 +257,12 @@ class PixelDrainCrawler(Crawler):
         await self._file(scrape_item, file)
 
     async def _file(self, scrape_item: ScrapeItem, file: File | Node) -> None:
-        if "text/plain" in file.mime_type:
-            return await self.text(scrape_item, file)
-
         src = _build_download_url(file).with_host(self.origin.host)
+        if "text/plain" in file.mime_type:
+            scrape_item.setup_as_album(self.create_title(file.name, file.id))
+            text = await self.api.text(src)
+            return self._text(scrape_item, text)
+
         if await self.check_complete_by_hash(src, "sha256", file.hash_sha256):
             return None
 
@@ -268,12 +270,7 @@ class PixelDrainCrawler(Crawler):
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
         await self.handle_file(src, scrape_item, file.name, ext, custom_filename=filename)
 
-    @error_handling_wrapper
-    async def text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
-        assert file.id
-        scrape_item.setup_as_album(self.create_title(file.name, file.id))
-        text = await self.api.text(file.id)
-
+    def _text(self, scrape_item: ScrapeItem, text: str) -> None:
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
@@ -298,24 +295,20 @@ class PixelDrainAPI(API):
 
     async def file(self, file_id: str) -> File:
         api_url = self.origin / "api/file" / file_id / "info"
-        resp = await self._request(api_url)
+        resp = await self.text(api_url)
         return type_adapter(File).validate_json(resp)
-
-    async def text(self, file_id: str) -> str:
-        api_url = self.origin / "api/file" / file_id
-        return await self._request(api_url)
 
     async def folder(self, list_id: str) -> Folder:
         api_url = self.origin / "api/list" / list_id
-        resp = await self._request(api_url)
+        resp = await self.text(api_url)
         return type_adapter(Folder).validate_json(resp)
 
     async def filesystem(self, path: str) -> FileSystem:
         api_url = (self.origin / "api/filesystem" / path.removeprefix("/")).with_query("stat")
-        resp = await self._request(api_url)
+        resp = await self.text(api_url)
         return type_adapter(FileSystem).validate_json(resp)
 
-    async def _request(self, api_url: AbsoluteHttpURL) -> str:
+    async def text(self, api_url: AbsoluteHttpURL) -> str:
         return await self.request_text(api_url, headers=self.headers)
 
 
