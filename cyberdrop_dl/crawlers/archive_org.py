@@ -49,7 +49,7 @@ class ArchiveOrgCrawler(Crawler):
                 raise ValueError
 
     def __post_init__(self) -> None:
-        self.api: ArchiveOrgAPI = ArchiveOrgAPI(self)
+        self.api: ArchiveOrgAPI = ArchiveOrgAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def item(self, scrape_item: ScrapeItem, identifier: str, base_path: str | None = None) -> None:

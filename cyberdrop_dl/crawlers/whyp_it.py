@@ -36,7 +36,7 @@ class WhypItCrawler(Crawler):
                 raise ValueError
 
     def __post_init__(self) -> None:
-        self.api: WhypItAPI = WhypItAPI(self)
+        self.api: WhypItAPI = WhypItAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:

@@ -14,7 +14,7 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Generic, Literal, ParamSpec, Self, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, final
 
 from typing_extensions import TypeVar, deprecated
 
@@ -958,25 +958,36 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
 _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
-_CrawlerT_generic = TypeVar("_CrawlerT_generic", bound=Crawler, default=Crawler)
 
-
-class API(HTTPMixin, ABC, Generic[_CrawlerT_generic]):
-    _crawler: _CrawlerT_generic
-
+class API(HTTPMixin, ABC):
+    # We inherit from ABC to force type checkers to recognise attributes defined in __post_init__ as if were defined in __init__
     @final
-    def __init__(self, crawler: _CrawlerT_generic) -> None:
-        self._crawler = crawler
-        self.PRIMARY_URL: Final = crawler.PRIMARY_URL
-        self.parse_url: Final = crawler.parse_url
-        self.request: Final = crawler.request
-        self.config: Final = crawler.manager.config
+    def __init__(
+        self,
+        PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
+        config: Config,
+        request: Callable[..., contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]],  # pyright: ignore[reportPrivateUsage]
+        parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
+    ) -> None:
+        self.PRIMARY_URL: Final = PRIMARY_URL
+        self.parse_url: Final = parse_url
+        self.request: Final = request
+        self.config: Final = config
         self.__post_init__()
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(
+            PRIMARY_URL=crawler.PRIMARY_URL,
+            parse_url=crawler.parse_url,
+            request=crawler.request,
+            config=crawler.manager.config,
+        )
 
     def __post_init__(self) -> None: ...
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(crawler={self._crawler.__name__!r})"
+        return f"<{type(self).__name__}(PRIMARY_URL={self.PRIMARY_URL!r})>"
 
     @final
     @property

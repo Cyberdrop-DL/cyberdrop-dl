@@ -64,7 +64,7 @@ class HitomiLaCrawler(Crawler):
     _SCRAPE_SLOTS: ClassVar[int] = 3
 
     def __post_init__(self) -> None:
-        self.api: HitomiAPI = HitomiAPI(self)
+        self.api: HitomiAPI = HitomiAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

@@ -27,7 +27,7 @@ class ClypItCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://clyp.it")
 
     def __post_init__(self) -> None:
-        self.api: ClypItAPI = ClypItAPI(self)
+        self.api: ClypItAPI = ClypItAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

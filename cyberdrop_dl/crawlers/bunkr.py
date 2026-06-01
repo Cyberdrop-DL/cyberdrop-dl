@@ -70,7 +70,7 @@ class BunkrCrawler(Crawler):
                 return url
 
     def __post_init__(self) -> None:
-        self.api: BunkrAPI = BunkrAPI(self)
+        self.api: BunkrAPI = BunkrAPI.from_crawler(self)
         self._parse_files = _make_album_parser()
         self._redirect_lock: asyncio.Lock = asyncio.Lock()
 

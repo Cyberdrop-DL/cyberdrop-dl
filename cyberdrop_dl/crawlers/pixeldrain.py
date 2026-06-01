@@ -128,7 +128,7 @@ class PixelDrainCrawler(Crawler):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
 
     def __post_init__(self) -> None:
-        self.api: PixelDrainAPI = PixelDrainAPI(self)
+        self.api: PixelDrainAPI = PixelDrainAPI.from_crawler(self)
         if self.api.logged_in:
             self.downloader.download_slots = None
 

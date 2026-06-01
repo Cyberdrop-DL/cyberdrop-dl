@@ -30,7 +30,7 @@ class ACastCrawler(Crawler):
                 raise ValueError
 
     def __post_init__(self) -> None:
-        self.api: ACastAPI = ACastAPI(self)
+        self.api: ACastAPI = ACastAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def show(self, scrape_item: ScrapeItem, show_id: str) -> None:

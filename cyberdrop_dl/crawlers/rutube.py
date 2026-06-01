@@ -40,7 +40,7 @@ class RutubeCrawler(Crawler):
                 raise ValueError
 
     def __post_init__(self) -> None:
-        self.api: RutubeAPI = RutubeAPI(self)
+        self.api: RutubeAPI = RutubeAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:

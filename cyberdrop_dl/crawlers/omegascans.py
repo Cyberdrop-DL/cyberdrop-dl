@@ -49,7 +49,7 @@ class OmegaScansCrawler(Crawler):
 
     @override
     async def __async_post_init__(self) -> None:
-        self.api: OmegaScansAPI = OmegaScansAPI(self)
+        self.api: OmegaScansAPI = OmegaScansAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem, series_slug: str) -> None:

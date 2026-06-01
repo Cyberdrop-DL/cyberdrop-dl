@@ -28,7 +28,7 @@ class LivestreamFailsCrawler(Crawler):
     _RATE_LIMIT: ClassVar[RateLimit] = 8, 1
 
     def __post_init__(self) -> None:
-        self.api: LivestreamFailsAPI = LivestreamFailsAPI(self)
+        self.api: LivestreamFailsAPI = LivestreamFailsAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

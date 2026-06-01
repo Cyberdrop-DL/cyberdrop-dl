@@ -26,7 +26,7 @@ class Rule34VaultCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "Rule34Vault"
 
     def __post_init__(self) -> None:
-        self.api: R34VaultAPI = R34VaultAPI(self)
+        self.api: R34VaultAPI = R34VaultAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
