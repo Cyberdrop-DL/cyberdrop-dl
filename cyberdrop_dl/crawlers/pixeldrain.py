@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
 
@@ -234,17 +235,18 @@ class PixelDrainCrawler(Crawler):
 
                     subfolders = node.path.split("/")[2:-1]
                     new_scrape_item.append_folders(*subfolders)
-                    self.create_task(self._file_task(new_scrape_item, node))
+                    tg.create_task(self._file_task(new_scrape_item, node))
 
                 elif node.type == "dir":
-                    self.create_task(subfolder(new_scrape_item, node.path))
+                    tg.create_task(subfolder(new_scrape_item, node.path))
 
                 else:
                     self.raise_exc(new_scrape_item, f"Unknown node type: {node.type}")
 
                 scrape_item.add_children()
 
-        walk_filesystem(fs)
+        async with asyncio.TaskGroup() as tg:
+            walk_filesystem(fs)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
