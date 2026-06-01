@@ -17,6 +17,21 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://pd.1drv.eu.org/QMMLJjmb",
+        "results": [
+            {
+                "url": "https://pixeldrain.com/api/file/QMMLJjmb?download",
+                "filename": "[One Pace][123-126] Little Garden 04 [1080p][CA509241].mkv",
+                "debrid_link": None,
+                "referer": "https://pixeldrain.com/u/QMMLJjmb",
+                "album_id": None,
+                "uploaded_at": 1779013482,
+                "download_folder": "re:Loose Files (PixelDrain)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://pixeldrain.net/l/xe5AJy9v#item=3",
         "description": "folder with an specific file selected (#4, index 3)",
         "results": [
