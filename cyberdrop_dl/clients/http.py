@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 _JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
+RequestContext = contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]  # pyright: ignore[reportPrivateUsage]
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +341,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
 
 class HTTPMixin:
     @signature.copy(HTTPClient.request)
-    def request(self, *args: Any, **kwargs: Any) -> contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]:
+    def request(self, *args: Any, **kwargs: Any) -> RequestContext:
         raise NotImplementedError
 
     @signature.copy(request)

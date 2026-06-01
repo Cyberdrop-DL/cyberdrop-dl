@@ -17,16 +17,16 @@ from cyberdrop_dl.exceptions import DDOSGuardError
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from multidict import MultiDict
+    from multidict import MultiMapping
 
 
 class _Response(Protocol):
     @property
     def content_type(self) -> str: ...
     @property
-    def headers(self) -> MultiDict[str]: ...
+    def headers(self) -> MultiMapping[str]: ...
     @property
-    def status_code(self) -> int: ...
+    def status(self) -> int: ...
     async def text(self) -> str: ...
 
 

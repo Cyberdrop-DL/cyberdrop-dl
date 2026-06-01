@@ -72,7 +72,7 @@ async def test_ddos_response_should_raise_ddos_guard_error() -> None:
 @dataclasses.dataclass(slots=True)
 class DummyResponse:
     headers: CIMultiDict[str]
-    status_code: int = 403
+    status: int = 403
     _text: str = ""
     content_type: str = "html"
 

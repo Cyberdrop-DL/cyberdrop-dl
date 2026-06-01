@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Pa
 from typing_extensions import TypeVar, deprecated
 
 from cyberdrop_dl import aio, env, signature
-from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin
+from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin, RequestContext
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -966,7 +966,7 @@ class API(HTTPMixin, ABC):
         self,
         PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
-        request: Callable[..., contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]],  # pyright: ignore[reportPrivateUsage]
+        request: Callable[..., RequestContext],
         parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
     ) -> None:
         self.PRIMARY_URL: Final = PRIMARY_URL
