@@ -87,7 +87,7 @@ class FilesterCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        soup = await self.request_soup(scrape_item.url)
+        soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
         file_details = css.select(soup, Selector.FILE_DETAILS)
 
         def file_attr(name: str) -> str:
@@ -131,18 +131,19 @@ class FilesterCrawler(Crawler):
         if not password:
             raise PasswordProtectedError
 
+        submit_url = self.parse_url(css.select(soup, "#password-form", "action"), self.origin)
         async with self.request(
-            url,
+            submit_url,
             "POST",
             data={"nonce": nonce, "password": _encode_password(password, nonce)},
         ) as resp:
+            # Token access is stored in cookies (folder_access_token) in a JWT encoded json
+            # Token is valid for 24hrs
             soup = await resp.soup()
             if _form_nonce(soup):
                 raise PasswordProtectedError("Wrong password")
-            if resp.url != url:
-                # Password protected files redirect to their folder
-                # Remake request to the actual file
-                # Token access is stored in cookies an is valid for 24hrs
+            if submit_url != url:
+                # Remake request to the actual page
                 soup = await self.request_soup(url)
         return soup
 

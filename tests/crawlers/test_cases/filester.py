@@ -30,6 +30,47 @@ TEST_CASES = [
         "count": 53,
     },
     {
+        "url": "https://filester.me/f/3cbf41ade376451d?password=bluesky",
+        "description": "Passwod protected folder",
+        "results": [
+            {
+                "url": "https://filester.me/d/ISENpvH",
+                "filename": "Jewelz Blu - Sultry Shower Fuck.mp4",
+                "original_filename": "Jewelz Blu - Sultry Shower Fuck.mp4.mp4",
+                "referer": "https://filester.me/d/ISENpvH",
+                "album_id": "3cbf41ade376451d",
+                "uploaded_at": 1778284800,
+                "download_folder": "re:Jewelz Blu (Filester)",
+            },
+            {
+                "url": "https://filester.me/d/vRvv9Qv",
+                "filename": "Jewelz Blu - Max Fills.mp4",
+                "original_filename": "Jewelz Blu - Max Fills .mp4.mp4",
+                "referer": "https://filester.me/d/vRvv9Qv",
+                "album_id": "3cbf41ade376451d",
+                "uploaded_at": 1778284800,
+                "download_folder": "re:Jewelz Blu (Filester)",
+            },
+        ],
+        "count": 2,
+    },
+    {
+        "url": "https://filester.me/d/vRvv9Qv?password=bluesky",
+        "description": "Password protected single file",
+        "results": [
+            {
+                "url": "https://filester.me/d/vRvv9Qv?password=bluesky",
+                "filename": "Jewelz Blu - Max Fills.mp4",
+                "original_filename": "Jewelz Blu - Max Fills .mp4.mp4",
+                "referer": "https://filester.me/d/vRvv9Qv?password=bluesky",
+                "album_id": None,
+                "uploaded_at": 1778284800,
+                "download_folder": "re:Loose Files (Filester)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://filester.me/f/c1a31c9ca510870b",
         "results": [{"url": "re:.filester.me/d/", "download_folder": "re:Natalie (Filester)/Pics"}],
         "count": range(150, 160),
