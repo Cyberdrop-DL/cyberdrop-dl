@@ -151,7 +151,7 @@ class FilesterCrawler(Crawler):
 def _encode_password(password: str, nonce: str) -> str:
     now = int(time.time() * 1000)
     payload = f"{password}|{now}|{nonce}"
-    return base64.b64encode(payload.encode("utf-8")).decode("ascii")
+    return base64.urlsafe_b64encode(payload.encode()).decode()
 
 
 def _extract_form(soup: BeautifulSoup) -> tuple[str, str] | None:
