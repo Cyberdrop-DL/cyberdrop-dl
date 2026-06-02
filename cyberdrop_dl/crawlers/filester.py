@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import random
+import time
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph
 
@@ -47,7 +50,7 @@ class FilesterCrawler(Crawler):
         title: str = ""
         subfolders: list[str] = []
 
-        async for soup in self._folder_pager(scrape_item.url):
+        async for soup in self._folder_pager(scrape_item.url, scrape_item.password):
             if not title:
                 name = open_graph.title(soup)
                 title = self.create_title(name, album_id)
@@ -66,10 +69,10 @@ class FilesterCrawler(Crawler):
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
-    async def _folder_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[BeautifulSoup]:
+    async def _folder_pager(self, url: AbsoluteHttpURL, password: str | None) -> AsyncGenerator[BeautifulSoup]:
+        soup = await self._request_soup_w_pass(url, password)
         next_page = url
         while True:
-            soup = await self.request_soup(next_page)
             yield soup
             try:
                 query = css.select(soup, Selector.NEXT_PAGE, "href")
@@ -77,6 +80,7 @@ class FilesterCrawler(Crawler):
                 break
 
             next_page = next_page.with_query(query.strip("?"))
+            soup = await self.request_soup(next_page)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
@@ -117,3 +121,40 @@ class FilesterCrawler(Crawler):
         )
         dl_link = random.choice(_CDN_URLS).with_path(resp["download_url"])
         return dl_link.with_query(download="true")
+
+    async def _request_soup_w_pass(self, url: AbsoluteHttpURL, password: str | None) -> BeautifulSoup:
+        soup = await self.request_soup(url)
+        nonce = _form_nonce(soup)
+        if not nonce:
+            return soup
+
+        if not password:
+            raise PasswordProtectedError
+
+        async with self.request(
+            url,
+            "POST",
+            data={"nonce": nonce, "password": _encode_password(password, nonce)},
+        ) as resp:
+            soup = await resp.soup()
+            if _form_nonce(soup):
+                raise PasswordProtectedError("Wrong password")
+            if resp.url != url:
+                # Password protected files redirect to their folder
+                # Remake request to the actual file
+                # Token access is stored in cookies an is valid for 24hrs
+                soup = await self.request_soup(url)
+        return soup
+
+
+def _encode_password(password: str, nonce: str) -> str:
+    now = int(time.time() * 1000)
+    payload = f"{password}|{now}|{nonce}"
+    return base64.b64encode(payload.encode("utf-8")).decode("ascii")
+
+
+def _form_nonce(soup: BeautifulSoup) -> str | None:
+    try:
+        return css.select(soup, "#password-form #nonce", "value")
+    except css.SelectorError:
+        return None
