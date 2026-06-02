@@ -146,7 +146,7 @@ class FilesterCrawler(Crawler):
         if _extract_form(soup):
             raise PasswordProtectedError("Wrong password")
         if submit_url.path != url.path:
-            # Remake request to the actual page
+            # The submit URL for files is actually their folder. Remake request to the actual file page
             soup = await self.request_soup(url)
             assert _extract_form(soup) is None
         return soup
