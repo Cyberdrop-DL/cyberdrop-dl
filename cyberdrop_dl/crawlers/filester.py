@@ -123,6 +123,7 @@ class FilesterCrawler(Crawler):
         return dl_link.with_query(download="true")
 
     async def _request_soup_w_pass(self, url: AbsoluteHttpURL, password: str | None) -> BeautifulSoup:
+        url = url.without_query_params("password")
         soup = await self.request_soup(url)
         form = _extract_form(soup)
         if not form:
@@ -133,18 +134,21 @@ class FilesterCrawler(Crawler):
 
         action, nonce = form
         submit_url = self.parse_url(action, self.origin)
-        async with self.request(
+        soup = await self.request_soup(
             submit_url,
             "POST",
-            data={"nonce": nonce, "password": _encode_password(password, nonce)},
-        ) as resp:
-            # Token access is stored in cookies (folder_access_token) in a JWT encoded json (valid for 24hrs)
-            soup = await resp.soup()
-            if _extract_form(soup):
-                raise PasswordProtectedError("Wrong password")
-            if submit_url != url:
-                # Remake request to the actual page
-                soup = await self.request_soup(url)
+            data={
+                "nonce": nonce,
+                "password": _encode_password(password, nonce),
+            },
+        )
+        # Token access is stored in cookies (folder_access_token) in a JWT encoded json (valid for 24hrs)
+        if _extract_form(soup):
+            raise PasswordProtectedError("Wrong password")
+        if submit_url.path != url.path:
+            # Remake request to the actual page
+            soup = await self.request_soup(url)
+            assert _extract_form(soup) is None
         return soup
 
 
