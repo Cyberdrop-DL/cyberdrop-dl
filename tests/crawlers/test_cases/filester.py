@@ -72,6 +72,7 @@ TEST_CASES = [
     },
     {
         "url": "https://filester.me/f/c1a31c9ca510870b",
+        "description": "folder with subfolders",
         "results": [{"url": "re:.filester.me/d/", "download_folder": "re:Natalie (Filester)/Pics"}],
         "count": range(150, 160),
     },
