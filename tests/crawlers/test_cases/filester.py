@@ -31,7 +31,7 @@ TEST_CASES = [
     },
     {
         "url": "https://filester.me/f/3cbf41ade376451d?password=bluesky",
-        "description": "Passwod protected folder",
+        "description": "Password protected folder",
         "results": [
             {
                 "url": "https://filester.me/d/ISENpvH",
