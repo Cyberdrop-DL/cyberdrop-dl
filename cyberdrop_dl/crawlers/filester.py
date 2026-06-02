@@ -124,14 +124,15 @@ class FilesterCrawler(Crawler):
 
     async def _request_soup_w_pass(self, url: AbsoluteHttpURL, password: str | None) -> BeautifulSoup:
         soup = await self.request_soup(url)
-        nonce = _form_nonce(soup)
-        if not nonce:
+        form = _extract_form(soup)
+        if not form:
             return soup
 
         if not password:
             raise PasswordProtectedError
 
-        submit_url = self.parse_url(css.select(soup, "#password-form", "action"), self.origin)
+        action, nonce = form
+        submit_url = self.parse_url(action, self.origin)
         async with self.request(
             submit_url,
             "POST",
@@ -140,7 +141,7 @@ class FilesterCrawler(Crawler):
             # Token access is stored in cookies (folder_access_token) in a JWT encoded json
             # Token is valid for 24hrs
             soup = await resp.soup()
-            if _form_nonce(soup):
+            if _extract_form(soup):
                 raise PasswordProtectedError("Wrong password")
             if submit_url != url:
                 # Remake request to the actual page
@@ -154,8 +155,9 @@ def _encode_password(password: str, nonce: str) -> str:
     return base64.b64encode(payload.encode("utf-8")).decode("ascii")
 
 
-def _form_nonce(soup: BeautifulSoup) -> str | None:
+def _extract_form(soup: BeautifulSoup) -> tuple[str, str] | None:
     try:
-        return css.select(soup, "#password-form #nonce", "value")
+        form = css.select(soup, "#password-form")
     except css.SelectorError:
         return None
+    return css.attr(form, "action"), css.select(form, "#nonce", "value")
