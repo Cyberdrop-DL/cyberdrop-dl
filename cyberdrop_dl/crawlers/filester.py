@@ -57,7 +57,7 @@ class FilesterCrawler(Crawler):
                 scrape_item.setup_as_album(title, album_id=album_id)
 
             for on_click in css.iselect(soup, Selector.FILES, "onclick"):
-                web_url = self.parse_url(extr_text(on_click, "'", "'"))
+                web_url = self.parse_url(extr_text(on_click, "'", "'"), self.origin)
                 new_scrape_item = scrape_item.create_child(web_url)
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
