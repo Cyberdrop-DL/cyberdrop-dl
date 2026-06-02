@@ -20,6 +20,7 @@ Example: `https://cyberfile.me/folder/xUGg?password=1234`
 | GoFile                                              |
 | Cyberfile                                           |
 | Chevereto Sites (`JPG5`, `ImagePond.net`,`ImgLike`) |
+| Filester                                            |
 | Iceyfile.com                                        |
 | Transfer.it                                         |
 | Koofr.eu                                            |
