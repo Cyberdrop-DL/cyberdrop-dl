@@ -138,8 +138,7 @@ class FilesterCrawler(Crawler):
             "POST",
             data={"nonce": nonce, "password": _encode_password(password, nonce)},
         ) as resp:
-            # Token access is stored in cookies (folder_access_token) in a JWT encoded json
-            # Token is valid for 24hrs
+            # Token access is stored in cookies (folder_access_token) in a JWT encoded json (valid for 24hrs)
             soup = await resp.soup()
             if _extract_form(soup):
                 raise PasswordProtectedError("Wrong password")
