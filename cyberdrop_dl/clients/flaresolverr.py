@@ -134,9 +134,11 @@ class Client:
 
             try:
                 await self._create_session()
+            except aiohttp.ClientConnectionError as e:
+                self._down = True
+                raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
             except Exception as e:
                 self._down = True
-                logger.exception(msg)
                 raise FlaresolverrError(msg) from e
 
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
