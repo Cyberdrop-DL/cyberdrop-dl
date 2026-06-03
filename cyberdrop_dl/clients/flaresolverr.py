@@ -97,7 +97,7 @@ class _LazyResponseLog:
 
 @dataclasses.dataclass(slots=True)
 class Client:
-    """Class that handles communication with flaresolverr."""
+    """Class that handles communication with Flaresolverr."""
 
     url: AbsoluteHttpURL
     _aiohttp_session: aiohttp.ClientSession
@@ -162,10 +162,10 @@ class Client:
             )
 
         except (TypeError, KeyError) as e:
-            raise FlaresolverrError("Invalid response from flaresolverr") from e
+            raise FlaresolverrError("Invalid response from Flaresolverr") from e
 
         if not resp.ok:
-            raise FlaresolverrError(f"Failed to resolve URL with flaresolverr. {resp.message}")
+            raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
 
         if not resp.solution:
             raise FlaresolverrError("Flaresolverr response did not include a solution")
@@ -187,9 +187,9 @@ class Client:
         async with self._request_lock:
             request_id = self._request_id()
             msg = (
-                "Destroying flaresolverr session"
+                "Destroying Flaresolverr session"
                 if command is Command.DESTROY_SESSION
-                else f"Waiting for flaresolverr [{request_id}]"
+                else f"Waiting for Flaresolverr [{request_id}]"
             )
             with show_msg(msg):
                 logger.debug("Making FlareSolverr request [id=%s]\n%s", request_id, params)
@@ -239,7 +239,7 @@ def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
 
 def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
     mismatch_ua_msg = (
-        "Config user_agent and flaresolverr user_agent do not match:"
+        "Config user_agent and Flaresolverr user_agent do not match:"
         f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
         f"\n  Flaresolverr: '{solution.user_agent}'"
     )
@@ -247,9 +247,10 @@ def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
     if type(solution.content) is str:
         try:
             ddos_guard.check_html(solution.content)
-        except DDOSGuardError:
+        except DDOSGuardError as e:
             if solution.user_agent != cdl_user_agent:
-                raise DDOSGuardError(mismatch_ua_msg) from None
+                e.add_note(mismatch_ua_msg)
+            raise
 
     if solution.user_agent != cdl_user_agent:
         logger.warning(f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid")
