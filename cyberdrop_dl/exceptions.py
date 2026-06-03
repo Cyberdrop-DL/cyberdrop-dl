@@ -13,10 +13,11 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import MediaItem, ScrapeItem
 
 
-def _format_error(ui_failure: str, message: str) -> str:
-    if ui_failure == message:
-        return message
-    return f"{ui_failure} - {message}"
+def _format_error(ui_failure: str, message: str, notes: list[str] | None = None) -> str:
+    msg = message if ui_failure == message else f"{ui_failure} - {message}"
+    if notes:
+        msg = msg + "\n" + "\n".join(f"[NOTE]: {note}" for note in notes)
+    return msg
 
 
 # See: https://developers.cloudflare.com/support/troubleshooting/cloudflare-errors/troubleshooting-cloudflare-5xx-errors/
@@ -66,7 +67,7 @@ class CDLBaseError(Exception):
             super().__init__(self.status)
 
     def __str__(self) -> str:
-        return _format_error(self.ui_failure, self.message)
+        return _format_error(self.ui_failure, self.message, self.__notes__)
 
 
 class FlaresolverrError(CDLBaseError):
@@ -284,7 +285,7 @@ class ErrorLogMessage:
         e_status = getattr(e, "status", None)
         e_message = getattr(e, "message", None)
         ui_failure = create_error_msg(e_status) if e_status else "Unknown"
-        log_msg = _format_error(ui_failure, e_message or str(e))
+        log_msg = _format_error(ui_failure, e_message or str(e), e.__notes__)
         return ErrorLogMessage(ui_failure, log_msg)
 
 
