@@ -77,27 +77,30 @@ def delete_empty_files_and_folders_in_place(
 
 
 def _delete_empty_files_and_folders_in_place(dirname: Path | str, exclude: set[str]) -> bool:
-    has_non_empty_files = False
-    has_non_empty_subfolders = False
+    has_on_empty_children = False
 
     try:
         for entry in os.scandir(dirname):
+            if entry.name.startswith(".") or entry.path in exclude:
+                has_on_empty_children = True
+                continue
+
             if _safe_is_dir(entry):
                 deleted = _delete_empty_files_and_folders_in_place(entry.path, exclude)
                 if not deleted:
-                    has_non_empty_subfolders = True
-            elif not entry.name.startswith(".") and entry.path not in exclude and _safe_get_size(entry) == 0:
+                    has_on_empty_children = True
+            elif _safe_get_size(entry) == 0:
                 deleted = _safe_delete(entry)
                 if not deleted:
-                    has_non_empty_files = True
+                    has_on_empty_children = True
             else:
-                has_non_empty_files = True
+                has_on_empty_children = True
 
     except OSError as e:
         logger.error(f"Unexpected error while walking '{dirname}' ({e!r})")
         return False
 
-    if has_non_empty_files or has_non_empty_subfolders:
+    if has_on_empty_children:
         return False
 
     return _safe_rmdir(dirname)
