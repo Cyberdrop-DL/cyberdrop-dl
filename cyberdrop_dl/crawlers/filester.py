@@ -114,7 +114,7 @@ class FilesterCrawler(Crawler):
 
     async def _request_download(self, slug: str) -> AbsoluteHttpURL:
         resp = await self.request_json(
-            self.PRIMARY_URL / "api/public/download",
+            self.origin / "api/public/download",
             method="POST",
             json={"file_slug": slug},
         )

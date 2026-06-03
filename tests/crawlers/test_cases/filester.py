@@ -13,9 +13,9 @@ TEST_CASES = [
         ],
     },
     {
-        "url": "https://filester.me/d/4h9lQtR",
+        "url": "https://filester.si/d/4h9lQtR",
         "results": [
-            {"url": "re:.filester.me/d/", "filename": "Linda Lan - Meanbitches slave orders.mp4", "album_id": None}
+            {"url": "re:.filester.si/d/", "filename": "Linda Lan - Meanbitches slave orders.mp4", "album_id": None}
         ],
     },
     {
@@ -55,14 +55,14 @@ TEST_CASES = [
         "count": 2,
     },
     {
-        "url": "https://filester.me/d/vRvv9Qv?password=bluesky",
+        "url": "https://filester.gg/d/vRvv9Qv?password=bluesky",
         "description": "Password protected single file",
         "results": [
             {
-                "url": "https://filester.me/d/vRvv9Qv?password=bluesky",
+                "url": "https://filester.gg/d/vRvv9Qv?password=bluesky",
                 "filename": "Jewelz Blu - Max Fills.mp4",
                 "original_filename": "Jewelz Blu - Max Fills .mp4.mp4",
-                "referer": "https://filester.me/d/vRvv9Qv?password=bluesky",
+                "referer": "https://filester.gg/d/vRvv9Qv?password=bluesky",
                 "album_id": None,
                 "uploaded_at": 1778284800,
                 "download_folder": "re:Loose Files (Filester)",
