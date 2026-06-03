@@ -100,7 +100,4 @@ def _delete_empty_files_and_folders_in_place(dirname: Path | str, exclude: set[s
         logger.error(f"Unexpected error while walking '{dirname}' ({e!r})")
         return False
 
-    if has_on_empty_children:
-        return False
-
-    return _safe_rmdir(dirname)
+    return has_on_empty_children and _safe_rmdir(dirname)
