@@ -142,7 +142,7 @@ class Client:
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
 
         await self._ensure_session()
-        invalid_response_error = DDOSGuardError("Invalid response from flaresolverr")
+        invalid_response_error = FlaresolverrError("Invalid response from flaresolverr")
         try:
             resp = await self._request(
                 Command.POST_REQUEST if data else Command.GET_REQUEST,
@@ -155,7 +155,7 @@ class Client:
             raise invalid_response_error from e
 
         if not resp.ok:
-            raise DDOSGuardError(f"Failed to resolve URL with flaresolverr. {resp.message}")
+            raise FlaresolverrError(f"Failed to resolve URL with flaresolverr. {resp.message}")
 
         if not resp.solution:
             raise invalid_response_error
