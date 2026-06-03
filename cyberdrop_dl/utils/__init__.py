@@ -215,11 +215,13 @@ def error_handling_wrapper(
 def delete_empty_files_and_folders(path: Path) -> None:
     """walks and removes in place"""
 
+    from cyberdrop_dl.logs import MAIN_LOG_FILE
     from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
 
     if not path.is_dir():
         return
-    _ = delete_empty_files_and_folders_in_place(path)
+
+    _ = delete_empty_files_and_folders_in_place(path, exclude=[MAIN_LOG_FILE.get(None)])
 
 
 def check_partials_and_empty_folders(manager: Manager) -> None:
