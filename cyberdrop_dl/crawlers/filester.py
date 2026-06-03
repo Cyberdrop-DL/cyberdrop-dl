@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import random
 import time
 from typing import TYPE_CHECKING, ClassVar
@@ -90,26 +91,13 @@ class FilesterCrawler(Crawler):
             return
 
         soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
-        file_details = css.select(soup, Selector.FILE_DETAILS)
-
-        def file_attr(name: str) -> str:
-            return css.select_text(file_details, f"span:-soup-contains({name}) + span")
-
-        try:
-            hash_algo, checksum = "sha256", file_attr("SHA-256")
-        except css.SelectorError:
-            hash_algo, checksum = "md5", file_attr("MD5")
-
-        if await self.check_complete_by_hash(scrape_item, hash_algo, checksum):
-            return
-
-        scrape_item.uploaded_at = self.parse_iso_date(file_attr("Uploaded"))
-        name = open_graph.title(soup)
-        filename, ext = self.get_filename_and_ext(name, mime_type=file_attr("Type"))
+        file = _parse_file(soup)
+        scrape_item.uploaded_at = self.parse_iso_date(file.uploaded_at)
+        filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            name,
+            file.name,
             ext,
             custom_filename=filename,
             debrid_link=await self.api.download(slug),
@@ -145,6 +133,15 @@ class FilesterCrawler(Crawler):
         return soup
 
 
+@dataclasses.dataclass(slots=True)
+class File:
+    name: str
+    uploaded_at: str
+    mime_type: str
+    hash_algo: str
+    checksum: str
+
+
 class FilesterAPI(API):
     async def download(self, slug: str) -> AbsoluteHttpURL:
         resp = await self.request_json(
@@ -177,3 +174,23 @@ def _extract_files(soup: BeautifulSoup) -> Generator[str]:
 
 def _extract_subfolders(soup: BeautifulSoup) -> Generator[str]:
     return css.iselect(soup, Selector.SUBFOLDER, "href")
+
+
+def _parse_file(soup: BeautifulSoup) -> File:
+    file_details = css.select(soup, Selector.FILE_DETAILS)
+
+    def file_attr(name: str) -> str:
+        return css.select_text(file_details, f"span:-soup-contains({name}) + span")
+
+    try:
+        hash_algo, checksum = "sha256", file_attr("SHA-256")
+    except css.SelectorError:
+        hash_algo, checksum = "md5", file_attr("MD5")
+
+    return File(
+        name=open_graph.title(soup),
+        hash_algo=hash_algo,
+        checksum=checksum,
+        uploaded_at=file_attr("Uploaded"),
+        mime_type=file_attr("Type"),
+    )
