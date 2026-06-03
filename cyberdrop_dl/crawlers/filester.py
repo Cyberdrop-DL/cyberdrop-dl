@@ -50,6 +50,24 @@ class FilesterCrawler(Crawler):
                 raise ValueError
 
     @error_handling_wrapper
+    async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
+        if await self.check_complete_from_referer(scrape_item):
+            return
+
+        soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
+        file = _parse_file(soup)
+        scrape_item.uploaded_at = self.parse_iso_date(file.uploaded_at)
+        filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            file.name,
+            ext,
+            custom_filename=filename,
+            debrid_link=await self.api.download(slug),
+        )
+
+    @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, album_id: str) -> None:
         title: str = ""
         subfolders: list[str] = []
@@ -84,24 +102,6 @@ class FilesterCrawler(Crawler):
 
             next_page = next_page.with_query(query.strip("?"))
             soup = await self.request_soup(next_page)
-
-    @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
-            return
-
-        soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
-        file = _parse_file(soup)
-        scrape_item.uploaded_at = self.parse_iso_date(file.uploaded_at)
-        filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
-        await self.handle_file(
-            scrape_item.url,
-            scrape_item,
-            file.name,
-            ext,
-            custom_filename=filename,
-            debrid_link=await self.api.download(slug),
-        )
 
     async def _request_soup_w_pass(self, url: AbsoluteHttpURL, password: str | None) -> BeautifulSoup:
         url = url.without_query_params("password")
@@ -144,11 +144,8 @@ class File:
 
 class FilesterAPI(API):
     async def download(self, slug: str) -> AbsoluteHttpURL:
-        resp = await self.request_json(
-            self.origin / "api/public/download",
-            method="POST",
-            json={"file_slug": slug},
-        )
+        api_url = self.origin / "api/public/download"
+        resp = await self.request_json(api_url, method="POST", json={"file_slug": slug})
         dl_link = random.choice(_CDN_URLS).with_path(resp["download_url"])
         return dl_link.with_query(download="true")
 
