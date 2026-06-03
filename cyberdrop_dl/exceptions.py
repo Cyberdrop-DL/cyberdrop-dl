@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING
 from yarl import URL
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from yaml import YAMLError
 
     from cyberdrop_dl.url_objects import MediaItem, ScrapeItem
 
 
-def _format_error(ui_failure: str, message: str, notes: list[str] | None = None) -> str:
+def _format_error(ui_failure: str, message: str, notes: Sequence[str] | None = None) -> str:
     msg = message if ui_failure == message else f"{ui_failure} - {message}"
     if notes:
         msg = msg + "\n" + "\n".join(f"[NOTE]: {note}" for note in notes)
@@ -47,6 +49,10 @@ HTTP_ERROR_CODES = {
 }
 
 
+def _notes(e: BaseException) -> list[str] | tuple[()]:
+    return getattr(e, "__notes__", ())
+
+
 class CDLBaseError(Exception):
     """Base exception for cyberdrop-dl errors."""
 
@@ -67,7 +73,7 @@ class CDLBaseError(Exception):
             super().__init__(self.status)
 
     def __str__(self) -> str:
-        return _format_error(self.ui_failure, self.message, self.__notes__)
+        return _format_error(self.ui_failure, self.message, _notes(self))
 
 
 class FlaresolverrError(CDLBaseError):
@@ -285,7 +291,7 @@ class ErrorLogMessage:
         e_status = getattr(e, "status", None)
         e_message = getattr(e, "message", None)
         ui_failure = create_error_msg(e_status) if e_status else "Unknown"
-        log_msg = _format_error(ui_failure, e_message or str(e), e.__notes__)
+        log_msg = _format_error(ui_failure, e_message or str(e), _notes(e))
         return ErrorLogMessage(ui_failure, log_msg)
 
 
