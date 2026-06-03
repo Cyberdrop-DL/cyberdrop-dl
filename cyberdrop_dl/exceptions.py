@@ -75,6 +75,12 @@ class CDLBaseError(Exception):
         return _format_error(self.ui_failure, self.message)
 
 
+class FlaresolverrError(CDLBaseError):
+    def __init__(self, message: str | None = None) -> None:
+        ui_failure = "Flaresolverr Error"
+        super().__init__(ui_failure, message=message)
+
+
 class InvalidContentTypeError(CDLBaseError):
     def __init__(self, *, message: str | None = None, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
         """This error will be thrown when the content type isn't as expected."""

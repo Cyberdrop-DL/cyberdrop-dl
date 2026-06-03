@@ -18,7 +18,6 @@ from mega.errors import MegaNzError
 from pydantic import ValidationError
 from typing_extensions import TypeIs
 
-from cyberdrop_dl.clients.flaresolverr import FlaresolverrError
 from cyberdrop_dl.exceptions import (
     CDLBaseError,
     ErrorLogMessage,
@@ -83,7 +82,7 @@ def _exc_group_msg(e: ExceptionGroup) -> str:
 
 
 @contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912, PLR0915
+def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912
     link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
     error_log_msg = origin = exc_info = None
     link_to_show: yarl.URL | str = ""
@@ -96,9 +95,6 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     except ExceptionGroup as e:
         error_log_msg = ErrorLogMessage(_exc_group_msg(e), str(e))
         exc_info = e.with_traceback(None)
-    except FlaresolverrError as e:
-        error_log_msg = ErrorLogMessage("Flaresolverr Error", str(e))
-        exc_info = e.__cause__
     except CDLBaseError as e:
         error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
         origin = e.origin
@@ -160,7 +156,7 @@ def _log_error(  # noqa: PLR0913
     link_to_show: yarl.URL | str,
     item: ScrapeItem | MediaItem | yarl.URL,
     error_log_msg: ErrorLogMessage,
-    exc_info: Exception | None,
+    exc_info: BaseException | None,
     origin: ScrapeItem | MediaItem | yarl.URL | Path | None,
 ) -> None:
     origin = origin or get_origin(item)

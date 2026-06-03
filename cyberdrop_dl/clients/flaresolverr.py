@@ -13,7 +13,7 @@ import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
 
 from cyberdrop_dl import ddos_guard
-from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.exceptions import DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
@@ -32,9 +32,6 @@ class Command(StrEnum):
 
     GET_REQUEST = "request.get"
     POST_REQUEST = "request.post"
-
-
-class FlaresolverrError(RuntimeError): ...
 
 
 @dataclasses.dataclass(slots=True)
