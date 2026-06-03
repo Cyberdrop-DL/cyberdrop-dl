@@ -65,7 +65,8 @@ class FilesterCrawler(Crawler):
             subfolders.extend(css.iselect(soup, Selector.SUBFOLDER, "href"))
 
         for subfolder in dict.fromkeys(subfolders):
-            new_scrape_item = scrape_item.create_child(self.parse_url(subfolder))
+            web_url = self.parse_url(subfolder, self.origin)
+            new_scrape_item = scrape_item.create_child(web_url)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
