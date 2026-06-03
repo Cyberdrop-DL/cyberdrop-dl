@@ -21,6 +21,7 @@ class HotLeakVipCrawler(LeakedZoneCrawler):
     FOLDER_DOMAIN: ClassVar[str] = "HotLeakVip"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hotleak.vip")
     IMAGES_CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://image-cdn.hotleak.vip")
+    _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
 
     @override
     @classmethod

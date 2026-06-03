@@ -127,7 +127,8 @@ class LeakedZoneCrawler(Crawler):
 
     async def _handle_video(self, scrape_item: ScrapeItem, post: Post) -> None:
         url = self.parse_url(_decode_video_url(post.stream_url_play))
-        m3u8, _ = await self.request_m3u8(url)
+        async with self.downloader.lock(url):
+            m3u8, _ = await self.request_m3u8(url)
         filename, ext = self.get_filename_and_ext(f"{post.id}.mp4")
         if post.created_at:
             scrape_item.uploaded_at = self.parse_iso_date(post.created_at)
