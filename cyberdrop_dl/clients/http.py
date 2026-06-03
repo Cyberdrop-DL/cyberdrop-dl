@@ -125,6 +125,8 @@ class HTTPClient:
     def flaresolverr(self) -> flaresolverr.Client | None:
         if self._flaresolverr is None and (url := self.config.global_settings.general.flaresolverr):
             self._flaresolverr = flaresolverr.Client(url, self._session)
+        if self._flaresolverr and self._flaresolverr.is_down:
+            return None
         return self._flaresolverr
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:

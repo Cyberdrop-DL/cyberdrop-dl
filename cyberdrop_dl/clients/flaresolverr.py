@@ -34,6 +34,9 @@ class Command(StrEnum):
     POST_REQUEST = "request.post"
 
 
+class FlaresolverrError(RuntimeError): ...
+
+
 @dataclasses.dataclass(slots=True)
 class Solution:
     content: Any
@@ -107,6 +110,10 @@ class Client:
     _request_id: Callable[[], int] = dataclasses.field(init=False, default_factory=lambda: itertools.count(1).__next__)
     _down: bool = dataclasses.field(init=False, default=False)
 
+    @property
+    def is_down(self) -> bool:
+        return self._down
+
     def __post_init__(self) -> None:
         self.url = self.url.origin() / "v1"
 
@@ -119,7 +126,7 @@ class Client:
     async def _ensure_session(self) -> None:
         msg = "Unable to create Flaresolverr session"
         if self._down:
-            raise RuntimeError(msg)
+            raise FlaresolverrError(msg)
 
         if self._session_id:
             return
@@ -133,7 +140,7 @@ class Client:
             except Exception as e:
                 self._down = True
                 logger.exception(msg)
-                raise RuntimeError(msg) from e
+                raise FlaresolverrError(msg) from e
 
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
 
@@ -199,7 +206,7 @@ class Client:
 
         resp = await self._request(Command.CREATE_SESSION, session=session_id, **params)
         if not resp.ok:
-            raise RuntimeError(f"FlareSolverr said: {resp.message}")
+            raise FlaresolverrError(f"FlareSolverr said: {resp.message}")
         self._session_id = session_id
 
     async def _destroy_session(self) -> None:
