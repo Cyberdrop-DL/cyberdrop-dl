@@ -18,14 +18,7 @@ from mega.errors import MegaNzError
 from pydantic import ValidationError
 from typing_extensions import TypeIs
 
-from cyberdrop_dl.exceptions import (
-    CDLBaseError,
-    ErrorLogMessage,
-    InvalidURLError,
-    TooManyCrawlerErrors,
-    create_error_msg,
-    get_origin,
-)
+from cyberdrop_dl.exceptions import CDLBaseError, ErrorLogMessage, InvalidURLError, create_error_msg, get_origin
 from cyberdrop_dl.utils._dataclasses import DictDataclass as DictDataclass
 from cyberdrop_dl.utils._dataclasses import deserialize as deserialize
 from cyberdrop_dl.utils._dataclasses import filter_data as filter_data
@@ -90,8 +83,6 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     try:
         with group_exceptions():
             yield
-    except TooManyCrawlerErrors:
-        return
     except ExceptionGroup as e:
         error_log_msg = ErrorLogMessage(_exc_group_msg(e), str(e))
         exc_info = e.with_traceback(None)
