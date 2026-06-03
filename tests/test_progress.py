@@ -5,6 +5,7 @@ import pytest
 from cyberdrop_dl import __version__
 from cyberdrop_dl.progress.scraping import ScrapingUI, downloads
 from cyberdrop_dl.progress.scraping.errors import UIError
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 @pytest.mark.parametrize(
@@ -42,7 +43,12 @@ def test_ui_errors_formatting(msg: str, code: int | None, padding: int, expected
 def test_scraping_json_dump() -> None:
     ui = ScrapingUI()
 
-    with ui(force=True), ui.scrape.new("example.com"), ui.downloads.download_file("a file.mp4", "example.com", 200):
+    url = AbsoluteHttpURL("https://example.com/a file.mp4")
+    with (
+        ui(force=True),
+        ui.scrape.new("example.com"),
+        ui.downloads.download_file(url.name, url.host, 200, url=url),
+    ):
         ui.download_errors.add("450 An Error")
         dump = ui.__json__()
         assert dump["files"] == {
@@ -81,6 +87,7 @@ def test_scraping_json_dump() -> None:
                 "bytes_downloaded": 0,
                 "domain": "EXAMPLE.COM",
                 "description": "a file.mp4",
+                "url": str(url),
                 "eta": None,
                 "visible": True,
             },

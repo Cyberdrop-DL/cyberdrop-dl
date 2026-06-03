@@ -138,6 +138,7 @@ class DownloadClient:
                 media_item.filename,
                 media_item.domain,
                 size,
+                url=media_item.url,
             )
 
         if resume_point:

@@ -43,9 +43,16 @@ if TYPE_CHECKING:
     from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
     from rich.panel import Panel
 
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL
+
 _current_hls_task: ContextVar[TaskID] = ContextVar("_current_hls_task")
-_HLS_TASK_FIELD_NAME: Final = "HLS"
-_DOMAIN_TASK_FIELD_NAME: Final = "DOMAIN"
+
+
+@final
+class _CustomField:
+    HLS = "HLS"
+    DOMAIN = "DOMAIN"
+    URL = "URL"
 
 
 @dataclasses.dataclass(slots=True)
@@ -79,7 +86,7 @@ class AutoWidthTextColumn(TextColumn):
 class AutoTransferSpeedColumn(TransferSpeedColumn):
     @override
     def render(self, task: Task) -> Text:
-        task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
+        task = task.fields.get(_CustomField.HLS, task)
         speed = _task_speed(task)
         return Text(_format_speed(speed), style="progress.data.speed")
 
@@ -89,7 +96,7 @@ class AutoDownloadColumn(DownloadColumn):
 
     @override
     def render(self, task: Task) -> Text:
-        hls_task: Task | None = task.fields.get(_HLS_TASK_FIELD_NAME)
+        hls_task: Task | None = task.fields.get(_CustomField.HLS)
         if hls_task is None:
             return super().render(task)
 
@@ -118,7 +125,7 @@ class DownloadsPanel(OverFlowPanel):
     def __init__(self, max_rows: int = 6) -> None:
         super().__init__(
             SpinnerColumn("dots3"),
-            AutoTextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _DOMAIN_TASK_FIELD_NAME + "]})"),
+            AutoTextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _CustomField.DOMAIN + "]})"),
             AutoWidthTextColumn(
                 "[progress.description]{task.description}",
                 table_column=Column(justify="left", no_wrap=True),
@@ -150,11 +157,7 @@ class DownloadsPanel(OverFlowPanel):
 
     @contextlib.contextmanager
     def download_hls(
-        self,
-        filename: str,
-        /,
-        domain: str,
-        segments: float,
+        self, filename: str, /, domain: str, segments: float, *, url: AbsoluteHttpURL | None = None
     ) -> Generator[None]:
         # For HLS downloads, we use 2 different tasks. One on a hidden progress to track the downloaded bytes
         # and one on the user facing progress to track the number of downloaded segments (with a known total)
@@ -167,7 +170,11 @@ class DownloadsPanel(OverFlowPanel):
         segments_task = self._add_task(
             _escape_filename(filename),
             segments,
-            fields={_DOMAIN_TASK_FIELD_NAME: domain.upper(), _HLS_TASK_FIELD_NAME: bytes_task},
+            fields={
+                _CustomField.DOMAIN: domain.upper(),
+                _CustomField.HLS: bytes_task,
+                _CustomField.URL: url,
+            },
         )
 
         token = _current_hls_task.set(segments_task.id)
@@ -179,18 +186,17 @@ class DownloadsPanel(OverFlowPanel):
             _current_hls_task.reset(token)
 
     def download_file(
-        self,
-        description: object,
-        /,
-        domain: str,
-        total: float | None,
+        self, description: object, /, domain: str, total: float | None, *, url: AbsoluteHttpURL | None = None
     ) -> ProgressHook:
 
         assert domain
         task = self._add_task(
             _escape_filename(str(description)),
             total,
-            fields={_DOMAIN_TASK_FIELD_NAME: domain.upper()},
+            fields={
+                _CustomField.DOMAIN: domain.upper(),
+                _CustomField.URL: url,
+            },
         )
 
         def advance(amount: int = 1) -> None:
@@ -207,7 +213,7 @@ class DownloadsPanel(OverFlowPanel):
 
     def download_hls_seg(self) -> ProgressHook:
         segments_task_id = _current_hls_task.get()
-        hls_task: Task = self._progress[segments_task_id].fields[_HLS_TASK_FIELD_NAME]
+        hls_task: Task = self._progress[segments_task_id].fields[_CustomField.HLS]
 
         def advance(amount: int) -> None:
             self._total_bytes += amount
@@ -283,13 +289,14 @@ class DownloadsPanel(OverFlowPanel):
 
 
 def _dump_task(task: Task) -> dict[str, Any]:
-    real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
+    real_task: Task = task.fields.get(_CustomField.HLS, task)
     return {
         "speed": truncate_float(_task_speed(real_task)),
         "size": task.total,
-        "domain": task.fields[_DOMAIN_TASK_FIELD_NAME],
+        "domain": task.fields[_CustomField.DOMAIN],
         "completed": task.completed,
-        "hls": _HLS_TASK_FIELD_NAME in task.fields,
+        "url": str(url) if (url := task.fields[_CustomField.URL]) else None,
+        "hls": _CustomField.HLS in task.fields,
         "bytes_downloaded": real_task.completed,
         "description": strip_markup(task.description),
         "eta": task.time_remaining,
@@ -338,7 +345,7 @@ def _format_speed(speed: float | None) -> str:
 
 
 def _total_speed(tasks: Iterable[Task]) -> float:
-    return sum(_task_speed(t.fields.get(_HLS_TASK_FIELD_NAME, t)) or 0 for t in tasks)
+    return sum(_task_speed(t.fields.get(_CustomField.HLS, t)) or 0 for t in tasks)
 
 
 if __name__ == "__main__":
