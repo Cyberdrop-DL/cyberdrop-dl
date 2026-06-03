@@ -40,7 +40,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.13.0
+List of sites supported by cyberdrop-dl-patched as of version 9.14.0
 
 ### 1fichier
 
@@ -1865,7 +1865,7 @@ spreadsheets:
 
 **Primary URL**: [https://pixeldrain.com](https://pixeldrain.com)
 
-**Supported Domains**: `pd.1drv.eu.org`, `pd.cybar.xyz`, `pixeldra.in`, `pixeldrain.biz`, `pixeldrain.com`, `pixeldrain.dev`, `pixeldrain.net`, `pixeldrain.nl`, `pixeldrain.tech`
+**Supported Domains**: `pixeldra.in`, `pixeldrain.biz`, `pixeldrain.com`, `pixeldrain.dev`, `pixeldrain.net`, `pixeldrain.nl`, `pixeldrain.tech`
 
 **Supported Paths**:
 
@@ -1884,6 +1884,18 @@ spreadsheets:
 **Notes**
 
 - text files will not be downloaded but their content will be parsed for URLs
+
+
+### Pixeldrain-proxy
+
+**Primary URL**: [https://pd.1drv.eu.org](https://pd.1drv.eu.org)
+
+**Supported Domains**: `pd.1drv.eu.org`, `pd.cybar.xyz`
+
+**Supported Paths**:
+
+- File:
+  - `/<file_id>`
 
 
 ### PixHost
