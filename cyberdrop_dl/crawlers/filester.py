@@ -5,7 +5,7 @@ import random
 import time
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph
@@ -35,6 +35,9 @@ class FilesterCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://filester.me")
     DOMAIN: ClassVar[str] = "filester"
     _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
+
+    def __post_init__(self) -> None:
+        self.api: FilesterAPI = FilesterAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -101,25 +104,16 @@ class FilesterCrawler(Crawler):
             return
 
         scrape_item.uploaded_at = self.parse_iso_date(file_attr("Uploaded"))
-        filename = open_graph.title(soup)
-        custom_filename, ext = self.get_filename_and_ext(filename, mime_type=file_attr("Type"))
+        name = open_graph.title(soup)
+        filename, ext = self.get_filename_and_ext(name, mime_type=file_attr("Type"))
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            filename,
+            name,
             ext,
-            custom_filename=custom_filename,
-            debrid_link=await self._request_download(slug),
+            custom_filename=filename,
+            debrid_link=await self.api.download(slug),
         )
-
-    async def _request_download(self, slug: str) -> AbsoluteHttpURL:
-        resp = await self.request_json(
-            self.origin / "api/public/download",
-            method="POST",
-            json={"file_slug": slug},
-        )
-        dl_link = random.choice(_CDN_URLS).with_path(resp["download_url"])
-        return dl_link.with_query(download="true")
 
     async def _request_soup_w_pass(self, url: AbsoluteHttpURL, password: str | None) -> BeautifulSoup:
         url = url.without_query_params("password")
@@ -149,6 +143,17 @@ class FilesterCrawler(Crawler):
             soup = await self.request_soup(url)
             assert _extract_form(soup) is None
         return soup
+
+
+class FilesterAPI(API):
+    async def download(self, slug: str) -> AbsoluteHttpURL:
+        resp = await self.request_json(
+            self.origin / "api/public/download",
+            method="POST",
+            json={"file_slug": slug},
+        )
+        dl_link = random.choice(_CDN_URLS).with_path(resp["download_url"])
+        return dl_link.with_query(download="true")
 
 
 def _encode_password(password: str, nonce: str) -> str:
