@@ -207,6 +207,7 @@ class Downloader:
             media_item.filename,
             media_item.domain,
             segments=sum(len(m.segments) for m in rendition if m is not None),
+            url=media_item.url,
         ):
             await self._hls_download(media_item, rendition)
 
