@@ -99,6 +99,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
         origin = e.origin
         link_to_show = getattr(e, "url", None) or link_to_show
+        exc_info = e.__cause__
     except NotImplementedError as e:
         error_log_msg = ErrorLogMessage("NotImplemented")
         exc_info = e
