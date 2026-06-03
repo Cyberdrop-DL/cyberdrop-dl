@@ -128,7 +128,7 @@ class Client:
         except Exception:
             if not self._down:
                 self._down = True
-                logger.warning("Flaresolverr has being disabled")
+                logger.warning("Flaresolverr has been disabled")
             raise
 
     async def _ensure_session(self) -> None:
@@ -152,9 +152,7 @@ class Client:
                 raise FlaresolverrError(msg) from e
 
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
-
         await self._ensure_session()
-        invalid_response_error = FlaresolverrError("Invalid response from flaresolverr")
         try:
             resp = await self._request(
                 Command.POST_REQUEST if data else Command.GET_REQUEST,
@@ -164,13 +162,13 @@ class Client:
             )
 
         except (TypeError, KeyError) as e:
-            raise invalid_response_error from e
+            raise FlaresolverrError("Invalid response from flaresolverr") from e
 
         if not resp.ok:
             raise FlaresolverrError(f"Failed to resolve URL with flaresolverr. {resp.message}")
 
         if not resp.solution:
-            raise invalid_response_error
+            raise FlaresolverrError("Flaresolverr response did not include a solution")
 
         return resp.solution
 
