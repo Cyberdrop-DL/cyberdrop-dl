@@ -173,7 +173,7 @@ def json_ld(soup: Tag, /, contains: str | None = None) -> JsonLD:
 def parse_form(form: Tag, /) -> HTMLForm:
     inputs: dict[str, str | None] = {}
     for elem in iselect(form, "input"):
-        name = attr(elem, "name")
+        name = attr_or_none(elem, "name") or attr(elem, "id")
         inputs[name] = attr_or_none(elem, "value")
 
     method = attr(form, "method").upper()
