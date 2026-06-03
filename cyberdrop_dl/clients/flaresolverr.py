@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import itertools
 import logging
@@ -19,7 +20,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable, Mapping
 
 
 logger = logging.getLogger(__name__)
@@ -120,6 +121,16 @@ class Client:
         except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to destroy flaresolver session ({e}!r)")
 
+    @contextlib.contextmanager
+    def _disable_on_error(self) -> Generator[None]:
+        try:
+            yield
+        except Exception:
+            if not self._down:
+                self._down = True
+                logger.warning("Flaresolverr has being disabled")
+            raise
+
     async def _ensure_session(self) -> None:
         msg = "Unable to create Flaresolverr session"
         if self._down:
@@ -133,12 +144,11 @@ class Client:
                 return
 
             try:
-                await self._create_session()
+                with self._disable_on_error():
+                    await self._create_session()
             except aiohttp.ClientConnectionError as e:
-                self._down = True
                 raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
             except Exception as e:
-                self._down = True
                 raise FlaresolverrError(msg) from e
 
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
