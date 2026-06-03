@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients.downloads import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import MediaItem
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
     from cyberdrop_dl.utils.m3u8 import Rendition
 
 logger = logging.getLogger(__name__)
@@ -155,6 +155,15 @@ class Downloader:
                 )
 
     @contextlib.asynccontextmanager
+    async def lock(self, url: AbsoluteHttpURL) -> AsyncGenerator[None]:
+        async with (
+            self._server_lock(url.host),
+            self._semaphore,
+            self.manager.http_client.global_download_limiter,
+        ):
+            yield
+
+    @contextlib.asynccontextmanager
     async def _download_context(self, media_item: MediaItem) -> AsyncGenerator[None]:
 
         media_item.attempts = 0
@@ -164,13 +173,7 @@ class Downloader:
             return
 
         self._waiting_items += 1
-
-        server = (media_item.debrid_link or media_item.url).host
-        async with (
-            self._server_lock(server),
-            self._semaphore,
-            self.manager.http_client.global_download_limiter,
-        ):
+        async with self.lock(media_item.real_url):
             self._processed_items.add(media_item.db_path)
             self._waiting_items -= 1
             yield
