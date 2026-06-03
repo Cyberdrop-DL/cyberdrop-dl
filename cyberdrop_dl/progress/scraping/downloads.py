@@ -299,7 +299,7 @@ def _dump_task(task: Task) -> dict[str, Any]:
         "hls": _CustomField.HLS in task.fields,
         "bytes_downloaded": real_task.completed,
         "description": strip_markup(task.description),
-        "urleta": task.time_remaining,
+        "eta": task.time_remaining,
         "visible": task.visible,
     }
 
