@@ -11,7 +11,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Generator, Iterable
 
     from bs4 import BeautifulSoup
 
@@ -56,16 +56,14 @@ class FilesterCrawler(Crawler):
                 title = self.create_title(name, album_id)
                 scrape_item.setup_as_album(title, album_id=album_id)
 
-            for on_click in css.iselect(soup, Selector.FILES, "onclick"):
-                web_url = self.parse_url(extr_text(on_click, "'", "'"), self.origin)
-                new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self.run(new_scrape_item))
-                scrape_item.add_children()
+            self._iter_children(scrape_item, _extract_files(soup))
+            subfolders.extend(_extract_subfolders(soup))
 
-            subfolders.extend(css.iselect(soup, Selector.SUBFOLDER, "href"))
+        self._iter_children(scrape_item, dict.fromkeys(subfolders))
 
-        for subfolder in dict.fromkeys(subfolders):
-            web_url = self.parse_url(subfolder, self.origin)
+    def _iter_children(self, scrape_item: ScrapeItem, children: Iterable[str]) -> None:
+        for child in children:
+            web_url = self.parse_url(child, self.origin)
             new_scrape_item = scrape_item.create_child(web_url)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
@@ -165,3 +163,12 @@ def _extract_form(soup: BeautifulSoup) -> tuple[str, str] | None:
     except css.SelectorError:
         return None
     return css.attr(form, "action"), css.select(form, "#nonce", "value")
+
+
+def _extract_files(soup: BeautifulSoup) -> Generator[str]:
+    for on_click in css.iselect(soup, Selector.FILES, "onclick"):
+        yield extr_text(on_click, "'", "'")
+
+
+def _extract_subfolders(soup: BeautifulSoup) -> Generator[str]:
+    return css.iselect(soup, Selector.SUBFOLDER, "href")
