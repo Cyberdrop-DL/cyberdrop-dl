@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Reject URL from unknown domains (PixelDrain)
+- Reject any URL not matching an official domain (Pixeldrain)
 
 ## [9.13.0] - 2026-05-29
 
