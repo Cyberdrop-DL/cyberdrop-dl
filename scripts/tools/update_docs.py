@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from cyberdrop_dl import __version__, supported_sites
+from cyberdrop_dl.constants import CDL_USER_AGENT
 
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
@@ -8,7 +9,7 @@ SUPPORTED_SITES_MD = REPO_ROOT / "docs/reference/supported-websites.md"
 GENERAL_MD = REPO_ROOT / "docs/reference/configuration-options/global-settings/general.md"
 
 
-def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
+def _write_if_updated(path: Path, old_content: str, new_content: str) -> None:
     relative = path.relative_to(REPO_ROOT)
     if old_content != new_content:
         path.write_text(new_content, encoding="utf8")
@@ -18,7 +19,7 @@ def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
     print(msg)
 
 
-def make_supported_sites_markdown_table() -> str:
+def _make_supported_sites_markdown_table() -> str:
     return "".join(
         (
             "\n",
@@ -32,23 +33,14 @@ def make_supported_sites_markdown_table() -> str:
     )
 
 
-def replace(text: str, marker: str, new_content: str) -> str:
+def _replace_content(text: str, marker: str, new_content: str) -> str:
     start_marker = f"<!-- START_{marker} -->"
     start = text.index(start_marker) + len(start_marker)
     end = text.index(f"<!-- END_{marker} -->")
     return text[:start] + "\n" + new_content + "\n" + text[end:]
 
 
-def update_supported_sites() -> None:
-    new_content = replace(
-        old_content := SUPPORTED_SITES_MD.read_text(),
-        marker="SUPPORTED_SITES",
-        new_content=make_supported_sites_markdown_table(),
-    )
-    write_if_updated(SUPPORTED_SITES_MD, old_content, new_content)
-
-
-def get_help_message() -> str:
+def _get_help_message() -> str:
     from rich.console import Console
 
     from cyberdrop_dl.__main__ import app
@@ -59,30 +51,46 @@ def get_help_message() -> str:
     return console.export_text()
 
 
-def update_cli_overview() -> None:
-    new_content = replace(
-        old_content := CLI_ARGUMENTS_MD.read_text(),
-        marker="CLI_OVERVIEW",
-        new_content=f"```shell\n{get_help_message()}```",
+def _update_file(file: Path, new_content: str, *, marker: str) -> None:
+    new_content = _replace_content(
+        old_content := file.read_text(),
+        marker=marker,
+        new_content=new_content,
     )
-    write_if_updated(CLI_ARGUMENTS_MD, old_content, new_content)
+    _write_if_updated(file, old_content, new_content)
 
 
-def get_custom_ua_crawlers() -> list[str]:
+def _get_custom_ua_crawlers() -> list[str]:
     from cyberdrop_dl.crawlers.crawler import Registry
 
     Registry.import_all()
-    return sorted(c.FOLDER_DOMAIN for c in Registry.concrete if c._DEFAULT_UA is not None)
+    return sorted(c.FOLDER_DOMAIN for c in Registry.concrete if c._DEFAULT_UA and CDL_USER_AGENT in c._DEFAULT_UA)
+
+
+def update_supported_sites() -> None:
+    _update_file(
+        SUPPORTED_SITES_MD,
+        _make_supported_sites_markdown_table(),
+        marker="SUPPORTED_SITES",
+    )
+
+
+def update_cli_overview() -> None:
+    new_content = f"```shell\n{_get_help_message()}```"
+    _update_file(
+        CLI_ARGUMENTS_MD,
+        new_content,
+        marker="CLI_OVERVIEW",
+    )
 
 
 def update_custom_ua_crawlers() -> None:
-    content = "- " + "\n- ".join(get_custom_ua_crawlers())
-    new_content = replace(
-        old_content := GENERAL_MD.read_text(),
+    new_content = "- " + "\n- ".join(_get_custom_ua_crawlers())
+    _update_file(
+        GENERAL_MD,
+        new_content,
         marker="CUSTOM_UA_CRAWLERS",
-        new_content=content,
     )
-    write_if_updated(GENERAL_MD, old_content, new_content)
 
 
 if __name__ == "__main__":
