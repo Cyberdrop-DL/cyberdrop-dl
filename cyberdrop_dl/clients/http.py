@@ -207,6 +207,7 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
+        default_ua: str | None = None,
         **request_params: Any,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
@@ -218,6 +219,7 @@ class HTTPClient:
             impersonate=impersonate,
             data=data,
             json=json,
+            default_ua=default_ua,
             request_params=request_params,
         ) as resp:
             try:
@@ -241,6 +243,7 @@ class HTTPClient:
         impersonate: str | bool | None = None,
         data: Any = None,
         json: Any = None,
+        default_ua: str | None = None,
         request_params: dict[str, Any] | None = None,
     ) -> AsyncGenerator[AbstractResponse[Any]]:
 
@@ -255,7 +258,7 @@ class HTTPClient:
         )
 
         if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", self.config.global_settings.general.user_agent)
+            _ = request.headers.setdefault("User-Agent", default_ua or self.config.global_settings.general.user_agent)
 
         async with self._request(request) as resp:
             yield resp
