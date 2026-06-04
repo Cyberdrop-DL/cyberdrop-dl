@@ -6,13 +6,14 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 _PRIMARY_URL = AbsoluteHttpURL("https://real-debrid.com")
@@ -58,7 +59,7 @@ _ERROR_CODES = {
 }
 
 
-class RealDebridCrawler(Crawler):
+class RealDebridCrawler(Crawler, cdl_user_agent=True):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
     DOMAIN: ClassVar[str] = "real-debrid"
     FOLDER_DOMAIN: ClassVar[str] = "RealDebrid"
@@ -75,7 +76,7 @@ class RealDebridCrawler(Crawler):
     def __post_init__(self) -> None:
         token = self.manager.config.auth.realdebrid.api_key
         self.disabled = not bool(token)
-        self.api = RealDebridAPI(self, token)
+        self.api: RealDebridAPI = RealDebridAPI(self, token)
 
     async def __async_post_init__(self) -> None:
         await self._get_regexes()
@@ -134,7 +135,7 @@ class RealDebridAPI:
         self._crawler = crawler
         self._folder_regex: re.Pattern[str]
         self._file_regex: re.Pattern[str]
-        self._headers = {"Authorization": f"Bearer {token}", "User-Agent": CDL_USER_AGENT}
+        self._headers: Mapping[str, str] = {"Authorization": f"Bearer {token}"}
 
     def is_supported(self, url: AbsoluteHttpURL) -> bool:
         match = self._file_regex.search(str(url))

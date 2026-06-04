@@ -16,15 +16,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class TransferItCrawler(Crawler, db_path="path_qs_frag"):
+class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")
     DOMAIN: ClassVar[str] = "transfer.it"
 
-    core: TransferItClient
-
-    async def __async_post_init__(self) -> None:
-        self.core = TransferItClient(self.manager.http_client._session, user_agent=CDL_USER_AGENT)
+    def __post_init__(self) -> None:
+        self.core: TransferItClient = TransferItClient(self.manager.http_client._session, user_agent=CDL_USER_AGENT)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

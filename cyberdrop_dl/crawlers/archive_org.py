@@ -9,7 +9,6 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -21,7 +20,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class ArchiveOrgCrawler(Crawler):
+class ArchiveOrgCrawler(Crawler, cdl_user_agent=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": (
             "/details/<identifier>",
@@ -95,7 +94,7 @@ class ArchiveOrgAPI(API):
         )
 
     async def _request(self, url: AbsoluteHttpURL) -> dict[str, Any]:
-        resp = await self.request_json(url, headers={"User-Agent": CDL_USER_AGENT, "Accept-Encoding": "deflate, gzip"})
+        resp = await self.request_json(url)
         if not resp:
             raise ScrapeError(404)
         if error := resp.get("error"):

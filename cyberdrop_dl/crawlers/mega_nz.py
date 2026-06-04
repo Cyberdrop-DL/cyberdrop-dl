@@ -47,6 +47,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("mega.co.nz",)
+    _DEFAULT_UA: ClassVar[str | None] = CDL_USER_AGENT
 
     core: MegaCore
     downloader: MegaDownloader
