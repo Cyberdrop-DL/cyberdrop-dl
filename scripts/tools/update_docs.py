@@ -5,6 +5,7 @@ from cyberdrop_dl import __version__, supported_sites
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
 SUPPORTED_SITES_MD = REPO_ROOT / "docs/reference/supported-websites.md"
+GENERAL_MD = REPO_ROOT / "docs/reference/configuration-options/global-settings/general.md"
 
 
 def write_if_updated(path: Path, old_content: str, new_content: str) -> None:
@@ -67,6 +68,24 @@ def update_cli_overview() -> None:
     write_if_updated(CLI_ARGUMENTS_MD, old_content, new_content)
 
 
+def get_custom_ua_crawlers() -> list[str]:
+    from cyberdrop_dl.crawlers.crawler import Registry
+
+    Registry.import_all()
+    return sorted(c.FOLDER_DOMAIN for c in Registry.concrete if c._DEFAULT_UA is not None)
+
+
+def update_custom_ua_crawlers() -> None:
+    content = "- " + "\n- ".join(get_custom_ua_crawlers())
+    new_content = replace(
+        old_content := GENERAL_MD.read_text(),
+        marker="CUSTOM_UA_CRAWLERS",
+        new_content=content,
+    )
+    write_if_updated(GENERAL_MD, old_content, new_content)
+
+
 if __name__ == "__main__":
     update_cli_overview()
     update_supported_sites()
+    update_custom_ua_crawlers()
