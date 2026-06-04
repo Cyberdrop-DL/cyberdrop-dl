@@ -52,7 +52,6 @@ class BunkrCrawler(Crawler):
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
         "bunkr.black",
         "bunkr.su",
-        "bunkr.ru",
         "bunkr.is",
         "bunkr.la",
         "bunkr.se",
@@ -70,7 +69,7 @@ class BunkrCrawler(Crawler):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = super().transform_url(url)
+        url = _fix_domain(url)
         match url.parts[1:]:
             case ["v" | "d" | "i", js_slug]:
                 return url.origin() / "f" / js_slug
@@ -281,3 +280,11 @@ def fix_db_referer(referer: str) -> str:
         return str(url)
 
     return str(BunkrCrawler.transform_url(url).with_host(BunkrCrawler.PRIMARY_URL.host))
+
+
+def _fix_domain(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if url.host in BunkrCrawler.OLD_DOMAINS:
+        return url.with_host(BunkrCrawler.PRIMARY_URL.host)
+    if url.host == "get.bunkr.cr":
+        return url.with_host("dl.bunkr.cr")
+    return url
