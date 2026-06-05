@@ -24,16 +24,16 @@ class HotPicCrawler(Crawler):
         "Album": "/album/...",
         "Image": "/i/...",
     }
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "hotpic", "2385290.xyz"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "hotpic", "2385290.xyz", "myhostdata.space"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hotpic.cc")
     DOMAIN: ClassVar[str] = "hotpic"
     FOLDER_DOMAIN: ClassVar[str] = "HotPic"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["album", album_id, *_]:
+            case ["album", album_id]:
                 return await self.album(scrape_item, album_id)
-            case ["i", _, *_]:
+            case ["i", _]:
                 return await self.file(scrape_item)
             case ["uploads" | "reddit", _, *_]:
                 return await self.direct_file(scrape_item)
