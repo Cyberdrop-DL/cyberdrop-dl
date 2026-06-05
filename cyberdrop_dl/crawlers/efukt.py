@@ -42,14 +42,18 @@ class EfuktCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [slug] if slug.isdigit():
-                return await self.homepage(scrape_item)
+            case [slug]:
+                if slug.isdigit():
+                    return await self.homepage(scrape_item)
+                if slug.endswith(".html"):
+                    return await self.media(scrape_item)
+                raise ValueError
             case []:
                 return await self.homepage(scrape_item)
             case ["series", _]:
                 return await self.series(scrape_item)
             case _:
-                return await self.media(scrape_item)
+                raise ValueError
 
     @error_handling_wrapper
     async def homepage(self, scrape_item: ScrapeItem) -> None:
