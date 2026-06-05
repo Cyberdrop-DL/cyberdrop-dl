@@ -56,9 +56,9 @@ class TwPornstarsCrawler(TwimgCrawler):
         soup = await self.request_soup(scrape_item.url)
         src = self.parse_url(css.select(soup, Selector.MEDIA, "src"))
         src = src.with_path(src.path.removesuffix(":large"))
-
         if "video" in src.host:
             await self.direct_file(scrape_item, src)
+            return
         await self.photo(scrape_item, src)
 
     @error_handling_wrapper
