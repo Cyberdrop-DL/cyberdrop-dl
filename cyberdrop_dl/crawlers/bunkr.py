@@ -83,7 +83,7 @@ class BunkrCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["file", file_id] if scrape_item.url.host == self.api.DL_URL.host:
+            case ["file", file_id] if scrape_item.url.host == self.api.DL_ENDPOINT.host:
                 return await self.file_download(scrape_item, file_id)
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
@@ -209,17 +209,16 @@ class BunkrCrawler(Crawler):
 
 
 class BunkrAPI(API):
-    DL_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://dl.bunkr.cr")
-    SIGN_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://glb-apisign.cdn.cr/sign")
+    DL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://dl.bunkr.cr/api/_001_v2")
+    SIGN_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://glb-apisign.cdn.cr/sign")
 
     async def download(self, file_id: str) -> tuple[AbsoluteHttpURL, str | None]:
-        api_url = self.DL_URL / "api/_001_v2"
-        resp = await self.request_json(api_url, json={"id": file_id})
+        resp = await self.request_json(self.DL_ENDPOINT, json={"id": file_id})
         url = self.parse_url(resp["mediafiles"]).with_path(resp["path"])
         return url, resp.get("original")
 
     async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        api_url = self.SIGN_URL.with_query(path=src.path)
+        api_url = self.SIGN_ENDPOINT.with_query(path=src.path)
         resp = await self.request_json(api_url)
         return src.with_query(token=resp["token"], ex=resp["ex"])
 
