@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
@@ -40,7 +40,7 @@ class MotherlessCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = "div.pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
-    _RATE_LIMIT = 2, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem, collection_id: str = "") -> None:
         parts = scrape_item.url.parts

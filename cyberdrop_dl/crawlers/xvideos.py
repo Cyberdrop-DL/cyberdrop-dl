@@ -64,10 +64,10 @@ class XVideosCrawler(Crawler):
         "Account Quickies": tuple(f"{path}#quickies" for path in _ACCOUNT_PATHS),
     }
 
-    PRIMARY_URL = AbsoluteHttpURL("https://www.xvideos.com")
-    DOMAIN = "xvideos"
-    FOLDER_DOMAIN = "xVideos"
-    NEXT_PAGE_SELECTOR = Selectors.NEXT_PAGE
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.xvideos.com")
+    DOMAIN: ClassVar[str] = "xvideos"
+    FOLDER_DOMAIN: ClassVar[str] = "xVideos"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selectors.NEXT_PAGE
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:

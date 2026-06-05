@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://streamable.com")
 AJAX_ENTRYPOINT = AbsoluteHttpURL("https://ajax.streamable.com/videos/")
 
 STATUS_OK = 2
@@ -26,7 +25,7 @@ VIDEO_STATUS = {
 
 class StreamableCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/..."}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://streamable.com")
     DOMAIN: ClassVar[str] = "streamable"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -35,7 +34,7 @@ class StreamableCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
         video_id = scrape_item.url.name or scrape_item.url.parent.name
-        canonical_url = PRIMARY_URL / video_id
+        canonical_url = self.PRIMARY_URL / video_id
         scrape_item.url = canonical_url
 
         if await self.check_complete_from_referer(canonical_url):

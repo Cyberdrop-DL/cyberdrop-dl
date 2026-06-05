@@ -59,9 +59,9 @@ class OdnoklassnikiCrawler(Crawler):
             "/profile/<username>/c<channel_id>",
         ),
     }
-    PRIMARY_URL = AbsoluteHttpURL("https://ok.ru")
-    DOMAIN = "odnoklassniki"
-    FOLDER_DOMAIN = "ok.ru"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://ok.ru")
+    DOMAIN: ClassVar[str] = "odnoklassniki"
+    FOLDER_DOMAIN: ClassVar[str] = "ok.ru"
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return super()._prepare_headers(scrape_item) | _MOBILE_HEADERS

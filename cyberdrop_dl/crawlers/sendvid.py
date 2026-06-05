@@ -10,9 +10,12 @@ from cyberdrop_dl.utils import css, error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://sendvid.com/")
-VIDEO_SRC_SELECTOR = "video > source#video_source"
-TITLE_SELECTOR = "p.video-title"
+
+class Selector:
+    VIDEO_SRC = "video > source#video_source"
+    TITLE = "p.video-title"
+
+
 REQUIRED_QUERY_PARAMS = "validfrom", "validto", "rate", "ip", "hash"
 
 
@@ -22,7 +25,7 @@ class SendVidCrawler(Crawler):
         "Embeds": "/embed/...",
         "Direct links": "",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://sendvid.com/")
     DOMAIN: ClassVar[str] = "sendvid"
     FOLDER_DOMAIN: ClassVar[str] = "SendVid"
 
@@ -37,9 +40,9 @@ class SendVidCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        title = css.select_text(soup, TITLE_SELECTOR)
+        title = css.select_text(soup, Selector.TITLE)
         try:
-            link_str: str = css.select(soup, VIDEO_SRC_SELECTOR, "src")
+            link_str: str = css.select(soup, Selector.VIDEO_SRC, "src")
         except AssertionError:
             raise ScrapeError(422, "Couldn't find video source") from None
         link = self.parse_url(link_str)
@@ -63,7 +66,7 @@ class SendVidCrawler(Crawler):
 def _get_streaming_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     if is_cdn(url):
         video_id = url.name.split(".", 1)[0]
-        return PRIMARY_URL.with_path(video_id)
+        return SendVidCrawler.PRIMARY_URL.with_path(video_id)
 
     if "embed" in url.parts:
         return url.with_path(url.path.replace("/embed/", "/"), keep_query=True, keep_fragment=True)
@@ -71,4 +74,4 @@ def _get_streaming_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 
 def is_cdn(url: AbsoluteHttpURL) -> bool:
-    return all(p in url.host for p in (PRIMARY_URL.host, "."))
+    return all(p in url.host for p in (SendVidCrawler.PRIMARY_URL.host, "."))

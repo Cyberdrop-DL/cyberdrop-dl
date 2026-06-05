@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, RateLimit
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -15,4 +15,4 @@ class SimpCityCrawler(XenforoCrawler, is_debug=True):
     login_required = False
     IGNORE_EMBEDED_IMAGES_SRC = False
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("simpcity.su",)
-    _RATE_LIMIT = 1, 20
+    _RATE_LIMIT: ClassVar[RateLimit] = 1, 20

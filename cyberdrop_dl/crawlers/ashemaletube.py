@@ -4,7 +4,7 @@ import json
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, m3u8
@@ -70,7 +70,7 @@ class AShemaleTubeCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "aShemaleTube"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT = 3, 10
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         if any(p in scrape_item.url.parts for p in ("creators", "profiles", "pornstars", "model")):

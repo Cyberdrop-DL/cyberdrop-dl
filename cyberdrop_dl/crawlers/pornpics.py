@@ -18,8 +18,6 @@ COLLECTION_PARTS = "search", "channel", "pornstar", "tag", "category"
 IMAGE_SELECTOR = "div#main a.rel-link"
 BASE_HOST: str = "pornpics.com"
 
-PRIMARY_URL = AbsoluteHttpURL("https://pornpics.com")
-
 
 class PornPicsCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -31,7 +29,7 @@ class PornPicsCrawler(Crawler):
         "Tags": "/tags/...",
         "Direct links": "",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pornpics.com")
     DOMAIN: ClassVar[str] = "pornpics"
     FOLDER_DOMAIN: ClassVar[str] = "PornPics"
 
@@ -78,7 +76,7 @@ class PornPicsCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
 
-        scrape_item.url = PRIMARY_URL / "galleries" / gallery_id  # canonical URL
+        scrape_item.url = self.PRIMARY_URL / "galleries" / gallery_id  # canonical URL
         title = css.select_text(soup, "h1")
         title = self.create_title(title, gallery_id)
         scrape_item.setup_as_album(title, album_id=gallery_id)

@@ -9,17 +9,13 @@ from cyberdrop_dl.utils import error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://send.now/")
-
 
 class SendNowCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Direct links": ""}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://send.now/")
     DOMAIN: ClassVar[str] = "send.now"
     FOLDER_DOMAIN: ClassVar[str] = "SendNow"
-
-    def __post_init__(self) -> None:
-        self.got_cookies = False
+    got_cookies: bool = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         await self.file(scrape_item)
@@ -57,5 +53,5 @@ class SendNowCrawler(Crawler):
 
             async with self.request(scrape_item.url, impersonate=True):
                 pass
-            cookies = self.manager.http_client.cookies.filter_cookies(PRIMARY_URL)
+            cookies = self.manager.http_client.cookies.filter_cookies(self.PRIMARY_URL)
             self.got_cookies = bool(cookies)

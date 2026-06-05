@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
@@ -34,11 +34,11 @@ class NHentaiCrawler(Crawler):
         ),
         "Gallery": "/g/<gallery_id>",
     }
-    PRIMARY_URL = AbsoluteHttpURL("https://nhentai.net/")
-    NEXT_PAGE_SELECTOR = "a.next"
-    DOMAIN = "nhentai.net"
-    FOLDER_DOMAIN = "nHentai"
-    _RATE_LIMIT = 4, 1
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nhentai.net/")
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "a.next"
+    DOMAIN: ClassVar[str] = "nhentai.net"
+    FOLDER_DOMAIN: ClassVar[str] = "nHentai"
+    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

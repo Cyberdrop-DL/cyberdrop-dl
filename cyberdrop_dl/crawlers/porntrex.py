@@ -30,7 +30,6 @@ class Selector:
 
 
 TITLE_TRASH = "Free HD ", "Most Relevant ", "New ", "Videos", "Porn", "for:", "New Videos", "Tagged with"
-PRIMARY_URL = AbsoluteHttpURL("https://www.porntrex.com")
 
 
 class PorntrexCrawler(Crawler):
@@ -44,7 +43,7 @@ class PorntrexCrawler(Crawler):
         "Playlist": "/playlists/...",
         "Search": "/search/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.porntrex.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "porntrex"
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
@@ -83,7 +82,7 @@ class PorntrexCrawler(Crawler):
         if not scrape_item.url.name:
             scrape_item.url = scrape_item.url.parent
 
-        canonical_url = PRIMARY_URL / "video" / video_id
+        canonical_url = self.PRIMARY_URL / "video" / video_id
         if await self.check_complete_from_referer(canonical_url):
             return
 

@@ -14,13 +14,12 @@ if TYPE_CHECKING:
     from cyberdrop_dl.utils import m3u8
 
 
-CDN_HOST = "pbs.twimg.com"
-PRIMARY_URL = AbsoluteHttpURL("https://twimg.com/")
+_CDN_HOST = "pbs.twimg.com"
 
 
 class TwimgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Photo": "/..."}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://twimg.com/")
     DOMAIN: ClassVar[str] = "twimg"
     FOLDER_DOMAIN: ClassVar[str] = "TwitterImages"
 
@@ -40,7 +39,7 @@ class TwimgCrawler(Crawler):
         # `orig`` is original quality but it's not always available, same as "4096x4096"
         # "large", "medium", or "small" are always available
 
-        link = next(_make_download_urls(link.with_host(CDN_HOST)))
+        link = next(_make_download_urls(link.with_host(_CDN_HOST)))
         filename = Path(link.name).with_suffix(".jpg").as_posix()
         filename, ext = self.get_filename_and_ext(filename)
         await self.handle_file(link, scrape_item, filename, ext)

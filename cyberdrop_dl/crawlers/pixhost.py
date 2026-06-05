@@ -16,16 +16,13 @@ class Selector:
     IMAGE = "img.image-img"
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://pixhost.to")
-
-
 class PixHostCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Gallery": "/gallery/<gallery_id>",
         "Image": "/show/<image_id>",
         "Thumbnail": "/thumbs/..",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixhost.to")
     UPDATE_UNSUPPORTED: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "pixhost"
     FOLDER_DOMAIN: ClassVar[str] = "PixHost"
@@ -77,11 +74,11 @@ class PixHostCrawler(Crawler):
 def _thumbnail_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     # https://t100.pixhost.to/thumbs/491/538303440_005.jpg -> https://img100.pixhost.to/images/491/538303440_005.jpg
     thumb_server_id = url.host.split(".", 1)[0].split("t")[-1]
-    img_host = f"img{thumb_server_id}.{PRIMARY_URL.host}"
+    img_host = f"img{thumb_server_id}.{PixHostCrawler.PRIMARY_URL.host}"
     new_path = url.path.replace("/thumbs/", "/images/")
     return url.with_host(img_host).with_path(new_path)
 
 
 def _thumbnail_to_web_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     new_path = url.path.replace("/thumbs/", "/show/")
-    return url.with_host(PRIMARY_URL.host).with_path(new_path)
+    return url.with_host(PixHostCrawler.PRIMARY_URL.host).with_path(new_path)

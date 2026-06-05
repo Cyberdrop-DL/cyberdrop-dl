@@ -20,8 +20,8 @@ class ToonilyCrawler(Crawler):
         "Serie": "/serie/<name>",
         "Chapter": "/serie/<name>/chapter-<chapter-id>",
     }
-    PRIMARY_URL = AbsoluteHttpURL("https://toonily.com")
-    DOMAIN = "toonily"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://toonily.com")
+    DOMAIN: ClassVar[str] = "toonily"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

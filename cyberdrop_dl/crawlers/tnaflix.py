@@ -15,9 +15,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://www.tnaflix.com")
-
-
 class Selector:
     VIDEO_SRC = "video#video-player source"
     COLLECTION_TITLE = "div.ph-title > h1"
@@ -39,7 +36,7 @@ class TNAFlixCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "tnaflix"
     FOLDER_DOMAIN: ClassVar[str] = "TNAFlix"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tnaflix.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 

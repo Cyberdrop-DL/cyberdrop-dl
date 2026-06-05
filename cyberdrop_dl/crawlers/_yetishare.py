@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from bs4 import BeautifulSoup
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
 
@@ -44,7 +44,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
         ),
         "Shared folders": "/shared/<share_key>",
     }
-    _RATE_LIMIT = 5, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

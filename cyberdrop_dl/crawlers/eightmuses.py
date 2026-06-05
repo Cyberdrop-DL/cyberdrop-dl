@@ -12,17 +12,16 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-TILE_SELECTOR = "a[class*=c-tile]"
-IMAGE_SELECTOR = "div[class=image]"
-TITLE_PARTS_SELECTOR = "div[class=top-menu-breadcrumb] > ol > li > a"
-
-PRIMARY_URL = AbsoluteHttpURL("https://comics.8muses.com")
+class Selector:
+    TILE = "a[class*=c-tile]"
+    IMAGE = "div[class=image]"
+    TITLE_PARTS = "div[class=top-menu-breadcrumb] > ol > li > a"
 
 
 class EightMusesCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Album": "/comics/album/..."}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    DOMAIN = "8muses"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://comics.8muses.com")
+    DOMAIN: ClassVar[str] = "8muses"
     FOLDER_DOMAIN: ClassVar[str] = "8Muses"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -44,10 +43,10 @@ class EightMusesCrawler(Crawler):
 
         results = await self.get_album_results(album_id)
 
-        for tile in soup.select(TILE_SELECTOR):
+        for tile in soup.select(Selector.TILE):
             tile_link = self.parse_url(css.attr(tile, "href"))
             tile_title: str = css.attr_or_none(tile, "title") or ""
-            image = css.select(tile, IMAGE_SELECTOR)
+            image = css.select(tile, Selector.IMAGE)
             is_new_album = image["itemtype"] == "https://schema.org/ImageGallery"
             new_album_id = f"{scrape_item.album_id}/{tile_title.replace(' ', '-')}"
             new_scrape_item = scrape_item.create_child(tile_link)
@@ -67,5 +66,5 @@ class EightMusesCrawler(Crawler):
 
 def get_title_parts(soup: BeautifulSoup) -> list[str]:
     """Gets the album title, sub-album title, and comic title."""
-    titles = soup.select(TITLE_PARTS_SELECTOR)[1:]
-    return [title.text for title in titles]
+    titles = soup.select(Selector.TITLE_PARTS)[1:]
+    return [title.get_text() for title in titles]
