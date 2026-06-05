@@ -61,7 +61,7 @@ version = "9.15.0.dev0"
 apprise = [
     "apprise >=1.11.0",
     "click >=8.4.1",
-    'pywin32>=311; platform_system == "Windows"',
+    'pywin32>=312; platform_system == "Windows"',
     'tzdata>=2025.3; platform_system == "Windows"'
 ]
 

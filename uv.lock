@@ -787,7 +787,7 @@ requires-dist = [
     { name = "psutil", marker = "sys_platform != 'android'", specifier = ">=7.2.1" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = "==2.13.4" },
-    { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=311" },
+    { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=312" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "readchar", specifier = ">=4.2.2" },
     { name = "rich", specifier = ">=15.0.0" },
