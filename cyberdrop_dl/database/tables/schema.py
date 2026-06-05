@@ -27,7 +27,7 @@ class Version(NamedTuple):
         return ".".join(map(str, self))
 
 
-CURRENT_APP_SCHEMA_VERSION = Version(9, 13, 0)
+CURRENT_APP_SCHEMA_VERSION = Version(9, 15, 0)
 
 logger = logging.getLogger(__name__)
 
