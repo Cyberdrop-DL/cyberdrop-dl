@@ -47,7 +47,7 @@ class BunkrCrawler(Crawler):
         "Stream redirect": "/<slug>",
     }
 
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.site")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.cr")
     DOMAIN: ClassVar[str] = "bunkr"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
         "bunkr.black",
@@ -275,11 +275,11 @@ def _fix_encoding(val: str) -> str:
 
 
 def fix_db_referer(referer: str) -> str:
-    url = AbsoluteHttpURL(referer)
+    url = BunkrCrawler.transform_url(AbsoluteHttpURL(referer))
     if BunkrCrawler.is_subdomain(url):
         return str(url)
 
-    return str(BunkrCrawler.transform_url(url).with_host(BunkrCrawler.PRIMARY_URL.host))
+    return str(url.with_host(BunkrCrawler.PRIMARY_URL.host))
 
 
 def _fix_domain(url: AbsoluteHttpURL) -> AbsoluteHttpURL:

@@ -7,7 +7,7 @@ TEST_CASES = [
                 "url": "re:/storage/media/AZ-Haul-119-tqLy8ZWy.mp4",
                 "filename": "AZ Haul 119.mp4",
                 "original_filename": "AZ Haul 119.mp4",
-                "referer": "https://bunkr.site/f/bla4XTB1v8aG6",
+                "referer": "https://bunkr.cr/f/bla4XTB1v8aG6",
             }
         ],
         "count": 1,
@@ -18,7 +18,7 @@ TEST_CASES = [
             {
                 "url": "ANY",
                 "filename": "xteleela Onlyfans Pics.zip",
-                "referer": "https://bunkr.site/f/xteleela-Onlyfans-Pics-qB1XyDRi.zip",
+                "referer": "https://bunkr.cr/f/xteleela-Onlyfans-Pics-qB1XyDRi.zip",
                 "download_folder": "re:Loose Files (Bunkr)",
             }
         ],
@@ -30,7 +30,7 @@ TEST_CASES = [
             {
                 "url": "re:1df93418-5063-4e1b-851e-9470cb8fc5c6\\.mp4",
                 "filename": "MysteriousProd.24.09.06.April.Olsen.Rebel.Rhyder.All.About.Fucking.720p.mp4",
-                "referer": "https://bunkr.site/f/rFicV4QnhSHBE",
+                "referer": "https://bunkr.cr/f/rFicV4QnhSHBE",
                 "album_id": None,
                 "uploaded_at": None,
             }
@@ -64,7 +64,7 @@ TEST_CASES = [
             {
                 "url": "re:24578-hd-kEMMY0JH.mp4",
                 "filename": "24578-hd.mp4",
-                "referer": "https://bunkr.site/f/24578-hd-kEMMY0JH.mp4",
+                "referer": "https://bunkr.cr/f/24578-hd-kEMMY0JH.mp4",
             }
         ],
     },
@@ -74,7 +74,7 @@ TEST_CASES = [
             {
                 "url": "re:/summertimejames-pics--VocHZQ0K.rar?",
                 "filename": "summertimejames(pics).rar",
-                "referer": "https://bunkr.site/f/summertimejames-pics--VocHZQ0K.rar",
+                "referer": "https://bunkr.cr/f/summertimejames-pics--VocHZQ0K.rar",
             }
         ],
     },
@@ -86,7 +86,7 @@ TEST_CASES = [
                 "filename": "Laura Perea en modo Perra.mp4",
                 "debrid_link": None,
                 "original_filename": "Laura Perea en modo Perra.mp4",
-                "referer": "https://bunkr.site/f/Laura-Perea-en-modo-Perra-l0dNCH9E.mp4",
+                "referer": "https://bunkr.cr/f/Laura-Perea-en-modo-Perra-l0dNCH9E.mp4",
                 "album_id": "bFfln2uj",
                 "uploaded_at": 1670173480,
                 "download_folder": "re:Nicol Loveee Laura Perea (Bunkr)",
@@ -116,7 +116,7 @@ TEST_CASES = [
             {
                 "url": "re:/storage/media/",
                 "debrid_link": None,
-                "referer": "re:https://bunkr.site/f/",
+                "referer": "re:https://bunkr.cr/f/",
                 "album_id": "A3k5ktj4",
                 "uploaded_at": int,
                 "download_folder": "re:Nicol Loveee (Bunkr)",
@@ -165,7 +165,7 @@ TEST_CASES = [
                 "filename": ".jpg",
                 "debrid_link": None,
                 "original_filename": "'\"'.jpg",
-                "referer": "https://bunkr.site/f/Nzt1ID7lsgwR4",
+                "referer": "https://bunkr.cr/f/Nzt1ID7lsgwR4",
                 "album_id": "z5Xt6NqH",
                 "uploaded_at": 1756986657,
                 "download_folder": "re:filename (Bunkr)",
