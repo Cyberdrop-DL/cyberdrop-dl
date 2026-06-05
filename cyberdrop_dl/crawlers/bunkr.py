@@ -283,8 +283,8 @@ def fix_db_referer(referer: str) -> str:
 
 
 def _fix_domain(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if url.host == "get.bunkrr.su":
+        return url.with_host("dl.bunkr.cr")
     if url.host in BunkrCrawler.OLD_DOMAINS:
         return url.with_host(BunkrCrawler.PRIMARY_URL.host)
-    if url.host == "get.bunkr.cr":
-        return url.with_host("dl.bunkr.cr")
     return url
