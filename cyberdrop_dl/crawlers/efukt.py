@@ -1,28 +1,28 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, dates, error_handling_wrapper
+from cyberdrop_dl.utils import css, dates, error_handling_wrapper, parse_url
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
-PRIMARY_URL = AbsoluteHttpURL("https://efukt.com")
 
-
-class Selectors:
+class Selector:
     DATE = "div.videobox span.stat:-soup-contains('Uploaded')"
     TITLE = "div.videobox > div.heading > h1"
-    VIDEO = "div.videoplayer source"
     NEXT_PAGE = "a.next_page"
-    IMAGE = "div.image_viewer img"
     VIDEO_THUMBS = "div.tile > a.thumb"
 
-
-_SELECTORS = Selectors()
+    _VIDEO = "div.videoplayer source"
+    _IMAGE = "div.image_viewer img"
+    MEDIA = f"{_IMAGE}, {_VIDEO}"
 
 
 class EfuktCrawler(Crawler):
@@ -33,61 +33,73 @@ class EfuktCrawler(Crawler):
         "Series": "/series/<series_name>",
         "Homepage": "/",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://efukt.com")
     DOMAIN: ClassVar[str] = "efukt.com"
     FOLDER_DOMAIN: ClassVar[str] = "eFukt"
-    NEXT_PAGE_SELECTOR = _SELECTORS.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     ALLOW_EMPTY_PATH: ClassVar[bool] = True
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} {title}"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if is_series(scrape_item.url) or is_homepage(scrape_item.url):
-            return await self.series(scrape_item)
-        return await self.video_image_or_gif(scrape_item)
+        match scrape_item.url.parts[1:]:
+            case [slug] if slug.isdigit():
+                return await self.homepage(scrape_item)
+            case []:
+                return await self.homepage(scrape_item)
+            case ["series", _]:
+                return await self.series(scrape_item)
+            case _:
+                return await self.media(scrape_item)
+
+    @error_handling_wrapper
+    async def homepage(self, scrape_item: ScrapeItem) -> None:
+        async for soup in self.web_pager(scrape_item.url):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO_THUMBS):
+                self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem) -> None:
         title: str = ""
-        homepage = is_homepage(scrape_item.url)
         async for soup in self.web_pager(scrape_item.url):
-            if not homepage and not title:
-                title = css.select_text(soup, _SELECTORS.TITLE)
+            if not title:
+                title = css.select_text(soup, Selector.TITLE)
                 scrape_item.setup_as_album(self.create_title(f"{title} [series]"))
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.VIDEO_THUMBS):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO_THUMBS):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def video_image_or_gif(self, scrape_item: ScrapeItem) -> None:
+    async def media(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-
-        date_str = css.select_text(soup, _SELECTORS.DATE).split(" ", 1)[-1]
-        date = dates.parse_format(date_str, "%m/%d/%y")
-        scrape_item.uploaded_at = dates.to_timestamp(date)
-
-        if is_image_or_gif(scrape_item.url):
-            link = self.parse_url(css.select(soup, _SELECTORS.IMAGE, "src"))
-        else:
-            link = self.parse_url(css.select(soup, _SELECTORS.VIDEO, "src"))
-
-        item_id = scrape_item.url.query.get("id") or scrape_item.url.name.partition("_")[0]
-        title = Path(css.select_text(soup, _SELECTORS.TITLE)).as_posix().replace("/", "-")
-        filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(f"{date.date().isoformat()} {title}", ext, file_id=item_id)
+        media = await self._request_media(scrape_item.url)
+        scrape_item.uploaded_at = dates.to_timestamp(media.date)
+        _, ext = self.get_filename_and_ext(media.src.name)
+        title = f"{media.date.date().isoformat()} {media.title}"
+        filename = self.create_custom_filename(title, ext, file_id=media.id)
         # Video links expire, but the path is always the same, only query params change
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link)
+        await self.handle_file(media.src, scrape_item, title, ext, custom_filename=filename)
+
+    async def _request_media(self, url: AbsoluteHttpURL) -> Media:
+        soup = await self.request_soup(url)
+        media = _parse_media(soup)
+        media.id = url.query.get("id") or url.name.partition("_")[0]
+        return media
 
 
-def is_homepage(url: AbsoluteHttpURL) -> bool:
-    return (url == PRIMARY_URL) or (len(url.parts) == 2 and url.name.isdigit())
+@dataclasses.dataclass(slots=True)
+class Media:
+    date: dates.UTCAwareDatetime
+    title: str
+    src: AbsoluteHttpURL
+    id: str = ""
 
 
-def is_series(url: AbsoluteHttpURL) -> bool:
-    return "series" in url.parts and len(url.parts) > 2
-
-
-def is_image_or_gif(url: AbsoluteHttpURL) -> bool:
-    return "pics" in url.parts or url.name == "view.gif.php"
+def _parse_media(soup: BeautifulSoup) -> Media:
+    date_str = css.select_text(soup, Selector.DATE).split(" ", 1)[-1]
+    return Media(
+        date=dates.parse_format(date_str, "%m/%d/%y"),
+        src=parse_url(css.select(soup, Selector.MEDIA, "src")),
+        title=Path(css.select_text(soup, Selector.TITLE)).as_posix().replace("/", "-"),
+    )
