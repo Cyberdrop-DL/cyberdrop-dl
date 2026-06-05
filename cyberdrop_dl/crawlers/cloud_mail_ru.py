@@ -56,7 +56,7 @@ class CloudMailRuCrawler(Crawler):
         node = await self._request_info(path)
         if node["type"] == "file":
             if await self.check_complete_from_referer(scrape_item):
-                return
+                return None
 
             return await self._file(scrape_item, node)
 
@@ -88,7 +88,7 @@ class CloudMailRuCrawler(Crawler):
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: dict[str, Any]) -> None:
         for part in file["weblink"].split("/")[2:-1]:
-            scrape_item.add_to_parent_title(part)
+            scrape_item.append_folders(part)
 
         dl_link = self.dispatcher_server / file["weblink"]
         filename, ext = self.get_filename_and_ext(file["name"])

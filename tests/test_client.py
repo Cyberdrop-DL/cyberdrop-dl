@@ -5,19 +5,19 @@ import aiohttp
 import pytest
 
 from cyberdrop_dl.clients.http import HTTPClient
+from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.manager import Manager
 
 
 @pytest.fixture
-def client(manager: Manager) -> HTTPClient:
-    return HTTPClient(manager)
+def client() -> HTTPClient:
+    return HTTPClient(Config())
 
 
 def test_initial_state(client: HTTPClient) -> None:
     assert client._cookies is None
     assert client._flaresolverr is None
-    assert isinstance(client.ssl_context, ssl.SSLContext)
+    assert isinstance(client._ssl_context, ssl.SSLContext)
     assert client.rate_limits == {}
 
 
@@ -56,5 +56,5 @@ async def test_create_aiohttp_session(client: HTTPClient) -> None:
         assert session.headers.get("User-agent")
         assert session.cookie_jar is client.cookies
         assert session._raise_for_status is False
-        assert session.timeout == client.manager.config.global_settings.rate_limiting_options._aiohttp_timeout
+        assert session.timeout == client.config.global_settings.rate_limiting_options.aiohttp_timeout
         assert session.requote_redirect_url is False

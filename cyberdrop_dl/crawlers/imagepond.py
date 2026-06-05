@@ -38,7 +38,6 @@ class File:
         is_archive = bool(soup.select_one(Selector.ARCHIVE))
 
         if is_archive:
-            # source = self.parse_url(scrape_item.url / "download/file")
             assume_ext, source = ".zip", css.select(soup, Selector.DIRECT_DL, "value")
         elif og.video:
             assume_ext, mimetype, source = ".mp4", og.video_type, og.video
@@ -71,7 +70,7 @@ class ImagePondCrawler(Crawler):
         ),
         "Direct links": "/media/<slug>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imagepond.net")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.imagepond.net")
     DOMAIN: ClassVar[str] = "imagepond.net"
     FOLDER_DOMAIN: ClassVar[str] = "ImagePond"
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
@@ -91,7 +90,7 @@ class ImagePondCrawler(Crawler):
                 raise ValueError
 
     @classmethod
-    def transform_url(cls, url: AbsoluteHttpURL):
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         match url.parts[1:]:
             case [a, b, "download", *_]:

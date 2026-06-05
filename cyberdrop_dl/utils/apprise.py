@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import MAIN_LOG_FILE, borrow_logger, export_logs, log_spacer
 from cyberdrop_dl.models import AppriseURL
 
@@ -64,7 +65,7 @@ def _parse_apprise_url(*urls: str) -> tuple[AppriseURL, ...]:
             errors.append(ValueError(f"Not a valid apprise URL: {e.errors(include_url=False)[0]['input']}"))
 
     if errors:
-        raise BaseExceptionGroup("Invalid Apprise file", errors)
+        raise CDLConfigRuntimeErrorsGroup("Invalid Apprise file", errors)
 
     return tuple(models)
 

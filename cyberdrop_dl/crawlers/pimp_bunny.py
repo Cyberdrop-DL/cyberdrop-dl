@@ -115,8 +115,7 @@ class PimpBunnyCrawler(Crawler):
         async for soup in self.web_pager(albums_url.with_query(query)):
             if not name:
                 name = css.select_text(soup, Selector.MODEL_NAME)
-                if name not in scrape_item.parent_title:
-                    scrape_item.setup_as_profile(self.create_title(f"{name} [model]"))
+                scrape_item.setup_as_profile(self.create_title(f"{name} [model]"))
 
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
                 self.create_task(self.run(new_scrape_item))

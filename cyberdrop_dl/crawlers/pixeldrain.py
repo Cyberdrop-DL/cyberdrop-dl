@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+import asyncio
+import dataclasses
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
 
-from pydantic import BaseModel
+from typing_extensions import override
 
-from cyberdrop_dl import env
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import basic_auth, error_handling_wrapper
+from cyberdrop_dl.utils import basic_auth, error_handling_wrapper, type_adapter
 
 if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -18,40 +19,40 @@ if TYPE_CHECKING:
 
 
 _PRIMARY_URL = AbsoluteHttpURL("https://pixeldrain.com")
-_BYPASS_HOSTS = "pd.cybar.xyz", "pd.1drv.eu.org"
-_PIXELDRAIN_PROXY = AbsoluteHttpURL(env.PIXELDRAIN_PROXY) if env.PIXELDRAIN_PROXY else None
 
 
-class File(BaseModel):
+@final
+@dataclasses.dataclass(slots=True)
+class File:
     id: str
     name: str
     date_upload: str
     mime_type: str
     hash_sha256: str
 
-    @property
-    def download_url(self) -> AbsoluteHttpURL:
-        return (_PRIMARY_URL / "api/file" / self.id).with_query("download")
 
-
-class Folder(BaseModel):
+@dataclasses.dataclass(slots=True)
+class Folder:
     id: str
     title: str
     files: list[File]
 
 
-class Node(BaseModel):
-    id: str | None = None
+@final
+@dataclasses.dataclass(slots=True)
+class Node:
     type: Literal["file", "dir"]
     path: str
     name: str
     modified: str
     sha256_sum: str
-    file_type: str = ""
+    id: str | None = None
+    file_type: str | None = None
 
+    # Properties so we can process a Node as a normal File
     @property
     def mime_type(self) -> str:
-        return self.file_type
+        return self.file_type or ""
 
     @property
     def date_upload(self) -> str:
@@ -61,15 +62,37 @@ class Node(BaseModel):
     def hash_sha256(self) -> str:
         return self.sha256_sum
 
-    @property
-    def download_url(self) -> AbsoluteHttpURL:
-        return (_PRIMARY_URL / "api/filesystem" / self.path.removeprefix("/")).with_query("attach")
 
-
-class FileSystem(BaseModel):
+@dataclasses.dataclass(slots=True)
+class FileSystem:
     children: list[Node]
     base_index: int
     path: list[Node]
+
+
+class PixelDrainProxyCrawler(Crawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"File": "/<file_id>"}
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "pd.cybar.xyz", "pd.1drv.eu.org"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pd.1drv.eu.org")
+    DOMAIN: ClassVar[str] = "pixeldrain-proxy"
+
+    @override
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["u", _]:
+                return self.handle_external_links(scrape_item)
+            case _:
+                raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url).with_host("pixeldrain.com")
+        match url.parts[1:]:
+            case [file_id]:
+                return url.origin() / "u" / file_id
+            case _:
+                return url
 
 
 class PixelDrainCrawler(Crawler):
@@ -81,7 +104,6 @@ class PixelDrainCrawler(Crawler):
         "pixeldrain.biz",
         "pixeldrain.tech",
         "pixeldrain.dev",
-        *_BYPASS_HOSTS,
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
@@ -106,26 +128,25 @@ class PixelDrainCrawler(Crawler):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
 
     def __post_init__(self) -> None:
-        self._headers: dict[str, str] = {}
-        if api_key := self.manager.config.auth.pixeldrain.api_key:
-            self._headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+        self.api: PixelDrainAPI = PixelDrainAPI.from_crawler(self)
+        if self.api.logged_in:
+            self.downloader.download_slots = None
 
     @classmethod
+    @override
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
         if not json_resp["success"]:
             msg = f"{json_resp['message']} ({json_resp['value']})"
             raise ScrapeError(resp.status, msg)
 
+    @override
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
-        return super()._prepare_headers(scrape_item) | self._headers
+        return super()._prepare_headers(scrape_item) | self.api.headers
 
-    async def _api_request(self, api_url: AbsoluteHttpURL) -> str:
-        return await self.request_text(api_url, headers=self._headers)
-
+    @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.host in _BYPASS_HOSTS:
-            return await self.file(scrape_item, scrape_item.url.name)
-
+        if self.origin.host not in self.SUPPORTED_DOMAINS:
+            raise ValueError
         match scrape_item.url.parts[1:]:
             case ["u", file_id]:
                 return await self.file(scrape_item, file_id)
@@ -137,12 +158,14 @@ class PixelDrainCrawler(Crawler):
                 raise ValueError
 
     @classmethod
+    @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
         match url.parts[1:]:
-            case ["api", "file", id_]:
-                return url.origin() / "u" / id_
-            case ["api", "list", id_]:
-                return url.origin() / "l" / id_
+            case ["api", "file", file_id]:
+                return url.origin() / "u" / file_id
+            case ["api", "list", list_id]:
+                return url.origin() / "l" / list_id
             case ["api", "filesystem", *rest] if rest:
                 return (url.origin() / "d").joinpath(*rest)
             case _:
@@ -150,27 +173,27 @@ class PixelDrainCrawler(Crawler):
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, list_id: str) -> None:
-        origin = scrape_item.url.origin()
-        api_url = origin / "api/list" / list_id
-        folder = Folder.model_validate_json(await self._api_request(api_url))
+        folder = await self.api.folder(list_id)
         title = self.create_title(folder.title, list_id)
         scrape_item.setup_as_album(title, album_id=list_id)
 
-        files = folder.files
-        if scrape_item.url.fragment.startswith(prefix := "item="):
-            try:
-                item_idx = int(scrape_item.url.fragment.removeprefix(prefix))
-                files = [files[item_idx]]
-            except (ValueError, IndexError):
-                msg = f"Unable to parse item index in folder {scrape_item.url}. Falling back to downloading the entire folder"
-                self.log.warning(msg)
+        try:
+            files = _filter_files(folder.files, scrape_item.url.fragment)
+        except (ValueError, IndexError):
+            msg = f"Unable to parse item index in {scrape_item.url}. Falling back to downloading the entire folder"
+            self.log.warning(msg)
+            files = folder.files
 
-        results = await self.get_album_results(list_id)
+        await self._files(scrape_item, files)
+
+    async def _files(self, scrape_item: ScrapeItem, files: list[File]) -> None:
+        assert scrape_item.album_id
+        results = await self.get_album_results(scrape_item.album_id)
         for file in files:
-            if self.check_album_results(file.download_url, results):
+            if self.check_album_results(_build_download_url(file), results):
                 continue
 
-            url = origin / "u" / file.id
+            url = self.origin / "u" / file.id
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
@@ -178,15 +201,7 @@ class PixelDrainCrawler(Crawler):
     @error_handling_wrapper
     async def filesystem(self, scrape_item: ScrapeItem, path: str) -> None:
         # https://github.com/Fornaxian/pixeldrain_web/blob/8e5ecfc5ce44c0b2b4fafdf9e8201dfc98395e88/svelte/src/filesystem/FilesystemAPI.ts
-
-        origin = scrape_item.url.origin()
-
-        async def request_fs(path: str) -> FileSystem:
-            api_url = (origin / "api/filesystem" / path.removeprefix("/")).with_query("stat")
-            content = await self._api_request(api_url)
-            return FileSystem.model_validate_json(content)
-
-        fs = await request_fs(path)
+        fs = await self.api.filesystem(path)
         base_node = fs.path[fs.base_index]
         root = fs.path[0]
         assert root.id
@@ -196,89 +211,117 @@ class PixelDrainCrawler(Crawler):
         if base_node.type == "file":
             fs.children = [base_node]
 
-        results = await self.get_album_results(root.id)
+        await self._filesystem(scrape_item, fs)
 
-        async def walk_task(new_scrape_item: ScrapeItem, path: str) -> None:
-            try:
-                fs = await request_fs(path)
+    async def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem) -> None:
+        assert scrape_item.album_id
+        results = await self.get_album_results(scrape_item.album_id)
+
+        async def subfolder(new_item: ScrapeItem, path: str) -> None:
+            with self.catch_errors(new_item):
+                fs = await self.api.filesystem(path)
                 scrape_item.add_children(0)
-                await walk_filesystem(fs)
-            except Exception as e:
-                self.raise_exc(new_scrape_item, e)
+                walk_filesystem(fs)
 
-        async def walk_filesystem(fs: FileSystem) -> None:
+        def walk_filesystem(fs: FileSystem) -> None:
             for node in fs.children:
                 if node.name == ".search_index.gz":
                     continue
 
-                url = origin / "d" / node.path.removeprefix("/")
+                url = self.origin / "d" / node.path.removeprefix("/")
                 new_scrape_item = scrape_item.create_child(url)
 
                 if node.type == "file":
-                    if self.check_album_results(node.download_url, results):
+                    if self.check_album_results(_build_download_url(node), results):
                         continue
 
-                    for part in node.path.split("/")[2:-1]:
-                        new_scrape_item.add_to_parent_title(part)
-
-                    self.create_task(self._file_task(new_scrape_item, node))
+                    subfolders = node.path.split("/")[2:-1]
+                    new_scrape_item.append_folders(*subfolders)
+                    tg.create_task(self._file_task(new_scrape_item, node))
 
                 elif node.type == "dir":
-                    self.create_task(walk_task(new_scrape_item, node.path))
+                    tg.create_task(subfolder(new_scrape_item, node.path))
 
                 else:
                     self.raise_exc(new_scrape_item, f"Unknown node type: {node.type}")
 
                 scrape_item.add_children()
 
-        await walk_filesystem(fs)
+        async with asyncio.TaskGroup() as tg:
+            walk_filesystem(fs)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        debrid_link = None
-        if scrape_item.url.host in _BYPASS_HOSTS:
-            debrid_link = scrape_item.url
-            scrape_item.url = _PRIMARY_URL / "u" / file_id
-
-        elif _PIXELDRAIN_PROXY:
-            debrid_link = _PIXELDRAIN_PROXY / file_id
-
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        api_url = scrape_item.url.origin() / "api/file" / file_id / "info"
-        file = File.model_validate_json(await self._api_request(api_url))
-        await self._file(scrape_item, file, debrid_link)
+        file = await self.api.file(file_id)
+        await self._file(scrape_item, file)
 
-    @error_handling_wrapper
-    async def _file(
-        self, scrape_item: ScrapeItem, file: File | Node, debrid_link: AbsoluteHttpURL | None = None
-    ) -> None:
-        link = file.download_url.with_host(scrape_item.url.origin().host)
-        if await self.check_complete_by_hash(link, "sha256", file.hash_sha256):
-            return
-
+    async def _file(self, scrape_item: ScrapeItem, file: File | Node) -> None:
+        src = _build_download_url(file).with_host(self.origin.host)
         if "text/plain" in file.mime_type:
-            return await self._text(scrape_item, file)
+            scrape_item.setup_as_album(self.create_title(file.name, file.id))
+            text = await self.api.text(src)
+            return self._text(scrape_item, text)
+
+        if await self.check_complete_by_hash(src, "sha256", file.hash_sha256):
+            return None
 
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
-        await self.handle_file(link, scrape_item, file.name, ext, debrid_link=debrid_link, custom_filename=filename)
+        await self.handle_file(src, scrape_item, file.name, ext, custom_filename=filename)
 
-    @error_handling_wrapper
-    async def _text(self, scrape_item: ScrapeItem, file: File | Node) -> None:
-        assert file.id
-        scrape_item.setup_as_album(self.create_title(file.name, file.id))
-        api_url = scrape_item.url.origin() / "api/file" / file.id
-        text = await self._api_request(api_url)
-
+    def _text(self, scrape_item: ScrapeItem, text: str) -> None:
         for line in text.splitlines():
             try:
                 link = self.parse_url(line)
-            except Exception:
+            except Exception:  # noqa: BLE001, S112
                 continue
-            new_scrape_item = scrape_item.create_child(link)
-            self.handle_external_links(new_scrape_item)
+            new_item = scrape_item.create_child(link)
+            self.handle_external_links(new_item)
             scrape_item.add_children()
 
-    _file_task = auto_task_id(_file)
+    _file_task = auto_task_id(error_handling_wrapper(_file))
+
+
+class PixelDrainAPI(API):
+    def __post_init__(self) -> None:
+        self.headers: dict[str, str] = {}
+        if api_key := self.config.auth.pixeldrain.api_key:
+            self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+
+    @property
+    def logged_in(self) -> bool:
+        return bool(self.headers)
+
+    async def file(self, file_id: str) -> File:
+        api_url = self.origin / "api/file" / file_id / "info"
+        resp = await self.text(api_url)
+        return type_adapter(File).validate_json(resp)
+
+    async def folder(self, list_id: str) -> Folder:
+        api_url = self.origin / "api/list" / list_id
+        resp = await self.text(api_url)
+        return type_adapter(Folder).validate_json(resp)
+
+    async def filesystem(self, path: str) -> FileSystem:
+        api_url = (self.origin / "api/filesystem" / path.removeprefix("/")).with_query("stat")
+        resp = await self.text(api_url)
+        return type_adapter(FileSystem).validate_json(resp)
+
+    async def text(self, api_url: AbsoluteHttpURL) -> str:
+        return await self.request_text(api_url, headers=self.headers)
+
+
+def _filter_files(files: list[File], fragment: str) -> list[File]:
+    if fragment.startswith(prefix := "item="):
+        item_idx = int(fragment.removeprefix(prefix))
+        return [files[item_idx]]
+    return files
+
+
+def _build_download_url(file: File | Node) -> AbsoluteHttpURL:
+    if type(file) is File:
+        return (_PRIMARY_URL / "api/file" / file.id).with_query("download")
+    return (_PRIMARY_URL / "api/filesystem" / file.path.removeprefix("/")).with_query("attach")

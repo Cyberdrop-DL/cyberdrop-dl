@@ -1,21 +1,26 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
+import time
 from sqlite3 import IntegrityError, Row
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from .definitions import create_fixed_history, create_history, create_media_index
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Callable, Generator
 
     import aiosqlite
     from yarl import URL
 
+    from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.url_objects import MediaItem
+
+    _T = TypeVar("_T")
 
 
 _FETCH_MANY_SIZE: int = 1000
@@ -33,12 +38,12 @@ class HistoryTable:
     async def create(self) -> None:
         await self.db_conn.execute(create_history)
         await self.db_conn.commit()
+
+    async def apply_updates(self) -> None:
+        logger.info("Applying database updates. This could take a while...")
         await self.fix_primary_keys()
         await self.add_columns_media()
-        await fix_domains(self.db_conn)
-        await fix_referers(self.db_conn)
-        await self.db_conn.executescript(create_media_index)
-        await self.db_conn.commit()
+        await apply_fixes(self.db_conn)
 
     async def delete_invalid_rows(self) -> None:
         query = "DELETE FROM media WHERE download_filename = '' "
@@ -158,7 +163,7 @@ class HistoryTable:
     async def get_duration(self, domain: str, media_item: MediaItem) -> float | None:
         """Returns the duration from the database."""
         if media_item.is_segment:
-            return
+            return None
 
         url_path = media_item.db_path
         query = "SELECT duration FROM media WHERE domain = ? and url_path = ? LIMIT 1"
@@ -229,8 +234,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via size: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via size")
 
     async def get_all_bunkr_failed_via_hash(self) -> AsyncGenerator[list[Row]]:
         query = """
@@ -244,8 +249,8 @@ class HistoryTable:
             while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
                 yield cast("list[Row]", rows)
 
-        except Exception as e:
-            logger.exception(f"Error getting bunkr failed via hash: {e}")
+        except Exception:
+            logger.exception("Error getting bunkr failed via hash")
 
     async def fix_primary_keys(self) -> None:
         domain_column, *_ = await self._get_media_table_columns()
@@ -291,50 +296,72 @@ class HistoryTable:
             await self.db_conn.commit()
 
 
-async def fix_domains(db_conn: aiosqlite.Connection) -> None:
-    logger.info("Updating old domains")
-    updates = "\n".join(
-        f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"
-        for current, old in [
-            ("bunkr", "bunkrr"),
-            ("jpg5.su", "sharex"),
-            ("turbovid", "saint"),
-            ("nudostar.tv", "nudostartv"),
-        ]
-    )
-    await db_conn.executescript(updates)
+async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
+    await _fix_domains(db_conn)
+    await _fix_referers(db_conn)
+    await db_conn.executescript(create_media_index)
     await db_conn.commit()
 
 
-async def fix_referers(db_conn: aiosqlite.Connection):
-    from cyberdrop_dl.crawlers import cyberdrop, jpg5, redgifs, turbovid
+async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
+    with _timed_update("old database domains"):
+        updates = "\n".join(
+            f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
+            for current, old in [
+                ("bunkr", "bunkrr"),
+                ("jpg5.su", "sharex"),
+                ("turbovid", "saint"),
+                ("nudostar.tv", "nudostartv"),
+            ]
+        )
+        await db_conn.executescript(updates)
+        await db_conn.commit()
 
-    logger.info("Updating old referers")
 
-    def try_wrap(fn):
-        def call(*args, **kwargs):
+async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
+    from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
+
+    def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:
+        def call(*args: Any, **kwargs: Any) -> _T:
             try:
                 return fn(*args, **kwargs)
-            except BaseException:
+            except Exception:
                 logger.exception(f"{fn.__name__} failed")
                 raise
 
         return call
 
-    for name, fn in [
-        ("FIX_REDGIFS_REFERER", redgifs.fix_db_referer),
-        ("FIX_JPG5_REFERER", jpg5.fix_db_referer),
-        ("FIX_CYBERDROP_REFERER", cyberdrop.fix_db_referer),
-        ("FIX_TURBOVID_REFERER", turbovid.fix_db_referer),
-    ]:
-        await db_conn.create_function(name, 1, try_wrap(fn), deterministic=True)
+    updates = ""
+    with _timed_update("old database referers"):
+        for fn_name, fn, domain in [
+            ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
+            ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler), "jpg5.su"),
+            ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
+            ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
+            ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
+        ]:
+            await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
+            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
 
-    updates = (
-        "UPDATE OR REPLACE media SET referer = FIX_REDGIFS_REFERER(referer) WHERE domain = 'redgifs';"
-        "UPDATE OR REPLACE media SET referer = FIX_JPG5_REFERER(referer) WHERE domain = 'jpg5.su';"
-        "UPDATE OR REPLACE media SET referer = FIX_CYBERDROP_REFERER(referer) WHERE domain = 'cyberdrop';"
-        "UPDATE OR REPLACE media SET referer = FIX_TURBOVID_REFERER(referer) WHERE domain = 'turbovid';"
-    )
+        await db_conn.executescript(updates)
+        await db_conn.commit()
 
-    await db_conn.executescript(updates)
-    await db_conn.commit()
+
+@contextlib.contextmanager
+def _timed_update(name: str) -> Generator[None]:
+    start = time.monotonic()
+    logger.info(f"Updating {name}")
+    try:
+        yield
+    finally:
+        took = time.monotonic() - start
+        logger.info(f"Finished update of {name}. Took: {took:0.2f} seconds")
+
+
+def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:
+    def fix_db_referer(referer: str) -> str:
+        url = crawler.parse_url(referer, trim=False)
+        return str(crawler.transform_url(url))
+
+    fix_db_referer.__name__ = f"fix_{crawler.DOMAIN}_referer"
+    return fix_db_referer

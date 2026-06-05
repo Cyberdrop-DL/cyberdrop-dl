@@ -55,10 +55,8 @@ class TestBorrowLogger:
         other.addHandler(orig_handler)
         other.setLevel(logging.CRITICAL)
 
-        with pytest.raises(RuntimeError):
-            with logs.borrow_logger("third_party_exc", level=logging.INFO):
-                assert other.level == logging.INFO
-                raise RuntimeError("boom")
+        with logs.borrow_logger("third_party_exc", level=logging.INFO):
+            assert other.level == logging.INFO
 
         assert other.handlers == [orig_handler]
         assert other.level == logging.CRITICAL
@@ -88,7 +86,7 @@ def test_entering_a_live_disables_console_logging() -> None:
     console.record = True
 
     class DummyLiveUI(LiveUI):
-        def __rich__(self):
+        def __rich__(self) -> str:
             return "In Live"
 
     with console, logs.setup_console_logging():

@@ -11,11 +11,10 @@ from cyberdrop_dl import __version__, env
 from cyberdrop_dl.compat import CIStrEnum, Enum, StrEnum
 
 # TIME
-STARTUP_TIME = datetime.now()
 STARTUP_TIME_UTC = datetime.now(UTC)
 LOGS_DATETIME_FORMAT = "%Y%m%d_%H%M%S"
 LOGS_DATE_FORMAT = "%Y_%m_%d"
-STARTUP_TIME_STR = STARTUP_TIME.strftime(LOGS_DATETIME_FORMAT)
+STARTUP_TIME_STR = datetime.now().strftime(LOGS_DATETIME_FORMAT)  # noqa: DTZ005
 CDL_USER_AGENT = f"cyberdrop-dl/{__version__}"
 
 
@@ -169,3 +168,27 @@ class FileExt:
     )
     VIDEO_OR_IMAGE = VIDEO | IMAGE
     MEDIA = AUDIO | VIDEO_OR_IMAGE
+    DANGEROUS = frozenset(
+        {
+            ".bat",
+            ".com",
+            ".exe",
+            ".hta",
+            ".inf",
+            ".jar",
+            ".js",
+            ".lnk",
+            ".msc",
+            ".msi",
+            ".ps1",
+            ".ps2",
+            ".psc1",
+            ".psc2",
+            ".sh",
+            ".scf",
+            ".vb",
+            ".vbs",
+            ".wsc",
+            ".wsh",
+        }
+    )

@@ -4,7 +4,7 @@ import json
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, m3u8
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class Selectors:
+class Selector:
     PROFILE_VIDEOS = "div.sub-content div.media-item__inner > a[data-video-preview]"
     SEARCH_VIDEOS = "div.main-content div.media-item__inner > a[data-video-preview]"
     USER_NAME = "h1.username"
@@ -31,9 +31,6 @@ class Selectors:
     NEXT_PAGE = "a.rightKey"
 
 
-_SELECTORS = Selectors()
-
-
 class CollectionType(StrEnum):
     ALBUM = "album"
     MODEL = "model"
@@ -43,19 +40,19 @@ class CollectionType(StrEnum):
 
 
 MEDIA_SELECTOR_MAP = {
-    CollectionType.ALBUM: _SELECTORS.ALBUM_IMAGES,
-    CollectionType.MODEL: _SELECTORS.PROFILE_VIDEOS,
-    CollectionType.PLAYLIST: _SELECTORS.PLAYLIST_VIDEOS,
-    CollectionType.SEARCH: _SELECTORS.SEARCH_VIDEOS,
-    CollectionType.PROFILE: _SELECTORS.ALBUM_IMAGES,
+    CollectionType.ALBUM: Selector.ALBUM_IMAGES,
+    CollectionType.MODEL: Selector.PROFILE_VIDEOS,
+    CollectionType.PLAYLIST: Selector.PLAYLIST_VIDEOS,
+    CollectionType.SEARCH: Selector.SEARCH_VIDEOS,
+    CollectionType.PROFILE: Selector.ALBUM_IMAGES,
 }
 
 TITLE_SELECTOR_MAP = {
-    CollectionType.ALBUM: _SELECTORS.ALBUM_TITLE,
-    CollectionType.MODEL: _SELECTORS.USER_NAME,
+    CollectionType.ALBUM: Selector.ALBUM_TITLE,
+    CollectionType.MODEL: Selector.USER_NAME,
     CollectionType.PLAYLIST: "h1",
     CollectionType.SEARCH: "h1",
-    CollectionType.PROFILE: _SELECTORS.USER_NAME,
+    CollectionType.PROFILE: Selector.USER_NAME,
 }
 
 TITLE_TRASH = "Shemale Porn Videos - Trending"
@@ -72,10 +69,10 @@ class AShemaleTubeCrawler(Crawler):
     DOMAIN: ClassVar[str] = "ashemaletube"
     FOLDER_DOMAIN: ClassVar[str] = "aShemaleTube"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    NEXT_PAGE_SELECTOR: ClassVar[str] = _SELECTORS.NEXT_PAGE
-    _RATE_LIMIT = 3, 10
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         if any(p in scrape_item.url.parts for p in ("creators", "profiles", "pornstars", "model")):
             if "galleries" in scrape_item.url.parts:
                 return await self.gallery(scrape_item)
@@ -99,7 +96,7 @@ class AShemaleTubeCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
         async for soup in self.web_pager(scrape_item.url, impersonate=True):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.GALLERY_ALBUM):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_ALBUM):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -132,15 +129,14 @@ class AShemaleTubeCrawler(Crawler):
             raise ScrapeError(401)
         collection_title: str = title_elem.get_text(strip=True)
         collection_title = collection_title.replace(TITLE_TRASH, "").strip()
-        collection_title = self.create_title(f"{collection_title} [{collection_type}]")
-        return collection_title
+        return self.create_title(f"{collection_title} [{collection_type}]")
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
         soup = await self.request_soup(scrape_item.url, impersonate=True)
-        img_item = soup.select_one(_SELECTORS.IMAGE_ITEM)
+        img_item = soup.select_one(Selector.IMAGE_ITEM)
         if not img_item:
             raise ScrapeError(404)
         await self.proccess_image(scrape_item, img_item)
@@ -162,16 +158,16 @@ class AShemaleTubeCrawler(Crawler):
         video_id: str = scrape_item.url.parts[2]
         canonical_url = PRIMARY_URL / "videos" / video_id
         if await self.check_complete_from_referer(canonical_url):
-            return
+            return None
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
 
-        if soup.select_one(_SELECTORS.LOGIN_REQUIRED):
+        if soup.select_one(Selector.LOGIN_REQUIRED):
             raise ScrapeError(401)
-        js_text = css.select_text(soup, _SELECTORS.JS_PLAYER)
+        js_text = css.select_text(soup, Selector.JS_PLAYER)
         resolution, url, m3u8 = await self.parse_player_info(js_text)
 
-        if video_object := soup.select_one(_SELECTORS.VIDEO_PROPS_JS):
+        if video_object := soup.select_one(Selector.VIDEO_PROPS_JS):
             json_data = json.loads(css.text(video_object))
             scrape_item.uploaded_at = self.parse_iso_date(json_data.get("uploadDate", ""))
 

@@ -4,18 +4,17 @@ import asyncio
 import contextlib
 import dataclasses
 import json
-import shutil
 import sys
 import time
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import rich
 from rich.console import Group, RenderableType
 from rich.layout import Layout
 
 from cyberdrop_dl import env
-from cyberdrop_dl.progress import LiveUI, UIOptions
+from cyberdrop_dl.progress import LiveUI, UIOptions, is_terminal_in_portrait
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
 from cyberdrop_dl.progress.scraping.files import FileStatsPanel
@@ -38,7 +37,7 @@ class Screen:
         return iter((self.horizontal, self.vertical))
 
     def __rich__(self) -> Layout:
-        return self.vertical if terminal_is_in_portrait() else self.horizontal
+        return self.vertical if is_terminal_in_portrait() else self.horizontal
 
 
 @dataclasses.dataclass(slots=True)
@@ -109,8 +108,8 @@ class ScrapingUI(LiveUI):
 
         vertical.split_column(
             Layout(self.files, name="files", size=9),
-            Layout(self.scrape_errors, name="scrape_errors"),
-            Layout(self.download_errors, name="download_errors"),
+            Layout(self.scrape_errors, name="scrape_errors", minimum_size=4),
+            Layout(self.download_errors, name="download_errors", minimum_size=4),
             *bottom,
         )
 
@@ -130,7 +129,7 @@ class ScrapingUI(LiveUI):
             except IndexError:
                 break
 
-    def __json__(self):
+    def __json__(self) -> dict[str, Any]:
         return {
             "files": self.files.__json__(),
             "scrape_errors": self.scrape_errors.__json__(),
@@ -165,27 +164,6 @@ class ScrapingUI(LiveUI):
 
         with show_msg("final msg"):
             await asyncio.sleep(3)
-
-
-def terminal_is_in_portrait() -> bool:
-
-    if env.PORTRAIT_MODE:
-        return True
-
-    terminal_size = shutil.get_terminal_size()
-    width, height = terminal_size.columns, terminal_size.lines
-    aspect_ratio = width / height
-
-    # High aspect ratios are likely to be in landscape mode
-    if aspect_ratio >= 3.2:
-        return False
-
-    # Check for mobile device in portrait mode
-    if (aspect_ratio < 1.5 and height >= 40) or (aspect_ratio < 2.3 and width <= 85):
-        return True
-
-    # Assume landscape mode for other cases
-    return False
 
 
 @contextlib.contextmanager

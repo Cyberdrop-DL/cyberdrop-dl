@@ -67,7 +67,7 @@ class Resolution(NamedTuple):
         return Fraction(self.width, self.height)
 
     @staticmethod
-    def parse(url_number_or_string: yarl.URL | str | int | None, /) -> Resolution:
+    def parse(url_number_or_string: yarl.URL | str | int | None, /) -> Resolution:  # noqa: PLR0911
         if url_number_or_string is None:
             return UNKNOWN_RESOLUTION
 

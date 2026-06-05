@@ -5,7 +5,7 @@ from cyberdrop_dl.models import AppriseURL
 
 
 @pytest.mark.parametrize(
-    "value, expected_url, expected_tags",
+    ("value", "expected_url", "expected_tags"),
     [
         (
             "ses://user@domain/AccessKeyID/AccessSecretKey/",

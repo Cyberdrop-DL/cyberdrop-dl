@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import base64
 import contextlib
-import dataclasses
 import functools
 import inspect
 import itertools
 import logging
-import os
 import platform
 import re
 import sys
 from http import HTTPStatus
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, ParamSpec, Protocol, Self, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, Protocol, TypeVar, cast, overload
 
 import yarl
 from aiohttp import ClientConnectorError, TooManyRedirects
@@ -21,18 +18,16 @@ from mega.errors import MegaNzError
 from pydantic import ValidationError
 from typing_extensions import TypeIs
 
-from cyberdrop_dl.constants import TempExt
-from cyberdrop_dl.exceptions import (
-    CDLBaseError,
-    ErrorLogMessage,
-    InvalidURLError,
-    TooManyCrawlerErrors,
-    create_error_msg,
-    get_origin,
-)
+from cyberdrop_dl.exceptions import CDLBaseError, ErrorLogMessage, InvalidURLError, create_error_msg, get_origin
+from cyberdrop_dl.utils._dataclasses import DictDataclass as DictDataclass
+from cyberdrop_dl.utils._dataclasses import deserialize as deserialize
+from cyberdrop_dl.utils._dataclasses import filter_data as filter_data
+from cyberdrop_dl.utils._dataclasses import type_adapter as type_adapter
+from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
+    from pathlib import Path
 
     from cyberdrop_dl.downloader.http import Downloader
     from cyberdrop_dl.manager import Manager
@@ -45,53 +40,57 @@ if TYPE_CHECKING:
     _Origin = TypeVar("_Origin", bound=ScrapeItem | MediaItem | yarl.URL)
 
 _P = ParamSpec("_P")
+_T = TypeVar("_T")
 _R = TypeVar("_R")
-
-
-class Dataclass(Protocol):
-    __dataclass_fields__: ClassVar[dict[str, Any]]
 
 
 logger = logging.getLogger(__name__)
 
-
-_FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
-
-
-def _fields(cls: type) -> tuple[str, ...]:
-    if fields := _FIELDS_CACHE.get(cls):
-        return fields
-    fields = _FIELDS_CACHE[cls] = tuple(f.name for f in dataclasses.fields(cls))
-    return fields
+_ERROR_WRAPPER_ATTR = "__cdl_error_wrapped__"
 
 
-class DictDataclass(Dataclass, Protocol):
-    @classmethod
-    def filter_dict(cls, data: dict[str, Any], /) -> dict[str, Any]:
-        return {name: data.get(name) for name in _fields(cls)}
+def is_error_wrapped(method: object) -> bool:
+    return getattr(method, _ERROR_WRAPPER_ATTR, False)
 
-    @classmethod
-    def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
-        if overrides:
-            data.update(overrides)
-        return cls(**cls.filter_dict(data))
+
+def mark_as_safe(fn: _T) -> _T:
+    setattr(fn, _ERROR_WRAPPER_ATTR, True)
+    return fn
 
 
 @contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+def group_exceptions(message: str | None = None) -> Generator[None]:
+    try:
+        yield
+    except ExceptionGroup as e:
+        raise ExceptionGroup(message or _exc_group_msg(e), e.exceptions) from None
+
+
+def _exc_group_msg(e: ExceptionGroup) -> str:
+    if "unhandled errors in a TaskGroup" not in e.message:
+        return e.message
+
+    first = e.exceptions[0]
+    return getattr(first, "ui_failure", None) or str(first)
+
+
+@contextlib.contextmanager
+def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912
     link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
     error_log_msg = origin = exc_info = None
     link_to_show: yarl.URL | str = ""
     is_segment: bool = getattr(item, "is_segment", False)
-    is_downloader: bool = bool(getattr(self, "log_prefix", False))
     try:
-        yield
-    except TooManyCrawlerErrors:
-        return
+        with group_exceptions():
+            yield
+    except ExceptionGroup as e:
+        error_log_msg = ErrorLogMessage(_exc_group_msg(e), str(e))
+        exc_info = e.with_traceback(None)
     except CDLBaseError as e:
         error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
         origin = e.origin
         link_to_show = getattr(e, "url", None) or link_to_show
+        exc_info = e.__cause__
     except NotImplementedError as e:
         error_log_msg = ErrorLogMessage("NotImplemented")
         exc_info = e
@@ -105,8 +104,11 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     except MegaNzError as e:
         if code := getattr(e, "code", None):
             if http_code := {
+                -4: HTTPStatus.TOO_MANY_REQUESTS,
+                -8: HTTPStatus.GONE,
                 -9: HTTPStatus.GONE,
                 -16: HTTPStatus.FORBIDDEN,
+                -17: 509,
                 -24: 509,
                 -401: 509,
             }.get(code):
@@ -116,7 +118,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         else:
             ui_failure = "MegaNZ Error"
 
-        error_log_msg = ErrorLogMessage(ui_failure, str(e))
+        error_log_msg = ErrorLogMessage(ui_failure, f"{ui_failure} {e!s}")
 
     except TimeoutError as e:
         error_log_msg = ErrorLogMessage("Timeout", repr(e))
@@ -130,15 +132,26 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         ui_failure = create_error_msg(422)
         log_msg = str(e).partition("For further information")[0].strip()
         error_log_msg = ErrorLogMessage(ui_failure, log_msg)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         exc_info = e
         error_log_msg = ErrorLogMessage.from_unknown_exc(e)
 
     if error_log_msg is None or is_segment:
         return
 
-    link_to_show = link_to_show or link
+    _log_error(self, link_to_show or link, item, error_log_msg, exc_info, origin)
+
+
+def _log_error(  # noqa: PLR0913
+    self: _HasManager,
+    link_to_show: yarl.URL | str,
+    item: ScrapeItem | MediaItem | yarl.URL,
+    error_log_msg: ErrorLogMessage,
+    exc_info: BaseException | None,
+    origin: ScrapeItem | MediaItem | yarl.URL | Path | None,
+) -> None:
     origin = origin or get_origin(item)
+    is_downloader = bool(getattr(self, "log_prefix", False))
     if is_downloader:
         self, item = cast("Downloader", self), cast("MediaItem", item)
         logger.error(
@@ -151,7 +164,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
         return
 
     logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)
-    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)
+    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)  # pyright: ignore[reportArgumentType]
     self.manager.scrape_mapper.tui.scrape_errors.add(error_log_msg.ui_failure)
 
 
@@ -179,7 +192,7 @@ def error_handling_wrapper(
             with error_handling_context(self, item):
                 return await func(self, item, *args, **kwargs)
 
-        return async_wrapper
+        return mark_as_safe(async_wrapper)
 
     @functools.wraps(func)
     def wrapper(self: _HasManagerT, item: _Origin, *args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -188,36 +201,32 @@ def error_handling_wrapper(
             assert not inspect.isawaitable(result)
             return result
 
-    return wrapper
-
-
-def get_download_path(manager: Manager, scrape_item: ScrapeItem, domain: str) -> Path:
-    """Returns the path to the download folder."""
-    download_dir = manager.config.settings.files.download_folder
-
-    return download_dir / scrape_item.create_download_path(domain)
+    return mark_as_safe(wrapper)
 
 
 def delete_empty_files_and_folders(path: Path) -> None:
     """walks and removes in place"""
 
+    from cyberdrop_dl.logs import MAIN_LOG_FILE
     from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
 
     if not path.is_dir():
         return
-    _ = delete_empty_files_and_folders_in_place(path)
+
+    _ = delete_empty_files_and_folders_in_place(path, exclude=[MAIN_LOG_FILE.get(None)])
 
 
 def check_partials_and_empty_folders(manager: Manager) -> None:
     download_folder = manager.config.settings.files.download_folder
 
-    _check_for_partial_files(download_folder)
+    logger.info("Checking for partial downloads...")
+    if has_partial_files(download_folder):
+        logger.warning("There are partial downloads in the downloads folder")
+
     settings = manager.config.settings.runtime_options
     if settings.delete_partial_files:
         logger.info("Deleting partial downloads...")
-        for file in _partial_files(download_folder):
-            logger.debug(f"Deleting '{file}'")
-            file.unlink(missing_ok=True)
+        delete_partial_files(download_folder)
 
     if settings.skip_check_for_empty_folders:
         return
@@ -230,28 +239,14 @@ def check_partials_and_empty_folders(manager: Manager) -> None:
         delete_empty_files_and_folders(sorted_folder)
 
 
-def _partial_files(dir: Path | str) -> Generator[Path]:
-    try:
-        for entry in os.scandir(dir):
-            try:
-                if entry.is_dir(follow_symlinks=False):
-                    yield from _partial_files(entry.path)
-                    continue
-            except OSError:
-                pass
-
-            suffix = entry.name.rpartition(".")[-1]
-            if f".{suffix}" in TempExt:
-                yield Path(entry.path)
-    except OSError:
-        return
-
-
-def _check_for_partial_files(path: Path) -> None:
-    logger.info("Checking for partial downloads...")
-    has_partial_files = next(_partial_files(path), None)
-    if has_partial_files:
-        logger.warning("There are partial downloads in the downloads folder")
+def delete_partial_files(path: Path) -> None:
+    for file in partial_files(path):
+        try:
+            file.unlink()
+        except OSError as e:
+            logger.error(f"Unable to delete '{file}' ({e!r})")
+        else:
+            logger.debug(f"Deleted '{file}'")
 
 
 def extr_text(text: str, /, start: str, end: str) -> str:
@@ -320,7 +315,7 @@ def get_system_information() -> dict[str, Any]:
     def get_common_name() -> str:
         system = platform.system()
 
-        if system in ("Linux",):
+        if system == "Linux":
             try:
                 return platform.freedesktop_os_release()["PRETTY_NAME"]
             except OSError:

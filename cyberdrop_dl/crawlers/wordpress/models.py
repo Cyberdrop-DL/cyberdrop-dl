@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Literal, NewType, TypeVar
+from typing import Annotated, Literal, NewType
 
 from bs4 import BeautifulSoup
 from pydantic import AfterValidator, AliasPath, BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
 from cyberdrop_dl.compat import StrEnum
-
-_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 def make_soup(string: str) -> BeautifulSoup:
@@ -55,12 +53,12 @@ class Collection(WordPressModel):
 
 
 class Category(Collection):
-    taxonomy: Literal["category"] = "category"
+    taxonomy: Literal["category"] = "category"  # pyright: ignore[reportIncompatibleVariableOverride]
     _type: ColletionType = ColletionType.CATEGORY
 
 
 class Tag(Category):
-    taxonomy: Literal["post_tag"] = "post_tag"
+    taxonomy: Literal["post_tag"] = "post_tag"  # pyright: ignore[reportIncompatibleVariableOverride]
     _type: ColletionType = ColletionType.TAG
 
 

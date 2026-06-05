@@ -1,13 +1,16 @@
 """Async versions of builtins and some path operations"""
 
+# ruff: noqa: A001
 from __future__ import annotations
 
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 from stat import S_ISREG
 from typing import IO, TYPE_CHECKING, Any, AnyStr, Generic, ParamSpec, Self, TypeVar, TypeVarTuple, cast, overload
@@ -18,6 +21,7 @@ from typing_extensions import Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Coroutine, Iterable, Iterator
+    from types import CoroutineType
 
     from _typeshed import OpenBinaryMode, OpenTextMode
 
@@ -70,6 +74,66 @@ class RateLimiter(AsyncLimiter):
         return cls(max_rate=0, time_period=1)
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class _CachedValue(Generic[_T]):
+    value: _T
+    ttl: float
+    created_at: float = dataclasses.field(init=False, default_factory=time.monotonic)
+
+    @property
+    def has_expired(self) -> bool:
+        return time.monotonic() - self.created_at >= self.ttl
+
+
+def cache_wrapper(
+    *, ttl: float | None = None
+) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], CoroutineType[Any, Any, _T]]]:
+
+    return lambda x: cached(x, ttl=ttl)
+
+
+def cached(fn: Callable[[], Awaitable[_T]], *, ttl: float | None = None) -> Callable[[], CoroutineType[Any, Any, _T]]:
+    if ttl is None:
+        return _perpetual_cache(fn)
+
+    lock = asyncio.Lock()
+    cached_value: _CachedValue[_T] | None = None
+
+    @functools.wraps(fn)
+    async def wrapper() -> _T:
+        nonlocal cached_value
+        async with lock:
+            if cached_value is not None and not cached_value.has_expired:
+                return cached_value.value
+
+            cached_value = _CachedValue(await fn(), ttl=ttl)
+
+        return cached_value.value
+
+    return wrapper
+
+
+def _perpetual_cache(fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
+    lock = asyncio.Lock()
+    cached_value: _T | Sentinel = _MISSING
+
+    @functools.wraps(fn)
+    async def wrapper() -> _T:
+        nonlocal cached_value
+        if cached_value is not _MISSING:
+            return cast("_T", cached_value)
+
+        async with lock:
+            if cached_value is not _MISSING:
+                return cast("_T", cached_value)
+
+            cached_value = await fn()
+
+        return cached_value
+
+    return wrapper
+
+
 @dataclasses.dataclass(slots=True, eq=False)
 class AsyncIOWrapper(Generic[AnyStr]):
     """An asynchronous context manager wrapper for a file object."""
@@ -81,7 +145,7 @@ class AsyncIOWrapper(Generic[AnyStr]):
         self._io = await self._coro
         return self
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         return await asyncio.to_thread(self._io.close)
 
     async def __aiter__(self) -> AsyncIterator[AnyStr]:
@@ -168,10 +232,7 @@ async def map_tuples(
     if not task_limit:
         return await gather(*(coro_factory(*params) for params in params_batched))
 
-    if isinstance(task_limit, int):
-        semaphore = asyncio.BoundedSemaphore(task_limit)
-    else:
-        semaphore = task_limit
+    semaphore = asyncio.BoundedSemaphore(task_limit) if isinstance(task_limit, int) else task_limit
 
     tasks: list[asyncio.Task[_R]] = []
 
@@ -193,7 +254,7 @@ async def map_tuples(
 def run(coro: Coroutine[Any, Any, _T]) -> _T:
     def _loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
-        if sys.version_info > (3, 12):
+        if sys.version_info >= (3, 12):
             loop.set_task_factory(asyncio.eager_task_factory)
         return loop
 
@@ -265,7 +326,7 @@ def open(
 ) -> AsyncIOWrapper[str]: ...
 
 
-def open(
+def open(  # noqa: PLR0913
     path: Path,
     mode: str = "r",
     buffering: int = -1,
@@ -285,7 +346,7 @@ async def get_size(path: Path) -> int | None:
     try:
         stat_result = await stat(path)
     except (OSError, ValueError):
-        return
+        return None
     else:
         if not S_ISREG(stat_result.st_mode):
             raise IsADirectoryError(path)

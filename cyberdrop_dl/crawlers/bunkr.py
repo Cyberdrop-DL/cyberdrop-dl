@@ -1,145 +1,98 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import dataclasses
 import json
 import re
-from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from aiohttp import ClientConnectorError
 from typing_extensions import override
 
-from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph, parse_url, xor_decrypt
+from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Generator, Mapping
 
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-_DOWNLOAD_API_ENTRYPOINT = AbsoluteHttpURL("https://apidl.bunkr.ru/api/_001_v2")
-_REINFORCED_URL = AbsoluteHttpURL("https://get.bunkrr.su")
+_HOST_OPTIONS: frozenset[str] = frozenset(("bunkr.site", "bunkr.cr", "bunkr.ph"))
+_find_js_vars = re.compile(r'var\s+(\w+)\s*=\s*(".*?"|\'.*?\'|[^;]+);', re.DOTALL).findall
+known_bad_hosts: set[str] = set()
 
 
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BTN = "a.btn.ic-download-01"
     SERVER_UNDER_MAINTENANCE = "h2:-soup-contains('Server under maintenance')"
-    IMAGE_CONTAINER = "img.max-h-full.w-auto.object-cover.relative"
-
-
-_HOST_OPTIONS: frozenset[str] = frozenset(("bunkr.site", "bunkr.cr", "bunkr.ph"))
-_DEEP_SCRAPE_CDNS: frozenset[str] = frozenset(
-    (
-        "burger",
-        "cheese",
-        "kebab",
-        "milkshake",
-        "static.scdn.st",
-        "wiener",
-    )
-)  # CDNs under maintenance, ignore them and try to get a cached URL
-
-known_bad_hosts: set[str] = set()
-
-
-def _make_album_parser() -> Callable[[str], Generator[File]]:
-    translation_map = {f" {field.name}: ": f'"{field.name}": ' for field in dataclasses.fields(File)}
-    pattern = re.compile("|".join(sorted(translation_map.keys(), key=len, reverse=True)))
-
-    def translate(text: str) -> str:
-        return pattern.sub(lambda m: translation_map[m.group(0)], text.replace("\\'", "'")).strip()
-
-    def decode(content: str) -> Generator[File]:
-        file: dict[str, Any]
-        for file in json.loads(content):
-            yield File(**file)
-
-    def parse(album_js: str) -> Generator[File]:
-        content = translate(album_js[album_js.find("=") + 1 : album_js.rfind("];")])
-        return decode(content.rstrip(",") + "]")
-
-    return parse
-
-
-@dataclasses.dataclass(slots=True)
-class File:
-    id: int
-    name: str
-    original: str | None
-    slug: str
-    type: str
-    extension: str
-    size: int
-    timestamp: str
-    thumbnail: str
-    cdnEndpoint: str  # noqa: N815
-
-    src: AbsoluteHttpURL | None = dataclasses.field(compare=False, default=None)
-
-    def __post_init__(self) -> None:
-        if self.src:
-            return
-
-        if self.thumbnail.count("https://") != 1:
-            return
-
-        src = parse_url(self.thumbnail).with_path(self.cdnEndpoint)
-
-        if src.suffix.lower() not in FileExt.IMAGE:
-            src = src.with_host(src.host.replace("i-", ""))
-
-        self.src = _override_cdn(src)
+    JS_VARS = "script:-soup-contains-own('var jsCDN')"
 
 
 class BunkrCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("bunkr",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Video": "/v/<slug>",
         "File": (
             "/f/<slug>",
             "/d/<slug>",
-            "/<slug>",
+            "/i/<slug>",
         ),
-        "Direct links": "",
+        "Stream redirect": "/<slug>",
     }
 
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.site")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bunkr.cr")
     DOMAIN: ClassVar[str] = "bunkr"
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
+        "bunkr.black",
+        "bunkr.su",
+        "bunkr.is",
+        "bunkr.la",
+        "bunkr.se",
+        "bunkrr.su",
+    )
     _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
     _known_good_host: ClassVar[str | None] = None
 
+    @staticmethod
+    @override
+    def __db_path__(url: AbsoluteHttpURL, /) -> str:
+        return "/" + url.name
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = _fix_domain(url)
+        match url.parts[1:]:
+            case ["v" | "d" | "i", js_slug]:
+                return url.origin() / "f" / js_slug
+            case _:
+                return url
+
     def __post_init__(self) -> None:
+        self.api: BunkrAPI = BunkrAPI.from_crawler(self)
+        self._parse_files = _make_album_parser()
         self._redirect_lock: asyncio.Lock = asyncio.Lock()
-        self._parse_album_files = _make_album_parser()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["file", file_id] if scrape_item.url.host == _REINFORCED_URL.host:
-                return await self.reinforced_file(scrape_item, file_id)
+            case ["file", file_id] if scrape_item.url.host == self.api.DL_ENDPOINT.host:
+                return await self.file_download(scrape_item, file_id)
             case ["a", album_id]:
                 return await self.album(scrape_item, album_id)
-            case ["v" | "d", _]:
+            case ["v" | "d" | "i", _]:
                 return await self.follow_redirect(scrape_item)
             case ["f", _]:
                 return await self.file(scrape_item)
-            case [_]:
-                if _is_stream_redirect(scrape_item.url.host):
-                    return await self.follow_redirect(scrape_item)
-
-                if self.is_subdomain(scrape_item.url):
-                    return await self._direct_file(scrape_item, scrape_item.url)
-
-                raise ValueError
+            case [_] if _is_stream_redirect(scrape_item.url.host):
+                return await self.follow_redirect(scrape_item)
             case _:
                 raise ValueError
 
@@ -167,42 +120,12 @@ class BunkrCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=album_id)
 
         origin = scrape_item.url.origin()
-        results = await self.get_album_results(album_id)
-        for file in self._parse_album_files(css.select_text(soup, Selector.ALBUM_FILES)):
+        for file in self._parse_files(css.select_text(soup, Selector.ALBUM_FILES)):
             web_url = origin / "f" / file.slug
-            new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._album_file(new_scrape_item, file, results))
+            new_item = scrape_item.create_child(web_url)
+            new_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
+            self.create_task(self.run(new_item))
             scrape_item.add_children()
-
-    @auto_task_id
-    @error_handling_wrapper
-    async def _album_file(self, scrape_item: ScrapeItem, file: File, results: dict[str, bool]) -> None:
-        db_url = scrape_item.url.with_host(self.PRIMARY_URL.host)
-        if await self.check_complete_from_referer(db_url):
-            return
-
-        scrape_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
-
-        src = file.src
-        if not src:
-            self.create_task(self.run(scrape_item))
-            return
-
-        deep_scrape = (
-            src.suffix.lower() not in FileExt.VIDEO_OR_IMAGE
-            or "no-image" in src.name
-            or self.deep_scrape
-            or any(cdn in src.host for cdn in _DEEP_SCRAPE_CDNS)
-        )
-
-        if deep_scrape:
-            self.create_task(self.run(scrape_item))
-            return
-
-        if self.check_album_results(src, results):
-            return
-
-        await self._direct_file(scrape_item, src, file.original or file.name)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
@@ -211,52 +134,41 @@ class BunkrCrawler(Crawler):
             return
 
         soup = await self._request_soup_lenient(scrape_item.url)
-        src = None
         if soup.select_one(Selector.SERVER_UNDER_MAINTENANCE):
-            raise ScrapeError("Bunkr Maintenance", message="Server under maintenance")
+            raise ScrapeError("Bunkr Maintenance", "Server under maintenance")
 
         try:
-            image = self.parse_url(css.select(soup, Selector.IMAGE_CONTAINER, "src"))
+            cdn = _extract_js_vars(soup)["jsCDN"]
         except css.SelectorError:
-            pass
+            dl_url = css.select(soup, Selector.DOWNLOAD_BTN, "href")
+            file_id = self.parse_url(dl_url).name
+            src, filename = await self.api.download(file_id)
         else:
-            if len(image.parts) == 2:
-                src = image
+            filename = open_graph.title(soup)
+            src = self.parse_url(cdn)
 
-        if self.deep_scrape or not src:
-            reinforced_url = css.select(soup, Selector.DOWNLOAD_BTN, "href")
-            referrer_url = self.parse_url(reinforced_url)
-            file_id = referrer_url.name
-            src = await self._request_download(file_id, referrer_url)
-
-        await self._direct_file(scrape_item, src, open_graph.title(soup))
+        await self._file(scrape_item, src, filename)
 
     @error_handling_wrapper
-    async def reinforced_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        name = css.select_text(soup, "h1")
-        src = await self._request_download(file_id, scrape_item.url)
-        await self._direct_file(scrape_item, src, name)
+    async def file_download(self, scrape_item: ScrapeItem, file_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+        source, name = await self.api.download(file_id)
+        await self._file(scrape_item, source, name)
 
-    @error_handling_wrapper
-    async def _direct_file(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL, filename: str | None = None) -> None:
-        name = link.query.get("n") or filename or link.name
-        link = link.update_query(n=name)
+    async def _file(self, scrape_item: ScrapeItem, src: AbsoluteHttpURL, filename: str | None = None) -> None:
+        referer = scrape_item.url
+        if not self.is_subdomain(referer):
+            referer = referer.with_host(self.PRIMARY_URL.host)
+
+        if await self.check_complete(src, referer):
+            return
+
+        src = await self.api.sign(src)
+        name = src.query.get("n") or filename or src.name
+        src = src.update_query(n=name)
         filename, ext = self.get_filename_and_ext(name, assume_ext=".mp4")
-        if not self.is_subdomain(scrape_item.url):
-            scrape_item.url = scrape_item.url.with_host(self.PRIMARY_URL.host)
-        elif link.host == scrape_item.url.host:
-            scrape_item.url = _REINFORCED_URL
-        await self.handle_file(_override_cdn(link), scrape_item, name, ext, custom_filename=filename)
-
-    async def _request_download(self, file_id: str, referrer: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        resp: dict[str, Any] = await self.request_json(
-            _DOWNLOAD_API_ENTRYPOINT,
-            "POST",
-            json={"id": file_id},
-            headers={"Referer": str(referrer)},
-        )
-        return self.parse_url(_parse_api_resp(**resp))
+        await self.handle_file(src, scrape_item, name, ext, custom_filename=filename, referer=referer)
 
     async def _try_request_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup | None:
         try:
@@ -285,9 +197,8 @@ class BunkrCrawler(Crawler):
             return await self.request_soup(url.with_host(self._known_good_host))
 
         async with self._startup_lock:
-            if url.host not in known_bad_hosts:
-                if soup := await self._try_request_soup(url):
-                    return soup
+            if url.host not in known_bad_hosts and (soup := await self._try_request_soup(url)):
+                return soup
 
             for host in _HOST_OPTIONS - known_bad_hosts:
                 if soup := await self._try_request_soup(url.with_host(host)):
@@ -297,26 +208,86 @@ class BunkrCrawler(Crawler):
         return await self.request_soup(url)
 
 
+class BunkrAPI(API):
+    DL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://dl.bunkr.cr/api/_001_v2")
+    SIGN_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://glb-apisign.cdn.cr/sign")
+    headers: Mapping[str, str] = {
+        "Referer": str(DL_ENDPOINT.origin()) + "/",
+        "Origin": str(DL_ENDPOINT.origin()),
+    }
+
+    async def download(self, file_id: str) -> tuple[AbsoluteHttpURL, str | None]:
+        resp = await self.request_json(self.DL_ENDPOINT, headers=self.headers, json={"id": file_id})
+        url = self.parse_url(resp["mediafiles"]).with_path(resp["path"])
+        return url, resp.get("original")
+
+    async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        api_url = self.SIGN_ENDPOINT.with_query(path=src.path)
+        resp = await self.request_json(api_url, headers=self.headers)
+        return src.with_query(token=resp["token"], ex=resp["ex"])
+
+
+@dataclasses.dataclass(slots=True)
+class File:
+    id: int
+    name: str
+    original: str | None
+    slug: str
+    type: str
+    extension: str
+    size: int
+    timestamp: str
+    thumbnail: str
+    cdnEndpoint: str  # noqa: N815
+
+
+def _make_album_parser() -> Callable[[str], Generator[File]]:
+    translation_map = {f" {field.name}: ": f'"{field.name}": ' for field in dataclasses.fields(File)}
+    pattern = re.compile("|".join(sorted(translation_map.keys(), key=len, reverse=True)))
+
+    def translate(text: str) -> str:
+        return pattern.sub(lambda m: translation_map[m.group(0)], text.replace("\\'", "'")).strip()
+
+    def decode(content: str) -> Generator[File]:
+        file: dict[str, Any]
+        for file in json.loads(content):
+            yield File(**file)
+
+    def parse(album_js: str) -> Generator[File]:
+        content = translate(album_js[album_js.find("=") + 1 : album_js.rfind("];")])
+        return decode(content.rstrip(",") + "]")
+
+    return parse
+
+
 def _is_stream_redirect(host: str) -> bool:
-    first_subdomain = host.split(".")[0]
+    first_subdomain = host.split(".", maxsplit=1)[0]
     prefix, _, number = first_subdomain.partition("cdn")
     if not prefix and number.isdigit():
         return True
     return any(part in host for part in ("cdn12", "cdn-")) or host == "cdn.bunkr.ru"
 
 
-def _override_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    if "milkshake" in url.host:
-        return url.with_host("mlk-bk.cdn.gigachad-cdn.ru")
-    if "burger." in url.host:
-        return url.with_host("brg-bk.cdn.gigachad-cdn.ru")
+def _extract_js_vars(soup: BeautifulSoup) -> dict[str, str]:
+    script = css.select_text(soup, Selector.JS_VARS)
+    return {k: _fix_encoding(v).strip("\"'") for k, v in _find_js_vars(script)}
+
+
+def _fix_encoding(val: str) -> str:
+    return val.replace(r"\/", "/")
+
+
+def fix_db_referer(referer: str) -> str:
+    url = BunkrCrawler.transform_url(AbsoluteHttpURL(referer))
+    if BunkrCrawler.is_subdomain(url):
+        return str(url)
+
+    return str(url.with_host(BunkrCrawler.PRIMARY_URL.host))
+
+
+def _fix_domain(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if url.host == "get.bunkrr.su":
+        return url.with_host("dl.bunkr.cr")
+    if url.host in BunkrCrawler.OLD_DOMAINS:
+        return url.with_host(BunkrCrawler.PRIMARY_URL.host)
     return url
-
-
-def _parse_api_resp(url: str, timestamp: int, encrypted: bool) -> str:
-    if not encrypted:
-        return url
-
-    time_key = timestamp // 3600
-    secret_key = f"SECRET_KEY_{time_key}".encode()
-    return xor_decrypt(base64.b64decode(url), secret_key)

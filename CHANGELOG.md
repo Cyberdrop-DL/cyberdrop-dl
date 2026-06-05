@@ -22,27 +22,152 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [9.14.0] - 2026-06-03
+
+⚠️**IMPORTANT**
+
+> If you has ever used a Pixeldrain API key with `cyberdrop-dl-pacthed` version >=8.5.0, you should consider them compromised and disable them.
+>
+> See: [GHSA-f5pf-q7c7-m3vv](https://github.com/Cyberdrop-DL/cyberdrop-dl/security/advisories/GHSA-f5pf-q7c7-m3vv)
 
 ### Added
 
+- Support password protected files/folders (Filester)
+
 ### Changed
 
+- Hard fail if any config option requires `ffmpeg` but `ffmpeg` is not installed
+- Disable hardcoded max concurrent downloads (2) if an API key is provided by the user (PixelDrain)
+- Exclude main log file from empty files check
+
+### Removed
+
+- Support for download proxies. Proxy URLs with be rewritten as pixeldrain.com URLs (PixelDrain)
+
+### Fixed
+
+- Some false positive DDoS-Guard detections
+- URLs extraction from text files in a filesystem (PixelDrain)
+
+### Security
+
+- Reject any URL not matching an official domain (Pixeldrain)
+
+## [9.13.0] - 2026-05-29
+
+### Changed
+
+- Replace bunkr-albums.io with balbums.st
+- Switch to new downloads API (Bunkr)
+- `--deep-scrape` no longer has any effect on Bunkr
+- Exclude dot files from empty files check
+
+### Removed
+
+- Support for direct links (Bunkr)
+
+### Fixed
+
+- Do not crash on HTTP errors from individual photos (Flickr)
+- Do not crash on HTTP errors from individual files (Google Drive)
+
+### Security
+
+- Reject download with leading dots as filenames (dot files)
+- Reject downloads if the final download path is outside the root download folder (path traversal)
+- The following extensions have been hardcoded to always be rejected:
+
+1. `.bat`
+2. `.com`
+3. `.exe`
+4. `.hta`
+5. `.inf`
+6. `.jar`
+7. `.js`
+8. `.lnk`
+9. `.msc`
+10. `.msi`
+11. `.ps1`
+12. `.ps2`
+13. `.psc1`
+14. `.psc2`
+15. `.sh`
+16. `.scf`
+17. `.vb`
+18. `.vbs`
+19. `.wsc`
+20. `.wsh`
+
+## [9.12.0] - 2026-05-27
+
+### Added
+
+- 1fichier support
+- Archive.org support
+- YTboob support
+- Rutube support
+- Acast support
+- Whyp.it support
+- Soundgasm support
+- Clyp.it support
+- Livestreamfails support
+- Yurivan support
+- Fatbox proxy support (Catbox)
+
+### Fixed
+
+- Date extraction (Rule34vault)
+- `--json` output missing files skipped by host or filename regex
+- Update website salt (Gofile)
+- Episode parsing (OnePace)
+- Do not crash on HTTP errors from profiles/search (Spankbang)
+
+## [9.11.0] - 2026-05-20
+
+### Changed
+
+- Show the aggregate speed of all downloads
+
 ### Deprecated
+
+- Posts filtering by URL params will be removed on the next major release (Wordpress)
+
+### Fixed
+
+- Crash trying to decode non https URLs from the database (jpg5)
+- Wordpress support
+
+## [9.10.3] - 2026-05-19
+
+### Fixed
+
+- Parsing of thread URLs (Xenforo)
+- Date extraction (efukt.com)
+
+## [9.10.2] - 2026-05-19
+
+### Changed
+
+- Replaced fapello.su with fapello.com. Existing database entries will be ignored
+- Updated domain to xbunker.cc (Xbunkr)
+- Updated domain to www.imagepond.net (Imagepond)
+- Updated domain to turbo.cr (TurboVid)
 
 ### Removed
 
 - files.vc support (No longer exists)
+- incestflix.com support (No longer exists)
 
 ### Fixed
 
 - Do not try to parse upload date (YouJizz)
-- Date extration (Sex.com)
 - Video extraction from embed URLs (YouJizz)
+- Date extraction (Sex.com)
 - Date extraction (Rule34.xxx)
 - Date extraction (Nsfw.xxx)
 - Date extraction (e621)
 - Chapter info extraction (OmegaScans)
+- 403 Forbidden when the input URL is a direct file (Turbo.cr)
 
 ## [9.10.1] - 2026-05-16
 

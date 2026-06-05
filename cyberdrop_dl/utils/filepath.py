@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from pathlib import Path
 
 from cyberdrop_dl.constants import FileExt
-from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
+from cyberdrop_dl.exceptions import FileNameError, InvalidExtensionError, NoExtensionError, PathTraversalError
 
 _ALLOWED_FILEPATH_PUNCTUATION = " .-_!#$%'()+,;=@[]^{}~"
 _SANITIZE_FILENAME_PATTERN = r'[<>:"/\\|?*\']'
@@ -29,7 +29,7 @@ def remove_emojis_and_symbols(filename: str) -> str:
 
 def sanitize_filename(name: str, sub: str = "") -> str:
     clean_name = re.sub(_SANITIZE_FILENAME_PATTERN, sub, name).strip()
-    if platform.system() in ("Windows", "Darwin"):
+    if platform.system() in {"Windows", "Darwin"}:
         clean_name = remove_emojis_and_symbols(clean_name)
     path = Path(clean_name)
     return path.stem.strip() + path.suffix
@@ -122,5 +122,23 @@ def remove_file_id(filename: str, ext: str) -> str:
         filename, _7z_ext = filename.rsplit("-", 1)
         filename = f"{filename}.{_7z_ext}"
     if not filename.endswith(ext):
-        filename = filename + ext
+        filename += ext
     return filename
+
+
+def check_path_traversal(download_folder: Path, folder: Path) -> None:
+    parts = folder.parts
+    if "." in parts or ".." in parts:
+        raise PathTraversalError(folder)
+
+    if not folder.resolve().is_relative_to(download_folder):
+        raise PathTraversalError(folder)
+
+
+def check_dangerous_filename(filename: str) -> None:
+    if filename.startswith("."):
+        raise FileNameError("Dot file", message=f"Dot files are restricted: {filename}")
+
+    path = Path(filename)
+    if "\\" in filename or "/" in filename or path.name != filename or path.suffix.lower() in FileExt.DANGEROUS:
+        raise FileNameError("Dangerous File Extension", message=filename)

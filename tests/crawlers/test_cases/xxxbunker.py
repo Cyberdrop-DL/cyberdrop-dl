@@ -28,4 +28,20 @@ TEST_CASES = [
         ],
         "count": 68,
     },
+    {
+        "url": "https://xxxbunker.com/raphaella_learning_something_new",
+        "results": [
+            {
+                "url": "https://xxxbunker.com/player/11208113",
+                "filename": "Raphaella Learning Something New [11208113].mp4",
+                "debrid_link": "https://relay1.xxxbunker.com/videos/internal/45d786ux19cd2440948.mp4",
+                "original_filename": "11208113.mp4",
+                "referer": "https://xxxbunker.com/raphaella_learning_something_new",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (XXXBunker)",
+            }
+        ],
+        "count": 1,
+    },
 ]

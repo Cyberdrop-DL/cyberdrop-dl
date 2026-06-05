@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 _API_URL = AbsoluteHttpURL("https://api.fxtwitter.com")
 
 
-class TwitterCrawler(Crawler):
+class TwitterCrawler(Crawler, is_debug=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Tweet": "/<handle>/status/<tweet_id>",
     }
@@ -41,7 +41,7 @@ class TwitterCrawler(Crawler):
         name = tweet["author"]["screen_name"]
         post_title = self.create_separate_post_title(None, tweet["id"], scrape_item.uploaded_at)
         scrape_item.setup_as_profile(self.create_title(f"@{name}"))
-        scrape_item.add_to_parent_title(post_title)
+        scrape_item.append_folders(post_title)
 
         await self.write_metadata(scrape_item, tweet["id"], tweet)
 

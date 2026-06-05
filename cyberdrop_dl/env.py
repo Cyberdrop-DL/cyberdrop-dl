@@ -17,7 +17,7 @@ def _env(name: str, *, censor: bool = False) -> str | None:
 RUNNING_IN_TERMUX = bool(
     os.getenv("TERMUX_VERSION") or os.getenv("TERMUX_MAIN_PACKAGE_FORMAT") or "com.termux" in os.getenv("$PREFIX", "")
 )
-PORTRAIT_MODE = bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
+FORCE_PORTRAIT_MODE = bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
 
 
 DEBUG_LOG_FOLDER = _env("DEBUG_LOG_FOLDER")
@@ -27,7 +27,7 @@ DEBUG_MODE = bool(
     _env("DEBUG_MODE")
     or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
-    or os.getenv("TERM_PROGRAM") in ("vscode", "zed")
+    or os.getenv("TERM_PROGRAM") in {"vscode", "zed"}
 )
 ENABLE_DEBUG_CRAWLERS = (
     _env("ENABLE_DEBUG_CRAWLERS", censor=True) == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda"
@@ -39,12 +39,12 @@ EDITOR = os.getenv("EDITOR")
 
 # CRAWLERS
 
-PIXELDRAIN_PROXY = _env("PIXELDRAIN_PROXY")
 BANDCAMP_FORMATS = _env("BANDCAMP_FORMATS")
 ENABLE_TWITTER = bool(_env("ENABLE_TWITTER"))
 ONEPACE_PREFER_DUB = bool(_env("ONEPACE_PREFER_DUB"))
+CLYPIT_PREFER_MP3 = bool(_env("CLYPIT_PREFER_MP3"))
 
 ALL_VARS = dict(sorted(ALL_VARS.items()))  # pyright: ignore[reportConstantRedefinition]
 ALL_VARS_RESOLVED = dict(
-    sorted((k, v) for k, v in globals().items() if k not in ("os", "hashlib", "ALL_VARS") and not k.startswith("_"))
+    sorted((k, v) for k, v in globals().items() if k not in {"os", "hashlib", "ALL_VARS"} and not k.startswith("_"))
 )

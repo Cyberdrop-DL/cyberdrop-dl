@@ -6,11 +6,11 @@ import pytest
 from cyberdrop_dl import csv_logs
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-now = datetime.datetime(2026, 5, 8)
+now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
 
 
 @pytest.mark.parametrize(
-    "url, expected",
+    ("url", "expected"),
     [
         (
             "https://static.scdn.st/e2f8a4c6-3d7b-4e19-9a5c-8b1d6f0e3a7c/thumbs/f7e8625e-b50b-42c3-93da-d74bce716c41-md8f1c79417cd16004-zU4LIum1.png",

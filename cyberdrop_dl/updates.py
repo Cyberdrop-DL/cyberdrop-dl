@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-from cyberdrop_dl import __version__
+from cyberdrop_dl import __dist_name__, __version__
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-_PYPI_JSON_URL = "https://pypi.org/pypi/cyberdrop-dl-patched/json"
+_PYPI_JSON_URL = f"https://pypi.org/pypi/{__dist_name__}/json"
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +18,7 @@ async def check_latest_pypi(session: aiohttp.ClientSession) -> None:
     logger.info("Checking for updates...")
     try:
         data = await _request_pypi_info(session)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Unable to get latest version information {e!r}")
     else:
         return _compare_and_log_version(

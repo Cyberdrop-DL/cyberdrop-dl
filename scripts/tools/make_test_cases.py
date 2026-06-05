@@ -22,7 +22,7 @@ TestCase = dict[str, Any]
 
 def parse_jsonl(file: Path) -> Generator[tuple[str, str, TestCase]]:
     base = Path.cwd() / "Downloads"
-    for line in file.read_text().splitlines():
+    for line in file.read_text(encoding="utf-8").splitlines():
         media = json.loads(line)
         url = media["parents"][0] if media["parents"] else media["referer"]
         media["download_folder"] = "re:" + str(Path(media["download_folder"]).relative_to(base))

@@ -71,7 +71,7 @@ class CoomerFansCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(post.model_name))
         scrape_item.uploaded_at = date = self.parse_iso_date(post.date)
         post_title = self.create_separate_post_title(post.title, post_id, date)
-        scrape_item.add_to_parent_title(post_title)
+        scrape_item.append_folders(post_title)
         self.create_task(self.write_metadata(scrape_item, f"post_{post_id}", post))
         self._post(scrape_item, post)
 
@@ -97,7 +97,7 @@ class CoomerFansCrawler(Crawler):
                 seen.add(link)
                 try:
                     url = self.parse_url(link)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
                 else:
                     if self.DOMAIN not in url.host:

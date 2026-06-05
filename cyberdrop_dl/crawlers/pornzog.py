@@ -14,14 +14,11 @@ class Selectors:
     EMBED_IFRAME = "div.fluid-width-video-wrapper > iframe"
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://pornzog.com")
-
-
 class PornZogCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pornzog.com")
     DOMAIN: ClassVar[str] = "pornzog"
     FOLDER_DOMAIN: ClassVar[str] = "PornZog"
 

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper
 
 from .xenforo import XenforoCrawler
+
+if TYPE_CHECKING:
+    import yarl
 
 _confirmation_data = ({"xhr": "1", "download": "1"},)
 
@@ -30,8 +33,15 @@ class F95ZoneCrawler(XenforoCrawler):
         return url.with_path(url.path.replace("/thumb/", ""))
 
     @classmethod
-    def parse_url(cls, link: str) -> AbsoluteHttpURL:
-        url = super().parse_url(link)
+    def parse_url(
+        cls,
+        url: yarl.URL | str,
+        /,
+        relative_to: AbsoluteHttpURL | None = None,
+        *,
+        trim: bool | None = None,
+    ) -> AbsoluteHttpURL:
+        url = super().parse_url(url, relative_to, trim=trim)
         if cls.is_thumbnail(url):
             return cls.thumbnail_to_img(url)
         return url

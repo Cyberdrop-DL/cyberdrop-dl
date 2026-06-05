@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     _BaseModelT = TypeVar("_BaseModelT", bound=BaseModel)
 
-_APP: App | None = None
+_app: App | None = None
 
 
 @Parameter(name="*")
@@ -62,11 +62,11 @@ class Config(BaseModel):
 
     @classmethod
     def parse_args(cls, tokens: str | Iterable[str]) -> Config:
-        global _APP
-        if _APP is None:
-            _APP = App(print_error=False, exit_on_error=False)
-            _ = _APP.command(name="coerce")(_coerce)
-        fn, bound, *_ = _APP.parse_args(["coerce", *normalize_tokens(tokens)])
+        global _app  # noqa: PLW0603
+        if _app is None:
+            _app = App(print_error=False, exit_on_error=False)
+            _ = _app.command(name="coerce")(_coerce)
+        fn, bound, *_ = _app.parse_args(["coerce", *normalize_tokens(tokens)])
         assert fn is _coerce
         return _coerce(*bound.args, **bound.kwargs)
 

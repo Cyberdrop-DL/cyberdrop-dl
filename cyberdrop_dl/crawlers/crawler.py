@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import datetime
 import importlib
 import logging
 import pkgutil
@@ -15,32 +14,30 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, final
 
-from typing_extensions import deprecated
+from typing_extensions import TypeVar, deprecated
 
 from cyberdrop_dl import aio, env, signature
-from cyberdrop_dl.clients.http import HTTPClient, HTTPClientProxy
-from cyberdrop_dl.crawlers._hls import HLSParser
+from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin, RequestContext
+from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
-from cyberdrop_dl.utils import (
-    css,
-    dates,
-    error_handling_context,
-    error_handling_wrapper,
-    get_download_path,
-    is_absolute_http_url,
-    is_blob_or_svg,
-    m3u8,
-    parse_url,
+from cyberdrop_dl.utils import css, dates, error_handling_context, is_absolute_http_url, is_blob_or_svg, m3u8, parse_url
+from cyberdrop_dl.utils.filepath import (
+    check_dangerous_filename,
+    check_path_traversal,
+    compose_filename,
+    get_filename_and_ext,
+    remove_file_id,
 )
-from cyberdrop_dl.utils.filepath import compose_filename, get_filename_and_ext, remove_file_id
 from cyberdrop_dl.utils.strings import safe_format
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import AsyncGenerator, AsyncIterator, Callable, Coroutine, Generator, Iterable, Mapping
     from types import ModuleType
 
@@ -48,6 +45,8 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
+    from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
 
 logger = logging.getLogger(__name__)
@@ -61,6 +60,8 @@ SupportedPaths = dict[str, OneOrTuple[str]]
 SupportedDomains = OneOrTuple[str]
 RateLimit = tuple[float, float]
 SKIP_DOWNLOAD: ContextVar[bool] = ContextVar("SKIP_DOWNLOAD", default=False)
+ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
+ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
 
 
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
@@ -81,7 +82,7 @@ _include = _PlaceHolderConfigInclude()
 
 _DB_PATH_BUILDERS: MappingProxyType[str, Callable[[AbsoluteHttpURL], str]] = MappingProxyType(
     {
-        "url": lambda url: str(url),
+        "url": str,
         "name": lambda url: url.name,
         "path": lambda url: url.path,
         "path_qs": lambda url: url.path_qs,
@@ -123,16 +124,33 @@ class Registry:
 
         assert __package__
         module = importlib.import_module(__package__)
-        cls._import_from(module)
+        errors = tuple(cls._import_from(module))
+        if errors:
+            error = RuntimeError("cyberdrop-dl installation is corrupted")
+            error.add_note("A complete uninstall and reinstall should fix crawler import errors")
+            raise BaseExceptionGroup("", (*errors, error))
+
         cls._loaded = True
 
     @classmethod
-    def _import_from(cls, module: ModuleType) -> None:
+    def _import_from(cls, module: ModuleType) -> Generator[ImportError]:
         """Import every module (and sub-package) inside *pkg_name*."""
         for sub_module_info in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-            sub_module = importlib.import_module(sub_module_info.name)
-            if sub_module_info.ispkg:
-                cls._import_from(sub_module)
+            try:
+                sub_module = cls._import_module(sub_module_info.name)
+            except ImportError as e:
+                yield e
+            else:
+                if sub_module_info.ispkg:
+                    yield from cls._import_from(sub_module)
+
+    @classmethod
+    def _import_module(cls, name: str, /) -> ModuleType:
+        try:
+            return importlib.import_module(name)
+        except ImportError as e:
+            msg = f"Could not import crawlers from module '{name}' [{e.msg}]"
+            raise ImportError(msg).with_traceback(e.__traceback__) from None
 
 
 class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
@@ -144,7 +162,9 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
-class Crawler(HTTPClientProxy, HLSParser, ABC):
+class Crawler(HTTPMixin, HLSMixin, ABC):
+    DOMAIN: ClassVar[str]
+    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -156,12 +176,15 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     DEFAULT_TRIM_URLS: ClassVar[bool] = True
     FOLDER_DOMAIN: ClassVar[str] = ""
-    DOMAIN: ClassVar[str]
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
+    _FORUM: ClassVar[bool] = False
 
     _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
+    _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+    _DEFAULT_UA: ClassVar[str | None] = None
+
     disabled: bool = False
 
     def __repr__(self) -> str:
@@ -180,13 +203,13 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
-        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
 
         self.downloader: Downloader = Downloader(
             self.manager,
             self.DOMAIN,
             use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
-            download_slots=self._DOWNLOAD_SLOTS,
+            _download_slots=self._DOWNLOAD_SLOTS,
         )
 
         self.__post_init__()
@@ -221,23 +244,16 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     def __init_subclass__(
         cls,
+        *,
         is_abc: bool = False,
         is_generic: bool = False,
         is_debug: bool = False,
         db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
-        **kwargs,
+        cdl_user_agent: bool = False,
+        **kwargs: Any,
     ) -> None:
         super().__init_subclass__(**kwargs)
-
-        assert cls.__init__ is Crawler.__init__, (
-            f"Subclass {cls.__name__} must not override __init__,use __post_init__ for additional setup"
-        )
-
-        assert cls.__async_init__ is Crawler.__async_init__, (
-            f"Subclass {cls.__name__} must not override __async_init__,"
-            "use __async_post_init__ for setup that requires manipulating cookies or any IO (database access, HTTP requests, etc...)"
-        )
-
+        _check_init_overrides(cls)
         cls.NAME: str = cls.__name__.removesuffix("Crawler")
         cls.IS_GENERIC: bool = is_generic
         cls.SUPPORTED_PATHS = _sort_supported_paths(cls.SUPPORTED_PATHS)  # pyright: ignore[reportConstantRedefinition]
@@ -247,6 +263,8 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
+        if cdl_user_agent:
+            cls._DEFAULT_UA = CDL_USER_AGENT  # pyright: ignore[reportConstantRedefinition]
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
@@ -264,13 +282,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             Crawler._assert_fields_overrides(cls, "PRIMARY_URL", "DOMAIN", "SUPPORTED_PATHS")
 
         cls.REPLACE_OLD_DOMAINS_REGEX: str | None = "|".join(cls.OLD_DOMAINS) if cls.OLD_DOMAINS else None
-        if cls.OLD_DOMAINS:
-            supported_domains = cls.SUPPORTED_DOMAINS or ()
-            if isinstance(supported_domains, str):
-                supported_domains = (supported_domains,)
-
-            cls.SUPPORTED_DOMAINS = tuple(sorted({*cls.OLD_DOMAINS, *supported_domains, cls.PRIMARY_URL.host}))  # pyright: ignore[reportConstantRedefinition]
-
+        _prepare_supported_domains(cls)
         _validate_supported_paths(cls)
         cls.SCRAPE_MAPPER_KEYS: tuple[str, ...] = _make_scrape_mapper_keys(cls)  # pyright: ignore[reportConstantRedefinition]
         cls.FOLDER_DOMAIN = cls.FOLDER_DOMAIN or cls.DOMAIN.capitalize()  # pyright: ignore[reportConstantRedefinition]
@@ -282,6 +294,51 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         )
         if add_to_registry:
             Registry.concrete.add(cls)
+
+    @signature.copy(HTTPClient.request)
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        *args: Any,
+        impersonate: str | bool | None = None,
+        default_ua: str | None = None,
+        **kwargs: Any,
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        if impersonate is None:
+            impersonate = self._IMPERSONATE
+
+        with self.client.json_context(self.__json_resp_check__):
+            async with (
+                self.client.rate_limits[self.DOMAIN],
+                self.client.global_rate_limiter,
+                self.client.request(
+                    *args,
+                    impersonate=impersonate,
+                    default_ua=default_ua or self._DEFAULT_UA,
+                    **kwargs,
+                ) as resp,
+            ):
+                yield resp
+
+    @classmethod
+    def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
+        """Custom check for JSON responses.
+
+        This method is called automatically by the `HttpClient` when a JSON response is received from `cls.DOMAIN`
+        and it was **NOT** successful (`4xx` or `5xx` HTTP code).
+
+        Override this method in subclasses to raise a custom `ScrapeError` instead of the default HTTP error
+
+        Example:
+            ```python
+            if isinstance(json, dict) and json.get("status") == "error":
+                raise ScrapeError(422, f"API error: {json['message']}")
+            ```
+
+        IMPORTANT:
+            Cases were the response **IS** successful (200, OK) but the JSON indicates an error
+            should be handled by the crawler itself
+        """
 
     @final
     @staticmethod
@@ -316,9 +373,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
     def deep_scrape(self) -> bool:
         return self.manager.config.deep_scrape
 
+    @final
     @property
-    def allow_no_extension(self) -> bool:
-        return not self.manager.config.settings.ignore_options.exclude_files_with_no_extension
+    def origin(self) -> AbsoluteHttpURL:
+        return ORIGIN.get()
 
     @property
     def separate_posts(self) -> bool:
@@ -342,7 +400,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             return
 
         async with self._semaphore:
-            with scrape_item.track_changes():
+            with scrape_item.track_changes:
                 scrape_item.url = url = self.transform_url(scrape_item.url)
 
             if url.path_qs in self._scraped_items:
@@ -351,13 +409,15 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
             self._scraped_items.add(url.path_qs)
 
+            if not self.ALLOW_EMPTY_PATH and url.path == "/":
+                self.raise_exc(scrape_item, ScrapeError.unsupported())
+                return
+
             with self.new_task_id(scrape_item.url):
                 try:
-                    if not self.ALLOW_EMPTY_PATH and scrape_item.url.path == "/":
-                        raise ValueError
                     await self.fetch(scrape_item)
                 except ValueError:
-                    self.raise_exc(scrape_item, ScrapeError("Unknown URL path"))
+                    self.raise_exc(scrape_item, ScrapeError.unsupported())
                 except MaxChildrenError as e:
                     self.raise_exc(scrape_item, e)
 
@@ -371,16 +431,17 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             return url.with_host(new_host)
         return url
 
-    @error_handling_wrapper
-    def raise_exc(self, scrape_item: ScrapeItem, exc: type[Exception] | Exception | str) -> None:
-        if isinstance(exc, str):
-            exc = ScrapeError(exc)
-        raise exc
+    def raise_exc(self, scrape_item: ScrapeItem, exc: type[Exception] | Exception | str | int) -> None:
+        with self.catch_errors(scrape_item):
+            if isinstance(exc, (str, int)):
+                exc = ScrapeError(exc)
+            raise exc
 
     @final
     def new_task_id(self, url: AbsoluteHttpURL):
         """Creates a new task_id (shows the URL in the UI and logs)"""
         self.log.info(f"Scraping {url}")
+        _ = ORIGIN.set(url.origin())
         return self.manager.scrape_mapper.tui.scrape.new(url)
 
     @final
@@ -401,7 +462,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         """Write general metadata (not specific to a single file) to json output"""
 
         filename = f"{name}.metadata"  # we won't write to fs, so we skip name sanitization
-        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         url = AbsoluteHttpURL(scrape_item.url.with_scheme("metadata"))
         media_item = MediaItem.from_item(
             scrape_item,
@@ -415,7 +476,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         await self.__write_to_jsonl(media_item)
 
     @final
-    async def handle_file(
+    async def handle_file(  # noqa: PLR0913
         self,
         url: AbsoluteHttpURL,
         scrape_item: ScrapeItem,
@@ -427,14 +488,15 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         m3u8: m3u8.Rendition | None = None,
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
+        frag: str | None = None,
     ) -> None:
         """Finishes handling the file and hands it off to the downloader."""
 
         ext = ext or Path(filename).suffix
-        if self.DOMAIN in ["cyberdrop"]:
+        if self.DOMAIN == "cyberdrop":
             custom_filename = remove_file_id(filename, ext)
 
-        download_folder = get_download_path(self.manager, scrape_item, self.FOLDER_DOMAIN)
+        download_folder = scrape_item.compose_download_path(self.FOLDER_DOMAIN)
         media_item = MediaItem.from_item(
             scrape_item,
             url,
@@ -450,19 +512,25 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             media_item.metadata = metadata
         if referer:
             media_item.referer = referer
+        if frag:
+            media_item.referer = media_item.referer.with_fragment(frag)
         media_item.headers.update(self._prepare_headers(scrape_item))
+        if not scrape_item.retry_path:
+            check_path_traversal(self.manager.config.settings.files.download_folder, media_item.download_folder)
+
+        check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
-            "User-Agent": self.manager.config.global_settings.general.user_agent,
+            "User-Agent": self._DEFAULT_UA or self.manager.config.global_settings.general.user_agent,
             "Referer": str(scrape_item.url),
         }
 
     @final
-    async def _download(self, media_item: MediaItem, m3u8: m3u8.Rendition | None) -> None:
+    async def _download(self, media_item: MediaItem, m3u8: m3u8.Rendition | None, *, skip: bool = False) -> None:
         try:
-            if SKIP_DOWNLOAD.get():
+            if skip or SKIP_DOWNLOAD.get():
                 return
             if m3u8:
                 await self.downloader.download_hls(media_item, m3u8)
@@ -499,39 +567,29 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         return downloaded
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
+        self.manager.scrape_mapper.create_download_task(
+            self._download(
+                media_item,
+                m3u8,
+                skip=await self.__should_skip(media_item),
+            )
+        )
+
+    async def __should_skip(self, media_item: MediaItem) -> bool:
         if await self.check_complete(media_item.url, media_item.referer):
             if media_item.album_id:
                 await self.manager.database.history.set_album_id(self.DOMAIN, media_item)
-            return
+            return True
 
-        if await self.check_skip_by_config(media_item):
+        if _should_skip_by_config(media_item, self.manager.config):
             self.manager.scrape_mapper.tui.files.stats.skipped += 1
-            return
-
-        self.manager.scrape_mapper.create_download_task(self._download(media_item, m3u8))
-
-    @final
-    async def check_skip_by_config(self, media_item: MediaItem) -> bool:
-        media_host = media_item.url.host
-        ignore_options = self.manager.config.settings.ignore_options
-
-        if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
-            logger.info(f"Download skipped {media_item.url} due to skip_hosts config")
-            return True
-
-        if (hosts := ignore_options.only_hosts) and not any(host in media_host for host in hosts):
-            logger.info(f"Download skipped {media_item.url} due to only_hosts config")
-            return True
-
-        if (regex := ignore_options.filename_regex_filter) and re.search(regex, media_item.filename):
-            logger.info(f"Download skipped {media_item.url} due to filename regex filter config")
             return True
 
         return False
 
     @final
     async def check_complete_from_referer(
-        self: Crawler, scrape_item: ScrapeItem | AbsoluteHttpURL, any_crawler: bool = False
+        self: Crawler, scrape_item: ScrapeItem | AbsoluteHttpURL, *, any_crawler: bool = False
     ) -> bool:
         """Checks if the scrape item has already been scraped.
 
@@ -563,7 +621,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         return await self.manager.database.history.check_album(self.DOMAIN, album_id)
 
     @final
-    def handle_external_links(self, scrape_item: ScrapeItem, reset: bool = True) -> None:
+    def handle_external_links(self, scrape_item: ScrapeItem, *, reset: bool = True) -> None:
         """Maps external links to the scraper class."""
         if reset:
             scrape_item.reset()
@@ -574,12 +632,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         self.handle_external_links(scrape_item, reset=False)
 
     @final
+    @classmethod
     def get_filename_and_ext(
-        self,
+        cls,
         filename: str,
-        forum: bool = False,
-        assume_ext: str | None = ".mp4",
         *,
+        assume_ext: str | None = ".mp4",
         mime_type: str | None = None,
     ) -> tuple[str, str]:
         """Wrapper around `utils.get_filename_and_ext`.
@@ -587,10 +645,10 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         If that fails, appends `assume_ext` and tries again, but only if the user had exclude_files_with_no_extension = `False`
         """
         try:
-            return get_filename_and_ext(filename, mime_type, xenforo=forum)
+            return get_filename_and_ext(filename, mime_type, xenforo=cls._FORUM)
         except NoExtensionError:
-            if self.allow_no_extension and assume_ext:
-                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=forum)
+            if ALLOW_NO_EXT.get() and assume_ext:
+                return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=cls._FORUM)
             raise
 
     @final
@@ -621,14 +679,13 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             title = f"{title} ({self.FOLDER_DOMAIN})"
 
         # Remove double spaces
-        title = " ".join(title.split(" "))
-        return title
+        return " ".join(title.split(" "))
 
     @final
     def create_separate_post_title(
         self,
         title: str | None = None,
-        id: str | None = None,
+        id: str | None = None,  # noqa: A002
         date: datetime.datetime | datetime.date | int | None = None,
         /,
     ) -> str:
@@ -638,7 +695,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
         if isinstance(date, int):
-            date = datetime.datetime.fromtimestamp(date)
+            date = dates.from_timestamp(date)
 
         post_title, _ = safe_format(title_format, id=id, number=id, date=date, title=title)
         return post_title
@@ -717,14 +774,13 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         attribute: str = "href",
         *,
         results: Mapping[str, bool] | None = None,
-        **kwargs: Any,
     ) -> Generator[tuple[AbsoluteHttpURL | None, ScrapeItem]]:
         """Generates tuples with an URL from the `src` value of the first image tag (AKA the thumbnail) and a new scrape item from the value of `attribute`
 
         :param results: must be the output of `self.get_album_results`.
         If provided, it will be used as a filter, to only yield items that has not been downloaded before"""
         for thumb, link in self.iter_tags(soup, selector, attribute, results=results):
-            new_scrape_item = scrape_item.create_child(link, **kwargs)
+            new_scrape_item = scrape_item.create_child(link)
             yield thumb, new_scrape_item
             scrape_item.add_children()
 
@@ -752,7 +808,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                 try:
                     return css.select(soup, selector, "href")
                 except css.SelectorError:
-                    return
+                    return None
 
         while True:
             soup = await self.request_soup(page_url, impersonate=impersonate or None)
@@ -762,14 +818,14 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
                 break
             page_url = self.parse_url(page_url_str, relative_to=relative_to, trim=trim)
 
-    @error_handling_wrapper
     async def direct_file(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
+        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
-        link = url or scrape_item.url
-        filename, ext = self.get_filename_and_ext(link.name or link.parent.name, assume_ext=assume_ext)
-        await self.handle_file(link, scrape_item, filename, ext)
+        url = url or scrape_item.url
+        with self.catch_errors(url):
+            filename, ext = self.get_filename_and_ext(url.name or url.parent.name, assume_ext=assume_ext)
+            await self.handle_file(url, scrape_item, filename, ext)
 
     @final
     @contextlib.asynccontextmanager
@@ -780,12 +836,12 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp | None:
+    def parse_date(cls, date_or_datetime: str, /, format: str) -> dates.TimeStamp:  # noqa: A002
         return dates.to_timestamp(dates.parse_format(date_or_datetime, format))
 
     @final
     @classmethod
-    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp | None:
+    def parse_iso_date(cls, date_or_datetime: str, /) -> dates.TimeStamp:
         return dates.to_timestamp(dates.parse_iso(date_or_datetime))
 
     async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -793,13 +849,13 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             return resp.url
 
     @final
-    @error_handling_wrapper
     async def follow_redirect(self, scrape_item: ScrapeItem) -> None:
-        redirect = await self._get_redirect_url(scrape_item.url)
-        if scrape_item.url == redirect:
-            raise ScrapeError(422, "Infinite redirect")
-        scrape_item.url = redirect
-        self.create_task(self.run(scrape_item))
+        with self.catch_errors(scrape_item):
+            redirect = await self._get_redirect_url(scrape_item.url)
+            if scrape_item.url == redirect:
+                raise ScrapeError(422, "Infinite redirect")
+            scrape_item.url = redirect
+            self.create_task(self.run(scrape_item))
 
     async def request_m3u8_playlist(
         self,
@@ -837,7 +893,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
         return await self._request_m3u8(url, headers, media_type)
 
     @final
-    def create_custom_filename(
+    def create_custom_filename(  # noqa: PLR0913
         self,
         name: str,  # can be the full name or just the stem
         ext: str,
@@ -859,7 +915,7 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             if _include.audio_codec and audio_codec:
                 yield audio_codec
 
-            if _include.resolution and resolution and resolution not in (Resolution.highest(), Resolution.unknown()):
+            if _include.resolution and resolution and resolution not in {Resolution.highest(), Resolution.unknown()}:
                 res = resolution if type(resolution) is Resolution else Resolution.parse(resolution)
                 if fps and _include.fps:
                     yield res.name + "@" + (str(int(fps)) if fps.is_integer() else f"{fps:.1f}") + "fps"
@@ -897,17 +953,43 @@ class Crawler(HTTPClientProxy, HLSParser, ABC):
             )
 
 
-@dataclasses.dataclass(slots=True)
-class CrawlerAPI:
-    crawler: Crawler
+_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
-    @signature.copy(HTTPClient.request)
-    async def request_text(self, *args, **kwargs) -> str:
-        return await self.crawler.request_text(*args, **kwargs)
 
-    @signature.copy(request_text)
-    async def request_json(self, *args, **kwargs) -> Any:
-        return await self.crawler.request_json(*args, **kwargs)
+class API(HTTPMixin, ABC):
+    # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
+    @final
+    def __init__(
+        self,
+        PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
+        config: Config,
+        request: Callable[..., RequestContext],
+        parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
+    ) -> None:
+        self.PRIMARY_URL: Final = PRIMARY_URL
+        self.parse_url: Final = parse_url
+        self.request: Final = request
+        self.config: Final = config
+        self.__post_init__()
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(
+            PRIMARY_URL=crawler.PRIMARY_URL,
+            parse_url=crawler.parse_url,
+            request=crawler.request,
+            config=crawler.manager.config,
+        )
+
+    def __post_init__(self) -> None: ...
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(PRIMARY_URL={self.PRIMARY_URL!r})>"
+
+    @final
+    @property
+    def origin(self) -> AbsoluteHttpURL:
+        return ORIGIN.get()
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
@@ -915,6 +997,27 @@ def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
     if isinstance(hosts, str):
         hosts = (hosts,)
     return tuple(sorted({host.removeprefix("www.") for host in hosts}))
+
+
+def _prepare_supported_domains(cls: type[Crawler]) -> None:
+    if not cls.OLD_DOMAINS:
+        return
+    supported_domains = cls.SUPPORTED_DOMAINS or ()
+    if isinstance(supported_domains, str):
+        supported_domains = (supported_domains,)
+
+    cls.SUPPORTED_DOMAINS = tuple(sorted({*cls.OLD_DOMAINS, *supported_domains, cls.PRIMARY_URL.host}))
+
+
+def _check_init_overrides(cls: type[Crawler]) -> None:
+    assert cls.__init__ is Crawler.__init__, (
+        f"Subclass {cls.__name__} must not override __init__,use __post_init__ for additional setup"
+    )
+
+    assert cls.__async_init__ is Crawler.__async_init__, (
+        f"Subclass {cls.__name__} must not override __async_init__,"
+        "use __async_post_init__ for setup that requires manipulating cookies or any IO (database access, HTTP requests, etc...)"
+    )
 
 
 def _validate_supported_paths(cls: type[Crawler]) -> None:
@@ -935,7 +1038,7 @@ def _validate_supported_paths(cls: type[Crawler]) -> None:
 
 
 def _make_wiki_supported_domains(scrape_mapper_keys: tuple[str, ...]) -> tuple[str, ...]:
-    def generalize(domain):
+    def generalize(domain: str) -> str:
         if "." not in domain:
             return f"{domain}.*"
         return domain
@@ -953,9 +1056,6 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTup
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
 
 
-_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
-
-
 def auto_task_id(
     func: Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]],
 ) -> Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]]:
@@ -967,3 +1067,22 @@ def auto_task_id(
             return await func(self, scrape_item, *args, **kwargs)
 
     return wrapper
+
+
+def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
+    media_host = media_item.url.host
+    ignore_options = config.settings.ignore_options
+
+    if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
+        logger.info(f"Download skipped {media_item.url} due to skip_hosts config")
+        return True
+
+    if (hosts := ignore_options.only_hosts) and not any(host in media_host for host in hosts):
+        logger.info(f"Download skipped {media_item.url} due to only_hosts config")
+        return True
+
+    if (regex := ignore_options.filename_regex_filter) and re.search(regex, media_item.filename):
+        logger.info(f"Download skipped {media_item.url} due to filename regex filter config")
+        return True
+
+    return False

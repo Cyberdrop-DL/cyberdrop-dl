@@ -20,8 +20,8 @@ class ToonilyCrawler(Crawler):
         "Serie": "/serie/<name>",
         "Chapter": "/serie/<name>/chapter-<chapter-id>",
     }
-    PRIMARY_URL = AbsoluteHttpURL("https://toonily.com")
-    DOMAIN = "toonily"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://toonily.com")
+    DOMAIN: ClassVar[str] = "toonily"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -51,7 +51,7 @@ class ToonilyCrawler(Crawler):
 
         if scrape_item.type != FILE_HOST_PROFILE:
             series_title = self.create_title(series_name)
-            scrape_item.add_to_parent_title(series_title)
+            scrape_item.append_folders(series_title)
 
         scrape_item.setup_as_album(chapter_title)
         iso_date = css.json_ld(soup)["@graph"][0]["datePublished"]

@@ -121,7 +121,8 @@ async def test_ffprobe_video_url() -> None:
     assert str(output.video.duration) == "10.51"
     assert output.video.codec == "h264"
     assert output.video.bitrate == 4_014_556
-    assert output.video.fps and round(output.video.fps) == 60.0
+    assert output.video.fps
+    assert round(output.video.fps) == 60.0
     assert output.video.width == 360
     assert output.video.height == 640
 
@@ -136,12 +137,12 @@ async def test_ffprobe_video_url() -> None:
 
 
 @pytest.mark.parametrize(
-    "input, hours, minutes, seconds",
+    ("duration", "hours", "minutes", "seconds"),
     [
         # numbers
         (42.5, 0, 0, 42.5),
         (123, 0, 0, 123),
-        # minutes:seconds
+        # format minutes:seconds
         ("3:30", 0, 3, 30),
         ("10:07.25", 0, 10, 7.25),
         ("00:00:30.000000000", 0, 0, 30),
@@ -153,18 +154,18 @@ async def test_ffprobe_video_url() -> None:
         ("0:0:120.5", 0, 2, 0.5),
     ],
 )
-def test_parse_duration(input: str, hours: float, minutes: float, seconds: float) -> None:
-    output = ffmpeg._parse_duration(input)
+def test_parse_duration(duration: str, hours: float, minutes: float, seconds: float) -> None:
+    output = ffmpeg._parse_duration(duration)
     expected = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()
     assert output == expected
 
 
 @pytest.mark.parametrize(
-    "input",
+    "duration",
     ["0", "0:00", "00:00:00", None, "", -1, False, "Invalid"],
 )
-def test_parse_null_duration(input: str) -> None:
-    output = ffmpeg._parse_duration(input)
+def test_parse_null_duration(duration: str) -> None:
+    output = ffmpeg._parse_duration(duration)
     assert output is None
 
 

@@ -34,7 +34,7 @@ _changelog: str = ""
 
 
 def changelog() -> str:
-    global _changelog
+    global _changelog  # noqa: PLW0603
     if not _changelog:
         _changelog = asyncio.run(_fetch_changelog())
 
@@ -107,10 +107,10 @@ def _view_changelog() -> None:
     _clear_term()
     try:
         content = changelog()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _CONSOLE.print(_ERROR, "UNABLE TO GET CHANGELOG INFORMATION", repr(e))
         _enter_to_continue()
-        return None
+        return
 
     with _CONSOLE.pager(links=True):
         _CONSOLE.print(Markdown(content, justify="left"))
@@ -204,4 +204,4 @@ def _enter_to_continue() -> None:
 
 
 def _clear_term() -> None:
-    _ = os.system("cls" if os.name == "nt" else "clear")
+    _ = os.system("cls" if os.name == "nt" else "clear")  # noqa: S605

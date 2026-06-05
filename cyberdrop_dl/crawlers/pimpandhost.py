@@ -9,18 +9,20 @@ from cyberdrop_dl.utils import css, error_handling_wrapper
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
-ALBUM_TITLE_SELECTOR = "span[class=author-header__album-name]"
-DATE_SELECTOR = "span[class=date-time]"
-FILES_SELECTOR = 'a[class*="image-wrapper center-cropped im-wr"]'
-IMAGE_SELECTOR = ".main-image-wrapper"
-DATE_FORMAT = "%A, %B %d, %Y %I:%M:%S%p %Z"
 
-PRIMARY_URL = AbsoluteHttpURL("https://pimpandhost.com/")
+class Selector:
+    ALBUM_TITLE = "span.author-header__album-name"
+    DATE = "span.date-time"
+    FILES = 'a[class*="image-wrapper center-cropped im-wr"]'
+    IMAGE = ".main-image-wrapper"
+
+
+DATE_FORMAT = "%A, %B %d, %Y %I:%M:%S%p %Z"
 
 
 class PimpAndHostCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Album": "/album/...", "Image": "/image/..."}
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pimpandhost.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = "li[class=next] a"
     DOMAIN: ClassVar[str] = "pimpandhost"
     FOLDER_DOMAIN: ClassVar[str] = "PimpAndHost"
@@ -36,23 +38,23 @@ class PimpAndHostCrawler(Crawler):
         async for soup in self.web_pager(scrape_item.url):
             if not title:
                 album_id = scrape_item.url.parts[2]
-                title_portion = css.select(soup, ALBUM_TITLE_SELECTOR).text
+                title_portion = css.select_text(soup, Selector.ALBUM_TITLE)
                 title = self.create_title(title_portion, album_id)
                 scrape_item.setup_as_album(title, album_id=album_id)
 
-                if date_tag := soup.select_one(DATE_SELECTOR):
+                if date_tag := soup.select_one(Selector.DATE):
                     scrape_item.uploaded_at = self.parse_date(css.attr(date_tag, "title"), DATE_FORMAT)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, FILES_SELECTOR):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.FILES):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
 
-        link_str: str = css.select(soup, IMAGE_SELECTOR, "data-src")
+        link_str: str = css.select(soup, Selector.IMAGE, "data-src")
         link = self.parse_url(link_str)
-        date_str: str = css.select(soup, DATE_SELECTOR, "title")
+        date_str: str = css.select(soup, Selector.DATE, "title")
         scrape_item.uploaded_at = self.parse_date(date_str, DATE_FORMAT)
         filename, ext = self.get_filename_and_ext(link.name)
         await self.handle_file(link, scrape_item, filename, ext)

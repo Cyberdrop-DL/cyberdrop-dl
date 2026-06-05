@@ -134,11 +134,13 @@ class SpankBangCrawler(Crawler):
 
             await self._iter_videos(scrape_item, soup)
 
+    @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         scrape_item.setup_as_album(self.create_title(f"{query} [search]"))
         async for soup in self.web_pager(scrape_item.url):
             await self._iter_videos(scrape_item, soup)
 
+    @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem, user: str) -> None:
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
         async for soup in self.web_pager(scrape_item.url):

@@ -1,7 +1,7 @@
 from cyberdrop_dl.utils import json
 
 
-def test_json_load_js_obj():
+def test_json_load_js_obj() -> None:
     string = """
     {
         unquoted_key: 'and you can quote me on that',

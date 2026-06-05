@@ -84,7 +84,7 @@ class PatreonCrawler(Crawler):
         )
 
     @error_handling_wrapper
-    def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]):
+    def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]) -> None:
         if not post["current_user_can_view"]:
             raise ScrapeError(402, "You do not have access to this post")
 
@@ -94,7 +94,7 @@ class PatreonCrawler(Crawler):
 
         scrape_item.uploaded_at = date = self.parse_iso_date(post["published_at"])
         post_title = self.create_separate_post_title(post["title"], post["id"], date)
-        scrape_item.add_to_parent_title(post_title)
+        scrape_item.append_folders(post_title)
 
         self.create_task(self.write_metadata(scrape_item, f"post_{post['id']}", post))
         for media in self._parse_media(post, included):
@@ -109,7 +109,7 @@ class PatreonCrawler(Crawler):
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def _media(self, scrape_item: ScrapeItem, media: Media):
+    async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
         if media.url.suffix == ".m3u8":
             return await self._m3u8_media(scrape_item, media)
 
@@ -126,7 +126,7 @@ class PatreonCrawler(Crawler):
 
         await self.handle_file(media.url, scrape_item, name, ext, custom_filename=filename)
 
-    async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media):
+    async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media) -> None:
         m3u8, info = await self.request_m3u8_playlist(media.url)
         filename = self.create_custom_filename(
             media.url.name.removesuffix(".m3u8"),
@@ -213,7 +213,7 @@ class PatreonCrawler(Crawler):
             return bootstrap["campaign"]["data"]["id"]
 
 
-def _extract_campaign_id(soup: BeautifulSoup):
+def _extract_campaign_id(soup: BeautifulSoup) -> str:
     return extr_text(str(soup), r"{\"value\":{\"campaign\":{\"data\":{\"id\":\"", r"\"")
 
 

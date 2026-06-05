@@ -8,15 +8,18 @@ from typing import TYPE_CHECKING
 from yarl import URL
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from yaml import YAMLError
 
     from cyberdrop_dl.url_objects import MediaItem, ScrapeItem
 
 
-def _format_error(ui_failure: str, message: str) -> str:
-    if ui_failure == message:
-        return message
-    return f"{ui_failure} - {message}"
+def _format_error(ui_failure: str, message: str, notes: Sequence[str] | None = None) -> str:
+    msg = message if ui_failure == message else f"{ui_failure} - {message}"
+    if notes:
+        msg = msg + "\n" + "\n".join(f"[NOTE]: {note}" for note in notes)
+    return msg
 
 
 # See: https://developers.cloudflare.com/support/troubleshooting/cloudflare-errors/troubleshooting-cloudflare-5xx-errors/
@@ -46,10 +49,8 @@ HTTP_ERROR_CODES = {
 }
 
 
-class TooManyCrawlerErrors(Exception):  # noqa: N818
-    """This exception will be raised after a crawler had too many errors processing URLs"""
-
-    # This exception does not inherit from `CDLBaseError`` cause it not intended to ever by shown to the user
+def _notes(e: BaseException) -> list[str] | tuple[()]:
+    return getattr(e, "__notes__", ())
 
 
 class CDLBaseError(Exception):
@@ -72,7 +73,13 @@ class CDLBaseError(Exception):
             super().__init__(self.status)
 
     def __str__(self) -> str:
-        return _format_error(self.ui_failure, self.message)
+        return _format_error(self.ui_failure, self.message, _notes(self))
+
+
+class FlaresolverrError(CDLBaseError):
+    def __init__(self, message: str | None = None) -> None:
+        ui_failure = "Flaresolverr Error"
+        super().__init__(ui_failure, message=message)
 
 
 class InvalidContentTypeError(CDLBaseError):
@@ -82,7 +89,10 @@ class InvalidContentTypeError(CDLBaseError):
         super().__init__(ui_failure, message=message, origin=origin)
 
 
-class NoExtensionError(CDLBaseError):
+class FileNameError(CDLBaseError): ...
+
+
+class NoExtensionError(FileNameError):
     def __init__(self, filename: str | None = None, *, origin: ScrapeItem | MediaItem | URL | None = None) -> None:
         """This error will be thrown when no extension is given for a file."""
         ui_failure = "No File Extension"
@@ -97,6 +107,13 @@ class InvalidExtensionError(NoExtensionError):
         """This error will be thrown when no extension is given for a file."""
         super().__init__(filename=filename, origin=origin)
         self.ui_failure = "Invalid File Extension"
+
+
+class PathTraversalError(CDLBaseError):
+    def __init__(self, path: Path) -> None:
+        ui_failure = "Path Traversal"
+        msg = f"Download path '{path}' is outside destination download path"
+        super().__init__(ui_failure, message=msg)
 
 
 class PasswordProtectedError(CDLBaseError):
@@ -129,12 +146,13 @@ class DownloadError(CDLBaseError):
         status: str | int,
         message: str | None = None,
         origin: ScrapeItem | MediaItem | URL | None = None,
+        *,
         retry: bool = False,
     ) -> None:
         """This error will be thrown when a download fails."""
         ui_failure = create_error_msg(status)
         msg = message
-        self.retry = retry
+        self.retry: bool = retry
         super().__init__(ui_failure, message=msg, status=status, origin=origin)
 
 
@@ -187,6 +205,10 @@ class ScrapeError(CDLBaseError):
         """This error will be thrown when a scrape fails."""
         ui_failure = create_error_msg(status)
         super().__init__(ui_failure, message=message, status=status, origin=origin)
+
+    @staticmethod
+    def unsupported() -> ScrapeError:
+        return ScrapeError("Unknown URL path")
 
 
 class InvalidURLError(ScrapeError):
@@ -269,5 +291,8 @@ class ErrorLogMessage:
         e_status = getattr(e, "status", None)
         e_message = getattr(e, "message", None)
         ui_failure = create_error_msg(e_status) if e_status else "Unknown"
-        log_msg = _format_error(ui_failure, e_message or str(e))
+        log_msg = _format_error(ui_failure, e_message or str(e), _notes(e))
         return ErrorLogMessage(ui_failure, log_msg)
+
+
+class CDLConfigRuntimeErrorsGroup(ExceptionGroup): ...

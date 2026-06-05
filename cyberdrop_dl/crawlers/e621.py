@@ -24,11 +24,7 @@ class E621Crawler(Crawler):
     DOMAIN: ClassVar[str] = "e621.net"
     FOLDER_DOMAIN: ClassVar[str] = "E621"
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
-
-    def __post_init__(self) -> None:
-        self.headers = {
-            "User-Agent": f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)",
-        }
+    _DEFAULT_UA: ClassVar[str | None] = f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
 
@@ -46,7 +42,7 @@ class E621Crawler(Crawler):
         initial_page = int(scrape_item.url.query.get("page", 1))
         url = (self.PRIMARY_URL / "posts.json").with_query(tags=scrape_item.url.query["tags"])
         for page in itertools.count(initial_page):
-            resp: dict[str, Any] = await self.request_json(url.update_query(page=page), headers=self.headers)
+            resp: dict[str, Any] = await self.request_json(url.update_query(page=page))
             posts = resp.get("posts", [])
             if not posts:
                 break
@@ -72,7 +68,7 @@ class E621Crawler(Crawler):
     @error_handling_wrapper
     async def pool(self, scrape_item: ScrapeItem, pool_id: str) -> None:
         url = self.PRIMARY_URL / f"pools/{pool_id}.json"
-        resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
+        resp: dict[str, Any] = await self.request_json(url)
         posts = resp.get("post_ids", [])
         title: str = resp.get("name", "Unknown Pool").replace("_", " ")
         scrape_item.setup_as_album(title)
@@ -86,6 +82,6 @@ class E621Crawler(Crawler):
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
         url = self.PRIMARY_URL / f"posts/{post_id}.json"
-        resp: dict[str, Any] = await self.request_json(url, headers=self.headers)
+        resp: dict[str, Any] = await self.request_json(url)
         file_url: str = resp["post"]["file"]["url"]
         await self.direct_file(scrape_item, self.parse_url(file_url))

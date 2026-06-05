@@ -38,10 +38,7 @@ class Node:
 
     @property
     def _id(self) -> str:
-        if self.isfolder:
-            id_ = self.folderid
-        else:
-            id_ = self.fileid
+        id_ = self.folderid if self.isfolder else self.fileid
         assert id_ is not None
         return str(id_)
 
@@ -54,7 +51,7 @@ _parse_node_resp = TypeAdapter(Node).validate_python
 
 
 class PCloudCrawler(Crawler):
-    SUPPORTED_DOMAINS: SupportedDomains = "e.pc.cd", "pc.cd", "pcloud"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "e.pc.cd", "pc.cd", "pcloud"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Public File or folder": (
             "?code=<share_code>",
@@ -89,9 +86,9 @@ class PCloudCrawler(Crawler):
         if node.isfolder:
             scrape_item.setup_as_album(self.create_title(node.name, node.id))
             self._iter_nodes(scrape_item, node.contents)
-            return
+            return None
 
-        return await self.file(scrape_item, cast("File", node))
+        return await self._file(scrape_item, cast("File", node))
 
     def _iter_nodes(self, scrape_item: ScrapeItem, nodes: Sequence[Node], *parents: str) -> None:
         folders: list[Node] = []
@@ -105,14 +102,14 @@ class PCloudCrawler(Crawler):
             url = scrape_item.url.update_query(file_id=file._id)
             new_scrape_item = scrape_item.create_child(url)
             for parent in parents:
-                new_scrape_item.add_to_parent_title(parent)
+                new_scrape_item.append_folders(parent)
             self.create_task(self._file_task(new_scrape_item, file))
             scrape_item.add_children()
 
         for folder in folders:
             self._iter_nodes(scrape_item, folder.contents, *parents, folder.name)
 
-    async def file(self, scrape_item: ScrapeItem, file: File) -> None:
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
         # https://docs.pcloud.com/methods/public_links/getpublinkdownload.html
 
         link = await self._request_download_url(scrape_item, file)
@@ -123,7 +120,7 @@ class PCloudCrawler(Crawler):
         db_url = (scrape_item.url.origin() / "file" / file._id).with_query(code=scrape_item.url.query["code"])
         await self.handle_file(db_url, scrape_item, file.name, ext, debrid_link=link, custom_filename=filename)
 
-    _file_task = auto_task_id(error_handling_wrapper(file))
+    _file_task = auto_task_id(error_handling_wrapper(_file))
 
     async def _request_download_url(self, scrape_item: ScrapeItem, file: File) -> AbsoluteHttpURL:
         path = "getmediatranscodepublink" if "video" in file.contenttype else "getpublinkdownload"

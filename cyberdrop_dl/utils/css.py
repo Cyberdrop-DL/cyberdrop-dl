@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import html
 import json
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast, overload
@@ -28,6 +29,13 @@ class CssAttributeSelector(NamedTuple):
         return select_text(tag, self.element)
 
 
+@dataclasses.dataclass(slots=True)
+class HTMLForm:
+    method: str
+    action: str
+    inputs: dict[str, str | None]
+
+
 class JsonLD(dict[str, Any]):
     @overload
     def __getitem__(self, key: Literal["uploadDate"], /) -> str: ...  # pyright: ignore[reportNoOverloadImplementation]
@@ -47,13 +55,13 @@ def _select_one(tag: Tag, selector: str) -> Tag:
     return result
 
 
-def select_text(tag: Tag, selector: str, strip: bool = True, *, decompose: str | None = None) -> str:
+def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str | None = None) -> str:
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
     inner_tag = select(tag, selector)
     if decompose:
         for trash in inner_tag.select(decompose):
             trash.decompose()
-    return text(inner_tag, strip)
+    return text(inner_tag, strip=strip)
 
 
 def attr_or_none(tag: Tag, attribute: str) -> str | None:
@@ -64,10 +72,7 @@ def attr_or_none(tag: Tag, attribute: str) -> str | None:
             return _parse_srcset(srcset)
         attribute_ = "src"
 
-    if attribute_ == "src":
-        value = tag.get("data-src") or tag.get(attribute_)
-    else:
-        value = tag.get(attribute_)
+    value = tag.get("data-src") or tag.get(attribute_) if attribute_ == "src" else tag.get(attribute_)
     if isinstance(value, list):
         raise SelectorError(f"Expected a single value for {attribute = !r}, got multiple")
     return value
@@ -81,7 +86,7 @@ def attr(tag: Tag, attribute: str) -> str:
     return result
 
 
-def text(tag: Tag, strip: bool = True) -> str:
+def text(tag: Tag, *, strip: bool = True) -> str:
     return tag.get_text(strip=strip)
 
 
@@ -140,7 +145,7 @@ def rstrip_domain(title: str, domain: str) -> str:
             return front.strip()
         return string
 
-    for char in sorted(("|", " - "), key=lambda x: title.rfind(x), reverse=True):
+    for char in sorted(("|", " - "), key=title.rfind, reverse=True):
         title = sanitize(title, char)
 
     return title
@@ -165,9 +170,18 @@ def json_ld(soup: Tag, /, contains: str | None = None) -> JsonLD:
     return cast("JsonLD", ld_json)
 
 
+def parse_form(form: Tag, /) -> HTMLForm:
+    inputs: dict[str, str | None] = {}
+    for elem in iselect(form, "input"):
+        name = attr_or_none(elem, "name") or attr(elem, "id")
+        inputs[name] = attr_or_none(elem, "value")
+
+    method = attr(form, "method").upper()
+    action = attr(form, "action")
+    return HTMLForm(method, action, inputs)
+
+
 unescape = html.unescape
-
-
 iframes = CssAttributeSelector("iframe", "src")
 images = CssAttributeSelector("img", "srcset")
 links = CssAttributeSelector(":any-link", "href")

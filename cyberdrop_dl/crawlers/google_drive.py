@@ -98,21 +98,18 @@ class GoogleDriveCrawler(Crawler):
         if file_id := url.query.get("id"):
             return await self.file(scrape_item, file_id)
 
-        def next_to(name: str):
+        def next_to(name: str) -> str | None:
             try:
                 index = url.parts.index(name)
                 return url.parts[index + 1]
             except (ValueError, IndexError):
-                return
+                return None
 
         if folder_id := (next_to("folders") or next_to("embeddedfolderview")):
             return await self.folder(scrape_item, folder_id)
 
         if file_id := next_to("d"):
-            if (first := url.parts[1]) in _DOC_FORMATS:
-                doc = first
-            else:
-                doc = None
+            doc = first if (first := url.parts[1]) in _DOC_FORMATS else None
             return await self.file(scrape_item, file_id, doc)
 
         raise ValueError
@@ -133,6 +130,7 @@ class GoogleDriveCrawler(Crawler):
             if index % 200 == 0:
                 await asyncio.sleep(0)
 
+    @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str = "", doc: str | None = None) -> None:
         version = int(file_id[0])
         if version not in _KNOWN_FILE_ID_VERSIONS:
@@ -190,14 +188,12 @@ class GoogleDriveCrawler(Crawler):
         method = "GET" if export_url.host == _DOCS_URL.host else "POST"
 
         async with self.request(export_url, method=method) as resp:
-            assert resp.ok and "html" not in resp.content_type
+            assert resp.ok
+            assert "html" not in resp.content_type
 
         return resp.url, resp.content_disposition.filename
 
 
-def _get_proper_doc_format(doc: str, format: str | None) -> str:
+def _get_proper_doc_format(doc: str, fmt: str | None) -> str:
     valid_formats = _DOC_FORMATS[doc]
-    if format in valid_formats:
-        return format
-
-    return valid_formats[0]
+    return fmt if fmt in valid_formats else valid_formats[0]

@@ -4,7 +4,7 @@ from cyberdrop_dl.__main__ import run_cdl
 
 
 @pytest.mark.parametrize(
-    "command, text",
+    ("command", "text"),
     [
         ("--help", "Bulk asynchronous downloader for multiple file hosts"),
         ("show", "cyberdrop-dl supported sites"),

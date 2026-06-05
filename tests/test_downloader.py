@@ -1,9 +1,39 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
+import pytest
+
 from cyberdrop_dl.clients.downloads import filter_by_duration
-from cyberdrop_dl.manager import Manager
+from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
+
+if TYPE_CHECKING:
+    from cyberdrop_dl.manager import Manager
+
+
+def test_downloader_creation(manager: Manager) -> None:
+    downloader = Downloader(manager, "example.com")
+    assert type(downloader.download_slots) is int
+    assert downloader.download_slots > 0
+
+
+def test_changing_downloader_limit(manager: Manager) -> None:
+    downloader = Downloader(manager, "example.com")
+    assert downloader.download_slots == 5
+    assert downloader._semaphore._value == 5
+    downloader.download_slots = 3
+    assert downloader.download_slots == 3
+    assert downloader._semaphore._value == 3
+
+
+async def test_changing_downloader_limit_after_usage_raises_error(manager: Manager) -> None:
+    downloader = Downloader(manager, "example.com")
+    await downloader._semaphore.acquire()
+    with pytest.raises(RuntimeError, match="Downloader is already in use"):
+        downloader.download_slots = 3
 
 
 async def test_probe_duration_is_skipped_on_default_config(manager: Manager) -> None:

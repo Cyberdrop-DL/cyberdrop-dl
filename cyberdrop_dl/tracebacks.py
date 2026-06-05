@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from rich.pretty import Node
+    from rich.traceback import Traceback
 
 _original_traverse = None
 
@@ -31,22 +32,21 @@ def patch() -> None:
     def is_page_element(obj: object) -> bool:
         try:
             return isinstance(obj, PageElement)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
-    def new_traverse(obj, *args, **kwargs):
+    def new_traverse(obj, *args: Any, **kwargs: Any) -> pretty.Node:
         if is_page_element(obj):
             try:
                 value_repr = truncated_preview(repr(obj))
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001
                 value_repr = f"<repr-error {str(error)!r}>"
 
             return pretty.Node(value_repr=value_repr, last=False)
 
         return traverse(obj, *args, **kwargs)
 
-    pretty.traverse = new_traverse
-    _original_traverse = traverse
+    pretty.traverse, _original_traverse = new_traverse, traverse
 
 
 def install_exception_hook(*, show_locals: bool = False) -> None:
@@ -59,3 +59,9 @@ def install_exception_hook(*, show_locals: bool = False) -> None:
         max_frames=30,
         show_locals=show_locals,
     )
+
+
+def from_exception(exc: Exception, *, chain_traceback: bool = True) -> Traceback:
+    from rich.traceback import Traceback
+
+    return Traceback.from_exception(type(exc), exc, None if not chain_traceback else exc.__traceback__)

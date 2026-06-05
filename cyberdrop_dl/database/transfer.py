@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import logging
 import sqlite3
 import sys
 from pathlib import Path
+from typing import LiteralString
 
 from cyberdrop_dl.database import Database, connect
-from cyberdrop_dl.database.tables.history import fix_domains, fix_referers
+from cyberdrop_dl.database.tables.history import apply_fixes
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
+from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.filepath import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
 
-def _get_table_names(conn: sqlite3.Connection, schema: str = "main") -> set[str]:
-    rows = conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'").fetchall()
-    return {r[0] for r in rows}
+def _get_table_names(conn: sqlite3.Connection, schema: LiteralString = "main") -> set[str]:
+    cursor = conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")  # noqa: S608
+    return {r[0] for r in cursor.fetchall()}
 
 
 def _get_column_names(conn: sqlite3.Connection, table: str, schema: str = "main") -> set[str]:
@@ -98,7 +99,7 @@ def _transfer_table(new_conn: sqlite3.Connection, table: str) -> None:
     select_sql = ", ".join(select_exprs)
 
     logger.info("_transfer_table: old.%s -> %s", table, table)
-    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"')
+    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"')  # noqa: S608
 
 
 def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
@@ -127,7 +128,7 @@ def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
             CAST(strftime('%s', "created_at") AS INTEGER)
         FROM old."media"
         WHERE "download_path" IS NOT NULL
-        """
+        """  # noqa: S608
     )
 
 
@@ -155,7 +156,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
         )
         return
 
-    now = sanitize_filename(str(datetime.datetime.now()))
+    now = sanitize_filename(str(dates.now()))
     new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
 
     logger.debug("Creating new database at: %s", new_path)
@@ -196,8 +197,7 @@ def _apply_fixes(db_path: Path) -> None:
     async def fix() -> None:
         conn = await connect(db_path)
         try:
-            await fix_domains(conn)
-            await fix_referers(conn)
+            await apply_fixes(conn)
         finally:
             await conn.close()
 

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, CrawlerAPI, SupportedPaths
+from typing_extensions import override
+
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import error_handling_wrapper, parse_url
@@ -47,7 +49,7 @@ class OmegaScansCrawler(Crawler):
 
     @override
     async def __async_post_init__(self) -> None:
-        self.api: OmegaScansAPI = OmegaScansAPI(self)
+        self.api: OmegaScansAPI = OmegaScansAPI.from_crawler(self)
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem, series_slug: str) -> None:
@@ -63,14 +65,14 @@ class OmegaScansCrawler(Crawler):
     async def chapter(self, scrape_item: ScrapeItem, series_slug: str, chapter_slug: str) -> None:
         chapter = await self.api.chapter(series_slug, chapter_slug)
         scrape_item.setup_as_album(self.create_title(chapter.series_title))
-        scrape_item.add_to_parent_title(chapter.name)
+        scrape_item.append_folders(chapter.name)
         scrape_item.uploaded_at = self.parse_iso_date(chapter.created_at)
         for img in chapter.images:
             self.create_task(self.direct_file(scrape_item, img))
             scrape_item.add_children()
 
 
-class OmegaScansAPI(CrawlerAPI):
+class OmegaScansAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.omegascans.org")
 
     async def chapter(self, series_slug: str, chapter_slug: str) -> Chapter:

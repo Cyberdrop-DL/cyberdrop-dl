@@ -23,7 +23,7 @@ def update_model(model: _M, **kwargs: Any) -> _M:
 
 
 @pytest.mark.parametrize(
-    "webhook, output",
+    ("webhook", "output"),
     [
         ("https://example.com", "no_logs=**********"),
         ("attach_logs=https://example.com", "attach_logs=**********"),

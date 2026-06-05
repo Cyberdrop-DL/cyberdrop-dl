@@ -14,8 +14,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
-# Primary URL needs `www.` to prevent redirect
-PRIMARY_URL = AbsoluteHttpURL("https://www.redgifs.com/")
+
 API_ENTRYPOINT = AbsoluteHttpURL("https://api.redgifs.com/v2")
 _PAGE_LIMIT: Final = 100
 _PAGE_COUNT: Final = 100
@@ -47,7 +46,7 @@ class RedGifsCrawler(Crawler):
         "Image": "/i/<image_id>",
         "Embeds": "/ifr/<gif_id>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.redgifs.com/")
     DOMAIN: ClassVar[str] = "redgifs"
     FOLDER_DOMAIN: ClassVar[str] = "RedGifs"
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 3
@@ -57,7 +56,7 @@ class RedGifsCrawler(Crawler):
         if error := json_resp.get("error"):
             msg: str = error.get("description") or error.get("message")
             if error.get("code"):
-                msg = f"[{error['code']}] {msg if msg else ''}".strip()
+                msg = f"[{error['code']}] {msg or ''}".strip()
             raise ScrapeError(resp.status, msg)
 
     def __post_init__(self) -> None:
@@ -157,10 +156,10 @@ def _id(name: str) -> str:
 
 
 def _canonical_url(name_or_id: str) -> AbsoluteHttpURL:
-    return PRIMARY_URL / "watch" / _id(name_or_id)
+    return RedGifsCrawler.PRIMARY_URL / "watch" / _id(name_or_id)
 
 
-def fix_db_referer(referer: str) -> str:
+def fix_redgifs_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer)
     name = url.name or url.parent.name
     return str(_canonical_url(name))

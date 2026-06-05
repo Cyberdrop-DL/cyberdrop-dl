@@ -44,10 +44,17 @@ class DownloadClient:
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            self.chunk_size = min(self.chunk_size, speed_limit)
+            upper_limit = int(
+                speed_limit / 1.5 / self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
+            )
+            self.chunk_size = min(
+                self.chunk_size,
+                upper_limit,
+            )
 
     @property
     def http_client(self) -> HTTPClient:
@@ -76,7 +83,7 @@ class DownloadClient:
         ) as resp:
             return await self._process_response(media_item, domain, resume_point, resp)
 
-    async def _process_response(
+    async def _process_response(  # noqa: C901
         self,
         media_item: MediaItem,
         domain: str,
@@ -131,6 +138,7 @@ class DownloadClient:
                 media_item.filename,
                 media_item.domain,
                 size,
+                url=media_item.url,
             )
 
         if resume_point:
@@ -148,11 +156,11 @@ class DownloadClient:
 
         async with aio.open(media_item.partial_file, mode="ab") as f:
             async for chunk in resp.iter_chunked(self.chunk_size):
+                n_bytes = len(chunk)
+                await self.speed_limiter.acquire(n_bytes)
                 await check_free_space()
-                chunk_size = len(chunk)
-                await self.speed_limiter.acquire(chunk_size)
                 await f.write(chunk)
-                hook.advance(chunk_size)
+                hook.advance(n_bytes)
                 check_download_speed()
 
         await self._post_download_check(media_item)
@@ -163,7 +171,7 @@ class DownloadClient:
         if not media_item.partial_file.is_file():
             media_item.partial_file.touch()
 
-    async def _post_download_check(self, media_item: MediaItem, *_) -> None:
+    async def _post_download_check(self, media_item: MediaItem, *_: Any) -> None:
         if not await aio.get_size(media_item.partial_file):
             await aio.unlink(media_item.partial_file, missing_ok=True)
             raise DownloadError(HTTPStatus.INTERNAL_SERVER_ERROR, message="File is empty")
@@ -216,7 +224,7 @@ class DownloadClient:
         if await aio.is_file(media_item.path):
             await self.manager.database.history.add_filesize(domain, media_item)
 
-    async def handle_media_item_completion(self, media_item: MediaItem, downloaded: bool = False) -> None:
+    async def handle_media_item_completion(self, media_item: MediaItem, *, downloaded: bool = False) -> None:
         """Sends to hash client to handle hashing and marks as completed/current download."""
         try:
             media_item.downloaded = downloaded
@@ -243,7 +251,7 @@ class DownloadClient:
         download_dir = self.get_download_dir(media_item)
         return download_dir / media_item.filename
 
-    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:
+    async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: C901, PLR0912, PLR0915
         """Complicated checker for if a file already exists, and was already downloaded."""
         media_item.path = self.get_file_location(media_item)
         part_suffix = media_item.path.suffix + constants.TempExt.PART
@@ -367,7 +375,7 @@ def _check_content_type(content_type: str, ext: str) -> str | None:
 def _get_content_type(headers: Mapping[str, str]) -> str | None:
     content_type = headers.get("Content-Type")
     if not content_type:
-        return
+        return None
 
     override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
     return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type

@@ -23,7 +23,7 @@ def test_generic_crawlers_that_match_supported_crawlers_should_not_be_created(li
     crawler = next(iter(create_crawlers([link], CheveretoCrawler)))
     with pytest.raises(ValueError) as exc_info:
         scrape_mapper.register_crawler(crawlers, crawler, from_user="raise")
-    assert f"Unable to assign {link.split('/')[0]}" in str(exc_info.value)
+    assert f"Unable to assign {link.split('/', maxsplit=1)[0]}" in str(exc_info.value)
 
 
 @pytest.mark.parametrize(

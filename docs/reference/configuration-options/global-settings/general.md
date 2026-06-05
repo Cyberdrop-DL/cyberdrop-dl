@@ -109,9 +109,22 @@ Sensitive data may be exposed using an insecure connection. For your safety, is 
 | ------------- | ------------------------------------------------------------------------ |
 | `NonEmptyStr` | `Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0` |
 
-The user agent is the signature of your browser. Some sites use it to identify if the requests come from a human or a robot.
+The user agent is the signature of your browser. Some sites use it to identify if the request came from a human or a robot.
 You can google "what is my user agent" to get yours.
 
 {% hint style="info" %}
 If you use flaresolverr, this value MUST match with flaresolverr's user agent. Otherwise, flaresolverr cookies won't work
+{% endhint %}
+
+{% hint style="info" %}
+These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/<version>`
+
+<!-- START_CUSTOM_UA_CRAWLERS -->
+- Archive.org
+- E621
+- MegaNz
+- RealDebrid
+- Transfer.it
+<!-- END_CUSTOM_UA_CRAWLERS -->
+
 {% endhint %}

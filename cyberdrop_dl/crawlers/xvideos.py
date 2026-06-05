@@ -64,10 +64,10 @@ class XVideosCrawler(Crawler):
         "Account Quickies": tuple(f"{path}#quickies" for path in _ACCOUNT_PATHS),
     }
 
-    PRIMARY_URL = AbsoluteHttpURL("https://www.xvideos.com")
-    DOMAIN = "xvideos"
-    FOLDER_DOMAIN = "xVideos"
-    NEXT_PAGE_SELECTOR = Selectors.NEXT_PAGE
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.xvideos.com")
+    DOMAIN: ClassVar[str] = "xvideos"
+    FOLDER_DOMAIN: ClassVar[str] = "xVideos"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = Selectors.NEXT_PAGE
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -150,7 +150,8 @@ class XVideosCrawler(Crawler):
 
             for gallery_id in galleries:
                 url = scrape_item.url / part / gallery_id.removeprefix("f-")
-                new_scrape_item = scrape_item.create_child(url, new_title_part="photos")
+                new_scrape_item = scrape_item.create_child(url)
+                new_scrape_item.append_folders("photos")
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
@@ -217,16 +218,20 @@ class XVideosCrawler(Crawler):
                 raise ScrapeError(json_resp["code"])
 
             per_page = json_resp.get("nb_per_page") or per_page
-            videos: list[dict[str, str]] = json_resp["videos"]
+            videos: list[dict[str, str]] | dict[str, Any] = json_resp["videos"]
+            if type(videos) is dict:
+                videos = [videos]
             for video in videos:
+                assert type(video) is dict
                 if new_part == "videos":
                     slug = video["u"].rpartition("/")[-1]
                     url = scrape_item.url.origin() / f"video.{video['eid']}" / slug
                 else:
                     url = self.parse_url(video["url"], scrape_item.url.origin())
-                new_scrape_item = scrape_item.create_child(url, new_title_part=new_part)
+                new_scrape_item = scrape_item.create_child(url)
+                new_scrape_item.append_folders(new_part)
                 self.create_task(self.run(new_scrape_item))
                 scrape_item.add_children()
 
-            if json_resp.get("hasMoreVideos", None) is False or len(videos) < per_page:
+            if json_resp.get("hasMoreVideos") is False or len(videos) < per_page:
                 break

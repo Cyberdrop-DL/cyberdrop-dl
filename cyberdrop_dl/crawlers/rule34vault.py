@@ -1,91 +1,141 @@
 from __future__ import annotations
 
-import itertools
-from typing import TYPE_CHECKING, ClassVar
+import dataclasses
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Iterable
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
-
-class Selectors:
-    CONTENT = "div[class='box-grid ng-star-inserted'] a[class='box ng-star-inserted']"
-    TITLE = "div[class*=title]"
-    DATE = 'div[class="posted-date-full text-secondary mt-4 ng-star-inserted"]'
-    VIDEO = 'div[class="con-video ng-star-inserted"] > video > source'
-    IMAGE = 'img[class*="img ng-star-inserted"]'
-
-
-_SELECTORS = Selectors()
-
-PRIMARY_URL = AbsoluteHttpURL("https://rule34vault.com")
+_CDN = AbsoluteHttpURL("https://r34xyz.b-cdn.net")
 
 
 class Rule34VaultCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Post": "/post/...",
-        "Playlist": "/playlists/view/...",
-        "Tag": "/...",
+        "Post": "/post/<post_id>",
+        "Playlist": "/playlists/view/<playlist_id>",
+        "Tags": "/<tag1>|<tags2>...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rule34vault.com")
     DOMAIN: ClassVar[str] = "rule34vault"
     FOLDER_DOMAIN: ClassVar[str] = "Rule34Vault"
 
+    def __post_init__(self) -> None:
+        self.api: R34VaultAPI = R34VaultAPI.from_crawler(self)
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "post" in scrape_item.url.parts:
-            return await self.file(scrape_item)
-        if "playlists" in scrape_item.url.parts and "view" not in scrape_item.url.parts:
-            raise ValueError
-        return await self.playlist_or_tag(scrape_item)
+        match scrape_item.url.parts[1:]:
+            case ["post", post_id]:
+                return await self.post(scrape_item, post_id)
+            case ["playlists", "view", playlist_id]:
+                return await self.playlist(scrape_item, playlist_id)
+            case [tags]:
+                return await self.tags(scrape_item, *tags.split(r"|"))
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def playlist_or_tag(self, scrape_item: ScrapeItem) -> None:
-        is_playlist = "playlists" in scrape_item.url.parts
-        init_page = int(scrape_item.url.query.get("page") or 1)
-        title: str = ""
-        for page in itertools.count(init_page):
-            url = scrape_item.url.with_query(page=page)
-            n_images = 0
-            soup = await self.request_soup(url)
+    async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
+        playlist = await self.api.playlist(playlist_id)
+        title = self.create_title(f"{playlist.title} [playlist]", album_id=playlist_id)
+        scrape_item.setup_as_album(title, album_id=playlist_id)
 
-            if not title:
-                if is_playlist:
-                    album_id = scrape_item.url.parts[-1]
-                    title_str: str = css.select_text(soup, _SELECTORS.TITLE)
-                    title = self.create_title(title_str, album_id)
-                    scrape_item.setup_as_album(title, album_id=album_id)
-                else:
-                    title = self.create_title(scrape_item.url.parts[1])
-                    scrape_item.setup_as_album(title)
-
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, _SELECTORS.CONTENT):
-                n_images += 1
-                self.create_task(self.run(new_scrape_item))
-
-            if n_images < 30:
-                break
+        async for posts in self.api.playlist_posts(playlist_id, cursor=scrape_item.url.query.get("cursor")):
+            self._iter_posts(scrape_item, posts)
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem) -> None:
-        canonical_url = scrape_item.url.with_query(None)
+    async def tags(self, scrape_item: ScrapeItem, *tags: str) -> None:
+        tags = tuple(t.replace("_", " ") for t in tags)
+        title = self.create_title(",".join(tags) + " [tags]")
+        scrape_item.setup_as_album(title)
+
+        async for posts in self.api.tags(tags, cursor=scrape_item.url.query.get("cursor")):
+            self._iter_posts(scrape_item, posts)
+
+    def _iter_posts(self, scrape_item: ScrapeItem, posts: Iterable[dict[str, Any]]) -> None:
+        for post in map(Post.from_dict, posts):
+            new_item = scrape_item.create_child(self.PRIMARY_URL / "post" / str(post.id))
+            self.create_task(self._post(new_item, post))
+            scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
+        canonical_url = self.PRIMARY_URL / "post" / post_id
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
+        post = await self.api.post(post_id)
+        await self._post(scrape_item, post)
 
-        if date_tag := soup.select_one(_SELECTORS.DATE):
-            scrape_item.uploaded_at = self.parse_date(date_tag.text, "%b %d, %Y, %I:%M:%S %p")
+    @error_handling_wrapper
+    async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
+        scrape_item.url = self.PRIMARY_URL / "post" / str(post.id)
+        scrape_item.uploaded_at = self.parse_iso_date(post.created)
+        await self.direct_file(scrape_item, post.src)
 
-        scrape_item.url = canonical_url
-        media_tag = soup.select_one(_SELECTORS.VIDEO) or soup.select_one(_SELECTORS.IMAGE)
-        assert media_tag
-        link_str: str = css.attr(media_tag, "src")
-        for trash in (".small", ".thumbnail", ".picsmall", ".720", ".hevc"):
-            link_str = link_str.replace(trash, "")
 
-        link = self.parse_url(link_str)
-        filename, ext = self.get_filename_and_ext(link.name)
-        await self.handle_file(link, scrape_item, filename, ext)
+@dataclasses.dataclass(slots=True)
+class Post(DictDataclass):
+    id: int
+    created: str
+    type: int
+    suffix: str = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        self.suffix = ".jpg" if self.type == 0 else ".mp4"
+
+    @property
+    def src(self) -> AbsoluteHttpURL:
+        return _CDN / f"posts/{self.id // 1000}/{self.id}/{self.id}{self.suffix}"
+
+
+@dataclasses.dataclass(slots=True)
+class Playlist(DictDataclass):
+    id: int
+    created: str
+    title: str
+
+
+class R34VaultAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rule34vault.com/api/v2")
+
+    async def post(self, post_id: str) -> Post:
+        api_url = self.ENTRYPOINT / "post" / post_id
+        post = await self.request_json(api_url)
+        return Post.from_dict(post)
+
+    async def playlist(self, playlist_id: str) -> Playlist:
+        api_url = self.ENTRYPOINT / "playlist" / playlist_id
+        playlist = await self.request_json(api_url)
+        return Playlist.from_dict(playlist)
+
+    def tags(self, tags: tuple[str, ...], cursor: str | None) -> AsyncGenerator[list[dict[str, Any]]]:
+        api_url = self.ENTRYPOINT / "post/search/root"
+        return self._pager(api_url, cursor=cursor, includeTags=tags)
+
+    def playlist_posts(self, playlist_id: str, cursor: str | None) -> AsyncGenerator[list[dict[str, Any]]]:
+        api_url = self.ENTRYPOINT / "post/search/playlist" / playlist_id
+        return self._pager(api_url, cursor=cursor)
+
+    async def _pager(
+        self, url: AbsoluteHttpURL, cursor: str | None, **params: Any
+    ) -> AsyncGenerator[list[dict[str, Any]]]:
+        per_page = 100
+        params = {"CountTotal": False, "Skip": 0, "take": per_page} | params
+        if cursor:
+            params["cursor"] = cursor
+
+        while True:
+            resp = await self.request_json(url, method="POST", json=params)
+            yield resp["items"]
+
+            if len(resp["items"]) < per_page:
+                return
+
+            params["cursor"] = resp.get("cursor")
+            params["Skip"] += params["take"]

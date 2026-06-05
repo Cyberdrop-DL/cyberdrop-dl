@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -9,7 +9,7 @@ import pytest
 from cyberdrop_dl import scrape_mapper
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils import dates, parse_url
 
 if TYPE_CHECKING:
     import aiosqlite
@@ -35,8 +35,8 @@ def row() -> aiosqlite.Row:
 
 @pytest.fixture
 def row_with_dates(row) -> aiosqlite.Row:
-    row["completed_at"] = datetime.now().isoformat()
-    row["created_at"] = datetime(2023, 1, 1, 10, 0, 0).isoformat()
+    row["completed_at"] = dates.now_utc().isoformat()
+    row["created_at"] = datetime.datetime(2023, 1, 1, 10, 0, 0, 0, tzinfo=datetime.UTC).isoformat()
     return row
 
 
@@ -55,13 +55,13 @@ def test_item_with_completed_at(row_with_dates) -> None:
     row_with_dates["created_at"] = None
 
     item = _create_item_from_row(row_with_dates)
-    expected_timestamp = int(datetime.fromisoformat(completed_at_str).timestamp())
+    expected_timestamp = int(dates.parse_iso(completed_at_str).timestamp())
     assert item.completed_at == expected_timestamp
     assert item.created_at is None
 
 
 def test_item_with_created_at(row) -> None:
-    now = datetime.now()
+    now = dates.now_utc()
     row["created_at"] = now.isoformat()
 
     item = _create_item_from_row(row)
@@ -74,8 +74,8 @@ def test_item_with_both_dates(row_with_dates) -> None:
     created_at_str = row_with_dates["created_at"]
 
     item = _create_item_from_row(row_with_dates)
-    expected_completed_timestamp = int(datetime.fromisoformat(completed_at_str).timestamp())
-    expected_created_timestamp = int(datetime.fromisoformat(created_at_str).timestamp())
+    expected_completed_timestamp = int(dates.parse_iso(completed_at_str).timestamp())
+    expected_created_timestamp = int(dates.parse_iso(created_at_str).timestamp())
     assert item.completed_at == expected_completed_timestamp
     assert item.created_at == expected_created_timestamp
 
@@ -95,7 +95,7 @@ def test_invalid_date_format(row) -> None:
 
 
 @pytest.mark.parametrize(
-    "url, expected",
+    ("url", "expected"),
     [
         (
             "https://megacloud.blog/embed-2/v3/e-1/TZb4gRkOQ642?k=1&autoPlay=1&oa=0&asi=1",
@@ -115,7 +115,7 @@ def test_invalid_date_format(row) -> None:
         ),
         (
             "https://c.bunkr-cache.se/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
-            "/HwdRnHMUiWOQevCg/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
+            "/1df93418-5063-4e1b-851e-9470cb8fc5c6.mp4",
         ),
         (
             "https://e-hentai.network/h/1bb8b499a5a1a21f9e25e2c42513f310c20e83a9-115314-1280-720-wbp/keystamp=1763995200-3f6832af21;fileindex=169742365;xres=1280/1_2.webp",
@@ -142,26 +142,27 @@ def test_create_db_path(url: str, expected: str) -> None:
 
 class TestGetDownloadPath:
     def test_loose_file(self, item: ScrapeItem) -> None:
-        assert not item.parent_title
+        assert not item.folders
         assert not item.part_of_album
         assert not item.retry_path
-        download_path = item.create_download_path("cyberdrop")
-        assert download_path == Path("Loose Files (cyberdrop)")
+        assert item.path == Path()
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/Loose Files (cyberdrop)")
 
     def test_loose_file_with_parent(self, item: ScrapeItem) -> None:
-        item.add_to_parent_title("a/sub/folder")
-        download_path = item.create_download_path("cyberdrop")
-        assert download_path == Path("a-sub-folder/Loose Files (cyberdrop)")
+        item.append_folders("a/sub/folder")
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/a-sub-folder/Loose Files (cyberdrop)")
 
     def test_album_file(self, item: ScrapeItem) -> None:
-        item.add_to_parent_title("a/sub/folder")
+        item.append_folders("a/sub/folder")
         item.part_of_album = True
-        download_path = item.create_download_path("cyberdrop")
-        assert download_path == Path("a-sub-folder")
+        download_path = item.compose_download_path("cyberdrop")
+        assert download_path == Path("downloads/a-sub-folder")
 
     def test_retry_path(self, item: ScrapeItem) -> None:
-        item.add_to_parent_title("a/sub/folder")
+        item.append_folders("a/sub/folder")
         item.part_of_album = True
         item.retry_path = retry_path = Path("a/retry/path")
-        download_path = item.create_download_path("cyberdrop")
+        download_path = item.compose_download_path("cyberdrop")
         assert download_path == retry_path

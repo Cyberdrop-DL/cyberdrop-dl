@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-from ._invision import InvisionCrawler
+from . import InvisionCrawler
 
 
 class BellazonCrawler(InvisionCrawler):

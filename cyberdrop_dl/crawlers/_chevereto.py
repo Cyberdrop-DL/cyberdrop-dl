@@ -181,7 +181,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
     @error_handling_wrapper
     async def direct_file(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
+        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
         link = self._thumbnail_to_src(url or scrape_item.url)
         await super().direct_file(scrape_item, link, assume_ext)
@@ -210,11 +210,11 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
 
 def _id(slug: str) -> str:
-    return slug.rsplit(".")[-1]
+    return slug.rsplit(".", maxsplit=1)[-1]
 
 
 def _sort_by_new(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     init_page = int(url.query.get("page") or 1)
     if url.name:
-        url = url / ""
+        url /= ""
     return url.with_query(sort="date_desc", page=init_page)

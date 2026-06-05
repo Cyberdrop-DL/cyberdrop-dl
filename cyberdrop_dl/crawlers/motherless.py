@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
@@ -40,7 +40,7 @@ class MotherlessCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = "div.pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
-    _RATE_LIMIT = 2, 1
+    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem, collection_id: str = "") -> None:
         parts = scrape_item.url.parts
@@ -81,13 +81,15 @@ class MotherlessCrawler(Crawler):
         if is_homepage or "images" in scrape_item.url.parts:
             async for soup in self.web_pager(images_url):
                 check_soup(soup)
-                for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR, new_title_part="Images"):
+                for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+                    new_scrape_item.append_folders("Images")
                     self.create_task(self.run(new_scrape_item))
 
         if is_homepage or "videos" in scrape_item.url.parts:
             async for soup in self.web_pager(videos_url):
                 check_soup(soup)
-                for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR, new_title_part="Videos"):
+                for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+                    new_scrape_item.append_folders("Videos")
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -128,7 +130,8 @@ class MotherlessCrawler(Crawler):
                 title = self.create_title(title, collection_id)
                 scrape_item.setup_as_album(title, album_id=collection_id)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR, new_title_part=name):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+                new_scrape_item.append_folders(name)
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -179,7 +182,7 @@ class MotherlessCrawler(Crawler):
             scrape_item.parents.append(parent_url)
             title = self.create_title(parent_title, parent_id)
             scrape_item.setup_as_album(title, album_id=parent_id)
-            scrape_item.add_to_parent_title(f"{media_info.type.capitalize()}s")
+            scrape_item.append_folders(f"{media_info.type.capitalize()}s")
 
         return media_info
 

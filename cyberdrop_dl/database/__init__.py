@@ -36,9 +36,13 @@ class Database:
     async def __aenter__(self) -> Self:
         self._db_conn = await connect(self._db_path)
         await self._pre_allocate()
+        await self.schema.create()
         await self.history.create()
         await self.hash.create()
-        await self.schema.create()
+        if not self.schema.up_to_date:
+            await self.history.apply_updates()
+            await self.schema.update()
+
         return self
 
     async def fetchone(self, query: str, parameters: Iterable[Any] | None = None) -> aiosqlite.Row | None:
@@ -48,7 +52,7 @@ class Database:
     async def fetchall(self, query: str, parameters: Iterable[Any] | None = None) -> list[aiosqlite.Row]:
         return await self._db_conn.execute_fetchall(query, parameters)  # pyright: ignore[reportReturnType]
 
-    async def __aexit__(self, *_) -> None:
+    async def __aexit__(self, *_: object) -> None:
         await self._db_conn.close()
 
     async def _pre_allocate(self) -> None:

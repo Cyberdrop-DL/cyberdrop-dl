@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import shutil
 import sys
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
@@ -9,7 +10,9 @@ from enum import auto
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.progress import Progress, Task, TaskID
+from rich.text import Text
 
+from cyberdrop_dl import env
 from cyberdrop_dl.compat import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
 
@@ -19,10 +22,15 @@ if TYPE_CHECKING:
 
     from rich.console import RenderableType
     from rich.live import Live
-    from rich.text import Text
 
 REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
 TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
+_in_portrait: bool = False
+
+
+class Color:
+    PLUM: str = "plum3"
+    YELLOW: str = "yellow"
 
 
 class UIOptions(CIStrEnum):
@@ -42,7 +50,37 @@ class JsonableRenderableType(Protocol):
     def __json__(self) -> Any: ...
 
 
-def create_test_live(renderable: JsonableRenderableType, transient: bool = False, json: bool = True) -> Live:
+class DisabledInPortraitMixin:
+    def render(self, task: Task) -> Text:
+        if _in_portrait:
+            return Text("")
+        return super().render(task)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAttributeAccessIssue]
+
+
+def _is_terminal_in_portrait() -> bool:
+
+    if env.FORCE_PORTRAIT_MODE:
+        return True
+
+    terminal_size = shutil.get_terminal_size()
+    width, height = terminal_size.columns, terminal_size.lines
+    aspect_ratio = width / height
+
+    # High aspect ratios are likely to be in landscape mode
+    if aspect_ratio >= 3.2:
+        return False
+
+    # Check for mobile device in portrait mode, Assume landscape mode for other cases
+    return (aspect_ratio < 1.5 and height >= 40) or (aspect_ratio < 2.3 and width <= 85)
+
+
+def is_terminal_in_portrait() -> bool:
+    global _in_portrait  # noqa: PLW0603
+    _in_portrait = _is_terminal_in_portrait()
+    return _in_portrait
+
+
+def create_test_live(renderable: JsonableRenderableType, *, transient: bool = False, json: bool = True) -> Live:
     from rich.json import JSON
     from rich.live import Live
 
@@ -96,16 +134,12 @@ class ProgressHook:
 
     _done: bool = dataclasses.field(init=False, default=False)
 
-    @property
-    def speed(self) -> float:
-        return self.get_speed()
-
     def __enter__(self) -> Self:
         if self._done:
             raise RuntimeError
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._done:
             raise RuntimeError
         self.done()
@@ -151,7 +185,7 @@ class LiveUI(ABC):
 def strip_markup(text: str) -> str:
     from rich.markup import _parse
 
-    def parse():
+    def parse() -> Generator[str]:
         for _position, plain_text, _tag in _parse(text):
             if plain_text is not None:
                 yield plain_text.replace("\\[", "[")
@@ -159,7 +193,7 @@ def strip_markup(text: str) -> str:
     return "".join(parse())
 
 
-def truncate_float(value: float | int | None, precision: int = 3) -> float | None:
+def truncate_float(value: float | None, precision: int = 3) -> float | None:
     if value is None:
         return None
     return round(value, precision)

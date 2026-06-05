@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import uuid
 from fractions import Fraction
-from typing import TYPE_CHECKING, Any, Literal, Self, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
@@ -21,8 +21,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-    _CMD: TypeAlias = Iterable[str | Path]
 
 
 logger = logging.getLogger(__name__)
@@ -52,9 +50,10 @@ _FFPROBE_CALL_PREFIX = (
 def is_installed() -> bool:
     try:
         _check()
-        return True
     except RuntimeError:
         return False
+    else:
+        return True
 
 
 def _check() -> None:
@@ -116,9 +115,9 @@ async def concat(input_files: Iterable[Path], output_file: Path, *, same_folder:
     return result
 
 
-async def _concat(input: Path, output: Path) -> SubProcessResult:
+async def _concat(input_file: Path, /, output: Path) -> SubProcessResult:
     concatenated_file = output.with_suffix(".concat" + output.suffix)
-    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input, *Args.CODEC_COPY, concatenated_file
+    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input_file, *Args.CODEC_COPY, concatenated_file
     result = await _run_command(command)
     if not result.success:
         return result
@@ -177,14 +176,14 @@ def _raw_concat(files: Iterable[Path], output: Path) -> None:
             file.unlink()
 
 
-async def probe(input: Path, /) -> FFprobeResult:
-    assert input.is_absolute()
-    command = *_FFPROBE_CALL_PREFIX, str(input)
+async def probe(file: Path, /) -> FFprobeResult:
+    assert file.is_absolute()
+    command = *_FFPROBE_CALL_PREFIX, str(file)
     return await _probe(command)
 
 
 async def probe_url(
-    input: AbsoluteHttpURL,
+    url: AbsoluteHttpURL,
     /,
     *,
     headers: Mapping[str, str] | None = None,
@@ -202,7 +201,7 @@ async def probe_url(
             yield "-http_proxy"
             yield str(proxy)
 
-    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(input), *extra_params()
+    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(url), *extra_params()
     return await _probe(command)
 
 
@@ -225,8 +224,8 @@ def _get_bin_version(bin_path: str) -> str | None:
             stderr=subprocess.DEVNULL,
         ).stdout.decode("utf-8", errors="ignore")
 
-    except Exception:
-        return
+    except Exception:  # noqa: BLE001
+        return None
     else:
         return stdout.partition("version")[-1].partition("Copyright")[0].strip()
 
@@ -249,7 +248,7 @@ def _parse_duration(duration: str | float | None) -> TruncatedFloat | None:
             for idx, value in enumerate(reversed(rest), 1):
                 seconds += int(value) * 60**idx
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     if seconds > 0:
@@ -278,7 +277,7 @@ class Stream(DictDataclass):
     tags: Tags
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         info = cls.filter_dict(stream_info)
         tags = Tags(CIMultiDict(stream_info.get("tags", {})))
         return info | {
@@ -289,8 +288,8 @@ class Stream(DictDataclass):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], /, **overrides: Any) -> Self:
-        return cls(**cls.validate(data))
+    def from_dict(cls, data: Mapping[str, Any], /, **overrides: Any) -> Self:
+        return super(Stream, cls).from_dict(cls.validate(data), **overrides)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -299,7 +298,7 @@ class AudioStream(Stream):
     codec_type: Literal["audio"] = "audio"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         defaults = super(AudioStream, cls).validate(stream_info)
         sample_rate = int(float(stream_info.get("sample_rate", 0))) or None
         return defaults | {"sample_rate": sample_rate}
@@ -314,14 +313,14 @@ class VideoStream(Stream):
     codec_type: Literal["video"] = "video"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @classmethod
-    def validate(cls, stream_info: dict[str, Any]) -> dict[str, Any]:
+    def validate(cls, stream_info: Mapping[str, Any]) -> dict[str, Any]:
         width = int(float(stream_info.get("width", 0))) or None
         height = int(float(stream_info.get("height", 0))) or None
         resolution = fps = None
         if width and height:
             resolution: str | None = f"{width}x{height}"
 
-        if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in ("0/0", "0", "0.0"):
+        if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
             fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
         defaults = super(VideoStream, cls).validate(stream_info)
@@ -370,7 +369,7 @@ class FFprobeResult:
 
     @staticmethod
     def from_output(ffprobe_output: FFprobeOutput) -> FFprobeResult:
-        def streams():
+        def streams() -> Generator[VideoStream | AudioStream]:
             for stream in ffprobe_output.get("streams", ()):
                 match stream["codec_type"]:
                     case "video":
@@ -431,16 +430,16 @@ async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
     program, *cmd = command
 
     if program == "ffmpeg":
-        bin = which_ffmpeg()
+        bin_path = which_ffmpeg()
     elif program == "ffprobe":
-        bin = which_ffprobe()
+        bin_path = which_ffprobe()
     else:
         raise ValueError(f"Unexpected program in command {command}")
 
-    assert bin
+    assert bin_path
     process_id = str(uuid.uuid4())
-    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin, *map(str, cmd)]})
-    process = await asyncio.create_subprocess_exec(bin, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin_path, *map(str, cmd)]})
+    process = await asyncio.create_subprocess_exec(bin_path, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
         stdout=stdout.decode("utf-8", errors="ignore"),

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients.downloads import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import MediaItem
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
     from cyberdrop_dl.utils.m3u8 import Rendition
 
 logger = logging.getLogger(__name__)
@@ -74,19 +74,41 @@ class Downloader:
     manager: Manager
     domain: str
     log_prefix: str = "Download"
-    download_slots: int | None = None
     use_server_lock: bool = False
 
-    waiting_items: int = dataclasses.field(init=False, default=0)
-
+    _download_slots: int | None = None
+    _waiting_items: int = dataclasses.field(init=False, default=0)
     _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
     _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
     _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
-    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(init=False, default_factory=aio.WeakAsyncLocks)
+    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(
+        init=False, default_factory=aio.WeakAsyncLocks, repr=False
+    )
 
     def __post_init__(self) -> None:
+        self.download_slots = self._download_slots
+
+    @property
+    def waiting_items(self) -> int:
+        return self._waiting_items
+
+    @property
+    def download_slots(self) -> int | None:
+        return self._download_slots
+
+    @download_slots.setter
+    def download_slots(self, new_limit: int | None) -> None:
+        try:
+            sem = self._semaphore
+        except AttributeError:
+            pass
+        else:
+            if not (sem._waiters is None and sem._value == self._download_slots):
+                raise RuntimeError("Can't change download limits. Downloader is already in use")
+
         upper_limit = self.config.global_settings.rate_limiting_options.max_simultaneous_downloads_per_domain
-        self._semaphore = asyncio.Semaphore(min(self.download_slots or upper_limit, upper_limit))
+        self._download_slots = min(new_limit or upper_limit, upper_limit)
+        self._semaphore = asyncio.Semaphore(self._download_slots)
 
     @property
     def client(self) -> DownloadClient:
@@ -133,7 +155,16 @@ class Downloader:
                 )
 
     @contextlib.asynccontextmanager
-    async def _download_context(self, media_item: MediaItem):
+    async def lock(self, url: AbsoluteHttpURL) -> AsyncGenerator[None]:
+        async with (
+            self._server_lock(url.host),
+            self._semaphore,
+            self.manager.http_client.global_download_limiter,
+        ):
+            yield
+
+    @contextlib.asynccontextmanager
+    async def _download_context(self, media_item: MediaItem) -> AsyncGenerator[None]:
 
         media_item.attempts = 0
         await self.client.mark_incomplete(media_item, self.domain)
@@ -141,16 +172,10 @@ class Downloader:
             yield
             return
 
-        self.waiting_items += 1
-
-        server = (media_item.debrid_link or media_item.url).host
-        async with (
-            self._server_lock(server),
-            self._semaphore,
-            self.manager.http_client.global_download_limiter,
-        ):
+        self._waiting_items += 1
+        async with self.lock(media_item.real_url):
             self._processed_items.add(media_item.db_path)
-            self.waiting_items -= 1
+            self._waiting_items -= 1
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
@@ -167,13 +192,7 @@ class Downloader:
         if media_item.url.path in self._processed_items and not self._ignore_history:
             return
 
-        if not ffmpeg.is_installed():
-            msg = "ffmpeg is not installed. (Required for HLS downloads)"
-            if os.name == "nt":
-                msg += ". Get it from: https://www.gyan.dev/ffmpeg/builds/"
-
-            raise DownloadError("FFmpeg Error", msg, media_item)
-
+        assert ffmpeg.is_installed()
         async with self._download_context(media_item):
             await self._start_hls_download(media_item, m3u8_group)
 
@@ -188,6 +207,7 @@ class Downloader:
             media_item.filename,
             media_item.domain,
             segments=sum(len(m.segments) for m in rendition if m is not None),
+            url=media_item.url,
         ):
             await self._hls_download(media_item, rendition)
 
@@ -210,7 +230,7 @@ class Downloader:
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         await self.finalize_download(media_item, downloaded=True)
 
-    async def finalize_download(self, media_item: MediaItem, downloaded: bool) -> None:
+    async def finalize_download(self, media_item: MediaItem, *, downloaded: bool) -> None:
         if downloaded:
             await aio.chmod(media_item.path, 0o666)
             await self.set_file_datetime(media_item, media_item.path)
@@ -258,7 +278,7 @@ class Downloader:
         async with _exclusive_lock(media_item):
             return bool(await self.download(media_item))
 
-    async def _download(self, media_item: MediaItem) -> bool | None:
+    async def _download(self, media_item: MediaItem) -> bool | None:  # noqa: C901
         """Downloads the media item."""
         url_as_str = str(media_item.url)
         if url_as_str in _KNOWN_BAD_URLS:
@@ -269,13 +289,6 @@ class Downloader:
                 media_item.duration = await self.manager.database.history.get_duration(self.domain, media_item)
                 await self.check_file_can_download(media_item)
             downloaded = await self.client.download_file(self.domain, media_item)
-            if downloaded:
-                await aio.chmod(media_item.path, 0o666)
-                if not media_item.is_segment:
-                    await self.set_file_datetime(media_item, media_item.path)
-                    self.manager.scrape_mapper.tui.files.stats.completed += 1
-                    logger.info(f"Download finished: {media_item.url}")
-            return downloaded
 
         except SkipDownloadError as e:
             if not media_item.is_segment:
@@ -304,6 +317,15 @@ class Downloader:
             message = str(e)
             raise DownloadError(ui_message, message, retry=True) from e
 
+        else:
+            if downloaded:
+                await aio.chmod(media_item.path, 0o666)
+                if not media_item.is_segment:
+                    await self.set_file_datetime(media_item, media_item.path)
+                    self.manager.scrape_mapper.tui.files.stats.completed += 1
+                    logger.info(f"Download finished: {media_item.url}")
+            return downloaded
+
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
     ignore_options = config.settings.ignore_options
@@ -330,6 +352,4 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
         return False
-    if ignore_options.exclude_after and item_date > ignore_options.exclude_after:
-        return False
-    return True
+    return not (ignore_options.exclude_after and item_date > ignore_options.exclude_after)

@@ -30,7 +30,6 @@ class Selector:
 
 
 TITLE_TRASH = "Free HD ", "Most Relevant ", "New ", "Videos", "Porn", "for:", "New Videos", "Tagged with"
-PRIMARY_URL = AbsoluteHttpURL("https://www.porntrex.com")
 
 
 class PorntrexCrawler(Crawler):
@@ -44,14 +43,14 @@ class PorntrexCrawler(Crawler):
         "Playlist": "/playlists/...",
         "Search": "/search/...",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.porntrex.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "porntrex"
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error
-            scrape_item.url = scrape_item.url / ""
+            scrape_item.url /= ""
 
         match scrape_item.url.parts[1:]:
             case ["video", video_id, *_]:
@@ -83,7 +82,7 @@ class PorntrexCrawler(Crawler):
         if not scrape_item.url.name:
             scrape_item.url = scrape_item.url.parent
 
-        canonical_url = PRIMARY_URL / "video" / video_id
+        canonical_url = self.PRIMARY_URL / "video" / video_id
         if await self.check_complete_from_referer(canonical_url):
             return
 
@@ -126,20 +125,21 @@ class PorntrexCrawler(Crawler):
         for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
             self.create_task(self.run(new_scrape_item))
 
-        await self.proccess_additional_pages(scrape_item, last_page)
+        await self._ajax_pagination(scrape_item, last_page)
 
         if "models" in scrape_item.url.parts:
             # Additional album pages
-            await self.proccess_additional_pages(scrape_item, last_page, block_id="list_albums_common_albums_list")
+            await self._ajax_pagination(scrape_item, last_page, block_id="list_albums_common_albums_list")
 
         elif "members" in scrape_item.url.parts:
             albums_url = scrape_item.url / "albums"
             soup = await self.request_soup(albums_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS, new_title_part="albums"):
+            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
+                new_scrape_item.append_folders("albums")
                 self.create_task(self.run(new_scrape_item))
 
-    async def proccess_additional_pages(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:
+    async def _ajax_pagination(self, scrape_item: ScrapeItem, last_page: int, **kwargs: str) -> None:  # noqa: C901
         if last_page == 1:
             return
         block_id: str = "list_videos_common_videos_list_norm"

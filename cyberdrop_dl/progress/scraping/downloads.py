@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, final
 
 from rich.jupyter import JupyterMixin
-from rich.markup import escape
 from rich.measure import Measurement
 from rich.progress import (
     BarColumn,
@@ -27,16 +26,33 @@ from rich.table import Column
 from rich.text import Text
 from typing_extensions import override
 
-from cyberdrop_dl.progress import DictProgress, ProgressHook, create_test_live, strip_markup, truncate_float
+from cyberdrop_dl.progress import (
+    Color,
+    DictProgress,
+    DisabledInPortraitMixin,
+    ProgressHook,
+    create_test_live,
+    strip_markup,
+    truncate_float,
+)
 from cyberdrop_dl.progress.overflow import OverFlowPanel
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
+    from rich.panel import Panel
+
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 _current_hls_task: ContextVar[TaskID] = ContextVar("_current_hls_task")
-_HLS_TASK_FIELD_NAME: Final = "HLS"
+
+
+@final
+class _CustomField:
+    HLS = "HLS"
+    DOMAIN = "DOMAIN"
+    URL = "URL"
 
 
 @dataclasses.dataclass(slots=True)
@@ -70,8 +86,9 @@ class AutoWidthTextColumn(TextColumn):
 class AutoTransferSpeedColumn(TransferSpeedColumn):
     @override
     def render(self, task: Task) -> Text:
-        real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
-        return super().render(real_task)
+        task = task.fields.get(_CustomField.HLS, task)
+        speed = _task_speed(task)
+        return Text(_format_speed(speed), style="progress.data.speed")
 
 
 class AutoDownloadColumn(DownloadColumn):
@@ -79,37 +96,22 @@ class AutoDownloadColumn(DownloadColumn):
 
     @override
     def render(self, task: Task) -> Text:
-        hls_task: Task | None = task.fields.get(_HLS_TASK_FIELD_NAME)
+        hls_task: Task | None = task.fields.get(_CustomField.HLS)
         if hls_task is None:
             return super().render(task)
 
-        downloaded_bytes = self._format_bytes(int(hls_task.completed))
+        downloaded_bytes = _format_bytes(int(hls_task.completed), binary=self.binary_units)
         completed_segs = int(task.completed)
         total_segs = "?" if task.total is None else f"{int(task.total):,}"
         total_width = len(str(total_segs))
         download_status = f"{downloaded_bytes} ({completed_segs:>{total_width},}/{total_segs})"
         return Text(download_status, style="progress.download", justify="right")
 
-    def _format_bytes(self, n_bytes: int) -> str:
-        multiplier, unit = self._select_bytes_units(n_bytes)
-        precision = 0 if multiplier == 1 else 1
-        normalized_n_bytes = n_bytes / multiplier
-        n_bytes_str = f"{normalized_n_bytes:,.{precision}f}"
-        return f"{n_bytes_str} {unit}"
 
-    def _select_bytes_units(self, size: int) -> tuple[int, str]:
-        if self.binary_units:
-            return filesize.pick_unit_and_suffix(
-                size,
-                ["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
-                1024,
-            )
+class AutoTimeRemainingColumn(DisabledInPortraitMixin, TimeRemainingColumn): ...
 
-        return filesize.pick_unit_and_suffix(
-            size,
-            ["bytes", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
-            1000,
-        )
+
+class AutoTextColumn(DisabledInPortraitMixin, TextColumn): ...
 
 
 @final
@@ -123,6 +125,7 @@ class DownloadsPanel(OverFlowPanel):
     def __init__(self, max_rows: int = 6) -> None:
         super().__init__(
             SpinnerColumn("dots3"),
+            AutoTextColumn(f"[{Color.PLUM}]" + "({task.fields[" + _CustomField.DOMAIN + "]})"),
             AutoWidthTextColumn(
                 "[progress.description]{task.description}",
                 table_column=Column(justify="left", no_wrap=True),
@@ -133,8 +136,8 @@ class DownloadsPanel(OverFlowPanel):
             AutoDownloadColumn(table_column=Column(justify="right", no_wrap=True)),
             "•",
             AutoTransferSpeedColumn(table_column=Column(justify="right", no_wrap=True, min_width=11)),
-            "•",
-            TimeRemainingColumn(
+            AutoTextColumn("•"),
+            AutoTimeRemainingColumn(
                 compact=True,
                 elapsed_when_finished=True,
                 table_column=Column(justify="right", no_wrap=True),
@@ -144,25 +147,36 @@ class DownloadsPanel(OverFlowPanel):
         self._hls_progress: Final[DictProgress] = DictProgress("")
         self._total_bytes = 0
 
+    @override
+    def __rich__(self) -> Panel:  # pyright: ignore[reportIncompatibleMethodOverride]
+        panel = super().__rich__()
+        total_speed = _total_speed(self._progress.tasks)
+        formatted_speed = _format_speed(total_speed).rjust(6)
+        panel.subtitle = f"Total: [white]{formatted_speed}"
+        return panel
+
     @contextlib.contextmanager
     def download_hls(
-        self,
-        filename: str,
-        /,
-        domain: str,
-        segments: float,
+        self, filename: str, /, domain: str, segments: float, *, url: AbsoluteHttpURL | None = None
     ) -> Generator[None]:
         # For HLS downloads, we use 2 different tasks. One on a hidden progress to track the downloaded bytes
         # and one on the user facing progress to track the number of downloaded segments (with a known total)
         # We create both at the same time and smuggle the bytes task as a field of the segments task
         # to make all info available to the main progress for rendering
 
+        assert domain
         task_id = self._hls_progress.add_task("", total=None, visible=False)
-        filename = str(filename).rsplit("/", 1)[-1]
-        desc = escape((f"({domain.upper()}) {filename}").encode().decode("ascii", errors="ignore"))
-        segments_task = self._add_task(desc, segments)
         bytes_task = self._hls_progress[task_id]
-        self._progress.update(segments_task.id, HLS=bytes_task)
+        segments_task = self._add_task(
+            _escape_filename(filename),
+            segments,
+            fields={
+                _CustomField.DOMAIN: domain.upper(),
+                _CustomField.HLS: bytes_task,
+                _CustomField.URL: url,
+            },
+        )
+
         token = _current_hls_task.set(segments_task.id)
         try:
             yield
@@ -172,15 +186,18 @@ class DownloadsPanel(OverFlowPanel):
             _current_hls_task.reset(token)
 
     def download_file(
-        self,
-        description: object,
-        /,
-        domain: str,
-        total: float | None,
+        self, description: object, /, domain: str, total: float | None, *, url: AbsoluteHttpURL | None = None
     ) -> ProgressHook:
-        filename = str(description).rsplit("/", 1)[-1]
-        desc = escape((f"({domain.upper()}) {filename}").encode().decode("ascii", errors="ignore"))
-        task = self._add_task(desc, total)
+
+        assert domain
+        task = self._add_task(
+            _escape_filename(str(description)),
+            total,
+            fields={
+                _CustomField.DOMAIN: domain.upper(),
+                _CustomField.URL: url,
+            },
+        )
 
         def advance(amount: int = 1) -> None:
             self._total_bytes += amount
@@ -190,13 +207,13 @@ class DownloadsPanel(OverFlowPanel):
             self._remove_task(task)
 
         def get_speed() -> float:
-            return task.finished_speed or task.speed or 0
+            return _task_speed(task) or 0
 
         return ProgressHook(advance, get_speed, on_exit)
 
     def download_hls_seg(self) -> ProgressHook:
         segments_task_id = _current_hls_task.get()
-        hls_task: Task = self._progress[segments_task_id].fields[_HLS_TASK_FIELD_NAME]
+        hls_task: Task = self._progress[segments_task_id].fields[_CustomField.HLS]
 
         def advance(amount: int) -> None:
             self._total_bytes += amount
@@ -206,7 +223,7 @@ class DownloadsPanel(OverFlowPanel):
             self._progress.advance(segments_task_id, 1)
 
         def get_speed() -> float:
-            return hls_task.finished_speed or hls_task.speed or 0
+            return _task_speed(hls_task) or 0
 
         return ProgressHook(advance, get_speed, on_exit)
 
@@ -272,12 +289,14 @@ class DownloadsPanel(OverFlowPanel):
 
 
 def _dump_task(task: Task) -> dict[str, Any]:
-    real_task: Task = task.fields.get(_HLS_TASK_FIELD_NAME, task)
+    real_task: Task = task.fields.get(_CustomField.HLS, task)
     return {
-        "speed": truncate_float(real_task.finished_speed or real_task.speed),
+        "speed": truncate_float(_task_speed(real_task)),
         "size": task.total,
+        "domain": task.fields[_CustomField.DOMAIN],
         "completed": task.completed,
-        "hls": _HLS_TASK_FIELD_NAME in task.fields,
+        "url": str(url) if (url := task.fields[_CustomField.URL]) else None,
+        "hls": _CustomField.HLS in task.fields,
         "bytes_downloaded": real_task.completed,
         "description": strip_markup(task.description),
         "eta": task.time_remaining,
@@ -285,10 +304,54 @@ def _dump_task(task: Task) -> dict[str, Any]:
     }
 
 
+def _format_bytes(n_bytes: int, *, binary: bool) -> str:
+    multiplier, unit = _select_bytes_units(n_bytes, binary=binary)
+    precision = 0 if multiplier == 1 else 1
+    normalized_n_bytes = n_bytes / multiplier
+    n_bytes_str = f"{normalized_n_bytes:,.{precision}f}"
+    return f"{n_bytes_str} {unit}"
+
+
+def _select_bytes_units(size: int, *, binary: bool) -> tuple[int, str]:
+    if binary:
+        return filesize.pick_unit_and_suffix(
+            size,
+            ["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
+            1024,
+        )
+
+    return filesize.pick_unit_and_suffix(
+        size,
+        ["bytes", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
+        1000,
+    )
+
+
+def _escape_filename(filename: str) -> str:
+    filename = str(filename).rsplit("/", 1)[-1]
+    return filename.encode().decode("ascii", errors="ignore")
+
+
+def _task_speed(task: Task) -> float | None:
+    return 0 if task.finished else task.speed
+
+
+def _format_speed(speed: float | None) -> str:
+    if speed is None:
+        return "?"
+    if speed == 0:
+        return "----"
+    return f"{filesize.decimal(int(speed))}/s"
+
+
+def _total_speed(tasks: Iterable[Task]) -> float:
+    return sum(_task_speed(t.fields.get(_CustomField.HLS, t)) or 0 for t in tasks)
+
+
 if __name__ == "__main__":
     panel = DownloadsPanel()
     import itertools
 
     panel.get_queue = itertools.count(1).__next__
-    with create_test_live(panel):
+    with create_test_live(panel, json=False):
         asyncio.run(panel.simulate())

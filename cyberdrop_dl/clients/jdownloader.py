@@ -105,11 +105,12 @@ class JDownloader:
     async def send(self, url: AbsoluteHttpURL, title: str, download_path: Path | None = None) -> None:
         """Sends links to JDownloader."""
 
-        assert self._device is not None and self.enabled
+        assert self._device is not None
+        assert self.enabled
         with self._wrap_errors():
             download_folder = self.config.download_dir
             if download_path:
-                download_folder = download_folder / download_path
+                download_folder /= download_path
 
             await asyncio.to_thread(
                 self._device.linkgrabber.add_links,
@@ -117,7 +118,7 @@ class JDownloader:
                     {
                         "autostart": self.config.autostart,
                         "links": str(url),
-                        "packageName": title if title else "Cyberdrop-DL",
+                        "packageName": title or "Cyberdrop-DL",
                         "destinationFolder": str(download_folder),
                         "overwritePackagizerRules": True,
                     },

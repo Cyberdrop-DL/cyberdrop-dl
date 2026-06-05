@@ -89,14 +89,10 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
 
     Any other exception is propagated"""
 
-    if to_trash:
-        coro = asyncio.to_thread(send2trash.send2trash, path)
-    else:
-        coro = aio.unlink(path)
+    coro = asyncio.to_thread(send2trash.send2trash, path) if to_trash else aio.unlink(path)
 
     try:
         await coro
-        return True
     except FileNotFoundError:
         return False
     except OSError as e:
@@ -104,6 +100,8 @@ async def _delete_file(path: Path, *, to_trash: bool) -> bool:
         if "file not found" in str(e).casefold():
             return False
         raise
+    else:
+        return True
 
 
 def _filter_db_matches(db_matches: Iterable[sqlite3.Row], base_dir: Path) -> Generator[Path]:

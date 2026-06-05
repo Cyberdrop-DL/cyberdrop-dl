@@ -67,7 +67,7 @@ class OneDriveFile(OneDriveItem):
     download_url: AbsoluteHttpURL
 
     @classmethod
-    def from_api_response(cls, json_resp: dict, access_details: AccessDetails) -> Self:
+    def from_api_response(cls, json_resp: dict[str, Any], access_details: AccessDetails) -> Self:
         info = parse_api_response(json_resp, access_details)
         download_url_str = json_resp["@content.downloadUrl"]
         info["download_url"] = AbsoluteHttpURL(download_url_str, encoded="%" in download_url_str)
@@ -79,7 +79,7 @@ class OneDriveFolder(OneDriveItem):
     children: list[dict[str, Any]]
 
     @classmethod
-    def from_api_response(cls, json_resp: dict, access_details: AccessDetails) -> Self:
+    def from_api_response(cls, json_resp: dict[str, Any], access_details: AccessDetails) -> Self:
         info = parse_api_response(json_resp, access_details)
         info["children"] = json_resp["children"]
         return cls(**info)
@@ -147,7 +147,7 @@ class OneDriveCrawler(Crawler):
             raise ScrapeError(401)
 
         api_url = create_api_url(access_details)
-        json_resp: dict = await self.make_api_request(api_url)
+        json_resp: dict[str, Any] = await self.make_api_request(api_url)
 
         if not is_folder(json_resp):
             file = OneDriveFile.from_api_response(json_resp, access_details)
@@ -223,7 +223,7 @@ def is_folder(json_resp: dict[str, Any]) -> bool:
     return bool(json_resp.get("folder"))
 
 
-def parse_api_response(json_resp: dict, access_details: AccessDetails) -> dict[str, Any]:
+def parse_api_response(json_resp: dict[str, Any], access_details: AccessDetails) -> dict[str, Any]:
     web_url_str: str = json_resp["webUrl"]
     item_id = json_resp["id"]
     date_str = json_resp["fileSystemInfo"]["lastModifiedDateTime"]

@@ -4,7 +4,7 @@ from cyberdrop_dl.utils import css
 
 
 @pytest.mark.parametrize(
-    "raw, domain, expected",
+    ("raw", "domain", "expected"),
     [
         ("cyberdrop-dl | GitHub", "github.com", "cyberdrop-dl"),
         ("cyberdrop-dl - GitHub", "github.com", "cyberdrop-dl"),

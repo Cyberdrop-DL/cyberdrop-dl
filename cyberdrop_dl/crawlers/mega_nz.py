@@ -47,6 +47,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("mega.co.nz",)
+    _DEFAULT_UA: ClassVar[str | None] = CDL_USER_AGENT
 
     core: MegaCore
     downloader: MegaDownloader
@@ -64,7 +65,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     def password(self) -> str | None:
         return self.manager.config.auth.meganz.password or None
 
-    async def __async_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         self._decryption_keys: dict[AbsoluteHttpURL, tuple[Crypto, int]] = {}
         api = MegaAPI(self.manager.http_client._session)
         api.user_agent = CDL_USER_AGENT
@@ -72,16 +73,18 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         speed_limiter = self.downloader.client.speed_limiter
         self.downloader = MegaDownloader(self.manager, self.DOMAIN)  # pyright: ignore[reportIncompatibleVariableOverride]
         self.downloader.client.speed_limiter = speed_limiter
-        await self.login(self.PRIMARY_URL)
+
+    async def __async_post_init__(self) -> None:
+        await self._login()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in:
-            return
+            return None
 
         info = self.core.parse_url(scrape_item.url, check_key=False)
         if not info.public_key:
             self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
-            return
+            return None
 
         if not info.is_folder:
             return await self.file(scrape_item, info.public_handle, info.public_key)
@@ -96,10 +99,10 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
         scrape_item.url = canonical_url
         full_key = b64_to_a32(public_key)
-        await self._process_file(scrape_item, handle, Crypto.decompose(full_key))  # pyright: ignore[reportArgumentType]
+        await self._file(scrape_item, handle, Crypto.decompose(full_key))  # pyright: ignore[reportArgumentType]
 
     @error_handling_wrapper
-    async def _process_file(
+    async def _file(
         self,
         scrape_item: ScrapeItem,
         handle: str,
@@ -117,7 +120,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=file_url)
 
-    _process_file_task = auto_task_id(_process_file)
+    _file_task = auto_task_id(_file)
 
     @error_handling_wrapper
     async def folder(
@@ -138,9 +141,9 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         scrape_item.setup_as_album(title, album_id=handle)
         canonical_url = (self.PRIMARY_URL / "folder" / handle).with_fragment(public_key)
         scrape_item.url = canonical_url
-        await self._process_fs(scrape_item, fs, selected_node)
+        await self._filesystem(scrape_item, fs, selected_node)
 
-    async def _process_fs(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
+    async def _filesystem(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
         folder_id, public_key = scrape_item.url.name, scrape_item.url.fragment
 
         for file in filesystem.files_from(selected_node_id):
@@ -150,11 +153,12 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             if await self.check_complete_from_referer(canonical_url):
                 continue
 
-            child_item = scrape_item.create_child(canonical_url, possible_datetime=file.created_at)
+            child_item = scrape_item.create_child(canonical_url)
+            child_item.uploaded_at = file.created_at
             for part in path.parent.parts[1:]:
-                child_item.add_to_parent_title(part)
+                child_item.append_folders(part)
 
-            self.create_task(self._process_file_task(child_item, file.id, file._crypto, folder_id=folder_id))
+            self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()
 
     @override
@@ -162,15 +166,15 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
         media_item.extra_info.setdefault(self.DOMAIN, {})["key"] = self._decryption_keys.pop(media_item.url)
         await super().handle_media_item(media_item, m3u8)
 
-    @error_handling_wrapper
-    async def login(self, *_) -> None:
+    async def _login(self) -> None:
         # This takes a really long time (dozens of seconds)
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
-        try:
-            with show_msg("Login into mega.nz"):
-                await self.core.login(self.user, self.password)
-            self._logged_in = True
-        except Exception as e:
-            self.disabled = True
-            raise LoginError(f"[MegaNZ] {e}") from e
+        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
+            try:
+                with show_msg("Login into mega.nz"):
+                    await self.core.login(self.user, self.password)
+            except Exception as e:
+                raise LoginError(f"[MegaNZ] {e}") from e
+            else:
+                self._logged_in = True

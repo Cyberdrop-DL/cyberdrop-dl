@@ -1,21 +1,7 @@
 import pytest
 
 from cyberdrop_dl.crawlers import bunkr
-
-
-@pytest.mark.parametrize(
-    "timestamp, url, expected",
-    [
-        (
-            1774897194,
-            "OzE3IjZucGQmazRRF0BTVlh9Njd9d2RteGhobxkKAh0fGxQsNTsrM3IMLCszRxRxQldXIDFuFz01MiIrOCtdVl1DH189aBMnJzg2KGg2aAFdC2lVQn0oM2Y=",
-            "https://c2ke.scdn.st/2023-10-31---Giving-Girls-Breast-Examinations-in-Public-o75d8Ygt.mp4",
-        )
-    ],
-)
-def test_parse_api_resp(timestamp: int, url: str, expected: str) -> None:
-    url = bunkr._parse_api_resp(url, timestamp, encrypted=True)
-    assert url == expected
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 def test_album_parser() -> None:
@@ -103,3 +89,21 @@ def test_is_stream_redirect(host: str) -> None:
 )
 def test_is_not_stream_redirect(host: str) -> None:
     assert not bunkr._is_stream_redirect(host)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://c5bu-b.cdn.cr/storage/media/--------------------------------------------------Yd6RpuQ8.mp4?token=2e5afd9aeb9c1&ex=1780065095&n=%E5%A5%BD%.mp4",
+            "/--------------------------------------------------Yd6RpuQ8.mp4",
+        ),
+        (
+            "https://kebab.bunkr.cr/12345-5670.mp4",
+            "/12345-5670.mp4",
+        ),
+    ],
+)
+def test_db_path(url: str, expected: str) -> None:
+    result = bunkr.BunkrCrawler.__db_path__(AbsoluteHttpURL(url))
+    assert result == expected

@@ -5,11 +5,13 @@ import time
 import pytest
 from cyclopts.exceptions import UnknownOptionError
 
+import cyberdrop_dl.cli.download
 from cyberdrop_dl.config import Config, settings
 from cyberdrop_dl.config.merge import merge_dicts
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 
 
-def test_config_equality():
+def test_config_equality() -> None:
     config1 = Config()
     time.sleep(0.1)
     config2 = Config()
@@ -22,11 +24,11 @@ def test_config_equality():
     assert config1.model_dump() == config2.model_dump()
 
 
-def test_parse_config_from_args():
+def test_parse_config_from_args() -> None:
     assert Config() == Config.parse_args([])
 
 
-def test_parse_config_from_args2():
+def test_parse_config_from_args2() -> None:
     config = Config.model_validate(
         {
             "settings": {
@@ -42,7 +44,7 @@ def test_parse_config_from_args2():
         _ = Config.parse_args(["--i", "test.txt"])
 
 
-def test_logs_equality():
+def test_logs_equality() -> None:
     logs1 = settings.Logs()
     time.sleep(0.1)
     logs2 = settings.Logs()
@@ -131,7 +133,7 @@ class TestMergeDicts:
 
 class TestRuntimeLogsConfig:
     @staticmethod
-    def parse(level: object, console_level: object):
+    def parse(level: object, console_level: object) -> settings.RuntimeOptions:
         return settings.RuntimeOptions.model_validate({"log_level": level, "console_log_level": console_level})
 
     def test_default(self) -> None:
@@ -148,3 +150,21 @@ class TestRuntimeLogsConfig:
             config = self.parse(a, b)
             assert config.effective_log_level == a
             assert config.effective_console_log_level == a
+
+
+def test_default_config_does_not_need_ffmpeg() -> None:
+    cyberdrop_dl.cli.download._check_ffmpeg(Config())
+
+
+def test_media_durations_need_ffmpeg() -> None:
+    config = Config.parse_args(["--maximum-video-duration", "20 seconds"])
+    duration = config.settings.media_duration_limits.maximum_video_duration
+    assert duration
+    assert duration.total_seconds() == 20
+    assert config.settings.media_duration_limits.needs_ffmpeg
+    with pytest.raises(CDLConfigRuntimeErrorsGroup) as exc:
+        cyberdrop_dl.cli.download._check_ffmpeg(config)
+
+    assert len(exc.value.exceptions) == 1
+    assert type(exc.value.exceptions[0]) is RuntimeError
+    assert str(exc.value.exceptions[0]) == "Filtering files by duration requires 'ffmpeg' to be installed"
