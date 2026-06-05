@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, json, open_graph
+from cyberdrop_dl.utils import css, error_handling_wrapper, json, mark_as_safe, open_graph
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
@@ -179,7 +179,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
         if soup.select_one("form"):
             raise PasswordProtectedError(message="Wrong password")
 
-    @error_handling_wrapper
+    @mark_as_safe
     async def direct_file(
         self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:

@@ -819,7 +819,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             page_url = self.parse_url(page_url_str, relative_to=relative_to, trim=trim)
 
     async def direct_file(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
+        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
         url = url or scrape_item.url
