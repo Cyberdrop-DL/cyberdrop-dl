@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -42,6 +41,12 @@ class EfuktCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case ["pics", _]:
+                return await self.media(scrape_item)
+            case ["view.gif.php"] if scrape_item.url.query.get("id"):
+                return await self.media(scrape_item)
+            case ["series", _]:
+                return await self.series(scrape_item)
             case [slug]:
                 if slug.isdigit():
                     return await self.homepage(scrape_item)
@@ -50,8 +55,6 @@ class EfuktCrawler(Crawler):
                 raise ValueError
             case []:
                 return await self.homepage(scrape_item)
-            case ["series", _]:
-                return await self.series(scrape_item)
             case _:
                 raise ValueError
 
@@ -105,5 +108,5 @@ def _parse_media(soup: BeautifulSoup) -> Media:
     return Media(
         date=dates.parse_format(date_str, "%m/%d/%y"),
         src=parse_url(css.select(soup, Selector.MEDIA, "src")),
-        title=Path(css.select_text(soup, Selector.TITLE)).as_posix().replace("/", "-"),
+        title=css.select_text(soup, Selector.TITLE),
     )
