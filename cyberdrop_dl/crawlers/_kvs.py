@@ -83,8 +83,10 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 return await self.collection(scrape_item, name, type_)
             case ["search", query]:
                 return await self.search(scrape_item, query)
-            case ["members", _, *_]:
-                return await self.profile(scrape_item)
+            case ["members", member_id, "public_videos" | "favourite_videos" | "private_videos", *_]:
+                return await self.profile(scrape_item, member_id, entire_profile=False)
+            case ["members", member_id, *_]:
+                return await self.profile(scrape_item, member_id)
             case ["videos", _, *_]:
                 return await self.video(scrape_item)
             case ["albums", _]:
@@ -126,20 +128,24 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         await self._iter_videos(scrape_item)
 
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        profile_url = scrape_item.url
+    async def profile(self, scrape_item: ScrapeItem, member_id: str, *, entire_profile: bool = False) -> None:
+        profile_url = scrape_item.url.origin() / "members" / member_id
+        soup = await self.request_soup(profile_url)
         user_name = _extract_user_name(soup)
         scrape_item.setup_as_profile(self.create_title(f"{user_name} [user]"))
 
-        urls = tuple(
-            profile_url / part
-            for (selector, part) in [
-                (Selector.PUBLIC_VIDEOS, "public_videos"),
-                (Selector.FAVOURITE_VIDEOS, "favourite_videos"),
-                (Selector.PRIVATE_VIDEOS, "private_videos"),
+        urls = (
+            [
+                profile_url / path
+                for (selector, path) in [
+                    (Selector.PUBLIC_VIDEOS, "public_videos"),
+                    (Selector.FAVOURITE_VIDEOS, "favourite_videos"),
+                    (Selector.PRIVATE_VIDEOS, "private_videos"),
+                ]
+                if soup.select_one(selector)
             ]
-            if soup.select_one(selector)
+            if entire_profile
+            else [scrape_item.url]
         )
 
         async for soup in aio.chain.from_iterable(map(self.web_pager, urls)):
