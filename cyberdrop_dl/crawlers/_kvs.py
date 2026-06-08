@@ -7,6 +7,7 @@ import itertools
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -127,22 +128,26 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        user_name: str = (
-            css.select_text(soup, Selector.USER_NAME).split("'s Profile")[0].strip().removesuffix("'s Page")
+        profile_url = scrape_item.url
+        user_name = _extract_user_name(soup)
+        scrape_item.setup_as_profile(self.create_title(f"{user_name} [user]"))
+
+        urls = tuple(
+            profile_url / part
+            for (selector, part) in [
+                (Selector.PUBLIC_VIDEOS, "public_videos"),
+                (Selector.FAVOURITE_VIDEOS, "favourite_videos"),
+                (Selector.PRIVATE_VIDEOS, "private_videos"),
+            ]
+            if soup.select_one(selector)
         )
-        title = self.create_title(f"{user_name} [user]")
-        scrape_item.setup_as_profile(title)
 
-        if soup.select_one(Selector.PUBLIC_VIDEOS):
-            await self._iter_videos(scrape_item, "public_videos")
-        if soup.select_one(Selector.FAVOURITE_VIDEOS):
-            await self._iter_videos(scrape_item, "favourite_videos")
-        if soup.select_one(Selector.PRIVATE_VIDEOS):
-            await self._iter_videos(scrape_item, "private_videos")
+        async for soup in aio.chain.from_iterable(map(self.web_pager, urls)):
+            for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
+                self.create_task(self.run(new_item))
 
-    async def _iter_videos(self, scrape_item: ScrapeItem, video_category: str = "") -> None:
-        url = scrape_item.url / video_category if video_category else scrape_item.url
-        async for soup in self.web_pager(url):
+    async def _iter_videos(self, scrape_item: ScrapeItem) -> None:
+        async for soup in self.web_pager(scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 self.create_task(self.run(new_scrape_item))
 
@@ -321,3 +326,7 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
     new_parts = list(url.parts)
     new_parts[3] = "".join(checksum[index] for index in indices) + tail
     return url.with_path("/".join(new_parts[1:]), keep_query=True, keep_fragment=True)
+
+
+def _extract_user_name(soup: BeautifulSoup) -> str:
+    return css.select_text(soup, Selector.USER_NAME).partition("'s Profile")[0].strip().removesuffix("'s Page")
