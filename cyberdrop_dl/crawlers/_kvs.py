@@ -40,7 +40,7 @@ class Selector:
     PRIVATE_VIDEOS = "div#list_videos_private_videos_items"
     FAVOURITE_VIDEOS = "div#list_videos_favourite_videos_items"
     COMMON_VIDEOS_TITLE = "div#list_videos_common_videos_list h1"
-    VIDEOS = "div#list_videos_common_videos_list_items a"
+    VIDEOS = "a.tumbpu"
     NEXT_PAGE = "li.pagination-next > a"
     ALBUM_ID = "script:-soup-contains('album_id')"
 
