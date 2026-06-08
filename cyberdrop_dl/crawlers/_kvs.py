@@ -185,16 +185,12 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str | None = None) -> None:
         soup = await self.request_soup(scrape_item.url)
-        if not album_id:
-            js_text = css.select_text(soup, Selector.ALBUM_ID)
-            album_id = extr_text(js_text, "params['album_id'] =", ";")
-
-        results = await self.get_album_results(album_id)
-        title = css.select_text(soup, Selector.ALBUM_NAME)
-        title = self.create_title(f"{title} [album]", album_id)
+        album_id = album_id or _extract_album_id(soup)
+        name = css.select_text(soup, Selector.ALBUM_NAME)
+        title = self.create_title(f"{name} [album]", album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM_PICTURES, results=results):
-            self.create_task(self.run(new_scrape_item))
+        for _, new_item in self.iter_children(scrape_item, soup, Selector.ALBUM_PICTURES):
+            self.create_task(self.run(new_item))
 
     @error_handling_wrapper
     async def picture(self, scrape_item: ScrapeItem) -> None:
@@ -202,8 +198,8 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        src = self.parse_url(css.select(soup, Selector.PICTURE, "src"))
-        await self.direct_file(scrape_item, src)
+        src = css.select(soup, Selector.PICTURE, "src")
+        await self.direct_file(scrape_item, self.parse_url(src))
 
     async def _ajax_pagination(  # noqa: PLR0913
         self,
@@ -329,3 +325,8 @@ def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> Absolu
 
 def _extract_user_name(soup: BeautifulSoup) -> str:
     return css.select_text(soup, Selector.USER_NAME).partition("'s Profile")[0].strip().removesuffix("'s Page")
+
+
+def _extract_album_id(soup: BeautifulSoup) -> str:
+    js_text = css.select_text(soup, Selector.ALBUM_ID)
+    return extr_text(js_text, "params['album_id'] =", ";")
