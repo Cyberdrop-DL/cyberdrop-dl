@@ -7,7 +7,6 @@ import itertools
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -134,26 +133,20 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         user_name = _extract_user_name(soup)
         scrape_item.setup_as_profile(self.create_title(f"{user_name} [user]"))
 
-        urls = (
-            [
-                profile_url / path
-                for (selector, path) in [
-                    (Selector.PUBLIC_VIDEOS, "public_videos"),
-                    (Selector.FAVOURITE_VIDEOS, "favourite_videos"),
-                    (Selector.PRIVATE_VIDEOS, "private_videos"),
-                ]
-                if soup.select_one(selector)
-            ]
-            if entire_profile
-            else [scrape_item.url]
-        )
+        if not entire_profile:
+            await self._iter_videos(scrape_item, scrape_item.url)
+            return
 
-        async for soup in aio.chain.from_iterable(map(self.web_pager, urls)):
-            for _, new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                self.create_task(self.run(new_item))
+        for selector, path in [
+            (Selector.PUBLIC_VIDEOS, "public_videos"),
+            (Selector.FAVOURITE_VIDEOS, "favourite_videos"),
+            (Selector.PRIVATE_VIDEOS, "private_videos"),
+        ]:
+            if soup.select_one(selector):
+                await self._iter_videos(scrape_item, profile_url / path)
 
-    async def _iter_videos(self, scrape_item: ScrapeItem) -> None:
-        async for soup in self.web_pager(scrape_item.url):
+    async def _iter_videos(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
+        async for soup in self.web_pager(url or scrape_item.url):
             for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 self.create_task(self.run(new_scrape_item))
 
