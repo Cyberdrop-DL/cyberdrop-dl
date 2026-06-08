@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+import json
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from cyberdrop_dl import aio
@@ -13,7 +14,9 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, m3u8, parse_url
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import AsyncGenerator, Generator, Iterable
+
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -127,12 +130,18 @@ class RumbleCrawler(Crawler):
     @error_handling_wrapper
     async def channel(self, scrape_item: ScrapeItem, name: str) -> None:
         scrape_item.setup_as_album(self.create_title(name))
-        init_page = int(scrape_item.url.query.get("page") or 1)
+        async for soup in self._pager(scrape_item.url):
+            info = _extract_channel_info(soup)
+            videos = (v for v in info["items"] if v.get("object_type") == "video")
+            for video in videos:
+                new_item = scrape_item.create_child(self.parse_url(video["url"]))
+                self.create_task(self.run(new_item))
+
+    async def _pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[BeautifulSoup]:
+        init_page = int(url.query.get("page") or 1)
         try:
             for page in itertools.count(init_page):
-                soup = await self.request_soup(scrape_item.url.update_query(page=page))
-                for _, new_scrape_item in self.iter_children(scrape_item, soup, "a.videostream__link"):
-                    self.create_task(self.run(new_scrape_item))
+                yield await self.request_soup(url.update_query(page=page))
 
         except DownloadError as e:
             if e.status == 404:
@@ -206,3 +215,8 @@ class RumbleCrawler(Crawler):
             hls_formats = await aio.map(resolve_m3u8, hls_formats, task_limit=10)
 
         return max((*hls_formats, *other_formats))
+
+
+def _extract_channel_info(soup: BeautifulSoup) -> dict[str, Any]:
+    content = css.select_text(soup, "script[type='application/json']:-soup-contains-own(relative_url)")
+    return json.loads(content)
