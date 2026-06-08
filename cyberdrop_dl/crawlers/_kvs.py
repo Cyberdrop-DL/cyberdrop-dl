@@ -78,10 +78,10 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:
-            case ["categories" | "tags", _]:
-                return await self.collection(scrape_item)
+            case ["categories" | "tags" as type_, name]:
+                return await self.collection(scrape_item, name, type_)
             case ["search", query]:
-                return await self.collection(scrape_item, query)
+                return await self.search(scrape_item, query)
             case ["members", _, *_]:
                 return await self.profile(scrape_item)
             case ["videos", _, *_]:
@@ -92,7 +92,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 return await self.picture(scrape_item)
             case _:
                 if query := scrape_item.url.query.get("q"):
-                    return await self.collection(scrape_item, query)
+                    return await self.search(scrape_item, query)
                 raise ValueError
 
     @classmethod
@@ -112,19 +112,14 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         return cls._clean_title(css.select_text(soup, Selector.COMMON_VIDEOS_TITLE))
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem, query: str | None = None) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        if query:
-            title = f"{query} [search]"
-        else:
-            common_title = css.select_text(soup, Selector.COMMON_VIDEOS_TITLE)
-            if common_title.startswith("New Videos Tagged"):
-                common_title = common_title.split("Showing")[0].split("Tagged with")[1].strip()
-                title = f"{common_title} [tag]"
-            else:
-                common_title = common_title.split("New Videos")[0].strip()
-                title = f"{common_title} [category]"
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        title = self.create_title(f"{query} [search]")
+        scrape_item.setup_as_album(title)
+        await self._iter_videos(scrape_item)
 
+    @error_handling_wrapper
+    async def collection(self, scrape_item: ScrapeItem, name: str, type_: str) -> None:
+        title = f"{name} [{'tag' if type_ == 'tags' else 'category'}]"
         title = self.create_title(title)
         scrape_item.setup_as_album(title)
         await self._iter_videos(scrape_item)
