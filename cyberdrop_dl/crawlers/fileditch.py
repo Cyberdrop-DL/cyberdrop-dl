@@ -18,7 +18,8 @@ class FileditchCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
             "/file.php?f=<file_id>",
-            "/beta/<file_id>/<name>",
+            "/beta123/<file_id>/<name>",
+            "/temp/<file_id>/<name>",
         )
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fileditchfiles.me/")
@@ -28,7 +29,7 @@ class FileditchCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case [*_, "file.php"]:
                 return await self.file(scrape_item)
-            case [a, _, *_] if a.startswith("beta"):
+            case [a, _, *_] if a.startswith(("beta", "temp")):
                 return await self.file(scrape_item)
             case _:
                 raise ValueError
