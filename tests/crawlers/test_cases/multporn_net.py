@@ -15,5 +15,21 @@ TEST_CASES = [
             },
         ],
         "count": 18,
-    }
+    },
+    {
+        "url": "https://multporn.net/video/ahsoka_blowjob",
+        "results": [
+            {
+                "url": "https://multporn.net/sites/default/files/videos/redmoa_ahsoka_-_blowjob.mp4",
+                "filename": "Ahsoka - Blowjob.mp4",
+                "debrid_link": None,
+                "original_filename": "Ahsoka - Blowjob",
+                "referer": "https://multporn.net/video/ahsoka_blowjob",
+                "album_id": None,
+                "uploaded_at": 1686697020,
+                "download_folder": "re:Loose Files (Multporn.net)",
+            }
+        ],
+        "count": 1,
+    },
 ]
