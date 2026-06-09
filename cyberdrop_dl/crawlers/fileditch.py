@@ -16,7 +16,10 @@ HOMEPAGE_CATCHALL_FILE = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 class FileditchCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File": "/file.php?f=<file_id>",
+        "File": (
+            "/file.php?f=<file_id>",
+            "/beta/<file_id>/<name>",
+        )
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fileditchfiles.me/")
     DOMAIN: ClassVar[str] = "fileditch"
@@ -24,6 +27,8 @@ class FileditchCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, "file.php"]:
+                return await self.file(scrape_item)
+            case [a, _, *_] if a.startswith("beta"):
                 return await self.file(scrape_item)
             case _:
                 raise ValueError
