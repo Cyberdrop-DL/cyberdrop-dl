@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
 
@@ -29,6 +29,7 @@ class MissAVCrawler(Crawler):
         "Video": "/...",
         **{name.capitalize(): f"/{name}/<{name.removesuffix('s')}>" for name in _COLLECTION_TYPES},
     }
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "njavtv.com", "missav.ws"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://missav.ws")
     DOMAIN: ClassVar[str] = "missav"
     FOLDER_DOMAIN: ClassVar[str] = "MissAV"
