@@ -19,6 +19,8 @@ class MultPornCrawler(Crawler):
         "comic": (
             "/comics/<slug>",
             "/hentai_manga/<slug>",
+            "/humor/<slug>",
+            "/gay_porn_comics/<slug>",
         ),
         "video": "/video/<slug>",
     }
@@ -27,7 +29,7 @@ class MultPornCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["comics" | "hentai_manga", _]:
+            case ["comics" | "hentai_manga" | "gay_porn_comics" | "humor", _]:
                 return await self.comic(scrape_item)
             case ["video", _]:
                 return await self.video(scrape_item)
@@ -58,7 +60,6 @@ def _extract_images(soup: BeautifulSoup) -> Generator[AbsoluteHttpURL]:
     subpath = "/styles/juicebox_medium/public/"
     for img in css.iselect(soup, ".content .jb-image img", "src"):
         url = parse_url(img)
-        assert subpath in url.path
         path = url.path.replace(subpath, "/")
         yield url.with_path(path)
 
