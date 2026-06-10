@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph, parse_url
@@ -19,12 +20,15 @@ class NaughtyMachinimaCrawler(Crawler):
         "Video": "/video/<slug>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.naughtymachinima.com")
+    NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination li:has(.fa-caret-right) a"
     DOMAIN: ClassVar[str] = "naughtymachinima"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["video", video_id, _]:
+            case ["video", video_id, *_]:
                 return await self.video(scrape_item, video_id)
+            case ["album", album_id, *_]:
+                return await self.album(scrape_item, album_id)
             case _:
                 raise ValueError
 
@@ -41,9 +45,30 @@ class NaughtyMachinimaCrawler(Crawler):
         filename = self.create_custom_filename(name, ext := ".mp4", resolution=res, file_id=video_id)
         await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
 
+    @error_handling_wrapper
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        first_page, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        name = css.select_text(first_page, "title").rpartition(" Gallery - Naughty Machinima")[0]
+        title = self.create_title(name, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
+        results = await self.get_album_results(album_id)
+
+        async for soup in pages:
+            for photo in _extract_photos(soup):
+                if self.check_album_results(photo, results):
+                    continue
+                await self.direct_file(scrape_item, photo)
+                scrape_item.add_children()
+
 
 def _extract_sources(soup: BeautifulSoup) -> Generator[tuple[int, AbsoluteHttpURL]]:
     for src in css.iselect(soup, "video#vjsplayer source"):
         res = int(css.attr(src, "res"))
         url = parse_url(css.attr(src, "src"))
         yield res, url
+
+
+def _extract_photos(soup: BeautifulSoup) -> Generator[AbsoluteHttpURL]:
+    for thumb in css.iselect(soup, "img[id^='album_photo_']", "src"):
+        url = thumb.replace("/tmb/", "/")
+        yield parse_url(url)

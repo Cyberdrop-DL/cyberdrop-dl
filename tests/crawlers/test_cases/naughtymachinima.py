@@ -15,5 +15,20 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://www.naughtymachinima.com/album/11382/releasing-some-monday-tensions-with-benjohn",
+        "results": [
+            {
+                "url": "https://videos.naughtymachinima.com/media/photos/141114.jpg",
+                "filename": "141114.jpg",
+                "original_filename": "141114.jpg",
+                "album_id": "11382",
+                "uploaded_at": None,
+                "referer": "https://www.naughtymachinima.com/album/11382/releasing-some-monday-tensions-with-benjohn",
+                "download_folder": "re:Releasing some Monday tensions with BenJohn (Naughtymachinima)",
+            },
+        ],
+        "count": 16,
+    },
 ]
