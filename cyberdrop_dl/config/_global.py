@@ -6,6 +6,7 @@ import aiohttp
 from cyclopts import Parameter
 from pydantic import (
     ByteSize,
+    Field,
     NonNegativeFloat,
     PositiveFloat,
     PositiveInt,
@@ -115,7 +116,7 @@ class GenericCrawlerInstances(SettingsGroup):
 
 @Parameter(name="*")
 class GlobalSettings(AliasModel):
-    general: General = General()
-    rate_limiting_options: RateLimiting = RateLimiting()
-    ui_options: UIOptions = UIOptions()
-    generic_crawlers_instances: GenericCrawlerInstances = GenericCrawlerInstances()
+    general: General = Field(default_factory=General)
+    rate_limiting_options: RateLimiting = Field(default_factory=RateLimiting)
+    ui_options: UIOptions = Field(default_factory=UIOptions)
+    generic_crawlers_instances: GenericCrawlerInstances = Field(default_factory=GenericCrawlerInstances)

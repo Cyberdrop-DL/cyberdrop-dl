@@ -390,16 +390,16 @@ class DupeCleanup(SettingsGroup):
 
 @Parameter(name="*")
 class ConfigSettings(AliasModel):
-    browser_cookies: BrowserCookies = BrowserCookies()
-    download_options: DownloadOptions = DownloadOptions()
-    dupe_cleanup_options: DupeCleanup = DupeCleanup()
-    file_size_limits: FileSizeLimits = FileSizeLimits()
-    media_duration_limits: MediaDurationLimits = MediaDurationLimits()
-    files: Files = Files()
-    ignore_options: IgnoreOptions = IgnoreOptions()
-    logs: Logs = Logs()
-    runtime_options: RuntimeOptions = RuntimeOptions()
-    sorting: Sorting = Sorting()
+    browser_cookies: BrowserCookies = Field(default_factory=BrowserCookies)
+    download_options: DownloadOptions = Field(default_factory=DownloadOptions)
+    dupe_cleanup_options: DupeCleanup = Field(default_factory=DupeCleanup)
+    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
+    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
+    files: Files = Field(default_factory=Files)
+    ignore_options: IgnoreOptions = Field(default_factory=IgnoreOptions)
+    logs: Logs = Field(default_factory=Logs)
+    runtime_options: RuntimeOptions = Field(default_factory=RuntimeOptions)
+    sorting: Sorting = Field(default_factory=Sorting)
     _resolved: bool = False
 
     def resolve_paths(self) -> None:
