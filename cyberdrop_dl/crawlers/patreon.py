@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, ReadOnly, TypedDict, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, cast
 
 from bs4 import BeautifulSoup
+from typing_extensions import ReadOnly
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError

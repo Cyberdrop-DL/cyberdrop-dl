@@ -5,6 +5,8 @@ import time
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NotRequired, TypedDict, TypeGuard
 
+from typing_extensions import ReadOnly
+
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import FILE_HOST_ALBUM, AbsoluteHttpURL, ScrapeItem
@@ -12,7 +14,6 @@ from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
-    from typing import ReadOnly
 
 
 _API_ENTRYPOINT = AbsoluteHttpURL("https://api.gofile.io")
