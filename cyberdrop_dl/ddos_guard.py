@@ -143,7 +143,7 @@ class CloudFlareTurnstile(DDosGuard):
 class BasedFlare(DDosGuard):
     # TODO: add logic to solve it: https://gitgud.io/fatchan/haproxy-protection/-/blob/71015f402c49afcdcb3e70bc98dbaddc5ccbc74c/src/js/ch.js#L105
     TITLES = ("Hold on...",)
-    SELECTOR = ", ".join(("head[data-langjson*='Performance & security by BasedFlare')]", "body[data-pow][data-mode]"))
+    SELECTOR = ", ".join(("head[data-langjson*='Performance & security by BasedFlare']", "body[data-pow][data-mode]"))
 
     @classmethod
     @override
