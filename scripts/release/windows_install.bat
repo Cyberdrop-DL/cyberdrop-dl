@@ -41,11 +41,12 @@ if exist "%APPDATA%\uv\uv.exe" (
 )
 
 echo ERROR: Unable to find uv after installation.
+pause
 exit /b 1
 
 :found
-"%uv_bin%" tool update-shell >nul 2>&1
+"%uv_bin%" tool update-shell
 echo Installing / Updating cyberdrop-dl...
-"%uv_bin%" tool install --managed-python -p "<3.14" --no-build --upgrade --force cyberdrop-dl-patched%PACKAGE_VERSION%
+"%uv_bin%" tool install --managed-python -p "<3.14" --no-build --upgrade --force "cyberdrop-dl-patched%PACKAGE_VERSION%"
 endlocal
 pause
