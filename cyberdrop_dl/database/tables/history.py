@@ -5,7 +5,7 @@ import dataclasses
 import logging
 import time
 from sqlite3 import IntegrityError, Row
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .definitions import create_fixed_history, create_history, create_media_index
 
@@ -19,8 +19,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.url_objects import MediaItem
-
-    _T = TypeVar("_T")
 
 
 _FETCH_MANY_SIZE: int = 1000
@@ -321,8 +319,8 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
 
-    def try_wrap(fn: Callable[..., _T]) -> Callable[..., _T]:
-        def call(*args: Any, **kwargs: Any) -> _T:
+    def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
+        def call(*args: Any, **kwargs: Any) -> T:
             try:
                 return fn(*args, **kwargs)
             except Exception:

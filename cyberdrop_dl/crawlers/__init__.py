@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import is_absolute_http_url, remove_trailing_slash
@@ -11,17 +11,15 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.crawlers.crawler import Crawler
 
-    _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
-
 
 def create_crawlers[CrawlerT: Crawler](
-    urls: Iterable[str] | Iterable[AbsoluteHttpURL], base_crawler: type[_CrawlerT]
-) -> set[type[_CrawlerT]]:
+    urls: Iterable[str] | Iterable[AbsoluteHttpURL], base_crawler: type[CrawlerT]
+) -> set[type[CrawlerT]]:
     """Creates new subclasses of the base crawler from the urls"""
     return {_create_subclass(url, base_crawler) for url in urls}
 
 
-def _create_subclass[CrawlerT: Crawler](url: AbsoluteHttpURL | str, base_class: type[_CrawlerT]) -> type[_CrawlerT]:
+def _create_subclass[CrawlerT: Crawler](url: AbsoluteHttpURL | str, base_class: type[CrawlerT]) -> type[CrawlerT]:
     url = AbsoluteHttpURL(url)
     assert is_absolute_http_url(url)
     primary_url = remove_trailing_slash(url)

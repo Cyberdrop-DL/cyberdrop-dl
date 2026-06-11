@@ -11,16 +11,13 @@ import json.scanner
 import re
 import time
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, ParamSpec, Protocol, Self, TypeGuard, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Protocol, Self, TypeGuard
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from pathlib import Path
 
     from pydantic import BaseModel
-
-    _P = ParamSpec("_P")
-    _R = TypeVar("_R")
 
 
 _scanstring: Callable[..., tuple[str, int]] = json.decoder.scanstring  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
@@ -82,9 +79,9 @@ class JSDecoder(json.JSONDecoder):
 JSONDecodeError = json.JSONDecodeError
 
 
-def _verbose[**P, R](func: Callable[_P, _R]) -> Callable[_P, _R]:
+def _verbose[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(func)
-    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return func(*args, **kwargs)
         except json.JSONDecodeError as e:

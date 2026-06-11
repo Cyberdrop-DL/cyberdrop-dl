@@ -8,7 +8,7 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from pydantic.types import ByteSize
 
@@ -38,8 +38,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.manager import Manager
 
-    _T = TypeVar("_T")
-    _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +66,16 @@ class CrawlerFactory:
     manager: Manager
     _instances: dict[type[Crawler], Crawler] = dataclasses.field(default_factory=dict)
 
-    def __getitem__(self, obj: type[_CrawlerT]) -> _CrawlerT:
+    def __getitem__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT:
         instance = self.get(obj)
         if instance is None:
             instance = self._instances[obj] = obj(self.manager)
         return instance
 
-    def __contains__(self, obj: type[_CrawlerT]) -> bool:
+    def __contains__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> bool:
         return obj in self._instances
 
-    def get(self, obj: type[_CrawlerT]) -> _CrawlerT | None:
+    def get[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT | None:
         return self._instances.get(obj)  # pyright: ignore[reportReturnType]
 
     def __iter__(self) -> Iterator[Crawler]:
@@ -147,10 +145,10 @@ class ScrapeMapper:
         self.tui.scrape.get_queue = self._scrape_queue
         self.tui.downloads.get_queue = self._download_queue
 
-    def create_task(self, coro: Coroutine[Any, Any, _T]) -> None:
+    def create_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.scrape.create_task(coro)
 
-    def create_download_task(self, coro: Coroutine[Any, Any, _T]) -> None:
+    def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
 
     def _init_crawlers(self) -> None:
@@ -527,7 +525,7 @@ def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *cra
     log_spacer()
 
 
-def _best_match[T](current_map: dict[str, _T], domain: str) -> _T | None:
+def _best_match[T](current_map: dict[str, T], domain: str) -> T | None:
     if found := current_map.get(domain):
         return found
 

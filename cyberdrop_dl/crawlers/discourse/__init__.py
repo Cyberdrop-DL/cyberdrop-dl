@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 _MAX_POSTS_PER_REQUEST = 50
-_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
@@ -66,7 +65,9 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
             case _:
                 raise ValueError
 
-    async def make_request(self, model_cls: type[_ModelT], path: str, params: dict[str, Any] | None = None) -> _ModelT:
+    async def make_request[ModelT: BaseModel](
+        self, model_cls: type[ModelT], path: str, params: dict[str, Any] | None = None
+    ) -> ModelT:
         api_url = self.PRIMARY_URL.joinpath(path)
         json_text = await self.request_text(api_url, params=params)
         return model_cls.model_validate_json(json_text, by_alias=True, by_name=True)

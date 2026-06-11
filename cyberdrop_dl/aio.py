@@ -12,7 +12,7 @@ import tempfile
 import time
 from pathlib import Path
 from stat import S_ISREG
-from typing import IO, TYPE_CHECKING, Any, AnyStr, ParamSpec, Self, TypeVar, TypeVarTuple, cast, overload
+from typing import IO, TYPE_CHECKING, Any, AnyStr, Self, cast, overload
 from weakref import WeakValueDictionary
 
 from aiolimiter.leakybucket import AsyncLimiter
@@ -35,13 +35,6 @@ if TYPE_CHECKING:
     from _typeshed import OpenBinaryMode, OpenTextMode
 
 
-_T = TypeVar("_T")
-_T1 = TypeVar("_T1")
-_T2 = TypeVar("_T2")
-_T3 = TypeVar("_T3")
-_Ts = TypeVarTuple("_Ts")
-_R = TypeVar("_R")
-_P = ParamSpec("_P")
 _MISSING = Sentinel("_MISSING")
 
 
@@ -51,11 +44,11 @@ class _AsyncChain:
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
 
-    def __call__(self, *async_iterables: AsyncIterable[_T]) -> AsyncGenerator[_T]:
+    def __call__[T](self, *async_iterables: AsyncIterable[T]) -> AsyncGenerator[T]:
         return self.from_iterable(async_iterables)
 
     @staticmethod
-    async def from_iterable(async_iterables: Iterable[AsyncIterable[_T]]) -> AsyncGenerator[_T]:
+    async def from_iterable[T](async_iterables: Iterable[AsyncIterable[T]]) -> AsyncGenerator[T]:
         for a_iterable in async_iterables:
             async for value in a_iterable:
                 yield value
@@ -64,14 +57,14 @@ class _AsyncChain:
 chain = _AsyncChain()
 
 
-async def peek_first[T](async_iterable: AsyncIterable[_T], /) -> tuple[_T, AsyncGenerator[_T, None]]:
+async def peek_first[T](async_iterable: AsyncIterable[T], /) -> tuple[T, AsyncGenerator[T, None]]:
     async_iterator = aiter(async_iterable)
     try:
         first = await anext(async_iterator)
     except StopAsyncIteration as e:
         raise e.__cause__ or e from None
 
-    async def yield_again() -> AsyncGenerator[_T, None]:
+    async def yield_again() -> AsyncGenerator[T, None]:
         yield first
 
     return first, chain(yield_again(), async_iterator)
@@ -85,9 +78,9 @@ class WeakAsyncLocks[T]:
     lock that does not exists, a new lock will be created.
     """
 
-    _locks: WeakValueDictionary[_T, asyncio.Lock] = dataclasses.field(init=False, default_factory=WeakValueDictionary)
+    _locks: WeakValueDictionary[T, asyncio.Lock] = dataclasses.field(init=False, default_factory=WeakValueDictionary)
 
-    def __getitem__(self, key: _T, /) -> asyncio.Lock:
+    def __getitem__(self, key: T, /) -> asyncio.Lock:
         lock = self._locks.get(key)
         if lock is None:
             self._locks[key] = lock = asyncio.Lock()
@@ -120,7 +113,7 @@ class RateLimiter(AsyncLimiter):
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class _CachedValue[T]:
-    value: _T
+    value: T
     ttl: float
     created_at: float = dataclasses.field(init=False, default_factory=time.monotonic)
 
@@ -129,24 +122,22 @@ class _CachedValue[T]:
         return time.monotonic() - self.created_at >= self.ttl
 
 
-def cache_wrapper(
+def cache_wrapper[T](
     *, ttl: float | None = None
-) -> Callable[[Callable[[], Awaitable[_T]]], Callable[[], CoroutineType[Any, Any, _T]]]:
+) -> Callable[[Callable[[], Awaitable[T]]], Callable[[], CoroutineType[Any, Any, T]]]:
 
     return lambda x: cached(x, ttl=ttl)
 
 
-def cached[T](
-    fn: Callable[[], Awaitable[_T]], *, ttl: float | None = None
-) -> Callable[[], CoroutineType[Any, Any, _T]]:
+def cached[T](fn: Callable[[], Awaitable[T]], *, ttl: float | None = None) -> Callable[[], CoroutineType[Any, Any, T]]:
     if ttl is None:
         return _perpetual_cache(fn)
 
     lock = asyncio.Lock()
-    cached_value: _CachedValue[_T] | None = None
+    cached_value: _CachedValue[T] | None = None
 
     @functools.wraps(fn)
-    async def wrapper() -> _T:
+    async def wrapper() -> T:
         nonlocal cached_value
         async with lock:
             if cached_value is not None and not cached_value.has_expired:
@@ -159,19 +150,19 @@ def cached[T](
     return wrapper
 
 
-def _perpetual_cache[T](fn: Callable[[], Awaitable[_T]]) -> Callable[[], CoroutineType[Any, Any, _T]]:
+def _perpetual_cache[T](fn: Callable[[], Awaitable[T]]) -> Callable[[], CoroutineType[Any, Any, T]]:
     lock = asyncio.Lock()
-    cached_value: _T | Sentinel = _MISSING
+    cached_value: T | Sentinel = _MISSING
 
     @functools.wraps(fn)
-    async def wrapper() -> _T:
+    async def wrapper() -> T:
         nonlocal cached_value
         if cached_value is not _MISSING:
-            return cast("_T", cached_value)
+            return cast("T", cached_value)
 
         async with lock:
             if cached_value is not _MISSING:
-                return cast("_T", cached_value)
+                return cast("T", cached_value)
 
             cached_value = await fn()
 
@@ -220,28 +211,28 @@ class AsyncIOWrapper[AnyStr: (bytes, str)]:
 
 @dataclasses.dataclass(slots=True, eq=False)
 class AsyncIteratorWrapper[T]:
-    _coro: Awaitable[Iterable[_T]]
-    _iterator: Iterator[_T] | None = dataclasses.field(default=None, init=False)
+    _coro: Awaitable[Iterable[T]]
+    _iterator: Iterator[T] | None = dataclasses.field(default=None, init=False)
 
     def __aiter__(self) -> Self:
         return self
 
-    async def __anext__(self) -> _T:
+    async def __anext__(self) -> T:
         if self._iterator is None:
             self._iterator = iter(await self._coro)
         value = await asyncio.to_thread(next, self._iterator, _MISSING)
         if value is _MISSING:
             raise StopAsyncIteration from None
 
-        return cast("_T", value)
+        return cast("T", value)
 
 
-async def gather[T](*coros: Awaitable[_T]) -> list[_T]:
+async def gather[T](*coros: Awaitable[T]) -> list[T]:
     """Like asyncio.gather but an exception on any coro cancels all pending coros
 
     AKA: all or nothing"""
 
-    async def wrap(coro: Awaitable[_R]) -> _R:
+    async def wrap(coro: Awaitable[T]) -> T:
         return await coro
 
     async with asyncio.TaskGroup() as tg:
@@ -251,24 +242,24 @@ async def gather[T](*coros: Awaitable[_T]) -> list[_T]:
 
 
 @overload
-async def safe_gather[T1](coro: Awaitable[_T1], /) -> tuple[_T1]: ...
+async def safe_gather[T1](coro: Awaitable[T1], /) -> tuple[T1]: ...
 @overload
-async def safe_gather[T1, T2](coro_1: Awaitable[_T1], coro_2: Awaitable[_T2], /) -> tuple[_T1, _T2]: ...
+async def safe_gather[T1, T2](coro_1: Awaitable[T1], coro_2: Awaitable[T2], /) -> tuple[T1, T2]: ...
 @overload
 async def safe_gather[T1, T2, T3](
-    coro_1: Awaitable[_T1],
-    coro_2: Awaitable[_T2],
-    coro_3: Awaitable[_T3],
+    coro_1: Awaitable[T1],
+    coro_2: Awaitable[T2],
+    coro_3: Awaitable[T3],
     /,
-) -> tuple[_T1, _T2, _T3]: ...
+) -> tuple[T1, T2, T3]: ...
 
 
 async def safe_gather[T1, T2, T3](
-    coro_1: Awaitable[_T1],
-    coro_2: Awaitable[_T2] | None = None,
-    coro_3: Awaitable[_T3] | None = None,
+    coro_1: Awaitable[T1],
+    coro_2: Awaitable[T2] | None = None,
+    coro_3: Awaitable[T3] | None = None,
     /,
-) -> Sequence[_T]:
+) -> Sequence[T1 | T2 | T3]:
     """Like `asyncio.gather(*coros, return_exceptions=True)`, but all exceptions are re-raised as an ExceptionGroup
 
     This makes errors deterministic"""
@@ -278,16 +269,16 @@ async def safe_gather[T1, T2, T3](
     errors = tuple(r for r in results if isinstance(r, BaseException))
     if errors:
         raise BaseExceptionGroup("", errors)
-    return cast("list[_T]", results)
+    return cast("list[T1 | T2 | T3]", results)
 
 
 async def map[T, R](
-    coro_factory: Callable[[_T], Awaitable[_R]],
-    params: Iterable[_T],
+    coro_factory: Callable[[T], Awaitable[R]],
+    params: Iterable[T],
     /,
     *,
     task_limit: asyncio.BoundedSemaphore | int | None,
-) -> list[_R]:
+) -> list[R]:
     """Map an async factory over a sequence of arguments with optional concurrency cap.
 
     If `task_limit` is given, no more than that many coroutines will be “in flight” at the same time,
@@ -296,12 +287,12 @@ async def map[T, R](
 
 
 async def map_tuples[*Ts, R](
-    coro_factory: Callable[[*_Ts], Awaitable[_R]],
-    params_batched: Iterable[tuple[*_Ts]],
+    coro_factory: Callable[[*Ts], Awaitable[R]],
+    params_batched: Iterable[tuple[*Ts]],
     /,
     *,
     task_limit: asyncio.BoundedSemaphore | int | None = None,
-) -> list[_R]:
+) -> list[R]:
     """Map an async factory over a sequence of arguments with optional concurrency cap.
 
     If `task_limit` is given, no more than that many coroutines will be “in flight” at the same time,
@@ -311,9 +302,9 @@ async def map_tuples[*Ts, R](
 
     semaphore = asyncio.BoundedSemaphore(task_limit) if isinstance(task_limit, int) else task_limit
 
-    tasks: list[asyncio.Task[_R]] = []
+    tasks: list[asyncio.Task[R]] = []
 
-    async def run(coro: Awaitable[_R]) -> _R:
+    async def run(coro: Awaitable[R]) -> R:
         try:
             return await coro
         finally:
@@ -328,7 +319,7 @@ async def map_tuples[*Ts, R](
     return [t.result() for t in tasks]
 
 
-def run[T](coro: Coroutine[Any, Any, _T]) -> _T:
+def run[T](coro: Coroutine[Any, Any, T]) -> T:
     def loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
         loop.set_task_factory(asyncio.eager_task_factory)
@@ -338,10 +329,10 @@ def run[T](coro: Coroutine[Any, Any, _T]) -> _T:
         return runner.run(coro)
 
 
-def to_thread[**P, R](fn: Callable[_P, _R]) -> Callable[_P, Coroutine[None, None, _R]]:
+def to_thread[**P, R](fn: Callable[P, R]) -> Callable[P, Coroutine[None, None, R]]:
     """Convert a blocking callable into an async callable that runs in another thread"""
 
-    async def async_run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+    async def async_run(*args: P.args, **kwargs: P.kwargs) -> R:
         return await asyncio.to_thread(fn, *args, **kwargs)
 
     return async_run

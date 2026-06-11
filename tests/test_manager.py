@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -15,10 +15,8 @@ from cyberdrop_dl.sorter import Sorter
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
-    _M = TypeVar("_M", bound=BaseModel)
 
-
-def update_model[M: BaseModel](model: _M, **kwargs: Any) -> _M:
+def update_model[M: BaseModel](model: M, **kwargs: Any) -> M:
     return model.model_validate(model.model_dump() | kwargs)
 
 

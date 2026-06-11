@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated, Self, TypeVar
+from typing import TYPE_CHECKING, Annotated, Self
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.manager import AppData, Manager
 
-    _BaseModelT = TypeVar("_BaseModelT", bound=BaseModel)
 
 _app: App | None = None
 
@@ -71,7 +70,7 @@ class Config(BaseModel):
         return _coerce(*bound.args, **bound.kwargs)
 
 
-def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[_BaseModelT]) -> _BaseModelT:
+def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[BaseModelT]) -> BaseModelT:
     try:
         content = yaml.load(file)
     except FileNotFoundError:

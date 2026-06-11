@@ -14,9 +14,9 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, ParamSpec, Self, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, final
 
-from typing_extensions import TypeVar, deprecated
+from typing_extensions import deprecated
 
 from cyberdrop_dl import aio, env, signature
 from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin, RequestContext
@@ -61,11 +61,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_P = ParamSpec("_P")
-_R = TypeVar("_R")
-_T = TypeVar("_T")
 
-type OneOrTuple[_T] = _T | tuple[_T, ...]
+type OneOrTuple[T] = T | tuple[T, ...]
 type SupportedPaths = dict[str, OneOrTuple[str]]
 type SupportedDomains = OneOrTuple[str]
 type RateLimit = tuple[float, float]
@@ -365,7 +362,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return self.manager.scrape_mapper
 
     @final
-    def create_task(self, coro: Coroutine[Any, Any, _T]) -> None:
+    def create_task(self, coro: Coroutine[Any, Any, Any]) -> None:
         _ = self.scrape_mapper.create_task(coro)
 
     @abstractmethod
@@ -936,9 +933,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             )
 
 
-_CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
-
-
 class API(HTTPMixin, ABC):
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
     @final
@@ -1040,12 +1034,12 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTup
 
 
 def auto_task_id[CrawlerT: Crawler, **P, R](
-    func: Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]],
-) -> Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]]:
+    func: Callable[Concatenate[CrawlerT, ScrapeItem, P], Coroutine[None, None, R]],
+) -> Callable[Concatenate[CrawlerT, ScrapeItem, P], Coroutine[None, None, R]]:
     """Autocreate a new `task_id` from the scrape_item of the method"""
 
     @wraps(func)
-    async def wrapper(self: _CrawlerT, scrape_item: ScrapeItem, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+    async def wrapper(self: CrawlerT, scrape_item: ScrapeItem, *args: P.args, **kwargs: P.kwargs) -> R:
         with self.new_task_id(scrape_item.url):
             return await func(self, scrape_item, *args, **kwargs)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import timedelta
-from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt, TypeVar
+from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt
 
 from pydantic import ByteSize, TypeAdapter
 
@@ -18,8 +18,6 @@ _DATE_PATTERN = re.compile(_DATE_PATTERN_REGEX, re.IGNORECASE)
 _BYTE_SIZE_ADAPTER = TypeAdapter(ByteSize)
 
 type _ConvertibleToInt = str | SupportsInt | SupportsIndex
-_T = TypeVar("_T")
-_T2 = TypeVar("_T2")
 
 
 def bytesize_to_str(value: _ConvertibleToInt) -> str:
@@ -98,16 +96,16 @@ def to_timedelta(input_date: timedelta | str | int) -> timedelta | str:
         return input_date  # Let pydantic try to validate this
 
 
-def falsy_as[T, T2](value: _T | Literal[""] | None, default: _T2) -> _T | _T2:
+def falsy_as[T, T2](value: T | Literal[""] | None, default: T2) -> T | T2:
     if isinstance(value, str) and value.casefold() in {"none", "null"}:
         return default
 
     return value or default
 
 
-def falsy_as_list[T](value: list[_T] | Literal[""] | None) -> list[_T]:
+def falsy_as_list[T](value: list[T] | Literal[""] | None) -> list[T]:
     return falsy_as(value, [])
 
 
-def falsy_as_none[T](value: _T | Literal[""] | None) -> _T | None:
+def falsy_as_none[T](value: T | Literal[""] | None) -> T | None:
     return falsy_as(value, None)

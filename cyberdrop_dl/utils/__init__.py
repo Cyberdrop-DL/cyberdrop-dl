@@ -5,7 +5,7 @@ import itertools
 import logging
 import platform
 import sys
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl.utils._dataclasses import DictDataclass, deserialize, filter_data, type_adapter  # noqa: F401
 from cyberdrop_dl.utils._errors import error_handling_context, error_handling_wrapper  # noqa: F401
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
 
 
-_T = TypeVar("_T")
 logger = logging.getLogger(__name__)
 
 
@@ -137,8 +136,8 @@ def basic_auth(username: str, password: str) -> str:
     return f"Basic {token}"
 
 
-def unique[T](itr: Iterable[_T], /) -> Generator[_T]:
-    seen: set[_T] = set()
+def unique[T](itr: Iterable[T], /) -> Generator[T]:
+    seen: set[T] = set()
     for ele in itr:
         if ele not in seen:
             seen.add(ele)

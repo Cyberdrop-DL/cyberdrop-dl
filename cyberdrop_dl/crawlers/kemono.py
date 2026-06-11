@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Generator
 from datetime import datetime  # noqa: TC003
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, NamedTuple, ParamSpec
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, NamedTuple
 
 from pydantic import BeforeValidator, Field
 
@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
-
-    _P = ParamSpec("_P")
 
 
 _DEFAULT_PAGE_SIZE = 50
@@ -162,12 +160,12 @@ class PartialUserPost(NamedTuple):
 
 
 def fallback_if_no_api[**P](
-    func: Callable[Concatenate[KemonoBaseCrawler, _P], Coroutine[None, None, None]],
-) -> Callable[Concatenate[KemonoBaseCrawler, _P], Coroutine[None, None, None]]:
+    func: Callable[Concatenate[KemonoBaseCrawler, P], Coroutine[None, None, None]],
+) -> Callable[Concatenate[KemonoBaseCrawler, P], Coroutine[None, None, None]]:
     """Calls a fallback method is the current instance does not define an API"""
 
     @functools.wraps(func)
-    async def wrapper(self: KemonoBaseCrawler, *args: _P.args, **kwargs: _P.kwargs) -> None:
+    async def wrapper(self: KemonoBaseCrawler, *args: P.args, **kwargs: P.kwargs) -> None:
         if getattr(self, "API_ENTRYPOINT", None):
             return await func(self, *args, **kwargs)
 
