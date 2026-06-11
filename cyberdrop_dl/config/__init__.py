@@ -71,7 +71,7 @@ class Config(BaseModel):
         return _coerce(*bound.args, **bound.kwargs)
 
 
-def _load_config_file(file: Path, model: type[_BaseModelT]) -> _BaseModelT:
+def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[_BaseModelT]) -> _BaseModelT:
     try:
         content = yaml.load(file)
     except FileNotFoundError:

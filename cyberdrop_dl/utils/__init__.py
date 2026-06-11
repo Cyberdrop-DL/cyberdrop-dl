@@ -137,7 +137,7 @@ def basic_auth(username: str, password: str) -> str:
     return f"Basic {token}"
 
 
-def unique(itr: Iterable[_T], /) -> Generator[_T]:
+def unique[T](itr: Iterable[_T], /) -> Generator[_T]:
     seen: set[_T] = set()
     for ele in itr:
         if ele not in seen:

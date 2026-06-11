@@ -42,7 +42,7 @@ def is_error_wrapped(method: object) -> bool:
     return getattr(method, _ERROR_WRAPPER_ATTR, False)
 
 
-def _mark_as_safe(fn: _T) -> _T:
+def _mark_as_safe[T](fn: _T) -> _T:
     setattr(fn, _ERROR_WRAPPER_ATTR, True)
     return fn
 
@@ -158,18 +158,18 @@ def _log_error(  # noqa: PLR0913
 
 
 @overload
-def error_handling_wrapper(
+def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaItem | yarl.URL, **P, R](
     func: Callable[Concatenate[_HasManagerT, _Origin, _P], _R],
 ) -> Callable[Concatenate[_HasManagerT, _Origin, _P], _R]: ...
 
 
 @overload
-def error_handling_wrapper(
+def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaItem | yarl.URL, **P, R](
     func: Callable[Concatenate[_HasManagerT, _Origin, _P], Coroutine[None, None, _R]],
 ) -> Callable[Concatenate[_HasManagerT, _Origin, _P], Coroutine[None, None, _R]]: ...
 
 
-def error_handling_wrapper(
+def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaItem | yarl.URL, **P, R](
     func: Callable[Concatenate[_HasManagerT, _Origin, _P], _R | Coroutine[None, None, _R]],
 ) -> Callable[Concatenate[_HasManagerT, _Origin, _P], _R | Coroutine[None, None, _R]]:
     """Wrapper handles errors for url scraping."""

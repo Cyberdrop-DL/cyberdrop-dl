@@ -82,7 +82,7 @@ class JSDecoder(json.JSONDecoder):
 JSONDecodeError = json.JSONDecodeError
 
 
-def _verbose(func: Callable[_P, _R]) -> Callable[_P, _R]:
+def _verbose[**P, R](func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:

@@ -161,7 +161,7 @@ class PartialUserPost(NamedTuple):
         return PartialUserPost(**params)
 
 
-def fallback_if_no_api(
+def fallback_if_no_api[**P](
     func: Callable[Concatenate[KemonoBaseCrawler, _P], Coroutine[None, None, None]],
 ) -> Callable[Concatenate[KemonoBaseCrawler, _P], Coroutine[None, None, None]]:
     """Calls a fallback method is the current instance does not define an API"""

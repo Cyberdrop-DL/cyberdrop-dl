@@ -527,7 +527,7 @@ def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *cra
     log_spacer()
 
 
-def _best_match(current_map: dict[str, _T], domain: str) -> _T | None:
+def _best_match[T](current_map: dict[str, _T], domain: str) -> _T | None:
     if found := current_map.get(domain):
         return found
 

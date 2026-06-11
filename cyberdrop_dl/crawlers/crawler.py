@@ -65,10 +65,11 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 _T = TypeVar("_T")
 
-OneOrTuple = _T | tuple[_T, ...]
-SupportedPaths = dict[str, OneOrTuple[str]]
-SupportedDomains = OneOrTuple[str]
-RateLimit = tuple[float, float]
+type OneOrTuple[_T] = _T | tuple[_T, ...]
+type SupportedPaths = dict[str, OneOrTuple[str]]
+type SupportedDomains = OneOrTuple[str]
+type RateLimit = tuple[float, float]
+
 SKIP_DOWNLOAD: ContextVar[bool] = ContextVar("SKIP_DOWNLOAD", default=False)
 ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
 ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
@@ -1038,7 +1039,7 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTup
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
 
 
-def auto_task_id(
+def auto_task_id[CrawlerT: Crawler, **P, R](
     func: Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]],
 ) -> Callable[Concatenate[_CrawlerT, ScrapeItem, _P], Coroutine[None, None, _R]]:
     """Autocreate a new `task_id` from the scrape_item of the method"""

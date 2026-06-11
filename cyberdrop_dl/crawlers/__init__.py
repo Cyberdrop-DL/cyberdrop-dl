@@ -14,14 +14,14 @@ if TYPE_CHECKING:
     _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 
-def create_crawlers(
+def create_crawlers[CrawlerT: Crawler](
     urls: Iterable[str] | Iterable[AbsoluteHttpURL], base_crawler: type[_CrawlerT]
 ) -> set[type[_CrawlerT]]:
     """Creates new subclasses of the base crawler from the urls"""
     return {_create_subclass(url, base_crawler) for url in urls}
 
 
-def _create_subclass(url: AbsoluteHttpURL | str, base_class: type[_CrawlerT]) -> type[_CrawlerT]:
+def _create_subclass[CrawlerT: Crawler](url: AbsoluteHttpURL | str, base_class: type[_CrawlerT]) -> type[_CrawlerT]:
     url = AbsoluteHttpURL(url)
     assert is_absolute_http_url(url)
     primary_url = remove_trailing_slash(url)

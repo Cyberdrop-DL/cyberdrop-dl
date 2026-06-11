@@ -29,11 +29,13 @@ def _fields(cls: type[_DataClass]) -> tuple[str, ...]:
     return fields
 
 
-def filter_data(cls: type[_DataClassT], data: Mapping[str, Any], /) -> dict[str, Any]:
+def filter_data[DataClassT: _DataClass](cls: type[_DataClassT], data: Mapping[str, Any], /) -> dict[str, Any]:
     return {name: value for name in _fields(cls) if (value := data.get(name, _MISSING)) is not _MISSING}
 
 
-def deserialize(cls: type[_DataClassT], data: Mapping[str, Any], /, **overrides: Any) -> _DataClassT:
+def deserialize[DataClassT: _DataClass](
+    cls: type[_DataClassT], data: Mapping[str, Any], /, **overrides: Any
+) -> _DataClassT:
     """Parses 'data' to build an instance of 'cls' without type validation"""
     data = filter_data(cls, data)
     if overrides:
@@ -41,7 +43,7 @@ def deserialize(cls: type[_DataClassT], data: Mapping[str, Any], /, **overrides:
     return cls(**data)
 
 
-def type_adapter(cls: type[_DataClassT]) -> TypeAdapter[_DataClassT]:
+def type_adapter[DataClassT: _DataClass](cls: type[_DataClassT]) -> TypeAdapter[_DataClassT]:
     """Get a type adapter for this class.
 
     Type adapters are cached. Multiple calls return the same adapter"""

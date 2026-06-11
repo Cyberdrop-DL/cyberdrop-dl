@@ -34,7 +34,7 @@ def merge_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:
 M = TypeVar("M", bound=BaseModel)
 
 
-def merge_models(default: M, new: M) -> M:
+def merge_models[M: BaseModel](default: M, new: M) -> M:
     default_dict = default.model_dump()
     new_dict = new.model_dump(exclude_unset=True)
 

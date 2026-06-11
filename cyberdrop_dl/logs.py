@@ -211,7 +211,7 @@ def _threaded_logger(
 
 
 @contextlib.contextmanager
-def _enter_context(context_var: ContextVar[_T], value: _T, /) -> Generator[None]:
+def _enter_context[T](context_var: ContextVar[_T], value: _T, /) -> Generator[None]:
     token = context_var.set(value)
     try:
         yield
