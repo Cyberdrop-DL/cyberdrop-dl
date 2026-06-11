@@ -5,9 +5,7 @@ import dataclasses
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Literal, override
 
 from cyberdrop_dl import ffmpeg
 from cyberdrop_dl.exceptions import DownloadError

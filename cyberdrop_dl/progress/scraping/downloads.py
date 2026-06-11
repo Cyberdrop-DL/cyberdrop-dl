@@ -7,7 +7,7 @@ import itertools
 import random
 from contextvars import ContextVar
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, final, override
 
 from rich.jupyter import JupyterMixin
 from rich.measure import Measurement
@@ -24,7 +24,6 @@ from rich.progress import (
 )
 from rich.table import Column
 from rich.text import Text
-from typing_extensions import override
 
 from cyberdrop_dl.progress import (
     Color,

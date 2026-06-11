@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, final, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError

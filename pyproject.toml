@@ -169,9 +169,6 @@ ignore = [
 [tool.ruff.lint.flake8-boolean-trap]
 extend-allowed-calls = ["cyberdrop_dl.logs._enter_context"]
 
-[tool.ruff.lint.flake8-tidy-imports.banned-api]
-"typing.override".msg = "Use typing_extensions.override instead."
-
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,docs,scripts}/*" = [
     "E402",  # imports not at the top of the file.

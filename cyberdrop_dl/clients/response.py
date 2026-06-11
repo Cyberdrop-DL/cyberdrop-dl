@@ -6,7 +6,7 @@ import datetime
 import json
 from abc import ABC, abstractmethod
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final
+from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final, override
 
 import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from curl_cffi.requests.models import Response as CurlResponse
 from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
-from typing_extensions import TypeVar, override
+from typing_extensions import TypeVar
 
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError

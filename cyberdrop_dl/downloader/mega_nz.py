@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, final
+from typing import TYPE_CHECKING, Any, final, override
 
 from mega.chunker import MegaChunker, get_chunks
-from typing_extensions import override
 
 from cyberdrop_dl import aio, storage
 from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker

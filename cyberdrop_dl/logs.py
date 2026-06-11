@@ -10,14 +10,13 @@ from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, ClassVar, TypeVar, final, override
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
 from rich.logging import RichHandler
 from rich.padding import Padding
 from rich.text import Text, TextType
-from typing_extensions import override
 
 from cyberdrop_dl import env
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup

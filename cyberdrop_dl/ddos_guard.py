@@ -6,11 +6,10 @@ import hashlib
 import json
 import os
 import sys
-from typing import TYPE_CHECKING, Protocol, final
+from typing import TYPE_CHECKING, Protocol, final, override
 
 import yarl
 from bs4 import BeautifulSoup
-from typing_extensions import override
 
 from cyberdrop_dl.exceptions import DDOSGuardError
 

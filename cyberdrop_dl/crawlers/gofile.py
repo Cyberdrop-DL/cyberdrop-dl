@@ -12,8 +12,7 @@ from cyberdrop_dl.utils import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
-
-    from typing_extensions import ReadOnly
+    from typing import ReadOnly
 
 
 _API_ENTRYPOINT = AbsoluteHttpURL("https://api.gofile.io")
