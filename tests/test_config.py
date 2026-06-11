@@ -146,10 +146,12 @@ class TestRuntimeLogsConfig:
         assert default.effective_console_log_level == expected.effective_console_log_level
 
     def test_falsy_console_log_level(self) -> None:
-        for a, b in [(30, None), (40, ""), (20, "none")]:
-            config = self.parse(a, b)
-            assert config.effective_log_level == a
-            assert config.effective_console_log_level == a
+        for name, level, console_level in [("warning", 30, None), ("error", 40, ""), ("info", 20, "none")]:
+            config = self.parse(name, console_level)
+            assert config.log_level == name.upper()
+            assert config.console_log_level is None
+            assert config.effective_log_level == level
+            assert config.effective_console_log_level == level
 
 
 def test_default_config_does_not_need_ffmpeg() -> None:
