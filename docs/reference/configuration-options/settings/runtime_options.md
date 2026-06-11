@@ -4,15 +4,11 @@ These are higher level options that effect the overarching functions of the prog
 
 ## `console_log_level`
 
-| Type             | Default |
-| ---------------- | ------- |
-| `NonNegativeInt` | `100`   |
+| Type                                            | Default |
+| ----------------------------------------------- | ------- |
+| `DEBUG, INFO, WARNING, ERROR, CRITICAL or None` | `None`  |
 
-Same as `log_level` but it controls which messages are shown on the console.
-
-{% hint style="info" %}
-This option is ignored unless CDL is running with `--ui DISABLED`
-{% endhint %}
+Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`
 
 ## `deep_scrape`
 
@@ -91,36 +87,22 @@ This option has no effect unless `send_unsupported_to_jdownloader` is `true`
 
 ## `log_level`
 
-| Type             | Default |
-| ---------------- | ------- |
-| `NonNegativeInt` | `10`    |
+| Type                                    | Default |
+| --------------------------------------- | ------- |
+| `DEBUG, INFO, WARNING, ERROR, CRITICAL` | `DEBUG` |
 
-Defines the logging level for messages, according to [Python logging levels](https://docs.python.org/3/library/logging.html#levels). Only messages with a level equal or greater than this setting will be logged, with the exception of `NOTSET` which will disable all logging messages. Setting a value above 50 will also disable logging entirely.
+Only log messages of this level or higher to the main log file, according to [Python logging levels](https://docs.python.org/3/library/logging.html#levels).
 
-| Level      | Value | Description                                                                                                    |
-| ---------- | ----- | -------------------------------------------------------------------------------------------------------------- |
-| `NOTSET`   | 0     | Disables all log messages                                                                                      |
-| `DEBUG`    | 10    | Offers detailed information, typically useful to troubleshoot problems                                         |
-| `INFO`     | 20    | Provides general information about scrape and download progress                                                |
+| Level      | Value | Description                                                                                        |
+| ---------- | ----- | -------------------------------------------------------------------------------------------------- |
+| `DEBUG`    | 10    | Offers detailed information, typically useful to troubleshoot problems                             |
+| `INFO`     | 20    | Provides general information about scrape and download progress                                    |
 | `WARNING`  | 30    | Potential issues or something that might need attention (e.g. `Login wasn't provided for <FORUM>`) |
-| `ERROR`    | 40    | Serious problem preventing Cyberdrop-DL to execute some function                                     |
-| `CRITICAL` | 50    | Fatal error that causes Cyberdrop-DL to exit immediately                                                       |
+| `ERROR`    | 40    | Serious problem preventing Cyberdrop-DL to execute some function                                   |
+| `CRITICAL` | 50    | Fatal error that causes Cyberdrop-DL to exit immediately                                           |
 
 {% hint style="info" %}
 Using anything other that `DEBUG` makes troubleshooting issues harder. Practically speaking, you should _only_ change this if you expect CDL to run for an extended period (with a large number of input URLs) to minimize the log files sizes
-{% endhint %}
-
-{% hint style="info" %}
-There is one more verbose level of logs: `DEVELOPER`
-
-It includes pager logs, posts logs, individual requests logs (their URLs and their response code), requests cache hits and misses, file system locks logs and local variable values from within a traceback. It's not exposed as a config option because it is too verbose.
-
-You can set the environment variable `CDL_DEBUG_LOG_FOLDER` to any valid folder and CDL will create an additional log file with the level set to `DEVELOPER` inside it.
-{% endhint %}
-
-{% hint style="warning" %}
-As the name suggests, the `DEVELOPER` log level is only meant for developers or, more generally, people that want and have the know how
-to troubleshoot CDL issues on their own. You should never share those logs with _anyone_ as it could potentially have raw information in the tracebacks like cookies, auth credentials, IPs, etc.
 {% endhint %}
 
 ## `send_unsupported_to_jdownloader`
