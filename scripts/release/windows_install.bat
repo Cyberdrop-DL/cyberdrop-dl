@@ -2,7 +2,6 @@
 setlocal EnableDelayedExpansion
 set "errorlevel="
 set "PACKAGE_VERSION=>=10.0,<11.0"
-set "UV_INSTALL_DIR=%USERPROFILE%\.local\bin"
 set "UV_NO_MODIFY_PATH=1"
 
 if defined UV_INSTALL_DIR (
