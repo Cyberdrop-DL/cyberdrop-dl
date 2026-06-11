@@ -7,7 +7,7 @@ pkg install rust which micro libjpeg-turbo python uv -y
 ANDROID_API_LEVEL=24
 export ANDROID_API_LEVEL
 
-uv tool install cyberdrop-dl-patched
+uv tool install --upgrade --force cyberdrop-dl-patched
 uv tool update-shell
 mkdir /sdcard/cyberdrop-dl
 echo 'alias cyberdrop-dl="cyberdrop-dl --appdata-folder /sdcard/cyberdrop-dl"' >> ~/.bashrc

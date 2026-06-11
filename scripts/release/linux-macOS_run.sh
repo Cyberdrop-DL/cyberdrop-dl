@@ -1,0 +1,3 @@
+#!/bin/sh
+echo Starting cyberdrop-dl...
+cyberdrop-dl-patched
