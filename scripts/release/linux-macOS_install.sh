@@ -3,6 +3,7 @@ set -eu
 
 PACKAGE_VERSION=">=10.0,<11.0"
 UV_INSTALL_DIR="${UV_INSTALL_DIR:-$HOME/.local/bin}"
+export UV_NO_MODIFY_PATH="1"
 
 is_installed() {
     command -v "$1" >/dev/null 2>&1
@@ -25,8 +26,8 @@ else
         exit 1
     fi
     UV_BIN="$UV_INSTALL_DIR/uv"
-    "$UV_BIN" tool update-shell
 fi
 
 echo Installing / Updating cyberdrop-dl...
 "$UV_BIN" tool install -p "<3.14" --no-build --upgrade --force "cyberdrop-dl-patched${PACKAGE_VERSION}"
+"$UV_BIN" tool update-shell

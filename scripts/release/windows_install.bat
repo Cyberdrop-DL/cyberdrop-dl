@@ -3,6 +3,7 @@ setlocal EnableDelayedExpansion
 set "errorlevel="
 set "PACKAGE_VERSION=>=10.0,<11.0"
 set "UV_INSTALL_DIR=%USERPROFILE%\.local\bin"
+set "UV_NO_MODIFY_PATH=1"
 
 if defined UV_INSTALL_DIR (
     set "uv_dir=%UV_INSTALL_DIR%"
@@ -45,8 +46,8 @@ pause
 exit /b 1
 
 :found
-"%uv_bin%" tool update-shell
 echo Installing / Updating cyberdrop-dl...
 "%uv_bin%" tool install --managed-python -p "<3.14" --no-build --upgrade --force "cyberdrop-dl-patched%PACKAGE_VERSION%"
+"%uv_bin%" tool update-shell
 endlocal
 pause
