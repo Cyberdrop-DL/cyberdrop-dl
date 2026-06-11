@@ -146,7 +146,12 @@ class ScrapeMapper:
         self.tui.downloads.get_queue = self._download_queue
 
     def create_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
-        _ = self._task_groups.scrape.create_task(coro)
+
+        async def lazy() -> T:
+            await asyncio.sleep(0)
+            return await coro
+
+        _ = self._task_groups.scrape.create_task(lazy())
 
     def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
