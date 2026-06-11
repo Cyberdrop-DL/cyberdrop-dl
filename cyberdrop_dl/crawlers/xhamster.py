@@ -5,9 +5,9 @@ import codecs
 import dataclasses
 import itertools
 import json
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution

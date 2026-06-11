@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle

@@ -13,7 +13,7 @@ from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
 from cyberdrop_dl import env
-from cyberdrop_dl.compat import CIStrEnum
+from cyberdrop_dl.constants import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
