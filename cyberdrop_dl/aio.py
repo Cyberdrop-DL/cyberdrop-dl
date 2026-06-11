@@ -8,7 +8,6 @@ import contextlib
 import dataclasses
 import functools
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
@@ -328,13 +327,12 @@ async def map_tuples(
 
 
 def run(coro: Coroutine[Any, Any, _T]) -> _T:
-    def _loop_factory() -> asyncio.AbstractEventLoop:
+    def loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
-        if sys.version_info >= (3, 12):
-            loop.set_task_factory(asyncio.eager_task_factory)
+        loop.set_task_factory(asyncio.eager_task_factory)
         return loop
 
-    with asyncio.Runner(loop_factory=_loop_factory) as runner:
+    with asyncio.Runner(loop_factory=loop_factory) as runner:
         return runner.run(coro)
 
 
