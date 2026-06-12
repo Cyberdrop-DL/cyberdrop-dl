@@ -217,11 +217,11 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
         assert not db.schema.up_to_date
         await db.schema.create()
         assert db.schema._version is None
-        assert await db.schema._get_version() is None
+        assert await db.schema.get_version() is None
         version = schema.Version(8, 8, 8)
         await db.schema.update(version)
         assert not db.schema.up_to_date
-        assert await db.schema._get_version() == version
+        assert await db.schema.get_version() == version
         assert db.schema._version == version
         with pytest.raises(DatabaseError):
             db.schema.check_version()

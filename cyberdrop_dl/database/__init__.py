@@ -8,7 +8,7 @@ import aiosqlite
 
 from cyberdrop_dl import aio
 
-from .tables import HashTable, HistoryTable, SchemaVersionTable
+from .tables import HashTable, HistoryTable, SchemaTable
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
@@ -37,14 +37,14 @@ class Database:
 
     history: HistoryTable = dataclasses.field(init=False)
     hash: HashTable = dataclasses.field(init=False)
-    schema: SchemaVersionTable = dataclasses.field(init=False)
+    schema: SchemaTable = dataclasses.field(init=False)
     _conn: aiosqlite.Connection = dataclasses.field(init=False)
     _is_new: bool = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.history = HistoryTable(self)
         self.hash = HashTable(self)
-        self.schema = SchemaVersionTable(self)
+        self.schema = SchemaTable(self)
 
     @property
     def conn(self) -> aiosqlite.Connection:
@@ -53,11 +53,6 @@ class Database:
     async def _connect(self) -> None:
         self._is_new = not await aio.get_size(self._db_path)
         self._conn = await _connect(self._db_path)
-
-    async def exists(self, table: str) -> bool:
-        query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}';"  # noqa: S608
-        row = await self.fetchone(query)
-        return row is not None
 
     async def _create_tables(self) -> None:
         await self.schema.create()
