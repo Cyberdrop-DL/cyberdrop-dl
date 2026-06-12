@@ -249,11 +249,6 @@ class HistoryTable:
         except Exception:
             logger.exception("Error getting bunkr failed via hash")
 
-    async def _get_media_table_columns(self) -> list[Row]:
-        query = "pragma table_info(media)"
-        cursor = await self.db_conn.execute(query)
-        return cast("list[Row]", await cursor.fetchall())
-
 
 async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
     await _fix_domains(db_conn)
