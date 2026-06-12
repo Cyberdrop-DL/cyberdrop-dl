@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Self, override
 
 from cyclopts import Parameter
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
@@ -373,11 +373,26 @@ class Cookies(SettingsGroup):
 
 
 class DupeCleanup(SettingsGroup):
-    add_md5_hash: bool = False
-    add_sha256_hash: bool = False
+    hashes: tuple[Literal["xxh128", "md5", "sha256"], ...] = "xxh128", "md5", "sha256"
     auto_dedupe: bool = True
     hashing: Hashing = Hashing.IN_PLACE
     send_deleted_to_trash: bool = True
+    _extra_hashes: tuple[Literal["md5", "sha256"], ...] = ()
+
+    @override
+    def model_post_init(self, *_) -> None:
+        self.re_compute()
+
+    def re_compute(self) -> None:
+        hashes = set(self.hashes)
+        if (xxhash := "xxh128") not in hashes:
+            self.hashes = xxhash, *hashes
+        hashes.discard(xxhash)
+        self._extra_hashes = tuple(sorted(hashes))  # pyright: ignore[reportAttributeAccessIssue]
+
+    @property
+    def extra_hashes(self) -> tuple[Literal["md5", "sha256"], ...]:
+        return self._extra_hashes
 
 
 @Parameter(name="*")

@@ -53,8 +53,9 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
     n_files = max(count.values())
     algos = count.keys()
     assert len(expected_results) == len(algos) * n_files
-    manager.config.settings.dupe_cleanup_options.add_md5_hash = "md5" in algos
-    manager.config.settings.dupe_cleanup_options.add_sha256_hash = "sha256" in algos
+    options = manager.config.settings.dupe_cleanup_options
+    options.hashes = tuple(algos)  # pyright: ignore[reportAttributeAccessIssue]
+    options.re_compute()
 
     manager.config.settings.files.download_folder.mkdir(parents=True)
     db_path = manager.appdata.db_file
@@ -68,8 +69,9 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
 
 
 async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, manager: Manager) -> None:
-    manager.config.settings.dupe_cleanup_options.add_md5_hash = True
-    manager.config.settings.dupe_cleanup_options.add_sha256_hash = True
+    options = manager.config.settings.dupe_cleanup_options
+    options.hashes = "md5", "sha256"
+    options.re_compute()
     hash_folder = tmp_cwd / "sorted_downloads"
     here = Path(__file__).parent
     files = [hash_folder / f.relative_to(here) for f in here.rglob("*") if f.is_file()]

@@ -1,32 +1,13 @@
 ---
 description: These are options for enable/disable hashing and auto dupe deletion
 ---
+
 # Dupe Cleanup Options
 
 Cyberdrop-DL maintains an internal database of all downloaded files, indexed by their hashes. This can be used to automatically delete newly downloaded files if they were downloaded before. To enable auto dupe cleanup:
 
 1. Set `hashing` to `IN_PLACE` or `POST_DOWNLOAD`
 2. Set `auto_dedupe` to `true`
-
-## `add_md5_hash`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-If enabled, calculates the `md5` hash for every downloaded file and store it in the internal database. This allows the program to match files with sites that provide hash information before downloading them, skipping the download altogether if a match is found
-
-{% hint style="info" %}
-`md5` was the default hashing algorithm of Cyberdrop-DL V5. Since v6, the default algorithm is `xxhash128`.
-{% endhint %}
-
-## `add_sha256_hash`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-If enabled, calculates the `sha256` hash for every downloaded file and store it in the internal database. This allows the program to match files with sites that provide hash information before downloading them, skipping the download altogether if a match is found
 
 ## `auto_dedupe`
 
