@@ -57,12 +57,6 @@ class SchemaVersionTable:
         if row := await cursor.fetchone():
             return Version.parse(row["version"])
 
-    async def __update_schema_version(self, version: Version) -> None:
-        query = "INSERT INTO schema_version (version) VALUES (?)"
-        _ = await self.db_conn.execute(query, (str(version),))
-        await self.db_conn.commit()
-        self._version = version
-
     async def create(self) -> None:
         logger.info(f"Expected database schema: {CURRENT_APP_SCHEMA_VERSION!s}")
         self._version = await self._get_version()
@@ -83,9 +77,12 @@ class SchemaVersionTable:
             self._up_to_date = True
 
     async def update(self, version: Version = CURRENT_APP_SCHEMA_VERSION) -> None:
-        await self.__update_schema_version(version)
-        logger.info(f"Updated database schema to {version!s}")
+        query = "INSERT INTO schema_version (version) VALUES (?)"
+        _ = await self.db_conn.execute(query, (str(version),))
+        await self.db_conn.commit()
+        self._version = version
         self._up_to_date = version >= CURRENT_APP_SCHEMA_VERSION
+        logger.info(f"Updated database schema to {version!s}")
 
 
 async def dump(db_conn: aiosqlite.Connection) -> str:

@@ -9,7 +9,6 @@ import pytest
 from cyberdrop_dl import aio, scrape_mapper
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.database.tables import schema
-from cyberdrop_dl.database.tables.schema import Version
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -207,7 +206,7 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
         await db.schema.create()
         assert db.schema._version is None
         assert await db.schema._get_version() is None
-        version = Version(8, 8, 8)
+        version = schema.Version(8, 8, 8)
         await db.schema.update(version)
         assert not db.schema.up_to_date
         assert await db.schema._get_version() == version

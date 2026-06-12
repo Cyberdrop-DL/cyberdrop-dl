@@ -258,7 +258,6 @@ class HistoryTable:
 async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
     await _fix_domains(db_conn)
     await _fix_referers(db_conn)
-    await db_conn.commit()
 
 
 async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
