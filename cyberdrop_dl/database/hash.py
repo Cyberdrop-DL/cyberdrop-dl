@@ -161,26 +161,3 @@ class HashTable(table.Table):
             logger.exception("Error inserting/updating record")
             return False
         return True
-
-    async def get_all_unique_hashes(self, hash_type: str | None = None) -> list[str]:
-        """Retrieves a list of hashes
-
-        Args:
-            hash_value: The hash value to search for.
-            hash_type: The type of hash[optional]
-
-        Returns:
-            A list of (folder, filename) tuples, or an empty list if no matches found.
-        """
-        if hash_type:
-            query, params = "SELECT DISTINCT hash FROM hash WHERE hash_type =?", (hash_type,)
-
-        else:
-            query, params = "SELECT DISTINCT hash FROM hash", ()
-        try:
-            cursor = await self.db_conn.execute(query, params)
-            rows = await cursor.fetchall()
-            return [row[0] for row in rows]
-        except Exception:
-            logger.exception("Error retrieving folder and filename")
-            return []

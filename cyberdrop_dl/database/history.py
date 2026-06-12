@@ -178,60 +178,12 @@ class HistoryTable(table.Table):
         if row := await cursor.fetchone():
             return row[0]
 
-    async def get_failed_items(self) -> AsyncGenerator[list[Row]]:
-        """Returns a list of failed items."""
-        query = "SELECT referer, download_path,completed_at,created_at FROM media WHERE completed = 0"
-        cursor = await self.db_conn.execute(query)
-        while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
-            yield cast("list[Row]", rows)
-
-    async def get_all_items(self) -> AsyncGenerator[list[Row]]:
-        """Returns a list of all items."""
-        query = """
-        SELECT referer,download_path,completed_at,created_at
-        FROM media ORDER BY completed_at DESC;
-        """
-        cursor = await self.db_conn.execute(query)
-        while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
-            yield cast("list[Row]", rows)
-
     async def get_unique_download_paths(self) -> AsyncGenerator[list[Row]]:
         """Returns a list of unique download paths."""
         query = "SELECT DISTINCT download_path FROM media"
         cursor = await self.db_conn.execute(query)
         while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
             yield cast("list[Row]", rows)
-
-    async def get_all_bunkr_failed(self) -> AsyncGenerator[list[Row]]:
-        async for rows in self.get_all_bunkr_failed_via_hash():
-            yield rows
-        async for rows in self.get_all_bunkr_failed_via_size():
-            yield rows
-
-    async def get_all_bunkr_failed_via_size(self) -> AsyncGenerator[list[Row]]:
-        query = "SELECT referer,download_path,completed_at,created_at from media WHERE file_size=322509;"
-        try:
-            cursor = await self.db_conn.execute(query)
-            while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
-                yield cast("list[Row]", rows)
-
-        except Exception:
-            logger.exception("Error getting bunkr failed via size")
-
-    async def get_all_bunkr_failed_via_hash(self) -> AsyncGenerator[list[Row]]:
-        query = """
-        SELECT m.referer,download_path,completed_at,created_at
-        FROM hash h INNER JOIN media m ON h.download_filename= m.download_filename
-        WHERE h.hash = 'eb669b6362e031fa2b0f1215480c4e30';
-        """
-
-        try:
-            cursor = await self.db_conn.execute(query)
-            while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
-                yield cast("list[Row]", rows)
-
-        except Exception:
-            logger.exception("Error getting bunkr failed via hash")
 
 
 async def apply_fixes(db_conn: aiosqlite.Connection) -> None:

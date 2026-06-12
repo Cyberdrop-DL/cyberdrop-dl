@@ -503,21 +503,3 @@ def _best_match[T](current_map: dict[str, T], domain: str) -> T | None:
     else:
         current_map[domain] = found = current_map[best_match]
         return found
-
-
-async def load_failed_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    async for rows in manager.database.history.get_failed_items():
-        for row in rows:
-            yield _create_item_from_row(row)
-
-
-async def load_all_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    async for rows in manager.database.history.get_all_items():
-        for row in rows:
-            yield _create_item_from_row(row)
-
-
-async def load_all_bunkr_failed_links_via_hash(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    async for rows in manager.database.history.get_all_bunkr_failed():
-        for row in rows:
-            yield _create_item_from_row(row)
