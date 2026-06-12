@@ -213,8 +213,7 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
 
     db = Database(db_file)
     await db._connect()
-    try:    
-
+    try:
         assert not db._is_new
         assert not db.schema.up_to_date
         await db.schema.create()
