@@ -1,4 +1,3 @@
-import datetime
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self
@@ -21,14 +20,6 @@ class CLIargs(BaseModel):
     appdata_folder: Path | None = Field(
         default=None,
         description="AppData folder path",
-    )
-    completed_after: datetime.date | None = Field(
-        default=None,
-        description="only retry downloads that were completed on or after this date",
-    )
-    completed_before: datetime.date | None = Field(
-        default=None,
-        description="only retry downloads that were completed on or before this date",
     )
 
     config_file: Path | None = Field(

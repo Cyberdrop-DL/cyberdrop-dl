@@ -10,7 +10,6 @@ from cyberdrop_dl.database import table
 from cyberdrop_dl.database.definitions import CREATE_HISTORY, CREATE_MEDIA_INDEX
 
 if TYPE_CHECKING:
-    import datetime
     from collections.abc import AsyncGenerator, Callable, Generator
 
     import aiosqlite
@@ -186,14 +185,13 @@ class HistoryTable(table.Table):
         while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
             yield cast("list[Row]", rows)
 
-    async def get_all_items(self, after: datetime.date, before: datetime.date) -> AsyncGenerator[list[Row]]:
+    async def get_all_items(self) -> AsyncGenerator[list[Row]]:
         """Returns a list of all items."""
         query = """
         SELECT referer,download_path,completed_at,created_at
-        FROM media WHERE COALESCE(completed_at, '1970-01-01') BETWEEN ? AND ?
-        ORDER BY completed_at DESC;
+        FROM media ORDER BY completed_at DESC;
         """
-        cursor = await self.db_conn.execute(query, (after.isoformat(), before.isoformat()))
+        cursor = await self.db_conn.execute(query)
         while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
             yield cast("list[Row]", rows)
 

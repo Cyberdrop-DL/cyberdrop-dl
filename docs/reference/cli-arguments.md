@@ -38,30 +38,6 @@ For items not explained below, you can find their counterparts in the configurat
 
 Folder where Cyberdrop-DL will store it's database, cache and config files.
 
-### `completed-after`
-
-| Type   | Default |
-| ------ | ------- |
-| `date` | `None`  |
-
-Only retry downloads that were completed on or after this date. The date should be in ISO 8601 format, for example, `2021-12-23`
-
-{% hint style="info" %}
-This option has no effect unless you run CDL with `--retry-all`
-{% endhint %}
-
-### `completed-before`
-
-| Type   | Default |
-| ------ | ------- |
-| `date` | `None`  |
-
-Only retry downloads that were completed on or before this date. The date should be in ISO 8601 format, for example, `2021-12-23`
-
-{% hint style="info" %}
-This option has no effect unless you run CDL with `--retry-all`
-{% endhint %}
-
 ### `config-file`
 
 | Type   | Default |
@@ -208,6 +184,7 @@ Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
 Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
 
 <!-- START_CLI_OVERVIEW -->
+
 ```shell
 Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
 
@@ -423,4 +400,5 @@ Bulk asynchronous downloader for multiple file hosts
 │ --refresh-rate  [default: 10.0]                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
+
 <!-- END_CLI_OVERVIEW -->
