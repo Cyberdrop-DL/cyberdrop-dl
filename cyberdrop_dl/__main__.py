@@ -32,12 +32,16 @@ def _error_panel(message: RenderableType, title: str = "Error") -> Panel:
 
 
 def run_cdl(args: Sequence[str] | None = None) -> int:
+    from pydantic import ValidationError
+
     from cyberdrop_dl.logs import setup_console_logging
 
     with setup_console_logging():
         try:
             app(args)
-
+        except ValidationError as exc:
+            tb = tracebacks.from_exception(exc.with_traceback(None), chain_traceback=False)
+            app.console.print(_error_panel(tb))
         except CDLConfigRuntimeErrorsGroup as exc_group:
             tb = tracebacks.from_exception(exc_group, chain_traceback=False)
             app.console.print(_error_panel(tb, title="Invalid Config"))
