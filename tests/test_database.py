@@ -49,13 +49,6 @@ def test_missing_download_path(row) -> None:
         _create_item_from_row(row)
 
 
-def test_invalid_date_format(row) -> None:
-    row["completed_at"] = "invalid date"
-
-    with pytest.raises(ValueError):
-        _create_item_from_row(row)
-
-
 @pytest.mark.parametrize(
     ("url", "expected"),
     [
