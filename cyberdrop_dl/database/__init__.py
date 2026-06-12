@@ -23,37 +23,49 @@ async def connect(path: Path) -> aiosqlite.Connection:
 @dataclasses.dataclass(slots=True)
 class Database:
     _db_path: Path
-    ignore_history: bool
+    ignore_history: bool = False
 
     history: HistoryTable = dataclasses.field(init=False)
     hash: HashTable = dataclasses.field(init=False)
     schema: SchemaVersionTable = dataclasses.field(init=False)
     _db_conn: aiosqlite.Connection = dataclasses.field(init=False)
+    _is_new: bool = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.history = HistoryTable(self)
         self.hash = HashTable(self)
         self.schema = SchemaVersionTable(self)
 
-    async def __aenter__(self) -> Self:
-        is_new_db = not await aio.exists(self._db_path)
+    async def _connect(self) -> None:
+        self._is_new = not await aio.get_size(self._db_path)
         self._db_conn = await connect(self._db_path)
+
+    async def exists(self, table: str) -> bool:
+        query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}';"  # noqa: S608
+        row = await self.fetchone(query)
+        return row is not None
+
+    async def _create_tables(self) -> None:
+        await self.schema.create()
+        if not self._is_new:
+            self.schema.check_version()
+        await self._pre_allocate()
+        await self.history.create()
+        await self.hash.create()
+        if self._is_new:
+            await self.schema.update()
+
+    async def __aenter__(self) -> Self:
+        await self._connect()
         try:
-            await self.schema.create()
-            if not is_new_db:
-                self.schema.check_version()
-            await self._pre_allocate()
-            await self.history.create()
-            await self.hash.create()
-            if is_new_db:
-                await self.schema.update()
+            await self._create_tables()
         except Exception:
-            if is_new_db:
+            if self._is_new:
                 await self._db_conn.close()
                 await aio.unlink(self._db_path)
             raise
         else:
-            if not (is_new_db or self.schema.up_to_date):
+            if not (self._is_new or self.schema.up_to_date):
                 await self.history.apply_updates()
                 await self.schema.update()
 

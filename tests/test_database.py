@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from cyberdrop_dl import scrape_mapper
+from cyberdrop_dl import aio, scrape_mapper
+from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.tables.schema import Version
+from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import dates, parse_url
@@ -166,3 +169,49 @@ class TestGetDownloadPath:
         item.retry_path = retry_path = Path("a/retry/path")
         download_path = item.compose_download_path("cyberdrop")
         assert download_path == retry_path
+
+
+async def test_database_creation(tmp_cwd: Path) -> None:
+    db_file = tmp_cwd / "test_db.db"
+    db = Database(db_file)
+    async with db:
+        pass
+
+    assert db._is_new
+    size = await aio.get_size(db_file)
+    assert size
+    assert size >= 100e6
+    assert db.schema.up_to_date
+
+
+async def test_database_version_check(tmp_cwd: Path) -> None:
+    db_file = tmp_cwd / "test_db.db"
+    db = Database(db_file)
+    db_file.touch()
+    await db._connect()
+    try:
+        await db._create_tables()
+        assert db._is_new
+        await db._db_conn.execute("DROP TABLE'schema_version'")
+        await db._db_conn.commit()
+    finally:
+        await db._db_conn.close()
+
+    db = Database(db_file)
+    try:
+        await db._connect()
+
+        assert not db._is_new
+        assert not db.schema.up_to_date
+        await db.schema.create()
+        assert db.schema._version is None
+        assert await db.schema._get_version() is None
+        version = Version(8, 8, 8)
+        await db.schema.update(version)
+        assert not db.schema.up_to_date
+        assert await db.schema._get_version() == version
+        assert db.schema._version == version
+        with pytest.raises(DatabaseError):
+            db.schema.check_version()
+    finally:
+        await db._db_conn.close()
