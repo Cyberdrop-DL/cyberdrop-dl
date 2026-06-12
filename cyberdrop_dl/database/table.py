@@ -22,7 +22,7 @@ class Table(ABC):
     async def create(self) -> None: ...
 
 
-async def table_exists(db_conn: aiosqlite.Connection, table: str) -> bool:
+async def exists(db_conn: aiosqlite.Connection, table: str) -> bool:
     query = "SELECT 1 FROM sqlite_master WHERE type='table' AND name= ? ;"
     cursor = await db_conn.execute(query, (table,))
     return await cursor.fetchone() is not None

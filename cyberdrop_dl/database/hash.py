@@ -5,9 +5,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from cyberdrop_dl.database.tables.common import Table
-
-from .definitions import create_files, create_hash, create_hash_index
+from cyberdrop_dl.database import table
+from cyberdrop_dl.database.definitions import CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX
 
 if TYPE_CHECKING:
     import aiosqlite
@@ -18,14 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True)
-class HashTable(Table):
+class HashTable(table.Table):
     cwd: Path = dataclasses.field(init=False, default_factory=lambda: Path.cwd().expanduser().resolve())
 
     async def create(self) -> None:
         for query in (
-            create_files,
-            create_hash,
-            create_hash_index,
+            CREATE_FILES,
+            CREATE_HASH,
+            CREATE_HASH_INDEX,
         ):
             _ = await self.db_conn.execute(query)
 

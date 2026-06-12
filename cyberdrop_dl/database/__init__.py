@@ -8,7 +8,9 @@ import aiosqlite
 
 from cyberdrop_dl import aio
 
-from .tables import HashTable, HistoryTable, SchemaTable
+from .hash import HashTable
+from .history import HistoryTable
+from .schema import SchemaTable
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable

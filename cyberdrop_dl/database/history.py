@@ -6,9 +6,8 @@ import time
 from sqlite3 import IntegrityError, Row
 from typing import TYPE_CHECKING, Any, cast
 
-from cyberdrop_dl.database.tables.common import Table
-
-from .definitions import create_history, create_media_index
+from cyberdrop_dl.database import table
+from cyberdrop_dl.database.definitions import CREATE_HISTORY, CREATE_MEDIA_INDEX
 
 if TYPE_CHECKING:
     import datetime
@@ -25,10 +24,10 @@ _FETCH_MANY_SIZE: int = 1000
 logger = logging.getLogger(__name__)
 
 
-class HistoryTable(Table):
+class HistoryTable(table.Table):
     async def create(self) -> None:
-        await self.db_conn.execute(create_history)
-        await self.db_conn.executescript(create_media_index)
+        await self.db_conn.execute(CREATE_HISTORY)
+        await self.db_conn.executescript(CREATE_MEDIA_INDEX)
         await self.db_conn.commit()
 
     async def apply_updates(self) -> None:

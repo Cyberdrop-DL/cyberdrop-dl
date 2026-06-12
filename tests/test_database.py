@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, cast
 import pytest
 
 from cyberdrop_dl import aio, database, scrape_mapper
-from cyberdrop_dl.database import Database
-from cyberdrop_dl.database.tables import schema
+from cyberdrop_dl.database import Database, schema
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem

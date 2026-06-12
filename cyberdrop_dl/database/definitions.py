@@ -1,4 +1,4 @@
-create_history = """CREATE TABLE IF NOT EXISTS media (
+CREATE_HISTORY = """CREATE TABLE IF NOT EXISTS media (
   domain TEXT,
   url_path TEXT,
   referer TEXT,
@@ -14,14 +14,14 @@ create_history = """CREATE TABLE IF NOT EXISTS media (
   PRIMARY KEY (domain, url_path, original_filename)
 );"""
 
-create_schema_version = """
+CREATE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
     version VARCHAR(50) NOT NULL PRIMARY KEY,
     applied_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
-create_files = """
+CREATE_FILES = """
 CREATE TABLE IF NOT EXISTS files (
   folder TEXT,
   download_filename TEXT,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS files (
 
 """
 
-create_hash = """
+CREATE_HASH = """
 CREATE TABLE IF NOT EXISTS hash (
   folder TEXT,
   download_filename TEXT,
@@ -43,15 +43,14 @@ CREATE TABLE IF NOT EXISTS hash (
   PRIMARY KEY (folder, download_filename, hash_type),
   FOREIGN KEY (folder, download_filename) REFERENCES files(folder, download_filename)
 );
-
 """
 
 
-create_hash_index = """
+CREATE_HASH_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_hash_type_hash ON hash (hash_type, hash);
 """
 
-create_media_index = """
+CREATE_MEDIA_INDEX = """
 CREATE INDEX IF NOT EXISTS idx_media_referer_completed
     ON media (referer, completed);
 

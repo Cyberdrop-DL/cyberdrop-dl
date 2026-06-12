@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import LiteralString
 
 from cyberdrop_dl import database
-from cyberdrop_dl.database.tables.history import apply_fixes
-from cyberdrop_dl.database.tables.schema import CURRENT_VERSION, Version
+from cyberdrop_dl.database.history import apply_fixes
+from cyberdrop_dl.database.schema import CURRENT_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.filepath import sanitize_filename

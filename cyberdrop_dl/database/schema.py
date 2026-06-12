@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING, NamedTuple, final
 
 import aiosqlite
 
-from cyberdrop_dl.database.tables.common import Table, table_exists
+from cyberdrop_dl.database import table
+from cyberdrop_dl.database.definitions import CREATE_SCHEMA
 from cyberdrop_dl.exceptions import DatabaseError
-
-from .definitions import create_schema_version
 
 if TYPE_CHECKING:
     import aiosqlite
@@ -39,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True)
-class SchemaTable(Table):
+class SchemaTable(table.Table):
     _up_to_date: bool = False
     _version: Version | None = None
 
@@ -48,7 +47,7 @@ class SchemaTable(Table):
         return self._up_to_date
 
     async def get_version(self) -> Version | None:
-        if not await table_exists(self.db_conn, "schema_version"):
+        if not await table.exists(self.db_conn, "schema_version"):
             return None
         query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
         cursor = await self.db_conn.execute(query)
@@ -59,7 +58,7 @@ class SchemaTable(Table):
         logger.info(f"Expected database schema: {CURRENT_VERSION!s}")
         self._version = await self.get_version()
         logger.info(f"Current database schema: {self._version!s}")
-        await self.db_conn.execute(create_schema_version)
+        await self.db_conn.execute(CREATE_SCHEMA)
         await self.db_conn.commit()
 
     def check_version(self) -> None:
