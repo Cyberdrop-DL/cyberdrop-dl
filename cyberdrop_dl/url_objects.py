@@ -229,8 +229,6 @@ class ScrapeItem:
     parent_threads: set[AbsoluteHttpURL] = dataclasses.field(default_factory=set, init=False)
 
     type: ScrapeItemType | None = dataclasses.field(default=None, init=False)
-    completed_at: int | None = dataclasses.field(default=None, init=False)
-    created_at: int | None = dataclasses.field(default=None, init=False)
     children_limits: list[int] = dataclasses.field(default_factory=list, init=False)
 
     password: str | None = dataclasses.field(default=None, init=False)
