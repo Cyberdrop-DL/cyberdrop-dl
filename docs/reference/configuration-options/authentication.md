@@ -13,26 +13,6 @@ All the options in these list are optional. The default value for all of them is
 
 <details>
 
-<summary>Coomer</summary>
-
-- `session`
-
-Value of the `session` cookie from the website. This will allow CDL to download from your favoruites by using `https://coomer.st/favorites` as an input URL.
-
-</details>
-
-<details>
-
-<summary>Kemono</summary>
-
-- `session`
-
-Value of the `session` cookie from the website. This will allow CDL to download from your favoruites by using `https://kemono.cr/favorites` as an input URL.
-
-</details>
-
-<details>
-
 <summary>Forums</summary>
 
 {% hint style="warning" %}

@@ -207,10 +207,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         self.__ad_posts: list[str] = []
 
     @property
-    def session_cookie(self) -> str:
-        return ""
-
-    @property
     def ignore_content(self) -> bool:
         return self.config.settings.ignore_options.ignore_coomer_post_content
 
@@ -320,13 +316,14 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     @fallback_if_no_api
     @error_handling_wrapper
     async def favorites(self, scrape_item: ScrapeItem, type_: str) -> None:
-        if not self.session_cookie:
-            msg = "No session cookie found in the config file, cannot scrape favorites"
+        session_cookie = self.get_cookie_value("session")
+        if not session_cookie:
+            msg = "No session cookie found, cannot scrape favorites"
             raise ScrapeError(401, msg)
 
         title = f"My favorite {type_}s"
         scrape_item.setup_as_profile(self.create_title(title))
-        self.update_cookies({"session": self.session_cookie})
+        self.update_cookies({"session": session_cookie})
         query_url = (self.API_ENTRYPOINT / "account/favorites").with_query(type=type_)
         resp: list[dict[str, Any]] = await self.__api_request(query_url)
         self.update_cookies({"session": ""})
@@ -612,10 +609,6 @@ class KemonoCrawler(KemonoBaseCrawler):
         "subscribestar",
     )
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = "kemono.party", "kemono.su"
-
-    @property
-    def session_cookie(self) -> str:
-        return self.config.auth.kemono.session
 
 
 def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
