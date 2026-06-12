@@ -114,20 +114,6 @@ No **FORUM** limit, no **FORUM_POST** limit, no **FILE_HOST_PROFILE** limit, max
 
 Setting this to `true` will remove the "(DOMAIN)" portion of folder names on new downloads.
 
-## `remove_generated_id_from_filenames`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Setting this to `true` will remove the alphanumeric ID added to the end of filenames by some websites.
-
-This option only works for URLs from `cyberdrop.me` at the moment.
-
-Multipart archive filenames will be corrected to follow the proper naming pattern for their format.
-
-Supported formats: `.rar` `.7z` `.tar` `.gz` `.bz2` `.zip`
-
 ## `scrape_single_forum_post`
 
 | Type   | Default |
@@ -201,15 +187,15 @@ Setting it to `{default}` will use the default format, which is different for ea
 | `Reddit`                              | `{title}`                          |
 | `WordPress`                           | `{date:%Y-%m-%d} - {id} - {title}` |
 | `eFukt`                               | `{date:%Y-%m-%d} {title}`          |
-| `Tiktok`                              | `{date:%Y-%m-%d} - {id}`          |
+| `Tiktok`                              | `{date:%Y-%m-%d} - {id}`           |
 
 A date without a `format_spec` defaults to ISO 8601 format
 
 You can use any valid format string supported by python, with the following restrictions:
 
 - You can not have positional arguments in the format string. ex: `post {0} from date {1}`
-- You can not have unnamed fields in the format string. ex:  `post {} from date {}`
-- You can not perform operations within the format string. ex:  `post {id + 1} from date {date}`
+- You can not have unnamed fields in the format string. ex: `post {} from date {}`
+- You can not perform operations within the format string. ex: `post {id + 1} from date {date}`
 - All the fields named in the format string must be valid fields for that format option. CDL will validate this at startup
 
 ## `skip_download_mark_completed`
@@ -273,7 +259,7 @@ Restricts the max number of nested folders CDL will create when `maximum_thread_
 
 Values:
 
-- `None`: Create as many nested folders as required (AKA, the same number as  `maximum_thread_depth` allows)
+- `None`: Create as many nested folders as required (AKA, the same number as `maximum_thread_depth` allows)
 - `0`: Do not create subfolders, use a flat structure for any nested thread.
 - `1+`: Create a max of `n` folders
 
