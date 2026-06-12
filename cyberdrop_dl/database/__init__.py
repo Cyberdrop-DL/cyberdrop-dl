@@ -40,13 +40,21 @@ class Database:
         self._db_conn = await connect(self._db_path)
         if not is_new_db:
             await self.schema.check_version()
-        await self._pre_allocate()
-        await self.history.create()
-        await self.hash.create()
-        if not self.schema.up_to_date:
-            if not is_new_db:
+        try:
+            await self._pre_allocate()
+            await self.history.create()
+            await self.hash.create()
+            if is_new_db:
+                await self.schema.update()
+        except Exception:
+            if is_new_db:
+                await self._db_conn.close()
+                await aio.unlink(self._db_path)
+            raise
+        else:
+            if not (is_new_db or self.schema.up_to_date):
                 await self.history.apply_updates()
-            await self.schema.update()
+                await self.schema.update()
 
         return self
 
