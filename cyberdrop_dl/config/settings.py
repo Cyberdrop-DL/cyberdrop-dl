@@ -15,7 +15,6 @@ from cyberdrop_dl.constants import (
     DEFAULT_DOWNLOAD_STORAGE,
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
-    Browser,
     Hashing,
 )
 from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
@@ -374,10 +373,9 @@ class Sorting(SettingsGroup):
         return value
 
 
-class BrowserCookies(SettingsGroup):
-    auto_import: bool = False
-    browser: Browser | None = Browser.firefox
-    sites: list[str] = Field(default_factory=list)
+class Cookies(SettingsGroup):
+    cookies: Path | None = None
+    "File/folder to import cookies from (.txt Netscape files)"
 
 
 class DupeCleanup(SettingsGroup):
@@ -390,7 +388,7 @@ class DupeCleanup(SettingsGroup):
 
 @Parameter(name="*")
 class ConfigSettings(AliasModel):
-    browser_cookies: BrowserCookies = Field(default_factory=BrowserCookies)
+    cookies: Cookies = Field(default_factory=Cookies)
     download_options: DownloadOptions = Field(default_factory=DownloadOptions)
     dupe_cleanup_options: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
