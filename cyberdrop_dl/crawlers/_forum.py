@@ -422,33 +422,27 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                     raise
                 scrape_item.append_folders(title)
 
-            continue_scraping, last_post_url = self._thread_page(scrape_item, thread, soup)
-            if not continue_scraping:
-                break
+            last_post_url = self._thread_page(scrape_item, thread, soup)
 
         await self._write_last_forum_post(thread.url, last_post_url)
 
-    def _thread_page(
-        self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup
-    ) -> tuple[bool, AbsoluteHttpURL]:
-        continue_scraping = False
+    def _thread_page(self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup) -> AbsoluteHttpURL:
         post_url = thread.url
         for article in soup.select(self.SELECTORS.posts.article):
             current_post = ForumPost.new(article, self.SELECTORS.posts)
-            continue_scraping, scrape_this_post = check_post_id(thread.post_id, current_post.id)
-            if scrape_this_post:
-                post_url = self.make_post_url(thread, current_post.id)
-                new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
-                new_scrape_item.uploaded_at = current_post.timestamp
-                self.create_task(self.post(new_scrape_item, current_post))
-                try:
-                    scrape_item.add_children()
-                except MaxChildrenError:
-                    break
+            if thread.post_id and current_post.id < thread.post_id:
+                continue
 
-            if not continue_scraping:
+            post_url = self.make_post_url(thread, current_post.id)
+            new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
+            new_scrape_item.uploaded_at = current_post.timestamp
+            self.create_task(self.post(new_scrape_item, current_post))
+            try:
+                scrape_item.add_children()
+            except MaxChildrenError:
                 break
-        return continue_scraping, post_url
+
+        return post_url
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post: ForumPostProtocol) -> None:
@@ -671,18 +665,6 @@ def is_confirmation_link(link: AbsoluteHttpURL) -> bool:
     return (
         "masked" in link.parts or "link-confirmation" in link.path or ("redirect" in link.parts and "to" in link.query)
     )
-
-
-def check_post_id(
-    init_post_id: int | None,
-    current_post_id: int,
-) -> tuple[bool, bool]:
-    """Checks if the program should scrape the current post.
-
-    Returns (continue_scraping, scrape_this_post)"""
-    if init_post_id and init_post_id > current_post_id:
-        return (True, False)
-    return (True, True)
 
 
 def pre_process_child(link_str: str, *, embeds: bool = False) -> str | None:

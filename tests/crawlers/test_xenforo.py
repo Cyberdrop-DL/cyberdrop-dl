@@ -665,45 +665,6 @@ def test_is_attachment_empty_string_should_be_false() -> None:
     assert TEST_CRAWLER.is_attachment("") is False
 
 
-class TestCheckPostId:
-    @pytest.mark.parametrize(
-        (
-            "init_post_id",
-            "current_post_id",
-            "expected_continue_scraping",
-            "expected_scrape_this_post",
-        ),
-        [
-            # init_post_id > current_post_id
-            (100, 90, True, False),
-            # case init_post_id == current_post_id
-            (100, 100, False, True),
-            (100, 100, True, True),
-            # case init_post_id < current_post_id
-            (100, 110, False, False),
-            (100, 110, True, True),
-        ],
-    )
-    def test_init_post_id_was_provided(
-        self,
-        init_post_id: int,
-        current_post_id: int,
-        *,
-        expected_continue_scraping: bool,
-        expected_scrape_this_post: bool,
-    ) -> None:
-        continue_scraping, scrape_this_post = _forum.check_post_id(init_post_id, current_post_id)
-        assert continue_scraping == expected_continue_scraping
-        assert scrape_this_post == expected_scrape_this_post
-
-    def test_no_init_post_id_and_scrape_single_post_false(self) -> None:
-        init_post_id = None
-        current_post_id = 100
-        continue_scraping, scrape_this_post = _forum.check_post_id(init_post_id, current_post_id)
-        assert continue_scraping is True
-        assert scrape_this_post is True
-
-
 # original post_id = 23549340
 POST_TEMPLATE = """
 <article class="message message--post js-post js-inlineModContainer" data-author="" data-content="post-{id}" id="js-post-{id}" itemscope="" itemtype="https://schema.org/Comment" itemid="https://simpcity.su/posts/{id}/">
