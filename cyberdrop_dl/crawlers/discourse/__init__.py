@@ -12,7 +12,6 @@ from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
 from cyberdrop_dl.crawlers._forum import MessageBoardCrawler
-from cyberdrop_dl.exceptions import MaxChildrenError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 from cyberdrop_dl.utils.dates import to_timestamp
@@ -100,21 +99,11 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
 
     @error_handling_wrapper
     async def process_posts(self, scrape_item: ScrapeItem, topic: Topic) -> None:
-        last_post_id = None
         async for post in self.iter_posts(topic):
             new_scrape_item = scrape_item.create_child(self.PRIMARY_URL / post.path.removeprefix("/"))
             new_scrape_item.uploaded_at = to_timestamp(post.created_at)
             await self.post(new_scrape_item, post)
-            last_post_id = post.id
-            try:
-                scrape_item.add_children()
-            except MaxChildrenError:
-                break
-
-        if last_post_id:
-            topic_url = self.PRIMARY_URL / topic.path.removeprefix("/")
-            post_url = topic_url / str(last_post_id)
-            await self._write_last_forum_post(topic_url, post_url)
+            scrape_item.add_children()
 
     async def iter_posts(self, topic: Topic) -> AsyncIterable[AvailablePost]:
         for offset in itertools.count(topic.init_post_number - 1, _MAX_POSTS_PER_REQUEST):

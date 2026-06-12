@@ -32,7 +32,6 @@ _CSV_DELIMITER = ","
 @dataclasses.dataclass(slots=True, kw_only=True)
 class CSVFiles:
     main_log: Path
-    last_post_log: Path
     unsupported_urls_log: Path
     download_error_log: Path
     scrape_error_log: Path
@@ -63,7 +62,6 @@ class CSVLogsManager:
     def from_manager(cls, manager: Manager) -> Self:
         files = CSVFiles(
             main_log=manager.config.settings.logs.main_log,
-            last_post_log=manager.config.settings.logs.last_forum_post,
             unsupported_urls_log=manager.config.settings.logs.unsupported_urls,
             download_error_log=manager.config.settings.logs.download_error_urls,
             scrape_error_log=manager.config.settings.logs.scrape_error_urls,
@@ -108,10 +106,6 @@ class CSVLogsManager:
                     writer.writerow(row)
 
             await asyncio.to_thread(write)
-
-    def write_last_post_log(self, url: URL) -> None:
-        """Writes to the last post log."""
-        _ = self.task_group.create_task(self._write_to_csv(self.files.last_post_log, url=url))
 
     def write_unsupported(self, url: URL, origin: URL | None = None) -> None:
         """Writes to the unsupported urls log."""

@@ -10,16 +10,6 @@ Path of the download error log. For relative paths, the final path will be `log_
 
 Cyberdrop-DL will output the links it fails to download, the reason and their origin in CSV format.
 
-## `last_forum_post`
-
-| Type   | Default                        | Restrictions                                  |
-| ------ | ------------------------------ | --------------------------------------------- |
-| `Path` | `Last_Scraped_Forum_Posts.csv` | extension will always be overridden to `.csv` |
-
-Path of the forum-post log file. For relative paths, the final path will be `log_folder` / `last_forum_post`
-
-Cyberdrop-DL will store the link to the last forum posts it scraped from a given forum thread in this file.
-
 ## `log_folder`
 
 | Type   | Default                         |

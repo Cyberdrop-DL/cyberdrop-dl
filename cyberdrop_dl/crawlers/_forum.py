@@ -314,12 +314,6 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         new_scrape_item.part_of_album = True
         await self.handle_file(link, new_scrape_item, filename, ext)
 
-    @final
-    async def _write_last_forum_post(self, thread_url: AbsoluteHttpURL, last_post_url: AbsoluteHttpURL | None) -> None:
-        if not last_post_url or last_post_url == thread_url:
-            return
-        self.manager.logs.write_last_post_log(last_post_url)
-
     # TODO: Move this to the base crawler
     # TODO: Define an unified workflow for crawlers to perform and check login
     @final
@@ -412,7 +406,6 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
     async def _thread(self, scrape_item: ScrapeItem, thread: ThreadProtocol) -> None:
         title: str = ""
-        last_post_url = thread.url
         async for soup in self.thread_pager(scrape_item):
             if not title:
                 try:
@@ -422,12 +415,9 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                     raise
                 scrape_item.append_folders(title)
 
-            last_post_url = self._thread_page(scrape_item, thread, soup)
+            self._thread_page(scrape_item, thread, soup)
 
-        await self._write_last_forum_post(thread.url, last_post_url)
-
-    def _thread_page(self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup) -> AbsoluteHttpURL:
-        post_url = thread.url
+    def _thread_page(self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup) -> None:
         for article in soup.select(self.SELECTORS.posts.article):
             current_post = ForumPost.new(article, self.SELECTORS.posts)
             if thread.post_id and current_post.id < thread.post_id:
@@ -437,12 +427,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
             new_scrape_item.uploaded_at = current_post.timestamp
             self.create_task(self.post(new_scrape_item, current_post))
-            try:
-                scrape_item.add_children()
-            except MaxChildrenError:
-                break
-
-        return post_url
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post: ForumPostProtocol) -> None:

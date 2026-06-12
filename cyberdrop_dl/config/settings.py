@@ -79,7 +79,6 @@ class Files(SettingsGroup):
 
 class Logs(SettingsGroup):  # noqa: PLW1641
     download_error_urls: LogPath = Path("Download_Error_URLs.csv")
-    last_forum_post: LogPath = Path("Last_Scraped_Forum_Posts.csv")
     log_folder: Path = DEFAULT_APP_STORAGE / "Logs"
     logs_expire_after: timedelta | None = None
     main_log: MainLogPath = Path("downloader.log")
