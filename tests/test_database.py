@@ -192,10 +192,10 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
     try:
         await db._create_tables()
         assert db._is_new
-        await db._db_conn.execute("DROP TABLE'schema_version'")
-        await db._db_conn.commit()
+        await db.conn.execute("DROP TABLE 'schema_version'")
+        await db.conn.commit()
     finally:
-        await db._db_conn.close()
+        await db.conn.close()
 
     db = Database(db_file)
     try:
@@ -214,13 +214,13 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
         with pytest.raises(DatabaseError):
             db.schema.check_version()
     finally:
-        await db._db_conn.close()
+        await db.conn.close()
 
 
 async def test_db_schema_dump(tmp_cwd: Path) -> None:
     db_file = tmp_cwd / "test_db.db"
 
     async with Database(db_file) as db:
-        current_schema = await schema.dump(db._db_conn)
+        current_schema = await schema.dump(db.conn)
 
     assert current_schema == schema.V9_15_0

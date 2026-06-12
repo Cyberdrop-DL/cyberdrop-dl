@@ -47,7 +47,7 @@ class SchemaVersionTable:
 
     @property
     def db_conn(self) -> aiosqlite.Connection:
-        return self._database._db_conn
+        return self._database.conn
 
     async def _get_version(self) -> Version | None:
         if not await self._database.exists("schema_version"):

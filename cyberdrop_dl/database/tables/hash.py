@@ -24,7 +24,7 @@ class HashTable:
 
     @property
     def db_conn(self) -> aiosqlite.Connection:
-        return self._database._db_conn
+        return self._database.conn
 
     async def create(self) -> None:
         for query in (

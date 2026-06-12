@@ -28,7 +28,7 @@ class Database:
     history: HistoryTable = dataclasses.field(init=False)
     hash: HashTable = dataclasses.field(init=False)
     schema: SchemaVersionTable = dataclasses.field(init=False)
-    _db_conn: aiosqlite.Connection = dataclasses.field(init=False)
+    _conn: aiosqlite.Connection = dataclasses.field(init=False)
     _is_new: bool = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
@@ -36,9 +36,13 @@ class Database:
         self.hash = HashTable(self)
         self.schema = SchemaVersionTable(self)
 
+    @property
+    def conn(self) -> aiosqlite.Connection:
+        return self._conn
+
     async def _connect(self) -> None:
         self._is_new = not await aio.get_size(self._db_path)
-        self._db_conn = await connect(self._db_path)
+        self._conn = await connect(self._db_path)
 
     async def exists(self, table: str) -> bool:
         query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}';"  # noqa: S608
@@ -49,7 +53,7 @@ class Database:
         await self.schema.create()
         if not self._is_new:
             self.schema.check_version()
-        await self._pre_allocate()
+        await _pre_allocate(self.conn)
         await self.history.create()
         await self.hash.create()
         if self._is_new:
@@ -61,8 +65,11 @@ class Database:
             await self._create_tables()
         except Exception:
             if self._is_new:
-                await self._db_conn.close()
-                await aio.unlink(self._db_path)
+                await self.conn.close()
+                try:
+                    await aio.unlink(self._db_path, missing_ok=True)
+                except OSError:
+                    pass
             raise
         else:
             if not (self._is_new or self.schema.up_to_date):
@@ -72,31 +79,33 @@ class Database:
         return self
 
     async def fetchone(self, query: str, parameters: Iterable[Any] | None = None) -> aiosqlite.Row | None:
-        cursor = await self._db_conn.execute(query, parameters)
+        cursor = await self.conn.execute(query, parameters)
         return await cursor.fetchone()
 
     async def fetchall(self, query: str, parameters: Iterable[Any] | None = None) -> list[aiosqlite.Row]:
-        return await self._db_conn.execute_fetchall(query, parameters)  # pyright: ignore[reportReturnType]
+        return await self.conn.execute_fetchall(query, parameters)  # pyright: ignore[reportReturnType]
 
     async def __aexit__(self, *_: object) -> None:
-        await self._db_conn.close()
+        await self.conn.close()
 
-    async def _pre_allocate(self) -> None:
-        """We pre-allocate 100MB of space to the SQL file just in case the user runs out of disk space."""
 
-        free_space = await self.fetchone("PRAGMA freelist_count;")
-        assert free_space is not None
+async def _pre_allocate(db_conn: aiosqlite.Connection) -> None:
+    """Pre-allocate 100MB of space to the SQL file just in case the user runs out of disk space."""
 
-        if free_space[0] > 1024:
-            return
+    cursor = await db_conn.execute("PRAGMA freelist_count;")
+    free_space = await cursor.fetchone()
+    assert free_space is not None
 
-        pre_allocate_script = (
-            "CREATE TABLE IF NOT EXISTS t(x);"
-            "INSERT INTO t VALUES(zeroblob(100*1024*1024));"  # 100 MB
-            "DROP TABLE t;"
-        )
-        _ = await self._db_conn.executescript(pre_allocate_script)
-        await self._db_conn.commit()
+    if free_space[0] > 1024:
+        return
+
+    pre_allocate_script = (
+        "CREATE TABLE IF NOT EXISTS t(x);"
+        "INSERT INTO t VALUES(zeroblob(100*1024*1024));"  # 100 MB
+        "DROP TABLE t;"
+    )
+    _ = await db_conn.executescript(pre_allocate_script)
+    await db_conn.commit()
 
 
 __all__ = ["Database"]

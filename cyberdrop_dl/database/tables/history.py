@@ -31,7 +31,7 @@ class HistoryTable:
 
     @property
     def db_conn(self) -> aiosqlite.Connection:
-        return self._database._db_conn
+        return self._database.conn
 
     async def create(self) -> None:
         await self.db_conn.execute(create_history)
