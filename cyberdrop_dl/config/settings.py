@@ -46,7 +46,6 @@ _SORTING_COMMON_FIELDS = {
 
 class DownloadOptions(SettingsGroup):
     block_download_sub_folders: bool = False
-    disable_download_attempt_limit: bool = False
     disable_file_timestamps: bool = False
     include_album_id_in_folder_name: bool = False
     include_thread_id_in_folder_name: bool = False

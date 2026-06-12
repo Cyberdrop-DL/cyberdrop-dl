@@ -14,16 +14,6 @@ will be changed to:
 
 > `Downloads/folderA/image.jpg`
 
-## `disable_download_attempts`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-By default the program will retry a download twice. You can set this to `true` to disable it and always retry until the download completes.
-
-However, to make sure the program will not run endlessly, there are certain situations where a file will never be retried, like if the program receives a `404` HTTP status, meaning the link is dead.
-
 ## `disable_file_timestamps`
 
 | Type   | Default |

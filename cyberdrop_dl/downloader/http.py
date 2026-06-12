@@ -81,10 +81,7 @@ class Downloader:
 
     def __post_init__(self) -> None:
         self.slots = self._slots
-        if self.config.settings.download_options.disable_download_attempt_limit:
-            self.max_attempts = 1
-        else:
-            self.max_attempts = self.config.global_settings.rate_limiting_options.download_attempts
+        self.max_attempts = self.config.global_settings.rate_limiting_options.download_attempts
 
     @property
     def waiting_items(self) -> int:
