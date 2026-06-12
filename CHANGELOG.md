@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Video metadata extraction (Spankbang)
-- Crashing when `--json` option is used
+- Crashing when `--dump-json` option is used
 
 ## [9.15.0] - 2026-06-10
 
