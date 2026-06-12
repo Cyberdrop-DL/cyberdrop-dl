@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from cyberdrop_dl import aio, scrape_mapper
+from cyberdrop_dl import aio, database, scrape_mapper
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.database.tables import schema
 from cyberdrop_dl.exceptions import DatabaseError
@@ -182,6 +182,20 @@ async def test_database_creation(tmp_cwd: Path) -> None:
     assert size
     assert size >= 100e6
     assert db.schema.up_to_date
+
+
+async def test_pre_allocation(tmp_cwd: Path) -> None:
+    db_file = tmp_cwd / "test_db.db"
+    async with database.connect(db_file) as db:
+        size = await aio.get_size(db_file)
+        assert size == 0
+
+    async with database.connect(db_file) as db:
+        await database._pre_allocate(db)
+
+    size = await aio.get_size(db_file)
+    assert size
+    assert size >= 100e6
 
 
 async def test_database_version_check(tmp_cwd: Path) -> None:

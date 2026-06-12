@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 from typing import TYPE_CHECKING, Any, Self
 
@@ -10,14 +11,23 @@ from cyberdrop_dl import aio
 from .tables import HashTable, HistoryTable, SchemaVersionTable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import AsyncGenerator, Iterable
     from pathlib import Path
 
 
-async def connect(path: Path) -> aiosqlite.Connection:
+async def _connect(path: Path) -> aiosqlite.Connection:
     db_conn = await aiosqlite.connect(path, timeout=20)
     db_conn.row_factory = aiosqlite.Row
     return db_conn
+
+
+@contextlib.asynccontextmanager
+async def connect(path: Path) -> AsyncGenerator[aiosqlite.Connection]:
+    db_conn = await _connect(path)
+    try:
+        yield db_conn
+    finally:
+        await db_conn.close()
 
 
 @dataclasses.dataclass(slots=True)
@@ -42,7 +52,7 @@ class Database:
 
     async def _connect(self) -> None:
         self._is_new = not await aio.get_size(self._db_path)
-        self._conn = await connect(self._db_path)
+        self._conn = await _connect(self._db_path)
 
     async def exists(self, table: str) -> bool:
         query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}';"  # noqa: S608
