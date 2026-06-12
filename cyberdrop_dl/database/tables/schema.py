@@ -67,7 +67,7 @@ class SchemaVersionTable:
     def check_version(self) -> None:
         if self._version is None:
             raise DatabaseError(
-                f"Database has no schema information. Mininum required version: {REQUIRED_APP_SCHEMA_VERSION}"
+                f"Database has no schema information. Minimum required version: {REQUIRED_APP_SCHEMA_VERSION}"
             )
         if self._version < REQUIRED_APP_SCHEMA_VERSION:
             raise DatabaseError(
