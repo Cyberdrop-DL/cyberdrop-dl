@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > If you has ever used a Pixeldrain API key with `cyberdrop-dl-pacthed` version >=8.5.0, you should consider them compromised and disable them.
 >
-> See: [GHSA-f5pf-q7c7-m3vv](https://github.com/Cyberdrop-DL/cyberdrop-dl/security/advisories/GHSA-f5pf-q7c7-m3vv)
+> See: [GHSA-f5pf-q7c7-m3vv (CVE-2026-54254)](https://github.com/Cyberdrop-DL/cyberdrop-dl/security/advisories/GHSA-f5pf-q7c7-m3vv)
 
 ### Added
 
