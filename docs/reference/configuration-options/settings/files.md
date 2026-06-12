@@ -52,18 +52,6 @@ The path to the text file containing the URLs you want to download. Each line sh
 
 You can also use `html` code. Cyberdrop-DL will parse all the links on the HTML
 
-## `save_pages_html`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `False` |
-
-CDL will save to disk a copy of every requests as an html file. The files will be saved to a folder named `cdl_responses`, located in the same folder as the main log file.
-
-{% hint style="info" %}
-Not every request made by CDL returns an HTML page (ex: API requests generally return JSON data). Only HTML responses will be saved
-{% endhint %}
-
 ## `dump_responses`
 
 | Type   | Default |

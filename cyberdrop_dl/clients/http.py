@@ -103,7 +103,7 @@ class HTTPClient:
     @staticmethod
     def from_manager(manager: Manager) -> HTTPClient:
         client = HTTPClient(config=manager.config, impersonate=manager.cli_args.impersonate)
-        if manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses:
+        if manager.config.settings.files.dump_responses:
             client.request_done_callback = manager.logs.write_response
 
         return client
