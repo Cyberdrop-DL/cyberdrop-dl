@@ -146,11 +146,3 @@ This setting specifies speed and it's interpreted as `<value> / second`. ex: `8M
 {% endhint %}
 
 Downloads with a speed lower than this value for more than 10 seconds will be skipped. Set to `0` to disable
-
-## `update_last_forum_post`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Updates `input_file` content, adding the last scraped post id to every forum thread URL

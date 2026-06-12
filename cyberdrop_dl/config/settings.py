@@ -286,7 +286,6 @@ class RuntimeOptions(SettingsGroup):
     skip_check_for_empty_folders: bool = False
     skip_check_for_partial_files: bool = False
     slow_download_speed: ByteSizeSerilized = ByteSize(0)
-    update_last_forum_post: bool = True
 
     @field_validator("log_level", "console_log_level", mode="before")
     @classmethod

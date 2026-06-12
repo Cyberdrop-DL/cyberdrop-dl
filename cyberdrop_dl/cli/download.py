@@ -76,9 +76,6 @@ async def _post_runtime(manager: Manager) -> None:
 
     check_partials_and_empty_folders(manager.config)
 
-    if manager.config.settings.runtime_options.update_last_forum_post:
-        await manager.logs.update_last_forum_post(manager.config.settings.files.input_file)
-
 
 def _main(manager: Manager) -> None:
     from cyberdrop_dl import aio, program_ui
