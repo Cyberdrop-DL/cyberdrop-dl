@@ -1,35 +1,32 @@
 from cyclopts import Parameter
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from cyberdrop_dl.models import AliasModel
 
 
-class ApiKeyAuth(BaseModel):
+class ApiKeyAuth(AliasModel):
     api_key: str = ""
 
 
-class EmailAuth(BaseModel):
+class EmailAuth(AliasModel):
     email: str = ""
     password: str = ""
 
 
-class ImgurAuth(BaseModel):
-    client_id: str = ""
-
-
-class JDownloaderAuth(BaseModel):
+class JDownloaderAuth(AliasModel):
     username: str = ""
     password: str = ""
     device: str = ""
 
 
-class KemonoAuth(BaseModel):
+class KemonoAuth(AliasModel):
     session: str = ""
 
 
 @Parameter(show=False)
-class AuthSettings(BaseModel, defer_build=True):
+class AuthSettings(AliasModel):
     coomer: KemonoAuth = Field(default_factory=KemonoAuth)
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
-    imgur: ImgurAuth = Field(default_factory=ImgurAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
     kemono: KemonoAuth = Field(default_factory=KemonoAuth)
     meganz: EmailAuth = Field(default_factory=EmailAuth)
