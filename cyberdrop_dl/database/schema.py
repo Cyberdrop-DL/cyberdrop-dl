@@ -39,12 +39,8 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass(slots=True)
 class SchemaTable(table.Table):
-    _up_to_date: bool = False
-    _version: Version | None = None
-
-    @property
-    def up_to_date(self) -> bool:
-        return self._up_to_date
+    up_to_date: bool = False
+    version: Version | None = None
 
     async def get_version(self) -> Version | None:
         if not await table.exists(self.db_conn, "schema_version"):
@@ -56,27 +52,27 @@ class SchemaTable(table.Table):
 
     async def create(self) -> None:
         logger.info(f"Expected database schema: {CURRENT_VERSION!s}")
-        self._version = await self.get_version()
-        logger.info(f"Current database schema: {self._version!s}")
+        self.version = await self.get_version()
+        logger.info(f"Current database schema: {self.version!s}")
         await self.db_conn.execute(CREATE_SCHEMA)
         await self.db_conn.commit()
 
     def check_version(self) -> None:
-        if self._version is None:
+        if self.version is None:
             raise DatabaseError(f"Database has no schema information. Minimum required version: {REQUIRED_VERSION}")
-        if self._version < REQUIRED_VERSION:
+        if self.version < REQUIRED_VERSION:
             raise DatabaseError(
-                f"Incompatible database version detected. Current: {self._version!s} , Minimum required: {REQUIRED_VERSION!s}"
+                f"Incompatible database version detected. Current: {self.version!s} , Minimum required: {REQUIRED_VERSION!s}"
             )
-        if self._version >= CURRENT_VERSION:
-            self._up_to_date = True
+        if self.version >= CURRENT_VERSION:
+            self.up_to_date = True
 
     async def update(self, version: Version = CURRENT_VERSION) -> None:
         query = "INSERT INTO schema_version (version) VALUES (?)"
         _ = await self.db_conn.execute(query, (str(version),))
         await self.db_conn.commit()
-        self._version = version
-        self._up_to_date = version >= CURRENT_VERSION
+        self.version = version
+        self.up_to_date = version >= CURRENT_VERSION
         logger.info(f"Updated database schema to {version!s}")
 
 

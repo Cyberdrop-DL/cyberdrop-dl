@@ -56,6 +56,14 @@ class Database:
         self._is_new = not await aio.get_size(self.path)
         self._conn = await _connect(self.path)
 
+    @contextlib.asynccontextmanager
+    async def connect(self) -> AsyncGenerator[Self]:
+        await self._connect()
+        try:
+            yield self
+        finally:
+            await self.conn.close()
+
     async def _create_tables(self) -> None:
         await self.schema.create()
         if not self._is_new:
@@ -66,8 +74,7 @@ class Database:
         if self._is_new:
             await self.schema.update()
 
-    async def __aenter__(self) -> Self:
-        await self._connect()
+    async def create_tables(self) -> None:
         try:
             await self._create_tables()
         except Exception:
@@ -83,6 +90,9 @@ class Database:
                 await self.history.apply_updates()
                 await self.schema.update()
 
+    async def __aenter__(self) -> Self:
+        await self._connect()
+        await self.create_tables()
         return self
 
     async def __aexit__(self, *_: object) -> None:
