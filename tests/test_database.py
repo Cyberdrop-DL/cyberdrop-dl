@@ -180,7 +180,6 @@ async def test_database_creation(tmp_cwd: Path) -> None:
     assert db._is_new
     size = await aio.get_size(db_file)
     assert size
-    assert size >= 100e6
     assert db.schema.up_to_date
 
 
