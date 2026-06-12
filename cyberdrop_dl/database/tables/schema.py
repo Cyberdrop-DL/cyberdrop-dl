@@ -30,7 +30,7 @@ class Version(NamedTuple):
 
 
 CURRENT_APP_SCHEMA_VERSION = Version(10, 0, 0)
-REQUIRED_APP_SCHEMA_VERSION = Version(9, 16, 0)
+REQUIRED_APP_SCHEMA_VERSION = Version(9, 15, 0)
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +71,13 @@ class SchemaVersionTable:
         await self.db_conn.commit()
 
     def check_version(self) -> None:
-        if self._version is None or self._version < REQUIRED_APP_SCHEMA_VERSION:
+        if self._version is None:
             raise DatabaseError(
-                f"Incompatible database version detected. Min required version: {REQUIRED_APP_SCHEMA_VERSION}"
+                f"Database has not schema information. Min required version: {REQUIRED_APP_SCHEMA_VERSION}"
+            )
+        if self._version < REQUIRED_APP_SCHEMA_VERSION:
+            raise DatabaseError(
+                f"Incompatible database version detected. Current: {self._version!s} , Minimum required: {REQUIRED_APP_SCHEMA_VERSION!s}"
             )
         if self._version >= CURRENT_APP_SCHEMA_VERSION:
             self._up_to_date = True
