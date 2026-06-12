@@ -53,6 +53,9 @@ def _notes(e: BaseException) -> list[str] | tuple[()]:
     return getattr(e, "__notes__", ())
 
 
+class DatabaseError(RuntimeError): ...
+
+
 class CDLBaseError(Exception):
     """Base exception for cyberdrop-dl errors."""
 

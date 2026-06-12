@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import aiosqlite
 
+from cyberdrop_dl.exceptions import DatabaseError
+
 from .definitions import create_schema_version
 
 if TYPE_CHECKING:
@@ -73,7 +75,7 @@ class SchemaVersionTable:
         version = await self.get_version()
         logger.info(f"Current database schema: {version!s}")
         if version is None or version < REQUIRED_APP_SCHEMA_VERSION:
-            raise RuntimeError(
+            raise DatabaseError(
                 f"Incompatible database version detected. Min required version: {REQUIRED_APP_SCHEMA_VERSION}"
             )
 
