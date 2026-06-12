@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 import aiosqlite
 
@@ -12,7 +12,7 @@ from cyberdrop_dl.database.history import HistoryTable
 from cyberdrop_dl.database.schema import SchemaTable
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable
+    from collections.abc import AsyncGenerator
     from pathlib import Path
 
 
@@ -60,7 +60,7 @@ class Database:
         await self.schema.create()
         if not self._is_new:
             self.schema.check_version()
-        await pre_allocate(self.conn)
+        await pre_allocate_100mb(self.conn)
         await self.history.create()
         await self.hash.create()
         if self._is_new:
@@ -85,18 +85,11 @@ class Database:
 
         return self
 
-    async def fetchone(self, query: str, parameters: Iterable[Any] | None = None) -> aiosqlite.Row | None:
-        cursor = await self.conn.execute(query, parameters)
-        return await cursor.fetchone()
-
-    async def fetchall(self, query: str, parameters: Iterable[Any] | None = None) -> list[aiosqlite.Row]:
-        return await self.conn.execute_fetchall(query, parameters)  # pyright: ignore[reportReturnType]
-
     async def __aexit__(self, *_: object) -> None:
         await self.conn.close()
 
 
-async def pre_allocate(db_conn: aiosqlite.Connection) -> None:
+async def pre_allocate_100mb(db_conn: aiosqlite.Connection) -> None:
     """Pre-allocate 100MB of space to the SQL file just in case the user runs out of disk space."""
 
     cursor = await db_conn.execute("PRAGMA freelist_count;")

@@ -189,7 +189,7 @@ async def test_pre_allocation(tmp_cwd: Path) -> None:
         assert size == 0
 
     async with database.connect(db_file) as db:
-        await database.pre_allocate(db)
+        await database.pre_allocate_100mb(db)
 
     size = await aio.get_size(db_file)
     assert size
