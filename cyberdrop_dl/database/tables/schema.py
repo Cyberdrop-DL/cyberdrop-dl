@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 class SchemaVersionTable:
     _database: Database
     _up_to_date: bool = False
+    _version: Version | None = None
 
     @property
     def up_to_date(self) -> bool:
@@ -48,14 +49,13 @@ class SchemaVersionTable:
     def db_conn(self) -> aiosqlite.Connection:
         return self._database._db_conn
 
-    async def get_version(self) -> Version | None:
+    async def _get_version(self) -> Version | None:
         if not await self.__exists():
             return None
         query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
         cursor = await self.db_conn.execute(query)
-        result = await cursor.fetchone()
-        if result:
-            return Version.parse(result["version"])
+        if row := await cursor.fetchone():
+            return Version.parse(row["version"])
 
     async def __exists(self) -> bool:
         query = "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version';"
@@ -64,22 +64,24 @@ class SchemaVersionTable:
         return result is not None
 
     async def __update_schema_version(self) -> None:
-        await self.db_conn.execute(create_schema_version)
-        await self.db_conn.commit()
         query = "INSERT INTO schema_version (version) VALUES (?)"
         _ = await self.db_conn.execute(query, (str(CURRENT_APP_SCHEMA_VERSION),))
         await self.db_conn.commit()
+        self._version = CURRENT_APP_SCHEMA_VERSION
 
-    async def check_version(self) -> None:
+    async def create(self) -> None:
         logger.info(f"Expected database schema: {CURRENT_APP_SCHEMA_VERSION!s}")
-        version = await self.get_version()
-        logger.info(f"Current database schema: {version!s}")
-        if version is None or version < REQUIRED_APP_SCHEMA_VERSION:
+        self._version = await self._get_version()
+        logger.info(f"Current database schema: {self._version!s}")
+        await self.db_conn.execute(create_schema_version)
+        await self.db_conn.commit()
+
+    def check_version(self) -> None:
+        if self._version is None or self._version < REQUIRED_APP_SCHEMA_VERSION:
             raise DatabaseError(
                 f"Incompatible database version detected. Min required version: {REQUIRED_APP_SCHEMA_VERSION}"
             )
-
-        if version >= CURRENT_APP_SCHEMA_VERSION:
+        if self._version >= CURRENT_APP_SCHEMA_VERSION:
             self._up_to_date = True
 
     async def update(self) -> None:

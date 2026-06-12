@@ -38,9 +38,10 @@ class Database:
     async def __aenter__(self) -> Self:
         is_new_db = not await aio.exists(self._db_path)
         self._db_conn = await connect(self._db_path)
-        if not is_new_db:
-            await self.schema.check_version()
         try:
+            await self.schema.create()
+            if not is_new_db:
+                self.schema.check_version()
             await self._pre_allocate()
             await self.history.create()
             await self.hash.create()
