@@ -86,3 +86,66 @@ class SchemaVersionTable:
         await self.__update_schema_version(version)
         logger.info(f"Updated database schema to {version!s}")
         self._up_to_date = version >= CURRENT_APP_SCHEMA_VERSION
+
+
+async def dump(db_conn: aiosqlite.Connection) -> str:
+    query = "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name"
+    cursor = await db_conn.execute(query)
+    rows = await cursor.fetchall()
+    index_queries: list[str] = []
+    table_queries: list[str] = []
+
+    for query in (row["sql"] for row in rows):
+        group = table_queries if "CREATE TABLE" in query else index_queries
+        group.append(query)
+
+    return ";\n".join([*sorted(table_queries), *sorted(index_queries)]) + ";"
+
+
+V9_15_0 = """
+CREATE TABLE files (
+  folder TEXT,
+  download_filename TEXT,
+  original_filename TEXT,
+  file_size INT,
+  referer TEXT,
+  date INT,
+  PRIMARY KEY (folder, download_filename)
+);
+CREATE TABLE hash (
+  folder TEXT,
+  download_filename TEXT,
+  hash_type TEXT,
+  hash TEXT,
+  PRIMARY KEY (folder, download_filename, hash_type),
+  FOREIGN KEY (folder, download_filename) REFERENCES files(folder, download_filename)
+);
+CREATE TABLE media (
+  domain TEXT,
+  url_path TEXT,
+  referer TEXT,
+  download_path TEXT,
+  download_filename TEXT,
+  original_filename TEXT,
+  file_size INT,
+  duration FLOAT,
+  album_id TEXT,
+  completed INTEGER NOT NULL,
+  created_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  PRIMARY KEY (domain, url_path, original_filename)
+);
+CREATE TABLE schema_version (
+    version VARCHAR(50) NOT NULL PRIMARY KEY,
+    applied_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_hash_type_hash ON hash (hash_type, hash);
+CREATE INDEX idx_media_domain_album
+    ON media (domain, album_id);
+CREATE INDEX idx_media_domain_referer_completed
+    ON media (domain, referer, completed);
+CREATE INDEX idx_media_domain_url_path_referer
+    ON media (domain, url_path, referer);
+CREATE INDEX idx_media_referer_completed
+    ON media (referer, completed);
+""".strip()

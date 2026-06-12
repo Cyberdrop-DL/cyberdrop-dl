@@ -8,6 +8,7 @@ import pytest
 
 from cyberdrop_dl import aio, scrape_mapper
 from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.tables import schema
 from cyberdrop_dl.database.tables.schema import Version
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
@@ -215,3 +216,12 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
             db.schema.check_version()
     finally:
         await db._db_conn.close()
+
+
+async def test_db_schema_dump(tmp_cwd: Path) -> None:
+    db_file = tmp_cwd / "test_db.db"
+
+    async with Database(db_file) as db:
+        current_schema = await schema.dump(db._db_conn)
+
+    assert current_schema == schema.V9_15_0
