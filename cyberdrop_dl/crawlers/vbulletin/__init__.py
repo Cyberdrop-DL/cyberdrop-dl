@@ -85,10 +85,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     @override
     async def _thread(self, scrape_item: ScrapeItem, thread: Thread) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title: str = ""
-        if thread.post_id and self.scrape_single_forum_post:
-            api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_POST_QUERY_PARAM: str(thread.post_id)})
-        else:
-            api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_THREAD_QUERY_PARAM: str(thread.id)})
+        api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_THREAD_QUERY_PARAM: str(thread.id)})
 
         root_xml = _parse_xml(await self.request_text(api_url))
         if (thread_element := root_xml.find("thread")) is not None:

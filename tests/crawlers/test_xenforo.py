@@ -670,20 +670,18 @@ class TestCheckPostId:
         (
             "init_post_id",
             "current_post_id",
-            "scrape_single_forum_post",
             "expected_continue_scraping",
             "expected_scrape_this_post",
         ),
         [
             # init_post_id > current_post_id
-            (100, 90, True, True, False),
-            (100, 90, False, True, False),
+            (100, 90, True, False),
             # case init_post_id == current_post_id
-            (100, 100, True, False, True),
-            (100, 100, False, True, True),
+            (100, 100, False, True),
+            (100, 100, True, True),
             # case init_post_id < current_post_id
-            (100, 110, True, False, False),
-            (100, 110, False, True, True),
+            (100, 110, False, False),
+            (100, 110, True, True),
         ],
     )
     def test_init_post_id_was_provided(
@@ -691,41 +689,19 @@ class TestCheckPostId:
         init_post_id: int,
         current_post_id: int,
         *,
-        scrape_single_forum_post: bool,
         expected_continue_scraping: bool,
         expected_scrape_this_post: bool,
     ) -> None:
-        continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id,
-            current_post_id,
-            scrape_single_forum_post=scrape_single_forum_post,
-        )
+        continue_scraping, scrape_this_post = _forum.check_post_id(init_post_id, current_post_id)
         assert continue_scraping == expected_continue_scraping
         assert scrape_this_post == expected_scrape_this_post
 
     def test_no_init_post_id_and_scrape_single_post_false(self) -> None:
         init_post_id = None
         current_post_id = 100
-        scrape_single_forum_post = False
-        continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id,
-            current_post_id,
-            scrape_single_forum_post=scrape_single_forum_post,
-        )
+        continue_scraping, scrape_this_post = _forum.check_post_id(init_post_id, current_post_id)
         assert continue_scraping is True
         assert scrape_this_post is True
-
-    def test_no_init_post_id_and_scrape_single_post_true_raises_error(self) -> None:
-        init_post_id = None
-        current_post_id = 100
-        scrape_single_forum_post = True
-
-        with pytest.raises(AssertionError):
-            _forum.check_post_id(
-                init_post_id,
-                current_post_id,
-                scrape_single_forum_post=scrape_single_forum_post,
-            )
 
 
 # original post_id = 23549340

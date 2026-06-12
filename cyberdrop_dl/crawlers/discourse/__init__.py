@@ -124,8 +124,6 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
             stream = await self.make_request(PostStream, f"t/{topic.id}/posts.json", {"post_ids[]": remaining})
             for post in stream.posts:
                 yield post
-                if topic.init_post_number != 1 and self.scrape_single_forum_post:
-                    return
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, /, post: AvailablePost) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]

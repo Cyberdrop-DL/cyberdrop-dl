@@ -199,11 +199,6 @@ class MessageBoardCrawler(Crawler, is_abc=True):
 
     @final
     @property
-    def scrape_single_forum_post(self) -> bool:
-        return self.config.settings.download_options.scrape_single_forum_post
-
-    @final
-    @property
     def max_thread_depth(self) -> int:
         return self.config.settings.download_options.maximum_thread_depth
 
@@ -371,7 +366,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     Concrete classes SHOULD define `ATTACHMENT_HOSTS` if internal images of the site are stored on servers with a different domain
     """
 
-    IGNORE_EMBEDED_IMAGES_SRC = True
+    IGNORE_EMBEDED_IMAGES_SRC: ClassVar[bool] = True
     SELECTORS: ClassVar[MessageBoardSelectors]
     POST_URL_PART_NAME: ClassVar[str]
     PAGE_URL_PART_NAME: ClassVar[str]
@@ -385,7 +380,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             assert getattr(cls, field_name, None), f"Subclass {cls.__name__} must override: {field_name}"
 
     def __post_init__(self) -> None:
-        self.scraped_threads = set()
+        self.scraped_threads: set[AbsoluteHttpURL] = set()
 
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
@@ -412,10 +407,6 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             return
 
         scrape_item.parent_threads.add(thread.url)
-        if self.scrape_single_forum_post and not thread.post_id:
-            msg = "`--scrape-single-forum-post` is `True`, but the provided URL has no post id"
-            raise ScrapeError("User Error", msg)
-
         self.scraped_threads.add(thread.url)
         await self._thread(scrape_item, thread)
 
@@ -444,11 +435,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         post_url = thread.url
         for article in soup.select(self.SELECTORS.posts.article):
             current_post = ForumPost.new(article, self.SELECTORS.posts)
-            continue_scraping, scrape_this_post = check_post_id(
-                thread.post_id,
-                current_post.id,
-                scrape_single_forum_post=self.scrape_single_forum_post,
-            )
+            continue_scraping, scrape_this_post = check_post_id(thread.post_id, current_post.id)
             if scrape_this_post:
                 post_url = self.make_post_url(thread, current_post.id)
                 new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
@@ -689,21 +676,13 @@ def is_confirmation_link(link: AbsoluteHttpURL) -> bool:
 def check_post_id(
     init_post_id: int | None,
     current_post_id: int,
-    *,
-    scrape_single_forum_post: bool,
 ) -> tuple[bool, bool]:
     """Checks if the program should scrape the current post.
 
     Returns (continue_scraping, scrape_this_post)"""
-    if init_post_id:
-        if init_post_id > current_post_id:
-            return (True, False)
-        if init_post_id == current_post_id:
-            return (not scrape_single_forum_post, True)
-        return (not scrape_single_forum_post, not scrape_single_forum_post)
-
-    assert not scrape_single_forum_post  # We should have raised an exception earlier
-    return True, True
+    if init_post_id and init_post_id > current_post_id:
+        return (True, False)
+    return (True, True)
 
 
 def pre_process_child(link_str: str, *, embeds: bool = False) -> str | None:

@@ -52,7 +52,6 @@ class DownloadOptions(SettingsGroup):
     include_thread_id_in_folder_name: bool = False
     maximum_number_of_children: ListNonNegativeInt = []
     remove_domains_from_folder_names: bool = False
-    scrape_single_forum_post: bool = False
     separate_posts_format: NonEmptyStr = "{default}"
     separate_posts: bool = False
     skip_download_mark_completed: bool = False

@@ -114,24 +114,6 @@ No **FORUM** limit, no **FORUM_POST** limit, no **FILE_HOST_PROFILE** limit, max
 
 Setting this to `true` will remove the "(DOMAIN)" portion of folder names on new downloads.
 
-## `scrape_single_forum_post`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Setting this to `true` will prevent Cyberdrop-DL from scraping an entire thread if the input URL had an specific post in it.
-
-CDL will only download files within that post.
-
-For most forum sites, the post id is part of the fragment in the URL.
-
-ex: `/thread/iphone-16-16e-16-plus-16-pro-16-promax.256047/page-64#post-7512404` has a post id of `7512404`
-
-If `scrape_single_forum_post` is `false`, CDL will download all post in the thread, from post `7512404` until the last post
-
-If `scrape_single_forum_post` is `true`, CDL will only download files within post `7512404` itself and stop.
-
 ## `separate_posts`
 
 | Type   | Default |
