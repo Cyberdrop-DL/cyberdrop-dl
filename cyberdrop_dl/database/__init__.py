@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Self
 
 import aiosqlite
 
+from cyberdrop_dl import aio
+
 from .tables import HashTable, HistoryTable, SchemaVersionTable
 
 if TYPE_CHECKING:
@@ -34,13 +36,16 @@ class Database:
         self.schema = SchemaVersionTable(self)
 
     async def __aenter__(self) -> Self:
+        is_new_db = not await aio.exists(self._db_path)
         self._db_conn = await connect(self._db_path)
+        if not is_new_db:
+            await self.schema.check_version()
         await self._pre_allocate()
-        await self.schema.create()
         await self.history.create()
         await self.hash.create()
         if not self.schema.up_to_date:
-            await self.history.apply_updates()
+            if not is_new_db:
+                await self.history.apply_updates()
             await self.schema.update()
 
         return self

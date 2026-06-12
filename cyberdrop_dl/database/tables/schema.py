@@ -27,7 +27,8 @@ class Version(NamedTuple):
         return ".".join(map(str, self))
 
 
-CURRENT_APP_SCHEMA_VERSION = Version(9, 15, 0)
+CURRENT_APP_SCHEMA_VERSION = Version(10, 0, 0)
+REQUIRED_APP_SCHEMA_VERSION = Version(9, 16, 0)
 
 logger = logging.getLogger(__name__)
 
@@ -60,22 +61,23 @@ class SchemaVersionTable:
         result = await cursor.fetchone()
         return result is not None
 
-    async def __create_if_not_exists(self) -> None:
+    async def __update_schema_version(self) -> None:
         await self.db_conn.execute(create_schema_version)
         await self.db_conn.commit()
-
-    async def __update_schema_version(self) -> None:
-        await self.__create_if_not_exists()
         query = "INSERT INTO schema_version (version) VALUES (?)"
         _ = await self.db_conn.execute(query, (str(CURRENT_APP_SCHEMA_VERSION),))
         await self.db_conn.commit()
 
-    async def create(self) -> None:
+    async def check_version(self) -> None:
         logger.info(f"Expected database schema: {CURRENT_APP_SCHEMA_VERSION!s}")
         version = await self.get_version()
         logger.info(f"Current database schema: {version!s}")
-        # TODO: on v10, raise SystemExit if db version is None or older than 8.0.0
-        if version is not None and version >= CURRENT_APP_SCHEMA_VERSION:
+        if version is None or version < REQUIRED_APP_SCHEMA_VERSION:
+            raise RuntimeError(
+                f"Incompatible database version detected. Min required version: {REQUIRED_APP_SCHEMA_VERSION}"
+            )
+
+        if version >= CURRENT_APP_SCHEMA_VERSION:
             self._up_to_date = True
 
     async def update(self) -> None:
