@@ -200,10 +200,6 @@ class ScrapeMapper:
         await self._real_debrid.__async_init__()
         await self._direct_http.__async_post_init__()
 
-        item_limit = 0
-        if self.manager.cli_args.retry_any and self.manager.cli_args.max_items_retry:
-            item_limit = self.manager.cli_args.max_items_retry
-
         source_name, source = _source(self.manager)
         async with contextlib.aclosing(source) as items:
             stats = ScrapeStats(source_name)
@@ -221,8 +217,6 @@ class ScrapeMapper:
                 item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
                 item.download_folder = self.manager.config.settings.files.download_folder
                 if self._should_scrape(item):
-                    if item_limit and stats.count >= item_limit:
-                        break
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
 
@@ -338,13 +332,6 @@ class ScrapeMapper:
 
 def _source(manager: Manager) -> tuple[str, AsyncGenerator[ScrapeItem]]:
     cli_args = manager.cli_args
-
-    if cli_args.retry_failed:
-        return "--retry-failed", load_failed_links(manager)
-    if cli_args.retry_all:
-        return "--retry-all", load_all_links(manager)
-    if cli_args.retry_maintenance:
-        return "--retry-maintenance", load_all_bunkr_failed_links_via_hash(manager)
     if cli_args.links:
         return "--links (CLI args)", _load_cli_links(cli_args.links)
 

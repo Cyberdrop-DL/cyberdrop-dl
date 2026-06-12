@@ -44,7 +44,6 @@ def changelog() -> str:
 def run(manager: Manager) -> None:
     choices: dict[str, Callable[[Manager], bool | None]] = {
         "Download": lambda _: True,
-        "Retry failed downloads": _retry_failed_download,
         "Create file hashes": _scan_and_create_hashes,
         "Sort files in download folder": _sort_files,
         "Edit URLs.txt": _edit_urls,
@@ -58,11 +57,6 @@ def run(manager: Manager) -> None:
         done = choices[answer](manager)
         if done:
             break
-
-
-def _retry_failed_download(manager: Manager) -> bool:
-    manager.cli_args.retry_failed = True
-    return True
 
 
 def _scan_and_create_hashes(manager: Manager) -> None:

@@ -102,18 +102,6 @@ Impersonation allows CDL to make requests and appear to be a legitimate web brow
 The current default target is `chrome`. The default target can change on any new release without notice
 {% endhint %}
 
-### `max-items-retry`
-
-| Type             | Default |
-| ---------------- | ------- |
-| `NonNegativeInt` | `0`     |
-
-Max number of links to retry. Using `0` means no limit
-
-{% hint style="info" %}
-This option has no effect unless you run CDL with one of the retry options: `--retry-all`, `--retry-failed` or `--retry-maintenance`
-{% endhint %}
-
 ### `portrait`
 
 | Type       | Default | Action       |
@@ -129,38 +117,6 @@ Force CDL to run with a vertical layout
 | `BoolFlag` | `True`  | `store_false` |
 
 Show stats report at the end of a run
-
-### `retry-all`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry all downloads
-
-### `retry-failed`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry failed downloads
-
-### `retry-maintenance`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry download of maintenance files (bunkr). Requires files to be hashed
-
-### `show-supported-sites`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Shows a list of all supported sites and exits
 
 ### `ui`
 

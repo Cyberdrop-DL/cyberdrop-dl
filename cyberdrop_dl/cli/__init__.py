@@ -1,10 +1,9 @@
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Literal
 
 from cyclopts import Parameter
 from cyclopts.core import App
-from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 from cyberdrop_dl import __version__
 from cyberdrop_dl.models.types import HttpURL
@@ -53,10 +52,7 @@ class CLIargs(BaseModel):
         default=None,
         description="Use this target as impersonation for all scrape requests",
     )
-    max_items_retry: int = Field(
-        default=0,
-        description="max number of links to retry",
-    )
+
     portrait: bool = Field(
         default=False,
         description="force CDL to run with a vertical layout",
@@ -65,26 +61,10 @@ class CLIargs(BaseModel):
         default=True,
         description="show stats report at the end of a run",
     )
-    retry_all: bool = Field(
-        default=False,
-        description="retry all downloads",
-    )
-    retry_failed: bool = Field(
-        default=False,
-        description="retry failed downloads",
-    )
-    retry_maintenance: bool = Field(
-        default=False,
-        description="retry download of maintenance files (bunkr). Requires files to be hashed",
-    )
     ui: UIOptions = Field(
         default=UIOptions.FULLSCREEN,
         description="DISABLED, ACTIVITY, SIMPLE or FULLSCREEN",
     )
-
-    @property
-    def retry_any(self) -> bool:
-        return any((self.retry_all, self.retry_failed, self.retry_maintenance))
 
     @property
     def fullscreen_ui(self) -> bool:
@@ -92,24 +72,12 @@ class CLIargs(BaseModel):
 
     @computed_field
     def __computed__(self) -> dict[str, bool]:
-        return {"retry_any": self.retry_any, "fullscreen_ui": self.fullscreen_ui}
-
-    @model_validator(mode="after")
-    def mutually_exclusive(self) -> Self:
-        group1 = [self.links, self.retry_all, self.retry_failed, self.retry_maintenance]
-        msg1 = "`--links`, '--retry-all', '--retry-maintenace' and '--retry-failed' are mutually exclusive"
-        _check_mutually_exclusive(group1, msg1)
-        return self
+        return {"fullscreen_ui": self.fullscreen_ui}
 
     @field_validator("ui", mode="before")
     @classmethod
     def lower(cls, value: str) -> str:
         return value.lower()
-
-
-def _check_mutually_exclusive(group: Iterable[Any], msg: str) -> None:
-    if sum(1 for value in group if value) >= 2:
-        raise ValueError(msg)
 
 
 app = App(
