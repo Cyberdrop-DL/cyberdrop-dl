@@ -33,12 +33,13 @@ async def connect(path: Path) -> AsyncGenerator[aiosqlite.Connection]:
 
 @dataclasses.dataclass(slots=True)
 class Database:
-    _db_path: Path
+    path: Path
     ignore_history: bool = False
 
     history: HistoryTable = dataclasses.field(init=False)
     hash: HashTable = dataclasses.field(init=False)
     schema: SchemaTable = dataclasses.field(init=False)
+
     _conn: aiosqlite.Connection = dataclasses.field(init=False)
     _is_new: bool = dataclasses.field(init=False)
 
@@ -52,8 +53,8 @@ class Database:
         return self._conn
 
     async def _connect(self) -> None:
-        self._is_new = not await aio.get_size(self._db_path)
-        self._conn = await _connect(self._db_path)
+        self._is_new = not await aio.get_size(self.path)
+        self._conn = await _connect(self.path)
 
     async def _create_tables(self) -> None:
         await self.schema.create()
@@ -73,7 +74,7 @@ class Database:
             if self._is_new:
                 await self.conn.close()
                 try:
-                    await aio.unlink(self._db_path, missing_ok=True)
+                    await aio.unlink(self.path, missing_ok=True)
                 except OSError:
                     pass
             raise

@@ -186,7 +186,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
 def _create_new_database(path: Path) -> None:
     async def connect() -> None:
-        async with database.Database(_db_path=path, ignore_history=True):
+        async with database.Database(path, ignore_history=True):
             pass
 
     asyncio.run(connect())
