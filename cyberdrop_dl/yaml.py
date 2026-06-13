@@ -11,6 +11,8 @@ from yarl import URL
 from cyberdrop_dl.exceptions import InvalidYamlError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pydantic import BaseModel
     from yaml.nodes import ScalarNode
 
@@ -27,9 +29,14 @@ def _date(dumper: yaml.Dumper, value: date) -> ScalarNode:
     return dumper.represent_str(value.isoformat())
 
 
+def _list(dumper: yaml.Dumper, value: Iterable[Any]):
+    return dumper.represent_list(value)
+
+
 yaml.add_multi_representer(PurePath, _str)
 yaml.add_multi_representer(Enum, _enum)
 yaml.add_multi_representer(date, _date)
+yaml.add_representer(tuple, _list)
 yaml.add_representer(timedelta, _str)
 yaml.add_representer(URL, _str)
 

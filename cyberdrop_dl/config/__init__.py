@@ -162,11 +162,14 @@ class Config(BaseModel):
         return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
-def _load_config_file(file: Path) -> Config:
+def _load_config_file(file: Path, *, save_if_not_found: bool = False) -> Config:
     try:
         content = yaml.load(file)
     except FileNotFoundError:
-        return Config()
+        default = Config()
+        if save_if_not_found:
+            yaml.save(file, default)
+        return default
     else:
         config = Config.model_validate(content, extra="forbid")
         config._source = file
