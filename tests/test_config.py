@@ -29,15 +29,7 @@ def test_parse_config_from_args() -> None:
 
 
 def test_parse_config_from_args2() -> None:
-    config = Config.model_validate(
-        {
-            "settings": {
-                "files": {
-                    "input_file": "test.txt",
-                }
-            }
-        }
-    )
+    config = Config.model_validate({"input_file": "test.txt"})
     assert config == Config.parse_args(["--input-file", "test.txt"])
     assert config == Config.parse_args(["-i", "test.txt"])
     with pytest.raises(UnknownOptionError):
@@ -159,7 +151,7 @@ def test_default_config_does_not_need_ffmpeg() -> None:
 
 
 def test_media_durations_need_ffmpeg() -> None:
-    config = Config.parse_args(["--maximum-video-duration", "20 seconds"])
+    config = Config.parse_args(["--max-video-duration", "20 seconds"])
     duration = config.media_duration_limits.max_video_duration
     assert duration
     assert duration.total_seconds() == 20
