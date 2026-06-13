@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-CREATE_HISTORY = """CREATE TABLE IF NOT EXISTS media (
+CREATE_HISTORY = """
+CREATE TABLE IF NOT EXISTS media (
   domain TEXT,
   url_path TEXT,
   referer TEXT,
@@ -14,7 +15,8 @@ CREATE_HISTORY = """CREATE TABLE IF NOT EXISTS media (
   created_at TIMESTAMP,
   completed_at TIMESTAMP,
   PRIMARY KEY (domain, url_path, original_filename)
-);"""
+);
+"""
 
 CREATE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -33,7 +35,6 @@ CREATE TABLE IF NOT EXISTS files (
   date INT,
   PRIMARY KEY (folder, download_filename)
 );
-
 """
 
 CREATE_HASH = """
@@ -64,5 +65,4 @@ CREATE INDEX IF NOT EXISTS idx_media_domain_url_path_referer
 
 CREATE INDEX IF NOT EXISTS idx_media_domain_referer_completed
     ON media (domain, referer, completed);
-
 """

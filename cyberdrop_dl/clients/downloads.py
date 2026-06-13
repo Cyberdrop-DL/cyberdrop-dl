@@ -448,8 +448,8 @@ async def _probe_item(media_item: MediaItem, config: Config) -> ffmpeg.FFprobeRe
     return await ffmpeg.probe_url(
         media_item.url,
         headers=media_item.headers,
-        proxy=config.global_settings.general.proxy,
-        verify=bool(config.global_settings.general.ssl_context),
+        proxy=config.proxy,
+        verify=bool(config.ssl_context),
     )
 
 

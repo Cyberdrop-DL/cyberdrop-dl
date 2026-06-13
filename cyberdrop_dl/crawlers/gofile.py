@@ -81,7 +81,7 @@ class GoFileCrawler(Crawler):
     @property
     def headers(self) -> dict[str, str]:
         headers = {
-            "User-Agent": (ua := self.config.global_settings.general.user_agent),
+            "User-Agent": (ua := self.config.user_agent),
             "Origin": "https://gofile.io",
             "Referer": "https://gofile.io/",
         }

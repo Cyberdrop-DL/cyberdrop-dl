@@ -542,7 +542,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
-            "User-Agent": self._DEFAULT_UA or self.config.global_settings.general.user_agent,
+            "User-Agent": self._DEFAULT_UA or self.config.user_agent,
             "Referer": str(scrape_item.url),
         }
 

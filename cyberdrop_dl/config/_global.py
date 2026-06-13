@@ -1,6 +1,5 @@
 # ruff: noqa: RUF012
 import random
-from typing import Literal
 
 import aiohttp
 from cyclopts import Parameter
@@ -10,54 +9,14 @@ from pydantic import (
     NonNegativeFloat,
     PositiveFloat,
     PositiveInt,
-    field_serializer,
     field_validator,
 )
-from yarl import URL
 
 from cyberdrop_dl.models import AliasModel, SettingsGroup
-from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, ListPydanticURL, NonEmptyStr
-from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_bytesize
+from cyberdrop_dl.models.types import ByteSizeSerilized, ListPydanticURL
+from cyberdrop_dl.models.validators import falsy_as_none, to_bytesize
 
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
-DEFAULT_REQUIRED_FREE_SPACE = to_bytesize("5GB")
-
-
-class General(SettingsGroup):
-    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
-    disable_crawlers: ListNonEmptyStr = []
-    flaresolverr: HttpURL | None = None
-    max_file_name_length: PositiveInt = 95
-    max_folder_name_length: PositiveInt = 60
-    proxy: HttpURL | None = None
-    required_free_space: ByteSizeSerilized = DEFAULT_REQUIRED_FREE_SPACE
-    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
-
-    @field_validator("ssl_context", mode="before")
-    @classmethod
-    def ssl(cls, value: str | None) -> str | None:
-        if isinstance(value, str):
-            value = value.lower().strip()
-        return falsy_as(value, None)
-
-    @field_validator("disable_crawlers", mode="after")
-    @classmethod
-    def unique_list(cls, value: list[str]) -> list[str]:
-        return sorted(set(value))
-
-    @field_serializer("flaresolverr", "proxy")
-    def serialize(self, value: URL | str) -> URL | str | None:
-        return falsy_as(value, None)
-
-    @field_validator("flaresolverr", "proxy", mode="before")
-    @classmethod
-    def convert_to_str(cls, value: str) -> str | None:
-        return falsy_as(value, None)
-
-    @field_validator("required_free_space", mode="after")
-    @classmethod
-    def override_min(cls, value: ByteSize) -> ByteSize:
-        return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
 class RateLimiting(SettingsGroup):
@@ -116,7 +75,6 @@ class GenericCrawlerInstances(SettingsGroup):
 
 @Parameter(name="*")
 class GlobalSettings(AliasModel):
-    general: General = Field(default_factory=General)
     rate_limiting_options: RateLimiting = Field(default_factory=RateLimiting)
     ui_options: UIOptions = Field(default_factory=UIOptions)
     generic_crawlers_instances: GenericCrawlerInstances = Field(default_factory=GenericCrawlerInstances)

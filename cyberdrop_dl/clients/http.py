@@ -92,7 +92,7 @@ class HTTPClient:
     _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self._ssl_context = tcp.create_ssl_context(self.config.global_settings.general.ssl_context)
+        self._ssl_context = tcp.create_ssl_context(self.config.ssl_context)
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(
             self.config.global_settings.rate_limiting_options.rate_limit
         )
@@ -123,7 +123,7 @@ class HTTPClient:
 
     @property
     def flaresolverr(self) -> flaresolverr.Client | None:
-        if self._flaresolverr is None and (url := self.config.global_settings.general.flaresolverr):
+        if self._flaresolverr is None and (url := self.config.flaresolverr):
             self._flaresolverr = flaresolverr.Client(url, self._session)
         if self._flaresolverr and self._flaresolverr.is_down:
             return None
@@ -166,11 +166,11 @@ class HTTPClient:
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
-            headers={"User-Agent": self.config.global_settings.general.user_agent},
+            headers={"User-Agent": self.config.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=self.config.global_settings.rate_limiting_options.aiohttp_timeout,
-            proxy=self.config.global_settings.general.proxy,
+            proxy=self.config.proxy,
             connector=tcp.create_connector(self._ssl_context),
             requote_redirect_url=False,
         )
@@ -258,7 +258,7 @@ class HTTPClient:
         )
 
         if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", default_ua or self.config.global_settings.general.user_agent)
+            _ = request.headers.setdefault("User-Agent", default_ua or self.config.user_agent)
 
         async with self._request(request) as resp:
             yield resp
@@ -323,7 +323,7 @@ class HTTPClient:
         assert self.flaresolverr
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
-        flaresolverr.verify_solution(self.config.global_settings.general.user_agent, solution)
+        flaresolverr.verify_solution(self.config.user_agent, solution)
         return AbstractResponse.create(solution)
 
     @contextlib.contextmanager
@@ -376,8 +376,8 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         loop=loop,
         async_curl=acurl,
         impersonate="chrome",
-        verify=bool(config.global_settings.general.ssl_context),
-        proxy=str(proxy) if (proxy := config.global_settings.general.proxy) else None,
+        verify=bool(config.ssl_context),
+        proxy=str(proxy) if (proxy := config.proxy) else None,
         timeout=config.global_settings.rate_limiting_options.curl_timeout,
         max_redirects=8,
     )

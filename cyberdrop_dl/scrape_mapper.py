@@ -150,7 +150,7 @@ class ScrapeMapper:
         for crawler in _create_generic_crawlers(self.manager.config.global_settings.generic_crawlers_instances):
             register_crawler(self.crawlers, crawler, from_user=True)
 
-        _disable_crawlers_by_config(self.crawlers, *self.manager.config.global_settings.general.disable_crawlers)
+        _disable_crawlers_by_config(self.crawlers, *self.manager.config.disable_crawlers)
 
         plugins.load(self.manager)
 
@@ -158,8 +158,8 @@ class ScrapeMapper:
     async def __call__(self) -> AsyncGenerator[Self]:
         assert not self._done.is_set()
         config = self.manager.config
-        _ = filepath.MAX_FILE_LEN.set(config.global_settings.general.max_file_name_length)
-        _ = filepath.MAX_FOLDER_LEN.set(config.global_settings.general.max_folder_name_length)
+        _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
+        _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
         _ = CONCURRENT_SEGMENTS.set(config.global_settings.rate_limiting_options.concurrent_segments)
         _ = ALLOW_NO_EXT.set(not config.settings.ignore_options.exclude_files_with_no_extension)
 
@@ -176,7 +176,7 @@ class ScrapeMapper:
         with self.tui():
             async with (
                 self.manager.http_client,
-                storage.monitor(config.global_settings.general.required_free_space),
+                storage.monitor(config.required_free_space),
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
             ):

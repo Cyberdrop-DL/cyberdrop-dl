@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated, Self
+from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    ByteSize,
+    Field,
+    PositiveInt,
+    field_serializer,
+    field_validator,
+)
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.models import AppriseURL  # noqa: TC001
+from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils.apprise import read_apprise_urls
 
 from ._global import GlobalSettings
@@ -19,10 +27,16 @@ from .settings import ConfigSettings
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from yarl import URL
+
     from cyberdrop_dl.manager import AppData, Manager
+    from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
 
 
 _app: App | None = None
+
+
+MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
 
 
 @Parameter(name="*")
@@ -35,6 +49,41 @@ class Config(BaseModel):
 
     deep_scrape: bool = False
     apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
+
+    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
+    disable_crawlers: ListNonEmptyStr = []
+    flaresolverr: HttpURL | None = None
+    max_file_name_length: PositiveInt = 95
+    max_folder_name_length: PositiveInt = 60
+    proxy: HttpURL | None = None
+    required_free_space: ByteSizeSerilized = to_bytesize("5GB")
+    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+
+    @field_validator("ssl_context", mode="before")
+    @classmethod
+    def ssl(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            value = value.lower().strip()
+        return falsy_as(value, None)
+
+    @field_validator("disable_crawlers", mode="after")
+    @classmethod
+    def unique_list(cls, value: list[str]) -> list[str]:
+        return sorted(set(value))
+
+    @field_serializer("flaresolverr", "proxy")
+    def serialize(self, value: URL | str) -> URL | str | None:
+        return falsy_as(value, None)
+
+    @field_validator("flaresolverr", "proxy", mode="before")
+    @classmethod
+    def convert_to_str(cls, value: str) -> str | None:
+        return falsy_as(value, None)
+
+    @field_validator("required_free_space", mode="after")
+    @classmethod
+    def override_min(cls, value: ByteSize) -> ByteSize:
+        return max(value, MIN_REQUIRED_FREE_SPACE)
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
