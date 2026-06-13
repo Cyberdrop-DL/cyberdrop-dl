@@ -147,7 +147,7 @@ class ScrapeMapper:
 
         self.crawlers.update(get_crawlers_mapping())
 
-        for crawler in _create_generic_crawlers(self.manager.config.global_settings.generic_crawlers_instances):
+        for crawler in _create_generic_crawlers(self.manager.config.generic_crawlers_instances):
             register_crawler(self.crawlers, crawler, from_user=True)
 
         _disable_crawlers_by_config(self.crawlers, *self.manager.config.disable_crawlers)
@@ -160,7 +160,7 @@ class ScrapeMapper:
         config = self.manager.config
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
-        _ = CONCURRENT_SEGMENTS.set(config.global_settings.rate_limiting_options.concurrent_segments)
+        _ = CONCURRENT_SEGMENTS.set(config.rate_limiting_options.concurrent_segments)
         _ = ALLOW_NO_EXT.set(not config.settings.ignore_options.exclude_files_with_no_extension)
 
         config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)

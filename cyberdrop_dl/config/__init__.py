@@ -1,42 +1,89 @@
-from __future__ import annotations
+# ruff: noqa: RUF012
+import random
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Annotated, Literal, Self
 
-from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated, Literal, Self
-
+import aiohttp
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
 from pydantic import (
     BaseModel,
     ByteSize,
     Field,
+    NonNegativeFloat,
+    PositiveFloat,
     PositiveInt,
     field_serializer,
     field_validator,
 )
+from yarl import URL
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
-from cyberdrop_dl.models import AppriseURL  # noqa: TC001
-from cyberdrop_dl.models.validators import falsy_as, to_bytesize
+from cyberdrop_dl.manager import AppData, Manager
+from cyberdrop_dl.models import AppriseURL, SettingsGroup
+from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, ListPydanticURL, NonEmptyStr
+from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_bytesize
 from cyberdrop_dl.utils.apprise import read_apprise_urls
 
-from ._global import GlobalSettings
 from .auth import AuthSettings
 from .settings import ConfigSettings
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from yarl import URL
-
-    from cyberdrop_dl.manager import AppData, Manager
-    from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
-
 
 _app: App | None = None
 
 
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
+
+
+class RateLimiting(SettingsGroup):
+    download_attempts: PositiveInt = 2
+    download_delay: NonNegativeFloat = 0.0
+    download_speed_limit: ByteSizeSerilized = ByteSize(0)
+    jitter: NonNegativeFloat = 0
+    max_simultaneous_downloads_per_domain: PositiveInt = 5
+    max_simultaneous_downloads: PositiveInt = 15
+    rate_limit: PositiveFloat = 25
+
+    connection_timeout: PositiveFloat = 15
+    read_timeout: PositiveFloat | None = 300
+    concurrent_segments: PositiveInt = 10
+    """Allow up to `<N>` HLS segments to be downloaded concurrently"""
+
+    @field_validator("read_timeout", mode="before")
+    @classmethod
+    def parse_timeouts(cls, value: object) -> object | None:
+        return falsy_as_none(value)
+
+    @property
+    def curl_timeout(self) -> float | tuple[float, float]:
+        if self.read_timeout is None:
+            return self.connection_timeout
+        return self.connection_timeout, self.read_timeout
+
+    @property
+    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
+        return aiohttp.ClientTimeout(
+            total=None,
+            sock_connect=self.connection_timeout,
+            sock_read=self.read_timeout,
+        )
+
+    @property
+    def total_delay(self) -> NonNegativeFloat:
+        """download_delay + jitter"""
+        return self.download_delay + random.uniform(0, self.jitter)
+
+
+class UIOptions(SettingsGroup):
+    refresh_rate: PositiveFloat = 10.0
+
+
+class GenericCrawlerInstances(SettingsGroup):
+    wordpress_media: ListPydanticURL = []
+    wordpress_html: ListPydanticURL = []
+    discourse: ListPydanticURL = []
+    chevereto: ListPydanticURL = []
 
 
 @Parameter(name="*")
@@ -45,7 +92,6 @@ class Config(BaseModel):
 
     auth: AuthSettings = Field(default_factory=AuthSettings)
     settings: ConfigSettings = Field(default_factory=ConfigSettings)
-    global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
 
     deep_scrape: bool = False
     apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
@@ -58,6 +104,10 @@ class Config(BaseModel):
     proxy: HttpURL | None = None
     required_free_space: ByteSizeSerilized = to_bytesize("5GB")
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+
+    rate_limiting_options: RateLimiting = Field(default_factory=RateLimiting)
+    ui_options: UIOptions = Field(default_factory=UIOptions)
+    generic_crawlers_instances: GenericCrawlerInstances = Field(default_factory=GenericCrawlerInstances)
 
     @field_validator("ssl_context", mode="before")
     @classmethod
@@ -87,8 +137,6 @@ class Config(BaseModel):
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
-
-        global_settings = appdata.configs / "global_settings.yaml"
         auth_file = appdata.configs / "authentication.yaml"
         config_file = config_file or appdata.config_file
         apprise_file = config_file.parent / "apprise.txt"
@@ -97,7 +145,6 @@ class Config(BaseModel):
             source=config_file,
             auth=_load_config_file(auth_file, AuthSettings),
             settings=_load_config_file(config_file, ConfigSettings),
-            global_settings=_load_config_file(global_settings, GlobalSettings),
             apprise_urls=read_apprise_urls(apprise_file),
         )
 
@@ -109,7 +156,7 @@ class Config(BaseModel):
         return merge_models(self, other)
 
     @classmethod
-    def parse_args(cls, tokens: str | Iterable[str]) -> Config:
+    def parse_args(cls, tokens: str | Iterable[str]) -> "Config":
         global _app  # noqa: PLW0603
         if _app is None:
             _app = App(print_error=False, exit_on_error=False)

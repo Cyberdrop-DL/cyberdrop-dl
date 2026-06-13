@@ -94,7 +94,7 @@ class Manager:
         self.sorter = Sorter.from_manager(self)
         with (
             _cache_context(self.appdata.cache_file, self.cache),
-            _enter_context(REFRESH_RATE, self.config.global_settings.ui_options.refresh_rate),
+            _enter_context(REFRESH_RATE, self.config.ui_options.refresh_rate),
             _enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
         ):
             try:
@@ -303,7 +303,6 @@ def _log_config(config: Config) -> None:
             "Download folder": config.settings.files.download_folder,
             "Auth": auth,
             "Settings": config.settings.model_dump(mode="json"),
-            "Global settings": config.global_settings.model_dump(mode="json"),
         }
     )
 

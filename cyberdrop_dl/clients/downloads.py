@@ -45,14 +45,12 @@ class DownloadClient:
         self.manager = manager
         self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
-        speed_limit = self.manager.config.global_settings.rate_limiting_options.download_speed_limit
+        speed_limit = self.manager.config.rate_limiting_options.download_speed_limit
 
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            upper_limit = int(
-                speed_limit / 1.5 / self.manager.config.global_settings.rate_limiting_options.max_simultaneous_downloads
-            )
+            upper_limit = int(speed_limit / 1.5 / self.manager.config.rate_limiting_options.max_simultaneous_downloads)
             self.chunk_size = min(
                 self.chunk_size,
                 upper_limit,
@@ -76,7 +74,7 @@ class DownloadClient:
             resume_point = size
             media_item.headers[hdrs.RANGE] = f"bytes={size}-"
 
-        await asyncio.sleep(self.manager.config.global_settings.rate_limiting_options.total_delay)
+        await asyncio.sleep(self.manager.config.rate_limiting_options.total_delay)
 
         async with self.http_client.raw_request(
             media_item.real_url,
