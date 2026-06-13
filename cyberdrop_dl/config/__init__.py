@@ -1,3 +1,5 @@
+import importlib.util
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Literal, Self
@@ -13,7 +15,6 @@ from cyberdrop_dl.manager import AppData, Manager
 from cyberdrop_dl.models import AppriseURL
 from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
-from cyberdrop_dl.utils.apprise import read_apprise_urls
 
 from .auth import AuthSettings
 from .settings import (
@@ -34,16 +35,17 @@ from .settings import (
 
 _app: App | None = None
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
+logger = logging.getLogger(__name__)
 
 
 @Parameter(name="*")
 class Config(BaseModel):
     source: Annotated[Path | None, Parameter(show=False)] = None
 
-    auth: AuthSettings = Field(default_factory=AuthSettings)
+    auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
 
     deep_scrape: bool = False
-    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
+    apprise_urls: tuple[AppriseURL, ...] = ()
 
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
     disable_crawlers: ListNonEmptyStr = []
@@ -122,15 +124,13 @@ class Config(BaseModel):
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
-        auth_file = appdata.configs / "authentication.yaml"
         config_file = config_file or appdata.config_file
-        apprise_file = config_file.parent / "apprise.txt"
 
-        return cls(
-            source=config_file,
-            auth=_load_config_file(auth_file, AuthSettings),
-            apprise_urls=read_apprise_urls(apprise_file),
-        )
+        self = _load_config_file(config_file, cls)
+        if self.apprise_urls and importlib.util.find_spec("apprise") is None:
+            logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
+            self.apprise_urls = ()
+        return self
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
