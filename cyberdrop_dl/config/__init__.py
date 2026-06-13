@@ -1,19 +1,16 @@
+from __future__ import annotations
+
 import importlib.util
 import logging
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
 from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_serializer, field_validator
-from yarl import URL
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
-from cyberdrop_dl.manager import AppData, Manager
-from cyberdrop_dl.models import AppriseURL
-from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 
 from .auth import AuthSettings
@@ -32,6 +29,15 @@ from .settings import (
     Sorting,
     UIOptions,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from yarl import URL
+
+    from cyberdrop_dl.manager import AppData, Manager
+    from cyberdrop_dl.models import AppriseURL
+    from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
 
 _app: App | None = None
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
@@ -60,7 +66,7 @@ class Config(BaseModel):
     media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     proxy: HttpURL | None = None
     rate_limits: RateLimiting = Field(default_factory=RateLimiting)
-    required_free_space: ByteSizeSerilized = to_bytesize("5GB")
+    min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sorting: Sorting = Field(default_factory=Sorting)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
@@ -74,7 +80,7 @@ class Config(BaseModel):
         return self._source
 
     @classmethod
-    def create(cls, appdata: AppData, config_file: Path | None = None) -> "Config":
+    def create(cls, appdata: AppData, config_file: Path | None = None) -> Config:
         config_file = config_file or appdata.config_file
 
         self = _load_config_file(config_file)
@@ -84,14 +90,14 @@ class Config(BaseModel):
         return self
 
     @classmethod
-    def from_manager(cls, manager: Manager) -> "Config":
+    def from_manager(cls, manager: Manager) -> Config:
         return cls.create(manager.appdata, manager.cli_args.config_file)
 
     def update(self, other: Self) -> Self:
         return merge_models(self, other)
 
     @classmethod
-    def parse_args(cls, tokens: str | Iterable[str]) -> "Config":
+    def parse_args(cls, tokens: str | Iterable[str]) -> Config:
         global _app  # noqa: PLW0603
         if _app is None:
             _app = App(print_error=False, exit_on_error=False)
@@ -168,4 +174,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["AuthSettings", "Config"]
+__all__ = ["Config"]

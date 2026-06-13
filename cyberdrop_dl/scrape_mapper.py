@@ -176,7 +176,7 @@ class ScrapeMapper:
         with self.tui():
             async with (
                 self.manager.http_client,
-                storage.monitor(config.required_free_space),
+                storage.monitor(config.min_free_space),
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
             ):
@@ -214,7 +214,7 @@ class ScrapeMapper:
             self.create_download_task(wait_until_scrape_is_done())
 
             async for item in items:
-                item.children_limits = self.manager.config.downloads.maximum_number_of_children
+                item.children_limits = self.manager.config.downloads.max_number_of_children
                 item.download_folder = self.manager.config.files.download_folder
                 if self._should_scrape(item):
                     stats.update(item)

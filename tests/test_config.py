@@ -160,7 +160,7 @@ def test_default_config_does_not_need_ffmpeg() -> None:
 
 def test_media_durations_need_ffmpeg() -> None:
     config = Config.parse_args(["--maximum-video-duration", "20 seconds"])
-    duration = config.media_duration_limits.maximum_video_duration
+    duration = config.media_duration_limits.max_video_duration
     assert duration
     assert duration.total_seconds() == 20
     assert config.media_duration_limits.needs_ffmpeg

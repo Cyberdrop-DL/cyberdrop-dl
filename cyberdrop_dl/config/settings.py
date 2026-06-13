@@ -59,16 +59,16 @@ _SORTING_COMMON_FIELDS = {
 
 class DownloadOptions(SettingsGroup):
     block_download_sub_folders: bool = False
-    disable_file_timestamps: bool = False
+    mtime: bool = True
     include_album_id_in_folder_name: bool = False
     include_thread_id_in_folder_name: bool = False
-    maximum_number_of_children: ListNonNegativeInt = []
+    max_number_of_children: ListNonNegativeInt = []
     remove_domains_from_folder_names: bool = False
     separate_posts_format: NonEmptyStr = "{default}"
     separate_posts: bool = False
     skip_download_mark_completed: bool = False
-    maximum_thread_depth: NonNegativeInt = 0
-    maximum_thread_folder_depth: NonNegativeInt | None = None
+    max_thread_depth: NonNegativeInt = 0
+    max_thread_folder_depth: NonNegativeInt | None = None
 
     @field_validator("separate_posts_format", mode="after")
     @classmethod
@@ -181,27 +181,27 @@ class FileSizeRanges:
 
 
 class FileSizeLimits(SettingsGroup):
-    maximum_image_size: ByteSizeSerilized = ByteSize(0)
-    maximum_other_size: ByteSizeSerilized = ByteSize(0)
-    maximum_video_size: ByteSizeSerilized = ByteSize(0)
-    minimum_image_size: ByteSizeSerilized = ByteSize(0)
-    minimum_other_size: ByteSizeSerilized = ByteSize(0)
-    minimum_video_size: ByteSizeSerilized = ByteSize(0)
+    max_image_size: ByteSizeSerilized = ByteSize(0)
+    max_other_size: ByteSizeSerilized = ByteSize(0)
+    max_video_size: ByteSizeSerilized = ByteSize(0)
+    min_image_size: ByteSizeSerilized = ByteSize(0)
+    min_other_size: ByteSizeSerilized = ByteSize(0)
+    min_video_size: ByteSizeSerilized = ByteSize(0)
 
     @cached_property
     def ranges(self) -> FileSizeRanges:
         return FileSizeRanges(
             video=Range(
-                self.minimum_video_size,
-                self.maximum_video_size,
+                self.min_video_size,
+                self.max_video_size,
             ),
             image=Range(
-                self.minimum_image_size,
-                self.maximum_image_size,
+                self.min_image_size,
+                self.max_image_size,
             ),
             other=Range(
-                self.minimum_other_size,
-                self.maximum_other_size,
+                self.min_other_size,
+                self.max_other_size,
             ),
         )
 
@@ -213,10 +213,10 @@ class MediaDurationRanges:
 
 
 class MediaDurationLimits(SettingsGroup):
-    maximum_video_duration: timedelta = timedelta(seconds=0)
-    maximum_audio_duration: timedelta = timedelta(seconds=0)
-    minimum_video_duration: timedelta = timedelta(seconds=0)
-    minimum_audio_duration: timedelta = timedelta(seconds=0)
+    max_video_duration: timedelta = timedelta(seconds=0)
+    max_audio_duration: timedelta = timedelta(seconds=0)
+    min_video_duration: timedelta = timedelta(seconds=0)
+    min_audio_duration: timedelta = timedelta(seconds=0)
 
     @field_validator("*", mode="before")
     @staticmethod
@@ -234,22 +234,19 @@ class MediaDurationLimits(SettingsGroup):
     @property
     def needs_ffmpeg(self) -> bool:
         return bool(
-            self.minimum_video_duration
-            or self.maximum_video_duration
-            or self.minimum_audio_duration
-            or self.maximum_audio_duration
+            self.min_video_duration or self.max_video_duration or self.min_audio_duration or self.max_audio_duration
         )
 
     @cached_property
     def ranges(self) -> MediaDurationRanges:
         return MediaDurationRanges(
             video=Range.parse(
-                self.minimum_video_duration.total_seconds(),
-                self.maximum_video_duration.total_seconds(),
+                self.min_video_duration.total_seconds(),
+                self.max_video_duration.total_seconds(),
             ),
             audio=Range.parse(
-                self.minimum_audio_duration.total_seconds(),
-                self.maximum_audio_duration.total_seconds(),
+                self.min_audio_duration.total_seconds(),
+                self.max_audio_duration.total_seconds(),
             ),
         )
 

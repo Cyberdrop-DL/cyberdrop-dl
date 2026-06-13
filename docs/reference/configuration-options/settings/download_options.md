@@ -14,15 +14,15 @@ will be changed to:
 
 > `Downloads/folderA/image.jpg`
 
-## `disable_file_timestamps`
+## `mtime`
 
 | Type   | Default |
 | ------ | ------- |
-| `bool` | `false` |
+| `bool` | `True`  |
 
 By default the program will do it's absolute best to try and find the upload date of a file. It'll then set the `last modified` and `last accessed` dates on the file to match. On Windows and macOS, it will also try to set the `created` date.
 
-Setting this to `true` will disable this function, and the dates for those metadata entries will be the date the file was downloaded.
+Setting this to `false` will disable this function, and the dates for those metadata entries will be the date the file was downloaded.
 
 ## `include_album_id_in_folder_name`
 
