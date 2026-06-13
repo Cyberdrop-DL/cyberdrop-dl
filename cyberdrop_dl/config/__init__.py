@@ -72,56 +72,6 @@ class Config(BaseModel):
     sorting: Sorting = Field(default_factory=Sorting)
     _resolved: bool = False
 
-    def resolve_paths(self) -> None:
-        if self._resolved:
-            return
-
-        self.logs.resolve_filenames()
-        self._resolve_paths(self)
-        self.logs.delete_old_logs_and_folders()
-        self._resolved = True
-
-    @classmethod
-    def _resolve_paths(cls, model: BaseModel) -> None:
-
-        for name, value in vars(model).items():
-            if isinstance(value, Path):
-                if "{config}" in str(value):
-                    raise RuntimeError(
-                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
-                    )
-
-                object.__setattr__(model, name, value.expanduser().resolve().absolute())
-
-            elif isinstance(value, BaseModel):
-                cls._resolve_paths(value)
-
-    @field_validator("ssl_context", mode="before")
-    @classmethod
-    def ssl(cls, value: str | None) -> str | None:
-        if isinstance(value, str):
-            value = value.lower().strip()
-        return falsy_as(value, None)
-
-    @field_validator("disable_crawlers", mode="after")
-    @classmethod
-    def unique_list(cls, value: list[str]) -> list[str]:
-        return sorted(set(value))
-
-    @field_serializer("flaresolverr", "proxy")
-    def serialize(self, value: URL | str) -> URL | str | None:
-        return falsy_as(value, None)
-
-    @field_validator("flaresolverr", "proxy", mode="before")
-    @classmethod
-    def convert_to_str(cls, value: str) -> str | None:
-        return falsy_as(value, None)
-
-    @field_validator("required_free_space", mode="after")
-    @classmethod
-    def override_min(cls, value: ByteSize) -> ByteSize:
-        return max(value, MIN_REQUIRED_FREE_SPACE)
-
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
         config_file = config_file or appdata.config_file
@@ -148,6 +98,56 @@ class Config(BaseModel):
         fn, bound, *_ = _app.parse_args(["coerce", *normalize_tokens(tokens)])
         assert fn is _coerce
         return _coerce(*bound.args, **bound.kwargs)
+
+    def resolve_paths(self) -> None:
+        if self._resolved:
+            return
+
+        self.logs.resolve_filenames()
+        self._resolve_paths(self)
+        self.logs.delete_old_logs_and_folders()
+        self._resolved = True
+
+    @classmethod
+    def _resolve_paths(cls, model: BaseModel) -> None:
+
+        for name, value in vars(model).items():
+            if isinstance(value, Path):
+                if "{config}" in str(value):
+                    raise RuntimeError(
+                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                    )
+
+                object.__setattr__(model, name, value.expanduser().resolve().absolute())
+
+            elif isinstance(value, BaseModel):
+                cls._resolve_paths(value)
+
+    @field_validator("ssl_context", mode="before")
+    @classmethod
+    def _ssl(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            value = value.lower().strip()
+        return falsy_as(value, None)
+
+    @field_validator("disable_crawlers", mode="after")
+    @classmethod
+    def _unique_list(cls, value: list[str]) -> list[str]:
+        return sorted(set(value))
+
+    @field_serializer("flaresolverr", "proxy")
+    def _serialize(self, value: URL | str) -> URL | str | None:
+        return falsy_as(value, None)
+
+    @field_validator("flaresolverr", "proxy", mode="before")
+    @classmethod
+    def _to_str(cls, value: str) -> str | None:
+        return falsy_as(value, None)
+
+    @field_validator("required_free_space", mode="after")
+    @classmethod
+    def _override_min_storage(cls, value: ByteSize) -> ByteSize:
+        return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
 def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[BaseModelT]) -> BaseModelT:
