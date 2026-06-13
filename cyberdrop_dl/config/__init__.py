@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 @Parameter(name="*")
 class Config(BaseModel):
+    __final__: Literal[True] = True
     auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
     apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
     deep_scrape: bool = False
@@ -73,17 +74,17 @@ class Config(BaseModel):
         return self._source
 
     @classmethod
-    def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
+    def create(cls, appdata: AppData, config_file: Path | None = None) -> "Config":
         config_file = config_file or appdata.config_file
 
-        self = _load_config_file(config_file, cls)
+        self = _load_config_file(config_file)
         if self.apprise_urls and importlib.util.find_spec("apprise") is None:
             logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
             self.apprise_urls = ()
         return self
 
     @classmethod
-    def from_manager(cls, manager: Manager) -> Self:
+    def from_manager(cls, manager: Manager) -> "Config":
         return cls.create(manager.appdata, manager.cli_args.config_file)
 
     def update(self, other: Self) -> Self:
@@ -150,15 +151,15 @@ class Config(BaseModel):
         return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
-def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[BaseModelT]) -> BaseModelT:
+def _load_config_file(file: Path) -> Config:
     try:
         content = yaml.load(file)
     except FileNotFoundError:
-        default = model()
-        yaml.save(file, default)
-        return default
+        return Config()
     else:
-        return model.model_validate(content, extra="forbid")
+        config = Config.model_validate(content, extra="forbid")
+        config._source = file
+        return config
 
 
 def _coerce(*, config: Config | None = None) -> Config:
