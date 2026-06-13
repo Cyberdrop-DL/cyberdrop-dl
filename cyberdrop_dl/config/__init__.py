@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Literal, Self
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
 from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_serializer, field_validator
+from yarl import URL  # noqa: TC002
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
@@ -34,8 +35,6 @@ from .settings import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-    from yarl import URL
 
     from cyberdrop_dl.manager import AppData, Manager
 

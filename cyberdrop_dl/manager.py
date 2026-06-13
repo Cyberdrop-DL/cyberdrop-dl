@@ -294,17 +294,10 @@ def _log_cli_args(cli_args: CLIargs) -> None:
 
 
 def _log_config(config: Config) -> None:
-    auth = {site: all(credentials.values()) for site, credentials in config.auth.model_dump().items()}
-    logger.debug(
-        {
-            "Config file": config.source,
-            "URLs file": config.input_file,
-            "Apprise URLs": tuple(url.format(dump_secret=False) for url in config.apprise_urls),
-            "Download folder": config.download_folder,
-            "Auth": auth,
-            "Settings": config.model_dump(mode="json"),
-        }
-    )
+    data = config.model_dump(mode="json")
+    data["auth"] = {site: all(credentials.values()) for site, credentials in data.pop("auth").items()}
+    logger.debug("Config file: %s", config.source)
+    logger.debug(data)
 
 
 def _log_ffmpeg() -> None:

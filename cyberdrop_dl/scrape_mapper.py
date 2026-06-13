@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     import aiosqlite
 
-    from cyberdrop_dl.config._global import GenericCrawlerInstances
+    from cyberdrop_dl.config.settings import GenericCrawlers
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.manager import Manager
 
@@ -448,7 +448,7 @@ def register_crawler(
         crawlers_map[domain] = crawler
 
 
-def _create_generic_crawlers(generics_config: GenericCrawlerInstances) -> Generator[type[Crawler]]:
+def _create_generic_crawlers(generics_config: GenericCrawlers) -> Generator[type[Crawler]]:
 
     for domains, cls in (
         (generics_config.wordpress_html, WordPressHTMLCrawler),
