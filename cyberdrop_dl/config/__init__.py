@@ -11,6 +11,8 @@ from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_serializer, 
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
+from cyberdrop_dl.models import AppriseURL  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 
 from .auth import AuthSettings
@@ -36,8 +38,7 @@ if TYPE_CHECKING:
     from yarl import URL
 
     from cyberdrop_dl.manager import AppData, Manager
-    from cyberdrop_dl.models import AppriseURL
-    from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
+
 
 _app: App | None = None
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
@@ -151,7 +152,7 @@ class Config(BaseModel):
     def _to_str(cls, value: str) -> str | None:
         return falsy_as(value, None)
 
-    @field_validator("required_free_space", mode="after")
+    @field_validator("min_free_space", mode="after")
     @classmethod
     def _override_min_storage(cls, value: ByteSize) -> ByteSize:
         return max(value, MIN_REQUIRED_FREE_SPACE)
