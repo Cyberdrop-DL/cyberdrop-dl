@@ -85,7 +85,7 @@ class Hasher:
 
     @property
     def download_folder(self) -> Path:
-        return self.manager.config.files.download_folder.expanduser().resolve().absolute()
+        return self.manager.config.download_folder.expanduser().resolve().absolute()
 
     @property
     def stats(self):

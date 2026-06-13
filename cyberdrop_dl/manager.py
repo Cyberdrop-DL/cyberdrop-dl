@@ -298,9 +298,9 @@ def _log_config(config: Config) -> None:
     logger.debug(
         {
             "Config file": config.source,
-            "URLs file": config.files.input_file,
+            "URLs file": config.input_file,
             "Apprise URLs": tuple(url.format(dump_secret=False) for url in config.apprise_urls),
-            "Download folder": config.files.download_folder,
+            "Download folder": config.download_folder,
             "Auth": auth,
             "Settings": config.model_dump(mode="json"),
         }

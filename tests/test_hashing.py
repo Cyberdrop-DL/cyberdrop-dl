@@ -57,12 +57,12 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
     options.hashes = tuple(algos)  # pyright: ignore[reportAttributeAccessIssue]
     options.re_compute()
 
-    manager.config.files.download_folder.mkdir(parents=True)
+    manager.config.download_folder.mkdir(parents=True)
     db_path = manager.appdata.db_file
-    await hash_directory_scanner(manager, manager.config.files.download_folder)
+    await hash_directory_scanner(manager, manager.config.download_folder)
     assert not get_hashes(db_path)
-    create_files(manager.config.files.download_folder, n_files)
-    await hash_directory_scanner(manager, manager.config.files.download_folder)
+    create_files(manager.config.download_folder, n_files)
+    await hash_directory_scanner(manager, manager.config.download_folder)
     results = get_hashes(db_path)
     assert len(results) == len(expected_results)
     assert results == expected_results

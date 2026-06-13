@@ -535,7 +535,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
 
         if not scrape_item.retry_path:
-            check_path_traversal(self.config.files.download_folder, media_item.download_folder)
+            check_path_traversal(self.config.download_folder, media_item.download_folder)
 
         check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
@@ -560,7 +560,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             await self.__write_to_jsonl(media_item)
 
     async def __write_to_jsonl(self, media_item: MediaItem) -> None:
-        if not self.config.files.dump_json:
+        if not self.config.dump_json:
             return
 
         await self.manager.logs.write_jsonl([media_item.serialize()])

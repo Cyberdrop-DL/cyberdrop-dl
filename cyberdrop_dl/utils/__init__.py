@@ -36,7 +36,7 @@ def delete_empty_files_and_folders(path: Path) -> None:
 
 
 def check_partials_and_empty_folders(config: Config) -> None:
-    download_folder = config.files.download_folder
+    download_folder = config.download_folder
 
     logger.info("Checking for partial downloads...")
     if has_partial_files(download_folder):

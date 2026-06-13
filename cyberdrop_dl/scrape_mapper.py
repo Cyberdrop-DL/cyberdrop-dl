@@ -163,7 +163,7 @@ class ScrapeMapper:
         _ = CONCURRENT_SEGMENTS.set(config.rate_limits.concurrent_segments)
         _ = ALLOW_NO_EXT.set(not config.ignore.exclude_files_with_no_extension)
 
-        config.files.download_folder.mkdir(parents=True, exist_ok=True)
+        config.download_folder.mkdir(parents=True, exist_ok=True)
         if config.sorting.sort_downloads:
             config.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
@@ -215,7 +215,7 @@ class ScrapeMapper:
 
             async for item in items:
                 item.children_limits = self.manager.config.downloads.max_number_of_children
-                item.download_folder = self.manager.config.files.download_folder
+                item.download_folder = self.manager.config.download_folder
                 if self._should_scrape(item):
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
@@ -253,7 +253,7 @@ class ScrapeMapper:
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
             download_folder = scrape_item.compose_download_path("jdownloader")
-            relative_download_dir = download_folder.relative_to(self.manager.config.files.download_folder)
+            relative_download_dir = download_folder.relative_to(self.manager.config.download_folder)
             try:
                 await self._jdownloader.send(
                     scrape_item.url,
@@ -335,7 +335,7 @@ def _source(manager: Manager) -> tuple[str, AsyncGenerator[ScrapeItem]]:
     if cli_args.links:
         return "--links (CLI args)", _load_cli_links(cli_args.links)
 
-    return str(manager.config.files.input_file), _load_urls_from_file(manager.config.files.input_file)
+    return str(manager.config.input_file), _load_urls_from_file(manager.config.input_file)
 
 
 async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:

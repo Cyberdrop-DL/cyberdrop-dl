@@ -13,7 +13,6 @@ from cyclopts import Parameter
 from pydantic import (
     BaseModel,
     ByteSize,
-    Field,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
@@ -76,16 +75,6 @@ class DownloadOptions(SettingsGroup):
         valid_keys = {"default", "title", "id", "number", "date"}
         validate_format_string(value, valid_keys)
         return value
-
-
-class Files(SettingsGroup):
-    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = Field(
-        default=DEFAULT_DOWNLOAD_STORAGE, validation_alias="d"
-    )
-    dump_json: Annotated[bool, Parameter(alias="-j")] = Field(default=False, validation_alias="j")
-    input_file: Annotated[Path, Parameter(alias="-i")] = Field(default=Path("URLs.txt"), validation_alias="i")
-    dump_responses: bool = False
-    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
 
 class Logs(SettingsGroup):  # noqa: PLW1641

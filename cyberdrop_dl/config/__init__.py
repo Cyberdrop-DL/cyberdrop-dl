@@ -11,6 +11,7 @@ from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_serializer, 
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
+from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.models import AppriseURL  # noqa: TC001
 from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
@@ -20,7 +21,6 @@ from .settings import (
     Cookies,
     DownloadOptions,
     DupeCleanup,
-    Files,
     FileSizeLimits,
     GenericCrawlers,
     IgnoreOptions,
@@ -57,7 +57,12 @@ class Config(BaseModel):
     downloads: DownloadOptions = Field(default_factory=DownloadOptions)
     dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
-    files: Files = Field(default_factory=Files)
+    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
+    dump_json: Annotated[bool, Parameter(alias="-j")] = False
+    input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
+    dump_responses: bool = False
+    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
+
     flaresolverr: HttpURL | None = None
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     ignore: IgnoreOptions = Field(default_factory=IgnoreOptions)

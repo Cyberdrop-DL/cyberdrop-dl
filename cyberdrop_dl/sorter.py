@@ -48,7 +48,7 @@ class Sorter:
     def from_manager(cls, manager: Manager) -> Self:
         settings = manager.config.sorting
         return cls(
-            input_dir=settings.scan_folder or manager.config.files.download_folder,
+            input_dir=settings.scan_folder or manager.config.download_folder,
             output_dir=settings.sort_folder,
             incrementer_format=settings.sort_incrementer_format,
             audio_format=settings.sorted_audio,

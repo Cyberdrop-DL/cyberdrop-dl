@@ -259,7 +259,7 @@ class DownloadClient:
         download_folder = media_item.download_folder
 
         if self.manager.config.downloads.block_download_sub_folders:
-            while download_folder.parent != self.manager.config.files.download_folder:
+            while download_folder.parent != self.manager.config.download_folder:
                 download_folder = download_folder.parent
             media_item.download_folder = download_folder
         return download_folder
