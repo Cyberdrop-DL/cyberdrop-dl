@@ -161,7 +161,7 @@ class ScrapeMapper:
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
         _ = CONCURRENT_SEGMENTS.set(config.rate_limits.concurrent_segments)
-        _ = ALLOW_NO_EXT.set(not config.ignore_options.exclude_files_with_no_extension)
+        _ = ALLOW_NO_EXT.set(not config.ignore.exclude_files_with_no_extension)
 
         config.files.download_folder.mkdir(parents=True, exist_ok=True)
         if config.sorting.sort_downloads:
@@ -291,12 +291,12 @@ class ScrapeMapper:
             logger.info(f"Skipping {scrape_item.url} as it is a blocked domain")
             return False
 
-        skip_hosts = self.manager.config.ignore_options.skip_hosts
+        skip_hosts = self.manager.config.ignore.skip_hosts
         if skip_hosts and _filter_by_domain(scrape_item, skip_hosts):
             logger.info(f"Skipping {scrape_item.url} by skip_hosts config")
             return False
 
-        only_hosts = self.manager.config.ignore_options.only_hosts
+        only_hosts = self.manager.config.ignore.only_hosts
         if only_hosts and not _filter_by_domain(scrape_item, only_hosts):
             logger.info(f"Skipping {scrape_item.url} by only_hosts config")
             return False

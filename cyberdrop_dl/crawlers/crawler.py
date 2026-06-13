@@ -1048,7 +1048,7 @@ def auto_task_id[CrawlerT: Crawler, **P, R](
 
 def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
     media_host = media_item.url.host
-    ignore_options = config.ignore_options
+    ignore_options = config.ignore
 
     if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
         logger.info(f"Download skipped {media_item.url} due to skip_hosts config")

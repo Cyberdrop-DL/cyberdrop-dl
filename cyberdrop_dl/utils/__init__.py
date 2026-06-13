@@ -42,7 +42,7 @@ def check_partials_and_empty_folders(config: Config) -> None:
     if has_partial_files(download_folder):
         logger.warning("There are partial downloads in the downloads folder")
 
-    settings = config.runtime_options
+    settings = config.runtime
     if settings.delete_partial_files:
         logger.info("Deleting partial downloads...")
         delete_partial_files(download_folder)

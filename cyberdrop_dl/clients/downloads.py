@@ -43,7 +43,7 @@ class DownloadClient:
 
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.download_speed_threshold = self.manager.config.runtime_options.slow_download_speed
+        self.download_speed_threshold = self.manager.config.runtime.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.rate_limits.download_speed_limit
 

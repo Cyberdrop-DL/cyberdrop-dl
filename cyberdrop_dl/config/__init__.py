@@ -52,7 +52,7 @@ class Config(BaseModel):
     files: Files = Field(default_factory=Files)
     flaresolverr: HttpURL | None = None
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
-    ignore_options: IgnoreOptions = Field(default_factory=IgnoreOptions)
+    ignore: IgnoreOptions = Field(default_factory=IgnoreOptions)
     logs: Logs = Field(default_factory=Logs)
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
@@ -60,7 +60,7 @@ class Config(BaseModel):
     proxy: HttpURL | None = None
     rate_limits: RateLimiting = Field(default_factory=RateLimiting)
     required_free_space: ByteSizeSerilized = to_bytesize("5GB")
-    runtime_options: RuntimeOptions = Field(default_factory=RuntimeOptions)
+    runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sorting: Sorting = Field(default_factory=Sorting)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
     ui_options: UIOptions = Field(default_factory=UIOptions)

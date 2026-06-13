@@ -115,7 +115,7 @@ class Downloader:
 
     @property
     def _ignore_history(self) -> bool:
-        return self.manager.config.runtime_options.ignore_history
+        return self.manager.config.runtime.ignore_history
 
     @error_handling_wrapper
     async def __download_w_retries(self, media_item: MediaItem) -> bool:
@@ -274,7 +274,7 @@ class Downloader:
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
-    ignore_options = config.ignore_options
+    ignore_options = config.ignore
     ext = media_item.ext.lower()
 
     return not (
@@ -294,7 +294,7 @@ def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
 
 def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
     item_date = item_datetime.date()
-    ignore_options = config.ignore_options
+    ignore_options = config.ignore
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
         return False
