@@ -36,13 +36,13 @@ def delete_empty_files_and_folders(path: Path) -> None:
 
 
 def check_partials_and_empty_folders(config: Config) -> None:
-    download_folder = config.settings.files.download_folder
+    download_folder = config.files.download_folder
 
     logger.info("Checking for partial downloads...")
     if has_partial_files(download_folder):
         logger.warning("There are partial downloads in the downloads folder")
 
-    settings = config.settings.runtime_options
+    settings = config.runtime_options
     if settings.delete_partial_files:
         logger.info("Deleting partial downloads...")
         delete_partial_files(download_folder)
@@ -53,8 +53,8 @@ def check_partials_and_empty_folders(config: Config) -> None:
     logger.info("Deleting empty files and folders...")
     delete_empty_files_and_folders(download_folder)
 
-    sorted_folder = config.settings.sorting.sort_folder
-    if sorted_folder and config.settings.sorting.sort_downloads:
+    sorted_folder = config.sorting.sort_folder
+    if sorted_folder and config.sorting.sort_downloads:
         delete_empty_files_and_folders(sorted_folder)
 
 

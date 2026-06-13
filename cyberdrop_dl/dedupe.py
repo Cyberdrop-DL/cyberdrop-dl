@@ -34,9 +34,9 @@ class Czkawka:
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
         return cls(
-            base_dir=manager.config.settings.files.download_folder.expanduser().resolve().absolute(),
+            base_dir=manager.config.files.download_folder.expanduser().resolve().absolute(),
             database=manager.database,
-            use_trash_bin=manager.config.settings.dupe_cleanup_options.send_deleted_to_trash,
+            use_trash_bin=manager.config.dupe_cleanup_options.send_deleted_to_trash,
         )
 
     def __post_init__(self) -> None:

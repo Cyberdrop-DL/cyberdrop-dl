@@ -1,14 +1,26 @@
 # ruff: noqa: RUF012
 import dataclasses
 import logging
+import random
 import re
 from datetime import date, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self, override
 
+import aiohttp
 from cyclopts import Parameter
-from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PrivateAttr, field_validator
+from pydantic import (
+    BaseModel,
+    ByteSize,
+    Field,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    PrivateAttr,
+    field_validator,
+)
 
 from cyberdrop_dl.constants import (
     DEFAULT_APP_STORAGE,
@@ -17,11 +29,12 @@ from cyberdrop_dl.constants import (
     LOGS_DATETIME_FORMAT,
     Hashing,
 )
-from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
+from cyberdrop_dl.models import AppriseURL, SettingsGroup
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     ListNonEmptyStr,
     ListNonNegativeInt,
+    ListPydanticURL,
     LogPath,
     MainLogPath,
     NonEmptyStr,
@@ -395,40 +408,51 @@ class DupeCleanup(SettingsGroup):
         return self._extra_hashes
 
 
-@Parameter(name="*")
-class ConfigSettings(AliasModel):
-    cookies: Cookies = Field(default_factory=Cookies)
-    download_options: DownloadOptions = Field(default_factory=DownloadOptions)
-    dupe_cleanup_options: DupeCleanup = Field(default_factory=DupeCleanup)
-    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
-    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
-    files: Files = Field(default_factory=Files)
-    ignore_options: IgnoreOptions = Field(default_factory=IgnoreOptions)
-    logs: Logs = Field(default_factory=Logs)
-    runtime_options: RuntimeOptions = Field(default_factory=RuntimeOptions)
-    sorting: Sorting = Field(default_factory=Sorting)
-    _resolved: bool = False
+class RateLimiting(SettingsGroup):
+    download_attempts: PositiveInt = 2
+    download_delay: NonNegativeFloat = 0.0
+    download_speed_limit: ByteSizeSerilized = ByteSize(0)
+    jitter: NonNegativeFloat = 0
+    max_simultaneous_downloads_per_domain: PositiveInt = 5
+    max_simultaneous_downloads: PositiveInt = 15
+    rate_limit: PositiveFloat = 25
 
-    def resolve_paths(self) -> None:
-        if self._resolved:
-            return
+    connection_timeout: PositiveFloat = 15
+    read_timeout: PositiveFloat | None = 300
+    concurrent_segments: PositiveInt = 10
+    """Allow up to `<N>` HLS segments to be downloaded concurrently"""
 
-        self.logs.resolve_filenames()
-        self._resolve_paths(self)
-        self.logs.delete_old_logs_and_folders()
-        self._resolved = True
-
+    @field_validator("read_timeout", mode="before")
     @classmethod
-    def _resolve_paths(cls, model: BaseModel) -> None:
+    def parse_timeouts(cls, value: object) -> object | None:
+        return falsy_as_none(value)
 
-        for name, value in vars(model).items():
-            if isinstance(value, Path):
-                if "{config}" in str(value):
-                    raise RuntimeError(
-                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
-                    )
+    @property
+    def curl_timeout(self) -> float | tuple[float, float]:
+        if self.read_timeout is None:
+            return self.connection_timeout
+        return self.connection_timeout, self.read_timeout
 
-                object.__setattr__(model, name, value.expanduser().resolve().absolute())
+    @property
+    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
+        return aiohttp.ClientTimeout(
+            total=None,
+            sock_connect=self.connection_timeout,
+            sock_read=self.read_timeout,
+        )
 
-            elif isinstance(value, BaseModel):
-                cls._resolve_paths(value)
+    @property
+    def total_delay(self) -> NonNegativeFloat:
+        """download_delay + jitter"""
+        return self.download_delay + random.uniform(0, self.jitter)
+
+
+class UIOptions(SettingsGroup):
+    refresh_rate: PositiveFloat = 10.0
+
+
+class GenericCrawlerInstances(SettingsGroup):
+    wordpress_media: ListPydanticURL = []
+    wordpress_html: ListPydanticURL = []
+    discourse: ListPydanticURL = []
+    chevereto: ListPydanticURL = []

@@ -24,8 +24,8 @@ async def _scrape(manager: Manager) -> None:
     from cyberdrop_dl.utils import apprise
 
     with setup_file_logging(
-        manager.config.settings.logs.main_log,
-        level=manager.config.settings.runtime_options.effective_log_level,
+        manager.config.logs.main_log,
+        level=manager.config.runtime_options.effective_log_level,
     ):
         manager.log_config_settings()
         if not ffmpeg.is_installed():
@@ -50,8 +50,8 @@ async def _scrape(manager: Manager) -> None:
             logger.info("Closing program...")
             logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
 
-            if manager.config.settings.logs.webhook:
-                await webhook.send_notification(manager.config.settings.logs.webhook, stats_summary)
+            if manager.config.logs.webhook:
+                await webhook.send_notification(manager.config.logs.webhook, stats_summary)
 
             if manager.config.apprise_urls:
                 await apprise.send_notifications(manager.config.apprise_urls, stats_summary)
@@ -64,14 +64,14 @@ async def _post_runtime(manager: Manager) -> None:
     logger.info("Running Post-Download Processes\n", extra={"color": "green"})
 
     if (
-        manager.config.settings.dupe_cleanup_options.hashing.enabled
-        and manager.config.settings.dupe_cleanup_options.auto_dedupe
-        and not manager.config.settings.runtime_options.ignore_history
+        manager.config.dupe_cleanup_options.hashing.enabled
+        and manager.config.dupe_cleanup_options.auto_dedupe
+        and not manager.config.runtime_options.ignore_history
     ):
         file_hashes = await manager.hasher.run()
         await manager.deduper.run(file_hashes)
 
-    if manager.config.settings.sorting.sort_downloads:
+    if manager.config.sorting.sort_downloads:
         await manager.sorter.run()
 
     check_partials_and_empty_folders(manager.config)
@@ -80,7 +80,7 @@ async def _post_runtime(manager: Manager) -> None:
 def _main(manager: Manager) -> None:
     from cyberdrop_dl import aio, program_ui
 
-    set_console_level(manager.config.settings.runtime_options.effective_console_log_level)
+    set_console_level(manager.config.runtime_options.effective_console_log_level)
     try:
         with manager():
             if not manager.cli_args.download:
@@ -111,7 +111,7 @@ def download(
 
     config = Config.create(appdata, cli.config_file).update(config)
 
-    if not cli.fullscreen_ui or cli.config_file or config.settings.sorting.sort_downloads:
+    if not cli.fullscreen_ui or cli.config_file or config.sorting.sort_downloads:
         cli.download = True
 
     manager = Manager(cli, appdata, config)
@@ -121,12 +121,12 @@ def download(
 
 def _check_ffmpeg(config: Config) -> None:
     errors: list[Exception] = []
-    if config.settings.sorting.needs_ffmpeg:
+    if config.sorting.needs_ffmpeg:
         exc = RuntimeError("Sorting media files requires 'ffmpeg' to be installed")
         exc.add_note("Disable sorting or install ffmpeg")
         errors.append(exc)
 
-    if config.settings.media_duration_limits.needs_ffmpeg:
+    if config.media_duration_limits.needs_ffmpeg:
         exc = RuntimeError("Filtering files by duration requires 'ffmpeg' to be installed")
         exc.add_note("Disable media duration limits or install ffmpeg")
         errors.append(exc)

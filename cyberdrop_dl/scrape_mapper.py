@@ -161,11 +161,11 @@ class ScrapeMapper:
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
         _ = CONCURRENT_SEGMENTS.set(config.rate_limiting_options.concurrent_segments)
-        _ = ALLOW_NO_EXT.set(not config.settings.ignore_options.exclude_files_with_no_extension)
+        _ = ALLOW_NO_EXT.set(not config.ignore_options.exclude_files_with_no_extension)
 
-        config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
-        if config.settings.sorting.sort_downloads:
-            config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+        config.files.download_folder.mkdir(parents=True, exist_ok=True)
+        if config.sorting.sort_downloads:
+            config.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
             "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
@@ -214,8 +214,8 @@ class ScrapeMapper:
             self.create_download_task(wait_until_scrape_is_done())
 
             async for item in items:
-                item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
-                item.download_folder = self.manager.config.settings.files.download_folder
+                item.children_limits = self.manager.config.download_options.maximum_number_of_children
+                item.download_folder = self.manager.config.files.download_folder
                 if self._should_scrape(item):
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
@@ -253,7 +253,7 @@ class ScrapeMapper:
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
             download_folder = scrape_item.compose_download_path("jdownloader")
-            relative_download_dir = download_folder.relative_to(self.manager.config.settings.files.download_folder)
+            relative_download_dir = download_folder.relative_to(self.manager.config.files.download_folder)
             try:
                 await self._jdownloader.send(
                     scrape_item.url,
@@ -291,12 +291,12 @@ class ScrapeMapper:
             logger.info(f"Skipping {scrape_item.url} as it is a blocked domain")
             return False
 
-        skip_hosts = self.manager.config.settings.ignore_options.skip_hosts
+        skip_hosts = self.manager.config.ignore_options.skip_hosts
         if skip_hosts and _filter_by_domain(scrape_item, skip_hosts):
             logger.info(f"Skipping {scrape_item.url} by skip_hosts config")
             return False
 
-        only_hosts = self.manager.config.settings.ignore_options.only_hosts
+        only_hosts = self.manager.config.ignore_options.only_hosts
         if only_hosts and not _filter_by_domain(scrape_item, only_hosts):
             logger.info(f"Skipping {scrape_item.url} by only_hosts config")
             return False
@@ -335,7 +335,7 @@ def _source(manager: Manager) -> tuple[str, AsyncGenerator[ScrapeItem]]:
     if cli_args.links:
         return "--links (CLI args)", _load_cli_links(cli_args.links)
 
-    return str(manager.config.settings.files.input_file), _load_urls_from_file(manager.config.settings.files.input_file)
+    return str(manager.config.files.input_file), _load_urls_from_file(manager.config.files.input_file)
 
 
 async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:

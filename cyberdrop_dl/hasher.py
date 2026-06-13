@@ -85,7 +85,7 @@ class Hasher:
 
     @property
     def download_folder(self) -> Path:
-        return self.manager.config.settings.files.download_folder.expanduser().resolve().absolute()
+        return self.manager.config.files.download_folder.expanduser().resolve().absolute()
 
     @property
     def stats(self):
@@ -93,7 +93,7 @@ class Hasher:
 
     @property
     def config(self) -> DupeCleanup:
-        return self.manager.config.settings.dupe_cleanup_options
+        return self.manager.config.dupe_cleanup_options
 
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename

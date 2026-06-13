@@ -115,7 +115,7 @@ class Downloader:
 
     @property
     def _ignore_history(self) -> bool:
-        return self.manager.config.settings.runtime_options.ignore_history
+        return self.manager.config.runtime_options.ignore_history
 
     @error_handling_wrapper
     async def __download_w_retries(self, media_item: MediaItem) -> bool:
@@ -274,7 +274,7 @@ class Downloader:
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
-    ignore_options = config.settings.ignore_options
+    ignore_options = config.ignore_options
     ext = media_item.ext.lower()
 
     return not (
@@ -294,7 +294,7 @@ def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
 
 def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
     item_date = item_datetime.date()
-    ignore_options = config.settings.ignore_options
+    ignore_options = config.ignore_options
 
     if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
         return False
@@ -305,7 +305,7 @@ async def _set_mtime(media_item: MediaItem, config: Config) -> None:
     if media_item.is_segment:
         return
 
-    if config.settings.download_options.disable_file_timestamps:
+    if config.download_options.disable_file_timestamps:
         return
 
     if not media_item.uploaded_at:

@@ -31,18 +31,15 @@ class Config:
 
     @staticmethod
     def from_manager(manager: Manager) -> Config:
-        download_dir = (
-            manager.config.settings.runtime_options.jdownloader_download_dir
-            or manager.config.settings.files.download_folder
-        )
+        download_dir = manager.config.runtime_options.jdownloader_download_dir or manager.config.files.download_folder
         return Config(
-            enabled=manager.config.settings.runtime_options.send_unsupported_to_jdownloader,
+            enabled=manager.config.runtime_options.send_unsupported_to_jdownloader,
             device=manager.config.auth.jdownloader.device,
             username=manager.config.auth.jdownloader.username,
             password=manager.config.auth.jdownloader.password,
             download_dir=download_dir.resolve(),
-            autostart=manager.config.settings.runtime_options.jdownloader_autostart,
-            whitelist=tuple(manager.config.settings.runtime_options.jdownloader_whitelist),
+            autostart=manager.config.runtime_options.jdownloader_autostart,
+            whitelist=tuple(manager.config.runtime_options.jdownloader_whitelist),
         )
 
 

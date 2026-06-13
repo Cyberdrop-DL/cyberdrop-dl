@@ -395,7 +395,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @property
     def separate_posts(self) -> bool:
-        return self.config.settings.download_options.separate_posts
+        return self.config.download_options.separate_posts
 
     @final
     @contextlib.contextmanager
@@ -535,7 +535,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
 
         if not scrape_item.retry_path:
-            check_path_traversal(self.config.settings.files.download_folder, media_item.download_folder)
+            check_path_traversal(self.config.files.download_folder, media_item.download_folder)
 
         check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
@@ -560,7 +560,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             await self.__write_to_jsonl(media_item)
 
     async def __write_to_jsonl(self, media_item: MediaItem) -> None:
-        if not self.config.settings.files.dump_json:
+        if not self.config.files.dump_json:
             return
 
         await self.manager.logs.write_jsonl([media_item.serialize()])
@@ -696,7 +696,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     ) -> str:
         if not self.separate_posts:
             return ""
-        title_format = self.config.settings.download_options.separate_posts_format
+        title_format = self.config.download_options.separate_posts_format
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
         if isinstance(date, int):
@@ -1048,7 +1048,7 @@ def auto_task_id[CrawlerT: Crawler, **P, R](
 
 def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
     media_host = media_item.url.host
-    ignore_options = config.settings.ignore_options
+    ignore_options = config.ignore_options
 
     if (hosts := ignore_options.skip_hosts) and any(host in media_host for host in hosts):
         logger.info(f"Download skipped {media_item.url} due to skip_hosts config")
@@ -1074,13 +1074,13 @@ def create_title(
 ) -> str:
     title = (title or "Untitled").strip()
 
-    if album_id and config.settings.download_options.include_album_id_in_folder_name:
+    if album_id and config.download_options.include_album_id_in_folder_name:
         title = f"{title} {album_id}"
 
-    if thread_id and config.settings.download_options.include_thread_id_in_folder_name:
+    if thread_id and config.download_options.include_thread_id_in_folder_name:
         title = f"{title} {thread_id}"
 
-    if not config.settings.download_options.remove_domains_from_folder_names:
+    if not config.download_options.remove_domains_from_folder_names:
         title = f"{title} ({domain})"
 
     # Remove double spaces

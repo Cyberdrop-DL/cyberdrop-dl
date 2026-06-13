@@ -79,7 +79,7 @@ class Manager:
 
     def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
-        self.config.settings.resolve_paths()
+        self.config.resolve_paths()
         self.logs = CSVLogsManager.from_manager(self)
         self.logs.delete_old_logs()
 
@@ -88,7 +88,7 @@ class Manager:
         self.__resolve_paths()
         self.database = Database(
             self.appdata.db_file,
-            self.config.settings.runtime_options.ignore_history,
+            self.config.runtime_options.ignore_history,
         )
         self.deduper = Czkawka.from_manager(self)
         self.sorter = Sorter.from_manager(self)
@@ -142,7 +142,7 @@ class Manager:
         logger.info(f"  URLs source: {scrape_stats.source}")
         logger.info(f"  URLs: {scrape_stats.count:,}")
         logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
-        logger.info(f"  Logs folder: {self.config.settings.logs.log_folder}")
+        logger.info(f"  Logs folder: {self.config.logs.log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
@@ -167,7 +167,7 @@ class Manager:
         )
 
     async def get_cookie_files(self) -> list[Path]:
-        path = self.config.settings.cookies.cookies
+        path = self.config.cookies.cookies
         if not path:
             return []
 
@@ -298,11 +298,11 @@ def _log_config(config: Config) -> None:
     logger.debug(
         {
             "Config file": config.source,
-            "URLs file": config.settings.files.input_file,
+            "URLs file": config.files.input_file,
             "Apprise URLs": tuple(url.format(dump_secret=False) for url in config.apprise_urls),
-            "Download folder": config.settings.files.download_folder,
+            "Download folder": config.files.download_folder,
             "Auth": auth,
-            "Settings": config.settings.model_dump(mode="json"),
+            "Settings": config.model_dump(mode="json"),
         }
     )
 

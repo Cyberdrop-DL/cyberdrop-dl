@@ -43,7 +43,7 @@ class DownloadClient:
 
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
-        self.download_speed_threshold = self.manager.config.settings.runtime_options.slow_download_speed
+        self.download_speed_threshold = self.manager.config.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
         speed_limit = self.manager.config.rate_limiting_options.download_speed_limit
 
@@ -194,7 +194,7 @@ class DownloadClient:
 
     async def download_file(self, domain: str, media_item: MediaItem) -> bool:
         """Starts a file."""
-        if self.manager.config.settings.download_options.skip_download_mark_completed and not media_item.is_segment:
+        if self.manager.config.download_options.skip_download_mark_completed and not media_item.is_segment:
             logger.info(f"Download removed {media_item.url} due to mark completed option")
             self.manager.scrape_mapper.tui.files.stats.skipped += 1
             # set completed path
@@ -258,8 +258,8 @@ class DownloadClient:
         """Returns the download directory for the media item."""
         download_folder = media_item.download_folder
 
-        if self.manager.config.settings.download_options.block_download_sub_folders:
-            while download_folder.parent != self.manager.config.settings.files.download_folder:
+        if self.manager.config.download_options.block_download_sub_folders:
+            while download_folder.parent != self.manager.config.files.download_folder:
                 download_folder = download_folder.parent
             media_item.download_folder = download_folder
         return download_folder
@@ -371,7 +371,7 @@ class DownloadClient:
 
     def check_filesize_limits(self, media: MediaItem) -> bool:
         """Checks if the file size is within the limits."""
-        limits = self.manager.config.settings.file_size_limits.ranges
+        limits = self.manager.config.file_size_limits.ranges
 
         assert media.filesize is not None
         if media.ext in FileExt.IMAGE:
@@ -420,7 +420,7 @@ async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
     if media_item.is_segment:
         return False
 
-    duration_limits = config.settings.media_duration_limits.ranges
+    duration_limits = config.media_duration_limits.ranges
     if media_item.ext.lower() in FileExt.VIDEO:
         limits = duration_limits.video
     elif media_item.ext.lower() in FileExt.AUDIO:

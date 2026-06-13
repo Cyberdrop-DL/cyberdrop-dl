@@ -61,10 +61,10 @@ class CSVLogsManager:
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
         files = CSVFiles(
-            main_log=manager.config.settings.logs.main_log,
-            unsupported_urls_log=manager.config.settings.logs.unsupported_urls,
-            download_error_log=manager.config.settings.logs.download_error_urls,
-            scrape_error_log=manager.config.settings.logs.scrape_error_urls,
+            main_log=manager.config.logs.main_log,
+            unsupported_urls_log=manager.config.logs.unsupported_urls,
+            download_error_log=manager.config.logs.download_error_urls,
+            scrape_error_log=manager.config.logs.scrape_error_urls,
         )
         return cls(files)
 

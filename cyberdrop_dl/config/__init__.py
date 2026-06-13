@@ -1,89 +1,39 @@
-# ruff: noqa: RUF012
-import random
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-import aiohttp
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import (
-    BaseModel,
-    ByteSize,
-    Field,
-    NonNegativeFloat,
-    PositiveFloat,
-    PositiveInt,
-    field_serializer,
-    field_validator,
-)
+from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_serializer, field_validator
 from yarl import URL
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.manager import AppData, Manager
-from cyberdrop_dl.models import AppriseURL, SettingsGroup
-from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, ListPydanticURL, NonEmptyStr
-from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_bytesize
+from cyberdrop_dl.models import AppriseURL
+from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr
+from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils.apprise import read_apprise_urls
 
 from .auth import AuthSettings
-from .settings import ConfigSettings
+from .settings import (
+    Cookies,
+    DownloadOptions,
+    DupeCleanup,
+    Files,
+    FileSizeLimits,
+    GenericCrawlerInstances,
+    IgnoreOptions,
+    Logs,
+    MediaDurationLimits,
+    RateLimiting,
+    RuntimeOptions,
+    Sorting,
+    UIOptions,
+)
 
 _app: App | None = None
-
-
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
-
-
-class RateLimiting(SettingsGroup):
-    download_attempts: PositiveInt = 2
-    download_delay: NonNegativeFloat = 0.0
-    download_speed_limit: ByteSizeSerilized = ByteSize(0)
-    jitter: NonNegativeFloat = 0
-    max_simultaneous_downloads_per_domain: PositiveInt = 5
-    max_simultaneous_downloads: PositiveInt = 15
-    rate_limit: PositiveFloat = 25
-
-    connection_timeout: PositiveFloat = 15
-    read_timeout: PositiveFloat | None = 300
-    concurrent_segments: PositiveInt = 10
-    """Allow up to `<N>` HLS segments to be downloaded concurrently"""
-
-    @field_validator("read_timeout", mode="before")
-    @classmethod
-    def parse_timeouts(cls, value: object) -> object | None:
-        return falsy_as_none(value)
-
-    @property
-    def curl_timeout(self) -> float | tuple[float, float]:
-        if self.read_timeout is None:
-            return self.connection_timeout
-        return self.connection_timeout, self.read_timeout
-
-    @property
-    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
-        return aiohttp.ClientTimeout(
-            total=None,
-            sock_connect=self.connection_timeout,
-            sock_read=self.read_timeout,
-        )
-
-    @property
-    def total_delay(self) -> NonNegativeFloat:
-        """download_delay + jitter"""
-        return self.download_delay + random.uniform(0, self.jitter)
-
-
-class UIOptions(SettingsGroup):
-    refresh_rate: PositiveFloat = 10.0
-
-
-class GenericCrawlerInstances(SettingsGroup):
-    wordpress_media: ListPydanticURL = []
-    wordpress_html: ListPydanticURL = []
-    discourse: ListPydanticURL = []
-    chevereto: ListPydanticURL = []
 
 
 @Parameter(name="*")
@@ -91,7 +41,6 @@ class Config(BaseModel):
     source: Annotated[Path | None, Parameter(show=False)] = None
 
     auth: AuthSettings = Field(default_factory=AuthSettings)
-    settings: ConfigSettings = Field(default_factory=ConfigSettings)
 
     deep_scrape: bool = False
     apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
@@ -108,6 +57,42 @@ class Config(BaseModel):
     rate_limiting_options: RateLimiting = Field(default_factory=RateLimiting)
     ui_options: UIOptions = Field(default_factory=UIOptions)
     generic_crawlers_instances: GenericCrawlerInstances = Field(default_factory=GenericCrawlerInstances)
+
+    cookies: Cookies = Field(default_factory=Cookies)
+    download_options: DownloadOptions = Field(default_factory=DownloadOptions)
+    dupe_cleanup_options: DupeCleanup = Field(default_factory=DupeCleanup)
+    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
+    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
+    files: Files = Field(default_factory=Files)
+    ignore_options: IgnoreOptions = Field(default_factory=IgnoreOptions)
+    logs: Logs = Field(default_factory=Logs)
+    runtime_options: RuntimeOptions = Field(default_factory=RuntimeOptions)
+    sorting: Sorting = Field(default_factory=Sorting)
+    _resolved: bool = False
+
+    def resolve_paths(self) -> None:
+        if self._resolved:
+            return
+
+        self.logs.resolve_filenames()
+        self._resolve_paths(self)
+        self.logs.delete_old_logs_and_folders()
+        self._resolved = True
+
+    @classmethod
+    def _resolve_paths(cls, model: BaseModel) -> None:
+
+        for name, value in vars(model).items():
+            if isinstance(value, Path):
+                if "{config}" in str(value):
+                    raise RuntimeError(
+                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                    )
+
+                object.__setattr__(model, name, value.expanduser().resolve().absolute())
+
+            elif isinstance(value, BaseModel):
+                cls._resolve_paths(value)
 
     @field_validator("ssl_context", mode="before")
     @classmethod
@@ -144,7 +129,6 @@ class Config(BaseModel):
         return cls(
             source=config_file,
             auth=_load_config_file(auth_file, AuthSettings),
-            settings=_load_config_file(config_file, ConfigSettings),
             apprise_urls=read_apprise_urls(apprise_file),
         )
 
@@ -183,4 +167,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["AuthSettings", "Config", "ConfigSettings", "GlobalSettings"]
+__all__ = ["AuthSettings", "Config"]
