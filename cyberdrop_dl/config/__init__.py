@@ -48,31 +48,31 @@ logger = logging.getLogger(__name__)
 @Parameter(name="*")
 class Config(BaseModel):
     __final__: Literal[True] = True
-    auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
-    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
-    deep_scrape: bool = False
 
+    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
+    auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
     cookies: Cookies = Field(default_factory=Cookies)
+    deep_scrape: bool = False
     disable_crawlers: ListNonEmptyStr = []
-    downloads: DownloadOptions = Field(default_factory=DownloadOptions)
-    dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
-    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
+    downloads: DownloadOptions = Field(default_factory=DownloadOptions)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
-    input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
+    dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
+    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
     flaresolverr: HttpURL | None = None
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     ignore: IgnoreOptions = Field(default_factory=IgnoreOptions)
+    input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     logs: Logs = Field(default_factory=Logs)
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
     media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
+    min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     proxy: HttpURL | None = None
     rate_limits: RateLimiting = Field(default_factory=RateLimiting)
-    min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sorting: Sorting = Field(default_factory=Sorting)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
