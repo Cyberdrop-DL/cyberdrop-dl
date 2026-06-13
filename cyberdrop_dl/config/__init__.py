@@ -158,7 +158,7 @@ def _load_config_file[BaseModelT: BaseModel](file: Path, model: type[BaseModelT]
         yaml.save(file, default)
         return default
     else:
-        return model.model_validate(content)
+        return model.model_validate(content, extra="forbid")
 
 
 def _coerce(*, config: Config | None = None) -> Config:
