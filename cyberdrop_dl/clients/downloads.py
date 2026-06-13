@@ -45,12 +45,12 @@ class DownloadClient:
         self.manager = manager
         self.download_speed_threshold = self.manager.config.runtime_options.slow_download_speed
         self._supports_ranges: bool = True
-        speed_limit = self.manager.config.rate_limiting_options.download_speed_limit
+        speed_limit = self.manager.config.rate_limits.download_speed_limit
 
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            upper_limit = int(speed_limit / 1.5 / self.manager.config.rate_limiting_options.max_simultaneous_downloads)
+            upper_limit = int(speed_limit / 1.5 / self.manager.config.rate_limits.max_simultaneous_downloads)
             self.chunk_size = min(
                 self.chunk_size,
                 upper_limit,
@@ -74,7 +74,7 @@ class DownloadClient:
             resume_point = size
             media_item.headers[hdrs.RANGE] = f"bytes={size}-"
 
-        await asyncio.sleep(self.manager.config.rate_limiting_options.total_delay)
+        await asyncio.sleep(self.manager.config.rate_limits.total_delay)
 
         async with self.http_client.raw_request(
             media_item.real_url,
@@ -194,7 +194,7 @@ class DownloadClient:
 
     async def download_file(self, domain: str, media_item: MediaItem) -> bool:
         """Starts a file."""
-        if self.manager.config.download_options.skip_download_mark_completed and not media_item.is_segment:
+        if self.manager.config.downloads.skip_download_mark_completed and not media_item.is_segment:
             logger.info(f"Download removed {media_item.url} due to mark completed option")
             self.manager.scrape_mapper.tui.files.stats.skipped += 1
             # set completed path
@@ -258,7 +258,7 @@ class DownloadClient:
         """Returns the download directory for the media item."""
         download_folder = media_item.download_folder
 
-        if self.manager.config.download_options.block_download_sub_folders:
+        if self.manager.config.downloads.block_download_sub_folders:
             while download_folder.parent != self.manager.config.files.download_folder:
                 download_folder = download_folder.parent
             media_item.download_folder = download_folder

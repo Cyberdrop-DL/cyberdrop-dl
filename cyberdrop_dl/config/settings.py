@@ -451,7 +451,7 @@ class UIOptions(SettingsGroup):
     refresh_rate: PositiveFloat = 10.0
 
 
-class GenericCrawlerInstances(SettingsGroup):
+class GenericCrawlers(SettingsGroup):
     wordpress_media: ListPydanticURL = []
     wordpress_html: ListPydanticURL = []
     discourse: ListPydanticURL = []

@@ -23,7 +23,7 @@ from .settings import (
     DupeCleanup,
     Files,
     FileSizeLimits,
-    GenericCrawlerInstances,
+    GenericCrawlers,
     IgnoreOptions,
     Logs,
     MediaDurationLimits,
@@ -40,37 +40,37 @@ logger = logging.getLogger(__name__)
 
 @Parameter(name="*")
 class Config(BaseModel):
-    source: Annotated[Path | None, Parameter(show=False)] = None
-
     auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
-
+    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
     deep_scrape: bool = False
-    apprise_urls: tuple[AppriseURL, ...] = ()
-
-    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
-    disable_crawlers: ListNonEmptyStr = []
-    flaresolverr: HttpURL | None = None
-    max_file_name_length: PositiveInt = 95
-    max_folder_name_length: PositiveInt = 60
-    proxy: HttpURL | None = None
-    required_free_space: ByteSizeSerilized = to_bytesize("5GB")
-    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
-
-    rate_limiting_options: RateLimiting = Field(default_factory=RateLimiting)
-    ui_options: UIOptions = Field(default_factory=UIOptions)
-    generic_crawlers_instances: GenericCrawlerInstances = Field(default_factory=GenericCrawlerInstances)
 
     cookies: Cookies = Field(default_factory=Cookies)
-    download_options: DownloadOptions = Field(default_factory=DownloadOptions)
-    dupe_cleanup_options: DupeCleanup = Field(default_factory=DupeCleanup)
+    disable_crawlers: ListNonEmptyStr = []
+    downloads: DownloadOptions = Field(default_factory=DownloadOptions)
+    dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
-    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     files: Files = Field(default_factory=Files)
+    flaresolverr: HttpURL | None = None
+    generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     ignore_options: IgnoreOptions = Field(default_factory=IgnoreOptions)
     logs: Logs = Field(default_factory=Logs)
+    max_file_name_length: PositiveInt = 95
+    max_folder_name_length: PositiveInt = 60
+    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
+    proxy: HttpURL | None = None
+    rate_limits: RateLimiting = Field(default_factory=RateLimiting)
+    required_free_space: ByteSizeSerilized = to_bytesize("5GB")
     runtime_options: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sorting: Sorting = Field(default_factory=Sorting)
+    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
+    ui_options: UIOptions = Field(default_factory=UIOptions)
+    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
     _resolved: bool = False
+    _source: Path | None = None
+
+    @property
+    def source(self) -> Path | None:
+        return self._source
 
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:

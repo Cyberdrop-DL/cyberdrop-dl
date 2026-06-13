@@ -93,8 +93,8 @@ class HTTPClient:
 
     def __post_init__(self) -> None:
         self._ssl_context = tcp.create_ssl_context(self.config.ssl_context)
-        self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.rate_limiting_options.rate_limit)
-        self.global_download_limiter = asyncio.Semaphore(self.config.rate_limiting_options.max_simultaneous_downloads)
+        self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.rate_limits.rate_limit)
+        self.global_download_limiter = asyncio.Semaphore(self.config.rate_limits.max_simultaneous_downloads)
 
     @staticmethod
     def from_manager(manager: Manager) -> HTTPClient:
@@ -165,7 +165,7 @@ class HTTPClient:
             headers={"User-Agent": self.config.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.config.rate_limiting_options.aiohttp_timeout,
+            timeout=self.config.rate_limits.aiohttp_timeout,
             proxy=self.config.proxy,
             connector=tcp.create_connector(self._ssl_context),
             requote_redirect_url=False,
@@ -374,6 +374,6 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         impersonate="chrome",
         verify=bool(config.ssl_context),
         proxy=str(proxy) if (proxy := config.proxy) else None,
-        timeout=config.rate_limiting_options.curl_timeout,
+        timeout=config.rate_limits.curl_timeout,
         max_redirects=8,
     )

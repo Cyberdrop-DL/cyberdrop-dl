@@ -395,7 +395,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @property
     def separate_posts(self) -> bool:
-        return self.config.download_options.separate_posts
+        return self.config.downloads.separate_posts
 
     @final
     @contextlib.contextmanager
@@ -696,7 +696,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     ) -> str:
         if not self.separate_posts:
             return ""
-        title_format = self.config.download_options.separate_posts_format
+        title_format = self.config.downloads.separate_posts_format
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
         if isinstance(date, int):
@@ -1074,13 +1074,13 @@ def create_title(
 ) -> str:
     title = (title or "Untitled").strip()
 
-    if album_id and config.download_options.include_album_id_in_folder_name:
+    if album_id and config.downloads.include_album_id_in_folder_name:
         title = f"{title} {album_id}"
 
-    if thread_id and config.download_options.include_thread_id_in_folder_name:
+    if thread_id and config.downloads.include_thread_id_in_folder_name:
         title = f"{title} {thread_id}"
 
-    if not config.download_options.remove_domains_from_folder_names:
+    if not config.downloads.remove_domains_from_folder_names:
         title = f"{title} ({domain})"
 
     # Remove double spaces

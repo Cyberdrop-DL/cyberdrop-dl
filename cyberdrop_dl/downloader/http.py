@@ -81,7 +81,7 @@ class Downloader:
 
     def __post_init__(self) -> None:
         self.slots = self._slots
-        self.max_attempts = self.config.rate_limiting_options.download_attempts
+        self.max_attempts = self.config.rate_limits.download_attempts
 
     @property
     def waiting_items(self) -> int:
@@ -101,7 +101,7 @@ class Downloader:
             if not (sem._waiters is None and sem._value == self._slots):
                 raise RuntimeError("Can't change download limits. Downloader is already in use")
 
-        upper_limit = self.config.rate_limiting_options.max_simultaneous_downloads_per_domain
+        upper_limit = self.config.rate_limits.max_simultaneous_downloads_per_domain
         self._slots = min(new_limit or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._slots)
 
@@ -305,7 +305,7 @@ async def _set_mtime(media_item: MediaItem, config: Config) -> None:
     if media_item.is_segment:
         return
 
-    if config.download_options.disable_file_timestamps:
+    if config.downloads.disable_file_timestamps:
         return
 
     if not media_item.uploaded_at:

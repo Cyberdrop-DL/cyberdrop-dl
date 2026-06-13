@@ -93,7 +93,7 @@ class Hasher:
 
     @property
     def config(self) -> DupeCleanup:
-        return self.manager.config.dupe_cleanup_options
+        return self.manager.config.dupe_cleanup
 
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
