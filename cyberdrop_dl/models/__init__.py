@@ -6,19 +6,10 @@ from cyclopts import Parameter
 from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, model_serializer, model_validator
 
 
-def get_model_fields(model: BaseModel, *, exclude_unset: bool = True) -> set[str]:
-    fields = set()
-    for submodel_name, submodel in model.model_dump(exclude_unset=exclude_unset).items():
-        for field_name in submodel:
-            fields.add(f"{submodel_name}.{field_name}")
-
-    return fields
-
-
 class AliasModel(BaseModel, populate_by_name=True, defer_build=True): ...
 
 
-class SettingsGroup(AliasModel):
+class ConfigGroup(AliasModel):
     def __init_subclass__(cls, *, group: str | None = None, name: str | None = "*") -> None:
         _ = Parameter(group=group or cls.__name__, name=name)(cls)
         return super().__init_subclass__()

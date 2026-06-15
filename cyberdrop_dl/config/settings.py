@@ -33,7 +33,7 @@ from cyberdrop_dl.constants import (
     CIStrEnum,
     Hashing,
 )
-from cyberdrop_dl.models import AliasModel, SettingsGroup
+from cyberdrop_dl.models import AliasModel, ConfigGroup
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     HttpURL,
@@ -55,7 +55,7 @@ class SubFoldersInclude(AliasModel):
     domain: bool = True
 
 
-class SubFolders(SettingsGroup, name=None):
+class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
     include: SubFoldersInclude = Field(default_factory=SubFoldersInclude)
     separate_posts_format: NonEmptyStr = "{default}"
@@ -80,7 +80,7 @@ class LogFiles(AliasModel):
         return self.main.with_suffix(".results.jsonl")
 
 
-class Logs(SettingsGroup, name=None):  # noqa: PLW1641
+class Logs(ConfigGroup, name=None):  # noqa: PLW1641
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     "Only log messages of this level or higher to the main log file"
     console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
@@ -184,7 +184,7 @@ class FileSizeRanges:
     other: Range
 
 
-class FileSizeLimits(SettingsGroup):
+class FileSizeLimits(ConfigGroup):
     max_image_size: ByteSizeSerilized = ByteSize(0)
     max_other_size: ByteSizeSerilized = ByteSize(0)
     max_video_size: ByteSizeSerilized = ByteSize(0)
@@ -216,7 +216,7 @@ class MediaDurationRanges:
     audio: Range | None
 
 
-class MediaDurationLimits(SettingsGroup):
+class MediaDurationLimits(ConfigGroup):
     max_video_duration: datetime.timedelta = datetime.timedelta(seconds=0)
     max_audio_duration: datetime.timedelta = datetime.timedelta(seconds=0)
     min_video_duration: datetime.timedelta = datetime.timedelta(seconds=0)
@@ -268,7 +268,7 @@ class Exclude(AliasModel):
     coomer_post_content: bool = True
 
 
-class Filters(SettingsGroup):
+class Filters(ConfigGroup):
     exclude: Exclude = Field(default_factory=Exclude)
     filename_regex: NonEmptyStrOrNone = None
     only_hosts: ListNonEmptyStr = []
@@ -286,7 +286,7 @@ class Filters(SettingsGroup):
         return value
 
 
-class Jdownloader(SettingsGroup, name=None):
+class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
     autostart: bool = False
     download_dir: PathOrNone = None
@@ -353,7 +353,7 @@ class SortFormats(AliasModel):
     "Format for separator on name collisions"
 
 
-class Sort(SettingsGroup, name=None):
+class Sort(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--sort")] = False
     input_folder: PathOrNone = None
     output_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
@@ -364,12 +364,12 @@ class Sort(SettingsGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class Cookies(SettingsGroup):
+class Cookies(ConfigGroup):
     cookies: Path | None = None
     "File/folder to import cookies from (.txt Netscape files)"
 
 
-class DupeCleanup(SettingsGroup):
+class DupeCleanup(ConfigGroup):
     hashes: tuple[Literal["xxh128", "md5", "sha256"], ...] = "xxh128", "md5", "sha256"
     auto_dedupe: bool = True
     hashing: Hashing = Hashing.IN_PLACE
@@ -392,7 +392,7 @@ class DupeCleanup(SettingsGroup):
         return self._extra_hashes
 
 
-class Downloads(SettingsGroup):
+class Downloads(ConfigGroup):
     concurrency: Annotated[PositiveInt, Parameter(name="--downloads")] = 15
     concurrency_per_domain: Annotated[PositiveInt, Parameter(name="--downloads.per-domain")] = 5
     attempts: PositiveInt = 2
@@ -409,7 +409,7 @@ class Downloads(SettingsGroup):
         return self.delay + random.uniform(0, self.jitter)
 
 
-class Network(SettingsGroup):
+class Network(ConfigGroup):
     proxy: HttpURL | None = None
     flaresolverr: HttpURL | None = None
     rate_limit: PositiveFloat = 25
@@ -457,12 +457,12 @@ class UIMode(CIStrEnum):
         return self is UIMode.FULLSCREEN
 
 
-class UIOptions(SettingsGroup):
+class UIOptions(ConfigGroup):
     refresh_rate: PositiveFloat = 10.0
     mode: Annotated[UIMode, Parameter(name="--ui")] = UIMode.FULLSCREEN
 
 
-class GenericCrawlers(SettingsGroup):
+class GenericCrawlers(ConfigGroup):
     wordpress_media: ListPydanticURL = []
     wordpress_html: ListPydanticURL = []
     discourse: ListPydanticURL = []
