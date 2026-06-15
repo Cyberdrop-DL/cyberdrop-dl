@@ -144,7 +144,7 @@ def _check_partials_and_empty_folders(config: Config) -> None:
         logger.info("Deleting partial downloads...")
         cleanup.rm_partial_files(config.download_folder)
 
-    if settings.skip_check_for_empty_folders:
+    if not settings.delete_empty_folders:
         return
 
     _delete_empty_files(config)

@@ -125,6 +125,7 @@ Several config options have been removed:
 - `--scrape-single-forum-post`
 - `--sites`
 - `--update-last-forum-post`
+- `--skip-check-for-partial-files`
 
 The following authentication entries has been removed:
 

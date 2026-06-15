@@ -279,16 +279,14 @@ class Jdownloader(SettingsGroup, name=None):
 
 
 class RuntimeOptions(SettingsGroup):
+    ignore_history: bool = False
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     "Only log messages of this level or higher to the main log file"
     console_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
     "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
-    deep_scrape: bool = False
     delete_partial_files: bool = False
-    ignore_history: bool = False
-
-    skip_check_for_empty_folders: bool = False
-    skip_check_for_partial_files: bool = False
+    delete_empty_folders: bool = True
     slow_download_speed: ByteSizeSerilized = ByteSize(0)
 
     @field_validator("log_level", "console_log_level", mode="before")
