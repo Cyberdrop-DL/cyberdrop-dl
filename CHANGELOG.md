@@ -139,6 +139,7 @@ Several config options have been removed:
 - `--completed-after`
 - `--completed-before`
 - `--disable-download-attempt-limit`
+- `--download-tiktok-audios`
 - `--last-forum-post`
 - `--max-items-retry`
 - `--remove-generated-id-from-filename`
@@ -148,8 +149,8 @@ Several config options have been removed:
 - `--save-pages-html`
 - `--scrape-single-forum-post`
 - `--sites`
-- `--update-last-forum-post`
 - `--skip-check-for-partial-files`
+- `--update-last-forum-post`
 
 The following authentication entries has been removed:
 

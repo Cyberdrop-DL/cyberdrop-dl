@@ -90,10 +90,6 @@ class TikTokCrawler(Crawler):
     _RATE_LIMIT: ClassVar[RateLimit] = 1, 2
 
     @property
-    def download_audios(self) -> bool:
-        return self.manager.cli_args.download_tiktok_audios
-
-    @property
     def download_src_quality_videos(self) -> bool:
         return self.manager.cli_args.download_tiktok_src_quality_videos
 
@@ -156,13 +152,7 @@ class TikTokCrawler(Crawler):
     @error_handling_wrapper
     async def src_quality_media(self, scrape_item: ScrapeItem, media_id: str, post: Post | None = None) -> None:
         if await self.check_complete(scrape_item.url, scrape_item.url):
-            # The video was downloaded, but the audio may have not
-            if not self.download_audios:
-                return None
-
-            if post:
-                return self._handle_post(scrape_item, post)
-            return await self.media(scrape_item, media_id)
+            return
 
         submit_url = _API_SUBMIT_TASK_URL.with_query(url=media_id)
         task_id: str = (await self._api_request(submit_url))["task_id"]
@@ -225,9 +215,6 @@ class TikTokCrawler(Crawler):
             scrape_item.add_children()
 
     def _handle_audio(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if not self.manager.cli_args.download_tiktok_audios:
-            return
-
         audio, ext = post.music_info, ".mp3"
         audio_url = self.parse_url(audio.play, trim=False)
         filename = self.create_custom_filename(audio.title, ext, file_id=audio.id)
