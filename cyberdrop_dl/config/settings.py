@@ -394,19 +394,27 @@ class DupeCleanup(SettingsGroup):
         return self._extra_hashes
 
 
-class RateLimiting(SettingsGroup):
-    download_attempts: PositiveInt = 2
-    download_delay: NonNegativeFloat = 0.0
-    download_speed_limit: ByteSizeSerilized = ByteSize(0)
+class Downloads(AliasModel):
+    attempts: PositiveInt = 2
+    concurrency_per_domain: Annotated[PositiveInt, Parameter(name="--downloads.per-domain")] = 5
+    concurrency: Annotated[PositiveInt, Parameter(name="--downloads")] = 15
+    delay: NonNegativeFloat = 0.0
+    slow_speed: ByteSizeSerilized = ByteSize(0)
+    speed_limit: ByteSizeSerilized = ByteSize(0)
     jitter: NonNegativeFloat = 0
-    max_simultaneous_downloads_per_domain: PositiveInt = 5
-    max_simultaneous_downloads: PositiveInt = 15
-    rate_limit: PositiveFloat = 25
-
-    connection_timeout: PositiveFloat = 15
-    read_timeout: PositiveFloat | None = 300
     concurrent_segments: PositiveInt = 10
     """Allow up to `<N>` HLS segments to be downloaded concurrently"""
+
+    @property
+    def total_delay(self) -> NonNegativeFloat:
+        return self.delay + random.uniform(0, self.jitter)
+
+
+class RateLimiting(SettingsGroup):
+    downloads: Downloads = Field(default_factory=Downloads)
+    rate_limit: PositiveFloat = 25
+    connection_timeout: PositiveFloat = 15
+    read_timeout: PositiveFloat | None = 300
 
     @field_validator("read_timeout", mode="before")
     @classmethod
@@ -426,11 +434,6 @@ class RateLimiting(SettingsGroup):
             sock_connect=self.connection_timeout,
             sock_read=self.read_timeout,
         )
-
-    @property
-    def total_delay(self) -> NonNegativeFloat:
-        """download_delay + jitter"""
-        return self.download_delay + random.uniform(0, self.jitter)
 
 
 class UIOptions(SettingsGroup):

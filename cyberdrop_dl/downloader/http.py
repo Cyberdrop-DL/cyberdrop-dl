@@ -81,7 +81,7 @@ class Downloader:
 
     def __post_init__(self) -> None:
         self.slots = self._slots
-        self.max_attempts = self.config.rate_limits.download_attempts
+        self.max_attempts = self.config.rate_limits.downloads.attempts
 
     @property
     def waiting_items(self) -> int:
@@ -101,7 +101,7 @@ class Downloader:
             if not (sem._waiters is None and sem._value == self._slots):
                 raise RuntimeError("Can't change download limits. Downloader is already in use")
 
-        upper_limit = self.config.rate_limits.max_simultaneous_downloads_per_domain
+        upper_limit = self.config.rate_limits.downloads.concurrency_per_domain
         self._slots = min(new_limit or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._slots)
 

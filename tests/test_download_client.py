@@ -15,13 +15,13 @@ from cyberdrop_dl.manager import Manager
 )
 def test_chunk_size_is_never_greater_that_speed_limit(manager: Manager, limit: int) -> None:
     max_expected = 1024 * 1024 * 10
-    limit = manager.config.rate_limits.download_speed_limit
+    limit = manager.config.rate_limits.downloads.speed_limit
     assert limit == 0
     client = DownloadClient(manager)
     assert client.chunk_size != limit
     assert client.chunk_size == max_expected
 
-    manager.config.rate_limits.download_speed_limit = limit
+    manager.config.rate_limits.downloads.speed_limit = limit
     client = DownloadClient(manager)
     assert client.chunk_size == min(limit or max_expected, max_expected)
 

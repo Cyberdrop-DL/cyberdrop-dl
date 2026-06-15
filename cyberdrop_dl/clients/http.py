@@ -94,7 +94,7 @@ class HTTPClient:
     def __post_init__(self) -> None:
         self._ssl_context = tcp.create_ssl_context(self.config.ssl_context)
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.rate_limits.rate_limit)
-        self.global_download_limiter = asyncio.Semaphore(self.config.rate_limits.max_simultaneous_downloads)
+        self.global_download_limiter = asyncio.Semaphore(self.config.rate_limits.downloads.concurrency)
 
     @staticmethod
     def from_manager(manager: Manager) -> HTTPClient:
