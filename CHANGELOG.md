@@ -103,6 +103,16 @@ Several config options have new names:
 - `--log-level` -> `--logs.level`
 - `--console-log-level` -> `--logs.console-level`
 
+#### DownloadOptions
+
+`--block-download-sub-folders` -> `--subfolders`, `--no-subfolders`
+`--include-album-id-in-folder-name` -> `--subfolders.include.album-id`
+`--include-thread-id-in-folder-name` -> `--subfolders.include.thread-id`
+`--remove-domains-from-folder-names` -> `--subfolders.include.domain`
+`--separate-posts-format` -> `--subfolders.separate-posts-format`
+`--separate-posts` -> `--subfolders.separate-posts`
+`--skip-download-mark-completed` -> `--downloads.skip-and-mark-completed`
+
 ### Removed
 
 - Support for python 3.11

@@ -200,12 +200,12 @@ class MessageBoardCrawler(Crawler, is_abc=True):
     @final
     @property
     def max_thread_depth(self) -> int:
-        return self.config.downloads.max_thread_depth
+        return self.config.filesystem.max_thread_depth
 
     @final
     @property
     def max_thread_folder_depth(self) -> int | None:
-        return self.config.downloads.max_thread_folder_depth
+        return self.config.filesystem.max_thread_folder_depth
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in and self.login_required is True:

@@ -196,7 +196,7 @@ class DownloadClient:
 
     async def download_file(self, domain: str, media_item: MediaItem) -> bool:
         """Starts a file."""
-        if self.manager.config.downloads.skip_download_mark_completed and not media_item.is_segment:
+        if self.manager.config.network.downloads.skip_and_mark_completed and not media_item.is_segment:
             logger.info(f"Download removed {media_item.url} due to mark completed option")
             self.manager.scrape_mapper.tui.files.stats.skipped += 1
             # set completed path
@@ -257,11 +257,12 @@ class DownloadClient:
     def get_download_dir(self, media_item: MediaItem) -> Path:
         """Returns the download directory for the media item."""
         download_folder = media_item.download_folder
+        if self.manager.config.subfolders.create:
+            return download_folder
 
-        if self.manager.config.downloads.block_download_sub_folders:
-            while download_folder.parent != self.manager.config.download_folder:
-                download_folder = download_folder.parent
-            media_item.download_folder = download_folder
+        while download_folder.parent != self.manager.config.download_folder:
+            download_folder = download_folder.parent
+        media_item.download_folder = download_folder
         return download_folder
 
     def get_file_location(self, media_item: MediaItem) -> Path:

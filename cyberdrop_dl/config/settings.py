@@ -60,18 +60,17 @@ _SORTING_COMMON_FIELDS = {
 }
 
 
-class DownloadOptions(SettingsGroup):
-    block_download_sub_folders: bool = False
-    mtime: bool = True
-    include_album_id_in_folder_name: bool = False
-    include_thread_id_in_folder_name: bool = False
-    max_children: ListNonNegativeInt = []
-    remove_domains_from_folder_names: bool = False
+class SubFoldersInclude(AliasModel):
+    album_id: bool = False
+    thread_id: bool = False
+    domain: bool = True
+
+
+class SubFolders(SettingsGroup, name=None):
+    create: Annotated[bool, Parameter(name="--subfolders")] = True
+    include: SubFoldersInclude = Field(default_factory=SubFoldersInclude)
     separate_posts_format: NonEmptyStr = "{default}"
     separate_posts: bool = False
-    skip_download_mark_completed: bool = False
-    max_thread_depth: NonNegativeInt = 0
-    max_thread_folder_depth: NonNegativeInt | None = None
 
     @field_validator("separate_posts_format", mode="after")
     @classmethod
@@ -79,6 +78,13 @@ class DownloadOptions(SettingsGroup):
         valid_keys = {"default", "title", "id", "number", "date"}
         validate_format_string(value, valid_keys)
         return value
+
+
+class FileSystem(SettingsGroup):
+    mtime: bool = True
+    max_children: ListNonNegativeInt = []
+    max_thread_depth: NonNegativeInt = 0
+    max_thread_folder_depth: NonNegativeInt | None = None
 
 
 class Logs(SettingsGroup):  # noqa: PLW1641
@@ -404,6 +410,7 @@ class Downloads(AliasModel):
     slow_speed: ByteSizeSerilized = ByteSize(0)
     speed_limit: ByteSizeSerilized = ByteSize(0)
     jitter: NonNegativeFloat = 0
+    skip_and_mark_completed: bool = False
     concurrent_segments: PositiveInt = 10
     """Allow up to `<N>` HLS segments to be downloaded concurrently"""
 

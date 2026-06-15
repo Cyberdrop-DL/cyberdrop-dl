@@ -305,7 +305,7 @@ async def _set_mtime(media_item: MediaItem, config: Config) -> None:
     if media_item.is_segment:
         return
 
-    if not config.downloads.mtime:
+    if not config.filesystem.mtime:
         return
 
     if not media_item.uploaded_at:

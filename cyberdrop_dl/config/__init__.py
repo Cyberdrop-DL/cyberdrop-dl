@@ -20,9 +20,9 @@ from cyberdrop_dl.utils import cleanup
 from .auth import AuthSettings
 from .settings import (
     Cookies,
-    DownloadOptions,
     DupeCleanup,
     FileSizeLimits,
+    FileSystem,
     Filters,
     GenericCrawlers,
     Jdownloader,
@@ -31,6 +31,7 @@ from .settings import (
     Network,
     RuntimeOptions,
     Sort,
+    SubFolders,
     UIOptions,
 )
 
@@ -55,7 +56,7 @@ class Config(BaseModel):
     deep_scrape: bool = False
     disable_crawlers: ListNonEmptyStr = []
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
-    downloads: DownloadOptions = Field(default_factory=DownloadOptions)
+    filesystem: FileSystem = Field(default_factory=FileSystem)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
@@ -75,6 +76,7 @@ class Config(BaseModel):
     runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sort: Sort = Field(default_factory=Sort)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
+    subfolders: SubFolders = Field(default_factory=SubFolders)
     ui_options: UIOptions = Field(default_factory=UIOptions)
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
     _resolved: bool = False
@@ -147,11 +149,6 @@ class Config(BaseModel):
     @classmethod
     def _unique_list(cls, value: list[str]) -> list[str]:
         return sorted(set(value))
-
-    @field_validator("flaresolverr", "proxy", mode="before")
-    @classmethod
-    def _to_str(cls, value: str) -> str | None:
-        return falsy_as(value, None)
 
     @field_validator("min_free_space", mode="after")
     @classmethod
