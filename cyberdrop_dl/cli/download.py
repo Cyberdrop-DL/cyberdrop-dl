@@ -51,11 +51,11 @@ async def _scrape(manager: Manager) -> None:
             logger.info("Closing program...")
             logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
 
-            if manager.config.logs.webhook:
-                await webhook.send_notification(manager.config.logs.webhook, stats_summary)
+            if webhook_url := manager.config.notifications.webhook:
+                await webhook.send_notification(webhook_url, stats_summary)
 
-            if manager.config.apprise_urls:
-                await apprise.send_notifications(manager.config.apprise_urls, stats_summary)
+            if urls := manager.config.notifications.apprise:
+                await apprise.send_notifications(urls, stats_summary)
 
 
 async def _post_runtime(manager: Manager) -> None:

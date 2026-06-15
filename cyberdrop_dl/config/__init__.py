@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal, Self
@@ -12,12 +11,11 @@ from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, fi
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
-from cyberdrop_dl.models import AppriseURL  # noqa: TC001
 from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils import cleanup
 
-from .auth import AuthSettings
+from .auth import AuthSettings, Notifications
 from .settings import (
     Cookies,
     Downloads,
@@ -49,8 +47,7 @@ logger = logging.getLogger(__name__)
 class Config(BaseModel):
     __final__: Literal[True] = True
 
-    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
-    auth: Annotated[AuthSettings, Parameter(show=False)] = Field(default_factory=AuthSettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
     cookies: Cookies = Field(default_factory=Cookies)
     deep_scrape: bool = False
     disable_crawlers: ListNonEmptyStr = []
@@ -84,6 +81,7 @@ class Config(BaseModel):
     ignore_history: bool = False
     delete_partial_files: bool = False
     delete_empty_folders: bool = True
+    notifications: Notifications = Field(default_factory=Notifications)
     show_stats: Annotated[bool, Parameter(name="stats")] = Field(
         default=True,
         description="show stats report at the end of a run",
@@ -99,12 +97,7 @@ class Config(BaseModel):
     @classmethod
     def create(cls, appdata: AppData, config_file: Path | None = None) -> Config:
         config_file = config_file or appdata.config_file
-
-        self = _load_config_file(config_file)
-        if self.apprise_urls and importlib.util.find_spec("apprise") is None:
-            logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
-            self.apprise_urls = ()
-        return self
+        return _load_config_file(config_file)
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Config:

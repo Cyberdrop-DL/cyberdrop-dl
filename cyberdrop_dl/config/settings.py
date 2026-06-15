@@ -33,7 +33,7 @@ from cyberdrop_dl.constants import (
     CIStrEnum,
     Hashing,
 )
-from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
+from cyberdrop_dl.models import AliasModel, SettingsGroup
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     HttpURL,
@@ -90,7 +90,6 @@ class Logs(SettingsGroup, name=None):  # noqa: PLW1641
     folder: Path = DEFAULT_APP_STORAGE / "Logs"
     expire_after: datetime.timedelta | None = None
     rotate: bool = False
-    webhook: Annotated[AppriseURL | None, Parameter(show=False), BeforeValidator(falsy_as_none)] = None
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
 
     @field_validator("level", "console_level", mode="before")
