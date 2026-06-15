@@ -65,7 +65,7 @@ async def _post_runtime(manager: Manager) -> None:
     if (
         manager.config.dupe_cleanup.hashing.enabled
         and manager.config.dupe_cleanup.auto_dedupe
-        and not manager.config.runtime.ignore_history
+        and not manager.config.ignore_history
     ):
         file_hashes = await manager.hasher.run()
         await manager.deduper.run(file_hashes)
@@ -139,12 +139,11 @@ def _check_partials_and_empty_folders(config: Config) -> None:
     if cleanup.has_partial_files(config.download_folder):
         logger.warning("There are partial downloads in the downloads folder")
 
-    settings = config.runtime
-    if settings.delete_partial_files:
+    if config.delete_partial_files:
         logger.info("Deleting partial downloads...")
         cleanup.rm_partial_files(config.download_folder)
 
-    if not settings.delete_empty_folders:
+    if not config.delete_empty_folders:
         return
 
     _delete_empty_files(config)

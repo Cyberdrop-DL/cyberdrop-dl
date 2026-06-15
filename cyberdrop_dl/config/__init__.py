@@ -29,7 +29,6 @@ from .settings import (
     Logs,
     MediaDurationLimits,
     Network,
-    RuntimeOptions,
     Sort,
     SubFolders,
     UIOptions,
@@ -73,7 +72,6 @@ class Config(BaseModel):
     media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     network: Network = Field(default_factory=Network)
-    runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sort: Sort = Field(default_factory=Sort)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
     subfolders: SubFolders = Field(default_factory=SubFolders)
@@ -83,6 +81,9 @@ class Config(BaseModel):
     max_children: ListNonNegativeInt = []
     max_thread_depth: NonNegativeInt = 0
     max_thread_folder_depth: NonNegativeInt | None = None
+    ignore_history: bool = False
+    delete_partial_files: bool = False
+    delete_empty_folders: bool = True
 
     _resolved: bool = False
     _source: Path | None = None

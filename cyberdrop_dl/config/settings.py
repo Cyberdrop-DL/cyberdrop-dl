@@ -301,12 +301,6 @@ class Jdownloader(SettingsGroup, name=None):
     whitelist: ListNonEmptyStr = []
 
 
-class RuntimeOptions(SettingsGroup):
-    ignore_history: bool = False
-    delete_partial_files: bool = False
-    delete_empty_folders: bool = True
-
-
 def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
 
     def check(value: str | None) -> str | None:

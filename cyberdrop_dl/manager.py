@@ -84,10 +84,7 @@ class Manager:
     @contextlib.contextmanager
     def __call__(self) -> Generator[Self]:
         self.__resolve_paths()
-        self.database = Database(
-            self.appdata.db_file,
-            self.config.runtime.ignore_history,
-        )
+        self.database = Database(self.appdata.db_file, self.config.ignore_history)
         self.deduper = Czkawka.from_manager(self)
         self.sorter = Sorter.from_manager(self)
         with (
