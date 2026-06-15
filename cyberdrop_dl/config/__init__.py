@@ -12,7 +12,7 @@ from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt  # noqa: TC001
-from cyberdrop_dl.models.validators import falsy_as, to_bytesize
+from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
 from .auth import AuthSettings, Notifications
@@ -54,8 +54,6 @@ class Config(BaseModel):
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
-    dump_responses: bool = False
-    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
 
     dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
@@ -70,7 +68,6 @@ class Config(BaseModel):
     min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     network: Network = Field(default_factory=Network)
     sort: Sort = Field(default_factory=Sort)
-    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
     subfolders: SubFolders = Field(default_factory=SubFolders)
     ui: UIOptions = Field(default_factory=UIOptions)
 
@@ -140,13 +137,6 @@ class Config(BaseModel):
 
             elif isinstance(value, BaseModel):
                 cls._resolve_paths(value)
-
-    @field_validator("ssl_context", mode="before")
-    @classmethod
-    def _ssl(cls, value: str | None) -> str | None:
-        if isinstance(value, str):
-            value = value.lower().strip()
-        return falsy_as(value, None)
 
     @field_validator("disable_crawlers", mode="after")
     @classmethod

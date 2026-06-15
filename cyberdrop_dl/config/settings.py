@@ -416,6 +416,16 @@ class Network(SettingsGroup):
     connection_timeout: PositiveFloat = 15
     read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
+    dump_responses: bool = False
+    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
+
+    @field_validator("ssl_context", mode="before")
+    @classmethod
+    def _ssl(cls, value: str | None) -> str | None:
+        if isinstance(value, str):
+            value = value.lower().strip()
+        return falsy_as(value, None)
 
     @property
     def curl_timeout(self) -> float | tuple[float, float]:
