@@ -24,20 +24,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+⚠️**IMPORTANT**
+
+> This version is imcompatible with any previous release. Config file options need to be manually migrated by user.
+>
+> CDL will refuse to start if the current database schema is older than `v9.15.0`. Use the `cyberdrop-dl database transfer` to upgrade older databases
+
+### Added
+
+- New `--cookies` option to read cookies from a file/folder
+- New `--hashes` option to control which hashes CDL computes for new downloads
+
 ### Changed
 
+- The config file format has completly changed. All configs (`Auth`, `Global` and `Setttings`) are now one single file. Several options have new names, new default and new groups
+- CDL will not create a default config file by if no config currently exists
+- CDL will refuse to start if the current database schema is older than `v9.15.0`
 - Detect and report BasedFlare anti-bot protection
+- Cookies with not be automatically loaded from `AppData/cookies`. Path to cookies needs to be spscified with `--cookies`
+- Always remove generated id from filenames (Cyberdrop)
+- Compute `xxhash`, `md5` and `sha256` hashes by default
+- `--deep-scrape` will no longer be reset after a single run
 
 Some config options have new names:
 
-`--send-unsupported-to-jdownloader`-> `--jdownloader.enabled`
-`--jdownloader-autostart` - `--jdownloader.autostart`
-`--jdownloader-download-dir` - `--jdownloader.download-dir`
-`--jdownloader-whitelist` - `--jdownloader.whitelist`
+- `--disable-file-timestamps`-> `--mtime`
+- `--jdownloader-autostart` -> `--jdownloader.autostart`
+- `--jdownloader-download-dir` -> `--jdownloader.download-dir`
+- `--jdownloader-whitelist` -> `--jdownloader.whitelist`
+- `--send-unsupported-to-jdownloader`-> `--jdownloader.enabled`
+- `--maximum-audio-duration` -> `--max-audio-duration`
+- `--maximum-image-size` -> `--max-image-size`
+- `--maximum-number-of-children` -> `--max-children`
+- `--maximum-other-size` -> `--max-other-size`
+- `--maximum-thread-depth` -> `--max-thread-depth`
+- `--maximum-thread-folder-depth` -> `--max-thread-folder-depth`
+- `--maximum-video-duration` -> `--max-video-duration`
+- `--maximum-video-size` -> `--max-video-size`
+- `--minimum-audio-duration` -> `--min-audio-duration`
+- `--minimum-image-size` -> `--min-image-size`
+- `--minimum-other-size` -> `--min-other-size`
+- `--minimum-video-duration` -> `--min-video-duration`
+- `--minimum-video-size` -> `--min-video-size`
+- `--required-free-space`-> `--min-free-space`
 
 ### Removed
 
+- Support for python 3.11
+- All retry setting + menu option
+- Auto database updates from versions older than v9.15.0
+- `--log-level` and `--console-log-level` no longer acept integer as level. Only log level names as valid, ex: `INFO, `DEBUG`, `WARNING`
 - Posts filtering by URL params (Wordpress)
+- Auto cookie extraction support
+
+Several config options:
+
+- `--add-md5-hash`
+- `--add-sha256-hash`
+- `--auto-import`
+- `--browser`
+- `--completed-after`
+- `--completed-before`
+- `--disable-download-attempt-limit`
+- `--last-forum-post`
+- `--max-items-retry`
+- `--remove-generated-id-from-filename`
+- `--retry-all`
+- `--retry-failed`
+- `--retry-maintenance`
+- `--save-pages-html`
+- `--scrape-single-forum-post`
+- `--sites`
+- `--update-last-forum-post`
+
+The following Authentication entries has been removed:
+
+- `Imgur.client_id`
+- `Kemono.session`
+- `Coomer.session`
 
 ### Fixed
 
