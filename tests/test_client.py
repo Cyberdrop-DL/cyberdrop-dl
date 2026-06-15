@@ -56,5 +56,5 @@ async def test_create_aiohttp_session(client: HTTPClient) -> None:
         assert session.headers.get("User-agent")
         assert session.cookie_jar is client.cookies
         assert session._raise_for_status is False
-        assert session.timeout == client.config.rate_limits.aiohttp_timeout
+        assert session.timeout == client.config.network.aiohttp_timeout
         assert session.requote_redirect_url is False

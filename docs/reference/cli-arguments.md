@@ -283,18 +283,18 @@ Bulk asynchronous downloader for multiple file hosts
 │ --min-audio-duration  [default: 0:00:00]                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RateLimiting ───────────────────────────────────────────────────────────────────────────────────╮
-│ --download-attempts                  [default: 2]                                                │
-│ --download-delay                     [default: 0.0]                                              │
-│ --download-speed-limit               [default: 0]                                                │
-│ --jitter                             [default: 0]                                                │
-│ --max-simultaneous-downloads-per-do  [default: 5]                                                │
-│   main                                                                                           │
-│ --max-simultaneous-downloads         [default: 15]                                               │
-│ --rate-limit                         [default: 25]                                               │
-│ --connection-timeout                 [default: 15]                                               │
-│ --read-timeout                       [default: 300]                                              │
-│ --concurrent-segments                Allow up to <N> HLS segments to be downloaded concurrently  │
-│                                      [default: 10]                                               │
+│ --downloads.attempts             [default: 2]                                                    │
+│ --downloads.per-domain           [default: 5]                                                    │
+│ --downloads                      [default: 15]                                                   │
+│ --downloads.delay                [default: 0.0]                                                  │
+│ --downloads.slow-speed           [default: 0]                                                    │
+│ --downloads.speed-limit          [default: 0]                                                    │
+│ --downloads.jitter               [default: 0]                                                    │
+│ --downloads.concurrent-segments  Allow up to <N> HLS segments to be downloaded concurrently      │
+│                                  [default: 10]                                                   │
+│ --rate-limit                     [default: 25]                                                   │
+│ --connection-timeout             [default: 15]                                                   │
+│ --read-timeout                   [default: 300]                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
 │ --ignore-history             [default: False]                                                    │

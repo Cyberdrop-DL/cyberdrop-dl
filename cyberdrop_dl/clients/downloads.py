@@ -45,12 +45,12 @@ class DownloadClient:
         self.manager = manager
         self.download_speed_threshold = self.manager.config.runtime.slow_download_speed
         self._supports_ranges: bool = True
-        speed_limit = self.manager.config.rate_limits.downloads.speed_limit
+        speed_limit = self.manager.config.network.downloads.speed_limit
 
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
         self.chunk_size: int = 1024 * 1024 * 10  # 10MB
         if speed_limit:
-            upper_limit = int(speed_limit / 1.5 / self.manager.config.rate_limits.downloads.concurrency)
+            upper_limit = int(speed_limit / 1.5 / self.manager.config.network.downloads.concurrency)
             self.chunk_size = min(
                 self.chunk_size,
                 upper_limit,
@@ -74,7 +74,7 @@ class DownloadClient:
             resume_point = size
             media_item.headers[hdrs.RANGE] = f"bytes={size}-"
 
-        await asyncio.sleep(self.manager.config.rate_limits.downloads.total_delay)
+        await asyncio.sleep(self.manager.config.network.downloads.total_delay)
 
         async with self.http_client.raw_request(
             media_item.real_url,
@@ -446,7 +446,7 @@ async def _probe_item(media_item: MediaItem, config: Config) -> ffmpeg.FFprobeRe
     return await ffmpeg.probe_url(
         media_item.url,
         headers=media_item.headers,
-        proxy=config.proxy,
+        proxy=config.network.proxy,
         verify=bool(config.ssl_context),
     )
 

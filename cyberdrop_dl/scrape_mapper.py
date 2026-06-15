@@ -156,7 +156,7 @@ class ScrapeMapper:
         config = self.manager.config
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
-        _ = CONCURRENT_SEGMENTS.set(config.rate_limits.downloads.concurrent_segments)
+        _ = CONCURRENT_SEGMENTS.set(config.network.downloads.concurrent_segments)
         _ = ALLOW_NO_EXT.set(not config.filters.exclude.files_with_no_ext)
 
         config.download_folder.mkdir(parents=True, exist_ok=True)

@@ -14,6 +14,7 @@ from cyclopts import Parameter
 from pydantic import (
     AfterValidator,
     BaseModel,
+    BeforeValidator,
     ByteSize,
     Field,
     NonNegativeFloat,
@@ -34,6 +35,7 @@ from cyberdrop_dl.constants import (
 from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
+    HttpURL,
     ListNonEmptyStr,
     ListNonNegativeInt,
     ListPydanticURL,
@@ -410,16 +412,13 @@ class Downloads(AliasModel):
         return self.delay + random.uniform(0, self.jitter)
 
 
-class RateLimiting(SettingsGroup):
+class Network(SettingsGroup):
+    proxy: HttpURL | None = None
+    flaresolverr: HttpURL | None = None
     downloads: Downloads = Field(default_factory=Downloads)
     rate_limit: PositiveFloat = 25
     connection_timeout: PositiveFloat = 15
-    read_timeout: PositiveFloat | None = 300
-
-    @field_validator("read_timeout", mode="before")
-    @classmethod
-    def parse_timeouts(cls, value: object) -> object | None:
-        return falsy_as_none(value)
+    read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
 
     @property
     def curl_timeout(self) -> float | tuple[float, float]:

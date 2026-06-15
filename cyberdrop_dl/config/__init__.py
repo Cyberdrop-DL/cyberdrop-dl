@@ -13,7 +13,7 @@ from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.models import AppriseURL  # noqa: TC001
-from cyberdrop_dl.models.types import ByteSizeSerilized, HttpURL, ListNonEmptyStr, NonEmptyStr  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, NonEmptyStr  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils import cleanup
 
@@ -28,7 +28,7 @@ from .settings import (
     Jdownloader,
     Logs,
     MediaDurationLimits,
-    RateLimiting,
+    Network,
     RuntimeOptions,
     Sort,
     UIOptions,
@@ -63,7 +63,6 @@ class Config(BaseModel):
     dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
     filters: Filters = Field(default_factory=Filters)
-    flaresolverr: HttpURL | None = None
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
@@ -72,8 +71,7 @@ class Config(BaseModel):
     max_folder_name_length: PositiveInt = 60
     media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     min_free_space: ByteSizeSerilized = to_bytesize("5GB")
-    proxy: HttpURL | None = None
-    rate_limits: RateLimiting = Field(default_factory=RateLimiting)
+    network: Network = Field(default_factory=Network)
     runtime: RuntimeOptions = Field(default_factory=RuntimeOptions)
     sort: Sort = Field(default_factory=Sort)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
