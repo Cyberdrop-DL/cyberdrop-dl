@@ -124,7 +124,7 @@ class ScrapeMapper:
 
     def __post_init__(self) -> None:
         self._direct_http = DirectHttpFileCrawler(self.manager)
-        self._jdownloader = JDownloader.from_manager(self.manager)
+        self._jdownloader = JDownloader.from_config(self.manager.config)
         self._real_debrid = RealDebridCrawler(self.manager)
         self._factory = CrawlerFactory(self.manager)
         self.tui.scrape.get_queue = self._scrape_queue

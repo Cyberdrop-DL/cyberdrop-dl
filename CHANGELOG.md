@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Detect and report BasedFlare anti-bot protection
 
+Some config options have new names:
+
+`--send-unsupported-to-jdownloader`-> `--jdownloader.enabled`
+`--jdownloader-autostart` - `--jdownloader.autostart`
+`--jdownloader-download-dir` - `--jdownloader.download-dir`
+`--jdownloader-whitelist` - `--jdownloader.whitelist`
+
 ### Removed
 
 - Posts filtering by URL params (Wordpress)

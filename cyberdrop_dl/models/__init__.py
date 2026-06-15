@@ -19,8 +19,8 @@ class AliasModel(BaseModel, populate_by_name=True, defer_build=True): ...
 
 
 class SettingsGroup(AliasModel):
-    def __init_subclass__(cls, group: str | None = None) -> None:
-        _ = Parameter(group=group or cls.__name__, name="*")(cls)
+    def __init_subclass__(cls, *, group: str | None = None, flat_namespace: bool = True) -> None:
+        _ = Parameter(group=group or cls.__name__, name="*" if flat_namespace else None)(cls)
         return super().__init_subclass__()
 
 

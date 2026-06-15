@@ -25,6 +25,7 @@ from .settings import (
     FileSizeLimits,
     GenericCrawlers,
     IgnoreOptions,
+    Jdownloader,
     Logs,
     MediaDurationLimits,
     RateLimiting,
@@ -65,6 +66,7 @@ class Config(BaseModel):
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     ignore: IgnoreOptions = Field(default_factory=IgnoreOptions)
     input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
+    jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60

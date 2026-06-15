@@ -263,6 +263,13 @@ class IgnoreOptions(SettingsGroup):
         return value
 
 
+class Jdownloader(SettingsGroup, flat_namespace=False):
+    enabled: bool = False
+    autostart: bool = False
+    download_dir: PathOrNone = None
+    whitelist: ListNonEmptyStr = []
+
+
 class RuntimeOptions(SettingsGroup):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     "Only log messages of this level or higher to the main log file"
@@ -271,11 +278,7 @@ class RuntimeOptions(SettingsGroup):
     deep_scrape: bool = False
     delete_partial_files: bool = False
     ignore_history: bool = False
-    jdownloader_autostart: bool = False
-    jdownloader_download_dir: PathOrNone = None
-    jdownloader_whitelist: ListNonEmptyStr = []
 
-    send_unsupported_to_jdownloader: bool = False
     skip_check_for_empty_folders: bool = False
     skip_check_for_partial_files: bool = False
     slow_download_speed: ByteSizeSerilized = ByteSize(0)
