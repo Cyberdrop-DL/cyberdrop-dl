@@ -274,14 +274,14 @@ class Downloader:
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
-    ignore_options = config.ignore
+    filters = config.filters
     ext = media_item.ext.lower()
 
     return not (
-        (ignore_options.exclude_images and ext in constants.FileExt.IMAGE)
-        or (ignore_options.exclude_videos and ext in constants.FileExt.VIDEO)
-        or (ignore_options.exclude_audio and ext in constants.FileExt.AUDIO)
-        or (ignore_options.exclude_other and ext not in constants.FileExt.MEDIA)
+        (filters.exclude.images and ext in constants.FileExt.IMAGE)
+        or (filters.exclude.videos and ext in constants.FileExt.VIDEO)
+        or (filters.exclude.audio and ext in constants.FileExt.AUDIO)
+        or (filters.exclude.other and ext not in constants.FileExt.MEDIA)
     )
 
 
@@ -294,11 +294,11 @@ def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
 
 def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
     item_date = item_datetime.date()
-    ignore_options = config.ignore
+    filters = config.filters
 
-    if ignore_options.exclude_before and item_date < ignore_options.exclude_before:
+    if filters.exclude.before and item_date < filters.exclude.before:
         return False
-    return not (ignore_options.exclude_after and item_date > ignore_options.exclude_after)
+    return not (filters.exclude.after and item_date > filters.exclude.after)
 
 
 async def _set_mtime(media_item: MediaItem, config: Config) -> None:

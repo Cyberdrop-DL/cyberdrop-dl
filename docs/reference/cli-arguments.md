@@ -229,39 +229,38 @@ Bulk asynchronous downloader for multiple file hosts
 │ --min-other-size  [default: 0]                                                                   │
 │ --min-video-size  [default: 0]                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Filters ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --exclude.audio --exclude.no-audio   [default: False]                                            │
+│ --exclude.images                     [default: False]                                            │
+│   --exclude.no-images                                                                            │
+│ --exclude.other --exclude.no-other   [default: False]                                            │
+│ --exclude.videos                     [default: False]                                            │
+│   --exclude.no-videos                                                                            │
+│ --exclude.files-with-no-extension -  [default: True]                                             │
+│   -exclude.no-files-with-no-extensi                                                              │
+│   on                                                                                             │
+│ --exclude.before                                                                                 │
+│ --exclude.after                                                                                  │
+│ --exclude.coomer-ads                 [default: False]                                            │
+│   --exclude.no-coomer-ads                                                                        │
+│ --exclude.coomer-post-content        [default: True]                                             │
+│   --exclude.no-coomer-post-content                                                               │
+│ --filename-regex                                                                                 │
+│ --only-hosts                         [default: []]                                               │
+│ --skip-hosts                         [default: []]                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ GenericCrawlers ────────────────────────────────────────────────────────────────────────────────╮
 │ --wordpress-media  [default: []]                                                                 │
 │ --wordpress-html   [default: []]                                                                 │
 │ --discourse        [default: []]                                                                 │
 │ --chevereto        [default: []]                                                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ IgnoreOptions ──────────────────────────────────────────────────────────────────────────────────╮
-│ --exclude-audio --no-exclude-audio   [default: False]                                            │
-│ --exclude-images                     [default: False]                                            │
-│   --no-exclude-images                                                                            │
-│ --exclude-other --no-exclude-other   [default: False]                                            │
-│ --exclude-videos                     [default: False]                                            │
-│   --no-exclude-videos                                                                            │
-│ --filename-regex-filter                                                                          │
-│ --ignore-coomer-ads                  [default: False]                                            │
-│   --no-ignore-coomer-ads                                                                         │
-│ --ignore-coomer-post-content         [default: True]                                             │
-│   --no-ignore-coomer-post-content                                                                │
-│ --only-hosts                         [default: []]                                               │
-│ --skip-hosts                         [default: []]                                               │
-│ --exclude-files-with-no-extension -  [default: True]                                             │
-│   -no-exclude-files-with-no-extensi                                                              │
-│   on                                                                                             │
-│ --exclude-before                                                                                 │
-│ --exclude-after                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Jdownloader ────────────────────────────────────────────────────────────────────────────────────╮
-│ --jdownloader.enabled         [default: False]                                                   │
-│   --jdownloader.no-enabled                                                                       │
-│ --jdownloader.autostart       [default: False]                                                   │
+│ --jdownloader --no-jdownloader  [default: False]                                                 │
+│ --jdownloader.autostart         [default: False]                                                 │
 │   --jdownloader.no-autostart                                                                     │
 │ --jdownloader.download-dir                                                                       │
-│ --jdownloader.whitelist       [default: []]                                                      │
+│ --jdownloader.whitelist         [default: []]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --download-error-urls           [default: Download_Error_URLs.csv]                               │
@@ -311,22 +310,8 @@ Bulk asynchronous downloader for multiple file hosts
 │ --slow-download-speed                [default: 0]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-folder                                                                                   │
-│ --sort --no-sort       [default: False]                                                          │
-│ --output-folder        [default: Downloads/Cyberdrop-DL Sorted Downloads]                        │
-│ --formats.audio        Format to generate sorted audio file [default:                            │
-│                        {sort_dir}/{base_dir}/Audio/{filename}{ext}]                              │
-│ --formats.image        Format to generate sorted image file [default:                            │
-│                        {sort_dir}/{base_dir}/Images/{filename}{ext}]                             │
-│ --formats.other        Format to generate sorted files of unknown type [default:                 │
-│                        {sort_dir}/{base_dir}/Other/{filename}{ext}]                              │
-│ --formats.video        Format to generate sorted video file [default:                            │
-│                        {sort_dir}/{base_dir}/Videos/{filename}{ext}]                             │
-│ --formats.incrementer  Format for separator on name collisions [default:  ({i})]                 │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Sort2 ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ --sort --no-sort            [default: False]                                                     │
 │ --sort.input-folder                                                                              │
-│ --sort. --sort.no-          [default: False]                                                     │
 │ --sort.output-folder        [default: Downloads/Cyberdrop-DL Sorted Downloads]                   │
 │ --sort.formats.audio        Format to generate sorted audio file [default:                       │
 │                             {sort_dir}/{base_dir}/Audio/{filename}{ext}]                         │

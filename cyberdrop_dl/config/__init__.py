@@ -23,8 +23,8 @@ from .settings import (
     DownloadOptions,
     DupeCleanup,
     FileSizeLimits,
+    Filters,
     GenericCrawlers,
-    IgnoreOptions,
     Jdownloader,
     Logs,
     MediaDurationLimits,
@@ -62,9 +62,9 @@ class Config(BaseModel):
 
     dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
     file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
+    filters: Filters = Field(default_factory=Filters)
     flaresolverr: HttpURL | None = None
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
-    ignore: IgnoreOptions = Field(default_factory=IgnoreOptions)
     input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)

@@ -240,23 +240,28 @@ class MediaDurationLimits(SettingsGroup):
         )
 
 
-class IgnoreOptions(SettingsGroup):
-    exclude_audio: bool = False
-    exclude_images: bool = False
-    exclude_other: bool = False
-    exclude_videos: bool = False
-    filename_regex_filter: NonEmptyStrOrNone = None
-    ignore_coomer_ads: bool = False
-    ignore_coomer_post_content: bool = True
+class Exclude(AliasModel):
+    audio: bool = False
+    images: bool = False
+    other: bool = False
+    videos: bool = False
+    files_with_no_ext: bool = True
+    before: datetime.date | None = None
+    after: datetime.date | None = None
+
+    coomer_ads: bool = False
+    coomer_post_content: bool = True
+
+
+class Filters(SettingsGroup):
+    exclude: Exclude = Field(default_factory=Exclude)
+    filename_regex: NonEmptyStrOrNone = None
     only_hosts: ListNonEmptyStr = []
     skip_hosts: ListNonEmptyStr = []
-    exclude_files_with_no_extension: bool = True
-    exclude_before: datetime.date | None = None
-    exclude_after: datetime.date | None = None
 
-    @field_validator("filename_regex_filter")
+    @field_validator("filename_regex")
     @classmethod
-    def is_valid_regex(cls, value: str | None) -> str | None:
+    def _is_valid_regex(cls, value: str | None) -> str | None:
         if not value:
             return None
         try:

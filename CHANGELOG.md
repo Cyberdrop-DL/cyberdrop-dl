@@ -85,6 +85,19 @@ Several config options have new names:
 - `--sorted-other` -> `--sort.formats.other`
 - `--sorted-video` -> `--sort.formats.video`
 
+#### Ignore options (filters)
+
+- `--exclude-audio` -> `--exclude.audio`
+- `--exclude-images` -> `--exclude.images`
+- `--exclude-other` -> `--exclude.other`
+- `--exclude-videos` -> `--exclude.videos`
+- `--filename-regex-filter` -> `--filename-regex`
+- `--ignore-coomer-ads` -> `--exclude.coomer-ads`
+- `--ignore-coomer-post-content` -> `--exclude.coomer-post-content`
+- `--exclude-files-with-no-extension` -> `--exclude.files-with-no-ext`
+- `--exclude-before` -> `--exclude.before`
+- `--exclude-after` -> `--exclude.after`
+
 ### Removed
 
 - Support for python 3.11
