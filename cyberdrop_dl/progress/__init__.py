@@ -6,14 +6,12 @@ import shutil
 import sys
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
-from enum import auto
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
 from cyberdrop_dl import env
-from cyberdrop_dl.constants import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
@@ -31,17 +29,6 @@ _in_portrait: bool = False
 class Color:
     PLUM: str = "plum3"
     YELLOW: str = "yellow"
-
-
-class UIMode(CIStrEnum):
-    DISABLED = auto()
-    ACTIVITY = auto()
-    SIMPLE = auto()
-    FULLSCREEN = auto()
-
-    @property
-    def is_disabled(self) -> bool:
-        return self is UIMode.DISABLED
 
 
 class JsonableRenderableType(Protocol):
