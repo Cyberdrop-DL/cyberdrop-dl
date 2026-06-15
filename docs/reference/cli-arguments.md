@@ -140,7 +140,6 @@ Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
 Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
 
 <!-- START_CLI_OVERVIEW -->
-
 ```shell
 Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
 
@@ -157,10 +156,6 @@ Bulk asynchronous downloader for multiple file hosts
 │ LINKS --links                        link(s) to content to download (passing multiple links is   │
 │                                      supported) [default: ()]                                    │
 │ --appdata-folder                     AppData folder path                                         │
-│ --completed-after                    only retry downloads that were completed on or after this   │
-│                                      date                                                        │
-│ --completed-before                   only retry downloads that were completed on or before this  │
-│                                      date                                                        │
 │ --config-file                        path to the CDL settings.yaml file to load                  │
 │ --download --no-download             skips UI, start download immediately [default: False]       │
 │ --download-tiktok-audios             download TikTok audios from posts and save them as separate │
@@ -171,94 +166,70 @@ Bulk asynchronous downloader for multiple file hosts
 │ --impersonate                        Use this target as impersonation for all scrape requests    │
 │                                      [choices: chrome, edge, safari, safari_ios, chrome_android, │
 │                                      firefox]                                                    │
-│ --max-items-retry                    max number of links to retry [default: 0]                   │
 │ --portrait --no-portrait             force CDL to run with a vertical layout [default: False]    │
 │ --print-stats --no-print-stats       show stats report at the end of a run [default: True]       │
-│ --retry-all --no-retry-all           retry all downloads [default: False]                        │
-│ --retry-failed --no-retry-failed     retry failed downloads [default: False]                     │
-│ --retry-maintenance                  retry download of maintenance files (bunkr). Requires files │
-│   --no-retry-maintenance             to be hashed [default: False]                               │
 │ --ui                                 DISABLED, ACTIVITY, SIMPLE or FULLSCREEN [choices:          │
 │                                      disabled, activity, simple, fullscreen] [default:           │
 │                                      fullscreen]                                                 │
 │ --deep-scrape --no-deep-scrape       [default: False]                                            │
+│ --disable-crawlers                   [default: []]                                               │
+│ --download-folder --output -o -d     [default: Downloads]                                        │
+│ --dump-json -j --no-dump-json        [default: False]                                            │
+│ --dump-responses                     Save text/HTML/JSON responses to disk (flaresolverr         │
+│   --no-dump-responses                responses are excluded) [default: False]                    │
+│ --flaresolverr                                                                                   │
+│ --input-file -i                      [default: URLs.txt]                                         │
+│ --max-file-name-length               [default: 95]                                               │
+│ --max-folder-name-length             [default: 60]                                               │
+│ --min-free-space                     [default: 5000000000]                                       │
+│ --proxy                                                                                          │
+│ --ssl-context                        [choices: truststore, certifi, truststore+certifi]          │
+│                                      [default: truststore+certifi]                               │
+│ --user-agent                         [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0)         │
+│                                      Gecko/20100101 Firefox/150.0]                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ BrowserCookies ─────────────────────────────────────────────────────────────────────────────────╮
-│ --auto-import --no-auto-import  [default: False]                                                 │
-│ --browser                       [choices: chrome, firefox, safari, edge, opera, brave,           │
-│                                 librewolf, opera-gx, vivaldi, chromium] [default: firefox]       │
-│ --sites                                                                                          │
+╭─ Cookies ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --cookies  File/folder to import cookies from (.txt Netscape files)                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ DownloadOptions ────────────────────────────────────────────────────────────────────────────────╮
 │ --block-download-sub-folders         [default: False]                                            │
 │   --no-block-download-sub-folders                                                                │
-│ --disable-download-attempt-limit     [default: False]                                            │
-│   --no-disable-download-attempt-lim                                                              │
-│   it                                                                                             │
-│ --disable-file-timestamps            [default: False]                                            │
-│   --no-disable-file-timestamps                                                                   │
+│ --mtime --no-mtime                   [default: True]                                             │
 │ --include-album-id-in-folder-name -  [default: False]                                            │
 │   -no-include-album-id-in-folder-na                                                              │
 │   me                                                                                             │
 │ --include-thread-id-in-folder-name   [default: False]                                            │
 │   --no-include-thread-id-in-folder-                                                              │
 │   name                                                                                           │
-│ --maximum-number-of-children         [default: []]                                               │
+│ --max-number-of-children             [default: []]                                               │
 │ --remove-domains-from-folder-names   [default: False]                                            │
 │   --no-remove-domains-from-folder-n                                                              │
 │   ames                                                                                           │
-│ --remove-generated-id-from-filename  [default: False]                                            │
-│   s --no-remove-generated-id-from-f                                                              │
-│   ilenames                                                                                       │
-│ --scrape-single-forum-post           [default: False]                                            │
-│   --no-scrape-single-forum-post                                                                  │
 │ --separate-posts-format              [default: {default}]                                        │
 │ --separate-posts                     [default: False]                                            │
 │   --no-separate-posts                                                                            │
 │ --skip-download-mark-completed       [default: False]                                            │
 │   --no-skip-download-mark-completed                                                              │
-│ --maximum-thread-depth               [default: 0]                                                │
-│ --maximum-thread-folder-depth                                                                    │
+│ --max-thread-depth                   [default: 0]                                                │
+│ --max-thread-folder-depth                                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ DupeCleanup ────────────────────────────────────────────────────────────────────────────────────╮
-│ --add-md5-hash --no-add-md5-hash  [default: False]                                               │
-│ --add-sha256-hash                 [default: False]                                               │
-│   --no-add-sha256-hash                                                                           │
-│ --auto-dedupe --no-auto-dedupe    [default: True]                                                │
-│ --hashing                         [choices: off, in-place, post-download] [default: in-place]    │
-│ --send-deleted-to-trash           [default: True]                                                │
+│ --hashes                        [choices: xxh128, md5, sha256] [default: ('xxh128', 'md5',       │
+│                                 'sha256')]                                                       │
+│ --auto-dedupe --no-auto-dedupe  [default: True]                                                  │
+│ --hashing                       [choices: off, in-place, post-download] [default: in-place]      │
+│ --send-deleted-to-trash         [default: True]                                                  │
 │   --no-send-deleted-to-trash                                                                     │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ FileSizeLimits ─────────────────────────────────────────────────────────────────────────────────╮
-│ --maximum-image-size  [default: 0]                                                               │
-│ --maximum-other-size  [default: 0]                                                               │
-│ --maximum-video-size  [default: 0]                                                               │
-│ --minimum-image-size  [default: 0]                                                               │
-│ --minimum-other-size  [default: 0]                                                               │
-│ --minimum-video-size  [default: 0]                                                               │
+│ --max-image-size  [default: 0]                                                                   │
+│ --max-other-size  [default: 0]                                                                   │
+│ --max-video-size  [default: 0]                                                                   │
+│ --min-image-size  [default: 0]                                                                   │
+│ --min-other-size  [default: 0]                                                                   │
+│ --min-video-size  [default: 0]                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Files ──────────────────────────────────────────────────────────────────────────────────────────╮
-│ --download-folder --output -o -d  [default: Downloads]                                           │
-│ --dump-json -j --no-dump-json     [default: False]                                               │
-│ --input-file -i                   [default: URLs.txt]                                            │
-│ --save-pages-html                 [default: False]                                               │
-│   --no-save-pages-html                                                                           │
-│ --dump-responses                  Save text/HTML/JSON responses to disk (flaresolverr responses  │
-│   --no-dump-responses             are excluded) [default: False]                                 │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ General ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --ssl-context             [choices: truststore, certifi, truststore+certifi] [default:           │
-│                           truststore+certifi]                                                    │
-│ --disable-crawlers        [default: []]                                                          │
-│ --flaresolverr                                                                                   │
-│ --max-file-name-length    [default: 95]                                                          │
-│ --max-folder-name-length  [default: 60]                                                          │
-│ --proxy                                                                                          │
-│ --required-free-space     [default: 5000000000]                                                  │
-│ --user-agent              [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101     │
-│                           Firefox/150.0]                                                         │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ GenericCrawlerInstances ────────────────────────────────────────────────────────────────────────╮
+╭─ GenericCrawlers ────────────────────────────────────────────────────────────────────────────────╮
 │ --wordpress-media  [default: []]                                                                 │
 │ --wordpress-html   [default: []]                                                                 │
 │ --discourse        [default: []]                                                                 │
@@ -284,9 +255,16 @@ Bulk asynchronous downloader for multiple file hosts
 │ --exclude-before                                                                                 │
 │ --exclude-after                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Jdownloader ────────────────────────────────────────────────────────────────────────────────────╮
+│ --jdownloader.enabled         [default: False]                                                   │
+│   --jdownloader.no-enabled                                                                       │
+│ --jdownloader.autostart       [default: False]                                                   │
+│   --jdownloader.no-autostart                                                                     │
+│ --jdownloader.download-dir                                                                       │
+│ --jdownloader.whitelist       [default: []]                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --download-error-urls           [default: Download_Error_URLs.csv]                               │
-│ --last-forum-post               [default: Last_Scraped_Forum_Posts.csv]                          │
 │ --log-folder                    [default: AppData/Logs]                                          │
 │ --logs-expire-after                                                                              │
 │ --main-log                      [default: downloader.log]                                        │
@@ -295,10 +273,10 @@ Bulk asynchronous downloader for multiple file hosts
 │ --unsupported-urls              [default: Unsupported_URLs.csv]                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ MediaDurationLimits ────────────────────────────────────────────────────────────────────────────╮
-│ --maximum-video-duration  [default: 0:00:00]                                                     │
-│ --maximum-audio-duration  [default: 0:00:00]                                                     │
-│ --minimum-video-duration  [default: 0:00:00]                                                     │
-│ --minimum-audio-duration  [default: 0:00:00]                                                     │
+│ --max-video-duration  [default: 0:00:00]                                                         │
+│ --max-audio-duration  [default: 0:00:00]                                                         │
+│ --min-video-duration  [default: 0:00:00]                                                         │
+│ --min-audio-duration  [default: 0:00:00]                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RateLimiting ───────────────────────────────────────────────────────────────────────────────────╮
 │ --download-attempts                  [default: 2]                                                │
@@ -326,20 +304,11 @@ Bulk asynchronous downloader for multiple file hosts
 │   --no-delete-partial-files                                                                      │
 │ --ignore-history                     [default: False]                                            │
 │   --no-ignore-history                                                                            │
-│ --jdownloader-autostart              [default: False]                                            │
-│   --no-jdownloader-autostart                                                                     │
-│ --jdownloader-download-dir                                                                       │
-│ --jdownloader-whitelist              [default: []]                                               │
-│ --send-unsupported-to-jdownloader -  [default: False]                                            │
-│   -no-send-unsupported-to-jdownload                                                              │
-│   er                                                                                             │
 │ --skip-check-for-empty-folders       [default: False]                                            │
 │   --no-skip-check-for-empty-folders                                                              │
 │ --skip-check-for-partial-files       [default: False]                                            │
 │   --no-skip-check-for-partial-files                                                              │
 │ --slow-download-speed                [default: 0]                                                │
-│ --update-last-forum-post             [default: True]                                             │
-│   --no-update-last-forum-post                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sorting ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --scan-folder                                                                                    │
@@ -356,5 +325,4 @@ Bulk asynchronous downloader for multiple file hosts
 │ --refresh-rate  [default: 10.0]                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
-
 <!-- END_CLI_OVERVIEW -->

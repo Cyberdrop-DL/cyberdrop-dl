@@ -40,7 +40,7 @@ CDL will only use Real-Debrid for unsupported sites. To use it for a site that C
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.15.0
+List of sites supported by cyberdrop-dl-patched as of version 10.0.0.dev0
 
 ### 1fichier
 
@@ -818,7 +818,9 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - File:
+  - `/beta123/<file_id>/<name>`
   - `/file.php?f=<file_id>`
+  - `/temp/<file_id>/<name>`
 
 
 ### Filester
@@ -1566,7 +1568,7 @@ spreadsheets:
 
 **Primary URL**: [https://missav.ws](https://missav.ws)
 
-**Supported Domains**: `missav.*`
+**Supported Domains**: `missav.ws`, `njavtv.com`
 
 **Supported Paths**:
 
