@@ -80,6 +80,11 @@ class DownloadOptions(SettingsGroup):
 
 
 class Logs(SettingsGroup):  # noqa: PLW1641
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
+    "Only log messages of this level or higher to the main log file"
+    console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+    "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
+
     download_error_urls: LogPath = Path("Download_Error_URLs.csv")
     log_folder: Path = DEFAULT_APP_STORAGE / "Logs"
     logs_expire_after: datetime.timedelta | None = None
@@ -90,6 +95,25 @@ class Logs(SettingsGroup):  # noqa: PLW1641
     webhook: Annotated[AppriseURL | None, Parameter(show=False)] = None
 
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
+
+    @field_validator("level", "console_level", mode="before")
+    @classmethod
+    def _normalize_log_level(cls, value: object) -> Any:
+        value = falsy_as_none(value)
+        if type(value) is str:
+            return value.upper()
+        return value
+
+    @property
+    def effective_level(self) -> int:
+        return logging.getLevelNamesMapping()[self.level]
+
+    @property
+    def effective_console_level(self) -> int:
+        if not self.console_level:
+            return self.effective_level
+
+        return logging.getLevelNamesMapping()[self.console_level]
 
     @field_validator("webhook", mode="before")
     @classmethod
@@ -280,33 +304,9 @@ class Jdownloader(SettingsGroup, name=None):
 
 class RuntimeOptions(SettingsGroup):
     ignore_history: bool = False
-
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
-    "Only log messages of this level or higher to the main log file"
-    console_log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
-    "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
     delete_partial_files: bool = False
     delete_empty_folders: bool = True
     slow_download_speed: ByteSizeSerilized = ByteSize(0)
-
-    @field_validator("log_level", "console_log_level", mode="before")
-    @classmethod
-    def normalize_log_level(cls, value: object) -> Any:
-        value = falsy_as_none(value)
-        if type(value) is str:
-            return value.upper()
-        return value
-
-    @property
-    def effective_log_level(self) -> int:
-        return logging.getLevelNamesMapping()[self.log_level]
-
-    @property
-    def effective_console_log_level(self) -> int:
-        if not self.console_log_level:
-            return self.effective_log_level
-
-        return logging.getLevelNamesMapping()[self.console_log_level]
 
 
 def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:

@@ -26,7 +26,7 @@ async def _scrape(manager: Manager) -> None:
 
     with setup_file_logging(
         manager.config.logs.main_log,
-        level=manager.config.runtime.effective_log_level,
+        level=manager.config.logs.effective_level,
     ):
         manager.log_config_settings()
         if not ffmpeg.is_installed():
@@ -79,7 +79,7 @@ async def _post_runtime(manager: Manager) -> None:
 def _main(manager: Manager) -> None:
     from cyberdrop_dl import aio, program_ui
 
-    set_console_level(manager.config.runtime.effective_console_log_level)
+    set_console_level(manager.config.logs.effective_console_level)
     try:
         with manager():
             if not manager.cli_args.download:

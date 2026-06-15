@@ -230,24 +230,23 @@ Bulk asynchronous downloader for multiple file hosts
 │ --min-video-size  [default: 0]                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Filters ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --exclude.audio --exclude.no-audio   [default: False]                                            │
-│ --exclude.images                     [default: False]                                            │
+│ --exclude.audio --exclude.no-audio  [default: False]                                             │
+│ --exclude.images                    [default: False]                                             │
 │   --exclude.no-images                                                                            │
-│ --exclude.other --exclude.no-other   [default: False]                                            │
-│ --exclude.videos                     [default: False]                                            │
+│ --exclude.other --exclude.no-other  [default: False]                                             │
+│ --exclude.videos                    [default: False]                                             │
 │   --exclude.no-videos                                                                            │
-│ --exclude.files-with-no-extension -  [default: True]                                             │
-│   -exclude.no-files-with-no-extensi                                                              │
-│   on                                                                                             │
+│ --exclude.files-with-no-ext         [default: True]                                              │
+│   --exclude.no-files-with-no-ext                                                                 │
 │ --exclude.before                                                                                 │
 │ --exclude.after                                                                                  │
-│ --exclude.coomer-ads                 [default: False]                                            │
+│ --exclude.coomer-ads                [default: False]                                             │
 │   --exclude.no-coomer-ads                                                                        │
-│ --exclude.coomer-post-content        [default: True]                                             │
+│ --exclude.coomer-post-content       [default: True]                                              │
 │   --exclude.no-coomer-post-content                                                               │
 │ --filename-regex                                                                                 │
-│ --only-hosts                         [default: []]                                               │
-│ --skip-hosts                         [default: []]                                               │
+│ --only-hosts                        [default: []]                                                │
+│ --skip-hosts                        [default: []]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ GenericCrawlers ────────────────────────────────────────────────────────────────────────────────╮
 │ --wordpress-media  [default: []]                                                                 │
@@ -263,6 +262,12 @@ Bulk asynchronous downloader for multiple file hosts
 │ --jdownloader.whitelist         [default: []]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --level                         Only log messages of this level or higher to the main log file   │
+│                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL] [default:       │
+│                                 DEBUG]                                                           │
+│ --console-level                 Only log messages of this level or higher to the console. An     │
+│                                 empty or None value will use the same level as log_level         │
+│                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]                 │
 │ --download-error-urls           [default: Download_Error_URLs.csv]                               │
 │ --log-folder                    [default: AppData/Logs]                                          │
 │ --logs-expire-after                                                                              │
@@ -292,22 +297,13 @@ Bulk asynchronous downloader for multiple file hosts
 │                                      [default: 10]                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
-│ --log-level                          Only log messages of this level or higher to the main log   │
-│                                      file [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]       │
-│                                      [default: DEBUG]                                            │
-│ --console-log-level                  Only log messages of this level or higher to the console.   │
-│                                      An empty or None value will use the same level as log_level │
-│                                      [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]            │
-│ --deep-scrape --no-deep-scrape       [default: False]                                            │
-│ --delete-partial-files               [default: False]                                            │
-│   --no-delete-partial-files                                                                      │
-│ --ignore-history                     [default: False]                                            │
+│ --ignore-history             [default: False]                                                    │
 │   --no-ignore-history                                                                            │
-│ --skip-check-for-empty-folders       [default: False]                                            │
-│   --no-skip-check-for-empty-folders                                                              │
-│ --skip-check-for-partial-files       [default: False]                                            │
-│   --no-skip-check-for-partial-files                                                              │
-│ --slow-download-speed                [default: 0]                                                │
+│ --delete-partial-files       [default: False]                                                    │
+│   --no-delete-partial-files                                                                      │
+│ --delete-empty-folders       [default: True]                                                     │
+│   --no-delete-empty-folders                                                                      │
+│ --slow-download-speed        [default: 0]                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --sort --no-sort            [default: False]                                                     │

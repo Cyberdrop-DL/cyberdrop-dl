@@ -98,6 +98,11 @@ Several config options have new names:
 - `--exclude-before` -> `--exclude.before`
 - `--exclude-after` -> `--exclude.after`
 
+#### Logs
+
+- `--log-level` -> `--logs.level`
+- `--console-log-level` -> `--logs.console-level`
+
 ### Removed
 
 - Support for python 3.11
