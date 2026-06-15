@@ -185,6 +185,10 @@ Bulk asynchronous downloader for multiple file hosts
 │                                      [default: truststore+certifi]                               │
 │ --user-agent                         [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0)         │
 │                                      Gecko/20100101 Firefox/150.0]                               │
+│ --mtime --no-mtime                   [default: True]                                             │
+│ --max-children                       [default: []]                                               │
+│ --max-thread-depth                   [default: 0]                                                │
+│ --max-thread-folder-depth                                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Cookies ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --cookies  File/folder to import cookies from (.txt Netscape files)                              │
@@ -204,12 +208,6 @@ Bulk asynchronous downloader for multiple file hosts
 │ --min-image-size  [default: 0]                                                                   │
 │ --min-other-size  [default: 0]                                                                   │
 │ --min-video-size  [default: 0]                                                                   │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ FileSystem ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --mtime --no-mtime         [default: True]                                                       │
-│ --max-children             [default: []]                                                         │
-│ --max-thread-depth         [default: 0]                                                          │
-│ --max-thread-folder-depth                                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Filters ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --exclude.audio --exclude.no-audio  [default: False]                                             │

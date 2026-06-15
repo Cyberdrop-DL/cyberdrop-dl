@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import BaseModel, ByteSize, Field, PositiveInt, field_validator
+from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, field_validator
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.models import AppriseURL  # noqa: TC001
-from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, NonEmptyStr  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt, NonEmptyStr  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils import cleanup
 
@@ -22,7 +22,6 @@ from .settings import (
     Cookies,
     DupeCleanup,
     FileSizeLimits,
-    FileSystem,
     Filters,
     GenericCrawlers,
     Jdownloader,
@@ -56,7 +55,6 @@ class Config(BaseModel):
     deep_scrape: bool = False
     disable_crawlers: ListNonEmptyStr = []
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
-    filesystem: FileSystem = Field(default_factory=FileSystem)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
@@ -79,6 +77,12 @@ class Config(BaseModel):
     subfolders: SubFolders = Field(default_factory=SubFolders)
     ui_options: UIOptions = Field(default_factory=UIOptions)
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+
+    mtime: bool = True
+    max_children: ListNonNegativeInt = []
+    max_thread_depth: NonNegativeInt = 0
+    max_thread_folder_depth: NonNegativeInt | None = None
+
     _resolved: bool = False
     _source: Path | None = None
 

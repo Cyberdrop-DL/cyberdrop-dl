@@ -209,7 +209,7 @@ class ScrapeMapper:
 
             self.create_download_task(wait_until_scrape_is_done())
 
-            children_limits = tuple(self.manager.config.filesystem.max_children)
+            children_limits = tuple(self.manager.config.max_children)
             async for item in items:
                 item.children_limits = children_limits
                 item.download_folder = self.manager.config.download_folder

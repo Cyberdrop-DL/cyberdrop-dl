@@ -18,7 +18,6 @@ from pydantic import (
     ByteSize,
     Field,
     NonNegativeFloat,
-    NonNegativeInt,
     PositiveFloat,
     PositiveInt,
     PrivateAttr,
@@ -37,7 +36,6 @@ from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     HttpURL,
     ListNonEmptyStr,
-    ListNonNegativeInt,
     ListPydanticURL,
     LogPath,
     MainLogPath,
@@ -78,13 +76,6 @@ class SubFolders(SettingsGroup, name=None):
         valid_keys = {"default", "title", "id", "number", "date"}
         validate_format_string(value, valid_keys)
         return value
-
-
-class FileSystem(SettingsGroup):
-    mtime: bool = True
-    max_children: ListNonNegativeInt = []
-    max_thread_depth: NonNegativeInt = 0
-    max_thread_folder_depth: NonNegativeInt | None = None
 
 
 class Logs(SettingsGroup):  # noqa: PLW1641
