@@ -94,7 +94,7 @@ class HTTPClient:
     def __post_init__(self) -> None:
         self._ssl_context = tcp.create_ssl_context(self.config.ssl_context)
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.network.rate_limit)
-        self.global_download_limiter = asyncio.Semaphore(self.config.network.downloads.concurrency)
+        self.global_download_limiter = asyncio.Semaphore(self.config.downloads.concurrency)
 
     @staticmethod
     def from_manager(manager: Manager) -> HTTPClient:
@@ -162,7 +162,7 @@ class HTTPClient:
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
-            headers={"User-Agent": self.config.user_agent},
+            headers={"User-Agent": self.config.network.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
             timeout=self.config.network.aiohttp_timeout,
@@ -250,7 +250,7 @@ class HTTPClient:
         )
 
         if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", default_ua or self.config.user_agent)
+            _ = request.headers.setdefault("User-Agent", default_ua or self.config.network.user_agent)
 
         async with self._request(request) as resp:
             yield resp
@@ -315,7 +315,7 @@ class HTTPClient:
         assert self.flaresolverr
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
-        flaresolverr.verify_solution(self.config.user_agent, solution)
+        flaresolverr.verify_solution(self.config.network.user_agent, solution)
         return AbstractResponse.create(solution)
 
 

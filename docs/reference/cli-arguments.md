@@ -183,8 +183,6 @@ Bulk asynchronous downloader for multiple file hosts
 │ --min-free-space                     [default: 5000000000]                                       │
 │ --ssl-context                        [choices: truststore, certifi, truststore+certifi]          │
 │                                      [default: truststore+certifi]                               │
-│ --user-agent                         [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0)         │
-│                                      Gecko/20100101 Firefox/150.0]                               │
 │ --mtime --no-mtime                   [default: True]                                             │
 │ --max-children                       [default: []]                                               │
 │ --max-thread-depth                   [default: 0]                                                │
@@ -192,6 +190,19 @@ Bulk asynchronous downloader for multiple file hosts
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Cookies ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --cookies  File/folder to import cookies from (.txt Netscape files)                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
+│ --downloads                     [default: 15]                                                    │
+│ --downloads.per-domain          [default: 5]                                                     │
+│ --attempts                      [default: 2]                                                     │
+│ --delay                         [default: 0.0]                                                   │
+│ --slow-speed                    [default: 0]                                                     │
+│ --speed-limit                   [default: 0]                                                     │
+│ --jitter                        [default: 0]                                                     │
+│ --skip-and-mark-completed       [default: False]                                                 │
+│   --no-skip-and-mark-completed                                                                   │
+│ --concurrent-segments           Allow up to <N> HLS segments to be downloaded concurrently       │
+│                                 [default: 10]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ DupeCleanup ────────────────────────────────────────────────────────────────────────────────────╮
 │ --hashes                        [choices: xxh128, md5, sha256] [default: ('xxh128', 'md5',       │
@@ -265,21 +276,11 @@ Bulk asynchronous downloader for multiple file hosts
 ╭─ Network ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --proxy                                                                                          │
 │ --flaresolverr                                                                                   │
-│ --downloads.attempts                 [default: 2]                                                │
-│ --downloads.per-domain               [default: 5]                                                │
-│ --downloads                          [default: 15]                                               │
-│ --downloads.delay                    [default: 0.0]                                              │
-│ --downloads.slow-speed               [default: 0]                                                │
-│ --downloads.speed-limit              [default: 0]                                                │
-│ --downloads.jitter                   [default: 0]                                                │
-│ --downloads.skip-and-mark-completed  [default: False]                                            │
-│   --downloads.no-skip-and-mark-comp                                                              │
-│   leted                                                                                          │
-│ --downloads.concurrent-segments      Allow up to <N> HLS segments to be downloaded concurrently  │
-│                                      [default: 10]                                               │
-│ --rate-limit                         [default: 25]                                               │
-│ --connection-timeout                 [default: 15]                                               │
-│ --read-timeout                       [default: 300]                                              │
+│ --rate-limit          [default: 25]                                                              │
+│ --connection-timeout  [default: 15]                                                              │
+│ --read-timeout        [default: 300]                                                             │
+│ --user-agent          [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101         │
+│                       Firefox/150.0]                                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
 │ --ignore-history             [default: False]                                                    │
@@ -288,7 +289,6 @@ Bulk asynchronous downloader for multiple file hosts
 │   --no-delete-partial-files                                                                      │
 │ --delete-empty-folders       [default: True]                                                     │
 │   --no-delete-empty-folders                                                                      │
-│ --slow-download-speed        [default: 0]                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --sort --no-sort            [default: False]                                                     │

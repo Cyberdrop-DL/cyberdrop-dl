@@ -305,7 +305,6 @@ class RuntimeOptions(SettingsGroup):
     ignore_history: bool = False
     delete_partial_files: bool = False
     delete_empty_folders: bool = True
-    slow_download_speed: ByteSizeSerilized = ByteSize(0)
 
 
 def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
@@ -393,10 +392,10 @@ class DupeCleanup(SettingsGroup):
         return self._extra_hashes
 
 
-class Downloads(AliasModel):
-    attempts: PositiveInt = 2
-    concurrency_per_domain: Annotated[PositiveInt, Parameter(name="--downloads.per-domain")] = 5
+class Downloads(SettingsGroup):
     concurrency: Annotated[PositiveInt, Parameter(name="--downloads")] = 15
+    concurrency_per_domain: Annotated[PositiveInt, Parameter(name="--downloads.per-domain")] = 5
+    attempts: PositiveInt = 2
     delay: NonNegativeFloat = 0.0
     slow_speed: ByteSizeSerilized = ByteSize(0)
     speed_limit: ByteSizeSerilized = ByteSize(0)
@@ -413,10 +412,10 @@ class Downloads(AliasModel):
 class Network(SettingsGroup):
     proxy: HttpURL | None = None
     flaresolverr: HttpURL | None = None
-    downloads: Downloads = Field(default_factory=Downloads)
     rate_limit: PositiveFloat = 25
     connection_timeout: PositiveFloat = 15
     read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
+    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
 
     @property
     def curl_timeout(self) -> float | tuple[float, float]:

@@ -92,7 +92,7 @@ class Manager:
         self.sorter = Sorter.from_manager(self)
         with (
             _cache_context(self.appdata.cache_file, self.cache),
-            enter_context(REFRESH_RATE, self.config.ui_options.refresh_rate),
+            enter_context(REFRESH_RATE, self.config.ui.refresh_rate),
             enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
         ):
             try:

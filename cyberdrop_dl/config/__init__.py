@@ -13,13 +13,14 @@ from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.models import AppriseURL  # noqa: TC001
-from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt, NonEmptyStr  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt  # noqa: TC001
 from cyberdrop_dl.models.validators import falsy_as, to_bytesize
 from cyberdrop_dl.utils import cleanup
 
 from .auth import AuthSettings
 from .settings import (
     Cookies,
+    Downloads,
     DupeCleanup,
     FileSizeLimits,
     Filters,
@@ -55,6 +56,7 @@ class Config(BaseModel):
     deep_scrape: bool = False
     disable_crawlers: ListNonEmptyStr = []
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
+    downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
@@ -75,8 +77,7 @@ class Config(BaseModel):
     sort: Sort = Field(default_factory=Sort)
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
     subfolders: SubFolders = Field(default_factory=SubFolders)
-    ui_options: UIOptions = Field(default_factory=UIOptions)
-    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+    ui: UIOptions = Field(default_factory=UIOptions)
 
     mtime: bool = True
     max_children: ListNonNegativeInt = []

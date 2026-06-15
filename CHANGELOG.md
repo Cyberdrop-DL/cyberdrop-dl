@@ -111,7 +111,7 @@ Several config options have new names:
 `--remove-domains-from-folder-names` -> `--subfolders.include.domain`
 `--separate-posts-format` -> `--subfolders.separate-posts-format`
 `--separate-posts` -> `--subfolders.separate-posts`
-`--skip-download-mark-completed` -> `--downloads.skip-and-mark-completed`
+`--skip-download-mark-completed` -> `--skip-and-mark-completed`
 
 ### Removed
 
