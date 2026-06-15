@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compute `xxh128`, `md5` and `sha256` hashes by default
 - `--deep-scrape` will no longer reset after a single run
 - `--ui` is now a config option instead of just a CLI command (entry: `ui.mode`)
+- `--print-stats` is now a config option instead of just a CLI command
 
 Several config options have new names:
 
@@ -65,7 +66,8 @@ Several config options have new names:
 - `--minimum-other-size` -> `--min-other-size`
 - `--minimum-video-duration` -> `--min-video-duration`
 - `--minimum-video-size` -> `--min-video-size`
-- `--required-free-space`-> `--min-free-space`
+- `--required-free-space` -> `--min-free-space`
+- `--print-stats` -> `--stats` , `--no-stats`
 
 #### Jdownloader
 

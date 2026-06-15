@@ -117,7 +117,7 @@ class Manager:
         _log_dependencies()
 
     def print_stats(self, stats: ScrapeStats) -> str:
-        if not self.cli_args.print_stats:
+        if not self.config.show_stats:
             return ""
 
         log_spacer()

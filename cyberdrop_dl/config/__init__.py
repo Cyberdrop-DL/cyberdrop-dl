@@ -84,6 +84,10 @@ class Config(BaseModel):
     ignore_history: bool = False
     delete_partial_files: bool = False
     delete_empty_folders: bool = True
+    show_stats: Annotated[bool, Parameter(name="stats")] = Field(
+        default=True,
+        description="show stats report at the end of a run",
+    )
 
     _resolved: bool = False
     _source: Path | None = None

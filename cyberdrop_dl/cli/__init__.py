@@ -56,10 +56,6 @@ class CLIargs(BaseModel):
         default=False,
         description="force CDL to run with a vertical layout",
     )
-    print_stats: bool = Field(
-        default=True,
-        description="show stats report at the end of a run",
-    )
 
 
 app = App(
