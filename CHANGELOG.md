@@ -104,6 +104,13 @@ Several config options have new names:
 
 - `--log-level` -> `--logs.level`
 - `--console-log-level` -> `--logs.console-level`
+- `--log-folder` -> `--logs.folder`
+- `--logs-expire-after` -> `--logs.expire-after`
+- `--main-log` -> `--logs.files.main --log-file`
+- `--download-error-urls` -> `--logs.files.download-errors`
+- `--rotate-logs` -> `--logs-rotate`
+- `--scrape-error-urls` -> `--logs.files.scrape-errors`
+- `--unsupported-urls` -> `--logs.files.unsupported`
 
 #### DownloadOptions
 

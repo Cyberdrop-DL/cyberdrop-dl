@@ -167,10 +167,6 @@ Bulk asynchronous downloader for multiple file hosts
 │                                      [choices: chrome, edge, safari, safari_ios, chrome_android, │
 │                                      firefox]                                                    │
 │ --portrait --no-portrait             force CDL to run with a vertical layout [default: False]    │
-│ --print-stats --no-print-stats       show stats report at the end of a run [default: True]       │
-│ --ui                                 DISABLED, ACTIVITY, SIMPLE or FULLSCREEN [choices:          │
-│                                      disabled, activity, simple, fullscreen] [default:           │
-│                                      fullscreen]                                                 │
 │ --deep-scrape --no-deep-scrape       [default: False]                                            │
 │ --disable-crawlers                   [default: []]                                               │
 │ --download-folder --output -o -d     [default: Downloads]                                        │
@@ -187,6 +183,13 @@ Bulk asynchronous downloader for multiple file hosts
 │ --max-children                       [default: []]                                               │
 │ --max-thread-depth                   [default: 0]                                                │
 │ --max-thread-folder-depth                                                                        │
+│ --ignore-history                     [default: False]                                            │
+│   --no-ignore-history                                                                            │
+│ --delete-partial-files               [default: False]                                            │
+│   --no-delete-partial-files                                                                      │
+│ --delete-empty-folders               [default: True]                                             │
+│   --no-delete-empty-folders                                                                      │
+│ --stats --no-stats                   show stats report at the end of a run [default: True]       │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Cookies ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --cookies  File/folder to import cookies from (.txt Netscape files)                              │
@@ -253,19 +256,19 @@ Bulk asynchronous downloader for multiple file hosts
 │ --jdownloader.whitelist         [default: []]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --level                         Only log messages of this level or higher to the main log file   │
+│ --logs.level                    Only log messages of this level or higher to the main log file   │
 │                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL] [default:       │
 │                                 DEBUG]                                                           │
-│ --console-level                 Only log messages of this level or higher to the console. An     │
+│ --logs.console-level            Only log messages of this level or higher to the console. An     │
 │                                 empty or None value will use the same level as log_level         │
 │                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]                 │
-│ --download-error-urls           [default: Download_Error_URLs.csv]                               │
-│ --log-folder                    [default: AppData/Logs]                                          │
-│ --logs-expire-after                                                                              │
-│ --main-log                      [default: downloader.log]                                        │
-│ --rotate-logs --no-rotate-logs  [default: False]                                                 │
-│ --scrape-error-urls             [default: Scrape_Error_URLs.csv]                                 │
-│ --unsupported-urls              [default: Unsupported_URLs.csv]                                  │
+│ --logs.files.main --log-file    [default: downloader.log]                                        │
+│ --logs.files.download-errors    [default: Download_Error_URLs.csv]                               │
+│ --logs.files.scrape-errors      [default: Scrape_Error_URLs.csv]                                 │
+│ --logs.files.unsupported        [default: Unsupported_URLs.csv]                                  │
+│ --logs.folder                   [default: AppData/Logs]                                          │
+│ --logs.expire-after                                                                              │
+│ --logs.rotate --logs.no-rotate  [default: False]                                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ MediaDurationLimits ────────────────────────────────────────────────────────────────────────────╮
 │ --max-video-duration  [default: 0:00:00]                                                         │
@@ -281,14 +284,6 @@ Bulk asynchronous downloader for multiple file hosts
 │ --read-timeout        [default: 300]                                                             │
 │ --user-agent          [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101         │
 │                       Firefox/150.0]                                                             │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
-│ --ignore-history             [default: False]                                                    │
-│   --no-ignore-history                                                                            │
-│ --delete-partial-files       [default: False]                                                    │
-│   --no-delete-partial-files                                                                      │
-│ --delete-empty-folders       [default: True]                                                     │
-│   --no-delete-empty-folders                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --sort --no-sort            [default: False]                                                     │
@@ -318,6 +313,7 @@ Bulk asynchronous downloader for multiple file hosts
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ UIOptions ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --refresh-rate  [default: 10.0]                                                                  │
+│ --ui            [choices: disabled, activity, simple, fullscreen] [default: fullscreen]          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 <!-- END_CLI_OVERVIEW -->

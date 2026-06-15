@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from cyberdrop_dl.clients.response import AbstractResponse
-    from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 
@@ -33,13 +33,10 @@ class CSVFiles:
     unsupported_urls_log: Path
     download_error_log: Path
     scrape_error_log: Path
-    jsonl_file: Path = dataclasses.field(init=False)
+    jsonl_file: Path
 
     def __iter__(self) -> Iterator[Path]:
         return iter(dataclasses.astuple(self))
-
-    def __post_init__(self) -> None:
-        self.jsonl_file = self.main_log.with_suffix(".results.jsonl")
 
 
 @dataclasses.dataclass(slots=True)
@@ -57,12 +54,14 @@ class CSVLogsManager:
         self._responses_folder = self.files.main_log.parent / "cdl_responses"
 
     @classmethod
-    def from_manager(cls, manager: Manager) -> Self:
+    def from_config(cls, config: Config) -> Self:
+        files = config.logs.files
         files = CSVFiles(
-            main_log=manager.config.logs.main_log,
-            unsupported_urls_log=manager.config.logs.unsupported_urls,
-            download_error_log=manager.config.logs.download_error_urls,
-            scrape_error_log=manager.config.logs.scrape_error_urls,
+            main_log=files.main,
+            unsupported_urls_log=files.unsupported,
+            download_error_log=files.download_errors,
+            scrape_error_log=files.scrape_errors,
+            jsonl_file=files.jsonl_file,
         )
         return cls(files)
 

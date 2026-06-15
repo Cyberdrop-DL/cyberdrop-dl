@@ -54,7 +54,7 @@ class Manager:
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
-        self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
+        self.logs: CSVLogsManager = CSVLogsManager.from_config(self.config)
         self.http_client: HTTPClient = HTTPClient.from_manager(self)
         self.download_client: DownloadClient = DownloadClient(self)
 
@@ -78,7 +78,7 @@ class Manager:
     def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
         self.config.resolve_paths()
-        self.logs = CSVLogsManager.from_manager(self)
+        self.logs = CSVLogsManager.from_config(self.config)
         self.logs.delete_old_logs()
 
     @contextlib.contextmanager
@@ -137,7 +137,7 @@ class Manager:
         logger.info(f"  URLs source: {scrape_stats.source}")
         logger.info(f"  URLs: {scrape_stats.count:,}")
         logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
-        logger.info(f"  Logs folder: {self.config.logs.log_folder}")
+        logger.info(f"  Logs folder: {self.config.logs.folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 

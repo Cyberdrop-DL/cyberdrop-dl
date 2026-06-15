@@ -69,21 +69,28 @@ class SubFolders(SettingsGroup, name=None):
         return value
 
 
-class Logs(SettingsGroup):  # noqa: PLW1641
+class LogFiles(AliasModel):
+    main: Annotated[MainLogPath, Parameter(alias="--log-file")] = Path("downloader.log")
+    download_errors: LogPath = Path("Download_Error_URLs.csv")
+    scrape_errors: LogPath = Path("Scrape_Error_URLs.csv")
+    unsupported: LogPath = Path("Unsupported_URLs.csv")
+
+    @property
+    def jsonl_file(self) -> Path:
+        return self.main.with_suffix(".results.jsonl")
+
+
+class Logs(SettingsGroup, name=None):  # noqa: PLW1641
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     "Only log messages of this level or higher to the main log file"
     console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
     "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
 
-    download_error_urls: LogPath = Path("Download_Error_URLs.csv")
-    log_folder: Path = DEFAULT_APP_STORAGE / "Logs"
-    logs_expire_after: datetime.timedelta | None = None
-    main_log: MainLogPath = Path("downloader.log")
-    rotate_logs: bool = False
-    scrape_error_urls: LogPath = Path("Scrape_Error_URLs.csv")
-    unsupported_urls: LogPath = Path("Unsupported_URLs.csv")
-    webhook: Annotated[AppriseURL | None, Parameter(show=False)] = None
-
+    files: LogFiles = Field(default_factory=LogFiles)
+    folder: Path = DEFAULT_APP_STORAGE / "Logs"
+    expire_after: datetime.timedelta | None = None
+    rotate: bool = False
+    webhook: Annotated[AppriseURL | None, Parameter(show=False), BeforeValidator(falsy_as_none)] = None
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
 
     @field_validator("level", "console_level", mode="before")
@@ -105,42 +112,37 @@ class Logs(SettingsGroup):  # noqa: PLW1641
 
         return logging.getLevelNamesMapping()[self.console_level]
 
-    @field_validator("webhook", mode="before")
-    @classmethod
-    def handle_falsy(cls, value: str) -> str | None:
-        return falsy_as(value, None)
-
-    @field_validator("logs_expire_after", mode="before")
+    @field_validator("expire_after", mode="before")
     @staticmethod
-    def parse_logs_duration(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str | None:
+    def _parse_logs_duration(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str | None:
         if value := falsy_as(input_date, None):
             return to_timedelta(value)
 
     def resolve_filenames(self) -> None:
-        self.log_folder = self.log_folder.expanduser().resolve().absolute()
+        self.folder = self.folder.expanduser().resolve().absolute()
         now_file_iso: str = self._created_at.strftime(LOGS_DATETIME_FORMAT)
         now_folder_iso: str = self._created_at.strftime(LOGS_DATE_FORMAT)
-        for name, log_file in vars(self).items():
-            if name == "log_folder" or not isinstance(log_file, Path) or log_file.suffix not in {".csv", ".log"}:
-                continue
 
-            log_file = self.log_folder / log_file
-
-            if self.rotate_logs:
+        def resolve(path: Path) -> Path:
+            log_file = self.folder / path
+            if self.rotate:
                 file_name = f"{log_file.stem}_{now_file_iso}{log_file.suffix}"
                 log_file = log_file.parent / now_folder_iso / file_name
+            return log_file
 
-            object.__setattr__(self, name, log_file)
+        self.files = LogFiles.model_construct(
+            None, **{name: resolve(value) for name, value in self.files.model_dump().items()}
+        )
 
     def delete_old_logs_and_folders(self) -> None:
-        if not self.logs_expire_after:
+        if not self.expire_after:
             return
 
-        for file in self.log_folder.rglob("*"):
+        for file in self.folder.rglob("*"):
             if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
-            if (self._created_at - datetime.datetime.fromtimestamp(file.stat().st_ctime)) > self.logs_expire_after:  # noqa: DTZ006
+            if (self._created_at - datetime.datetime.fromtimestamp(file.stat().st_ctime)) > self.expire_after:  # noqa: DTZ006
                 file.unlink()
 
     def __eq__(self, other: object) -> bool:

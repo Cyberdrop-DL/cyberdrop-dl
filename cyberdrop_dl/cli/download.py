@@ -25,7 +25,7 @@ async def _scrape(manager: Manager) -> None:
     from cyberdrop_dl.utils import apprise
 
     with setup_file_logging(
-        manager.config.logs.main_log,
+        manager.config.logs.files.main,
         level=manager.config.logs.effective_level,
     ):
         manager.log_config_settings()

@@ -130,7 +130,7 @@ class Config(BaseModel):
         self.logs.resolve_filenames()
         self._resolve_paths(self)
         self.logs.delete_old_logs_and_folders()
-        cleanup.rm_empty_dirs(self.logs.log_folder)
+        cleanup.rm_empty_dirs(self.logs.folder)
         self._resolved = True
 
     @classmethod
