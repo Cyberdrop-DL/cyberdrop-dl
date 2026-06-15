@@ -60,7 +60,7 @@ class DownloadOptions(SettingsGroup):
     mtime: bool = True
     include_album_id_in_folder_name: bool = False
     include_thread_id_in_folder_name: bool = False
-    max_number_of_children: ListNonNegativeInt = []
+    max_children: ListNonNegativeInt = []
     remove_domains_from_folder_names: bool = False
     separate_posts_format: NonEmptyStr = "{default}"
     separate_posts: bool = False
@@ -263,7 +263,7 @@ class IgnoreOptions(SettingsGroup):
         return value
 
 
-class Jdownloader(SettingsGroup, flat_namespace=False):
+class Jdownloader(SettingsGroup, name=None):
     enabled: bool = False
     autostart: bool = False
     download_dir: PathOrNone = None
