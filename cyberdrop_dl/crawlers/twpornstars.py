@@ -16,7 +16,7 @@ class Selector:
 
     TITLE = "h1.user-page, h1.tag-page, h1.block__title"
     THUMBS = "div.block-thumbs a.thumb__link"
-    _VIDEO = "video.video-js > source"
+    _VIDEO = "video#video_tag_html5_api > source"
     _PHOTO = "img.thumb__img"
     MEDIA = f"{_VIDEO}, {_PHOTO}"
 
@@ -60,6 +60,12 @@ class TwPornstarsCrawler(TwimgCrawler):
             await self.direct_file(scrape_item, src)
             return
         await self.photo(scrape_item, src)
+
+    def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
+        """Prepare headers with x.com referer for video.twimg.com URLs."""
+        headers = super()._prepare_headers(scrape_item)
+        headers["Referer"] = "https://x.com/"
+        return headers
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem) -> None:
