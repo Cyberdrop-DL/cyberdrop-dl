@@ -46,15 +46,15 @@ class Sorter:
 
     @classmethod
     def from_manager(cls, manager: Manager) -> Self:
-        settings = manager.config.sorting
+        settings = manager.config.sort
         return cls(
-            input_dir=settings.scan_folder or manager.config.download_folder,
-            output_dir=settings.sort_folder,
-            incrementer_format=settings.sort_incrementer_format,
-            audio_format=settings.sorted_audio,
-            image_format=settings.sorted_image,
-            video_format=settings.sorted_video,
-            other_format=settings.sorted_other,
+            input_dir=settings.input_folder or manager.config.download_folder,
+            output_dir=settings.output_folder,
+            incrementer_format=settings.formats.incrementer,
+            audio_format=settings.formats.audio,
+            image_format=settings.formats.image,
+            video_format=settings.formats.video,
+            other_format=settings.formats.other,
         )
 
     async def run(self, *, disable_tui: bool = False) -> None:

@@ -160,8 +160,8 @@ class ScrapeMapper:
         _ = ALLOW_NO_EXT.set(not config.ignore.exclude_files_with_no_extension)
 
         config.download_folder.mkdir(parents=True, exist_ok=True)
-        if config.sorting.sort_downloads:
-            config.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+        if config.sort.enabled:
+            config.sort.output_folder.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
             "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)

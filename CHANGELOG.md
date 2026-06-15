@@ -51,10 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Several config options have new names:
 
 - `--disable-file-timestamps`-> `--mtime`
-- `--jdownloader-autostart` -> `--jdownloader.autostart`
-- `--jdownloader-download-dir` -> `--jdownloader.download-dir`
-- `--jdownloader-whitelist` -> `--jdownloader.whitelist`
-- `--send-unsupported-to-jdownloader`-> `--jdownloader.enabled`
+
 - `--maximum-audio-duration` -> `--max-audio-duration`
 - `--maximum-image-size` -> `--max-image-size`
 - `--maximum-number-of-children` -> `--max-children`
@@ -69,6 +66,24 @@ Several config options have new names:
 - `--minimum-video-duration` -> `--min-video-duration`
 - `--minimum-video-size` -> `--min-video-size`
 - `--required-free-space`-> `--min-free-space`
+
+#### Jdownloader
+
+- `--jdownloader-autostart` -> `--jdownloader.autostart`
+- `--jdownloader-download-dir` -> `--jdownloader.download-dir`
+- `--jdownloader-whitelist` -> `--jdownloader.whitelist`
+- `--send-unsupported-to-jdownloader`-> `--jdownloader` / `--no-jdownloader`
+
+#### Sorting
+
+- `--sort-downloads` -> `--sort` / `--no-sort`
+- `--scan-folder` -> `--sort.input-folder`
+- `--sort-folder` -> `--sort.output-folder`
+- `--sort-incrementer-format` -> `--sort.formats.incrementer`
+- `--sorted-audio` -> `--sort.formats.audio`
+- `--sorted-image` -> `--sort.formats.image`
+- `--sorted-other` -> `--sort.formats.other`
+- `--sorted-video` -> `--sort.formats.video`
 
 ### Removed
 

@@ -5,14 +5,17 @@ import functools
 import logging
 import random
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Literal, Self, override
 
 import aiohttp
 from cyclopts import Parameter
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ByteSize,
+    Field,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
@@ -28,7 +31,7 @@ from cyberdrop_dl.constants import (
     LOGS_DATETIME_FORMAT,
     Hashing,
 )
-from cyberdrop_dl.models import AppriseURL, SettingsGroup
+from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     ListNonEmptyStr,
@@ -264,7 +267,7 @@ class IgnoreOptions(SettingsGroup):
 
 
 class Jdownloader(SettingsGroup, name=None):
-    enabled: bool = False
+    enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
     autostart: bool = False
     download_dir: PathOrNone = None
     whitelist: ListNonEmptyStr = []
@@ -303,67 +306,61 @@ class RuntimeOptions(SettingsGroup):
         return logging.getLevelNamesMapping()[self.console_log_level]
 
 
-class Sorting(SettingsGroup):
-    scan_folder: PathOrNone = None
-    sort_downloads: bool = False
-    sort_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
-    sort_incrementer_format: NonEmptyStr = " ({i})"
-    sorted_audio: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
-    sorted_image: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
-    sorted_other: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Other/{filename}{ext}"
-    sorted_video: NonEmptyStrOrNone = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
+def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
+
+    def check(value: str | None) -> str | None:
+        if value is not None:
+            validate_format_string(value, valid_keys)
+        return value
+
+    return check
+
+
+class SortFormats(AliasModel):
+    audio: Annotated[
+        NonEmptyStrOrNone,
+        AfterValidator(_format_validator(_SORTING_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"})),
+    ] = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
+    "Format to generate sorted audio file"
+    image: Annotated[
+        NonEmptyStrOrNone, AfterValidator(_format_validator(_SORTING_COMMON_FIELDS | {"height", "resolution", "width"}))
+    ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
+    "Format to generate sorted image file"
+    other: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_SORTING_COMMON_FIELDS))] = (
+        "{sort_dir}/{base_dir}/Other/{filename}{ext}"
+    )
+    "Format to generate sorted files of unknown type"
+    video: Annotated[
+        NonEmptyStrOrNone,
+        AfterValidator(
+            _format_validator(
+                _SORTING_COMMON_FIELDS
+                | {
+                    "codec",
+                    "duration",
+                    "fps",
+                    "height",
+                    "length",
+                    "resolution",
+                    "width",
+                }
+            )
+        ),
+    ] = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
+    "Format to generate sorted video file"
+    incrementer: Annotated[NonEmptyStr, AfterValidator(_format_validator({"i"}))] = " ({i})"
+    "Format for separator on name collisions"
+
+
+class Sort(SettingsGroup, name=None):
+    enabled: Annotated[bool, Parameter(name="--sort")] = False
+    input_folder: PathOrNone = None
+    output_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
+    formats: SortFormats = Field(default_factory=SortFormats)
 
     @property
     def needs_ffmpeg(self) -> bool:
-        return bool(self.sort_downloads and (self.sorted_audio or self.sorted_image or self.sorted_video))
-
-    @field_validator("sort_incrementer_format", mode="after")
-    @classmethod
-    def valid_sort_incrementer_format(cls, value: str | None) -> str | None:
-        if value is not None:
-            valid_keys = {"i"}
-            validate_format_string(value, valid_keys)
-        return value
-
-    @field_validator("sorted_audio", mode="after")
-    @classmethod
-    def valid_sorted_audio(cls, value: str | None) -> str | None:
-        if value is not None:
-            valid_keys = _SORTING_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}
-            validate_format_string(value, valid_keys)
-        return value
-
-    @field_validator("sorted_image", mode="after")
-    @classmethod
-    def valid_sorted_image(cls, value: str | None) -> str | None:
-        if value is not None:
-            valid_keys = _SORTING_COMMON_FIELDS | {"height", "resolution", "width"}
-            validate_format_string(value, valid_keys)
-        return value
-
-    @field_validator("sorted_other", mode="after")
-    @classmethod
-    def valid_sorted_other(cls, value: str | None) -> str | None:
-        if value is not None:
-            valid_keys = _SORTING_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}
-            validate_format_string(value, valid_keys)
-        return value
-
-    @field_validator("sorted_video", mode="after")
-    @classmethod
-    def valid_sorted_video(cls, value: str | None) -> str | None:
-        if value is not None:
-            valid_keys = _SORTING_COMMON_FIELDS | {
-                "codec",
-                "duration",
-                "fps",
-                "height",
-                "length",
-                "resolution",
-                "width",
-            }
-            validate_format_string(value, valid_keys)
-        return value
+        return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
 class Cookies(SettingsGroup):

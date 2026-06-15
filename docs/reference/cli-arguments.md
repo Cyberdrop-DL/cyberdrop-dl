@@ -201,7 +201,7 @@ Bulk asynchronous downloader for multiple file hosts
 │ --include-thread-id-in-folder-name   [default: False]                                            │
 │   --no-include-thread-id-in-folder-                                                              │
 │   name                                                                                           │
-│ --max-number-of-children             [default: []]                                               │
+│ --max-children                       [default: []]                                               │
 │ --remove-domains-from-folder-names   [default: False]                                            │
 │   --no-remove-domains-from-folder-n                                                              │
 │   ames                                                                                           │
@@ -310,16 +310,33 @@ Bulk asynchronous downloader for multiple file hosts
 │   --no-skip-check-for-partial-files                                                              │
 │ --slow-download-speed                [default: 0]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Sorting ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --scan-folder                                                                                    │
-│ --sort-downloads           [default: False]                                                      │
-│   --no-sort-downloads                                                                            │
-│ --sort-folder              [default: Downloads/Cyberdrop-DL Sorted Downloads]                    │
-│ --sort-incrementer-format  [default:  ({i})]                                                     │
-│ --sorted-audio             [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]                │
-│ --sorted-image             [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]               │
-│ --sorted-other             [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]                │
-│ --sorted-video             [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]               │
+╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --input-folder                                                                                   │
+│ --sort --no-sort       [default: False]                                                          │
+│ --output-folder        [default: Downloads/Cyberdrop-DL Sorted Downloads]                        │
+│ --formats.audio        Format to generate sorted audio file [default:                            │
+│                        {sort_dir}/{base_dir}/Audio/{filename}{ext}]                              │
+│ --formats.image        Format to generate sorted image file [default:                            │
+│                        {sort_dir}/{base_dir}/Images/{filename}{ext}]                             │
+│ --formats.other        Format to generate sorted files of unknown type [default:                 │
+│                        {sort_dir}/{base_dir}/Other/{filename}{ext}]                              │
+│ --formats.video        Format to generate sorted video file [default:                            │
+│                        {sort_dir}/{base_dir}/Videos/{filename}{ext}]                             │
+│ --formats.incrementer  Format for separator on name collisions [default:  ({i})]                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Sort2 ──────────────────────────────────────────────────────────────────────────────────────────╮
+│ --sort.input-folder                                                                              │
+│ --sort. --sort.no-          [default: False]                                                     │
+│ --sort.output-folder        [default: Downloads/Cyberdrop-DL Sorted Downloads]                   │
+│ --sort.formats.audio        Format to generate sorted audio file [default:                       │
+│                             {sort_dir}/{base_dir}/Audio/{filename}{ext}]                         │
+│ --sort.formats.image        Format to generate sorted image file [default:                       │
+│                             {sort_dir}/{base_dir}/Images/{filename}{ext}]                        │
+│ --sort.formats.other        Format to generate sorted files of unknown type [default:            │
+│                             {sort_dir}/{base_dir}/Other/{filename}{ext}]                         │
+│ --sort.formats.video        Format to generate sorted video file [default:                       │
+│                             {sort_dir}/{base_dir}/Videos/{filename}{ext}]                        │
+│ --sort.formats.incrementer  Format for separator on name collisions [default:  ({i})]            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ UIOptions ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --refresh-rate  [default: 10.0]                                                                  │
