@@ -37,16 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The config file format has completly changed. All configs (`Auth`, `Global` and `Setttings`) are now one single file. Several options have new names, new default and new groups
+- The config file format has completly changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
 - CDL will not create a default config file by if no config currently exists
+- CDL will validate config in strict mode. If a config has an unknown entry, CDL will refuse to run instead of ignoring it
+- Apprise URLs are now part of the main config file instead of a dedicated `apprise.txt` file
 - CDL will refuse to start if the current database schema is older than `v9.15.0`
 - Detect and report BasedFlare anti-bot protection
-- Cookies with not be automatically loaded from `AppData/cookies`. Path to cookies needs to be spscified with `--cookies`
+- Cookies with not be automatically loaded from `AppData/cookies`. Path to cookies needs to be specified with `--cookies`
 - Always remove generated id from filenames (Cyberdrop)
-- Compute `xxhash`, `md5` and `sha256` hashes by default
-- `--deep-scrape` will no longer be reset after a single run
+- Compute `xxh128`, `md5` and `sha256` hashes by default
+- `--deep-scrape` will no longer reset after a single run
 
-Some config options have new names:
+Several config options have new names:
 
 - `--disable-file-timestamps`-> `--mtime`
 - `--jdownloader-autostart` -> `--jdownloader.autostart`
@@ -71,13 +73,12 @@ Some config options have new names:
 ### Removed
 
 - Support for python 3.11
-- All retry setting + menu option
-- Auto database updates from versions older than v9.15.0
-- `--log-level` and `--console-log-level` no longer acept integer as level. Only log level names as valid, ex: `INFO, `DEBUG`, `WARNING`
+- All retry settings + menu option
+- `--log-level` and `--console-log-level` no longer accept integers. Only log level names as valid, ex: `INFO`, `DEBUG`, `WARNING`
 - Posts filtering by URL params (Wordpress)
 - Auto cookie extraction support
 
-Several config options:
+Several config options have been removed:
 
 - `--add-md5-hash`
 - `--add-sha256-hash`
@@ -97,7 +98,7 @@ Several config options:
 - `--sites`
 - `--update-last-forum-post`
 
-The following Authentication entries has been removed:
+The following authentication entries has been removed:
 
 - `Imgur.client_id`
 - `Kemono.session`
