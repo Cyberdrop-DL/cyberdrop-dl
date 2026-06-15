@@ -167,7 +167,7 @@ class ScrapeMapper:
             "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
         )
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
-        self.tui.mode = self.manager.cli_args.ui
+        self.tui.mode = self.manager.config.ui.mode
         ## IMPORTANT: Order of each context matters!
         with self.tui():
             async with (

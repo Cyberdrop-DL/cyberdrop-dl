@@ -33,7 +33,7 @@ class Color:
     YELLOW: str = "yellow"
 
 
-class UIOptions(CIStrEnum):
+class UIMode(CIStrEnum):
     DISABLED = auto()
     ACTIVITY = auto()
     SIMPLE = auto()
@@ -41,7 +41,7 @@ class UIOptions(CIStrEnum):
 
     @property
     def is_disabled(self) -> bool:
-        return self is UIOptions.DISABLED
+        return self is UIMode.DISABLED
 
 
 class JsonableRenderableType(Protocol):

@@ -110,7 +110,7 @@ def download(
 
     config = Config.create(appdata, cli.config_file).update(config)
 
-    if not cli.fullscreen_ui or cli.config_file or config.sort.enabled:
+    if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True
 
     manager = Manager(cli, appdata, config)

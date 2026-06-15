@@ -3,11 +3,10 @@ from typing import Annotated, Literal
 
 from cyclopts import Parameter
 from cyclopts.core import App
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field
 
 from cyberdrop_dl import __version__
 from cyberdrop_dl.models.types import HttpURL
-from cyberdrop_dl.progress import UIOptions
 
 
 @Parameter(name="*")
@@ -61,23 +60,6 @@ class CLIargs(BaseModel):
         default=True,
         description="show stats report at the end of a run",
     )
-    ui: UIOptions = Field(
-        default=UIOptions.FULLSCREEN,
-        description="DISABLED, ACTIVITY, SIMPLE or FULLSCREEN",
-    )
-
-    @property
-    def fullscreen_ui(self) -> bool:
-        return self.ui == UIOptions.FULLSCREEN
-
-    @computed_field
-    def __computed__(self) -> dict[str, bool]:
-        return {"fullscreen_ui": self.fullscreen_ui}
-
-    @field_validator("ui", mode="before")
-    @classmethod
-    def lower(cls, value: str) -> str:
-        return value.lower()
 
 
 app = App(

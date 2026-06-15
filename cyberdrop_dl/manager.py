@@ -90,7 +90,7 @@ class Manager:
         with (
             _cache_context(self.appdata.cache_file, self.cache),
             enter_context(REFRESH_RATE, self.config.ui.refresh_rate),
-            enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
+            enter_context(TUI_DISABLED, self.config.ui.mode.is_disabled),
         ):
             try:
                 yield self

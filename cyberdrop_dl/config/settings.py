@@ -6,8 +6,9 @@ import logging
 import random
 import re
 from collections.abc import Callable
+from enum import auto
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self, override
+from typing import Annotated, Any, ClassVar, Literal, Self, override
 
 import aiohttp
 from cyclopts import Parameter
@@ -29,6 +30,7 @@ from cyberdrop_dl.constants import (
     DEFAULT_DOWNLOAD_STORAGE,
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
+    CIStrEnum,
     Hashing,
 )
 from cyberdrop_dl.models import AliasModel, AppriseURL, SettingsGroup
@@ -45,17 +47,6 @@ from cyberdrop_dl.models.types import (
 )
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_timedelta
 from cyberdrop_dl.utils.strings import validate_format_string
-
-_SORTING_COMMON_FIELDS = {
-    "base_dir",
-    "ext",
-    "file_date",
-    "file_date_iso",
-    "file_date_us",
-    "filename",
-    "parent_dir",
-    "sort_dir",
-}
 
 
 class SubFoldersInclude(AliasModel):
@@ -312,24 +303,38 @@ def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None
 
 
 class SortFormats(AliasModel):
+    _COMMON_FIELDS: ClassVar[set[str]] = {
+        "base_dir",
+        "ext",
+        "file_date",
+        "file_date_iso",
+        "file_date_us",
+        "filename",
+        "parent_dir",
+        "sort_dir",
+    }
+
     audio: Annotated[
         NonEmptyStrOrNone,
-        AfterValidator(_format_validator(_SORTING_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"})),
+        AfterValidator(_format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"})),
     ] = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
     "Format to generate sorted audio file"
+
     image: Annotated[
-        NonEmptyStrOrNone, AfterValidator(_format_validator(_SORTING_COMMON_FIELDS | {"height", "resolution", "width"}))
+        NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS | {"height", "resolution", "width"}))
     ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     "Format to generate sorted image file"
-    other: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_SORTING_COMMON_FIELDS))] = (
+
+    other: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS))] = (
         "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     )
     "Format to generate sorted files of unknown type"
+
     video: Annotated[
         NonEmptyStrOrNone,
         AfterValidator(
             _format_validator(
-                _SORTING_COMMON_FIELDS
+                _COMMON_FIELDS
                 | {
                     "codec",
                     "duration",
@@ -426,8 +431,24 @@ class Network(SettingsGroup):
         )
 
 
+class UIMode(CIStrEnum):
+    DISABLED = auto()
+    ACTIVITY = auto()
+    SIMPLE = auto()
+    FULLSCREEN = auto()
+
+    @property
+    def is_disabled(self) -> bool:
+        return self is UIMode.DISABLED
+
+    @property
+    def is_fullscreen(self):
+        return self is UIMode.FULLSCREEN
+
+
 class UIOptions(SettingsGroup):
     refresh_rate: PositiveFloat = 10.0
+    mode: Annotated[UIMode, Parameter(name="--ui")] = UIMode.FULLSCREEN
 
 
 class GenericCrawlers(SettingsGroup):

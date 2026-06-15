@@ -14,7 +14,8 @@ from rich.console import Group, RenderableType
 from rich.layout import Layout
 
 from cyberdrop_dl import env
-from cyberdrop_dl.progress import LiveUI, UIOptions, is_terminal_in_portrait
+from cyberdrop_dl.config.settings import UIMode
+from cyberdrop_dl.progress import LiveUI, is_terminal_in_portrait
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
 from cyberdrop_dl.progress.scraping.files import FileStatsPanel
@@ -43,7 +44,7 @@ class Screen:
 
 @dataclasses.dataclass(slots=True)
 class ScrapingUI(LiveUI):
-    mode: UIOptions = UIOptions.FULLSCREEN
+    mode: UIMode = UIMode.FULLSCREEN
     files: FileStatsPanel = dataclasses.field(default_factory=FileStatsPanel)
     scrape_errors: ScrapeErrorsPanel = dataclasses.field(default_factory=ScrapeErrorsPanel)
     download_errors: DownloadErrorsPanel = dataclasses.field(default_factory=DownloadErrorsPanel)
@@ -59,9 +60,9 @@ class ScrapingUI(LiveUI):
 
     def __rich__(self) -> RenderableType:
         self._emit_jsonl()
-        if self.mode is UIOptions.SIMPLE:
+        if self.mode is UIMode.SIMPLE:
             return Group(self.files.simple, self.status)
-        if self.mode is UIOptions.ACTIVITY:
+        if self.mode is UIMode.ACTIVITY:
             return self.status
 
         return self._screen
@@ -86,7 +87,7 @@ class ScrapingUI(LiveUI):
         with (
             enter_context(_STATUS, self.status),
             super(ScrapingUI, self).__call__(
-                transient=transient if self.mode is UIOptions.FULLSCREEN else False, force=force
+                transient=transient if self.mode is UIMode.FULLSCREEN else False, force=force
             ),
         ):
             yield
