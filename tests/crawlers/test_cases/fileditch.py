@@ -56,4 +56,19 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://fileditchfiles.me/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
+        "results": [
+            {
+                "url": "re:https://1.donotsharethesetemplinksyouidiot.st/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
+                "filename": "Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
+                "original_filename": "Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
+                "referer": "https://fileditchfiles.me/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (Fileditch)",
+            }
+        ],
+        "count": 1,
+    },
 ]
