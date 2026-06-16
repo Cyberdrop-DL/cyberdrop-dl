@@ -74,7 +74,7 @@ class Manager:
     @property
     def config(self) -> Config:
         if self._config is None:
-            self._config = Config.from_manager(self)
+            self._config = Config.from_file(self.cli_args.config_file or self.appdata.config_file)
         return self._config
 
     def __resolve_paths(self) -> None:

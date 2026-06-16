@@ -127,7 +127,7 @@ def download(
     config = config or Config()
     appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
 
-    config = Config.create(appdata, cli.config_file).update(config)
+    config = Config.from_file(cli.config_file or appdata.config_file) | config
 
     if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True

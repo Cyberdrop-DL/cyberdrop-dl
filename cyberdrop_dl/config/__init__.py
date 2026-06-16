@@ -9,8 +9,9 @@ from cyclopts.bind import normalize_tokens
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, field_validator
 
 from cyberdrop_dl import yaml
-from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
+from cyberdrop_dl.models import merge_models
 from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonNegativeInt  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
@@ -33,8 +34,6 @@ from .settings import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-    from cyberdrop_dl.manager import AppData, Manager
 
 
 _app: App | None = None
@@ -87,20 +86,25 @@ class Config(BaseModel):
     def source(self) -> Path | None:
         return self._source
 
-    @classmethod
-    def create(cls, appdata: AppData, config_file: Path | None = None) -> Config:
-        config_file = config_file or appdata.config_file
-        return _load_config_file(config_file)
+    @staticmethod
+    def from_file(file: Path, *, _save_if_not_found: bool = False) -> Config:
+        try:
+            content = yaml.load(file)
+        except FileNotFoundError:
+            default = Config()
+            if _save_if_not_found:
+                yaml.save(file, default.model_dump())
+            return default
 
-    @classmethod
-    def from_manager(cls, manager: Manager) -> Config:
-        return cls.create(manager.appdata, manager.cli_args.config_file)
+        config = Config.model_validate(content, extra="forbid")
+        config._source = file
+        return config
 
-    def update(self, other: Self) -> Self:
+    def __or__(self, other: Self) -> Self:
         return merge_models(self, other)
 
-    @classmethod
-    def parse_args(cls, tokens: str | Iterable[str]) -> Config:
+    @staticmethod
+    def parse_args(tokens: str | Iterable[str]) -> Config:
         global _app  # noqa: PLW0603
         if _app is None:
             _app = App(print_error=False, exit_on_error=False)
@@ -114,25 +118,11 @@ class Config(BaseModel):
             return
 
         self.logs.resolve_filenames()
-        self._resolve_paths(self)
-        self.logs.delete_old_logs_and_folders()
-        cleanup.rm_empty_dirs(self.logs.folder)
+        _resolve_paths(self)
+        if self.logs.expire_after:
+            self.logs.delete_old_logs_and_folders()
+            cleanup.rm_empty_dirs(self.logs.folder)
         self._resolved = True
-
-    @classmethod
-    def _resolve_paths(cls, model: BaseModel) -> None:
-
-        for name, value in vars(model).items():
-            if isinstance(value, Path):
-                if "{config}" in str(value):
-                    raise RuntimeError(
-                        f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
-                    )
-
-                object.__setattr__(model, name, value.expanduser().resolve().absolute())
-
-            elif isinstance(value, BaseModel):
-                cls._resolve_paths(value)
 
     @field_validator("min_free_space", mode="after")
     @classmethod
@@ -140,18 +130,31 @@ class Config(BaseModel):
         return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
-def _load_config_file(file: Path, *, save_if_not_found: bool = False) -> Config:
-    try:
-        content = yaml.load(file)
-    except FileNotFoundError:
-        default = Config()
-        if save_if_not_found:
-            yaml.save(file, default.model_dump())
-        return default
-    else:
-        config = Config.model_validate(content, extra="forbid")
-        config._source = file
-        return config
+def _resolve_paths(model: BaseModel) -> None:
+    for name, value in vars(model).items():
+        if isinstance(value, Path):
+            if "{config}" in str(value):
+                error = ValueError(
+                    f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                )
+                raise CDLConfigRuntimeErrorsGroup("Invalid config", (error,))
+
+            object.__setattr__(model, name, value.expanduser().resolve().absolute())
+
+        elif isinstance(value, BaseModel):
+            _resolve_paths(value)
+
+
+def merge_additive_args[T: list[str] | tuple[str, ...]](cli_values: T, config_values: Iterable[str]) -> T:
+    match cli_values:
+        case ["+", *_]:
+            new_values = set(config_values).union(cli_values)
+        case ["-", *_]:
+            new_values = set(config_values) - set(cli_values)
+        case _:
+            return cli_values
+
+    return type(cli_values)(sorted(new_values - {"+", "-"}))
 
 
 def _coerce(*, config: Config | None = None) -> Config:

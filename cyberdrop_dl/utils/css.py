@@ -161,7 +161,11 @@ def page_title(soup: Tag, domain: str | None = None) -> str:
 
 
 def json_ld(soup: Tag, /, contains: str | None = None) -> JsonLD:
-    ld_json = next(iter_json_ld(soup, contains)) or {}
+    try:
+        ld_json = next(iter_json_ld(soup, contains)) or {}
+    except StopIteration:
+        details = f" (-contains:'{contains}')" if contains else ""
+        raise SelectorError(f"ld-json tag{details} not found") from None
     if type(ld_json) is list:
         ld_json = ld_json[0]
 
