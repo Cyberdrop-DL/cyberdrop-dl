@@ -44,11 +44,6 @@ class CLIargs(BaseModel):
         description="Use this target as impersonation for all scrape requests",
     )
 
-    portrait: bool = Field(
-        default=False,
-        description="force CDL to run with a vertical layout",
-    )
-
 
 app = App(
     name="cyberdrop-dl",

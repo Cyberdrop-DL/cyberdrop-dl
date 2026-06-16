@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal, Self
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import aio, filepath, storage
+from cyberdrop_dl import aio, env, filepath, storage
 from cyberdrop_dl.clients.jdownloader import JDownloader
 from cyberdrop_dl.constants import BlockedDomains
 from cyberdrop_dl.crawlers import create_crawlers
@@ -158,6 +158,8 @@ class ScrapeMapper:
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
         _ = CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
         _ = ALLOW_NO_EXT.set(not config.filters.exclude.files_with_no_ext)
+        if config.ui.portrait:
+            env.FORCE_PORTRAIT_MODE = True
 
         config.download_folder.mkdir(parents=True, exist_ok=True)
         if config.sort.enabled:

@@ -47,8 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Always remove generated id from filenames (Cyberdrop)
 - Compute `xxh128`, `md5` and `sha256` hashes by default
 - `--deep-scrape` will no longer reset after a single run
-- `--ui` is now a config option instead of just a CLI command (entry: `ui.mode`)
-- `--print-stats` is now a config option instead of just a CLI command
+
+The following options, which were CLI only commands before, now have dedicated config entries:
+
+- `--ui` (entry: `ui.mode`)
+- `--portrait` (entry: `ui.portrait`)
+- `--show-stats`
 
 Several config options have new names:
 

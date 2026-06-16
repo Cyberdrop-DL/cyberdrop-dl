@@ -445,13 +445,15 @@ class UIMode(CIStrEnum):
         return self is UIMode.DISABLED
 
     @property
-    def is_fullscreen(self):
+    def is_fullscreen(self) -> bool:
         return self is UIMode.FULLSCREEN
 
 
 class UIOptions(ConfigGroup):
     refresh_rate: PositiveFloat = 10.0
     mode: Annotated[UIMode, Parameter(name="--ui")] = UIMode.FULLSCREEN
+    portrait: bool = False
+    "force CDL to run with a vertical layout"
 
 
 class GenericCrawlers(ConfigGroup):
