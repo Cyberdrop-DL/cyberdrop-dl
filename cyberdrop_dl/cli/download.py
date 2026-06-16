@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
+import cyclopts.validators
 from cyclopts import Parameter
+from cyclopts.group import Group
 
 from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
@@ -90,21 +93,37 @@ def _main(manager: Manager) -> None:
         logger.info("Exiting (Ctrl + C) ...")
 
 
+inputs_group = Group(sort_key=-1, validator=cyclopts.validators.mutually_exclusive)
+
+
 def download(
-    links: Annotated[
+    urls: Annotated[
         tuple[HttpURL, ...],
         Parameter(
-            help="link(s) to content to download (passing multiple links is supported)",
+            group=inputs_group,
+            help="URL(s) to download",
         ),
     ] = (),
+    /,
     *,
+    input_file: Annotated[
+        Path | None,
+        Parameter(
+            group=inputs_group,
+            alias="-i",
+            help="Text/HTML file with URL(s) to download",
+            validator=cyclopts.validators.Path(exists=True, dir_okay=False),
+        ),
+    ] = None,
     cli: CLIargs | None = None,
     config: Config | None = None,
 ) -> None:
+    if input_file:
+        input_file = input_file.resolve().absolute()
     from cyberdrop_dl.manager import AppData, Manager
 
     cli = cli or CLIargs()
-    cli.links = links
+    cli.links = urls
     config = config or Config()
     appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
 
@@ -113,8 +132,7 @@ def download(
     if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True
 
-    manager = Manager(cli, appdata, config)
-
+    manager = Manager(cli, appdata, config, input_file)
     _main(manager)
 
 

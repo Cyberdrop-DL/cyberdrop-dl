@@ -44,6 +44,7 @@ class Manager:
         cli_args: CLIargs | None = None,
         appdata: AppData | None = None,
         config: Config | None = None,
+        input_file: Path | None = None,
     ) -> None:
         from cyberdrop_dl.cli import CLIargs
 
@@ -51,6 +52,7 @@ class Manager:
         self._appdata: AppData | None = appdata
         self.cli_args: CLIargs = cli_args or CLIargs()
         self._config: Config | None = config
+        self.input_file: Path = input_file or Path("URLs.txt")
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)

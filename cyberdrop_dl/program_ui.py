@@ -82,7 +82,7 @@ def _sort_files(manager: Manager) -> None:
 
 def _edit_urls(manager: Manager) -> None:
     try:
-        text_editor.open(manager.config.input_file)
+        text_editor.open(manager.input_file)
     except ValueError as e:
         _CONSOLE.print(_ERROR, str(e))
         _enter_to_continue()
@@ -116,7 +116,7 @@ def _app_header(manager: Manager) -> None:
     _CONSOLE.rule(style="blue")
     _CONSOLE.print("Config file:  ", hyperlink(manager.config.source) if manager.config.source else None)
     _CONSOLE.print("Database file:", hyperlink(manager.appdata.db_file))
-    _CONSOLE.print("URLs file:    ", hyperlink(manager.config.input_file))
+    _CONSOLE.print("URLs file:    ", hyperlink(manager.input_file))
     _CONSOLE.line()
 
 

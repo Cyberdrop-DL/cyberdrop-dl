@@ -60,7 +60,6 @@ class Config(BaseModel):
     filters: Filters = Field(default_factory=Filters)
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     hashing: Hashing = Field(default_factory=Hashing)
-    input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
     max_file_name_length: PositiveInt = 95

@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Always remove generated id from filenames (Cyberdrop)
 - Compute `xxh128`, `md5` and `sha256` hashes by default
 - `--deep-scrape` will no longer reset after a single run
+- `--input-file` has been removed from the config and is now a CLI only arg
+- If supplied, `--input-file` needs to be a valid file that exists
+- Refuse to run if both URLs and `--input-file` are pass as arguments
 
 The following options, which were CLI only commands before, now have dedicated config entries:
 
