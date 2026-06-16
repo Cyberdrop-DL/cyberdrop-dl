@@ -26,7 +26,6 @@ from .settings import (
     Logs,
     MediaDurationLimits,
     Network,
-    SizeLimits,
     Sort,
     SubFolders,
     UIOptions,
@@ -48,41 +47,38 @@ class Config(BaseModel):
     __final__: Literal[True] = True
 
     auth: AuthSettings = Field(default_factory=AuthSettings)
-    crawlers: Crawlers = Field(default_factory=Crawlers)
     cookies: Path | None = None
     "File/folder to import cookies from (.txt Netscape files)"
+
+    crawlers: Crawlers = Field(default_factory=Crawlers)
     deep_scrape: bool = False
+    delete_empty_folders: bool = True
+    delete_partial_files: bool = False
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
-
-    size_limits: SizeLimits = Field(default_factory=SizeLimits)
     filters: Filters = Field(default_factory=Filters)
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     hashing: Hashing = Field(default_factory=Hashing)
+    ignore_history: bool = False
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
+    max_children: ListNonNegativeInt = []
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
+    max_thread_depth: NonNegativeInt = 0
+    max_thread_folder_depth: NonNegativeInt | None = None
     media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     min_free_space: ByteSizeSerilized = to_bytesize("5GB")
+    mtime: bool = True
     network: Network = Field(default_factory=Network)
+    notifications: Notifications = Field(default_factory=Notifications)
+    show_stats: Annotated[bool, Parameter(name="stats")] = True
+    "show stats report at the end of a run"
+
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)
     ui: UIOptions = Field(default_factory=UIOptions)
-
-    mtime: bool = True
-    max_children: ListNonNegativeInt = []
-    max_thread_depth: NonNegativeInt = 0
-    max_thread_folder_depth: NonNegativeInt | None = None
-    ignore_history: bool = False
-    delete_partial_files: bool = False
-    delete_empty_folders: bool = True
-    notifications: Notifications = Field(default_factory=Notifications)
-    show_stats: Annotated[bool, Parameter(name="stats")] = Field(
-        default=True,
-        description="show stats report at the end of a run",
-    )
 
     _resolved: bool = False
     _source: Path | None = None

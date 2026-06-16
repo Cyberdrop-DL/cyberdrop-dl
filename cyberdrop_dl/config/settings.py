@@ -49,6 +49,16 @@ from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_timedelta
 from cyberdrop_dl.utils.strings import validate_format_string
 
 
+def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
+
+    def check(value: str | None) -> str | None:
+        if value is not None:
+            validate_format_string(value, valid_keys)
+        return value
+
+    return check
+
+
 class SubFoldersInclude(AliasModel):
     album_id: bool = False
     thread_id: bool = False
@@ -58,15 +68,10 @@ class SubFoldersInclude(AliasModel):
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
     include: SubFoldersInclude = Field(default_factory=SubFoldersInclude)
-    separate_posts_format: NonEmptyStr = "{default}"
+    separate_posts_format: Annotated[
+        NonEmptyStr, AfterValidator(_format_validator({"default", "title", "id", "number", "date"}))
+    ] = "{default}"
     separate_posts: bool = False
-
-    @field_validator("separate_posts_format", mode="after")
-    @classmethod
-    def valid_format(cls, value: str) -> str:
-        valid_keys = {"default", "title", "id", "number", "date"}
-        validate_format_string(value, valid_keys)
-        return value
 
 
 class LogFiles(AliasModel):
@@ -265,6 +270,7 @@ class FileFilter(AliasModel):
 
 class Filters(ConfigGroup):
     files: FileFilter = Field(default_factory=FileFilter)
+    sizes: SizeLimits = Field(default_factory=SizeLimits)
     before: datetime.date | None = None
     after: datetime.date | None = None
     filename_regex: NonEmptyStrOrNone = None
@@ -289,16 +295,6 @@ class Jdownloader(ConfigGroup, name=None):
     autostart: bool = False
     download_dir: PathOrNone = None
     whitelist: ListNonEmptyStr = []
-
-
-def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
-
-    def check(value: str | None) -> str | None:
-        if value is not None:
-            validate_format_string(value, valid_keys)
-        return value
-
-    return check
 
 
 class SortFormats(AliasModel):
@@ -411,15 +407,15 @@ class Downloads(ConfigGroup):
 
 
 class Network(ConfigGroup):
-    proxy: HttpURL | None = None
+    dump_responses: bool = False
+    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
     flaresolverr: HttpURL | None = None
+    proxy: HttpURL | None = None
     rate_limit: PositiveFloat = 25
     connection_timeout: PositiveFloat = 15
     read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
-    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
     ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
-    dump_responses: bool = False
-    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
+    user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
 
     @field_validator("ssl_context", mode="before")
     @classmethod
@@ -459,10 +455,10 @@ class UIMode(CIStrEnum):
 
 
 class UIOptions(ConfigGroup):
-    refresh_rate: PositiveFloat = 10.0
     mode: Annotated[UIMode, Parameter(name="--ui")] = UIMode.FULLSCREEN
     portrait: bool = False
     "force CDL to run with a vertical layout"
+    refresh_rate: PositiveFloat = 10.0
 
 
 class GenericCrawlers(ConfigGroup):
