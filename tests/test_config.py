@@ -29,11 +29,11 @@ def test_parse_config_from_args() -> None:
 
 
 def test_parse_config_from_args2() -> None:
-    config = Config.model_validate({"input_file": "test.txt"})
-    assert config == Config.parse_args(["--input-file", "test.txt"])
-    assert config == Config.parse_args(["-i", "test.txt"])
+    config = Config.model_validate({"download_folder": "downloads"})
+    assert config == Config.parse_args(["--download-folder", "downloads"])
+    assert config == Config.parse_args(["-o", "downloads"])
     with pytest.raises(UnknownOptionError):
-        _ = Config.parse_args(["--i", "test.txt"])
+        _ = Config.parse_args(["-i", "test.txt"])
 
 
 def test_logs_equality() -> None:
