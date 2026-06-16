@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
+    from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -207,12 +208,16 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         self.__ad_posts: list[str] = []
 
     @property
+    def _my_config(self) -> KemonoConfig:
+        return getattr(self.config.crawlers, self.DOMAIN)
+
+    @property
     def ignore_content(self) -> bool:
-        return self.config.filters.exclude.coomer_post_content
+        return self._my_config.ignore_post_content
 
     @property
     def ignore_ads(self) -> bool:
-        return self.config.filters.exclude.coomer_ads
+        return self._my_config.ignore_ads
 
     async def __async_post_init__(self) -> None:
         if getattr(self, "API_ENTRYPOINT", None):

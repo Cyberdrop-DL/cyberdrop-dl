@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Several config options have new names:
 
+- `--disable-crawlers`-> `--crawlers.disabled`
 - `--disable-file-timestamps`-> `--mtime`
 - `--maximum-audio-duration` -> `--max-audio-duration`
 - `--maximum-image-size` -> `--max-image-size`
@@ -94,8 +95,9 @@ Several config options have new names:
 - `--exclude-other` -> `--exclude.other`
 - `--exclude-videos` -> `--exclude.videos`
 - `--filename-regex-filter` -> `--filename-regex`
-- `--ignore-coomer-ads` -> `--exclude.coomer-ads`
-- `--ignore-coomer-post-content` -> `--exclude.coomer-post-content`
+- `--ignore-coomer-ads` -> `--crawlers.coomer.ignore-ads`
+- `--ignore-coomer-post-content` -> `--crawlers.coomer.ignore-post-content`
+- `--download-tiktok-src-quality-videos` -> - `--crawlers.tiktok.original`
 - `--exclude-files-with-no-extension` -> `--exclude.files-with-no-ext`
 - `--exclude-before` -> `--exclude.before`
 - `--exclude-after` -> `--exclude.after`

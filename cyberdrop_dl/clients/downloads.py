@@ -372,7 +372,7 @@ class DownloadClient:
 
     def check_filesize_limits(self, media: MediaItem) -> bool:
         """Checks if the file size is within the limits."""
-        limits = self.manager.config.file_size_limits.ranges
+        limits = self.manager.config.size_limits.ranges
 
         assert media.size is not None
         if media.ext in FileExt.IMAGE:

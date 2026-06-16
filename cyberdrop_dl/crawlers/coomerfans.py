@@ -53,7 +53,7 @@ class CoomerFansCrawler(Crawler):
 
     @property
     def ignore_content(self) -> bool:
-        return self.config.filters.exclude.coomer_post_content
+        return self.config.crawlers.coomer.ignore_post_content
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

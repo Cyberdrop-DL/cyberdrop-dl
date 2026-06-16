@@ -29,10 +29,6 @@ class CLIargs(BaseModel):
         default=False,
         description="skips UI, start download immediately",
     )
-    download_tiktok_src_quality_videos: bool = Field(
-        default=False,
-        description="download TikTok videos in source quality",
-    )
     impersonate: (
         Literal[
             "chrome",

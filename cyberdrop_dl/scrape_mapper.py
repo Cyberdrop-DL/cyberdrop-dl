@@ -148,7 +148,7 @@ class ScrapeMapper:
         for crawler in _create_generic_crawlers(self.manager.config.generic_crawlers):
             register_crawler(self.crawlers, crawler, from_user=True)
 
-        _disable_crawlers_by_config(self.crawlers, *self.manager.config.disable_crawlers)
+        _disable_crawlers_by_config(self.crawlers, *self.manager.config.crawlers.disabled)
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:

@@ -11,22 +11,22 @@ from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, fi
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.merge import merge_models
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
-from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonEmptyStr, ListNonNegativeInt  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonNegativeInt  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
 from .auth import AuthSettings, Notifications
+from .crawlers import Crawlers
 from .settings import (
-    Cookies,
+    DedupeCleanup,
     Downloads,
-    DupeCleanup,
-    FileSizeLimits,
     Filters,
     GenericCrawlers,
     Jdownloader,
     Logs,
     MediaDurationLimits,
     Network,
+    SizeLimits,
     Sort,
     SubFolders,
     UIOptions,
@@ -48,15 +48,16 @@ class Config(BaseModel):
     __final__: Literal[True] = True
 
     auth: AuthSettings = Field(default_factory=AuthSettings)
-    cookies: Cookies = Field(default_factory=Cookies)
+    crawlers: Crawlers = Field(default_factory=Crawlers)
+    cookies: Path | None = None
+    "File/folder to import cookies from (.txt Netscape files)"
     deep_scrape: bool = False
-    disable_crawlers: ListNonEmptyStr = []
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
 
-    dupe_cleanup: DupeCleanup = Field(default_factory=DupeCleanup)
-    file_size_limits: FileSizeLimits = Field(default_factory=FileSizeLimits)
+    dedupe: DedupeCleanup = Field(default_factory=DedupeCleanup)
+    size_limits: SizeLimits = Field(default_factory=SizeLimits)
     filters: Filters = Field(default_factory=Filters)
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
@@ -137,11 +138,6 @@ class Config(BaseModel):
 
             elif isinstance(value, BaseModel):
                 cls._resolve_paths(value)
-
-    @field_validator("disable_crawlers", mode="after")
-    @classmethod
-    def _unique_list(cls, value: list[str]) -> list[str]:
-        return sorted(set(value))
 
     @field_validator("min_free_space", mode="after")
     @classmethod

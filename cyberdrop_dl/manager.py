@@ -162,7 +162,7 @@ class Manager:
         )
 
     async def get_cookie_files(self) -> list[Path]:
-        path = self.config.cookies.cookies
+        path = self.config.cookies
         if not path:
             return []
 

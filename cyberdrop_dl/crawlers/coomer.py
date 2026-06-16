@@ -13,3 +13,7 @@ class CoomerCrawler(KemonoBaseCrawler):
     API_ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://coomer.st/api/v1")
     SERVICES: ClassVar[tuple[str, ...]] = "onlyfans", "fansly", "candfans"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = "coomer.party", "coomer.su"
+
+    @property
+    def ignore_ads(self) -> bool:
+        return self.config.crawlers.coomer.ignore_ads

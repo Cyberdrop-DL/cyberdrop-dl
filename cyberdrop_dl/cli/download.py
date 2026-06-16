@@ -63,8 +63,8 @@ async def _post_runtime(manager: Manager) -> None:
     logger.info("Running Post-Download Processes\n", extra={"color": "green"})
 
     if (
-        manager.config.dupe_cleanup.hashing.enabled
-        and manager.config.dupe_cleanup.auto_dedupe
+        manager.config.dedupe.hashing.enabled
+        and manager.config.dedupe.auto_dedupe
         and not manager.config.ignore_history
     ):
         file_hashes = await manager.hasher.run()

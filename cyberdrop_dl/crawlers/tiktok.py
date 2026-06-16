@@ -91,7 +91,7 @@ class TikTokCrawler(Crawler):
 
     @property
     def download_src_quality_videos(self) -> bool:
-        return self.manager.cli_args.download_tiktok_src_quality_videos
+        return self.config.crawlers.tiktok.original
 
     def __post_init__(self) -> None:
         self._headers: dict[str, Any] = {"X-Requested-With": "XMLHttpRequest"}

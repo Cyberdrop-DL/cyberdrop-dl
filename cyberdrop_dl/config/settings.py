@@ -184,7 +184,7 @@ class FileSizeRanges:
     other: Range
 
 
-class FileSizeLimits(ConfigGroup):
+class SizeLimits(ConfigGroup):
     max_image_size: ByteSizeSerilized = ByteSize(0)
     max_other_size: ByteSizeSerilized = ByteSize(0)
     max_video_size: ByteSizeSerilized = ByteSize(0)
@@ -263,9 +263,6 @@ class Exclude(AliasModel):
     files_with_no_ext: bool = True
     before: datetime.date | None = None
     after: datetime.date | None = None
-
-    coomer_ads: bool = False
-    coomer_post_content: bool = True
 
 
 class Filters(ConfigGroup):
@@ -364,12 +361,7 @@ class Sort(ConfigGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class Cookies(ConfigGroup):
-    cookies: Path | None = None
-    "File/folder to import cookies from (.txt Netscape files)"
-
-
-class DupeCleanup(ConfigGroup):
+class DedupeCleanup(ConfigGroup):
     hashes: tuple[Literal["xxh128", "md5", "sha256"], ...] = "xxh128", "md5", "sha256"
     auto_dedupe: bool = True
     hashing: Hashing = Hashing.IN_PLACE
