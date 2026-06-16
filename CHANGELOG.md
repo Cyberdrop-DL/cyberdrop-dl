@@ -26,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ⚠️**IMPORTANT**
 
-> This version is imcompatible with any previous release. Config file options need to be manually migrated by user.
+> This version is incompatible with any previous release. Config file options need to be manually migrated by user.
 >
-> CDL will refuse to start if the current database schema is older than `v9.15.0`. Use the `cyberdrop-dl database transfer` to upgrade older databases
+> CDL will refuse to start if the current database schema is older than `v9.15.0`. Run `cyberdrop-dl database transfer` to upgrade older databases
 
 ### Added
 
@@ -37,25 +37,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The config file format has completly changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
-- CDL will not create a default config file by if no config currently exists
-- CDL will validate config in strict mode. If a config has an unknown entry, CDL will refuse to run instead of ignoring it
+- The config file format has completely changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
+- Do not create a config file by default
+- Validate config in strict mode. If a config has an unknown entry, CDL will refuse to run instead of ignoring it
 - Apprise URLs are now part of the main config file instead of a dedicated `apprise.txt` file
-- CDL will refuse to start if the current database schema is older than `v9.15.0`
+- Refuse to start if the current database schema is older than `v9.15.0`
 - Detect and report BasedFlare anti-bot protection
 - Cookies with not be automatically loaded from `AppData/cookies`. Path to cookies needs to be specified with `--cookies`
 - Always remove generated id from filenames (Cyberdrop)
 - Compute `xxh128`, `md5` and `sha256` hashes by default
 - `--deep-scrape` will no longer reset after a single run
-- `--input-file` has been removed from the config and is now a CLI only arg
+- `--input-file` is now a CLI only arg
 - If supplied, `--input-file` needs to be a valid file that exists
-- Refuse to run if both URLs and `--input-file` are pass as arguments
+- Refuse to run if both URLs and `--input-file` are passed as arguments
 
-The following options, which were CLI only commands before, now have dedicated config entries:
+The following options, which were CLI only arguments, now have dedicated config entries:
 
 - `--ui` (entry: `ui.mode`)
 - `--portrait` (entry: `ui.portrait`)
-- `--show-stats`
+- `--stats`
 
 Several config options have new names:
 
@@ -119,7 +119,7 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 - `--console-log-level` -> `--logs.console-level`
 - `--log-folder` -> `--logs.folder`
 - `--logs-expire-after` -> `--logs.expire-after`
-- `--main-log` -> `--logs.files.main --log-file`
+- `--main-log` -> `--logs.files.main` with alias `--log-file`
 - `--download-error-urls` -> `--logs.files.download-errors`
 - `--rotate-logs` -> `--logs-rotate`
 - `--scrape-error-urls` -> `--logs.files.scrape-errors`
@@ -145,7 +145,7 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 
 - Support for python 3.11
 - All retry settings + menu option
-- `--log-level` and `--console-log-level` no longer accept integers. Only log level names as valid, ex: `INFO`, `DEBUG`, `WARNING`
+- `--log-level` and `--console-log-level` (`--logs.level` and `--logs.console-level`) no longer accept integers. Only log level names as valid, ex: `INFO`, `DEBUG`, `WARNING`
 - Posts filtering by URL params (Wordpress)
 - Auto cookie extraction support
 
