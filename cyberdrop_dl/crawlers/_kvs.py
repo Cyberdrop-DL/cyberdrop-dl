@@ -164,8 +164,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
         try:
             date_str = css.json_ld(soup)["uploadDate"]
-        except (LookupError, ValueError, css.SelectorError, StopIteration):
-        # except Exception as err:
+        except (LookupError, ValueError, css.SelectorError):
             # Human date parsing was removed from parse_date. This fallback
             # no longer supports relative strings like "2 hours ago".
             pass
