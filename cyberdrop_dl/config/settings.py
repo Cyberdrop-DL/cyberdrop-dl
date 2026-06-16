@@ -265,11 +265,22 @@ class Exclude(AliasModel):
     after: datetime.date | None = None
 
 
+@Parameter(name="*")
+class FileFilter(AliasModel):
+    audio: bool = True
+    images: bool = True
+    videos: bool = True
+    non_media: bool = True
+
+
 class Filters(ConfigGroup):
-    exclude: Exclude = Field(default_factory=Exclude)
+    files: FileFilter = Field(default_factory=FileFilter)
+    before: datetime.date | None = None
+    after: datetime.date | None = None
     filename_regex: NonEmptyStrOrNone = None
     only_hosts: ListNonEmptyStr = []
     skip_hosts: ListNonEmptyStr = []
+    allow_files_with_no_extension: bool = False
 
     @field_validator("filename_regex")
     @classmethod

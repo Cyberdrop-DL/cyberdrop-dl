@@ -157,7 +157,7 @@ class ScrapeMapper:
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
         _ = CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
-        _ = ALLOW_NO_EXT.set(not config.filters.exclude.files_with_no_ext)
+        _ = ALLOW_NO_EXT.set(config.filters.allow_files_with_no_extension)
         if config.ui.portrait:
             env.FORCE_PORTRAIT_MODE = True
 

@@ -95,17 +95,20 @@ Several config options have new names:
 
 #### Ignore options (filters)
 
-- `--exclude-audio` -> `--exclude.audio`
-- `--exclude-images` -> `--exclude.images`
-- `--exclude-other` -> `--exclude.other`
-- `--exclude-videos` -> `--exclude.videos`
+The behavior of `--filename-regex` has been reversed (files that DO NOT match the regex will skipped)
+The behavior of `--before` and `--after` has been reversed and the `--exclude` prefix removed (they now **include** instead of excluding files)
+
+- `--exclude-audio` -> `--no-audio`
+- `--exclude-images` -> `--no-images`
+- `--exclude-other` -> `--no-non-media`
+- `--exclude-videos` -> `--no-videos`
+- `--exclude-before` -> `--before`
+- `--exclude-after` -> `--after`
+- `--exclude-files-with-no-extension` -> `--allow-files-with-no-extension`
 - `--filename-regex-filter` -> `--filename-regex`
 - `--ignore-coomer-ads` -> `--crawlers.coomer.ignore-ads`
 - `--ignore-coomer-post-content` -> `--crawlers.coomer.ignore-post-content`
 - `--download-tiktok-src-quality-videos` -> - `--crawlers.tiktok.original`
-- `--exclude-files-with-no-extension` -> `--exclude.files-with-no-ext`
-- `--exclude-before` -> `--exclude.before`
-- `--exclude-after` -> `--exclude.after`
 
 #### Logs
 

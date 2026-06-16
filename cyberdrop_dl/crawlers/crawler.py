@@ -1053,8 +1053,12 @@ def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
         logger.info(f"Download skipped {media_item.url} due to only_hosts config")
         return True
 
-    if (regex := filters.filename_regex) and re.search(regex, media_item.filename):
-        logger.info(f"Download skipped {media_item.url} due to filename regex filter config")
+    if (regex := filters.filename_regex) and not re.search(regex, media_item.filename):
+        logger.info(
+            "Download skipped %s due to filename regex filter. Filename '%s' does not match config regex",
+            media_item.url,
+            media_item.filename,
+        )
         return True
 
     return False

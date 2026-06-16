@@ -274,15 +274,18 @@ class Downloader:
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
-    filters = config.filters
+    filters = config.filters.files
     ext = media_item.ext.lower()
 
-    return not (
-        (filters.exclude.images and ext in constants.FileExt.IMAGE)
-        or (filters.exclude.videos and ext in constants.FileExt.VIDEO)
-        or (filters.exclude.audio and ext in constants.FileExt.AUDIO)
-        or (filters.exclude.other and ext not in constants.FileExt.MEDIA)
-    )
+    for is_allowed, valid_exts in [
+        (filters.images, constants.FileExt.IMAGE),
+        (filters.videos, constants.FileExt.VIDEO),
+        (filters.audio, constants.FileExt.AUDIO),
+    ]:
+        if ext in valid_exts:
+            return is_allowed
+
+    return filters.non_media
 
 
 def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
@@ -296,9 +299,9 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
     item_date = item_datetime.date()
     filters = config.filters
 
-    if filters.exclude.before and item_date < filters.exclude.before:
+    if filters.before and item_date > filters.before:
         return False
-    return not (filters.exclude.after and item_date > filters.exclude.after)
+    return not (filters.after and item_date < filters.after)
 
 
 async def _set_mtime(media_item: MediaItem, config: Config) -> None:
