@@ -380,7 +380,7 @@ class DownloadClient:
         if media.ext in FileExt.VIDEO:
             return media.size in limits.video
 
-        return media.size in limits.other
+        return media.size in limits.non_media
 
 
 def _check_content_type(content_type: str, ext: str) -> str | None:

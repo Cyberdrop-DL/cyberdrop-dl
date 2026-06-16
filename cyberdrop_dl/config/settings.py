@@ -181,15 +181,15 @@ class Range:
 class FileSizeRanges:
     video: Range
     image: Range
-    other: Range
+    non_media: Range
 
 
 class SizeLimits(ConfigGroup):
     max_image_size: ByteSizeSerilized = ByteSize(0)
-    max_other_size: ByteSizeSerilized = ByteSize(0)
+    max_non_media_size: ByteSizeSerilized = ByteSize(0)
     max_video_size: ByteSizeSerilized = ByteSize(0)
     min_image_size: ByteSizeSerilized = ByteSize(0)
-    min_other_size: ByteSizeSerilized = ByteSize(0)
+    min_non_media_size: ByteSizeSerilized = ByteSize(0)
     min_video_size: ByteSizeSerilized = ByteSize(0)
 
     @functools.cached_property
@@ -203,9 +203,9 @@ class SizeLimits(ConfigGroup):
                 self.min_image_size,
                 self.max_image_size,
             ),
-            other=Range(
-                self.min_other_size,
-                self.max_other_size,
+            non_media=Range(
+                self.min_non_media_size,
+                self.max_non_media_size,
             ),
         )
 
@@ -253,16 +253,6 @@ class MediaDurationLimits(ConfigGroup):
                 self.max_audio_duration.total_seconds(),
             ),
         )
-
-
-class Exclude(AliasModel):
-    audio: bool = False
-    images: bool = False
-    other: bool = False
-    videos: bool = False
-    files_with_no_ext: bool = True
-    before: datetime.date | None = None
-    after: datetime.date | None = None
 
 
 @Parameter(name="*")
@@ -334,7 +324,7 @@ class SortFormats(AliasModel):
     ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     "Format to generate sorted image file"
 
-    other: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS))] = (
+    non_media: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS))] = (
         "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     )
     "Format to generate sorted files of unknown type"

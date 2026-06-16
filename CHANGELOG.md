@@ -64,14 +64,14 @@ Several config options have new names:
 - `--maximum-audio-duration` -> `--max-audio-duration`
 - `--maximum-image-size` -> `--max-image-size`
 - `--maximum-number-of-children` -> `--max-children`
-- `--maximum-other-size` -> `--max-other-size`
+- `--maximum-other-size` -> `--max-non-media-size`
 - `--maximum-thread-depth` -> `--max-thread-depth`
 - `--maximum-thread-folder-depth` -> `--max-thread-folder-depth`
 - `--maximum-video-duration` -> `--max-video-duration`
 - `--maximum-video-size` -> `--max-video-size`
 - `--minimum-audio-duration` -> `--min-audio-duration`
 - `--minimum-image-size` -> `--min-image-size`
-- `--minimum-other-size` -> `--min-other-size`
+- `--minimum-other-size` -> `--min-non-media-size`
 - `--minimum-video-duration` -> `--min-video-duration`
 - `--minimum-video-size` -> `--min-video-size`
 - `--required-free-space` -> `--min-free-space`
@@ -93,7 +93,7 @@ Several config options have new names:
 - `--sort-incrementer-format` -> `--sort.formats.incrementer`
 - `--sorted-audio` -> `--sort.formats.audio`
 - `--sorted-image` -> `--sort.formats.image`
-- `--sorted-other` -> `--sort.formats.other`
+- `--sorted-other` -> `--sort.formats.non-media`
 - `--sorted-video` -> `--sort.formats.video`
 
 #### Ignore options (filters)

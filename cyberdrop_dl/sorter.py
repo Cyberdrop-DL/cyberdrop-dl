@@ -32,7 +32,7 @@ class Sorter:
     audio_format: str | None
     image_format: str | None
     video_format: str | None
-    other_format: str | None
+    non_media_format: str | None
     incrementer_format: str = "{i}"
 
     _tui: SortingUI = dataclasses.field(init=False, repr=False)
@@ -54,7 +54,7 @@ class Sorter:
             audio_format=settings.formats.audio,
             image_format=settings.formats.image,
             video_format=settings.formats.video,
-            other_format=settings.formats.other,
+            non_media_format=settings.formats.non_media,
         )
 
     async def run(self, *, disable_tui: bool = False) -> None:
@@ -186,10 +186,10 @@ class Sorter:
             self._tui.stats.videos += 1
 
     async def sort_other(self, file: Path, base_name: str) -> None:
-        if not self.other_format:
+        if not self.non_media_format:
             return
 
-        if await self._move_file(file, base_name, self.other_format):
+        if await self._move_file(file, base_name, self.non_media_format):
             self._tui.stats.others += 1
 
     async def _move_file(self, file: Path, base_name: str, format_str: str, /, **kwargs: object) -> bool:
