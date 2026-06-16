@@ -18,10 +18,10 @@ from cyberdrop_dl.utils import cleanup
 from .auth import AuthSettings, Notifications
 from .crawlers import Crawlers
 from .settings import (
-    DedupeCleanup,
     Downloads,
     Filters,
     GenericCrawlers,
+    Hashing,
     Jdownloader,
     Logs,
     MediaDurationLimits,
@@ -56,10 +56,10 @@ class Config(BaseModel):
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
 
-    dedupe: DedupeCleanup = Field(default_factory=DedupeCleanup)
     size_limits: SizeLimits = Field(default_factory=SizeLimits)
     filters: Filters = Field(default_factory=Filters)
     generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
+    hashing: Hashing = Field(default_factory=Hashing)
     input_file: Annotated[Path, Parameter(alias="-i")] = Path("URLs.txt")
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)

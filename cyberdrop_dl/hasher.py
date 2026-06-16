@@ -11,11 +11,10 @@ from typing import TYPE_CHECKING, Final, Literal
 import xxhash
 
 from cyberdrop_dl import aio, stats
-from cyberdrop_dl.constants import Hashing, TempExt
+from cyberdrop_dl.constants import HashMode, TempExt
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.config.settings import DedupeCleanup
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
@@ -89,10 +88,6 @@ class Hasher:
     def stats(self):
         return self._tui.stats
 
-    @property
-    def config(self) -> DedupeCleanup:
-        return self.manager.config.dedupe
-
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
         return await asyncio.to_thread(_compute_hash, file_path, hash_type)
@@ -111,7 +106,7 @@ class Hasher:
         if media_item.is_segment:
             return
 
-        if self.config.hashing != Hashing.IN_PLACE:
+        if self.manager.config.hashing.mode != HashMode.IN_PLACE:
             return
 
         try:
@@ -148,7 +143,7 @@ class Hasher:
                 async with asyncio.TaskGroup() as tg:
                     logger.info("Computing hashes of '%s'", file)
                     xxxhash = compute_hash("xxh128")
-                    for algo in self.config.extra_hashes:
+                    for algo in self.manager.config.hashing.extra_hashes:
                         _ = compute_hash(algo)
 
         return xxxhash.result()

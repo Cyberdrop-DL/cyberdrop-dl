@@ -73,6 +73,7 @@ Several config options have new names:
 - `--minimum-video-size` -> `--min-video-size`
 - `--required-free-space` -> `--min-free-space`
 - `--print-stats` -> `--stats` , `--no-stats`
+- `--send-deleted-to-trash` -> `--hashing.dedupe.use-trash-bin`
 
 #### Jdownloader
 

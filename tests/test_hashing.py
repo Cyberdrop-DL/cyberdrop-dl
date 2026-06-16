@@ -53,8 +53,8 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
     n_files = max(count.values())
     algos = count.keys()
     assert len(expected_results) == len(algos) * n_files
-    options = manager.config.dedupe
-    options.hashes = tuple(algos)  # pyright: ignore[reportAttributeAccessIssue]
+    options = manager.config.hashing
+    options.algorithms = tuple(algos)  # pyright: ignore[reportAttributeAccessIssue]
     options.re_compute()
 
     manager.config.download_folder.mkdir(parents=True)
@@ -69,8 +69,8 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
 
 
 async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, manager: Manager) -> None:
-    options = manager.config.dedupe
-    options.hashes = "md5", "sha256"
+    options = manager.config.hashing
+    options.algorithms = "md5", "sha256"
     options.re_compute()
     hash_folder = tmp_cwd / "sorted_downloads"
     here = Path(__file__).parent

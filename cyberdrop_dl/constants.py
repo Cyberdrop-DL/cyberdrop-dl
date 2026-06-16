@@ -69,14 +69,14 @@ class HashType(StrEnum):
     xxh128 = "xxh128"
 
 
-class Hashing(CIStrEnum):
+class HashMode(CIStrEnum):
     OFF = auto()
     IN_PLACE = auto()
     POST_DOWNLOAD = auto()
 
     @property
     def enabled(self) -> bool:
-        return self is not Hashing.OFF
+        return self is not HashMode.OFF
 
 
 class Browser(StrEnum):

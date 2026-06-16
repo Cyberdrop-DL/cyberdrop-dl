@@ -31,7 +31,7 @@ from cyberdrop_dl.constants import (
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
     CIStrEnum,
-    Hashing,
+    HashMode,
 )
 from cyberdrop_dl.models import AliasModel, ConfigGroup
 from cyberdrop_dl.models.types import (
@@ -361,11 +361,19 @@ class Sort(ConfigGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class DedupeCleanup(ConfigGroup):
-    hashes: tuple[Literal["xxh128", "md5", "sha256"], ...] = "xxh128", "md5", "sha256"
-    auto_dedupe: bool = True
-    hashing: Hashing = Hashing.IN_PLACE
-    send_deleted_to_trash: bool = True
+class Dedupe(AliasModel):
+    enabled: Annotated[bool, Parameter(name="--hashing.dedupe", alias="--auto-dedupe")] = True
+    use_trash_bin: bool = True
+
+
+class Hashing(ConfigGroup, name=None):
+    mode: Annotated[HashMode, Parameter(name="--hashing")] = HashMode.IN_PLACE
+    algorithms: Annotated[tuple[Literal["xxh128", "md5", "sha256"], ...], Parameter(alias="--hashes")] = (
+        "xxh128",
+        "md5",
+        "sha256",
+    )
+    dedupe: Dedupe = Field(default_factory=Dedupe)
     _extra_hashes: tuple[Literal["md5", "sha256"], ...] = ()
 
     @override
@@ -373,9 +381,9 @@ class DedupeCleanup(ConfigGroup):
         self.re_compute()
 
     def re_compute(self) -> None:
-        hashes = set(self.hashes)
+        hashes = set(self.algorithms)
         if (xxhash := "xxh128") not in hashes:
-            self.hashes = xxhash, *hashes
+            self.algorithms = xxhash, *hashes
         hashes.discard(xxhash)
         self._extra_hashes = tuple(sorted(hashes))  # pyright: ignore[reportAttributeAccessIssue]
 
