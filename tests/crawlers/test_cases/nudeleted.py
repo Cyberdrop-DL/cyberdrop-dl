@@ -25,4 +25,17 @@ TEST_CASES = [
         ],
         "count": range(20, 50),
     },
+    {
+        "url": "https://nudeleted.com/search/hitomi/",
+        "results": [
+            {
+                "url": "https://nudeleted.com/videos/10960/hitomi-r18",
+                "referer": "https://nudeleted.com/videos/10960/hitomi-r18",
+                "album_id": None,
+                "uploaded_at": int,
+                "download_folder": r"re:hitomi \[tag\] \(Nudeleted\)",
+            },
+        ],
+        "count": range(8, 15),
+    },
 ]

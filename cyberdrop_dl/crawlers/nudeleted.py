@@ -11,7 +11,11 @@ if TYPE_CHECKING:
 
 
 class NudeletedCrawler(KernelVideoSharingCrawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/videos/...", "Tags": "/tags/..."}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/videos/...",
+        "Tags": "/tags/...",
+        "Search": "/search/..."
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nudeleted.com")
     DOMAIN: ClassVar[str] = "nudeleted"
     FOLDER_DOMAIN: ClassVar[str] = "Nudeleted"
@@ -22,7 +26,7 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
         match scrape_item.url.parts[1:]:
             case ["videos", *_]:
                 return await self.video(scrape_item)
-            case ["tags", *_]:
+            case ["tags" | "search", *_]:
                 return await self.collection(scrape_item, scrape_item.url.parts[-1], "tags")
             case _:
                 raise ValueError
