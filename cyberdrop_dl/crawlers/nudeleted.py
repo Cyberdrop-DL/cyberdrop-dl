@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers._kvs import KernelVideoSharingCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.utils import css, error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
@@ -21,3 +22,12 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
                 return await self.video(scrape_item)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    async def video(self, scrape_item: ScrapeItem) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+        soup = await self.request_soup(scrape_item.url)
+        date_str: str = css.select(soup, 'meta[itemprop="uploadDate"]', "content")
+        scrape_item.uploaded_at = self.parse_iso_date(date_str)
+        await super().video(scrape_item, soup)

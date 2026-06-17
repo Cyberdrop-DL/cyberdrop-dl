@@ -8,6 +8,7 @@ TEST_CASES = [
                 "filename": "Normal nude. And dreads. [9920].mp4",
                 "referer": "https://nudeleted.com/videos/9920/normal-nude-and-dreads/",
                 "download_folder": "re:Loose Files (Nudeleted)",
+                "uploaded_at": 1653579022,
             }
         ],
     }
