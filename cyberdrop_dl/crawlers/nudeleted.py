@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class NudeletedCrawler(KernelVideoSharingCrawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/videos/..."}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/videos/...", "Tags": "/tags/..."}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nudeleted.com")
     DOMAIN: ClassVar[str] = "nudeleted"
     FOLDER_DOMAIN: ClassVar[str] = "Nudeleted"
@@ -20,6 +20,8 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
         match scrape_item.url.parts[1:]:
             case ["videos", *_]:
                 return await self.video(scrape_item)
+            case ["tags", *_]:
+                return await self.collection(scrape_item, scrape_item.url.parts[-1], "tags")
             case _:
                 raise ValueError
 
@@ -31,3 +33,8 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
         date_str: str = css.select(soup, 'meta[itemprop="uploadDate"]', "content")
         scrape_item.uploaded_at = self.parse_iso_date(date_str)
         await super().video(scrape_item, soup)
+
+    async def _iter_videos(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
+        async for soup in self.web_pager(url or scrape_item.url):
+            for new_scrape_item in self.iter_children(scrape_item, soup, "div.margin-fix > div.item a"):
+                self.create_task(self.run(new_scrape_item))
