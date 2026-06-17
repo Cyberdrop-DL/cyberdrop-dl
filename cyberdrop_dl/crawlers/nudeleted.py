@@ -15,6 +15,7 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nudeleted.com")
     DOMAIN: ClassVar[str] = "nudeleted"
     FOLDER_DOMAIN: ClassVar[str] = "Nudeleted"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "li.next > a"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

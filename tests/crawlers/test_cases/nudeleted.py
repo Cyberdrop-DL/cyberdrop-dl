@@ -11,5 +11,18 @@ TEST_CASES = [
                 "uploaded_at": 1653579022,
             }
         ],
+    },
+    {
+        "url": "https://nudeleted.com/tags/mayer-lil/",
+        "results": [
+            {
+                "url": "https://nudeleted.com/videos/10434/mayer-lil-nip-slips-troughout",
+                "referer": "https://nudeleted.com/videos/10434/mayer-lil-nip-slips-troughout",
+                "album_id": None,
+                "uploaded_at": int,
+                "download_folder": r"re:mayer\-lil \[tag\] \(Nudeleted\)",
+            },
+        ],
+        "count": range(20, 50),
     }
 ]
