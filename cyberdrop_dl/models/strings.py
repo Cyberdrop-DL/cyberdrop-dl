@@ -10,7 +10,7 @@ class UnknownPlaceholder:
     Use this to prevent errors if the user supplied custom formatting for a value that the crawler was not able to scrape"""
 
     def __init__(self, value: str) -> None:
-        self.value = value
+        self.value: str = value
 
     def __str__(self) -> str:
         return self.value
