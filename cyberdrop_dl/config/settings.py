@@ -41,6 +41,7 @@ from cyberdrop_dl.models.types import (
     LogLevel,
     LogPath,
     NonEmptyStr,
+    RemoveDuplicates,
     Timedelta,
 )
 
@@ -236,11 +237,11 @@ class _FileFilter(AliasModel):
 class Filters(ConfigGroup):
     files: _FileFilter = Field(default_factory=_FileFilter)
     sizes: SizeLimits = Field(default_factory=SizeLimits)
-    before: datetime.date | None = None
-    after: datetime.date | None = None
+    before: FalsyAsNone[datetime.date] = None
+    after: FalsyAsNone[datetime.date] = None
     filename_regex: FalsyAsNone[re.Pattern[str]] = None
-    only_hosts: FalsyAsTuple[NonEmptyStr] = ()
-    skip_hosts: FalsyAsTuple[NonEmptyStr] = ()
+    only_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    skip_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
     allow_files_with_no_extension: bool = False
 
 
@@ -248,7 +249,7 @@ class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
     autostart: bool = False
     download_dir: FalsyAsNone[Path] = None
-    whitelist: FalsyAsTuple[NonEmptyStr] = ()
+    whitelist: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
 
 
 class SortFormats(AliasModel):
@@ -414,10 +415,3 @@ class UIOptions(ConfigGroup):
     portrait: bool = False
     "force CDL to run with a vertical layout"
     refresh_rate: PositiveFloat = 10.0
-
-
-class GenericCrawlers(ConfigGroup):
-    wordpress_media: FalsyAsTuple[HttpURL] = ()
-    wordpress_html: FalsyAsTuple[HttpURL] = ()
-    discourse: FalsyAsTuple[HttpURL] = ()
-    chevereto: FalsyAsTuple[HttpURL] = ()

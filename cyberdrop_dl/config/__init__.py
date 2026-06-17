@@ -21,7 +21,6 @@ from .crawlers import Crawlers
 from .settings import (
     Downloads,
     Filters,
-    GenericCrawlers,
     Hashing,
     Jdownloader,
     Logs,
@@ -57,12 +56,11 @@ class Config(BaseModel):
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     filters: Filters = Field(default_factory=Filters)
-    generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     hashing: Hashing = Field(default_factory=Hashing)
     ignore_history: bool = False
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
-    max_children: FalsyAsTuple[NonNegativeInt] = []
+    max_children: FalsyAsTuple[NonNegativeInt] = ()
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
     max_thread_depth: NonNegativeInt = 0

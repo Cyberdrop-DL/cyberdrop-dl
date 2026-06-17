@@ -111,3 +111,7 @@ def falsy_as_tuple[T](
 
 def falsy_as_none[T](value: T | Literal[""] | None) -> T | None:
     return falsy_as(value, None)
+
+
+def remove_duplicates[T: str](value: tuple[T, ...]) -> tuple[T, ...]:
+    return tuple(sorted(set(value)))

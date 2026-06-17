@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
     from pathlib import Path
 
-    from cyberdrop_dl.config.settings import GenericCrawlers
+    from cyberdrop_dl.config.crawlers import GenericCrawlers
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.manager import Manager
 
@@ -145,7 +145,7 @@ class ScrapeMapper:
 
         self.crawlers.update(get_crawlers_mapping())
 
-        for crawler in _create_generic_crawlers(self.manager.config.generic_crawlers):
+        for crawler in _create_generic_crawlers(self.manager.config.crawlers.generic):
             register_crawler(self.crawlers, crawler, from_user=True)
 
         _disable_crawlers_by_config(self.crawlers, *self.manager.config.crawlers.disabled)

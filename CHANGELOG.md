@@ -141,6 +141,13 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 - `--download-delay` -> `--delay`
 - `--download-speed-limit` -> `--speed-limit`
 
+#### Generic crawlers
+
+- `--wordpress-media` -> `--crawlers.generic.wordpress-media`
+- `--wordpress-html` -> `--crawlers.generic.wordpress-html`
+- `--discourse` -> `--crawlers.generic.discourse`
+- `--chevereto` -> `--crawlers.generic.chevereto`
+
 ### Removed
 
 - Support for python 3.11
