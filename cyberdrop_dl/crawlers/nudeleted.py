@@ -14,7 +14,7 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/...",
         "Tags": "/tags/...",
-        "Search": "/search/..."
+        "Search": "/search/...",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nudeleted.com")
     DOMAIN: ClassVar[str] = "nudeleted"
