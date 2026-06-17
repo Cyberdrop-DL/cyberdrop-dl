@@ -308,7 +308,10 @@
           "$ref": "#/$defs/_FileFilter"
         },
         "sizes": {
-          "$ref": "#/$defs/SizeLimits"
+          "$ref": "#/$defs/_FileSizes"
+        },
+        "duration": {
+          "$ref": "#/$defs/_DurationLimits"
         },
         "before": {
           "$ref": "#/$defs/FalsyAsNone_date_",
@@ -533,28 +536,6 @@
       "title": "Logs",
       "type": "object"
     },
-    "MediaDurationLimits": {
-      "properties": {
-        "max_video_duration": {
-          "$ref": "#/$defs/Timedelta",
-          "default": "PT0S"
-        },
-        "max_audio_duration": {
-          "$ref": "#/$defs/Timedelta",
-          "default": "PT0S"
-        },
-        "min_video_duration": {
-          "$ref": "#/$defs/Timedelta",
-          "default": "PT0S"
-        },
-        "min_audio_duration": {
-          "$ref": "#/$defs/Timedelta",
-          "default": "PT0S"
-        }
-      },
-      "title": "MediaDurationLimits",
-      "type": "object"
-    },
     "Network": {
       "properties": {
         "dump_responses": {
@@ -629,36 +610,6 @@
     },
     "RemoveDuplicates_FalsyAsTuple_NonEmptyStr__": {
       "$ref": "#/$defs/FalsyAsTuple_NonEmptyStr_"
-    },
-    "SizeLimits": {
-      "properties": {
-        "max_image_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        },
-        "max_non_media_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        },
-        "max_video_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        },
-        "min_image_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        },
-        "min_non_media_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        },
-        "min_video_size": {
-          "$ref": "#/$defs/ByteSizeSerilized",
-          "default": 0
-        }
-      },
-      "title": "SizeLimits",
-      "type": "object"
     },
     "Sort": {
       "properties": {
@@ -780,6 +731,32 @@
       "title": "UIOptions",
       "type": "object"
     },
+    "_DurationLimit": {
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/Timedelta",
+          "default": "PT0S"
+        },
+        "max": {
+          "$ref": "#/$defs/Timedelta",
+          "default": "PT0S"
+        }
+      },
+      "title": "_DurationLimit",
+      "type": "object"
+    },
+    "_DurationLimits": {
+      "properties": {
+        "video": {
+          "$ref": "#/$defs/_DurationLimit"
+        },
+        "audio": {
+          "$ref": "#/$defs/_DurationLimit"
+        }
+      },
+      "title": "_DurationLimits",
+      "type": "object"
+    },
     "_FileFilter": {
       "properties": {
         "audio": {
@@ -804,6 +781,38 @@
         }
       },
       "title": "_FileFilter",
+      "type": "object"
+    },
+    "_FileSizes": {
+      "properties": {
+        "image": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "video": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "audio": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "non_media": {
+          "$ref": "#/$defs/_SizeLimit"
+        }
+      },
+      "title": "_FileSizes",
+      "type": "object"
+    },
+    "_SizeLimit": {
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/ByteSizeSerilized",
+          "default": 0
+        },
+        "max": {
+          "$ref": "#/$defs/ByteSizeSerilized",
+          "default": 0
+        }
+      },
+      "title": "_SizeLimit",
       "type": "object"
     },
     "_SubFoldersInclude": {
@@ -928,9 +937,6 @@
       ],
       "default": null,
       "title": "Max Thread Folder Depth"
-    },
-    "media_duration_limits": {
-      "$ref": "#/$defs/MediaDurationLimits"
     },
     "min_free_space": {
       "$ref": "#/$defs/ByteSizeSerilized",
