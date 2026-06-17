@@ -1,6 +1,6 @@
 import datetime
 from pathlib import Path
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import (
     AfterValidator,
@@ -18,6 +18,9 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 from .validators import bytesize_to_str, change_path_suffix, falsy_as_none, falsy_as_tuple, to_timedelta, to_yarl_url
 
+type LogLevel = Annotated[
+    Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], StringConstraints(to_upper=True, strip_whitespace=True)
+]
 type NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 type CSVPath = Annotated[Path, AfterValidator(change_path_suffix(".csv"))]
 type LogPath = Annotated[Path, AfterValidator(change_path_suffix(".log"))]

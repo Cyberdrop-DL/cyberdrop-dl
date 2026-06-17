@@ -1,4 +1,3 @@
-# ruff: noqa: RUF012
 import dataclasses
 import datetime
 import functools
@@ -7,21 +6,19 @@ import random
 import re
 from enum import auto
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, Self, override
+from typing import Annotated, ClassVar, Literal, Self, override
 
 import aiohttp
 from cyclopts import Parameter
 from pydantic import (
     AfterValidator,
     BaseModel,
-    BeforeValidator,
     ByteSize,
     Field,
     NonNegativeFloat,
     PositiveFloat,
     PositiveInt,
     PrivateAttr,
-    field_validator,
 )
 from pydantic.types import StringConstraints
 
@@ -34,18 +31,18 @@ from cyberdrop_dl.constants import (
     HashMode,
 )
 from cyberdrop_dl.models import AliasModel, ConfigGroup
+from cyberdrop_dl.models.strings import validate_format_string
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
     FalsyAsNone,
     FalsyAsTuple,
     HttpURL,
+    LogLevel,
     LogPath,
     NonEmptyStr,
     Timedelta,
 )
-from cyberdrop_dl.models.validators import falsy_as_none
-from cyberdrop_dl.utils.strings import validate_format_string
 
 
 def _format_validator(valid_keys: set[str]) -> AfterValidator:
@@ -85,9 +82,9 @@ class LogFiles(AliasModel):
 
 
 class Logs(ConfigGroup, name=None):  # noqa: PLW1641
-    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
+    level: LogLevel = "DEBUG"
     "Only log messages of this level or higher to the main log file"
-    console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+    console_level: FalsyAsNone[LogLevel] = None
     "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
 
     files: LogFiles = Field(default_factory=LogFiles)
@@ -95,14 +92,6 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
     expire_after: FalsyAsNone[Timedelta] = None
     rotate: bool = False
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
-
-    @field_validator("level", "console_level", mode="before")
-    @classmethod
-    def _normalize_log_level(cls, value: object) -> Any:
-        value = falsy_as_none(value)
-        if type(value) is str:
-            return value.upper()
-        return value
 
     @property
     def effective_level(self) -> int:
@@ -249,9 +238,9 @@ class Filters(ConfigGroup):
     sizes: SizeLimits = Field(default_factory=SizeLimits)
     before: datetime.date | None = None
     after: datetime.date | None = None
-    filename_regex: Annotated[re.Pattern[str] | None, BeforeValidator(falsy_as_none)] = None
-    only_hosts: FalsyAsTuple[NonEmptyStr] = []
-    skip_hosts: FalsyAsTuple[NonEmptyStr] = []
+    filename_regex: FalsyAsNone[re.Pattern[str]] = None
+    only_hosts: FalsyAsTuple[NonEmptyStr] = ()
+    skip_hosts: FalsyAsTuple[NonEmptyStr] = ()
     allow_files_with_no_extension: bool = False
 
 
@@ -259,7 +248,7 @@ class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
     autostart: bool = False
     download_dir: FalsyAsNone[Path] = None
-    whitelist: FalsyAsTuple[NonEmptyStr] = []
+    whitelist: FalsyAsTuple[NonEmptyStr] = ()
 
 
 class SortFormats(AliasModel):
@@ -377,18 +366,16 @@ class Downloads(ConfigGroup):
 class Network(ConfigGroup):
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
-    flaresolverr: Annotated[HttpURL | None, BeforeValidator(falsy_as_none)] = None
-    proxy: Annotated[HttpURL | None, BeforeValidator(falsy_as_none)] = None
+    flaresolverr: FalsyAsNone[HttpURL] = None
+    proxy: FalsyAsNone[HttpURL] = None
     rate_limit: PositiveFloat = 25
     connection_timeout: PositiveFloat = 15
-    read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
-    ssl_context: Annotated[
+    read_timeout: FalsyAsNone[PositiveFloat] = 300
+    ssl_context: FalsyAsNone[
         Annotated[
             Literal["truststore", "certifi", "truststore+certifi"],
             StringConstraints(to_lower=True, strip_whitespace=True),
         ]
-        | None,
-        BeforeValidator(falsy_as_none),
     ] = "truststore+certifi"
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
 
@@ -430,7 +417,7 @@ class UIOptions(ConfigGroup):
 
 
 class GenericCrawlers(ConfigGroup):
-    wordpress_media: FalsyAsTuple[HttpURL] = []
-    wordpress_html: FalsyAsTuple[HttpURL] = []
-    discourse: FalsyAsTuple[HttpURL] = []
-    chevereto: FalsyAsTuple[HttpURL] = []
+    wordpress_media: FalsyAsTuple[HttpURL] = ()
+    wordpress_html: FalsyAsTuple[HttpURL] = ()
+    discourse: FalsyAsTuple[HttpURL] = ()
+    chevereto: FalsyAsTuple[HttpURL] = ()

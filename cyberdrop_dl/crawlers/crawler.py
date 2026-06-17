@@ -24,6 +24,7 @@ from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.filepath import check_dangerous_filename, check_path_traversal, compose_filename, get_filename_and_ext
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
+from cyberdrop_dl.models.strings import safe_format
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import (
     css,
@@ -35,7 +36,6 @@ from cyberdrop_dl.utils import (
     parse_url,
     unique,
 )
-from cyberdrop_dl.utils.strings import safe_format
 
 if TYPE_CHECKING:
     import datetime
