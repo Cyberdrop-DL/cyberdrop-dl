@@ -45,7 +45,6 @@ from .settings import (
     Hashing,
     Jdownloader,
     Logs,
-    MediaDurationLimits,
     Network,
     Sort,
     SubFolders,
@@ -86,7 +85,6 @@ class Config(BaseModel):
     max_folder_name_length: PositiveInt = 60
     max_thread_depth: NonNegativeInt = 0
     max_thread_folder_depth: NonNegativeInt | None = None
-    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
     min_free_space: ByteSizeSerilized = to_bytesize("5GB")
     mtime: bool = True
     network: Network = Field(default_factory=Network)

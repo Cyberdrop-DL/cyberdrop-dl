@@ -423,7 +423,7 @@ async def filter_by_duration(media_item: MediaItem, config: Config) -> bool:
     if media_item.is_segment:
         return False
 
-    duration_limits = config.media_duration_limits.ranges
+    duration_limits = config.filters.duration.ranges
     if media_item.ext.lower() in FileExt.VIDEO:
         limits = duration_limits.video
     elif media_item.ext.lower() in FileExt.AUDIO:

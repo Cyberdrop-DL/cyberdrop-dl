@@ -61,18 +61,18 @@ Several config options have new names:
 
 - `--disable-crawlers`-> `--crawlers.disabled`
 - `--disable-file-timestamps`-> `--mtime`
-- `--maximum-audio-duration` -> `--max-audio-duration`
+- `--maximum-audio-duration` -> `--audio.duration.max`
 - `--maximum-image-size` -> `--image.size.max`
 - `--maximum-number-of-children` -> `--max-children`
 - `--maximum-other-size` -> `--non-media.size.max`
 - `--maximum-thread-depth` -> `--max-thread-depth`
 - `--maximum-thread-folder-depth` -> `--max-thread-folder-depth`
-- `--maximum-video-duration` -> `--max-video-duration`
+- `--maximum-video-duration` -> `--video.duration.max`
 - `--maximum-video-size` -> `--video.size.max`
-- `--minimum-audio-duration` -> `--min-audio-duration`
+- `--minimum-audio-duration` -> `--audio.duration.min`
 - `--minimum-image-size` -> `--image.size.min`
 - `--minimum-other-size` -> `--non-media.size.min`
-- `--minimum-video-duration` -> `--min-video-duration`
+- `--minimum-video-duration` -> `--video.duration.min`
 - `--minimum-video-size` -> `--video.size.min`
 - `--required-free-space` -> `--min-free-space`
 - `--print-stats` -> `--stats` , `--no-stats`

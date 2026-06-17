@@ -166,8 +166,19 @@ class _SizeLimit(AliasModel):
     max: ByteSizeSerilized = ByteSize(0)
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class _MediaDurationRanges:
+    video: _FloatRange | None
+    audio: _FloatRange | None
+
+
+class _DurationLimit(AliasModel):
+    min: Timedelta = datetime.timedelta(seconds=0)
+    max: Timedelta = datetime.timedelta(seconds=0)
+
+
 @Parameter(name="*", name_transform=lambda name: name if name in {"min", "max"} else name + ".size")
-class FileSizes(AliasModel):
+class _FileSizes(AliasModel):
     image: _SizeLimit = Field(default_factory=_SizeLimit)
     video: _SizeLimit = Field(default_factory=_SizeLimit)
     audio: _SizeLimit = Field(default_factory=_SizeLimit)
@@ -195,34 +206,25 @@ class FileSizes(AliasModel):
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class MediaDurationRanges:
-    video: _FloatRange | None
-    audio: _FloatRange | None
-
-
-class MediaDurationLimits(ConfigGroup):
-    max_video_duration: Timedelta = datetime.timedelta(seconds=0)
-    max_audio_duration: Timedelta = datetime.timedelta(seconds=0)
-    min_video_duration: Timedelta = datetime.timedelta(seconds=0)
-    min_audio_duration: Timedelta = datetime.timedelta(seconds=0)
+@Parameter(name="*", name_transform=lambda name: name if name in {"min", "max"} else name + ".duration")
+class _DurationLimits(AliasModel):
+    video: _DurationLimit = Field(default_factory=_DurationLimit)
+    audio: _DurationLimit = Field(default_factory=_DurationLimit)
 
     @property
     def needs_ffmpeg(self) -> bool:
-        return bool(
-            self.min_video_duration or self.max_video_duration or self.min_audio_duration or self.max_audio_duration
-        )
+        return bool(self.video.min or self.video.max or self.audio.min or self.audio.max)
 
     @functools.cached_property
-    def ranges(self) -> MediaDurationRanges:
-        return MediaDurationRanges(
+    def ranges(self) -> _MediaDurationRanges:
+        return _MediaDurationRanges(
             video=_FloatRange.parse(
-                self.min_video_duration.total_seconds(),
-                self.max_video_duration.total_seconds(),
+                self.video.min.total_seconds(),
+                self.video.max.total_seconds(),
             ),
             audio=_FloatRange.parse(
-                self.min_audio_duration.total_seconds(),
-                self.max_audio_duration.total_seconds(),
+                self.audio.min.total_seconds(),
+                self.audio.max.total_seconds(),
             ),
         )
 
@@ -237,7 +239,8 @@ class _FileFilter(AliasModel):
 
 class Filters(ConfigGroup):
     files: _FileFilter = Field(default_factory=_FileFilter)
-    sizes: FileSizes = Field(default_factory=FileSizes)
+    sizes: _FileSizes = Field(default_factory=_FileSizes)
+    duration: _DurationLimits = Field(default_factory=_DurationLimits)
     before: FalsyAsNone[datetime.date] = None
     after: FalsyAsNone[datetime.date] = None
     filename_regex: FalsyAsNone[re.Pattern[str]] = None

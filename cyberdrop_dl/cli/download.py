@@ -143,7 +143,7 @@ def _check_ffmpeg(config: Config) -> None:
         exc.add_note("Disable sorting or install ffmpeg")
         errors.append(exc)
 
-    if config.media_duration_limits.needs_ffmpeg:
+    if config.filters.duration.needs_ffmpeg:
         exc = RuntimeError("Filtering files by duration requires 'ffmpeg' to be installed")
         exc.add_note("Disable media duration limits or install ffmpeg")
         errors.append(exc)
