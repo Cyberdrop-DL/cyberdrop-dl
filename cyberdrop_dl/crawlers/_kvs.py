@@ -155,7 +155,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, soup: BeautifulSoup = None) -> None:
+    async def video(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
