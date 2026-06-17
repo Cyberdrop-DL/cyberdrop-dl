@@ -59,6 +59,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         "Members": "/members/<member_id>",
     }
     NEXT_PAGE_SELECTOR: ClassVar[str] = "li.pagination-next > a"
+    THUMBNAIL_SELECTOR: ClassVar[str] = Selector.THUMBNAILS
     _RATE_LIMIT: ClassVar[RateLimit] = 6, 5
 
     def __init_subclass__(cls, *, ensure_trailing_slash: bool = False, **kwargs: Any) -> None:
@@ -150,7 +151,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     async def _iter_videos(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
         async for soup in self.web_pager(url or scrape_item.url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.THUMBNAILS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, self.THUMBNAIL_SELECTOR):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
