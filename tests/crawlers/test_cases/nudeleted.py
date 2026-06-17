@@ -24,5 +24,5 @@ TEST_CASES = [
             },
         ],
         "count": range(20, 50),
-    }
+    },
 ]
