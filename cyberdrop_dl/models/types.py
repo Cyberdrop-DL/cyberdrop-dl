@@ -22,12 +22,13 @@ from .validators import (
     falsy_as_none,
     falsy_as_tuple,
     remove_duplicates,
+    strings,
     to_timedelta,
     to_yarl_url,
 )
 
 type LogLevel = Annotated[
-    Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], StringConstraints(to_upper=True, strip_whitespace=True)
+    Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], strings.pre_validator(to_upper=True, strip=True)
 ]
 type NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 type CSVPath = Annotated[Path, AfterValidator(change_path_suffix(".csv"))]

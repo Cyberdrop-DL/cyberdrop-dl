@@ -24,7 +24,7 @@ from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.filepath import check_dangerous_filename, check_path_traversal, compose_filename, get_filename_and_ext
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
-from cyberdrop_dl.models.strings import safe_format
+from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import (
     css,
@@ -713,7 +713,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if isinstance(date, int):
             date = dates.from_timestamp(date)
 
-        post_title, _ = safe_format(title_format, id=id, number=id, date=date, title=title)
+        post_title, _ = strings.safe_format(title_format, id=id, number=id, date=date, title=title)
         return post_title
 
     @classmethod

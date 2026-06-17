@@ -11,7 +11,6 @@ from typing import Annotated, ClassVar, Literal, Self, override
 import aiohttp
 from cyclopts import Parameter
 from pydantic import (
-    AfterValidator,
     BaseModel,
     ByteSize,
     Field,
@@ -20,7 +19,6 @@ from pydantic import (
     PositiveInt,
     PrivateAttr,
 )
-from pydantic.types import StringConstraints
 
 from cyberdrop_dl.constants import (
     DEFAULT_APP_STORAGE,
@@ -31,7 +29,6 @@ from cyberdrop_dl.constants import (
     HashMode,
 )
 from cyberdrop_dl.models import AliasModel, ConfigGroup
-from cyberdrop_dl.models.strings import validate_format_string
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
@@ -44,16 +41,7 @@ from cyberdrop_dl.models.types import (
     RemoveDuplicates,
     Timedelta,
 )
-
-
-def _format_validator(valid_keys: set[str]) -> AfterValidator:
-
-    def check(value: str | None) -> str | None:
-        if value is not None:
-            validate_format_string(value, valid_keys)
-        return value
-
-    return AfterValidator(check)
+from cyberdrop_dl.models.validators import strings
 
 
 class _SubFoldersInclude(AliasModel):
@@ -65,9 +53,9 @@ class _SubFoldersInclude(AliasModel):
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
-    separate_posts_format: Annotated[NonEmptyStr, _format_validator({"default", "title", "id", "number", "date"})] = (
-        "{default}"
-    )
+    separate_posts_format: Annotated[
+        NonEmptyStr, strings.format_validator({"default", "title", "id", "number", "date"})
+    ] = "{default}"
     separate_posts: bool = False
 
 
@@ -266,23 +254,23 @@ class SortFormats(AliasModel):
 
     audio: Annotated[
         FalsyAsNone[NonEmptyStr],
-        _format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}),
+        strings.format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}),
     ] = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
     "Format to generate sorted audio file"
 
     image: Annotated[
-        FalsyAsNone[NonEmptyStr], _format_validator(_COMMON_FIELDS | {"height", "resolution", "width"})
+        FalsyAsNone[NonEmptyStr], strings.format_validator(_COMMON_FIELDS | {"height", "resolution", "width"})
     ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     "Format to generate sorted image file"
 
-    non_media: Annotated[FalsyAsNone[NonEmptyStr], _format_validator(_COMMON_FIELDS)] = (
+    non_media: Annotated[FalsyAsNone[NonEmptyStr], strings.format_validator(_COMMON_FIELDS)] = (
         "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     )
     "Format to generate sorted files of unknown type"
 
     video: Annotated[
         FalsyAsNone[NonEmptyStr],
-        _format_validator(
+        strings.format_validator(
             _COMMON_FIELDS
             | {
                 "codec",
@@ -297,7 +285,7 @@ class SortFormats(AliasModel):
     ] = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
     "Format to generate sorted video file"
 
-    incrementer: Annotated[NonEmptyStr, _format_validator({"i"})] = " ({i})"
+    incrementer: Annotated[NonEmptyStr, strings.format_validator({"i"})] = " ({i})"
     "Format for separator on name collisions"
 
 
@@ -320,9 +308,14 @@ class Dedupe(AliasModel):
 class Hashing(ConfigGroup, name=None):
     mode: Annotated[HashMode, Parameter(name="--hashing")] = HashMode.IN_PLACE
     algorithms: Annotated[
-        tuple[Literal["xxh128", "md5", "sha256"], ...],
+        tuple[
+            Annotated[
+                Literal["xxh128", "md5", "sha256"],
+                strings.pre_validator(to_lower=True, strip=True),
+            ],
+            ...,
+        ],
         Parameter(alias="--hashes"),
-        StringConstraints(to_lower=True, strip_whitespace=True),
     ] = (
         "xxh128",
         "md5",
@@ -375,7 +368,7 @@ class Network(ConfigGroup):
     ssl_context: FalsyAsNone[
         Annotated[
             Literal["truststore", "certifi", "truststore+certifi"],
-            StringConstraints(to_lower=True, strip_whitespace=True),
+            strings.pre_validator(to_lower=True, strip=True),
         ]
     ] = "truststore+certifi"
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
