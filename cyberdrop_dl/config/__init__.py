@@ -92,7 +92,7 @@ class Config(BaseModel):
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
     show_stats: Annotated[bool, Parameter(name="stats")] = True
-    "show stats report at the end of a run"
+    "Show stats report at the end of a run"
 
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)

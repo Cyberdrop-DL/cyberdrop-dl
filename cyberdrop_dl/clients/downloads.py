@@ -379,6 +379,8 @@ class DownloadClient:
             return media.size in limits.image
         if media.ext in FileExt.VIDEO:
             return media.size in limits.video
+        if media.ext in FileExt.AUDIO:
+            return media.size in limits.audio
 
         return media.size in limits.non_media
 

@@ -134,10 +134,14 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
         return self.__dict__ == other.__dict__
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True)
 class _FloatRange:
     min: float
     max: float
+
+    def __post_init__(self) -> None:
+        if not self.max:
+            self.max = float("inf")
 
     def __contains__(self, value: float, /) -> bool:
         return self.min <= value <= self.max
@@ -153,31 +157,40 @@ class _FloatRange:
 class _FileSizeRanges:
     video: _FloatRange
     image: _FloatRange
+    audio: _FloatRange
     non_media: _FloatRange
 
 
-class SizeLimits(ConfigGroup):
-    max_image_size: ByteSizeSerilized = ByteSize(0)
-    max_non_media_size: ByteSizeSerilized = ByteSize(0)
-    max_video_size: ByteSizeSerilized = ByteSize(0)
-    min_image_size: ByteSizeSerilized = ByteSize(0)
-    min_non_media_size: ByteSizeSerilized = ByteSize(0)
-    min_video_size: ByteSizeSerilized = ByteSize(0)
+class _SizeLimit(AliasModel):
+    min: ByteSizeSerilized = ByteSize(0)
+    max: ByteSizeSerilized = ByteSize(0)
+
+
+@Parameter(name="*", name_transform=lambda name: name if name in {"min", "max"} else name + ".size")
+class FileSizes(AliasModel):
+    image: _SizeLimit = Field(default_factory=_SizeLimit)
+    video: _SizeLimit = Field(default_factory=_SizeLimit)
+    audio: _SizeLimit = Field(default_factory=_SizeLimit)
+    non_media: _SizeLimit = Field(default_factory=_SizeLimit)
 
     @functools.cached_property
     def ranges(self) -> _FileSizeRanges:
         return _FileSizeRanges(
             video=_FloatRange(
-                self.min_video_size,
-                self.max_video_size,
+                self.video.min,
+                self.video.max,
             ),
             image=_FloatRange(
-                self.min_image_size,
-                self.max_image_size,
+                self.image.min,
+                self.image.max,
             ),
             non_media=_FloatRange(
-                self.min_non_media_size,
-                self.max_non_media_size,
+                self.non_media.min,
+                self.non_media.max,
+            ),
+            audio=_FloatRange(
+                self.audio.min,
+                self.audio.max,
             ),
         )
 
@@ -224,7 +237,7 @@ class _FileFilter(AliasModel):
 
 class Filters(ConfigGroup):
     files: _FileFilter = Field(default_factory=_FileFilter)
-    sizes: SizeLimits = Field(default_factory=SizeLimits)
+    sizes: FileSizes = Field(default_factory=FileSizes)
     before: FalsyAsNone[datetime.date] = None
     after: FalsyAsNone[datetime.date] = None
     filename_regex: FalsyAsNone[re.Pattern[str]] = None
