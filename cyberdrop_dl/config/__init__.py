@@ -113,7 +113,7 @@ class Config(BaseModel):
         except FileNotFoundError:
             default = Config()
             if _save_if_not_found:
-                yaml.save(file, default.model_dump())
+                yaml.save(file, default.model_dump(mode="json"))
             return default
 
         config = Config.model_validate(content, extra="forbid")
