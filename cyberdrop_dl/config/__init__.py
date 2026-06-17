@@ -39,9 +39,9 @@ class Schema:
 
 from .auth import Authentication, Notifications
 from .crawlers import Crawlers
+from .filters import Filters
 from .settings import (
     Downloads,
-    Filters,
     Hashing,
     Jdownloader,
     Logs,

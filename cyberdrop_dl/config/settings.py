@@ -1,12 +1,9 @@
-import dataclasses
 import datetime
-import functools
 import logging
 import random
-import re
 from enum import auto
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal, Self, override
+from typing import Annotated, ClassVar, Literal, override
 
 import aiohttp
 from cyclopts import Parameter
@@ -132,121 +129,6 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
             return False
 
         return self.__dict__ == other.__dict__
-
-
-@dataclasses.dataclass(slots=True)
-class _FloatRange:
-    min: float
-    max: float
-
-    def __post_init__(self) -> None:
-        if not self.max:
-            self.max = float("inf")
-
-    def __contains__(self, value: float, /) -> bool:
-        return self.min <= value <= self.max
-
-    @classmethod
-    def parse(cls, min: float, max: float | None) -> Self | None:  # noqa: A002
-        if not min and not max:
-            return None
-        return cls(min, max or float("inf"))
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class _FileSizeRanges:
-    video: _FloatRange
-    image: _FloatRange
-    audio: _FloatRange
-    non_media: _FloatRange
-
-
-class _SizeLimit(AliasModel):
-    min: ByteSizeSerilized = ByteSize(0)
-    max: ByteSizeSerilized = ByteSize(0)
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class _MediaDurationRanges:
-    video: _FloatRange | None
-    audio: _FloatRange | None
-
-
-class _DurationLimit(AliasModel):
-    min: Timedelta = datetime.timedelta(seconds=0)
-    max: Timedelta = datetime.timedelta(seconds=0)
-
-
-@Parameter(name="*", name_transform=lambda name: name if name in {"min", "max"} else name + ".size")
-class _FileSizes(AliasModel):
-    image: _SizeLimit = Field(default_factory=_SizeLimit)
-    video: _SizeLimit = Field(default_factory=_SizeLimit)
-    audio: _SizeLimit = Field(default_factory=_SizeLimit)
-    non_media: _SizeLimit = Field(default_factory=_SizeLimit)
-
-    @functools.cached_property
-    def ranges(self) -> _FileSizeRanges:
-        return _FileSizeRanges(
-            video=_FloatRange(
-                self.video.min,
-                self.video.max,
-            ),
-            image=_FloatRange(
-                self.image.min,
-                self.image.max,
-            ),
-            non_media=_FloatRange(
-                self.non_media.min,
-                self.non_media.max,
-            ),
-            audio=_FloatRange(
-                self.audio.min,
-                self.audio.max,
-            ),
-        )
-
-
-@Parameter(name="*", name_transform=lambda name: name if name in {"min", "max"} else name + ".duration")
-class _DurationLimits(AliasModel):
-    video: _DurationLimit = Field(default_factory=_DurationLimit)
-    audio: _DurationLimit = Field(default_factory=_DurationLimit)
-
-    @property
-    def needs_ffmpeg(self) -> bool:
-        return bool(self.video.min or self.video.max or self.audio.min or self.audio.max)
-
-    @functools.cached_property
-    def ranges(self) -> _MediaDurationRanges:
-        return _MediaDurationRanges(
-            video=_FloatRange.parse(
-                self.video.min.total_seconds(),
-                self.video.max.total_seconds(),
-            ),
-            audio=_FloatRange.parse(
-                self.audio.min.total_seconds(),
-                self.audio.max.total_seconds(),
-            ),
-        )
-
-
-@Parameter(name="*")
-class _FileFilter(AliasModel):
-    audio: bool = True
-    images: bool = True
-    videos: bool = True
-    non_media: bool = True
-
-
-class Filters(ConfigGroup):
-    files: _FileFilter = Field(default_factory=_FileFilter)
-    sizes: _FileSizes = Field(default_factory=_FileSizes)
-    duration: _DurationLimits = Field(default_factory=_DurationLimits)
-    before: FalsyAsNone[datetime.date] = None
-    after: FalsyAsNone[datetime.date] = None
-    filename_regex: FalsyAsNone[re.Pattern[str]] = None
-    only_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
-    skip_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
-    allow_files_with_no_extension: bool = False
 
 
 class Jdownloader(ConfigGroup, name=None):
