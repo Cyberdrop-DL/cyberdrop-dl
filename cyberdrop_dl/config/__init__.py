@@ -101,6 +101,9 @@ class Config(BaseModel):
     _resolved: bool = False
     _source: Path | None = None
 
+    def __repr_args__(self) -> list[tuple[str, Path | None]]:
+        return [("source", self._source)]
+
     @property
     def source(self) -> Path | None:
         return self._source
@@ -150,18 +153,18 @@ class Config(BaseModel):
 
 
 def _resolve_paths(model: BaseModel) -> None:
-    for name, value in vars(model).items():
-        if isinstance(value, Path):
-            if "{config}" in str(value):
+    for field_name, field_value in model:
+        if isinstance(field_value, Path):
+            if "{config}" in str(field_value):
                 error = ValueError(
-                    f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                    f"Using '{{config}}' as reference on a path is no longer supported: {field_value} ({field_name})"
                 )
                 raise CDLConfigRuntimeErrorsGroup("Invalid config", (error,))
 
-            object.__setattr__(model, name, value.expanduser().resolve().absolute())
+            object.__setattr__(model, field_name, field_value.expanduser().resolve().absolute())
 
-        elif isinstance(value, BaseModel):
-            _resolve_paths(value)
+        elif isinstance(field_value, BaseModel):
+            _resolve_paths(field_value)
 
 
 def merge_additive_args[T: list[str] | tuple[str, ...]](cli_values: T, config_values: Iterable[str]) -> T:
