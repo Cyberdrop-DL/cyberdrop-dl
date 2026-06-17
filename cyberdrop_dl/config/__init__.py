@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Literal, Self, final
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
@@ -16,7 +16,28 @@ from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: T
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
-from .auth import AuthSettings, Notifications
+
+@final
+class Schema:
+    PATH: Path = Path(__file__).parent / "schema"
+    VALIDATION: Path = PATH / "validation.json"
+    SERIALIZATION: Path = PATH / "serialization.json"
+
+    @staticmethod
+    def update() -> None:
+        import json
+
+        for file in (Schema.VALIDATION, Schema.SERIALIZATION):
+            file.write_text(
+                json.dumps(
+                    Config.model_json_schema(mode=file.stem),  # pyright: ignore[reportArgumentType]
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+
+
+from .auth import Authentication, Notifications
 from .crawlers import Crawlers
 from .settings import (
     Downloads,
@@ -44,7 +65,7 @@ logger = logging.getLogger(__name__)
 class Config(BaseModel):
     __final__: Literal[True] = True
 
-    auth: AuthSettings = Field(default_factory=AuthSettings)
+    auth: Authentication = Field(default_factory=Authentication)
     cookies: Path | None = None
     "File/folder to import cookies from (.txt Netscape files)"
 
@@ -161,4 +182,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["Config"]
+__all__ = ["Config", "Schema"]

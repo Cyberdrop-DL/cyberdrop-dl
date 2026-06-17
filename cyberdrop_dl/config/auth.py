@@ -29,7 +29,7 @@ class JDownloaderAuth(AliasModel):
 
 
 @Parameter(show=False)
-class AuthSettings(AliasModel):
+class Authentication(AliasModel):
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
     meganz: EmailAuth = Field(default_factory=EmailAuth)

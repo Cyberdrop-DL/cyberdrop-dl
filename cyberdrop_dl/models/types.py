@@ -12,6 +12,7 @@ from pydantic import (
     PlainValidator,
     StringConstraints,
     UrlConstraints,
+    WithJsonSchema,
 )
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -56,4 +57,11 @@ class _HttpURL(AnyUrl):
 
 
 # Only use this for config validation. To parse URLs internally while scraping, call `parse_url` directly
-type HttpURL = Annotated[AbsoluteHttpURL, PlainValidator(lambda x: to_yarl_url(_HttpURL(str(x))))]
+type HttpURL = Annotated[
+    AbsoluteHttpURL,
+    PlainValidator(
+        lambda x: to_yarl_url(_HttpURL(str(x))),
+        json_schema_input_type=str,
+    ),
+    WithJsonSchema({"type": "string", "format": "uri"}),
+]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
 import cyberdrop_dl.cli.download
-from cyberdrop_dl.config import Config, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config import Config, Schema, _resolve_paths, merge_additive_args, settings
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import merge_dicts
 
@@ -254,3 +255,15 @@ def test_config_from_file(tmp_cwd: Path) -> None:
     assert config_2.source == config_file
     config_2._source = None
     assert config_1 == config_2
+
+
+class TestSchema:
+    def test_validation_schema(self) -> None:
+        schema = Config.model_json_schema(mode="validation")
+        expected_schema = json.loads(Schema.VALIDATION.read_text())
+        assert schema == expected_schema, "Validation schema changed"
+
+    def test_serialization_schema(self) -> None:
+        schema = Config.model_json_schema(mode="serialization")
+        expected_schema = json.loads(Schema.SERIALIZATION.read_text())
+        assert schema == expected_schema, "Serialization schema changed"
