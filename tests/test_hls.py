@@ -44,7 +44,6 @@ def test_parse_segments() -> None:
     first = result[0]
     assert type(first) is hls.HLSSegment
     assert first.idx == 0
-    assert first.part is None
     assert first.url == AbsoluteHttpURL("https://example.com/m3u8/test")
     assert first.name == "00001.cdl_hls"
     last = result[-1]
@@ -64,7 +63,6 @@ def test_create_media_segments() -> None:
     )
     segment = hls.HLSSegment(
         idx=22,
-        part="image.jpg",
         name="00023.cdl_hls",
         url=AbsoluteHttpURL("https://example.com/m3u8/test/segments001.ts"),
     )
@@ -92,3 +90,30 @@ def test_prepare_output_path(tmp_path: Path) -> None:
     output = tmp_path / "download" / "m3u8.txt"
     file = hls._prepare_output_path(m3u8, output)
     assert file == tmp_path / "download" / "m3u8.subtitle.vtt"
+
+
+def test_init_segments_should_be_include() -> None:
+    content = """
+    #EXTM3U
+    #EXT-X-VERSION:6
+    #EXT-X-PLAYLIST-TYPE:VOD
+    #EXT-X-MEDIA-SEQUENCE:0
+    #EXT-X-TARGETDURATION:5
+    #EXT-X-MAP:URI="../../ac555a6ea0431c298d53d486a2cc1059/video/1080/init.mp4"
+    #EXT-X-INDEPENDENT-SEGMENTS
+    #EXTINF:4.00000,
+    ../../ac555a6ea0431c298d53d486a2cc1059/video/1080/seg_1.mp4
+    #EXTINF:4.00000,
+    ../../ac555a6ea0431c298d53d486a2cc1059/video/1080/seg_2.mp4
+    #EXTINF:4.00000,
+    ../../ac555a6ea0431c298d53d486a2cc1059/video/1080/seg_3.mp4
+    #EXTINF:4.00000,
+    ../../ac555a6ea0431c298d53d486a2cc1059/video/1080/seg_4.mp4
+    #EXTINF:2,
+    ../../ac555a6ea0431c298d53d486a2cc1059/video/1080/seg_260.mp4
+    #EXT-X-ENDLIST
+    """
+    m3u8 = M3U8(content)
+    assert len(m3u8.segment_map) == 1
+    assert len(m3u8.segments) == 5
+    assert len(hls._segments(m3u8)) == 6

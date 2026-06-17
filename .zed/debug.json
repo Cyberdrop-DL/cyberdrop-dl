@@ -12,7 +12,6 @@
       "--dump-json",
       "--min-free-space",
       "512MB",
-      "--exclude.no-coomer-post-content",
       "--downloads",
       "2",
       "--flaresolverr",
