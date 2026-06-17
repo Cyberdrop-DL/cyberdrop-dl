@@ -12,7 +12,7 @@ from cyberdrop_dl import yaml
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import merge_models
-from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonNegativeInt  # noqa: TC001
+from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
@@ -62,7 +62,7 @@ class Config(BaseModel):
     ignore_history: bool = False
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
-    max_children: ListNonNegativeInt = []
+    max_children: FalsyAsTuple[NonNegativeInt] = []
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
     max_thread_depth: NonNegativeInt = 0
