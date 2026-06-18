@@ -1,6 +1,7 @@
 {
   "$defs": {
     "ApiKeyAuth": {
+      "additionalProperties": false,
       "properties": {
         "api_key": {
           "anyOf": [
@@ -19,6 +20,7 @@
       "type": "object"
     },
     "AppriseURL": {
+      "additionalProperties": false,
       "properties": {
         "url": {
           "format": "uri",
@@ -43,6 +45,7 @@
       "type": "object"
     },
     "Authentication": {
+      "additionalProperties": false,
       "properties": {
         "gofile": {
           "$ref": "#/$defs/ApiKeyAuth"
@@ -80,6 +83,7 @@
       "type": "string"
     },
     "Crawlers": {
+      "additionalProperties": false,
       "properties": {
         "disabled": {
           "$ref": "#/$defs/RemoveDuplicates_FalsyAsTuple_NonEmptyStr__",
@@ -105,6 +109,7 @@
       "type": "object"
     },
     "Dedupe": {
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "default": true,
@@ -121,6 +126,7 @@
       "type": "object"
     },
     "Downloads": {
+      "additionalProperties": false,
       "properties": {
         "concurrency": {
           "default": 15,
@@ -176,6 +182,7 @@
       "type": "object"
     },
     "EmailAuth": {
+      "additionalProperties": false,
       "properties": {
         "email": {
           "anyOf": [
@@ -334,6 +341,7 @@
       "type": "array"
     },
     "Filters": {
+      "additionalProperties": false,
       "properties": {
         "files": {
           "$ref": "#/$defs/_FileFilter"
@@ -378,6 +386,7 @@
       "type": "string"
     },
     "GenericCrawlers": {
+      "additionalProperties": false,
       "properties": {
         "wordpress_media": {
           "$ref": "#/$defs/FalsyAsTuple_HttpURL_",
@@ -409,6 +418,7 @@
       "type": "string"
     },
     "Hashing": {
+      "additionalProperties": false,
       "properties": {
         "mode": {
           "$ref": "#/$defs/HashMode",
@@ -443,6 +453,7 @@
       "type": "string"
     },
     "JDownloaderAuth": {
+      "additionalProperties": false,
       "properties": {
         "username": {
           "anyOf": [
@@ -485,6 +496,7 @@
       "type": "object"
     },
     "Jdownloader": {
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "default": false,
@@ -509,6 +521,7 @@
       "type": "object"
     },
     "KemonoConfig": {
+      "additionalProperties": false,
       "properties": {
         "ignore_ads": {
           "default": false,
@@ -525,6 +538,7 @@
       "type": "object"
     },
     "LogFiles": {
+      "additionalProperties": false,
       "properties": {
         "main": {
           "$ref": "#/$defs/LogPath",
@@ -561,6 +575,7 @@
       "type": "string"
     },
     "Logs": {
+      "additionalProperties": false,
       "properties": {
         "level": {
           "$ref": "#/$defs/LogLevel",
@@ -593,6 +608,7 @@
       "type": "object"
     },
     "Network": {
+      "additionalProperties": false,
       "properties": {
         "dump_responses": {
           "default": false,
@@ -640,6 +656,7 @@
       "type": "string"
     },
     "Notifications": {
+      "additionalProperties": false,
       "properties": {
         "apprise": {
           "default": [],
@@ -661,6 +678,7 @@
       "$ref": "#/$defs/FalsyAsTuple_NonEmptyStr_"
     },
     "Sort": {
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "default": false,
@@ -685,6 +703,7 @@
       "type": "object"
     },
     "SortFormats": {
+      "additionalProperties": false,
       "properties": {
         "audio": {
           "$ref": "#/$defs/FalsyAsNone_FormatStr_",
@@ -711,6 +730,7 @@
       "type": "object"
     },
     "SubFolders": {
+      "additionalProperties": false,
       "properties": {
         "create": {
           "default": true,
@@ -734,6 +754,7 @@
       "type": "object"
     },
     "TikTokConfig": {
+      "additionalProperties": false,
       "properties": {
         "original": {
           "default": false,
@@ -760,6 +781,7 @@
       "type": "string"
     },
     "UIOptions": {
+      "additionalProperties": false,
       "properties": {
         "mode": {
           "$ref": "#/$defs/UIMode",
@@ -781,6 +803,7 @@
       "type": "object"
     },
     "_DurationLimit": {
+      "additionalProperties": false,
       "properties": {
         "min": {
           "$ref": "#/$defs/Timedelta",
@@ -795,6 +818,7 @@
       "type": "object"
     },
     "_DurationLimits": {
+      "additionalProperties": false,
       "properties": {
         "video": {
           "$ref": "#/$defs/_DurationLimit"
@@ -807,6 +831,7 @@
       "type": "object"
     },
     "_FileFilter": {
+      "additionalProperties": false,
       "properties": {
         "audio": {
           "default": true,
@@ -833,6 +858,7 @@
       "type": "object"
     },
     "_FileSizes": {
+      "additionalProperties": false,
       "properties": {
         "image": {
           "$ref": "#/$defs/_SizeLimit"
@@ -851,6 +877,7 @@
       "type": "object"
     },
     "_SizeLimit": {
+      "additionalProperties": false,
       "properties": {
         "min": {
           "$ref": "#/$defs/ByteSizeSerilized",
@@ -865,6 +892,7 @@
       "type": "object"
     },
     "_SubFoldersInclude": {
+      "additionalProperties": false,
       "properties": {
         "album_id": {
           "default": false,
