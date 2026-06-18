@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
 import cyberdrop_dl.cli.download
-from cyberdrop_dl.config import Config, Schema, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config import Config, Files, _resolve_paths, merge_additive_args, settings
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import merge_dicts
 
@@ -257,13 +258,32 @@ def test_config_from_file(tmp_cwd: Path) -> None:
     assert config_1 == config_2
 
 
-class TestSchema:
-    def test_validation_schema(self) -> None:
-        schema = Config.model_json_schema(mode="validation")
-        expected_schema = json.loads(Schema.VALIDATION.read_text())
-        assert schema == expected_schema, "Validation schema changed"
+@pytest.mark.skipif(os.name == "nt", reason="pydantic can't generate schema w pathlib.WindowsPath defaults")
+def test_schema_has_not_changed() -> None:
+    schema = Config.model_json_schema()
+    expected_schema = json.loads(Files.SCHEMA.read_text())
+    assert schema == expected_schema, "Validation schema changed"
 
-    def test_serialization_schema(self) -> None:
-        schema = Config.model_json_schema(mode="serialization")
-        expected_schema = json.loads(Schema.SERIALIZATION.read_text())
-        assert schema == expected_schema, "Serialization schema changed"
+
+def test_round_trip_parsed_the_same_config() -> None:
+    config = Config()
+    for mode in ("python", "json"):
+        new_config = Config.model_validate(config.model_dump(mode=mode))
+        assert vars(new_config) == vars(config)
+        assert new_config == config
+
+
+def test_config_default_has_not_changed() -> None:
+    config = Config().model_dump(mode="json")
+    expected = json.loads(Files.DEFAULT.read_text())
+    assert config == expected, "Config serialization changed"
+
+
+def test_config_can_be_serialized_as_json() -> None:
+    Config().model_dump_json()
+
+
+def test_config_defaults_are_valid() -> None:
+    class StrictConfig(Config, validate_default=True, validation_error_cause=True): ...
+
+    StrictConfig()

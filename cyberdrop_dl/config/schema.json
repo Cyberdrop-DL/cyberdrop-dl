@@ -12,7 +12,28 @@
       "type": "object"
     },
     "AppriseURL": {
-      "type": "string"
+      "properties": {
+        "url": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "tags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "AppriseURL",
+      "type": "object"
     },
     "Authentication": {
       "properties": {
@@ -36,7 +57,16 @@
       "type": "object"
     },
     "ByteSizeSerilized": {
-      "type": "string"
+      "anyOf": [
+        {
+          "pattern": "^\\s*(\\d*\\.?\\d+)\\s*(\\w+)?",
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
     },
     "CSVPath": {
       "format": "path",
@@ -180,6 +210,16 @@
         }
       ]
     },
+    "FalsyAsNone_FormatStr_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FormatStr"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "FalsyAsNone_HttpURL_": {
       "anyOf": [
         {
@@ -194,16 +234,6 @@
       "anyOf": [
         {
           "$ref": "#/$defs/LogLevel"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "FalsyAsNone_NonEmptyStr_": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/NonEmptyStr"
         },
         {
           "type": "null"
@@ -311,6 +341,10 @@
       },
       "title": "Filters",
       "type": "object"
+    },
+    "FormatStr": {
+      "minLength": 1,
+      "type": "string"
     },
     "GenericCrawlers": {
       "properties": {
@@ -608,23 +642,23 @@
     "SortFormats": {
       "properties": {
         "audio": {
-          "$ref": "#/$defs/FalsyAsNone_NonEmptyStr_",
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
           "default": "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
         },
         "image": {
-          "$ref": "#/$defs/FalsyAsNone_NonEmptyStr_",
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
           "default": "{sort_dir}/{base_dir}/Images/{filename}{ext}"
         },
         "non_media": {
-          "$ref": "#/$defs/FalsyAsNone_NonEmptyStr_",
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
           "default": "{sort_dir}/{base_dir}/Other/{filename}{ext}"
         },
         "video": {
-          "$ref": "#/$defs/FalsyAsNone_NonEmptyStr_",
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
           "default": "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
         },
         "incrementer": {
-          "$ref": "#/$defs/NonEmptyStr",
+          "$ref": "#/$defs/FormatStr",
           "default": " ({i})"
         }
       },
@@ -642,7 +676,7 @@
           "$ref": "#/$defs/_SubFoldersInclude"
         },
         "separate_posts_format": {
-          "$ref": "#/$defs/NonEmptyStr",
+          "$ref": "#/$defs/FormatStr",
           "default": "{default}"
         },
         "separate_posts": {
@@ -666,6 +700,7 @@
       "type": "object"
     },
     "Timedelta": {
+      "format": "duration",
       "ge": "PT0S",
       "type": "string"
     },
@@ -806,6 +841,7 @@
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "properties": {
     "auth": {
       "$ref": "#/$defs/Authentication"
@@ -937,6 +973,6 @@
       "$ref": "#/$defs/UIOptions"
     }
   },
-  "title": "Config",
+  "title": "cyberdrop-dl config",
   "type": "object"
 }

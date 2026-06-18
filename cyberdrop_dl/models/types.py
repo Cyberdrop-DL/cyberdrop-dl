@@ -32,6 +32,7 @@ type LogLevel = Annotated[
     Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], strings.pre_validator(to_upper=True, strip=True)
 ]
 type NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
+type FormatStr = Annotated[str, StringConstraints(min_length=1)]
 type CSVPath = Annotated[Path, AfterValidator(change_path_suffix(".csv"))]
 type LogPath = Annotated[Path, AfterValidator(change_path_suffix(".log"))]
 type ByteSizeSerilized = Annotated[ByteSize, PlainSerializer(bytesize_to_str, return_type=str, when_used="json")]

@@ -31,6 +31,7 @@ from cyberdrop_dl.models.types import (
     CSVPath,
     FalsyAsNone,
     FalsyAsTuple,
+    FormatStr,
     HttpURL,
     LogLevel,
     LogPath,
@@ -51,7 +52,7 @@ class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
     separate_posts_format: Annotated[
-        NonEmptyStr, strings.format_validator({"default", "title", "id", "number", "date"})
+        FormatStr, strings.format_validator({"default", "title", "id", "number", "date"})
     ] = "{default}"
     separate_posts: bool = False
 
@@ -151,23 +152,23 @@ class SortFormats(AliasModel):
     }
 
     audio: Annotated[
-        FalsyAsNone[NonEmptyStr],
+        FalsyAsNone[FormatStr],
         strings.format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}),
     ] = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
     "Format to generate sorted audio file"
 
     image: Annotated[
-        FalsyAsNone[NonEmptyStr], strings.format_validator(_COMMON_FIELDS | {"height", "resolution", "width"})
+        FalsyAsNone[FormatStr], strings.format_validator(_COMMON_FIELDS | {"height", "resolution", "width"})
     ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     "Format to generate sorted image file"
 
-    non_media: Annotated[FalsyAsNone[NonEmptyStr], strings.format_validator(_COMMON_FIELDS)] = (
+    non_media: Annotated[FalsyAsNone[FormatStr], strings.format_validator(_COMMON_FIELDS)] = (
         "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     )
     "Format to generate sorted files of unknown type"
 
     video: Annotated[
-        FalsyAsNone[NonEmptyStr],
+        FalsyAsNone[FormatStr],
         strings.format_validator(
             _COMMON_FIELDS
             | {
@@ -183,7 +184,7 @@ class SortFormats(AliasModel):
     ] = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
     "Format to generate sorted video file"
 
-    incrementer: Annotated[NonEmptyStr, strings.format_validator({"i"})] = " ({i})"
+    incrementer: Annotated[FormatStr, strings.format_validator({"i"})] = " ({i})"
     "Format for separator on name collisions"
 
 

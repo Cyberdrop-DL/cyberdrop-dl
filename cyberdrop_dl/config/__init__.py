@@ -8,7 +8,7 @@ from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
 from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, field_validator
 
-from cyberdrop_dl import yaml
+from cyberdrop_dl import env, yaml
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import merge_models
@@ -16,25 +16,26 @@ from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: T
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
+_HERE = Path(__file__).parent
+
 
 @final
-class Schema:
-    PATH: Path = Path(__file__).parent / "schema"
-    VALIDATION: Path = PATH / "validation.json"
-    SERIALIZATION: Path = PATH / "serialization.json"
+class Files:
+    DEFAULT: Path = _HERE / "default.json"
+    SCHEMA: Path = _HERE / "schema.json"
 
     @staticmethod
     def update() -> None:
         import json
 
-        for file in (Schema.VALIDATION, Schema.SERIALIZATION):
-            file.write_text(
-                json.dumps(
-                    Config.model_json_schema(mode=file.stem),  # pyright: ignore[reportArgumentType]
-                    indent=2,
-                    ensure_ascii=False,
-                )
+        Files.SCHEMA.write_text(
+            json.dumps(
+                Config.model_json_schema(),
+                indent=2,
+                ensure_ascii=False,
             )
+        )
+        Files.DEFAULT.write_text(Config().model_dump_json(indent=2))
 
 
 from .auth import Authentication, Notifications
@@ -61,7 +62,17 @@ logger = logging.getLogger(__name__)
 
 
 @Parameter(name="*")
-class Config(BaseModel):
+class Config(
+    BaseModel,
+    allow_inf_nan=False,
+    defer_build=True,
+    extra="forbid",
+    url_preserve_empty_path=True,
+    title="cyberdrop-dl config",
+    val_temporal_unit="milliseconds",
+    validate_default=env.DEBUG_MODE,
+    validation_error_cause=env.DEBUG_MODE,
+):
     __final__: Literal[True] = True
 
     auth: Authentication = Field(default_factory=Authentication)
@@ -116,7 +127,7 @@ class Config(BaseModel):
                 yaml.save(file, default.model_dump(mode="json"))
             return default
 
-        config = Config.model_validate(content, extra="forbid")
+        config = Config.model_validate(content)
         config._source = file
         return config
 
@@ -183,4 +194,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["Config", "Schema"]
+__all__ = ["Config", "Files"]
