@@ -51,6 +51,17 @@ class JDownloaderAuth(CensoredModel):
     device: str | None = None
 
 
+class Notifications(CensoredModel):
+    apprise: tuple[AppriseURL, ...] = ()
+    webhook: FalsyAsNone[AppriseURL] = None
+
+    def model_post_init(self, *_) -> None:
+        if self.apprise and not _HAS_APPRISE:
+            logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
+            self.apprise = ()
+
+
+@Parameter(show=False)
 class Authentication(DeferedModel):
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
@@ -60,13 +71,3 @@ class Authentication(DeferedModel):
 
     def censored_dump(self) -> dict[str, bool]:
         return {site: all(credentials.values()) for site, credentials in self.model_dump().items()}
-
-
-class Notifications(CensoredModel):
-    apprise: tuple[AppriseURL, ...] = ()
-    webhook: FalsyAsNone[AppriseURL] = None
-
-    def model_post_init(self, *_) -> None:
-        if self.apprise and not _HAS_APPRISE:
-            logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
-            self.apprise = ()
