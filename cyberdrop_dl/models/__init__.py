@@ -6,10 +6,10 @@ from cyclopts import Parameter
 from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, model_serializer, model_validator
 
 
-class AliasModel(BaseModel, populate_by_name=True, defer_build=True): ...
+class DeferedModel(BaseModel, populate_by_name=True, defer_build=True): ...
 
 
-class ConfigGroup(AliasModel):
+class ConfigGroup(DeferedModel):
     def __init_subclass__(cls, *, group: str | None = None, name: str | None = "*") -> None:
         _ = Parameter(group=group or cls.__name__, name=name)(cls)
         return super().__init_subclass__()
@@ -21,7 +21,7 @@ class _AppriseURLDict(TypedDict):
 
 
 @Parameter(name="*")
-class AppriseURL(AliasModel):
+class AppriseURL(DeferedModel):
     url: Secret[AnyUrl]
     tags: set[str] = set()
 

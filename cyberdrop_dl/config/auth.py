@@ -1,13 +1,13 @@
 import importlib.util
 import logging
 from collections.abc import Iterable
-from typing import Annotated, Any, override
+from typing import Any, override
 
 from cyclopts import Parameter
-from pydantic import BeforeValidator, Field, Secret
+from pydantic import Field, Secret
 
-from cyberdrop_dl.models import AliasModel, AppriseURL
-from cyberdrop_dl.models.validators import falsy_as_none
+from cyberdrop_dl.models import AppriseURL, DeferedModel
+from cyberdrop_dl.models.types import FalsyAsNone
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def _censor(value: object) -> object:
 
 
 @Parameter(show=False)
-class CensoredModel(AliasModel):
+class CensoredModel(DeferedModel):
     @override
     def __repr_name__(self) -> str:
         return ""
@@ -51,10 +51,10 @@ class JDownloaderAuth(CensoredModel):
     device: str | None = None
 
 
-class Authentication(AliasModel):
+class Authentication(DeferedModel):
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
-    meganz: EmailAuth = Field(default_factory=EmailAuth)
+    mega_nz: EmailAuth = Field(default_factory=EmailAuth)
     pixeldrain: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     realdebrid: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
 
@@ -64,7 +64,7 @@ class Authentication(AliasModel):
 
 class Notifications(CensoredModel):
     apprise: tuple[AppriseURL, ...] = ()
-    webhook: Annotated[AppriseURL | None, BeforeValidator(falsy_as_none)] = None
+    webhook: FalsyAsNone[AppriseURL] = None
 
     def model_post_init(self, *_) -> None:
         if self.apprise and not _HAS_APPRISE:

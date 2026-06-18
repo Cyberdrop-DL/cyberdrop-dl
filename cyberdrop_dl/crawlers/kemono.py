@@ -14,7 +14,7 @@ from pydantic import BeforeValidator, Field
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
-from cyberdrop_dl.models import AliasModel
+from cyberdrop_dl.models import DeferedModel
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
@@ -83,7 +83,7 @@ FileOrNone = Annotated[File | None, BeforeValidator(falsy_as_none)]
 Tags = Annotated[list[str], BeforeValidator(lambda x: falsy_as(x, []))]
 
 
-class Post(AliasModel):
+class Post(DeferedModel):
     id: str
     content: str = ""
     file: FileOrNone = None

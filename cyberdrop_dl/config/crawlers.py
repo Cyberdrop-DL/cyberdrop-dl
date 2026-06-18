@@ -1,19 +1,19 @@
 from pydantic import Field
 
-from cyberdrop_dl.models import AliasModel, ConfigGroup
+from cyberdrop_dl.models import ConfigGroup, DeferedModel
 from cyberdrop_dl.models.types import FalsyAsTuple, HttpURL, NonEmptyStr, RemoveDuplicates
 
 
-class KemonoConfig(AliasModel):
+class KemonoConfig(DeferedModel):
     ignore_ads: bool = False
     ignore_post_content: bool = True
 
 
-class TikTokConfig(AliasModel):
+class TikTokConfig(DeferedModel):
     original: bool = False
 
 
-class GenericCrawlers(AliasModel):
+class GenericCrawlers(DeferedModel):
     wordpress_media: FalsyAsTuple[HttpURL] = ()
     wordpress_html: FalsyAsTuple[HttpURL] = ()
     discourse: FalsyAsTuple[HttpURL] = ()

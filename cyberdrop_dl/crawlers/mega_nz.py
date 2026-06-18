@@ -58,11 +58,11 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     @property
     def user(self) -> str | None:
-        return self.config.auth.meganz.email or None
+        return self.config.auth.mega_nz.email
 
     @property
     def password(self) -> str | None:
-        return self.config.auth.meganz.password or None
+        return self.config.auth.mega_nz.password
 
     def __post_init__(self) -> None:
         self._decryption_keys: dict[AbsoluteHttpURL, tuple[Crypto, int]] = {}

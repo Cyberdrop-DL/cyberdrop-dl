@@ -25,7 +25,7 @@ from cyberdrop_dl.constants import (
     CIStrEnum,
     HashMode,
 )
-from cyberdrop_dl.models import AliasModel, ConfigGroup
+from cyberdrop_dl.models import ConfigGroup, DeferedModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
@@ -42,7 +42,7 @@ from cyberdrop_dl.models.types import (
 from cyberdrop_dl.models.validators import strings
 
 
-class _SubFoldersInclude(AliasModel):
+class _SubFoldersInclude(DeferedModel):
     album_id: bool = False
     thread_id: bool = False
     domain: bool = True
@@ -57,7 +57,7 @@ class SubFolders(ConfigGroup, name=None):
     separate_posts: bool = False
 
 
-class LogFiles(AliasModel):
+class LogFiles(DeferedModel):
     main: Annotated[LogPath, Parameter(alias="--log-file")] = Path("downloader.log")
     download_errors: CSVPath = Path("Download_Error_URLs.csv")
     scrape_errors: CSVPath = Path("Scrape_Error_URLs.csv")
@@ -139,7 +139,7 @@ class Jdownloader(ConfigGroup, name=None):
     whitelist: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
 
 
-class SortFormats(AliasModel):
+class SortFormats(DeferedModel):
     _COMMON_FIELDS: ClassVar[set[str]] = {
         "base_dir",
         "ext",
@@ -199,7 +199,7 @@ class Sort(ConfigGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class Dedupe(AliasModel):
+class Dedupe(DeferedModel):
     enabled: Annotated[bool, Parameter(name="--hashing.dedupe", alias="--auto-dedupe")] = True
     use_trash_bin: bool = True
 
