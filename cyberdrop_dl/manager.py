@@ -291,9 +291,8 @@ def _log_cli_args(cli_args: CLIargs) -> None:
 
 
 def _log_config(config: Config) -> None:
-    auth = {site: all(credentials.values()) for site, credentials in config.auth.model_dump().items()}
     logger.debug("Config file: %s", config.source)
-    logger.debug("Auth: \n%s", auth)
+    logger.debug("Auth: \n%s", config.auth.censored_dump())
     logger.debug(config.model_dump_json(exclude={"auth"}, indent=2))
 
 

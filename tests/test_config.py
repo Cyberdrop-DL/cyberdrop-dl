@@ -11,8 +11,9 @@ from pydantic import BaseModel
 
 import cyberdrop_dl.cli.download
 from cyberdrop_dl.config import Config, Files, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import merge_dicts
+from cyberdrop_dl.models import AppriseURL, merge_dicts
 
 
 def test_config_equality() -> None:
@@ -288,3 +289,27 @@ def test_config_defaults_are_valid() -> None:
     class StrictConfig(Config, validate_default=True, validation_error_cause=True): ...
 
     StrictConfig()
+
+
+class TestCensoredConfig:
+    def test_auth_is_censored_on_repr(self) -> None:
+        api_key = "my_api_key"
+        auth = Authentication.model_validate({"gofile": {"api_key": api_key}})
+        assert api_key not in repr(auth)
+        assert auth.gofile.api_key == api_key
+        assert auth.model_dump()["gofile"]["api_key"] == api_key
+        assert auth.censored_dump()["gofile"] is True
+        assert auth.model_dump(mode="json")["gofile"]["api_key"] == api_key
+
+    def test_apprise_urls_are_censored(self) -> None:
+        url = AppriseURL.model_validate({"url": "https://example.com/a"})
+        assert str(url) == "no_logs=https://example.com/a"
+        assert repr(url) == "AppriseURL(url=Secret('**********'), tags={'no_logs'})"
+        assert url.model_dump() == "no_logs=https://example.com/a"
+        assert url.model_dump(mode="json") == "no_logs=**********"
+
+    def test_notifications_are_censored(self) -> None:
+        url = AppriseURL.model_validate({"url": "https://example.com/a"})
+        noti = Notifications(apprise=(url,))
+        assert "example.com" not in repr(noti)
+        assert "example.com" not in str(noti)
