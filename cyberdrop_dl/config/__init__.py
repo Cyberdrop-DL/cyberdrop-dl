@@ -2,77 +2,50 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Self, final
+from typing import TYPE_CHECKING, Annotated, Literal, final
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, field_validator
+from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
-from cyberdrop_dl import env, yaml
+from cyberdrop_dl import yaml
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import merge_models
+from cyberdrop_dl.models import DeferedModel
 from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
-_HERE = Path(__file__).parent
-
-
-@final
-class Files:
-    DEFAULT: Path = _HERE / "default.json"
-    SCHEMA: Path = _HERE / "schema.json"
-
-    @staticmethod
-    def update() -> None:
-        import json
-
-        Files.SCHEMA.write_text(
-            json.dumps(
-                Config.model_json_schema(),
-                indent=2,
-                ensure_ascii=False,
-            )
-        )
-        Files.DEFAULT.write_text(Config().model_dump_json(indent=2))
-
-
 from .auth import Authentication, Notifications
 from .crawlers import Crawlers
 from .filters import Filters
-from .settings import (
-    Downloads,
-    Hashing,
-    Jdownloader,
-    Logs,
-    Network,
-    Sort,
-    SubFolders,
-    UIOptions,
-)
+from .settings import Downloads, Hashing, Jdownloader, Logs, Network, Sort, SubFolders, UIOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-_app: App | None = None
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
+MODULE_PATH = Path(__file__).parent
 logger = logging.getLogger(__name__)
+_app: App | None = None
+
+
+@final
+class Files:
+    DEFAULT: Path = MODULE_PATH / "default.json"
+    SCHEMA: Path = MODULE_PATH / "schema.json"
+
+    @staticmethod
+    def update() -> None:
+        import json
+
+        Files.SCHEMA.write_text(json.dumps(Config.model_json_schema(), indent=2, ensure_ascii=False))
+        Files.DEFAULT.write_text(Config().model_dump_json(indent=2))
 
 
 @Parameter(name="*")
-class Config(
-    BaseModel,
-    allow_inf_nan=False,
-    defer_build=True,
-    extra="forbid",
-    url_preserve_empty_path=True,
-    title="cyberdrop-dl config",
-    val_temporal_unit="milliseconds",
-    validate_default=env.DEBUG_MODE,
-    validation_error_cause=env.DEBUG_MODE,
-):
+class Config(DeferedModel, title="cyberdrop-dl config"):
     __final__: Literal[True] = True
 
     auth: Authentication = Field(default_factory=Authentication)
@@ -96,7 +69,9 @@ class Config(
     max_folder_name_length: PositiveInt = 60
     max_thread_depth: NonNegativeInt = 0
     max_thread_folder_depth: NonNegativeInt | None = None
-    min_free_space: ByteSizeSerilized = to_bytesize("5GB")
+    min_free_space: Annotated[ByteSizeSerilized, AfterValidator(lambda x: max(x, MIN_REQUIRED_FREE_SPACE))] = (
+        to_bytesize("5GB")
+    )
     mtime: bool = True
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
@@ -131,9 +106,6 @@ class Config(
         config._source = file
         return config
 
-    def __or__(self, other: Self) -> Self:
-        return merge_models(self, other)
-
     @staticmethod
     def parse_args(tokens: str | Iterable[str]) -> Config:
         global _app  # noqa: PLW0603
@@ -154,11 +126,6 @@ class Config(
             self.logs.delete_old_logs_and_folders()
             cleanup.rm_empty_dirs(self.logs.folder)
         self._resolved = True
-
-    @field_validator("min_free_space", mode="after")
-    @classmethod
-    def _override_min_storage(cls, value: ByteSize) -> ByteSize:
-        return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
 def _resolve_paths(model: BaseModel) -> None:

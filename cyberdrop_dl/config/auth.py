@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import importlib.util
 import logging
-from collections.abc import Iterable
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 from cyclopts import Parameter
 from pydantic import Field, Secret
 
 from cyberdrop_dl.models import AppriseURL, DeferedModel
-from cyberdrop_dl.models.types import FalsyAsNone
+from cyberdrop_dl.models.types import FalsyAsNone  # noqa: TC001
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
-
 _HAS_APPRISE = importlib.util.find_spec("apprise") is not None
 
 
@@ -70,4 +73,4 @@ class Authentication(DeferedModel):
     realdebrid: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
 
     def censored_dump(self) -> dict[str, bool]:
-        return {site: all(credentials.values()) for site, credentials in self.model_dump().items()}
+        return {site: all(vars(credentials).values()) for site, credentials in self}

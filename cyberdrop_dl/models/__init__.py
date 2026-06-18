@@ -5,8 +5,20 @@ from typing import Any, ClassVar, TypedDict
 from cyclopts import Parameter
 from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, model_serializer, model_validator
 
+from cyberdrop_dl import env
 
-class DeferedModel(BaseModel, populate_by_name=True, defer_build=True): ...
+
+class DeferedModel(
+    BaseModel,
+    populate_by_name=True,
+    defer_build=True,
+    allow_inf_nan=False,
+    extra="forbid",
+    url_preserve_empty_path=True,
+    val_temporal_unit="milliseconds",
+    validate_default=env.DEBUG_MODE,
+    validation_error_cause=env.DEBUG_MODE,
+): ...
 
 
 class ConfigGroup(DeferedModel):

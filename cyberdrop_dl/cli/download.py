@@ -12,6 +12,7 @@ from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
+from cyberdrop_dl.models import merge_models
 from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
 from cyberdrop_dl.utils import cleanup
 
@@ -127,7 +128,8 @@ def download(
     config = config or Config()
     appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
 
-    config = Config.from_file(cli.config_file or appdata.config_file) | config
+    config_file = cli.config_file or appdata.config_file
+    config = merge_models(Config.from_file(config_file), config)
 
     if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True

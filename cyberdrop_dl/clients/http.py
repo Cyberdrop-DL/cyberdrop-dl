@@ -165,7 +165,11 @@ class HTTPClient:
             headers={"User-Agent": self.config.network.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.config.network.aiohttp_timeout,
+            timeout=aiohttp.ClientTimeout(
+                total=None,
+                sock_connect=self.config.network.connection_timeout,
+                sock_read=self.config.network.read_timeout,
+            ),
             proxy=self.config.network.proxy,
             connector=tcp.create_connector(self._ssl_context),
             requote_redirect_url=False,

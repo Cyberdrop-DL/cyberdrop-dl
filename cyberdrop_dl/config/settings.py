@@ -5,17 +5,9 @@ from enum import auto
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, override
 
-import aiohttp
 from cyclopts import Parameter
-from pydantic import (
-    BaseModel,
-    ByteSize,
-    Field,
-    NonNegativeFloat,
-    PositiveFloat,
-    PositiveInt,
-    PrivateAttr,
-)
+from pydantic import BaseModel, Field, PrivateAttr
+from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import (
     DEFAULT_APP_STORAGE,
@@ -277,14 +269,6 @@ class Network(ConfigGroup):
         if self.read_timeout is None:
             return self.connection_timeout
         return self.connection_timeout, self.read_timeout
-
-    @property
-    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
-        return aiohttp.ClientTimeout(
-            total=None,
-            sock_connect=self.connection_timeout,
-            sock_read=self.read_timeout,
-        )
 
 
 class UIMode(CIStrEnum):
