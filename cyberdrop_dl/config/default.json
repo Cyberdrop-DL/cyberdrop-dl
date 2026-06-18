@@ -1,22 +1,22 @@
 {
   "auth": {
     "gofile": {
-      "api_key": ""
+      "api_key": null
     },
     "jdownloader": {
-      "username": "",
-      "password": "",
-      "device": ""
+      "username": null,
+      "password": null,
+      "device": null
     },
-    "meganz": {
-      "email": "",
-      "password": ""
+    "mega_nz": {
+      "email": null,
+      "password": null
     },
     "pixeldrain": {
-      "api_key": ""
+      "api_key": null
     },
     "realdebrid": {
-      "api_key": ""
+      "api_key": null
     }
   },
   "cookies": null,

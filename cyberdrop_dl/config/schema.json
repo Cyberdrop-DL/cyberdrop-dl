@@ -3,9 +3,16 @@
     "ApiKeyAuth": {
       "properties": {
         "api_key": {
-          "default": "",
-          "title": "Api Key",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key"
         }
       },
       "title": "ApiKeyAuth",
@@ -43,7 +50,7 @@
         "jdownloader": {
           "$ref": "#/$defs/JDownloaderAuth"
         },
-        "meganz": {
+        "mega_nz": {
           "$ref": "#/$defs/EmailAuth"
         },
         "pixeldrain": {
@@ -171,14 +178,28 @@
     "EmailAuth": {
       "properties": {
         "email": {
-          "default": "",
-          "title": "Email",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
         },
         "password": {
-          "default": "",
-          "title": "Password",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password"
         }
       },
       "title": "EmailAuth",
@@ -204,6 +225,16 @@
         {
           "exclusiveMinimum": 0,
           "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_AppriseURL_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AppriseURL"
         },
         {
           "type": "null"
@@ -414,19 +445,40 @@
     "JDownloaderAuth": {
       "properties": {
         "username": {
-          "default": "",
-          "title": "Username",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Username"
         },
         "password": {
-          "default": "",
-          "title": "Password",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password"
         },
         "device": {
-          "default": "",
-          "title": "Device",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device"
         }
       },
       "title": "JDownloaderAuth",
@@ -598,14 +650,7 @@
           "type": "array"
         },
         "webhook": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/AppriseURL"
-            },
-            {
-              "type": "null"
-            }
-          ],
+          "$ref": "#/$defs/FalsyAsNone_AppriseURL_",
           "default": null
         }
       },
