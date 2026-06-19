@@ -133,9 +133,16 @@ class _DurationLimits(ConfigModel):
 @Parameter(name="*")
 class _FileFilter(ConfigModel):
     audio: bool = True
+    "Download/skip audio files"
+
     images: bool = True
+    "Download/skip image files"
+
     videos: bool = True
+    "Download/skip videos"
+
     non_media: bool = True
+    "Download/skip non media files (.txt, zip, .rar, etc...)"
 
 
 class Filters(ConfigGroup):
@@ -143,8 +150,19 @@ class Filters(ConfigGroup):
     sizes: _FileSizes = Field(default_factory=_FileSizes)
     duration: _DurationLimits = Field(default_factory=_DurationLimits)
     before: FalsyAsNone[datetime.date] = None
+    "Only download files uploaded before this date"
+
     after: FalsyAsNone[datetime.date] = None
+    "Only download files uploaded after this date"
+
     filename_regex: FalsyAsNone[re.Pattern[str]] = None
+    "Only download files that match this regex"
+
     only_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    "Only scrape/download from these domains"
+
     skip_hosts: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    "Skip scrape/download from these domains"
+
     allow_files_with_no_extension: bool = False
+    "Download potentially dangerous files that have no extension"

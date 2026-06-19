@@ -250,6 +250,8 @@ class Hashing(ConfigGroup, name=None):
         "md5",
         "sha256",
     )
+    "List of hashes to compute for each download"
+
     dedupe: Dedupe = Field(default_factory=Dedupe)
     _extra_hashes: tuple[Literal["md5", "sha256"], ...] = ()
 

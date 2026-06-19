@@ -6,7 +6,9 @@ from cyberdrop_dl.models.types import FalsyAsTuple, HttpURL, NonEmptyStr, Remove
 
 class KemonoConfig(ConfigModel):
     ignore_ads: bool = False
+    "Ignore advertisement posts"
     ignore_post_content: bool = True
+    "Ignore URL in inside the content (text) of posts"
 
 
 class TikTokConfig(ConfigModel):
