@@ -9,6 +9,7 @@ from cyclopts.bind import normalize_tokens
 from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
 from cyberdrop_dl import yaml
+from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import DeferedModel
@@ -120,11 +121,12 @@ class Config(DeferedModel, title="cyberdrop-dl config"):
         if self._resolved:
             return
 
-        self.logs.resolve_filenames()
+        default_log_folder = AppData.default().logs_folder
+        self.logs.resolve_filenames(default_log_folder)
         _resolve_paths(self)
         if self.logs.expire_after:
             self.logs.delete_old_logs_and_folders()
-            cleanup.rm_empty_dirs(self.logs.folder)
+            cleanup.rm_empty_dirs(self.logs.effective_log_folder)
         self._resolved = True
 
 

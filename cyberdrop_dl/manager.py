@@ -144,7 +144,7 @@ class Manager:
         logger.info(f"  URLs source: {scrape_stats.source}")
         logger.info(f"  URLs: {scrape_stats.count:,}")
         logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
-        logger.info(f"  Logs folder: {self.config.logs.folder}")
+        logger.info(f"  Logs folder: {self.config.logs.effective_log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
