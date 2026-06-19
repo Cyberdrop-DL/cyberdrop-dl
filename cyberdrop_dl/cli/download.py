@@ -124,13 +124,23 @@ def download(
         ),
     ] = None,
     cli: CLIargs | None = None,
-    config_overrides: Config | None = None,
+    cli_overrides: Config | None = None,
 ) -> None:
     if input_file:
         input_file = input_file.resolve().absolute()
 
-    from cyberdrop_dl.config.appdata import AppData
     from cyberdrop_dl.manager import Manager
+
+    appdata, config = _prepare_appdata_and_config(urls, cli, cli_overrides)
+    _main(Manager(cli, appdata, config, input_file))
+
+
+def _prepare_appdata_and_config(
+    urls: tuple[HttpURL, ...] = (),
+    cli: CLIargs | None = None,
+    cli_overrides: Config | None = None,
+):
+    from cyberdrop_dl.config.appdata import AppData
 
     cli = cli or CLIargs()
     cli.links = urls
@@ -141,8 +151,8 @@ def download(
     )
 
     default_config = Config.from_file(cli.config_file or appdata.config_file)
-    config = merge_models(default_config, config_overrides) if config_overrides else default_config
-    _main(Manager(cli, appdata, config, input_file))
+    config = merge_models(default_config, cli_overrides) if cli_overrides else default_config
+    return appdata, config
 
 
 def _check_ffmpeg(config: Config) -> None:
