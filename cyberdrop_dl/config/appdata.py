@@ -23,7 +23,8 @@ def _windows_appdata() -> Path:
     global _win_appdata  # noqa: PLW0603
     if _win_appdata is not None:
         return _win_appdata
-    appdata = _expand("%APPDATA%") / _appname
+
+    appdata = Path(os.environ["APPDATA"]) / _appname
     appdata.mkdir(parents=True, exist_ok=True)
     anchor = appdata / "cdl.anchor"
     anchor.touch()
@@ -40,19 +41,19 @@ def _windows_appdata() -> Path:
         anchor.unlink()
 
 
-def _expand(path: os.PathLike[str] | str) -> Path:
-    return Path(os.path.expandvars(path)).expanduser()
+def _resolve(path: Path) -> Path:
+    return path.expanduser().resolve().absolute()
 
 
-def _resolve(path: os.PathLike[str] | str) -> Path:
-    return Path(path).expanduser().resolve().absolute()
+def _xdg_expand(name: str, default: str) -> Path:
+    return Path(os.environ.get(name, default)).expanduser()
 
 
 class XDG:
-    CACHE_HOME: Path = _expand(os.getenv("XDG_CACHE_HOME") or "~/.cache")
-    CONFIG_HOME: Path = _expand(os.getenv("XDG_CONFIG_HOME") or "~/.config")
-    DATA_HOME: Path = _expand(os.getenv("XDG_DATA_HOME") or "~/.local/share")
-    STATE_HOME: Path = _expand(os.getenv("XDG_STATE_HOME") or "~/.local/state")
+    CACHE_HOME: Path = _xdg_expand("XDG_CACHE_HOME", "~/.cache")
+    CONFIG_HOME: Path = _xdg_expand("XDG_CONFIG_HOME", "~/.config")
+    DATA_HOME: Path = _xdg_expand("XDG_DATA_HOME", "~/.local/share")
+    STATE_HOME: Path = _xdg_expand("XDG_STATE_HOME", "~/.local/state")
 
 
 @final
@@ -136,10 +137,6 @@ class AppData:
     @staticmethod
     def default() -> AppData:
         return AppData.from_dirs(AppDirs.default())
-
-    @staticmethod
-    def from_path(path: Path) -> AppData:
-        return AppData.from_dirs(AppDirs.from_path(path))
 
     @staticmethod
     def from_dirs(app_dirs: AppDirs) -> AppData:
