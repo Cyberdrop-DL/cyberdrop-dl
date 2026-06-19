@@ -4,7 +4,10 @@ import dataclasses
 import logging
 import os
 from pathlib import Path
-from typing import final
+from typing import TYPE_CHECKING, final
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 _win_appdata: Path | None = None
@@ -84,8 +87,11 @@ class AppDirs:
             )
         return _default_app_dirs
 
+    def __iter__(self) -> Iterator[tuple[str, Path]]:
+        return iter(dataclasses.asdict(self).items())
+
     def __json__(self) -> dict[str, str]:
-        return {k: str(v) for k, v in dataclasses.asdict(self).items()}
+        return {k: str(v) for k, v in self}
 
 
 @final
@@ -96,6 +102,7 @@ class AppData:
     db_file: Path
     logs_folder: Path
 
+    __iter__ = AppDirs.__iter__
     __json__ = AppDirs.__json__
 
     @staticmethod
@@ -138,4 +145,4 @@ class AppData:
 
 
 if __name__ == "__main__":
-    print(AppDirs.default().__json__())  # noqa: T201
+    print(dict(AppDirs.default()))  # noqa: T201
