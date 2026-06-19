@@ -65,7 +65,7 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 def manager(tmp_cwd: Path) -> Generator[Manager]:
     with Manager(
         appdata=AppData.from_dirs(
-            AppDirs.from_path(tmp_cwd / "AppData"),
+            AppDirs.from_path(tmp_cwd / "pytest_appdata"),
         )
     )() as manager:
         yield manager
