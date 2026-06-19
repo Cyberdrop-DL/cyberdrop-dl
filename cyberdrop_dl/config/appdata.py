@@ -29,16 +29,17 @@ def _windows_appdata() -> Path:
     anchor = appdata / "cdl.anchor"
     anchor.touch()
     try:
-        _win_appdata = anchor.resolve().parent
-        if appdata != _win_appdata:
-            logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", appdata, _win_appdata)
-        try:
-            _win_appdata.rmdir()
-        except OSError:
-            pass
-        return _win_appdata
+        _win_appdata = anchor.resolve(strict=True).parent
     finally:
-        anchor.unlink()
+        anchor.unlink(missing_ok=True)
+
+    if appdata != _win_appdata:
+        logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", appdata, _win_appdata)
+    try:
+        _win_appdata.rmdir()
+    except OSError:
+        pass
+    return _win_appdata
 
 
 def _resolve(path: Path) -> Path:
