@@ -28,38 +28,34 @@ async def _scrape(manager: Manager) -> None:
     from cyberdrop_dl.updates import check_latest_pypi
     from cyberdrop_dl.utils import apprise
 
-    with setup_file_logging(
-        manager.config.logs.files.main,
-        level=manager.config.logs.effective_level,
-    ):
-        manager.log_config_settings()
-        if not ffmpeg.is_installed():
-            _check_ffmpeg(manager.config)
+    manager.log_config_settings()
+    if not ffmpeg.is_installed():
+        _check_ffmpeg(manager.config)
+
+    log_spacer()
+    async with manager.database:
+        log_spacer()
+        logger.info("Starting CDL...")
+        async with ScrapeMapper(manager)() as scrape_mapper:
+            stats = await scrape_mapper.run()
 
         log_spacer()
-        async with manager.database:
-            log_spacer()
-            logger.info("Starting CDL...")
-            async with ScrapeMapper(manager)() as scrape_mapper:
-                stats = await scrape_mapper.run()
+        await _post_runtime(manager)
 
-            log_spacer()
-            await _post_runtime(manager)
+        stats_summary = manager.print_stats(stats)
 
-            stats_summary = manager.print_stats(stats)
+        log_spacer()
+        async with manager.http_client.create_aiohttp_session() as session:
+            await check_latest_pypi(session)
+        log_spacer()
+        logger.info("Closing program...")
+        logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
 
-            log_spacer()
-            async with manager.http_client.create_aiohttp_session() as session:
-                await check_latest_pypi(session)
-            log_spacer()
-            logger.info("Closing program...")
-            logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
+        if webhook_url := manager.config.notifications.webhook:
+            await webhook.send_notification(webhook_url, stats_summary)
 
-            if webhook_url := manager.config.notifications.webhook:
-                await webhook.send_notification(webhook_url, stats_summary)
-
-            if urls := manager.config.notifications.apprise:
-                await apprise.send_notifications(urls, stats_summary)
+        if urls := manager.config.notifications.apprise:
+            await apprise.send_notifications(urls, stats_summary)
 
 
 async def _post_runtime(manager: Manager) -> None:
@@ -84,6 +80,7 @@ def _main(manager: Manager) -> None:
     from cyberdrop_dl import aio, program_ui
 
     set_console_level(manager.config.logs.effective_console_level)
+    manager.appdata.mkdirs()
     try:
         with manager():
             if (
@@ -93,7 +90,12 @@ def _main(manager: Manager) -> None:
                 or manager.config.sort.enabled
             ):
                 program_ui.run(manager)
-            aio.run(_scrape(manager))
+
+            with setup_file_logging(
+                manager.config.logs.files.main,
+                level=manager.config.logs.effective_level,
+            ):
+                aio.run(_scrape(manager))
 
     except KeyboardInterrupt:
         logger.info("Exiting (Ctrl + C) ...")
