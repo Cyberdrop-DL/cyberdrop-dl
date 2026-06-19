@@ -27,7 +27,6 @@ from cyberdrop_dl.utils import enter_context, get_system_information
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from types import NotImplementedType
 
     from cyberdrop_dl.cli import CLIargs
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
@@ -78,7 +77,6 @@ class Manager:
         return self._config
 
     def __resolve_paths(self) -> None:
-        self.appdata.mkdirs()
         self.config.resolve_paths()
         self.logs = CSVLogsManager.from_config(self.config)
         self.logs.delete_old_logs()
@@ -194,18 +192,23 @@ def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class AppData:
-    path: Path
     cache_file: Path
     config_file: Path
     db_file: Path
 
-    cache: Path
-    cookies: Path
-    configs: Path
-
     @classmethod
     def default(cls) -> Self:
-        return cls.from_path(Path.cwd())
+        path = Path.cwd().expanduser().resolve().absolute() / "AppData"
+        if os.name == "nt":
+            path = cls._resolve_win_path(path)
+
+        cache = path / "Cache"
+        configs = path / "Configs"
+        return cls(
+            config_file=configs / "Default" / "settings.yaml",
+            cache_file=cache / "cache.yaml",
+            db_file=cache / "cyberdrop.db",
+        )
 
     @staticmethod
     def _resolve_win_path(path: Path) -> Path:
@@ -224,40 +227,6 @@ class AppData:
         except OSError:
             pass
         return real_path
-
-    @classmethod
-    def from_path(cls, path: Path) -> Self:
-        path = path.expanduser().resolve().absolute() / "AppData"
-        if os.name == "nt":
-            path = cls._resolve_win_path(path)
-
-        cache = path / "Cache"
-        configs = path / "Configs"
-        return cls(
-            path=path,
-            cache=cache,
-            configs=configs,
-            cookies=path / "Cookies",
-            config_file=configs / "Default" / "settings.yaml",
-            cache_file=cache / "cache.yaml",
-            db_file=cache / "cyberdrop.db",
-        )
-
-    def __truediv__(self, other: os.PathLike[str]) -> Path | NotImplementedType:
-        try:
-            return self.path / other
-        except TypeError:
-            return NotImplemented
-
-    def __fspath__(self) -> str:
-        return str(self)
-
-    def __str__(self) -> str:
-        return str(self.path)
-
-    def mkdirs(self) -> None:
-        for folder in (self.cache, self.configs, self.cookies):
-            folder.mkdir(parents=True, exist_ok=True)
 
 
 def _log_dependencies() -> None:

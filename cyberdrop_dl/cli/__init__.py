@@ -15,10 +15,6 @@ class CLIargs(BaseModel):
         default=(),
         description="link(s) to content to download (passing multiple links is supported)",
     )
-    appdata_folder: Path | None = Field(
-        default=None,
-        description="AppData folder path",
-    )
 
     config_file: Path | None = Field(
         default=None,

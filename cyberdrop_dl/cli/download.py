@@ -126,7 +126,7 @@ def download(
     cli = cli or CLIargs()
     cli.links = urls
     config = config or Config()
-    appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
+    appdata = AppData.default()
 
     config_file = cli.config_file or appdata.config_file
     config = merge_models(Config.from_file(config_file), config)
