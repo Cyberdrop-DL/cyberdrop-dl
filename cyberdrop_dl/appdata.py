@@ -7,9 +7,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import final
 
-_WIN_APPDATA: Path | None = None
-_DEFAULT_APP_DIRS: AppDirs | None = None
 logger = logging.getLogger(__name__)
+_win_appdata: Path | None = None
+_default_app_dirs: AppDirs | None = None
 _appname = "cyberdrop-dl"
 
 
@@ -18,15 +18,15 @@ def _windows_appdata() -> Path:
     # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1700#issuecomment-4317561031
     # https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization#default-msix-behavior
 
-    global _WIN_APPDATA  # noqa: PLW0603
-    if _WIN_APPDATA is not None:
-        return _WIN_APPDATA
+    global _win_appdata  # noqa: PLW0603
+    if _win_appdata is not None:
+        return _win_appdata
     appdata = _expand("%APPDATA%") / _appname
     appdata.mkdir(parents=True, exist_ok=True)
     anchor = appdata / "cdl.anchor"
     anchor.touch()
     try:
-        real_appdata = _WIN_APPDATA = anchor.resolve().parent  # pyright: ignore[reportConstantRedefinition]
+        real_appdata = _win_appdata = anchor.resolve().parent  # pyright: ignore[reportConstantRedefinition]
         if appdata != real_appdata:
             logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", appdata, real_appdata)
         try:
@@ -39,7 +39,7 @@ def _windows_appdata() -> Path:
 
 
 def _expand(path: os.PathLike[str] | str) -> Path:
-    return Path(os.path.expandvars(os.path.expanduser(path)))  # noqa: PTH111
+    return Path(os.path.expandvars(path)).expanduser()
 
 
 def _resolve(path: os.PathLike[str] | str) -> Path:
@@ -69,13 +69,13 @@ class AppDirs:
 
     @staticmethod
     def default() -> AppDirs:
-        global _DEFAULT_APP_DIRS  # noqa: PLW0603
-        if _DEFAULT_APP_DIRS is not None:
-            return _DEFAULT_APP_DIRS
+        global _default_app_dirs  # noqa: PLW0603
+        if _default_app_dirs is not None:
+            return _default_app_dirs
 
         if os.name == "nt":
             appdata = _windows_appdata()
-            _DEFAULT_APP_DIRS = AppDirs(  # pyright: ignore[reportConstantRedefinition]
+            _default_app_dirs = AppDirs(
                 cache=appdata,
                 config=appdata,
                 data=appdata,
@@ -83,13 +83,13 @@ class AppDirs:
             )
 
         else:
-            _DEFAULT_APP_DIRS = AppDirs(  # pyright: ignore[reportConstantRedefinition]
+            _default_app_dirs = AppDirs(
                 cache=_resolve(XDG.CACHE_HOME) / _appname,
                 config=_resolve(XDG.CONFIG_HOME) / _appname,
                 data=_resolve(XDG.DATA_HOME) / _appname,
                 logs=_resolve(XDG.STATE_HOME) / _appname / "logs",
             )
-        return _DEFAULT_APP_DIRS
+        return _default_app_dirs
 
     def __json__(self) -> dict[str, str]:
         return {k: str(v) for k, v in dataclasses.asdict(self).items()}
