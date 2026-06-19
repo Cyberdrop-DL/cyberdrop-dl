@@ -267,6 +267,8 @@ class Network(ConfigGroup):
         ]
     ] = "truststore+certifi"
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+    impersonate: FalsyAsNone[Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"]] = None
+    "Use this target as impersonation for all scrape requests"
 
     @property
     def curl_timeout(self) -> float | tuple[float, float]:

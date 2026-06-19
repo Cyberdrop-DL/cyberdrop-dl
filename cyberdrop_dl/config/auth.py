@@ -70,7 +70,7 @@ class Authentication(DeferedModel):
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
     mega_nz: EmailAuth = Field(default_factory=EmailAuth)
     pixeldrain: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
-    realdebrid: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
+    real_debrid: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
 
     def censored_dump(self) -> dict[str, bool]:
         return {site: all(vars(credentials).values()) for site, credentials in self}

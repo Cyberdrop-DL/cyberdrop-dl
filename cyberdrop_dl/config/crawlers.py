@@ -22,6 +22,7 @@ class GenericCrawlers(DeferedModel):
 
 class Crawlers(ConfigGroup, name=None):
     disabled: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    """Name of crawlers to disable for the current run"""
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     kemono: KemonoConfig = Field(default_factory=KemonoConfig)
     coomer: KemonoConfig = Field(default_factory=KemonoConfig)

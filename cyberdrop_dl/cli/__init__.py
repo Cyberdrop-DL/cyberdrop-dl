@@ -1,43 +1,27 @@
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from cyclopts import Parameter
 from cyclopts.core import App
-from pydantic import BaseModel, Field
 
 from cyberdrop_dl import __version__
+from cyberdrop_dl.models import DeferedModel
 from cyberdrop_dl.models.types import HttpURL
 
 
 @Parameter(name="*")
-class CLIargs(BaseModel):
-    links: Annotated[tuple[HttpURL, ...], Parameter(show=False)] = Field(
-        default=(),
-        description="link(s) to content to download (passing multiple links is supported)",
-    )
+class CLIargs(DeferedModel):
+    links: Annotated[tuple[HttpURL, ...], Parameter(show=False)] = ()
+    "link(s) to content to download (passing multiple links is supported"
+
     config_file: Path | None = None
     "path to the config.yaml file to load"
+
     cache_file: Path | None = None
     database_file: Path | None = None
 
-    download: bool = Field(
-        default=False,
-        description="skips UI, start download immediately",
-    )
-    impersonate: (
-        Literal[
-            "chrome",
-            "edge",
-            "safari",
-            "safari_ios",
-            "chrome_android",
-            "firefox",
-        ]
-        | None
-    ) = Field(
-        default=None,
-        description="Use this target as impersonation for all scrape requests",
-    )
+    download: bool = False
+    "skips UI, start download immediately"
 
 
 app = App(

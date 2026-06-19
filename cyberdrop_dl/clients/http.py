@@ -67,6 +67,7 @@ class RequestDoneCallback(Protocol):
 @dataclasses.dataclass(slots=True)
 class HTTPClient:
     config: Config
+    request_done_callback: RequestDoneCallback | None = None
     impersonate: (
         Literal[
             "chrome",
@@ -77,8 +78,7 @@ class HTTPClient:
             "firefox",
         ]
         | None
-    ) = None
-    request_done_callback: RequestDoneCallback | None = None
+    ) = dataclasses.field(init=False)
 
     rate_limits: dict[str, aio.RateLimiter] = dataclasses.field(init=False, default_factory=dict)
     global_rate_limiter: aio.RateLimiter = dataclasses.field(init=False)
@@ -92,13 +92,14 @@ class HTTPClient:
     _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
+        self.impersonate = self.config.network.impersonate
         self._ssl_context = tcp.create_ssl_context(self.config.network.ssl_context)
         self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.network.rate_limit)
         self.global_download_limiter = asyncio.Semaphore(self.config.downloads.concurrency)
 
     @staticmethod
     def from_manager(manager: Manager) -> HTTPClient:
-        client = HTTPClient(config=manager.config, impersonate=manager.cli_args.impersonate)
+        client = HTTPClient(manager.config)
         if manager.config.network.dump_responses:
             client.request_done_callback = manager.logs.write_response
 
