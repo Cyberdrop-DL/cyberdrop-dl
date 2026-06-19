@@ -12,16 +12,19 @@ from cyberdrop_dl.models.types import HttpURL
 @Parameter(name="*")
 class CLIargs(DeferedModel):
     links: Annotated[tuple[HttpURL, ...], Parameter(show=False)] = ()
-    "link(s) to content to download (passing multiple links is supported"
+    "Link(s) to content to download (passing multiple links is supported"
 
     config_file: Path | None = None
-    "path to the config.yaml file to load"
+    "YAML file to use as config"
 
     cache_file: Path | None = None
+    "JSON file to use as cache"
+
     database_file: Path | None = None
+    "SQLite file to use as database"
 
     download: bool = False
-    "skips UI, start download immediately"
+    "Skips UI, start download immediately"
 
 
 app = App(

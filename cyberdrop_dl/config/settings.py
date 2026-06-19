@@ -41,11 +41,15 @@ class _SubFoldersInclude(DeferedModel):
 
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
+    "Enable/disable the create of nested subfolders"
+
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
     separate_posts_format: Annotated[
         FormatStr, strings.format_validator({"default", "title", "id", "number", "date"})
     ] = "{default}"
+
     separate_posts: bool = False
+    "Create new subfolders for every post on a site"
 
 
 class LogFiles(DeferedModel):
@@ -130,9 +134,16 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
 class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
+    "Send unsupported URLs to jdownloader"
+
     autostart: bool = False
+    "Immediately start downloads as soon as they are sent"
+
     download_dir: FalsyAsNone[Path] = None
+    "Custom output path for jdownloader"
+
     whitelist: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    "Only send unsupported URLs from these domains to jdownloader"
 
 
 class SortFormats(DeferedModel):
@@ -244,6 +255,8 @@ class Downloads(ConfigGroup):
     speed_limit: ByteSizeSerilized = ByteSize(0)
     jitter: NonNegativeFloat = 0
     skip_and_mark_completed: bool = False
+    "Skip all downloads and mark them as downloaded on the database"
+
     concurrent_segments: PositiveInt = 10
     """Allow up to `<N>` HLS segments to be downloaded concurrently"""
 
@@ -254,10 +267,17 @@ class Downloads(ConfigGroup):
 
 class Network(ConfigGroup):
     dump_responses: bool = False
-    """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
+    "Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"
+
     flaresolverr: FalsyAsNone[HttpURL] = None
+    "HTTP URL of an existing flaresolverr instance"
+
     proxy: FalsyAsNone[HttpURL] = None
+    "HTTP/HTTPS proxy"
+
     rate_limit: PositiveFloat = 25
+    "Max number of requests per second (only used while scraping)"
+
     connection_timeout: PositiveFloat = 15
     read_timeout: FalsyAsNone[PositiveFloat] = 300
     ssl_context: FalsyAsNone[

@@ -55,25 +55,51 @@ class Config(DeferedModel, title="cyberdrop-dl config", extra="forbid"):
 
     crawlers: Crawlers = Field(default_factory=Crawlers)
     deep_scrape: bool = False
+    "Make additional requests while scraping (slower)"
+
     delete_empty_folders: bool = True
+    "Delete empty files and folders after a run"
+
     delete_partial_files: bool = False
+    "Delete partial files after a run"
+
     download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_PATH
+    "Base output path for all downloads"
+
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
+    "Save details about each file (both skipped and downloaded) to a .jsonl file"
+
     filters: Filters = Field(default_factory=Filters)
     hashing: Hashing = Field(default_factory=Hashing)
     ignore_history: bool = False
+    "Download files even if the alrady are maked as downloaded on the database"
+
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
     max_children: FalsyAsTuple[NonNegativeInt] = ()
+    "Limit the number of items to scrape per category"
+
     max_file_name_length: PositiveInt = 95
+    "Max number of characters a filename should have. Filenames longer that this will be truncated"
+
     max_folder_name_length: PositiveInt = 60
+    "Max number of characters a folder should have. Filenames longer that this will be truncated"
+
     max_thread_depth: NonNegativeInt = 0
+    "Restricts how many levels of nested threads are scraped on a forum"
+
     max_thread_folder_depth: NonNegativeInt | None = None
+    "Max number of nested folders CDL will create when maximum_thread_depth is greater that 0"
+
     min_free_space: Annotated[ByteSizeSerilized, AfterValidator(lambda x: max(x, MIN_REQUIRED_FREE_SPACE))] = (
         to_bytesize("5GB")
     )
+    "Mininum free space require to start new downloads"
+
     mtime: bool = True
+    "Use original upload date as modification date for downloded file"
+
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
     show_stats: Annotated[bool, Parameter(name="stats")] = True
