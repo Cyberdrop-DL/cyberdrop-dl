@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
+import sys
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
@@ -80,7 +82,11 @@ class AppDirs:
         if _default_app_dirs is not None:
             return _default_app_dirs
 
-        if os.name == "nt":
+        if "pytest" in sys.modules:
+            temp_dir = Path(tempfile.TemporaryDirectory(prefix="cdl_", delete=False).name)
+            _default_app_dirs = AppDirs.from_path(temp_dir)
+
+        elif os.name == "nt":
             appdata = _windows_appdata()
             _default_app_dirs = AppDirs(
                 cache=appdata,

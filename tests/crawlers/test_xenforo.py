@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from bs4 import BeautifulSoup
 
+from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import _forum
 from cyberdrop_dl.crawlers import xenforo as crawlers
 from cyberdrop_dl.crawlers.xenforo import xenforo
@@ -15,7 +18,8 @@ def _item(url: str) -> ScrapeItem:
     return ScrapeItem.from_url(url)
 
 
-manager = Manager()
+manager = Manager(appdata=AppData.from_dirs(AppDirs.from_path(Path(__file__).parent / "xenforo_appdata")))
+
 scrape_item = _item("https://xenforo.com/community")
 crawler_instances = {crawler: crawler(manager) for crawler in crawlers.XF_CRAWLERS}
 TEST_CRAWLER = crawler_instances[crawlers.CelebForumCrawler]

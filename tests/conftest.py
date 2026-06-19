@@ -62,12 +62,13 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 
 
 @pytest.fixture
-def manager(tmp_cwd: Path) -> Generator[Manager]:
-    with Manager(
-        appdata=AppData.from_dirs(
-            AppDirs.from_path(tmp_cwd / "pytest_appdata"),
-        )
-    )() as manager:
+def appdata(tmp_cwd: Path) -> AppData:
+    return AppData.from_dirs(AppDirs.from_path(tmp_cwd / "pytest_appdata"))
+
+
+@pytest.fixture
+def manager(appdata: AppData) -> Generator[Manager]:
+    with Manager(appdata=appdata)() as manager:
         yield manager
 
 

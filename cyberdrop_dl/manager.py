@@ -199,7 +199,7 @@ def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
     finally:
         cache["version"] = __version__
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(json.dumps(cache, indent=2, ensure_ascci=False, sort_keys=True))
+        cache_file.write_text(json.dumps(cache, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 def _log_dependencies() -> None:

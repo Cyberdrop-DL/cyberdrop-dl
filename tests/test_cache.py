@@ -2,12 +2,13 @@ from pathlib import Path
 from typing import Any
 
 from cyberdrop_dl import __version__
+from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.manager import Manager, _cache_context
 from cyberdrop_dl.utils import json
 
 
-def test_cache_file_is_not_saved_outside_ctx() -> None:
-    manager = Manager()
+def test_cache_file_is_not_saved_outside_ctx(appdata: AppData) -> None:
+    manager = Manager(appdata=appdata)
     cache_file = manager.appdata.cache_file
     manager.cache["test"] = 1
     assert manager.cache == {"test": 1}

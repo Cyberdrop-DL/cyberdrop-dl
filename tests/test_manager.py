@@ -15,6 +15,8 @@ from cyberdrop_dl.sorter import Sorter
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
+    from cyberdrop_dl.config.appdata import AppData
+
 
 def update_model[M: BaseModel](model: M, **kwargs: Any) -> M:
     return model.model_validate(model.model_dump() | kwargs)
@@ -42,9 +44,9 @@ def test_args_logging_should_censor_webhook(
     assert output == webhook_url
 
 
-def test_manager_context() -> None:
+def test_manager_context(appdata: AppData) -> None:
     config = Config.parse_args(["--refresh-rate", "40"])
-    manager = Manager(config=config)
+    manager = Manager(config=config, appdata=appdata)
 
     for attr in ("database", "deduper", "sorter"):
         with pytest.raises(AttributeError):
