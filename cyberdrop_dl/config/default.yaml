@@ -1,0 +1,149 @@
+auth:
+  gofile:
+    api_key: null
+  jdownloader:
+    device: null
+    password: null
+    username: null
+  mega_nz:
+    email: null
+    password: null
+  pixeldrain:
+    api_key: null
+  real_debrid:
+    api_key: null
+cookies: null
+crawlers:
+  coomer:
+    ignore_ads: false
+    ignore_post_content: true
+  disabled: []
+  generic:
+    chevereto: []
+    discourse: []
+    wordpress_html: []
+    wordpress_media: []
+  kemono:
+    ignore_ads: false
+    ignore_post_content: true
+  nekohouse:
+    ignore_ads: false
+    ignore_post_content: true
+  tiktok:
+    original: false
+deep_scrape: false
+delete_empty_folders: true
+delete_partial_files: false
+download_folder: Downloads
+downloads:
+  attempts: 2
+  concurrency: 15
+  concurrency_per_domain: 5
+  concurrent_segments: 10
+  delay: 0.0
+  jitter: 0.0
+  skip_and_mark_completed: false
+  slow_speed: 0B
+  speed_limit: 0B
+dump_json: false
+filters:
+  after: null
+  allow_files_with_no_extension: false
+  before: null
+  duration:
+    audio:
+      max: 0:00:00
+      min: 0:00:00
+    video:
+      max: 0:00:00
+      min: 0:00:00
+  filename_regex: null
+  files:
+    audio: true
+    images: true
+    non_media: true
+    videos: true
+  only_hosts: []
+  sizes:
+    audio:
+      max: 0B
+      min: 0B
+    image:
+      max: 0B
+      min: 0B
+    non_media:
+      max: 0B
+      min: 0B
+    video:
+      max: 0B
+      min: 0B
+  skip_hosts: []
+hashing:
+  algorithms:
+  - xxh128
+  - md5
+  - sha256
+  dedupe:
+    enabled: true
+    use_trash_bin: true
+  mode: in_place
+ignore_history: false
+jdownloader:
+  autostart: false
+  download_dir: null
+  enabled: false
+  whitelist: []
+logs:
+  console_level: null
+  expire_after: null
+  files:
+    download_errors: Download_Error_URLs.csv
+    main: downloader.log
+    scrape_errors: Scrape_Error_URLs.csv
+    unsupported: Unsupported_URLs.csv
+  folder: null
+  level: DEBUG
+  rotate: false
+max_children: []
+max_file_name_length: 95
+max_folder_name_length: 60
+max_thread_depth: 0
+max_thread_folder_depth: null
+min_free_space: 5.0GB
+mtime: true
+network:
+  connection_timeout: 15.0
+  dump_responses: false
+  flaresolverr: null
+  impersonate: null
+  proxy: null
+  rate_limit: 25.0
+  read_timeout: 300.0
+  ssl_context: truststore+certifi
+  user_agent: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0
+notifications:
+  apprise: []
+  webhook: null
+show_stats: true
+sort:
+  enabled: false
+  formats:
+    audio: '{sort_dir}/{base_dir}/Audio/{filename}{ext}'
+    image: '{sort_dir}/{base_dir}/Images/{filename}{ext}'
+    incrementer: ' ({i})'
+    non_media: '{sort_dir}/{base_dir}/Other/{filename}{ext}'
+    video: '{sort_dir}/{base_dir}/Videos/{filename}{ext}'
+  input_folder: null
+  output_folder: Downloads/Cyberdrop-DL Sorted Downloads
+subfolders:
+  create: true
+  include:
+    album_id: false
+    domain: true
+    thread_id: false
+  separate_posts: false
+  separate_posts_format: '{default}'
+ui:
+  mode: fullscreen
+  portrait: false
+  refresh_rate: 10.0

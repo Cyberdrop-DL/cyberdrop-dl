@@ -34,7 +34,7 @@ _app: App | None = None
 
 @final
 class Files:
-    DEFAULT: Path = MODULE_PATH / "default.json"
+    DEFAULT: Path = MODULE_PATH / "default.yaml"
     SCHEMA: Path = MODULE_PATH / "schema.json"
 
     @staticmethod
@@ -42,7 +42,7 @@ class Files:
         import json
 
         Files.SCHEMA.write_text(json.dumps(Config.model_json_schema(), indent=2, ensure_ascii=False))
-        Files.DEFAULT.write_text(Config().model_dump_json(indent=2))
+        Config().save_to(Files.DEFAULT)
 
 
 @Parameter(name="*")

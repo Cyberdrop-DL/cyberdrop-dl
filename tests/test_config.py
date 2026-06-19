@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import pytest
+import yaml
 from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
@@ -278,7 +279,7 @@ def test_round_trip_parsed_the_same_config() -> None:
 @pytest.mark.skipif(os.name == "nt", reason="OS separators make paths different on Windows")
 def test_config_default_has_not_changed() -> None:
     config = Config().model_dump(mode="json")
-    expected = json.loads(Files.DEFAULT.read_text())
+    expected = yaml.safe_load(Files.DEFAULT.read_text())
     assert config == expected, "Config serialization changed"
 
 
