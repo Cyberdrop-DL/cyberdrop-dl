@@ -145,4 +145,4 @@ class AppData:
 
 
 if __name__ == "__main__":
-    print(dict(AppDirs.default()))  # noqa: T201
+    print(AppDirs.default().__json__())  # noqa: T201

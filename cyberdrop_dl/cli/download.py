@@ -122,7 +122,7 @@ def download(
     if input_file:
         input_file = input_file.resolve().absolute()
 
-    from cyberdrop_dl.appdata import AppData
+    from cyberdrop_dl.config.appdata import AppData
     from cyberdrop_dl.manager import Manager
 
     cli = cli or CLIargs()
