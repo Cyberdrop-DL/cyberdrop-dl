@@ -15,7 +15,7 @@
     "pixeldrain": {
       "api_key": null
     },
-    "realdebrid": {
+    "real_debrid": {
       "api_key": null
     }
   },
@@ -149,7 +149,8 @@
     "connection_timeout": 15.0,
     "read_timeout": 300.0,
     "ssl_context": "truststore+certifi",
-    "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0",
+    "impersonate": null
   },
   "notifications": {
     "apprise": [],

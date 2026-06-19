@@ -59,7 +59,7 @@
         "pixeldrain": {
           "$ref": "#/$defs/ApiKeyAuth"
         },
-        "realdebrid": {
+        "real_debrid": {
           "$ref": "#/$defs/ApiKeyAuth"
         }
       },
@@ -262,6 +262,24 @@
       "anyOf": [
         {
           "$ref": "#/$defs/HttpURL"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Literal__chrome____edge____safari____safari_ios____chrome_android____firefox___": {
+      "anyOf": [
+        {
+          "enum": [
+            "chrome",
+            "edge",
+            "safari",
+            "safari_ios",
+            "chrome_android",
+            "firefox"
+          ],
+          "type": "string"
         },
         {
           "type": "null"
@@ -644,6 +662,10 @@
         "user_agent": {
           "$ref": "#/$defs/NonEmptyStr",
           "default": "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+        },
+        "impersonate": {
+          "$ref": "#/$defs/FalsyAsNone_Literal__chrome____edge____safari____safari_ios____chrome_android____firefox___",
+          "default": null
         }
       },
       "title": "Network",
