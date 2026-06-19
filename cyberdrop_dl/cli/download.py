@@ -133,8 +133,8 @@ def download(
         db_file=cli.database_file,
     )
 
-    system_config = Config.from_file(cli.config_file or appdata.config_file)
-    config = merge_models(system_config, config_overrides) if config_overrides else system_config
+    default_config = Config.from_file(cli.config_file or appdata.config_file)
+    config = merge_models(default_config, config_overrides) if config_overrides else default_config
 
     if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True

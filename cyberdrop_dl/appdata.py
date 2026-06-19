@@ -127,6 +127,15 @@ class AppData:
             logs_folder=app_dirs.logs,
         )
 
+    def mkdirs(self) -> None:
+        for folder in {
+            self.config_file.parent,
+            self.cache_file.parent,
+            self.db_file.parent,
+            self.logs_folder,
+        }:
+            folder.mkdir(parents=True, exist_ok=True)
+
 
 if __name__ == "__main__":
     print(AppDirs.default().__json__())  # noqa: T201

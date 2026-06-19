@@ -77,6 +77,7 @@ class Manager:
         return self._config
 
     def __resolve_paths(self) -> None:
+        self.appdata.mkdirs()
         self.config.resolve_paths()
         self.logs = CSVLogsManager.from_config(self.config)
         self.logs.delete_old_logs()
