@@ -10,9 +10,11 @@ type _RowLike = Iterable[str]
 
 
 def markdown_table(headers: Sequence[str], *rows: Row) -> str:
-    for val in headers, rows:
-        if len(val) == 0:
-            raise ValueError
+    if len(headers) == 0:
+        raise ValueError("At least 1 header is required")
+
+    if len(rows) == 0:
+        raise ValueError("At least 1 row is required")
 
     _sanity_check(headers)
     return "\n".join(_md_table_lines([headers, *rows]))
@@ -25,18 +27,14 @@ def _md_table_lines(rows: Sequence[_RowLike]) -> Generator[str]:
         for value, width in zip(row, column_widths, strict=True):
             yield value.strip().ljust(width)
 
-    lines = (_compose_md_line(justify(_escape(row))) for row in rows)
+    lines = (_compose_md_line(justify(row)) for row in rows)
     yield next(lines)
     yield _compose_md_line("-" * w for w in column_widths)
     yield from lines
 
 
-def _escape(row: _RowLike) -> _RowLike:
-    return (value.replace("|", r"\|") for value in row)
-
-
 def _compose_md_line(row: _RowLike) -> str:
-    return "| " + " | ".join(row) + " |"
+    return "| " + " | ".join(value.replace("|", r"\|") for value in row) + " |"
 
 
 def _sanity_check[T: _RowLike](row: T) -> T:
