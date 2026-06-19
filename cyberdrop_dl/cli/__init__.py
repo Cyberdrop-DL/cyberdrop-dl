@@ -5,12 +5,12 @@ from cyclopts import Parameter
 from cyclopts.core import App
 
 from cyberdrop_dl import __version__
-from cyberdrop_dl.models import DeferedModel
+from cyberdrop_dl.models import ConfigModel
 from cyberdrop_dl.models.types import HttpURL
 
 
 @Parameter(name="*")
-class CLIargs(DeferedModel):
+class CLIargs(ConfigModel):
     links: Annotated[tuple[HttpURL, ...], Parameter(show=False)] = ()
     "Link(s) to content to download (passing multiple links is supported"
 

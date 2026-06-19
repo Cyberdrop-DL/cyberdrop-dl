@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, override
 from cyclopts import Parameter
 from pydantic import Field, Secret
 
-from cyberdrop_dl.models import AppriseURL, DeferedModel
+from cyberdrop_dl.models import AppriseURL, ConfigModel
 from cyberdrop_dl.models.types import FalsyAsNone  # noqa: TC001
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ def _censor(value: object) -> object:
 
 
 @Parameter(show=False)
-class CensoredModel(DeferedModel):
+class CensoredModel(ConfigModel):
     @override
     def __repr_name__(self) -> str:
         return ""
@@ -65,7 +65,7 @@ class Notifications(CensoredModel):
 
 
 @Parameter(show=False)
-class Authentication(DeferedModel):
+class Authentication(ConfigModel):
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
     mega_nz: EmailAuth = Field(default_factory=EmailAuth)

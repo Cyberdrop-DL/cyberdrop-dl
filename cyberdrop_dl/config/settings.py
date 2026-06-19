@@ -16,7 +16,7 @@ from cyberdrop_dl.constants import (
     CIStrEnum,
     HashMode,
 )
-from cyberdrop_dl.models import ConfigGroup, DeferedModel
+from cyberdrop_dl.models import ConfigGroup, ConfigModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
@@ -33,7 +33,7 @@ from cyberdrop_dl.models.types import (
 from cyberdrop_dl.models.validators import strings
 
 
-class _SubFoldersInclude(DeferedModel):
+class _SubFoldersInclude(ConfigModel):
     album_id: bool = False
     thread_id: bool = False
     domain: bool = True
@@ -52,7 +52,7 @@ class SubFolders(ConfigGroup, name=None):
     "Create new subfolders for every post on a site"
 
 
-class LogFiles(DeferedModel):
+class LogFiles(ConfigModel):
     main: Annotated[LogPath, Parameter(alias="--log-file")] = Path("downloader.log")
     "Path of main log file"
 
@@ -160,7 +160,7 @@ class Jdownloader(ConfigGroup, name=None):
     "Only send unsupported URLs from these domains to jdownloader"
 
 
-class SortFormats(DeferedModel):
+class SortFormats(ConfigModel):
     _COMMON_FIELDS: ClassVar[set[str]] = {
         "base_dir",
         "ext",
@@ -226,7 +226,7 @@ class Sort(ConfigGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class Dedupe(DeferedModel):
+class Dedupe(ConfigModel):
     enabled: Annotated[bool, Parameter(name="--hashing.dedupe", alias="--auto-dedupe")] = True
     "Auto delete duplicate downloads by hash"
 

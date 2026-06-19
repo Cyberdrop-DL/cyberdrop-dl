@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Self
 from cyclopts import Parameter
 from pydantic import ByteSize, Field
 
-from cyberdrop_dl.models import ConfigGroup, DeferedModel
+from cyberdrop_dl.models import ConfigGroup, ConfigModel
 from cyberdrop_dl.models.types import (  # noqa: TC001
     ByteSizeSerilized,
     FalsyAsNone,
@@ -56,13 +56,13 @@ class _FileSizeRanges:
     non_media: _FloatRange
 
 
-class _SizeLimit(DeferedModel):
+class _SizeLimit(ConfigModel):
     min: ByteSizeSerilized = ByteSize(0)
     max: ByteSizeSerilized = ByteSize(0)
 
 
 @Parameter(name="*", name_transform=_limit_suffix("size"))
-class _FileSizes(DeferedModel):
+class _FileSizes(ConfigModel):
     image: _SizeLimit = Field(default_factory=_SizeLimit)
     video: _SizeLimit = Field(default_factory=_SizeLimit)
     audio: _SizeLimit = Field(default_factory=_SizeLimit)
@@ -99,13 +99,13 @@ class _DurationRanges:
     audio: _FloatRange | None
 
 
-class _DurationLimit(DeferedModel):
+class _DurationLimit(ConfigModel):
     min: Timedelta = datetime.timedelta(seconds=0)
     max: Timedelta = datetime.timedelta(seconds=0)
 
 
 @Parameter(name="*", name_transform=_limit_suffix("duration"))
-class _DurationLimits(DeferedModel):
+class _DurationLimits(ConfigModel):
     video: _DurationLimit = Field(default_factory=_DurationLimit)
     audio: _DurationLimit = Field(default_factory=_DurationLimit)
     _ranges: _DurationRanges | None = None
@@ -131,7 +131,7 @@ class _DurationLimits(DeferedModel):
 
 
 @Parameter(name="*")
-class _FileFilter(DeferedModel):
+class _FileFilter(ConfigModel):
     audio: bool = True
     images: bool = True
     videos: bool = True

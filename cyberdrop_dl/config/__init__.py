@@ -12,7 +12,7 @@ from cyberdrop_dl import yaml
 from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_PATH
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import DeferedModel
+from cyberdrop_dl.models import ConfigModel
 from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
@@ -46,7 +46,7 @@ class Files:
 
 
 @Parameter(name="*")
-class Config(DeferedModel, title="cyberdrop-dl config", extra="forbid"):
+class Config(ConfigModel, title="cyberdrop-dl config"):
     __final__: Literal[True] = True
 
     auth: Authentication = Field(default_factory=Authentication)
