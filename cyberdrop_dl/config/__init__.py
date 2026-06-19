@@ -46,7 +46,7 @@ class Files:
 
 
 @Parameter(name="*")
-class Config(DeferedModel, title="cyberdrop-dl config"):
+class Config(DeferedModel, title="cyberdrop-dl config", extra="forbid"):
     __final__: Literal[True] = True
 
     auth: Authentication = Field(default_factory=Authentication)
