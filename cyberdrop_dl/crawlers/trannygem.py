@@ -20,11 +20,3 @@ class TrannyGemCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
                 return await self.video(scrape_item)
             case _:
                 raise ValueError
-
-    def _extract_video_params(self, soup: BeautifulSoup) -> tuple[KVSVideo, str, str]:
-        video = extract_kvs_video(self, soup)
-        filename, ext = self.get_filename_and_ext(video.url.name)
-
-        # The path of the video URL is missing a trailing slash. Without it we get a 404 error.
-        video.url = video.url.with_path(video.url.path + "/", keep_query=True, keep_fragment=True)
-        return video, filename, ext
