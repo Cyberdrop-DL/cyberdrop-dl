@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import json
 import logging
 import os
 import sys
@@ -11,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Self, final
 
 from pydantic.types import ByteSize
 
-from cyberdrop_dl import ALL_DEPENDENCIES, __version__, aio, env, ffmpeg, stats, yaml
+from cyberdrop_dl import ALL_DEPENDENCIES, __version__, aio, env, ffmpeg, stats
 from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
@@ -185,16 +186,20 @@ class Manager:
 @contextlib.contextmanager
 def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
     try:
-        cache.update(yaml.load(cache_file))
+        content = cache_file.read_text()
     except FileNotFoundError:
         cache_file.parent.mkdir(exist_ok=True, parents=True)
         cache_file.touch()
-
+    else:
+        data = json.loads(content)
+        assert type(data) is dict
+        cache.update(data)
     try:
         yield
     finally:
         cache["version"] = __version__
-        yaml.save(cache_file, cache)
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(json.dumps(cache, indent=2, ensure_ascci=False, sort_keys=True))
 
 
 def _log_dependencies() -> None:

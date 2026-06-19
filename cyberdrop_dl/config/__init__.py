@@ -4,14 +4,14 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal, final
 
+import yaml
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
 from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
-from cyberdrop_dl import yaml
 from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_PATH
-from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
 from cyberdrop_dl.models import ConfigModel
 from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
@@ -120,19 +120,26 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
         return self._source
 
     def save_to(self, file: Path) -> None:
-        yaml.save(file, self.model_dump(mode="json"))
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with file.open("w", encoding="utf8") as file_io:
+            yaml.safe_dump(self.model_dump(mode="json"), file_io, default_flow_style=False)
 
     @staticmethod
     def from_file(file: Path, *, _save_if_not_found: bool = False) -> Config:
         try:
-            content = yaml.load(file)
+            content = file.read_text()
         except FileNotFoundError:
             default = Config()
             if _save_if_not_found:
                 default.save_to(file)
             return default
 
-        config = Config.model_validate(content)
+        try:
+            data = yaml.safe_load(content) or {}
+        except yaml.YAMLError as e:
+            raise InvalidYamlError(file, e) from e
+
+        config = Config.model_validate(data)
         config._source = file
         return config
 
