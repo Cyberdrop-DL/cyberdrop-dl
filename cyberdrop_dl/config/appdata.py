@@ -64,6 +64,15 @@ class AppDirs:
     logs: Path
 
     @staticmethod
+    def from_path(path: Path) -> AppDirs:
+        return AppDirs(
+            cache=path,
+            config=path,
+            data=path,
+            logs=path,
+        )
+
+    @staticmethod
     def default() -> AppDirs:
         global _default_app_dirs  # noqa: PLW0603
         if _default_app_dirs is not None:
@@ -126,7 +135,14 @@ class AppData:
 
     @staticmethod
     def default() -> AppData:
-        app_dirs = AppDirs.default()
+        return AppData.from_dirs(AppDirs.default())
+
+    @staticmethod
+    def from_path(path: Path):
+        return AppData.from_dirs(AppDirs.from_path(path))
+
+    @staticmethod
+    def from_dirs(app_dirs: AppDirs) -> AppData:
         return AppData(
             config_file=app_dirs.config / "config.yaml",
             cache_file=app_dirs.cache / "cache.json",
