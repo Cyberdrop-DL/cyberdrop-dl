@@ -59,8 +59,7 @@ class BlockedDomains:
         exact_match = *exact_match, "x.com"
 
 
-DEFAULT_APP_STORAGE = Path("./AppData")
-DEFAULT_DOWNLOAD_STORAGE = Path("./Downloads")
+DEFAULT_DOWNLOAD_PATH = Path("./Downloads")
 
 
 class HashType(StrEnum):

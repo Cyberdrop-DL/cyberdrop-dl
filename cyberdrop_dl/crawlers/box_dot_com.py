@@ -10,7 +10,7 @@ from pydantic import Field
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.models import AliasModel
+from cyberdrop_dl.models import DeferedModel
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, error_handling_wrapper
 
@@ -23,7 +23,7 @@ class ItemType(StrEnum):
     file = "file"
 
 
-class Item(AliasModel):
+class Item(DeferedModel):
     name: str
     type: str
     id: str = Field(validation_alias="itemID", coerce_numbers_to_str=True)
@@ -32,7 +32,7 @@ class Item(AliasModel):
     parent_id: str = Field(validation_alias="parentFolderID", coerce_numbers_to_str=True)
 
 
-class SharedFolder(AliasModel):
+class SharedFolder(DeferedModel):
     name: str = Field(validation_alias="currentFolderName")
     id: str = Field(validation_alias="currentFolderID", coerce_numbers_to_str=True)
     items: list[Item]

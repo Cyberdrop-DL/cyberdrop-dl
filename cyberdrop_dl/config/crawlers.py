@@ -1,27 +1,29 @@
-from typing import Annotated
+from pydantic import Field
 
-from pydantic import AfterValidator, Field
-
-from cyberdrop_dl.models import AliasModel, ConfigGroup
-from cyberdrop_dl.models.types import ListNonEmptyStr
+from cyberdrop_dl.models import ConfigGroup, DeferedModel
+from cyberdrop_dl.models.types import FalsyAsTuple, HttpURL, NonEmptyStr, RemoveDuplicates
 
 
-def _unique_list[T](value: list[T]) -> list[T]:
-    return sorted(set(value))  # pyright: ignore[reportArgumentType, reportUnknownVariableType]
-
-
-class KemonoConfig(AliasModel):
+class KemonoConfig(DeferedModel):
     ignore_ads: bool = False
     ignore_post_content: bool = True
 
 
-class TiktokConfig(AliasModel):
+class TikTokConfig(DeferedModel):
     original: bool = False
 
 
-class Crawlers(ConfigGroup):
-    disabled: Annotated[ListNonEmptyStr, AfterValidator(_unique_list)] = Field(default_factory=list)
+class GenericCrawlers(DeferedModel):
+    wordpress_media: FalsyAsTuple[HttpURL] = ()
+    wordpress_html: FalsyAsTuple[HttpURL] = ()
+    discourse: FalsyAsTuple[HttpURL] = ()
+    chevereto: FalsyAsTuple[HttpURL] = ()
+
+
+class Crawlers(ConfigGroup, name=None):
+    disabled: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
+    generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     kemono: KemonoConfig = Field(default_factory=KemonoConfig)
     coomer: KemonoConfig = Field(default_factory=KemonoConfig)
     nekohouse: KemonoConfig = Field(default_factory=KemonoConfig)
-    tiktok: TiktokConfig = Field(default_factory=TiktokConfig)
+    tiktok: TikTokConfig = Field(default_factory=TikTokConfig)

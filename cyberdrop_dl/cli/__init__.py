@@ -15,15 +15,10 @@ class CLIargs(BaseModel):
         default=(),
         description="link(s) to content to download (passing multiple links is supported)",
     )
-    appdata_folder: Path | None = Field(
-        default=None,
-        description="AppData folder path",
-    )
-
-    config_file: Path | None = Field(
-        default=None,
-        description="path to the CDL settings.yaml file to load",
-    )
+    config_file: Path | None = None
+    "path to the config.yaml file to load"
+    cache_file: Path | None = None
+    database_file: Path | None = None
 
     download: bool = Field(
         default=False,
@@ -58,12 +53,14 @@ def register_commands() -> None:
     from cyberdrop_dl.cli.clean_up import app as cleanup
     from cyberdrop_dl.cli.database import app as database
     from cyberdrop_dl.cli.download import download
+    from cyberdrop_dl.cli.report import report
     from cyberdrop_dl.cli.show import show
 
+    app.default(download)
     app.command(database)
     app.command(show)
-    app.default(download)
     app.command(cleanup)
+    app.command(report)
 
 
 register_commands()

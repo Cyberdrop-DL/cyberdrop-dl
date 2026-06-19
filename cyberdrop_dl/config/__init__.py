@@ -2,50 +2,54 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Literal, final
 
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import BaseModel, ByteSize, Field, NonNegativeInt, PositiveInt, field_validator
+from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
 from cyberdrop_dl import yaml
-from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
+from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_PATH
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import merge_models
-from cyberdrop_dl.models.types import ByteSizeSerilized, ListNonNegativeInt  # noqa: TC001
+from cyberdrop_dl.models import DeferedModel
+from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
 
-from .auth import AuthSettings, Notifications
+from .auth import Authentication, Notifications
 from .crawlers import Crawlers
-from .settings import (
-    Downloads,
-    Filters,
-    GenericCrawlers,
-    Hashing,
-    Jdownloader,
-    Logs,
-    MediaDurationLimits,
-    Network,
-    Sort,
-    SubFolders,
-    UIOptions,
-)
+from .filters import Filters
+from .settings import Downloads, Hashing, Jdownloader, Logs, Network, Sort, SubFolders, UIOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-_app: App | None = None
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MB")
+MODULE_PATH = Path(__file__).parent
 logger = logging.getLogger(__name__)
+_app: App | None = None
+
+
+@final
+class Files:
+    DEFAULT: Path = MODULE_PATH / "default.json"
+    SCHEMA: Path = MODULE_PATH / "schema.json"
+
+    @staticmethod
+    def update() -> None:
+        import json
+
+        Files.SCHEMA.write_text(json.dumps(Config.model_json_schema(), indent=2, ensure_ascii=False))
+        Files.DEFAULT.write_text(Config().model_dump_json(indent=2))
 
 
 @Parameter(name="*")
-class Config(BaseModel):
+class Config(DeferedModel, title="cyberdrop-dl config"):
     __final__: Literal[True] = True
 
-    auth: AuthSettings = Field(default_factory=AuthSettings)
+    auth: Authentication = Field(default_factory=Authentication)
     cookies: Path | None = None
     "File/folder to import cookies from (.txt Netscape files)"
 
@@ -53,27 +57,27 @@ class Config(BaseModel):
     deep_scrape: bool = False
     delete_empty_folders: bool = True
     delete_partial_files: bool = False
-    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
+    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_PATH
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     filters: Filters = Field(default_factory=Filters)
-    generic_crawlers: GenericCrawlers = Field(default_factory=GenericCrawlers)
     hashing: Hashing = Field(default_factory=Hashing)
     ignore_history: bool = False
     jdownloader: Jdownloader = Field(default_factory=Jdownloader)
     logs: Logs = Field(default_factory=Logs)
-    max_children: ListNonNegativeInt = []
+    max_children: FalsyAsTuple[NonNegativeInt] = ()
     max_file_name_length: PositiveInt = 95
     max_folder_name_length: PositiveInt = 60
     max_thread_depth: NonNegativeInt = 0
     max_thread_folder_depth: NonNegativeInt | None = None
-    media_duration_limits: MediaDurationLimits = Field(default_factory=MediaDurationLimits)
-    min_free_space: ByteSizeSerilized = to_bytesize("5GB")
+    min_free_space: Annotated[ByteSizeSerilized, AfterValidator(lambda x: max(x, MIN_REQUIRED_FREE_SPACE))] = (
+        to_bytesize("5GB")
+    )
     mtime: bool = True
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
     show_stats: Annotated[bool, Parameter(name="stats")] = True
-    "show stats report at the end of a run"
+    "Show stats report at the end of a run"
 
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)
@@ -81,6 +85,9 @@ class Config(BaseModel):
 
     _resolved: bool = False
     _source: Path | None = None
+
+    def __repr_args__(self) -> list[tuple[str, Path | None]]:
+        return [("source", self._source)]
 
     @property
     def source(self) -> Path | None:
@@ -93,15 +100,12 @@ class Config(BaseModel):
         except FileNotFoundError:
             default = Config()
             if _save_if_not_found:
-                yaml.save(file, default.model_dump())
+                yaml.save(file, default.model_dump(mode="json"))
             return default
 
-        config = Config.model_validate(content, extra="forbid")
+        config = Config.model_validate(content)
         config._source = file
         return config
-
-    def __or__(self, other: Self) -> Self:
-        return merge_models(self, other)
 
     @staticmethod
     def parse_args(tokens: str | Iterable[str]) -> Config:
@@ -117,32 +121,28 @@ class Config(BaseModel):
         if self._resolved:
             return
 
-        self.logs.resolve_filenames()
+        default_log_folder = AppData.default().logs_folder
+        self.logs.resolve_filenames(default_log_folder)
         _resolve_paths(self)
         if self.logs.expire_after:
             self.logs.delete_old_logs_and_folders()
-            cleanup.rm_empty_dirs(self.logs.folder)
+            cleanup.rm_empty_dirs(self.logs.effective_log_folder)
         self._resolved = True
-
-    @field_validator("min_free_space", mode="after")
-    @classmethod
-    def _override_min_storage(cls, value: ByteSize) -> ByteSize:
-        return max(value, MIN_REQUIRED_FREE_SPACE)
 
 
 def _resolve_paths(model: BaseModel) -> None:
-    for name, value in vars(model).items():
-        if isinstance(value, Path):
-            if "{config}" in str(value):
+    for field_name, field_value in model:
+        if isinstance(field_value, Path):
+            if "{config}" in str(field_value):
                 error = ValueError(
-                    f"Using '{{config}}' as reference on a path is no longer supported: {value} ({name})"
+                    f"Using '{{config}}' as reference on a path is no longer supported: {field_value} ({field_name})"
                 )
                 raise CDLConfigRuntimeErrorsGroup("Invalid config", (error,))
 
-            object.__setattr__(model, name, value.expanduser().resolve().absolute())
+            object.__setattr__(model, field_name, field_value.expanduser().resolve().absolute())
 
-        elif isinstance(value, BaseModel):
-            _resolve_paths(value)
+        elif isinstance(field_value, BaseModel):
+            _resolve_paths(field_value)
 
 
 def merge_additive_args[T: list[str] | tuple[str, ...]](cli_values: T, config_values: Iterable[str]) -> T:
@@ -163,4 +163,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["Config"]
+__all__ = ["Config", "Files"]

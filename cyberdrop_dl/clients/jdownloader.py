@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(frozen=True, slots=True)
 class JDConfig:
     enabled: bool
-    username: str
-    password: str
-    device: str
+    username: str | None
+    password: str | None
+    device: str | None
     download_dir: Path
     autostart: bool
     whitelist: tuple[str, ...]

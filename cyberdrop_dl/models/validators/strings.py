@@ -1,5 +1,8 @@
 import string
+from collections.abc import Generator
 from typing import Any
+
+from pydantic import AfterValidator, BeforeValidator
 
 _FORMATER = string.Formatter()
 
@@ -10,7 +13,7 @@ class UnknownPlaceholder:
     Use this to prevent errors if the user supplied custom formatting for a value that the crawler was not able to scrape"""
 
     def __init__(self, value: str) -> None:
-        self.value = value
+        self.value: str = value
 
     def __str__(self) -> str:
         return self.value
@@ -43,7 +46,7 @@ def safe_format(format_string: str, **fields: Any) -> tuple[str, set[str]]:
     """
 
     new_kwargs = dict(fields)
-    unknown_field_names = get_unknown_field_names(format_string, set(new_kwargs.keys()))
+    unknown_field_names = _get_unknown_field_names(format_string, set(new_kwargs.keys()))
 
     for field_name, value in new_kwargs.items():
         if value is None:
@@ -58,8 +61,7 @@ def safe_format(format_string: str, **fields: Any) -> tuple[str, set[str]]:
     return _FORMATER.vformat(format_string, (), new_kwargs), unknown_field_names
 
 
-# To use with pydantic
-def validate_format_string(format_string: str, valid_keys: set[str]) -> None:
+def validate_format(format_string: str, valid_keys: set[str]) -> None:
     msg = "invalid format string. "
     for _, field_name, _, _ in _FORMATER.parse(format_string):
         if field_name is not None:
@@ -70,7 +72,7 @@ def validate_format_string(format_string: str, valid_keys: set[str]) -> None:
                 msg += "Operations within a format string are not supported"
                 raise ValueError(msg)
 
-    if unknown_field_names := get_unknown_field_names(format_string, valid_keys):
+    if unknown_field_names := _get_unknown_field_names(format_string, valid_keys):
         msg += " ".join(
             (
                 f"{tuple(sorted(unknown_field_names))}",
@@ -81,16 +83,36 @@ def validate_format_string(format_string: str, valid_keys: set[str]) -> None:
         raise ValueError(msg)
 
 
-def get_field_names(format_string: str) -> set[str]:
-    field_names = set()
-
-    # literal_text, field_name, format_spec, conversion
-    for _, field_name, _, _ in _FORMATER.parse(format_string):
+def _get_field_names(format_string: str) -> Generator[str]:
+    for _literal_text, field_name, _fmt_spec, _conversion in _FORMATER.parse(format_string):
         if field_name and not field_name.isdigit():  # Ignore positional args and empty fields
-            field_names.add(field_name)
-    return field_names
+            yield field_name
 
 
-def get_unknown_field_names(format_string: str, valid_keys: set[str]) -> set[str]:
-    field_names = get_field_names(format_string)
+def _get_unknown_field_names(format_string: str, valid_keys: set[str]) -> set[str]:
+    field_names = set(_get_field_names(format_string))
     return field_names - valid_keys
+
+
+def pre_validator(*, to_upper: bool = False, to_lower: bool = False, strip: bool = False) -> BeforeValidator:
+    def coerce[T](value: T | str) -> T | str:
+        if not isinstance(value, str):
+            return value
+        if to_upper:
+            value = value.upper()
+        if to_lower:
+            value = value.lower()
+        if strip:
+            value = value.strip()
+        return value
+
+    return BeforeValidator(coerce)
+
+
+def format_validator(valid_keys: set[str]) -> AfterValidator:
+    def check[T](value: T) -> T:
+        if isinstance(value, str):
+            validate_format(value, valid_keys)
+        return value
+
+    return AfterValidator(check)

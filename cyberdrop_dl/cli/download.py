@@ -12,6 +12,7 @@ from cyberdrop_dl.cli import CLIargs
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
+from cyberdrop_dl.models import merge_models
 from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
 from cyberdrop_dl.utils import cleanup
 
@@ -27,38 +28,34 @@ async def _scrape(manager: Manager) -> None:
     from cyberdrop_dl.updates import check_latest_pypi
     from cyberdrop_dl.utils import apprise
 
-    with setup_file_logging(
-        manager.config.logs.files.main,
-        level=manager.config.logs.effective_level,
-    ):
-        manager.log_config_settings()
-        if not ffmpeg.is_installed():
-            _check_ffmpeg(manager.config)
+    manager.log_config_settings()
+    if not ffmpeg.is_installed():
+        _check_ffmpeg(manager.config)
+
+    log_spacer()
+    async with manager.database:
+        log_spacer()
+        logger.info("Starting CDL...")
+        async with ScrapeMapper(manager)() as scrape_mapper:
+            stats = await scrape_mapper.run()
 
         log_spacer()
-        async with manager.database:
-            log_spacer()
-            logger.info("Starting CDL...")
-            async with ScrapeMapper(manager)() as scrape_mapper:
-                stats = await scrape_mapper.run()
+        await _post_runtime(manager)
 
-            log_spacer()
-            await _post_runtime(manager)
+        stats_summary = manager.print_stats(stats)
 
-            stats_summary = manager.print_stats(stats)
+        log_spacer()
+        async with manager.http_client.create_aiohttp_session() as session:
+            await check_latest_pypi(session)
+        log_spacer()
+        logger.info("Closing program...")
+        logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
 
-            log_spacer()
-            async with manager.http_client.create_aiohttp_session() as session:
-                await check_latest_pypi(session)
-            log_spacer()
-            logger.info("Closing program...")
-            logger.info("Finished downloading. Enjoy :)", extra={"color": "green"})
+        if webhook_url := manager.config.notifications.webhook:
+            await webhook.send_notification(webhook_url, stats_summary)
 
-            if webhook_url := manager.config.notifications.webhook:
-                await webhook.send_notification(webhook_url, stats_summary)
-
-            if urls := manager.config.notifications.apprise:
-                await apprise.send_notifications(urls, stats_summary)
+        if urls := manager.config.notifications.apprise:
+            await apprise.send_notifications(urls, stats_summary)
 
 
 async def _post_runtime(manager: Manager) -> None:
@@ -83,11 +80,22 @@ def _main(manager: Manager) -> None:
     from cyberdrop_dl import aio, program_ui
 
     set_console_level(manager.config.logs.effective_console_level)
+    manager.appdata.mkdirs()
     try:
         with manager():
-            if not manager.cli_args.download:
+            if (
+                not manager.cli_args.download
+                or not manager.config.ui.mode.is_fullscreen
+                or manager.cli_args.config_file
+                or manager.config.sort.enabled
+            ):
                 program_ui.run(manager)
-            aio.run(_scrape(manager))
+
+            with setup_file_logging(
+                manager.config.logs.files.main,
+                level=manager.config.logs.effective_level,
+            ):
+                aio.run(_scrape(manager))
 
     except KeyboardInterrupt:
         logger.info("Exiting (Ctrl + C) ...")
@@ -116,24 +124,35 @@ def download(
         ),
     ] = None,
     cli: CLIargs | None = None,
-    config: Config | None = None,
+    cli_overrides: Config | None = None,
 ) -> None:
     if input_file:
         input_file = input_file.resolve().absolute()
-    from cyberdrop_dl.manager import AppData, Manager
+
+    from cyberdrop_dl.manager import Manager
+
+    appdata, config = _prepare_appdata_and_config(urls, cli, cli_overrides)
+    _main(Manager(cli, appdata, config, input_file))
+
+
+def _prepare_appdata_and_config(
+    urls: tuple[HttpURL, ...] = (),
+    cli: CLIargs | None = None,
+    cli_overrides: Config | None = None,
+):
+    from cyberdrop_dl.config.appdata import AppData
 
     cli = cli or CLIargs()
     cli.links = urls
-    config = config or Config()
-    appdata = AppData.from_path(cli.appdata_folder) if cli.appdata_folder else AppData.default()
+    appdata = AppData.create(
+        config_file=cli.config_file,
+        cache_file=cli.cache_file,
+        db_file=cli.database_file,
+    )
 
-    config = Config.from_file(cli.config_file or appdata.config_file) | config
-
-    if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
-        cli.download = True
-
-    manager = Manager(cli, appdata, config, input_file)
-    _main(manager)
+    default_config = Config.from_file(cli.config_file or appdata.config_file)
+    config = merge_models(default_config, cli_overrides) if cli_overrides else default_config
+    return appdata, config
 
 
 def _check_ffmpeg(config: Config) -> None:
@@ -143,7 +162,7 @@ def _check_ffmpeg(config: Config) -> None:
         exc.add_note("Disable sorting or install ffmpeg")
         errors.append(exc)
 
-    if config.media_duration_limits.needs_ffmpeg:
+    if config.filters.duration.needs_ffmpeg:
         exc = RuntimeError("Filtering files by duration requires 'ffmpeg' to be installed")
         exc.add_note("Disable media duration limits or install ffmpeg")
         errors.append(exc)

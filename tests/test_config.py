@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import time
 from pathlib import Path
 
@@ -8,9 +10,11 @@ from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
 import cyberdrop_dl.cli.download
-from cyberdrop_dl.config import Config, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config import Config, Files, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import merge_dicts
+from cyberdrop_dl.models import AppriseURL, merge_dicts
 
 
 def test_config_equality() -> None:
@@ -153,11 +157,11 @@ def test_default_config_does_not_need_ffmpeg() -> None:
 
 
 def test_media_durations_need_ffmpeg() -> None:
-    config = Config.parse_args(["--max-video-duration", "20 seconds"])
-    duration = config.media_duration_limits.max_video_duration
+    config = Config.parse_args(["--video.duration.max", "20 seconds"])
+    duration = config.filters.duration.video.max
     assert duration
     assert duration.total_seconds() == 20
-    assert config.media_duration_limits.needs_ffmpeg
+    assert config.filters.duration.needs_ffmpeg
     with pytest.raises(CDLConfigRuntimeErrorsGroup) as exc:
         cyberdrop_dl.cli.download._check_ffmpeg(config)
 
@@ -254,3 +258,82 @@ def test_config_from_file(tmp_cwd: Path) -> None:
     assert config_2.source == config_file
     config_2._source = None
     assert config_1 == config_2
+
+
+@pytest.mark.skipif(os.name == "nt", reason="pydantic can't generate schema w pathlib.WindowsPath defaults")
+def test_schema_has_not_changed() -> None:
+    schema = Config.model_json_schema()
+    expected_schema = json.loads(Files.SCHEMA.read_text())
+    assert schema == expected_schema, "Validation schema changed"
+
+
+def test_round_trip_parsed_the_same_config() -> None:
+    config = Config()
+    for mode in ("python", "json"):
+        new_config = Config.model_validate(config.model_dump(mode=mode))
+        assert vars(new_config) == vars(config)
+        assert new_config == config
+
+
+@pytest.mark.skipif(os.name == "nt", reason="OS separators make paths different on Windows")
+def test_config_default_has_not_changed() -> None:
+    config = Config().model_dump(mode="json")
+    expected = json.loads(Files.DEFAULT.read_text())
+    assert config == expected, "Config serialization changed"
+
+
+def test_config_can_be_serialized_as_json() -> None:
+    Config().model_dump_json()
+
+
+def test_config_defaults_are_valid() -> None:
+    class StrictConfig(Config, validate_default=True, validation_error_cause=True): ...
+
+    StrictConfig()
+
+
+class TestCensoredConfig:
+    def test_auth_is_censored_on_repr(self) -> None:
+        api_key = "my_api_key"
+        auth = Authentication.model_validate({"gofile": {"api_key": api_key}})
+        assert api_key not in repr(auth)
+        assert auth.gofile.api_key == api_key
+        assert auth.model_dump()["gofile"]["api_key"] == api_key
+        assert auth.censored_dump()["gofile"] is True
+        assert auth.model_dump(mode="json")["gofile"]["api_key"] == api_key
+
+    def test_apprise_urls_are_censored(self) -> None:
+        url = AppriseURL.model_validate({"url": "https://example.com/a"})
+        assert str(url) == "no_logs=https://example.com/a"
+        assert repr(url) == "AppriseURL(url=Secret('**********'), tags={'no_logs'})"
+        assert url.model_dump() == "no_logs=https://example.com/a"
+        assert url.model_dump(mode="json") == "no_logs=**********"
+
+    def test_notifications_are_censored(self) -> None:
+        url = AppriseURL.model_validate({"url": "https://example.com/a"})
+        noti = Notifications(apprise=(url,))
+        assert "example.com" not in repr(noti)
+        assert "example.com" not in str(noti)
+
+
+class TestAppData:
+    def test_default_names(self) -> None:
+        appdata = AppData.default()
+        assert appdata.cache_file.name == "cache.json"
+        assert appdata.db_file.name == "cyberdrop.db"
+        assert appdata.config_file.name == "config.yaml"
+
+    def test_default_log_folder_name(self) -> None:
+        appdata = AppData.default()
+        assert appdata.logs_folder.name == "Logs" if os.name == "nt" else "logs"
+
+    def test_create_w_no_args_is_default(self) -> None:
+        assert AppData.create() == AppData.default()
+
+
+def test_log_folder_after_resolution(tmp_cwd: Path) -> None:
+    logs = settings.Logs()
+    assert logs.folder is None
+    tmp_log_folder = tmp_cwd / "logs"
+    logs.resolve_filenames(tmp_log_folder)
+    assert logs.folder == tmp_log_folder

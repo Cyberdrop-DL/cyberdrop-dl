@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt
 from pydantic import ByteSize, TypeAdapter
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
     from pathlib import Path
 
     import yarl
@@ -75,7 +75,7 @@ def _str_to_timedelta(input_date: str) -> datetime.timedelta:
     return datetime.timedelta(**time_dict)
 
 
-def to_timedelta(input_date: datetime.timedelta | str | int) -> datetime.timedelta | str:
+def to_timedelta(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str:
     """Parses `datetime.timedelta`, `str` or `int` into a timedelta format.
 
     For `str`, the expected format is `<value> <unit>`, ex: `5 days`, `10 minutes`, `1 year`
@@ -103,9 +103,15 @@ def falsy_as[T, T2](value: T | Literal[""] | None, default: T2) -> T | T2:
     return value or default
 
 
-def falsy_as_list[T](value: list[T] | Literal[""] | None) -> list[T]:
-    return falsy_as(value, [])
+def falsy_as_tuple[T](
+    value: Iterable[T] | Literal[""] | tuple[T, ...] | tuple[()] | None,
+) -> tuple[T, ...] | Iterable[T]:
+    return falsy_as(value, ())
 
 
 def falsy_as_none[T](value: T | Literal[""] | None) -> T | None:
     return falsy_as(value, None)
+
+
+def remove_duplicates[T: str](value: tuple[T, ...]) -> tuple[T, ...]:
+    return tuple(sorted(set(value)))

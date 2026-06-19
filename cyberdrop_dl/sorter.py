@@ -14,8 +14,9 @@ import imagesize
 
 from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.constants import FileExt, TempExt
+from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.progress.sorting import SortingUI, SortStats
-from cyberdrop_dl.utils import cleanup, strings
+from cyberdrop_dl.utils import cleanup
 
 if TYPE_CHECKING:
     from cyberdrop_dl.manager import Manager

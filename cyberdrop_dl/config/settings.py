@@ -1,65 +1,39 @@
-# ruff: noqa: RUF012
-import dataclasses
 import datetime
-import functools
 import logging
 import random
-import re
-from collections.abc import Callable
 from enum import auto
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, Self, override
+from typing import Annotated, ClassVar, Literal, override
 
-import aiohttp
 from cyclopts import Parameter
-from pydantic import (
-    AfterValidator,
-    BaseModel,
-    BeforeValidator,
-    ByteSize,
-    Field,
-    NonNegativeFloat,
-    PositiveFloat,
-    PositiveInt,
-    PrivateAttr,
-    field_validator,
-)
+from pydantic import BaseModel, Field, PrivateAttr
+from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import (
-    DEFAULT_APP_STORAGE,
-    DEFAULT_DOWNLOAD_STORAGE,
+    DEFAULT_DOWNLOAD_PATH,
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
     CIStrEnum,
     HashMode,
 )
-from cyberdrop_dl.models import AliasModel, ConfigGroup
+from cyberdrop_dl.models import ConfigGroup, DeferedModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
+    CSVPath,
+    FalsyAsNone,
+    FalsyAsTuple,
+    FormatStr,
     HttpURL,
-    ListNonEmptyStr,
-    ListPydanticURL,
+    LogLevel,
     LogPath,
-    MainLogPath,
     NonEmptyStr,
-    NonEmptyStrOrNone,
-    PathOrNone,
+    RemoveDuplicates,
+    Timedelta,
 )
-from cyberdrop_dl.models.validators import falsy_as, falsy_as_none, to_timedelta
-from cyberdrop_dl.utils.strings import validate_format_string
+from cyberdrop_dl.models.validators import strings
 
 
-def _format_validator(valid_keys: set[str]) -> Callable[[str | None], str | None]:
-
-    def check(value: str | None) -> str | None:
-        if value is not None:
-            validate_format_string(value, valid_keys)
-        return value
-
-    return check
-
-
-class SubFoldersInclude(AliasModel):
+class _SubFoldersInclude(DeferedModel):
     album_id: bool = False
     thread_id: bool = False
     domain: bool = True
@@ -67,18 +41,18 @@ class SubFoldersInclude(AliasModel):
 
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
-    include: SubFoldersInclude = Field(default_factory=SubFoldersInclude)
+    include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
     separate_posts_format: Annotated[
-        NonEmptyStr, AfterValidator(_format_validator({"default", "title", "id", "number", "date"}))
+        FormatStr, strings.format_validator({"default", "title", "id", "number", "date"})
     ] = "{default}"
     separate_posts: bool = False
 
 
-class LogFiles(AliasModel):
-    main: Annotated[MainLogPath, Parameter(alias="--log-file")] = Path("downloader.log")
-    download_errors: LogPath = Path("Download_Error_URLs.csv")
-    scrape_errors: LogPath = Path("Scrape_Error_URLs.csv")
-    unsupported: LogPath = Path("Unsupported_URLs.csv")
+class LogFiles(DeferedModel):
+    main: Annotated[LogPath, Parameter(alias="--log-file")] = Path("downloader.log")
+    download_errors: CSVPath = Path("Download_Error_URLs.csv")
+    scrape_errors: CSVPath = Path("Scrape_Error_URLs.csv")
+    unsupported: CSVPath = Path("Unsupported_URLs.csv")
 
     @property
     def jsonl_file(self) -> Path:
@@ -86,24 +60,16 @@ class LogFiles(AliasModel):
 
 
 class Logs(ConfigGroup, name=None):  # noqa: PLW1641
-    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
+    level: LogLevel = "DEBUG"
     "Only log messages of this level or higher to the main log file"
-    console_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+    console_level: FalsyAsNone[LogLevel] = None
     "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
 
     files: LogFiles = Field(default_factory=LogFiles)
-    folder: Path = DEFAULT_APP_STORAGE / "Logs"
-    expire_after: datetime.timedelta | None = None
+    folder: FalsyAsNone[Path] = None
+    expire_after: FalsyAsNone[Timedelta] = None
     rotate: bool = False
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
-
-    @field_validator("level", "console_level", mode="before")
-    @classmethod
-    def _normalize_log_level(cls, value: object) -> Any:
-        value = falsy_as_none(value)
-        if type(value) is str:
-            return value.upper()
-        return value
 
     @property
     def effective_level(self) -> int:
@@ -116,19 +82,13 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
         return logging.getLevelNamesMapping()[self.console_level]
 
-    @field_validator("expire_after", mode="before")
-    @staticmethod
-    def _parse_logs_duration(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str | None:
-        if value := falsy_as(input_date, None):
-            return to_timedelta(value)
-
-    def resolve_filenames(self) -> None:
-        self.folder = self.folder.expanduser().resolve().absolute()
+    def resolve_filenames(self, appdata_folder: Path) -> None:
+        self.folder = folder = self.folder.expanduser().resolve().absolute() if self.folder else appdata_folder
         now_file_iso: str = self._created_at.strftime(LOGS_DATETIME_FORMAT)
         now_folder_iso: str = self._created_at.strftime(LOGS_DATE_FORMAT)
 
         def resolve(path: Path) -> Path:
-            log_file = self.folder / path
+            log_file = folder / path
             if self.rotate:
                 file_name = f"{log_file.stem}_{now_file_iso}{log_file.suffix}"
                 log_file = log_file.parent / now_folder_iso / file_name
@@ -138,11 +98,16 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
             None, **{name: resolve(value) for name, value in self.files.model_dump().items()}
         )
 
+    @property
+    def effective_log_folder(self) -> Path:
+        assert self.folder
+        return self.folder
+
     def delete_old_logs_and_folders(self) -> None:
         if not self.expire_after:
             return
 
-        for file in self.folder.rglob("*"):
+        for file in (self.effective_log_folder).rglob("*"):
             if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
@@ -163,141 +128,14 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
         return self.__dict__ == other.__dict__
 
 
-@dataclasses.dataclass(slots=True)
-class Range:
-    min: float
-    max: float
-
-    def __post_init__(self) -> None:
-        if not self.max:
-            self.max = float("inf")
-
-    def __contains__(self, value: float, /) -> bool:
-        return self.min <= value <= self.max
-
-    @classmethod
-    def parse(cls, min: float, max: float) -> Self | None:  # noqa: A002
-        if not min and not max:
-            return None
-        return cls(min, max)
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class FileSizeRanges:
-    video: Range
-    image: Range
-    non_media: Range
-
-
-class SizeLimits(ConfigGroup):
-    max_image_size: ByteSizeSerilized = ByteSize(0)
-    max_non_media_size: ByteSizeSerilized = ByteSize(0)
-    max_video_size: ByteSizeSerilized = ByteSize(0)
-    min_image_size: ByteSizeSerilized = ByteSize(0)
-    min_non_media_size: ByteSizeSerilized = ByteSize(0)
-    min_video_size: ByteSizeSerilized = ByteSize(0)
-
-    @functools.cached_property
-    def ranges(self) -> FileSizeRanges:
-        return FileSizeRanges(
-            video=Range(
-                self.min_video_size,
-                self.max_video_size,
-            ),
-            image=Range(
-                self.min_image_size,
-                self.max_image_size,
-            ),
-            non_media=Range(
-                self.min_non_media_size,
-                self.max_non_media_size,
-            ),
-        )
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class MediaDurationRanges:
-    video: Range | None
-    audio: Range | None
-
-
-class MediaDurationLimits(ConfigGroup):
-    max_video_duration: datetime.timedelta = datetime.timedelta(seconds=0)
-    max_audio_duration: datetime.timedelta = datetime.timedelta(seconds=0)
-    min_video_duration: datetime.timedelta = datetime.timedelta(seconds=0)
-    min_audio_duration: datetime.timedelta = datetime.timedelta(seconds=0)
-
-    @field_validator("*", mode="before")
-    @staticmethod
-    def parse_runtime_duration(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str:
-        """Parses `datetime.timedelta`, `str` or `int` into a timedelta format.
-        for `str`, the expected format is `value unit`, ex: `5 days`, `10 minutes`, `1 year`
-        valid units:
-            year(s), week(s), day(s), hour(s), minute(s), second(s), millisecond(s), microsecond(s)
-        for `int`, value is assumed as `days`
-        """
-        if input_date is None:
-            return datetime.timedelta(seconds=0)
-        return to_timedelta(input_date)
-
-    @property
-    def needs_ffmpeg(self) -> bool:
-        return bool(
-            self.min_video_duration or self.max_video_duration or self.min_audio_duration or self.max_audio_duration
-        )
-
-    @functools.cached_property
-    def ranges(self) -> MediaDurationRanges:
-        return MediaDurationRanges(
-            video=Range.parse(
-                self.min_video_duration.total_seconds(),
-                self.max_video_duration.total_seconds(),
-            ),
-            audio=Range.parse(
-                self.min_audio_duration.total_seconds(),
-                self.max_audio_duration.total_seconds(),
-            ),
-        )
-
-
-@Parameter(name="*")
-class FileFilter(AliasModel):
-    audio: bool = True
-    images: bool = True
-    videos: bool = True
-    non_media: bool = True
-
-
-class Filters(ConfigGroup):
-    files: FileFilter = Field(default_factory=FileFilter)
-    sizes: SizeLimits = Field(default_factory=SizeLimits)
-    before: datetime.date | None = None
-    after: datetime.date | None = None
-    filename_regex: NonEmptyStrOrNone = None
-    only_hosts: ListNonEmptyStr = []
-    skip_hosts: ListNonEmptyStr = []
-    allow_files_with_no_extension: bool = False
-
-    @field_validator("filename_regex")
-    @classmethod
-    def _is_valid_regex(cls, value: str | None) -> str | None:
-        if not value:
-            return None
-        try:
-            _ = re.compile(value)
-        except re.error as e:
-            raise ValueError("input is not a valid regex") from e
-        return value
-
-
 class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
     autostart: bool = False
-    download_dir: PathOrNone = None
-    whitelist: ListNonEmptyStr = []
+    download_dir: FalsyAsNone[Path] = None
+    whitelist: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
 
 
-class SortFormats(AliasModel):
+class SortFormats(DeferedModel):
     _COMMON_FIELDS: ClassVar[set[str]] = {
         "base_dir",
         "ext",
@@ -310,47 +148,46 @@ class SortFormats(AliasModel):
     }
 
     audio: Annotated[
-        NonEmptyStrOrNone,
-        AfterValidator(_format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"})),
+        FalsyAsNone[FormatStr],
+        strings.format_validator(_COMMON_FIELDS | {"bitrate", "duration", "length", "sample_rate"}),
     ] = "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
     "Format to generate sorted audio file"
 
     image: Annotated[
-        NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS | {"height", "resolution", "width"}))
+        FalsyAsNone[FormatStr], strings.format_validator(_COMMON_FIELDS | {"height", "resolution", "width"})
     ] = "{sort_dir}/{base_dir}/Images/{filename}{ext}"
     "Format to generate sorted image file"
 
-    non_media: Annotated[NonEmptyStrOrNone, AfterValidator(_format_validator(_COMMON_FIELDS))] = (
+    non_media: Annotated[FalsyAsNone[FormatStr], strings.format_validator(_COMMON_FIELDS)] = (
         "{sort_dir}/{base_dir}/Other/{filename}{ext}"
     )
     "Format to generate sorted files of unknown type"
 
     video: Annotated[
-        NonEmptyStrOrNone,
-        AfterValidator(
-            _format_validator(
-                _COMMON_FIELDS
-                | {
-                    "codec",
-                    "duration",
-                    "fps",
-                    "height",
-                    "length",
-                    "resolution",
-                    "width",
-                }
-            )
+        FalsyAsNone[FormatStr],
+        strings.format_validator(
+            _COMMON_FIELDS
+            | {
+                "codec",
+                "duration",
+                "fps",
+                "height",
+                "length",
+                "resolution",
+                "width",
+            }
         ),
     ] = "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
     "Format to generate sorted video file"
-    incrementer: Annotated[NonEmptyStr, AfterValidator(_format_validator({"i"}))] = " ({i})"
+
+    incrementer: Annotated[FormatStr, strings.format_validator({"i"})] = " ({i})"
     "Format for separator on name collisions"
 
 
 class Sort(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--sort")] = False
-    input_folder: PathOrNone = None
-    output_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
+    input_folder: FalsyAsNone[Path] = None
+    output_folder: Path = DEFAULT_DOWNLOAD_PATH / "Cyberdrop-DL Sorted Downloads"
     formats: SortFormats = Field(default_factory=SortFormats)
 
     @property
@@ -358,14 +195,23 @@ class Sort(ConfigGroup, name=None):
         return bool(self.enabled and (self.formats.audio or self.formats.video))
 
 
-class Dedupe(AliasModel):
+class Dedupe(DeferedModel):
     enabled: Annotated[bool, Parameter(name="--hashing.dedupe", alias="--auto-dedupe")] = True
     use_trash_bin: bool = True
 
 
 class Hashing(ConfigGroup, name=None):
     mode: Annotated[HashMode, Parameter(name="--hashing")] = HashMode.IN_PLACE
-    algorithms: Annotated[tuple[Literal["xxh128", "md5", "sha256"], ...], Parameter(alias="--hashes")] = (
+    algorithms: Annotated[
+        tuple[
+            Annotated[
+                Literal["xxh128", "md5", "sha256"],
+                strings.pre_validator(to_lower=True, strip=True),
+            ],
+            ...,
+        ],
+        Parameter(alias="--hashes"),
+    ] = (
         "xxh128",
         "md5",
         "sha256",
@@ -409,34 +255,24 @@ class Downloads(ConfigGroup):
 class Network(ConfigGroup):
     dump_responses: bool = False
     """Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"""
-    flaresolverr: HttpURL | None = None
-    proxy: HttpURL | None = None
+    flaresolverr: FalsyAsNone[HttpURL] = None
+    proxy: FalsyAsNone[HttpURL] = None
     rate_limit: PositiveFloat = 25
     connection_timeout: PositiveFloat = 15
-    read_timeout: Annotated[PositiveFloat | None, BeforeValidator(falsy_as_none)] = 300
-    ssl_context: Literal["truststore", "certifi", "truststore+certifi"] | None = "truststore+certifi"
+    read_timeout: FalsyAsNone[PositiveFloat] = 300
+    ssl_context: FalsyAsNone[
+        Annotated[
+            Literal["truststore", "certifi", "truststore+certifi"],
+            strings.pre_validator(to_lower=True, strip=True),
+        ]
+    ] = "truststore+certifi"
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
-
-    @field_validator("ssl_context", mode="before")
-    @classmethod
-    def _ssl(cls, value: str | None) -> str | None:
-        if isinstance(value, str):
-            value = value.lower().strip()
-        return falsy_as(value, None)
 
     @property
     def curl_timeout(self) -> float | tuple[float, float]:
         if self.read_timeout is None:
             return self.connection_timeout
         return self.connection_timeout, self.read_timeout
-
-    @property
-    def aiohttp_timeout(self) -> aiohttp.ClientTimeout:
-        return aiohttp.ClientTimeout(
-            total=None,
-            sock_connect=self.connection_timeout,
-            sock_read=self.read_timeout,
-        )
 
 
 class UIMode(CIStrEnum):
@@ -459,10 +295,3 @@ class UIOptions(ConfigGroup):
     portrait: bool = False
     "force CDL to run with a vertical layout"
     refresh_rate: PositiveFloat = 10.0
-
-
-class GenericCrawlers(ConfigGroup):
-    wordpress_media: ListPydanticURL = []
-    wordpress_html: ListPydanticURL = []
-    discourse: ListPydanticURL = []
-    chevereto: ListPydanticURL = []

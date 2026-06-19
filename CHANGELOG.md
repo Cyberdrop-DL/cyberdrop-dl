@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New `--cookies` option to read cookies from a file/folder
 - New `--hashes` option to control which hashes CDL computes for new downloads
+- New `--database-file` option
+- New `--cache-file` option
 
 ### Changed
 
@@ -61,19 +63,19 @@ Several config options have new names:
 
 - `--disable-crawlers`-> `--crawlers.disabled`
 - `--disable-file-timestamps`-> `--mtime`
-- `--maximum-audio-duration` -> `--max-audio-duration`
-- `--maximum-image-size` -> `--max-image-size`
+- `--maximum-audio-duration` -> `--audio.duration.max`
+- `--maximum-image-size` -> `--image.size.max`
 - `--maximum-number-of-children` -> `--max-children`
-- `--maximum-other-size` -> `--max-non-media-size`
+- `--maximum-other-size` -> `--non-media.size.max`
 - `--maximum-thread-depth` -> `--max-thread-depth`
 - `--maximum-thread-folder-depth` -> `--max-thread-folder-depth`
-- `--maximum-video-duration` -> `--max-video-duration`
-- `--maximum-video-size` -> `--max-video-size`
-- `--minimum-audio-duration` -> `--min-audio-duration`
-- `--minimum-image-size` -> `--min-image-size`
-- `--minimum-other-size` -> `--min-non-media-size`
-- `--minimum-video-duration` -> `--min-video-duration`
-- `--minimum-video-size` -> `--min-video-size`
+- `--maximum-video-duration` -> `--video.duration.max`
+- `--maximum-video-size` -> `--video.size.max`
+- `--minimum-audio-duration` -> `--audio.duration.min`
+- `--minimum-image-size` -> `--image.size.min`
+- `--minimum-other-size` -> `--non-media.size.min`
+- `--minimum-video-duration` -> `--video.duration.min`
+- `--minimum-video-size` -> `--video.size.min`
 - `--required-free-space` -> `--min-free-space`
 - `--print-stats` -> `--stats` , `--no-stats`
 - `--send-deleted-to-trash` -> `--hashing.dedupe.use-trash-bin`
@@ -141,6 +143,13 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 - `--download-delay` -> `--delay`
 - `--download-speed-limit` -> `--speed-limit`
 
+#### Generic crawlers
+
+- `--wordpress-media` -> `--crawlers.generic.wordpress-media`
+- `--wordpress-html` -> `--crawlers.generic.wordpress-html`
+- `--discourse` -> `--crawlers.generic.discourse`
+- `--chevereto` -> `--crawlers.generic.chevereto`
+
 ### Removed
 
 - Support for python 3.11
@@ -151,6 +160,7 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 
 Several config options have been removed:
 
+- `--appdata-folder`
 - `--add-md5-hash`
 - `--add-sha256-hash`
 - `--auto-import`

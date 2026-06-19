@@ -45,6 +45,7 @@ class DoodStreamCrawler(Crawler):
         "myvidplay.com",
         "playmogo.com",
         "vidply.com",
+        "dooodster.com",
     )
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://doodstream.com/")
     UPDATE_UNSUPPORTED: ClassVar[bool] = True
