@@ -13,6 +13,7 @@ class KemonoConfig(ConfigModel):
 
 class TikTokConfig(ConfigModel):
     original: bool = False
+    "Download videos in original quality (slower)"
 
 
 class GenericCrawlers(ConfigModel):
@@ -24,7 +25,8 @@ class GenericCrawlers(ConfigModel):
 
 class Crawlers(ConfigGroup, name=None):
     disabled: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
-    """Name of crawlers to disable for the current run"""
+    "Name of crawlers to disable for the current run"
+    
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     kemono: KemonoConfig = Field(default_factory=KemonoConfig)
     coomer: KemonoConfig = Field(default_factory=KemonoConfig)

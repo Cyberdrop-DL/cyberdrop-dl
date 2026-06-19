@@ -41,7 +41,7 @@ class _SubFoldersInclude(ConfigModel):
 
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
-    "Enable/disable the create of nested subfolders"
+    "Enable/disable the createtion of nested sub-folders"
 
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
     separate_posts_format: Annotated[
@@ -148,16 +148,16 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
 class Jdownloader(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
-    "Send unsupported URLs to jdownloader"
+    "Send unsupported URLs to Jdownloader"
 
     autostart: bool = False
     "Immediately start downloads as soon as they are sent"
 
     download_dir: FalsyAsNone[Path] = None
-    "Custom output path for jdownloader"
+    "Output path for Jdownloader. Defaults to `--download-folder`"
 
     whitelist: RemoveDuplicates[FalsyAsTuple[NonEmptyStr]] = ()
-    "Only send unsupported URLs from these domains to jdownloader"
+    "Only send unsupported URLs from these domains to Jdownloader. An empty list means 'send all URLs'"
 
 
 class SortFormats(ConfigModel):
@@ -281,10 +281,10 @@ class Downloads(ConfigGroup):
     attempts: PositiveInt = 2
 
     delay: NonNegativeFloat = 0.0
-    "Number of seconds to wait in before starting downloads"
+    "Number of seconds to wait before starting downloads"
 
     slow_speed: ByteSizeSerilized = ByteSize(0)
-    "Skip any download with a speed lower that this for more than 10 seconds. Set to 0 to disable"
+    "Skip downloads if their speed is bellow this value for more than 10 seconds. Set to 0 to disable"
 
     speed_limit: ByteSizeSerilized = ByteSize(0)
     "Max speed rate (in bytes per second) to limit downloads (combined)"
