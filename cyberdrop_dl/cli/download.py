@@ -117,19 +117,24 @@ def download(
         ),
     ] = None,
     cli: CLIargs | None = None,
-    config: Config | None = None,
+    config_overrides: Config | None = None,
 ) -> None:
     if input_file:
         input_file = input_file.resolve().absolute()
-    from cyberdrop_dl.manager import AppData, Manager
+
+    from cyberdrop_dl.appdata import AppData
+    from cyberdrop_dl.manager import Manager
 
     cli = cli or CLIargs()
     cli.links = urls
-    config = config or Config()
-    appdata = AppData.default()
+    appdata = AppData.create(
+        config_file=cli.config_file,
+        cache_file=cli.cache_file,
+        db_file=cli.database_file,
+    )
 
-    config_file = cli.config_file or appdata.config_file
-    config = merge_models(Config.from_file(config_file), config)
+    system_config = Config.from_file(cli.config_file or appdata.config_file)
+    config = merge_models(system_config, config_overrides) if config_overrides else system_config
 
     if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
         cli.download = True

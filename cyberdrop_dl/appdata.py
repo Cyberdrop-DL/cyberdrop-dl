@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import final
 
 _WIN_APPDATA: Path | None = None
+_DEFAULT_APP_DIRS: AppDirs | None = None
 logger = logging.getLogger(__name__)
 _appname = "cyberdrop-dl"
 
@@ -42,7 +43,7 @@ def _expand(path: os.PathLike[str] | str) -> Path:
 
 
 def _resolve(path: os.PathLike[str] | str) -> Path:
-    return Path(path).resolve().absolute()
+    return Path(path).expanduser().resolve().absolute()
 
 
 class XDG:
@@ -68,21 +69,27 @@ class AppDirs:
 
     @staticmethod
     def default() -> AppDirs:
+        global _DEFAULT_APP_DIRS  # noqa: PLW0603
+        if _DEFAULT_APP_DIRS is not None:
+            return _DEFAULT_APP_DIRS
+
         if os.name == "nt":
             appdata = _windows_appdata()
-            return AppDirs(
+            _DEFAULT_APP_DIRS = AppDirs(  # pyright: ignore[reportConstantRedefinition]
                 cache=appdata,
                 config=appdata,
                 data=appdata,
                 logs=appdata / "Logs",
             )
 
-        return AppDirs(
-            cache=_resolve(XDG.CACHE_HOME) / _appname,
-            config=_resolve(XDG.CONFIG_HOME) / _appname,
-            data=_resolve(XDG.DATA_HOME) / _appname,
-            logs=_resolve(XDG.STATE_HOME) / _appname / "logs",
-        )
+        else:
+            _DEFAULT_APP_DIRS = AppDirs(  # pyright: ignore[reportConstantRedefinition]
+                cache=_resolve(XDG.CACHE_HOME) / _appname,
+                config=_resolve(XDG.CONFIG_HOME) / _appname,
+                data=_resolve(XDG.DATA_HOME) / _appname,
+                logs=_resolve(XDG.STATE_HOME) / _appname / "logs",
+            )
+        return _DEFAULT_APP_DIRS
 
     def __json__(self) -> dict[str, str]:
         return {k: str(v) for k, v in dataclasses.asdict(self).items()}
@@ -97,6 +104,25 @@ class AppData:
     logs_folder: Path
 
     __json__ = AppDirs.__json__
+
+    @staticmethod
+    def create(
+        *,
+        config_file: Path | None = None,
+        cache_file: Path | None = None,
+        db_file: Path | None = None,
+    ):
+        default = AppData.default()
+
+        def resolve(path: Path | None) -> Path | None:
+            return _resolve(path) if path else None
+
+        return AppData(
+            config_file=resolve(config_file) or default.config_file,
+            cache_file=resolve(cache_file) or default.cache_file,
+            db_file=resolve(db_file) or default.db_file,
+            logs_folder=default.logs_folder,
+        )
 
     @staticmethod
     def default() -> AppData:

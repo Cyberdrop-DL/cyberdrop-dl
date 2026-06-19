@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import datetime
 import logging
 import os
@@ -13,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Self, final
 from pydantic.types import ByteSize
 
 from cyberdrop_dl import ALL_DEPENDENCIES, __version__, aio, env, ffmpeg, stats, yaml
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
@@ -73,7 +73,7 @@ class Manager:
     @property
     def config(self) -> Config:
         if self._config is None:
-            self._config = Config.from_file(self.cli_args.config_file or self.appdata.config_file)
+            self._config = Config.from_file(self.appdata.config_file)
         return self._config
 
     def __resolve_paths(self) -> None:
@@ -188,45 +188,6 @@ def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
     finally:
         cache["version"] = __version__
         yaml.save(cache_file, cache)
-
-
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class AppData:
-    cache_file: Path
-    config_file: Path
-    db_file: Path
-
-    @classmethod
-    def default(cls) -> Self:
-        path = Path.cwd().expanduser().resolve().absolute() / "AppData"
-        if os.name == "nt":
-            path = cls._resolve_win_path(path)
-
-        cache = path / "Cache"
-        configs = path / "Configs"
-        return cls(
-            config_file=configs / "Default" / "settings.yaml",
-            cache_file=cache / "cache.yaml",
-            db_file=cache / "cyberdrop.db",
-        )
-
-    @staticmethod
-    def _resolve_win_path(path: Path) -> Path:
-        # Detect the real path when running in sandboxed interpreter (ex: UWP Python)
-        # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1700#issuecomment-4317561031
-        # https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization#default-msix-behavior
-        anchor = path / "cyberdrop_dl.anchor"
-        path.mkdir(parents=True, exist_ok=True)
-        anchor.touch()
-        real_path = anchor.resolve().parent
-        if path != real_path:
-            logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", path, real_path)
-        anchor.unlink()
-        try:
-            real_path.rmdir()
-        except OSError:
-            pass
-        return real_path
 
 
 def _log_dependencies() -> None:
