@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import (
-    DEFAULT_DOWNLOAD_STORAGE,
+    DEFAULT_DOWNLOAD_PATH,
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
     CIStrEnum,
@@ -187,7 +187,7 @@ class SortFormats(DeferedModel):
 class Sort(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--sort")] = False
     input_folder: FalsyAsNone[Path] = None
-    output_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
+    output_folder: Path = DEFAULT_DOWNLOAD_PATH / "Cyberdrop-DL Sorted Downloads"
     formats: SortFormats = Field(default_factory=SortFormats)
 
     @property

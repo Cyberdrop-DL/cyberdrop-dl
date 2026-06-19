@@ -10,7 +10,7 @@ from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveI
 
 from cyberdrop_dl import yaml
 from cyberdrop_dl.config.appdata import AppData
-from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_STORAGE
+from cyberdrop_dl.constants import DEFAULT_DOWNLOAD_PATH
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import DeferedModel
 from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsTuple  # noqa: TC001
@@ -57,7 +57,7 @@ class Config(DeferedModel, title="cyberdrop-dl config"):
     deep_scrape: bool = False
     delete_empty_folders: bool = True
     delete_partial_files: bool = False
-    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_STORAGE
+    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = DEFAULT_DOWNLOAD_PATH
     downloads: Downloads = Field(default_factory=Downloads)
     dump_json: Annotated[bool, Parameter(alias="-j")] = False
     filters: Filters = Field(default_factory=Filters)
