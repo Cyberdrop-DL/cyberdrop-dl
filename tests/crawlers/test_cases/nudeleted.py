@@ -33,7 +33,7 @@ TEST_CASES = [
                 "referer": "https://nudeleted.com/videos/10960/hitomi-r18",
                 "album_id": None,
                 "uploaded_at": int,
-                "download_folder": r"re:hitomi \[tag\] \(Nudeleted\)",
+                "download_folder": r"re:hitomi \[search\] \(Nudeleted\)",
             },
         ],
         "count": range(8, 15),

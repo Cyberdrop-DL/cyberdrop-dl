@@ -28,8 +28,10 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
         match scrape_item.url.parts[1:]:
             case ["videos", *_]:
                 return await self.video(scrape_item)
-            case ["tags" | "search", *_]:
-                return await self.collection(scrape_item, scrape_item.url.parts[-1], "tags")
+            case ["search", query, *_]:
+                return await self.search(scrape_item, query)
+            case ["tags" as type_, name, *_]:
+                return await self.collection(scrape_item, name, type_)
             case _:
                 raise ValueError
 
