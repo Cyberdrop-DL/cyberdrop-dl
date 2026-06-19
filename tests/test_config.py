@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 import cyberdrop_dl.cli.download
 from cyberdrop_dl.config import Config, Files, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import AppriseURL, merge_dicts
@@ -313,3 +314,26 @@ class TestCensoredConfig:
         noti = Notifications(apprise=(url,))
         assert "example.com" not in repr(noti)
         assert "example.com" not in str(noti)
+
+
+class TestAppData:
+    def test_default_names(self) -> None:
+        appdata = AppData.default()
+        assert appdata.cache_file.name == "cache.json"
+        assert appdata.db_file.name == "cyberdrop.db"
+        assert appdata.config_file.name == "config.yaml"
+
+    def test_default_log_folder_name(self) -> None:
+        appdata = AppData.default()
+        assert appdata.logs_folder.name == "Logs" if os.name == "nt" else "logs"
+
+    def test_create_w_no_args_is_default(self) -> None:
+        assert AppData.create() == AppData.default()
+
+
+def test_log_folder_after_resolution(tmp_cwd: Path) -> None:
+    logs = settings.Logs()
+    assert logs.folder is None
+    tmp_log_folder = tmp_cwd / "logs"
+    logs.resolve_filenames(tmp_log_folder)
+    assert logs.folder == tmp_log_folder

@@ -589,10 +589,8 @@
           "$ref": "#/$defs/LogFiles"
         },
         "folder": {
-          "default": "AppData/Logs",
-          "format": "path",
-          "title": "Folder",
-          "type": "string"
+          "$ref": "#/$defs/FalsyAsNone_Path_",
+          "default": null
         },
         "expire_after": {
           "$ref": "#/$defs/FalsyAsNone_Timedelta_",

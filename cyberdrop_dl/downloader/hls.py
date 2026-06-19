@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
     from pathlib import Path
 
-    from m3u8.model import Segment
+    from m3u8.model import InitializationSection, Segment
 
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
@@ -39,18 +39,16 @@ class Streams(NamedTuple):
 
 class HLSSegment(NamedTuple):
     idx: int
-    part: str
     name: str
     url: AbsoluteHttpURL
 
 
-def _parse_segments(segments: Sequence[Segment]) -> Generator[HLSSegment]:
+def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Generator[HLSSegment]:
     padding = max(5, len(str(len(segments))))
     for index, segment in enumerate(segments, 1):
         assert segment.uri
         yield HLSSegment(
             idx=index - 1,
-            part=segment.title,
             name=f"{index:0{padding}d}{constants.TempExt.HLS}",
             url=parse_url(segment.absolute_uri),
         )
@@ -82,6 +80,14 @@ def _create_media_segments(
         yield seg_media_item
 
 
+def _segments(m3u8: M3U8) -> list[Segment | InitializationSection]:
+    segments = m3u8.segment_map + m3u8.segments
+    if not segments:
+        msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments"
+        raise DownloadError(HTTPStatus.NO_CONTENT, msg)
+    return segments
+
+
 async def _download_m3u8(
     m3u8: M3U8,
     temp_dir: Path,
@@ -90,41 +96,44 @@ async def _download_m3u8(
     sem: asyncio.BoundedSemaphore,
 ) -> Path:
     assert m3u8.media_type
-    if not m3u8.segments:
-        raise DownloadError(
-            HTTPStatus.NO_CONTENT,
-            f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments",
-        )
-
+    segments = _segments(m3u8)
     output = _prepare_output_path(m3u8, media_item.path)
     if await aio.is_file(output):
         return output
 
-    async def download_segment(seg_media_item: MediaItem) -> SegmentDownloadResult:
+    async def download(seg_media_item: MediaItem) -> SegmentDownloadResult:
         return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
 
-    segments = _create_media_segments(
+    m_segments = _create_media_segments(
         media_item,
-        _parse_segments(m3u8.segments),
+        _parse_segments(segments),
         download_folder=temp_dir / m3u8.media_type,
     )
 
-    logger.debug(
-        f"Starting HLS download ({m3u8.media_type}, {len(m3u8.segments):,} segments) for {media_item.real_url}"
-    )
+    logger.debug(f"Starting HLS download ({m3u8.media_type}, {len(segments):,} segments) for {media_item.real_url}")
+    results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
+    await _merge_segments(tuple(result.item.path for result in results), output, m3u8.media_type)
+    return output
+
+
+async def _download_segments(
+    segments: Iterable[MediaItem],
+    count: int,
+    download: Callable[[MediaItem], Awaitable[SegmentDownloadResult]],
+    sem: asyncio.BoundedSemaphore,
+) -> list[SegmentDownloadResult]:
     results = await aio.map(
-        download_segment,
+        download,
         segments,
         task_limit=sem,
     )
 
     n_successful = sum(1 for result in results if result.downloaded)
-    if n_successful != len(m3u8.segments):
-        msg = f"Download of some segments failed. Successful: {n_successful:,}/{len(m3u8.segments):,} "
-        raise DownloadError("HLS Seg Error", msg, media_item)
+    if n_successful != count:
+        msg = f"Download of some segments failed. Successful: {n_successful:,}/{count:,} "
+        raise DownloadError("HLS Seg Error", msg)
 
-    await _merge_segments(tuple(result.item.path for result in results), output, m3u8.media_type)
-    return output
+    return results
 
 
 async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: str) -> None:

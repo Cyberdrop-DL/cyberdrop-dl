@@ -155,6 +155,10 @@ class M3U8(_M3U8):
         self.media_type: Literal["video", "audio", "subtitle"] | None = media_type
         super().__init__(content, base_uri=str(base_uri) if base_uri else None)
 
+    @property
+    def total_segments(self) -> int:
+        return len(self.segment_map) + len(self.segments)
+
     def __repr__(self) -> str:
         return (
             f"{type(self)}(media_type={self.media_type!r}, base_uri={self.base_uri!r}, is_variant={self.is_variant!r})"

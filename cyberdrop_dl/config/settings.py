@@ -10,8 +10,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import (
-    DEFAULT_APP_STORAGE,
-    DEFAULT_DOWNLOAD_STORAGE,
+    DEFAULT_DOWNLOAD_PATH,
     LOGS_DATE_FORMAT,
     LOGS_DATETIME_FORMAT,
     CIStrEnum,
@@ -67,7 +66,7 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
     "Only log messages of this level or higher to the console. An empty or `None` value will use the same level as `log_level`"
 
     files: LogFiles = Field(default_factory=LogFiles)
-    folder: Path = DEFAULT_APP_STORAGE / "Logs"
+    folder: FalsyAsNone[Path] = None
     expire_after: FalsyAsNone[Timedelta] = None
     rotate: bool = False
     _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
@@ -83,13 +82,13 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
         return logging.getLevelNamesMapping()[self.console_level]
 
-    def resolve_filenames(self) -> None:
-        self.folder = self.folder.expanduser().resolve().absolute()
+    def resolve_filenames(self, appdata_folder: Path) -> None:
+        self.folder = folder = self.folder.expanduser().resolve().absolute() if self.folder else appdata_folder
         now_file_iso: str = self._created_at.strftime(LOGS_DATETIME_FORMAT)
         now_folder_iso: str = self._created_at.strftime(LOGS_DATE_FORMAT)
 
         def resolve(path: Path) -> Path:
-            log_file = self.folder / path
+            log_file = folder / path
             if self.rotate:
                 file_name = f"{log_file.stem}_{now_file_iso}{log_file.suffix}"
                 log_file = log_file.parent / now_folder_iso / file_name
@@ -99,11 +98,16 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
             None, **{name: resolve(value) for name, value in self.files.model_dump().items()}
         )
 
+    @property
+    def effective_log_folder(self) -> Path:
+        assert self.folder
+        return self.folder
+
     def delete_old_logs_and_folders(self) -> None:
         if not self.expire_after:
             return
 
-        for file in self.folder.rglob("*"):
+        for file in (self.effective_log_folder).rglob("*"):
             if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
@@ -183,7 +187,7 @@ class SortFormats(DeferedModel):
 class Sort(ConfigGroup, name=None):
     enabled: Annotated[bool, Parameter(name="--sort")] = False
     input_folder: FalsyAsNone[Path] = None
-    output_folder: Path = DEFAULT_DOWNLOAD_STORAGE / "Cyberdrop-DL Sorted Downloads"
+    output_folder: Path = DEFAULT_DOWNLOAD_PATH / "Cyberdrop-DL Sorted Downloads"
     formats: SortFormats = Field(default_factory=SortFormats)
 
     @property

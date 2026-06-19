@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import datetime
 import logging
 import os
@@ -16,6 +15,7 @@ from cyberdrop_dl import ALL_DEPENDENCIES, __version__, aio, env, ffmpeg, stats,
 from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
@@ -27,7 +27,6 @@ from cyberdrop_dl.utils import enter_context, get_system_information
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from types import NotImplementedType
 
     from cyberdrop_dl.cli import CLIargs
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
@@ -52,7 +51,7 @@ class Manager:
         self._appdata: AppData | None = appdata
         self.cli_args: CLIargs = cli_args or CLIargs()
         self._config: Config | None = config
-        self.input_file: Path = input_file or Path("URLs.txt")
+        self._input_file: Path | None = input_file
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
@@ -66,6 +65,12 @@ class Manager:
         self.sorter: Sorter
 
     @property
+    def input_file(self) -> Path:
+        if self._input_file is None:
+            self._input_file = Path("URLs.txt").absolute()
+        return self._input_file
+
+    @property
     def appdata(self) -> AppData:
         if self._appdata is None:
             self._appdata = AppData.default()
@@ -74,7 +79,7 @@ class Manager:
     @property
     def config(self) -> Config:
         if self._config is None:
-            self._config = Config.from_file(self.cli_args.config_file or self.appdata.config_file)
+            self._config = Config.from_file(self.appdata.config_file)
         return self._config
 
     def __resolve_paths(self) -> None:
@@ -139,7 +144,7 @@ class Manager:
         logger.info(f"  URLs source: {scrape_stats.source}")
         logger.info(f"  URLs: {scrape_stats.count:,}")
         logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
-        logger.info(f"  Logs folder: {self.config.logs.folder}")
+        logger.info(f"  Logs folder: {self.config.logs.effective_log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
@@ -190,74 +195,6 @@ def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
     finally:
         cache["version"] = __version__
         yaml.save(cache_file, cache)
-
-
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class AppData:
-    path: Path
-    cache_file: Path
-    config_file: Path
-    db_file: Path
-
-    cache: Path
-    cookies: Path
-    configs: Path
-
-    @classmethod
-    def default(cls) -> Self:
-        return cls.from_path(Path.cwd())
-
-    @staticmethod
-    def _resolve_win_path(path: Path) -> Path:
-        # Detect the real path when running in sandboxed interpreter (ex: UWP Python)
-        # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1700#issuecomment-4317561031
-        # https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization#default-msix-behavior
-        anchor = path / "cyberdrop_dl.anchor"
-        path.mkdir(parents=True, exist_ok=True)
-        anchor.touch()
-        real_path = anchor.resolve().parent
-        if path != real_path:
-            logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", path, real_path)
-        anchor.unlink()
-        try:
-            real_path.rmdir()
-        except OSError:
-            pass
-        return real_path
-
-    @classmethod
-    def from_path(cls, path: Path) -> Self:
-        path = path.expanduser().resolve().absolute() / "AppData"
-        if os.name == "nt":
-            path = cls._resolve_win_path(path)
-
-        cache = path / "Cache"
-        configs = path / "Configs"
-        return cls(
-            path=path,
-            cache=cache,
-            configs=configs,
-            cookies=path / "Cookies",
-            config_file=configs / "Default" / "settings.yaml",
-            cache_file=cache / "cache.yaml",
-            db_file=cache / "cyberdrop.db",
-        )
-
-    def __truediv__(self, other: os.PathLike[str]) -> Path | NotImplementedType:
-        try:
-            return self.path / other
-        except TypeError:
-            return NotImplemented
-
-    def __fspath__(self) -> str:
-        return str(self)
-
-    def __str__(self) -> str:
-        return str(self.path)
-
-    def mkdirs(self) -> None:
-        for folder in (self.cache, self.configs, self.cookies):
-            folder.mkdir(parents=True, exist_ok=True)
 
 
 def _log_dependencies() -> None:

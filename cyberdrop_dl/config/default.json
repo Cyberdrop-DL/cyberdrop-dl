@@ -130,7 +130,7 @@
       "scrape_errors": "Scrape_Error_URLs.csv",
       "unsupported": "Unsupported_URLs.csv"
     },
-    "folder": "AppData/Logs",
+    "folder": null,
     "expire_after": null,
     "rotate": false
   },

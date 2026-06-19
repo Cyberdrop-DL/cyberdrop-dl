@@ -114,9 +114,18 @@ def _app_header(manager: Manager) -> None:
     _clear_term()
     _CONSOLE.print(f"[bold]cyberdrop-dl ([blue]v{__version__!s}[/blue])[/bold]")
     _CONSOLE.rule(style="blue")
-    _CONSOLE.print("Config file:  ", hyperlink(manager.config.source) if manager.config.source else None)
-    _CONSOLE.print("Database file:", hyperlink(manager.appdata.db_file))
-    _CONSOLE.print("URLs file:    ", hyperlink(manager.input_file))
+    paths = {
+        "Config file": manager.config.source,
+        "Database file": manager.appdata.db_file,
+        "URLs file": manager.input_file,
+        "Cache file": manager.appdata.cache_file,
+        "Logs": manager.config.logs.effective_log_folder,
+        "Main log file": manager.config.logs.files.main,
+    }
+    padding = max(map(len, paths))
+    for name, file in paths.items():
+        _CONSOLE.print(f"{name:<{padding}} :", hyperlink(file) if file else None)
+
     _CONSOLE.line()
 
 
