@@ -86,7 +86,12 @@ def _main(manager: Manager) -> None:
     set_console_level(manager.config.logs.effective_console_level)
     try:
         with manager():
-            if not manager.cli_args.download:
+            if (
+                not manager.cli_args.download
+                or not manager.config.ui.mode.is_fullscreen
+                or manager.cli_args.config_file
+                or manager.config.sort.enabled
+            ):
                 program_ui.run(manager)
             aio.run(_scrape(manager))
 
@@ -135,12 +140,7 @@ def download(
 
     default_config = Config.from_file(cli.config_file or appdata.config_file)
     config = merge_models(default_config, config_overrides) if config_overrides else default_config
-
-    if not config.ui.mode.is_fullscreen or cli.config_file or config.sort.enabled:
-        cli.download = True
-
-    manager = Manager(cli, appdata, config, input_file)
-    _main(manager)
+    _main(Manager(cli, appdata, config, input_file))
 
 
 def _check_ffmpeg(config: Config) -> None:

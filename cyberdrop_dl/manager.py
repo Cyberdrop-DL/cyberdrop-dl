@@ -51,7 +51,7 @@ class Manager:
         self._appdata: AppData | None = appdata
         self.cli_args: CLIargs = cli_args or CLIargs()
         self._config: Config | None = config
-        self.input_file: Path = input_file or Path("URLs.txt")
+        self._input_file: Path | None = input_file
 
         self._completed_downloads: list[MediaItem] = []
         self.hasher: Hasher = Hasher(self)
@@ -63,6 +63,12 @@ class Manager:
         self.database: Database
         self.deduper: Czkawka
         self.sorter: Sorter
+
+    @property
+    def input_file(self) -> Path:
+        if self._input_file is None:
+            self._input_file = Path("URLs.txt").absolute()
+        return self._input_file
 
     @property
     def appdata(self) -> AppData:

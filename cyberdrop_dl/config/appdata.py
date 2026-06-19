@@ -138,7 +138,7 @@ class AppData:
         return AppData.from_dirs(AppDirs.default())
 
     @staticmethod
-    def from_path(path: Path):
+    def from_path(path: Path) -> AppData:
         return AppData.from_dirs(AppDirs.from_path(path))
 
     @staticmethod
