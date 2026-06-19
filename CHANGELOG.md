@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New `--cookies` option to read cookies from a file/folder
 - New `--hashes` option to control which hashes CDL computes for new downloads
+- New `--database-file` option
+- New `--cache-file` option
 
 ### Changed
 
@@ -158,6 +160,7 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 
 Several config options have been removed:
 
+- `--appdata-folder`
 - `--add-md5-hash`
 - `--add-sha256-hash`
 - `--auto-import`
