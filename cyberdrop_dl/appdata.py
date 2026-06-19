@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
-from enum import StrEnum
 from pathlib import Path
 from typing import final
 
@@ -51,12 +50,6 @@ class XDG:
     CONFIG_HOME: Path = _expand(os.getenv("XDG_CONFIG_HOME") or "~/.config")
     DATA_HOME: Path = _expand(os.getenv("XDG_DATA_HOME") or "~/.local/share")
     STATE_HOME: Path = _expand(os.getenv("XDG_STATE_HOME") or "~/.local/state")
-
-
-class AppFiles(StrEnum):
-    cache = "cache.json"
-    config = "config.yaml"
-    database = "cyberdrop.db"
 
 
 @final
@@ -128,9 +121,9 @@ class AppData:
     def default() -> AppData:
         app_dirs = AppDirs.default()
         return AppData(
-            config_file=app_dirs.config / AppFiles.config,
-            cache_file=app_dirs.cache / AppFiles.cache,
-            db_file=app_dirs.data / AppFiles.database,
+            config_file=app_dirs.config / "config.yaml",
+            cache_file=app_dirs.cache / "cache.json",
+            db_file=app_dirs.data / "cyberdrop.db",
             logs_folder=app_dirs.logs,
         )
 
