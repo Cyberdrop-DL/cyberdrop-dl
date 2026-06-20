@@ -36,11 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `--hashes` option to control which hashes CDL computes for new downloads
 - New `--database-file` option
 - New `--cache-file` option
+- New `hash` subcommand
+- New `report` subcommand
 
 ### Changed
 
-- The config file format has completely changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
-- A default config file will not be created by default. You can manually create a default one from the `Edit config` option on the main menu
+- The config file format has changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
+- A default config file will noo longer be created. You can manually create a default one from the `Edit config` option on the main menu
 - Validate config in strict mode. If a config has an unknown entry, CDL will refuse to run instead of ignoring it
 - Apprise URLs are now part of the main config file instead of a dedicated `apprise.txt` file
 - Refuse to start if the current database schema is older than `v9.15.0`
