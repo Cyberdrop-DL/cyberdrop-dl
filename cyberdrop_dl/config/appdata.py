@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 _win_appdata: Path | None = None
 _default_app_dirs: AppDirs | None = None
 _appname = "cyberdrop-dl"
+_logs_folder = "Logs" if os.name == "nt" else "logs"
 
 
 def _windows_appdata() -> Path:
@@ -82,26 +83,9 @@ class AppDirs:
         if _default_app_dirs is not None:
             return _default_app_dirs
 
-        if "pytest" in sys.modules:
-            temp_dir = Path(tempfile.TemporaryDirectory(prefix="cdl_", delete=False).name)
-            _default_app_dirs = AppDirs.from_path(temp_dir)
-
-        elif os.name == "nt":
-            appdata = _windows_appdata()
-            _default_app_dirs = AppDirs(
-                cache=appdata,
-                config=appdata,
-                data=appdata,
-                logs=appdata / "Logs",
-            )
-
-        else:
-            _default_app_dirs = AppDirs(
-                cache=_resolve(XDG.CACHE_HOME) / _appname,
-                config=_resolve(XDG.CONFIG_HOME) / _appname,
-                data=_resolve(XDG.DATA_HOME) / _appname,
-                logs=_resolve(XDG.STATE_HOME) / _appname / "logs",
-            )
+        app_dirs = _default_app_dir()
+        object.__setattr__(app_dirs, "logs", app_dirs.logs / _logs_folder)
+        _default_app_dirs = app_dirs
         return _default_app_dirs
 
     def __iter__(self) -> Iterator[tuple[str, Path]]:
@@ -109,6 +93,22 @@ class AppDirs:
 
     def __json__(self) -> dict[str, str]:
         return {k: str(v) for k, v in self}
+
+
+def _default_app_dir() -> AppDirs:
+    if "pytest" in sys.modules:
+        temp_dir = Path(tempfile.TemporaryDirectory(prefix="cdl_", delete=False).name)
+        return AppDirs.from_path(temp_dir)
+
+    if os.name == "nt":
+        return AppDirs.from_path(_windows_appdata())
+
+    return AppDirs(
+        cache=_resolve(XDG.CACHE_HOME) / _appname,
+        config=_resolve(XDG.CONFIG_HOME) / _appname,
+        data=_resolve(XDG.DATA_HOME) / _appname,
+        logs=_resolve(XDG.STATE_HOME) / _appname,
+    )
 
 
 @final
