@@ -11,8 +11,9 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
-from cyberdrop_dl.constants import FileExt
+from cyberdrop_dl.constants import FileExt, HashMode
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.hasher import compute_in_place_hash
 from cyberdrop_dl.utils import dates
 
 if TYPE_CHECKING:
@@ -247,12 +248,15 @@ class DownloadClient:
 
     async def handle_media_item_completion(self, media_item: MediaItem, *, downloaded: bool = False) -> None:
         """Sends to hash client to handle hashing and marks as completed/current download."""
+        media_item.downloaded = downloaded
         try:
-            media_item.downloaded = downloaded
-            await self.manager.hasher.hash_item_during_download(media_item)
-            self.manager.add_completed(media_item)
+            if media_item.is_segment or self.manager.config.hashing.mode != HashMode.IN_PLACE:
+                return
+            await compute_in_place_hash(self.manager.hasher, media_item)
         except Exception:
-            logger.exception(f"Error handling media item completion of: {media_item.path}")
+            logger.exception(f"Unable to compute hashes of: {media_item.path}")
+        finally:
+            self.manager.add_completed(media_item)
 
     def get_download_dir(self, media_item: MediaItem) -> Path:
         """Returns the download directory for the media item."""
