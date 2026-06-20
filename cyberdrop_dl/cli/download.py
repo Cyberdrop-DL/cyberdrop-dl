@@ -67,7 +67,7 @@ async def _post_runtime(manager: Manager) -> None:
         and manager.config.hashing.dedupe.enabled
         and not manager.config.ignore_history
     ):
-        file_hashes = await manager.hasher.run()
+        file_hashes = await manager.hasher.run(manager.completed_downloads)
         await manager.deduper.run(file_hashes)
 
     if manager.config.sort.enabled:

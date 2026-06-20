@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from cyberdrop_dl.hasher import hash_directory_scanner
+from cyberdrop_dl.hasher import hash_directory
 
 if TYPE_CHECKING:
     from cyberdrop_dl.manager import Manager
@@ -59,10 +59,10 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
 
     manager.config.download_folder.mkdir(parents=True)
     db_path = manager.appdata.db_file
-    await hash_directory_scanner(manager, manager.config.download_folder)
+    await hash_directory(manager.config, manager.database, manager.config.download_folder)
     assert not get_hashes(db_path)
     create_files(manager.config.download_folder, n_files)
-    await hash_directory_scanner(manager, manager.config.download_folder)
+    await hash_directory(manager.config, manager.database, manager.config.download_folder)
     results = get_hashes(db_path)
     assert len(results) == len(expected_results)
     assert results == expected_results
@@ -79,4 +79,4 @@ async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, mana
     for file in files:
         file.parent.mkdir(parents=True, exist_ok=True)
         file.touch()
-    await hash_directory_scanner(manager, hash_folder)
+    await hash_directory(manager.config, manager.database, hash_folder)

@@ -55,7 +55,7 @@ class Manager:
         self._input_file: Path | None = input_file
 
         self._completed_downloads: list[MediaItem] = []
-        self.hasher: Hasher = Hasher(self)
+        self._hasher: Hasher | None = None
         self.logs: CSVLogsManager = CSVLogsManager.from_config(self.config)
         self.http_client: HTTPClient = HTTPClient.from_manager(self)
         self.download_client: DownloadClient = DownloadClient(self)
@@ -64,6 +64,12 @@ class Manager:
         self.database: Database
         self.deduper: Czkawka
         self.sorter: Sorter
+
+    @property
+    def hasher(self) -> Hasher:
+        if self._hasher is None:
+            self._hasher = Hasher.create(self.config, self.database)
+        return self._hasher
 
     @property
     def input_file(self) -> Path:
