@@ -3,11 +3,11 @@ from __future__ import annotations
 import sqlite3
 from collections import Counter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 
-from cyberdrop_dl.hasher import hash_directory
+from cyberdrop_dl.hasher import _compute_hash, hash_directory
 
 if TYPE_CHECKING:
     from cyberdrop_dl.manager import Manager
@@ -80,3 +80,17 @@ async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, mana
         file.parent.mkdir(parents=True, exist_ok=True)
         file.touch()
     await hash_directory(manager.config, manager.database, hash_folder)
+
+
+@pytest.mark.parametrize(
+    ("algo", "expected"),
+    [
+        ("xxh128", "ae6ea5d955361e9dd7d91f1432616dcc"),
+        ("md5", "1ebbd3e34237af26da5dc08a4e440464"),
+        ("sha256", "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"),
+    ],
+)
+def test_compute_hash(algo: Literal["xxh128", "md5", "sha256"], expected: str) -> None:
+    file = Path(__file__).parent.parent / "LICENSE"
+    result = _compute_hash(file, algo)
+    assert result == expected
