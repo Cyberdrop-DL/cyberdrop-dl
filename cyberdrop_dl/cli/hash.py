@@ -10,7 +10,7 @@ async def compute_hashes(
     database_file: ExistingFile | None = None,
     hashes: tuple[Literal["xxh128", "md5", "sha256"], ...] = ("xxh128", "md5", "sha256"),
 ) -> None:
-    """Compute and save hashes of every file inside <folder> (recursively)"""
+    """Compute and save hashes of every file inside `folder` (recursively)"""
 
     from cyberdrop_dl import stats
     from cyberdrop_dl.config.appdata import AppData
