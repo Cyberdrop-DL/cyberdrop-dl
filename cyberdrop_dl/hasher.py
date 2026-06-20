@@ -45,22 +45,17 @@ def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> 
     return hasher.hexdigest()
 
 
-async def hash_directory(config: Config, database: Database, path: Path) -> HashingStats:
-    async with database:
-        hasher = Hasher.create(config, database, path)
-        with hasher.tui():
-            await _hash_directory(hasher)
-
-    return hasher.stats
-
-
-async def _hash_directory(hasher: Hasher) -> None:
+async def hash_directory(hasher: Hasher) -> HashingStats:
     if not await aio.is_dir(hasher.path):
         raise NotADirectoryError(None, hasher.path)
 
-    async with asyncio.TaskGroup() as tg:
-        async for file in aio.rglob(hasher.path, "*"):
-            _ = tg.create_task(hasher.update_db_and_retrive_hash(file))
+    async with hasher.database:
+        with hasher.tui():
+            async with asyncio.TaskGroup() as tg:
+                async for file in aio.rglob(hasher.path, "*"):
+                    _ = tg.create_task(hasher.update_db_and_retrive_hash(file))
+
+    return hasher.stats
 
 
 @dataclasses.dataclass(slots=True)

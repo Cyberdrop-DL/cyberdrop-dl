@@ -15,7 +15,7 @@ from rich.markdown import Markdown
 from rich.text import Text
 
 from cyberdrop_dl import __version__, stats
-from cyberdrop_dl.hasher import hash_directory
+from cyberdrop_dl.hasher import Hasher, hash_directory
 from cyberdrop_dl.progress import hyperlink
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import text_editor
@@ -65,7 +65,8 @@ def _scan_and_create_hashes(manager: Manager) -> None:
         "Select the directory to scan",
         default=manager.config.download_folder,
     )
-    hash_stats = asyncio.run(hash_directory(manager.config, manager.database, path))
+    hasher = Hasher.create(manager.config, manager.database, path)
+    hash_stats = asyncio.run(hash_directory(hasher))
     stats.print(hash_stats)
     _enter_to_continue()
 

@@ -40,6 +40,7 @@ def register_commands() -> None:
     from cyberdrop_dl.cli.clean_up import app as cleanup
     from cyberdrop_dl.cli.database import app as database
     from cyberdrop_dl.cli.download import download
+    from cyberdrop_dl.cli.hash import compute_hashes
     from cyberdrop_dl.cli.report import report
     from cyberdrop_dl.cli.show import show
 
@@ -48,6 +49,7 @@ def register_commands() -> None:
     app.command(show)
     app.command(cleanup)
     app.command(report)
+    app.command(compute_hashes, name="hash")
 
 
 register_commands()
