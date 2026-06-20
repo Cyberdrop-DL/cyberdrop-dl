@@ -90,7 +90,9 @@ async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, mana
         ("sha256", "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"),
     ],
 )
-def test_compute_hash(algo: Literal["xxh128", "md5", "sha256"], expected: str) -> None:
-    file = Path(__file__).parent.parent / "LICENSE"
+def test_compute_hash(tmp_cwd: Path, algo: Literal["xxh128", "md5", "sha256"], expected: str) -> None:
+    license_file = Path(__file__).parent.parent / "LICENSE"
+    file = tmp_cwd / "license"
+    file.write_bytes(license_file.read_text("utf8").encode())  # Remove windows EOF
     result = _compute_hash(file, algo)
     assert result == expected
