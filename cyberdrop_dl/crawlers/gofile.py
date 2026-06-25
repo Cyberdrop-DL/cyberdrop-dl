@@ -228,13 +228,18 @@ class GoFileCrawler(Crawler):
             self.update_cookies({"accountToken": self._api_key})
 
     async def _create_temp_account(self) -> str:
+        if token := self.cache.get("account_token"):
+            return token
+
         self.log.info("Creating temp account")
         api_url = _API_ENTRYPOINT / "accounts"
         json_resp = await self.request_json(api_url, method="POST", data={}, headers=self.headers)
         if json_resp["status"] != "ok":
-            raise ScrapeError(401, "Couldn't generate GoFile API token", origin=api_url)
+            raise ScrapeError(401, "Couldn't generate GoFile temp account", origin=api_url)
 
-        return json_resp["data"]["token"]
+        token = json_resp["data"]["token"]
+        self.cache.save("account_token", token, ttl=86400 * 60)
+        return token
 
 
 def _check_node_is_accessible(node: Node) -> TypeGuard[File | Folder]:
