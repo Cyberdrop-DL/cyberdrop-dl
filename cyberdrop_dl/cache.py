@@ -30,12 +30,12 @@ def _has_expired(self: _CachedValue[Any]) -> bool:
 
 @dataclasses.dataclass(slots=True)
 class TTLCacheAdapter[T]:
-    _cache: dict[str, Any] = dataclasses.field(default_factory=dict)
-    keys: tuple[str, ...] = ()
+    _cache: dict[str, Any]
+    _keys: tuple[str, ...] = ()
     _root: dict[str, _CachedValue[Any]] = dataclasses.field(init=False)
 
     def create_lookup_path(self, *keys: str) -> str:
-        return ".".join([*self.keys, *keys])
+        return ".".join([*self._keys, *keys])
 
     @property
     def root(self) -> dict[str, _CachedValue[Any]]:
@@ -43,7 +43,7 @@ class TTLCacheAdapter[T]:
             return self._root
         except AttributeError:
             root = self._cache
-            for key in self.keys:
+            for key in self._keys:
                 try:
                     root = root.setdefault(key, {})
                 except (KeyError, TypeError, ValueError, AttributeError):
@@ -55,10 +55,10 @@ class TTLCacheAdapter[T]:
             return self._root
 
     def __getitem__(self, key: str, /) -> T:
-        value = self._get(key)
-        if value is None:
+        cache_hit = self._get(key)
+        if cache_hit is None:
             raise KeyError(key)
-        return value["value"]
+        return cache_hit["value"]
 
     def _get(self, key: str) -> _CachedValue[T] | None:
         try:
@@ -81,8 +81,8 @@ class TTLCacheAdapter[T]:
         del self.root[key]
 
     def get(self, key: str) -> T | None:
-        value = self._get(key)
-        return None if value is None else value["value"]
+        cache_hit = self._get(key)
+        return None if cache_hit is None else cache_hit["value"]
 
     def save(self, key: str, value: T, *, ttl: float | None = None) -> None:
         """NOTE: cached values MUST be JSON serializable"""
