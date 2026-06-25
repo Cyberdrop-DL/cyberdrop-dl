@@ -315,6 +315,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     @property
     def cache(self) -> TTLCacheAdapter[Any]:
+        """Get a TTL cache access for entries specific to this crawler
+
+        NOTE: cached values MUST be JSON seriable"""
         return TTLCacheAdapter(self.manager.cache, ("crawlers", self.DOMAIN))
 
     @final

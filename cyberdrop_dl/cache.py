@@ -34,8 +34,8 @@ class TTLCacheAdapter[T]:
     keys: tuple[str, ...] = ()
     _root: dict[str, _CachedValue[Any]] = dataclasses.field(init=False)
 
-    def create_lookup_path(self, key: str | None = None) -> str:
-        return ".".join(filter(None, [*self.keys, key]))
+    def create_lookup_path(self, *keys: str) -> str:
+        return ".".join([*self.keys, *keys])
 
     @property
     def root(self) -> dict[str, _CachedValue[Any]]:
@@ -85,6 +85,7 @@ class TTLCacheAdapter[T]:
         return None if value is None else value["value"]
 
     def save(self, key: str, value: T, *, ttl: float | None = None) -> None:
+        """NOTE: cached values MUST be JSON serializable"""
         self.root[key] = {
             "value": value,
             "ttl": ttl,
@@ -92,6 +93,7 @@ class TTLCacheAdapter[T]:
         }
 
     def __setitem__(self, name: str, value: T) -> None:
+        """NOTE: cached values MUST be JSON serializable"""
         self.save(name, value, ttl=None)
 
 
