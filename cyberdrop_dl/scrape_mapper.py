@@ -476,8 +476,8 @@ def _parse_source(
 ) -> tuple[ScrapeStats, AsyncGenerator[ScrapeItem]]:
     match src:
         case RetryScrapeSource():
-            name = src.source.name
-            query = RetryQuery[name]
+            source = src.source.value
+            query = RetryQuery[src.source.name]
             items = load_items_from_db(
                 manager.database.conn,
                 query,
@@ -485,10 +485,10 @@ def _parse_source(
                 before=src.before,
             )
         case Path():
-            name = str(src)
+            source = src
             items = load_items_from_file(src)
         case _:
-            name = "--links (CLI args)"
+            source = "--links (CLI args)"
             items = load_items_from_iterable(src)
 
-    return ScrapeStats(name), items
+    return ScrapeStats(source), items

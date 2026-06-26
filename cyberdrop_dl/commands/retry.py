@@ -34,12 +34,13 @@ def _tomorrow() -> datetime.date:
     return datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(days=1)
 
 
-def _create_retry_source(args: RetryArgs) -> RetryScrapeSource:
+def create_retry_source(retry: RetrySource, args: RetryArgs | None = None) -> RetryScrapeSource:
+    args = args or RetryArgs()
     if args.force_original_path:
         error = RuntimeError("Support for '--force-original-path' has been temporarily removed")
         raise CDLConfigRuntimeErrorsGroup("Unsupported option", (error,))
 
-    return RetryScrapeSource(RetrySource.FAILED, after=args.from_, before=args.from_ or _tomorrow())
+    return RetryScrapeSource(retry, after=args.from_, before=args.from_ or _tomorrow())
 
 
 @app.command
@@ -47,7 +48,7 @@ def failed(*, args: RetryArgs | None = None) -> None:
     """Retry failed downloads"""
     args = args or RetryArgs()
     with prepare_manager(args.cli_args, args.cli_overrides)() as manager:
-        scrape(manager, source=_create_retry_source(args))
+        scrape(manager, source=create_retry_source(RetrySource.FAILED, args))
 
 
 @app.command(name="all")
@@ -55,4 +56,4 @@ def retry_all(*, args: RetryArgs | None = None) -> None:
     "Retry all downloads"
     args = args or RetryArgs()
     with prepare_manager(args.cli_args, args.cli_overrides)() as manager:
-        scrape(manager, source=_create_retry_source(args))
+        scrape(manager, source=create_retry_source(RetrySource.ALL, args))

@@ -18,6 +18,7 @@ from cyberdrop_dl.prompts import (
     console,
     enter_to_continue,
 )
+from cyberdrop_dl.scrape_source import RetrySource
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import text_editor
 
@@ -40,10 +41,11 @@ def _changelog() -> str:
     return _changelog_content
 
 
-def run(manager: Manager, input_file: Path) -> None:
+def run(manager: Manager, input_file: Path) -> RetrySource | Path:
     _INPUT_FILE.set(input_file)
-    choices: dict[str, Callable[[Manager], bool | None]] = {
-        "Download": lambda _: True,
+    choices: dict[str, Callable[[Manager], RetrySource | Path | None]] = {
+        "Download": lambda _: input_file,
+        "Retry failed downloads": lambda _: RetrySource.FAILED,
         "Create file hashes": _scan_and_create_hashes,
         "Sort files in download folder": _sort_files,
         "Edit URLs.txt": lambda _: _edit_urls(),
@@ -55,9 +57,9 @@ def run(manager: Manager, input_file: Path) -> None:
     while True:
         _app_header(manager)
         answer = ask_choices(choices)
-        done = choices[answer](manager)
-        if done:
-            break
+        source = choices[answer](manager)
+        if source:
+            return source
 
 
 def _scan_and_create_hashes(manager: Manager) -> None:

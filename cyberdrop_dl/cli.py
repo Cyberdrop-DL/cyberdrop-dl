@@ -14,7 +14,9 @@ from cyberdrop_dl.commands.config import app as config_app
 from cyberdrop_dl.commands.database import app as database_app
 from cyberdrop_dl.commands.hash import compute_hashes
 from cyberdrop_dl.commands.retry import app as retry_app
+from cyberdrop_dl.commands.retry import create_retry_source
 from cyberdrop_dl.commands.scrape import download, prepare_manager, scrape
+from cyberdrop_dl.scrape_source import RetryScrapeSource, RetrySource
 
 app = App(
     name="cyberdrop-dl",
@@ -46,8 +48,14 @@ def main_menu(
     with prepare_manager(cli_args, cli_overrides=None)() as manager:
         from cyberdrop_dl import program_ui
 
-        program_ui.run(manager, input_file)
-        scrape(manager, input_file)
+        source = program_ui.run(manager, input_file)
+        scrape(manager, source=_parse_scrape_source(source))
+
+
+def _parse_scrape_source(src: Path | RetrySource) -> Path | RetryScrapeSource:
+    if isinstance(src, Path):
+        return src
+    return create_retry_source(src)
 
 
 @app.command
