@@ -16,7 +16,7 @@ from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.models import merge_models
 from cyberdrop_dl.models.types import HttpURL  # noqa: TC001
-from cyberdrop_dl.scrape_source import URLSource
+from cyberdrop_dl.scrape_source import URLsSource
 from cyberdrop_dl.utils import cleanup
 
 logger = logging.getLogger(__name__)
@@ -25,17 +25,17 @@ if TYPE_CHECKING:
     from cyclopts.argument import ArgumentCollection
 
     from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.scrape_source import URLSource
+    from cyberdrop_dl.scrape_source import RetryScrapeSource, URLsSource
 
 
-def scrape(manager: Manager, source: URLSource) -> None:
+def scrape(manager: Manager, source: URLsSource | RetryScrapeSource) -> None:
     from cyberdrop_dl import aio
 
     with setup_file_logging(manager.config.logs.files.main, level=manager.config.logs.effective_level):
         aio.run(_scrape(manager, source))
 
 
-async def _scrape(manager: Manager, source: URLSource) -> None:
+async def _scrape(manager: Manager, source: URLsSource | RetryScrapeSource) -> None:
     from cyberdrop_dl import ffmpeg
     from cyberdrop_dl.scrape_mapper import ScrapeMapper
 

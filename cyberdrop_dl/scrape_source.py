@@ -1,42 +1,82 @@
 from __future__ import annotations
 
-import contextlib
 import dataclasses
 import logging
 import re
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
+from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import AsyncGenerator, Generator, Iterable
 
-
-type URLSource = Path | Iterable[AbsoluteHttpURL]
-REGEX_LINKS = re.compile(r"(?:http.*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]))")
+    import aiosqlite
 
 logger = logging.getLogger(__name__)
+
+_FETCH_MANY_SIZE = 1000
+_REGEX_LINKS = re.compile(r"(?:http.*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]))")
+
+type URLsSource = Path | Iterable[AbsoluteHttpURL]
+
+
+class RetryQuery(StrEnum):
+    FAILED = """
+    SELECT domain, url_path, referer, download_path, download_filename FROM media
+    WHERE
+      completed = 0 AND created_at BETWEEN ? AND ?
+    ORDER BY
+      created_at DESC;
+    """
+
+    ALL = """
+    SELECT domain, url_path, referer, download_path, download_filename FROM media
+    WHERE
+      created_at BETWEEN ? AND ?
+    ORDER BY
+      created_at DESC;
+    """
+
+
+class RetrySource(StrEnum):
+    FAILED = "retry failed"
+    ALL = "retry all"
+
+
+@dataclasses.dataclass(slots=True)
+class RetryScrapeSource:
+    source: RetrySource
+    after: datetime.date
+    before: datetime.date
+
+    @property
+    def name(self) -> str:
+        return self.source.value
+
+    def items(self, conn: aiosqlite.Connection) -> AsyncGenerator[ScrapeItem]:
+        query = RetryQuery[self.source.name]
+        return _query_items(conn, query, after=self.after, before=self.before)
 
 
 @dataclasses.dataclass(slots=True)
 class ScrapeSource:
-    source: URLSource
+    source: URLsSource
     name: str = ""
 
     def __post_init__(self) -> None:
         if not self.name:
             self.name = str(self.source) if isinstance(self.source, Path) else "--links (CLI args)"
 
-    def _items(self) -> AsyncGenerator[ScrapeItem]:
+    def items(self) -> AsyncGenerator[ScrapeItem]:
         if isinstance(self.source, Path):
             return _load_urls_from_file(self.source)
 
         return _load_cli_links(self.source)
-
-    def items(self) -> contextlib.aclosing[AsyncGenerator[ScrapeItem]]:
-        return contextlib.aclosing(self._items())
 
 
 async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
@@ -85,10 +125,32 @@ def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
     if line.startswith("#"):
         return
 
-    http_urls = (url.group().replace(".md.", ".") for url in re.finditer(REGEX_LINKS, line))
+    http_urls = (url.group().replace(".md.", ".") for url in re.finditer(_REGEX_LINKS, line))
     for link in http_urls:
         try:
             encoded = "%" in link
             yield AbsoluteHttpURL(link, encoded=encoded)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to parse URL from input file: {link} {e:!r}")
+
+
+async def _query_items(
+    db_conn: aiosqlite.Connection,
+    query: RetryQuery,
+    *,
+    after: datetime.date,
+    before: datetime.date,
+) -> AsyncGenerator[ScrapeItem]:
+    cursor = await db_conn.execute(query, (after.isoformat(), before.isoformat()))
+    while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
+        for row in rows:
+            yield _create_item_from_row(row)
+
+
+def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
+    referer: str = row["referer"]
+    url = AbsoluteHttpURL(referer, encoded="%" in referer)
+    item = ScrapeItem.from_url(url)
+    item.part_of_album = True
+    item.retry_info = deserialize(RetryInfo, dict(row), referer=url, download_path=Path(row["download_path"]))
+    return item

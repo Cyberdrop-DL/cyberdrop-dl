@@ -188,6 +188,15 @@ class MediaItem:
         return me
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class RetryInfo:
+    domain: str
+    url_path: str
+    download_path: Path
+    download_filename: str
+    referer: AbsoluteHttpURL
+
+
 @final
 @dataclasses.dataclass(kw_only=True, slots=True)
 class ScrapeItem:
@@ -206,6 +215,7 @@ class ScrapeItem:
     _children_limit: int = 0
     _type: ScrapeItemType | None = None
     _uploaded_at: int | None = None
+    retry_info: RetryInfo | None = None
 
     __repr__ = signature.simple_repr("url", "folders", "uploaded_at")
 

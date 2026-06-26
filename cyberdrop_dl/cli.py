@@ -13,6 +13,7 @@ from cyberdrop_dl.commands.cleanup import app as cleanup_app
 from cyberdrop_dl.commands.config import app as config_app
 from cyberdrop_dl.commands.database import app as database_app
 from cyberdrop_dl.commands.hash import compute_hashes
+from cyberdrop_dl.commands.retry import app as retry_app
 from cyberdrop_dl.commands.scrape import download, prepare_manager, scrape
 
 app = App(
@@ -66,7 +67,7 @@ def report() -> None:
     app.console.print(generate_report())
 
 
-for cmd in download, database_app, cleanup_app, config_app, cache_app:
+for cmd in download, database_app, cleanup_app, config_app, cache_app, retry_app:
     app.command(cmd)
 
 

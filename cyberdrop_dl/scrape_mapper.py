@@ -15,7 +15,7 @@ from cyberdrop_dl.crawlers import ALLOW_NO_EXT, create_crawlers
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
-from cyberdrop_dl.scrape_source import ScrapeSource, URLSource
+from cyberdrop_dl.scrape_source import RetryScrapeSource, ScrapeSource, URLsSource
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
 from cyberdrop_dl.utils import remove_trailing_slash
 
@@ -210,25 +210,23 @@ class ScrapeMapper:
         await self._direct_http.__async_post_init__()
         self._ready = True
 
-    async def run(self, src: URLSource | None = None) -> ScrapeStats:
+    async def wait_until_scrape_is_done(self, stats: ScrapeStats) -> None:
+        _ = await self._done.wait()
+        self.tui.hide_scrape_panel()
+        stats.url_count.update(
+            (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
+        )
+
+    async def run(self, src: URLsSource | RetryScrapeSource | None = None) -> ScrapeStats:
         await self.__async_init__()
         if src is None:
             return ScrapeStats("")
 
-        source = ScrapeSource(src)
-        stats = ScrapeStats(source.name)
-        async with source.items() as items:
-
-            async def wait_until_scrape_is_done() -> None:
-                _ = await self._done.wait()
-                self.tui.hide_scrape_panel()
-                stats.url_count.update(
-                    (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
-                )
-
-            self.create_download_task(wait_until_scrape_is_done())
-
+        stats, get_items = _parse_source(src, self.manager)
+        async with contextlib.aclosing(get_items) as items:
+            self.create_download_task(self.wait_until_scrape_is_done(stats))
             max_children = _build_max_children_map(self.manager.config)
+
             async for item in items:
                 item.max_children = max_children
                 item.download_folder = self.manager.config.download_folder
@@ -464,3 +462,17 @@ def _build_max_children_map(config: Config) -> dict[ScrapeItemType, int]:
         ScrapeItemType.PROFILE: max_children.profile,
         ScrapeItemType.ALBUM: max_children.album,
     }
+
+
+def _parse_source(
+    src: URLsSource | RetryScrapeSource, manager: Manager
+) -> tuple[ScrapeStats, AsyncGenerator[ScrapeItem]]:
+    match src:
+        case RetryScrapeSource():
+            source = src
+            items = source.items(manager.database.conn)
+        case _:
+            source = ScrapeSource(src)
+            items = source.items()
+
+    return ScrapeStats(source.name), items
