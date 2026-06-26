@@ -36,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `--hashes` option to control which hashes CDL computes for new downloads
 - New `--database-file` option
 - New `--cache-file` option
-- New `download` CLI command (replaces the `--download` argument)
+- New `download` CLI command (replaces `--download` argument)
+- New `retry` CLI command (replaces `--retry-failed` and `--retry-all` arguments)
 - New `config` CLI command
 - New `cache` CLI command
 - New `hash` CLI command
