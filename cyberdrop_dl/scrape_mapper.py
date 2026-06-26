@@ -20,9 +20,9 @@ from cyberdrop_dl.scrape_source import (
     RetryQuery,
     RetryScrapeSource,
     URLsSource,
-    async_iterable,
-    load_urls_from_file,
-    query_items,
+    load_items_from_db,
+    load_items_from_file,
+    load_items_from_iterable,
 )
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
 from cyberdrop_dl.utils import remove_trailing_slash
@@ -217,7 +217,7 @@ class ScrapeMapper:
         await self._direct_http.__async_post_init__()
         self._ready = True
 
-    async def wait_until_scrape_is_done(self, stats: ScrapeStats) -> None:
+    async def _wait_until_scrape_is_done(self, stats: ScrapeStats) -> None:
         _ = await self._done.wait()
         self.tui.hide_scrape_panel()
         stats.url_count.update(
@@ -231,7 +231,7 @@ class ScrapeMapper:
 
         stats, get_items = _parse_source(src, self.manager)
         async with contextlib.aclosing(get_items) as items:
-            self.create_download_task(self.wait_until_scrape_is_done(stats))
+            self.create_download_task(self._wait_until_scrape_is_done(stats))
             max_children = _build_max_children_map(self.manager.config)
 
             async for item in items:
@@ -478,7 +478,7 @@ def _parse_source(
         case RetryScrapeSource():
             name = src.source.name
             query = RetryQuery[name]
-            items = query_items(
+            items = load_items_from_db(
                 manager.database.conn,
                 query,
                 after=src.after,
@@ -486,9 +486,9 @@ def _parse_source(
             )
         case Path():
             name = str(src)
-            items = load_urls_from_file(src)
+            items = load_items_from_file(src)
         case _:
             name = "--links (CLI args)"
-            items = async_iterable(src)
+            items = load_items_from_iterable(src)
 
     return ScrapeStats(name), items
