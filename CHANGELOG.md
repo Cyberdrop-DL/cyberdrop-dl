@@ -46,19 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The config file format has changed. All configs (`Auth`, `Global` and `Setttings`) are now a single file. Several options have new names, new defaults and new groups
-- A default config file will noo longer be created. You can manually create a default one from the `Edit config` option on the main menu
+- A default config file will no longer be created. You can manually create a default one from the `Edit config` option on the main menu or running `cyberdrop-dl config new`
 - Validate config in strict mode. If a config has an unknown entry, CDL will refuse to run instead of ignoring it
 - Apprise URLs are now part of the main config file instead of a dedicated `apprise.txt` file
 - Refuse to start if the current database schema is older than `v9.15.0`
 - Cookies with not be automatically loaded from `AppData/cookies`. Path to cookies needs to be specified with `--cookies`
-- Always remove generated id from filenames (Cyberdrop)
+- Retry options will no longer use the original path of the first download attempt. Download path will be generated based on current config options (like normal downloads)
 - Compute `xxh128`, `md5` and `sha256` hashes by default
 - `--deep-scrape` will no longer reset after a single run
 - `--input-file` is now a CLI only arg
-- If supplied, `--input-file` needs to be a valid file that exists
+- If supplied, `--input-file` needs to be a valid file that already exists
 - Refuse to run if both URLs and `--input-file` are passed as arguments
 - Detect and report BasedFlare anti-bot protection
 - Limit max queued downloads of a single site to the config concurrency limit x10 (capped at 50). All scraping for a site will be paused if its queue is full
+- Always remove generated id from filenames (Cyberdrop)
 
 The following options, which were CLI only arguments, now have dedicated config entries:
 
