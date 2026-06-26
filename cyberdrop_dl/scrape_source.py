@@ -58,28 +58,8 @@ class RetryScrapeSource:
     def name(self) -> str:
         return self.source.value
 
-    def items(self, conn: aiosqlite.Connection) -> AsyncGenerator[ScrapeItem]:
-        query = RetryQuery[self.source.name]
-        return _query_items(conn, query, after=self.after, before=self.before)
 
-
-@dataclasses.dataclass(slots=True)
-class ScrapeSource:
-    source: URLsSource
-    name: str = ""
-
-    def __post_init__(self) -> None:
-        if not self.name:
-            self.name = str(self.source) if isinstance(self.source, Path) else "--links (CLI args)"
-
-    def items(self) -> AsyncGenerator[ScrapeItem]:
-        if isinstance(self.source, Path):
-            return _load_urls_from_file(self.source)
-
-        return _load_cli_links(self.source)
-
-
-async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
+async def load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
     async for group_name, urls in _parse_input_file_groups(file):
         for url in urls:
             item = ScrapeItem.from_url(url)
@@ -110,7 +90,7 @@ async def _parse_input_file_groups(input_file: Path) -> AsyncGenerator[tuple[str
                 yield ("", list(_regex_links(line)))
 
 
-async def _load_cli_links(links: Iterable[AbsoluteHttpURL]) -> AsyncGenerator[ScrapeItem]:
+async def async_iterable(links: Iterable[AbsoluteHttpURL]) -> AsyncGenerator[ScrapeItem]:
     for url in links:
         yield ScrapeItem.from_url(url)
 
@@ -134,7 +114,7 @@ def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
             logger.error(f"Unable to parse URL from input file: {link} {e:!r}")
 
 
-async def _query_items(
+async def query_items(
     db_conn: aiosqlite.Connection,
     query: RetryQuery,
     *,

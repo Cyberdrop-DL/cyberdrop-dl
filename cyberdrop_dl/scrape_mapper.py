@@ -5,6 +5,7 @@ import contextlib
 import dataclasses
 import logging
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from pydantic.types import ByteSize
@@ -15,13 +16,19 @@ from cyberdrop_dl.crawlers import ALLOW_NO_EXT, create_crawlers
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.scraping import ScrapingUI
-from cyberdrop_dl.scrape_source import RetryScrapeSource, ScrapeSource, URLsSource
+from cyberdrop_dl.scrape_source import (
+    RetryQuery,
+    RetryScrapeSource,
+    URLsSource,
+    async_iterable,
+    load_urls_from_file,
+    query_items,
+)
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
 from cyberdrop_dl.utils import remove_trailing_slash
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Coroutine, Generator, Iterator, Sequence
-    from pathlib import Path
+    from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
 
     from cyberdrop_dl.clients.jdownloader import JDownloader
     from cyberdrop_dl.config import Config
@@ -465,14 +472,23 @@ def _build_max_children_map(config: Config) -> dict[ScrapeItemType, int]:
 
 
 def _parse_source(
-    src: URLsSource | RetryScrapeSource, manager: Manager
+    src: RetryScrapeSource | Path | Iterable[AbsoluteHttpURL], manager: Manager
 ) -> tuple[ScrapeStats, AsyncGenerator[ScrapeItem]]:
     match src:
         case RetryScrapeSource():
-            source = src
-            items = source.items(manager.database.conn)
+            name = src.source.name
+            query = RetryQuery[name]
+            items = query_items(
+                manager.database.conn,
+                query,
+                after=src.after,
+                before=src.before,
+            )
+        case Path():
+            name = str(src)
+            items = load_urls_from_file(src)
         case _:
-            source = ScrapeSource(src)
-            items = source.items()
+            name = "--links (CLI args)"
+            items = async_iterable(src)
 
-    return ScrapeStats(source.name), items
+    return ScrapeStats(name), items

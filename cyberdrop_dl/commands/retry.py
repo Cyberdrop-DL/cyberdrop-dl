@@ -44,9 +44,7 @@ def _create_retry_source(args: RetryArgs) -> RetryScrapeSource:
 
 @app.command
 def failed(*, args: RetryArgs | None = None) -> None:
-    """Retry failed downloads
-
-    Downloads will use the same download path as they original had"""
+    """Retry failed downloads"""
     args = args or RetryArgs()
     with prepare_manager(args.cli_args, args.cli_overrides)() as manager:
         scrape(manager, source=_create_retry_source(args))
