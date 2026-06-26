@@ -54,9 +54,6 @@ class RetryScrapeSource:
     after: datetime.date
     before: datetime.date
 
-    @property
-    def name(self) -> str:
-        return self.source.value
 
 
 async def load_items_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
