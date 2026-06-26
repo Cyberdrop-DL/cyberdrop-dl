@@ -5,7 +5,7 @@ import logging
 import re
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
@@ -13,7 +13,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import AsyncGenerator, Generator, Iterable
+    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
 
     import aiosqlite
 
@@ -124,10 +124,10 @@ async def load_items_from_db(
     cursor = await db_conn.execute(query, (after.isoformat(), before.isoformat()))
     while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):
         for row in rows:
-            yield _create_item_from_row(row)
+            yield _create_item_from_row(dict(row))
 
 
-def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
+def _create_item_from_row(row: Mapping[str, Any]) -> ScrapeItem:
     referer: str = row["referer"]
     url = AbsoluteHttpURL(referer, encoded="%" in referer)
     item = ScrapeItem.from_url(url)

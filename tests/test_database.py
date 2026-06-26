@@ -8,6 +8,7 @@ from cyberdrop_dl import aio, scrape_mapper
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
 from cyberdrop_dl.database import Database, common, schema
 from cyberdrop_dl.exceptions import DatabaseError
+from cyberdrop_dl.scrape_source import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import parse_url
 
@@ -151,3 +152,22 @@ async def test_db_schema_dump(tmp_cwd: Path) -> None:
         current_schema = await schema.dump(db.conn)
 
     assert current_schema == schema.V9_15_0
+
+
+def test_create_item_from_row() -> None:
+    referer, domain, url_path, download_path, download_filename = (
+        "https://example.com/a/b/c/",
+        "example.com",
+        "/a/b/c",
+        "/home/user/downloads",
+        "movie.mp4",
+    )
+
+    item = _create_item_from_row(locals())
+    assert item.url.human_repr() == referer
+    info = item.retry_info
+    assert info
+    assert info.domain == domain
+    assert info.url_path == url_path
+    assert info.download_path == Path(download_path)
+    assert info.download_filename == download_filename

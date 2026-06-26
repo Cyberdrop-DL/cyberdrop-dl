@@ -40,7 +40,7 @@ def create_retry_source(retry: RetrySource, args: RetryArgs | None = None) -> Re
         error = RuntimeError("Support for '--force-original-path' has been temporarily removed")
         raise CDLConfigRuntimeErrorsGroup("Unsupported option", (error,))
 
-    return RetryScrapeSource(retry, after=args.from_, before=args.from_ or _tomorrow())
+    return RetryScrapeSource(retry, after=args.from_, before=args.to or _tomorrow())
 
 
 @app.command
