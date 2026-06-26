@@ -165,7 +165,7 @@ def test_create_item_from_row() -> None:
 
     item = _create_item_from_row(locals())
     assert item.url.human_repr() == referer
-    assert item.part_of_album if True
+    assert item.part_of_album is True
     info = item.retry_info
     assert info
     assert info.domain == domain
