@@ -55,7 +55,6 @@ class RetryScrapeSource:
     before: datetime.date
 
 
-
 async def load_items_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
     async for group_name, urls in _parse_input_file_groups(file):
         for url in urls:
