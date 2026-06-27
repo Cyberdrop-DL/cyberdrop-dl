@@ -19,7 +19,7 @@ You can download them here: [https://github.com/Cyberdrop-DL/cyberdrop-dl/releas
 
 You only need to download the `Cyberdrop-DL_<version>.zip` file, you don't need to worry about the other files.
 
-Extract the contents of the zip file to any location. The extracted files will include an install files for Windows, macOS, and Linux
+Extract the contents of the zip file to any location. The extracted files will include an install file for Windows, macOS, and Linux
 
 Run the `install` file to install/update `cyberdrop-dl`, then open the `run` file to run it. That's it!
 

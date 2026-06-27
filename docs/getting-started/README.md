@@ -59,17 +59,17 @@ However, `cyberdrop-dl` has a ton of configuration options if you want more cont
 
 ## AppData and Configuration
 
-`cyberdrop-dl` have 2 main files to control its behavior at runtime:
+`cyberdrop-dl` have 3 files to control its behavior at runtime:
 
 - A config file (YAML)
 - A database file (SQLite)
 - A cache file
 
-Additionally, dedicated `logs` folder is created to store logs files of a session.
+Additionally, a dedicated `logs` folder is created to store logs files of a session.
 
-On Windows, all files are stored in `%AppData%/cyberdrop-dl` folder, with the logs folder being `%AppData%/cyberdrop-dl/logs`
+On Windows, all files are stored in `%AppData%/cyberdrop-dl`, with the logs folder being `%AppData%/cyberdrop-dl/logs`
 
-On Unix system, `cyberdrop-dl` follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/0.8/) to storage application files.
+On Unix systems, `cyberdrop-dl` follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/0.8/) to storage application files.
 
 These are the default locations used on each platform
 

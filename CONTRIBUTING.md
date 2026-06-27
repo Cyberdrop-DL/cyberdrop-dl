@@ -78,12 +78,12 @@ with formatting options and a recipe to quickly launch `cyberdrop-dl` with `pdb`
 This project uses pre-commit hooks to enforce consistent code style and identify common issues early on.
 
 These hooks run automatically on every `git commit`. If a check fails, the commit is blocked and `ruff` will attempt to
-automatically fix the files. You may need to fix the fix some errors manually if `ruff` can not do it automatically.
+automatically fix the files. You may need to fix some errors manually if `ruff` can not do it automatically.
 
 Once everything is fixed, `git add` the changes and commit again.
 
 > [!TIP]
-> You can trigger linting and formatting manually, run `uv run ruff check --fix` then `uv run ruff format`
+> To trigger linting and formatting manually, run `uv run ruff check --fix` then `uv run ruff format`
 
 ## Implementing new changes
 

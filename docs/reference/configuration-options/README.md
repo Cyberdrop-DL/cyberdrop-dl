@@ -9,7 +9,7 @@ You can setup a configuration file to customize the default behaviour of `cyberd
 but some options (like account credentials) can only be provided via config file.
 
 The config file format is YAML and it _must_ have a `.yaml` or `.yml` extension. `cyberdrop-dl` will not created a config file by default.
-You can manually create a config with all the default settings using the`Edit config`option on the main menu or running the command `cyberdrop-dl config new`
+You can manually create a config with all the default settings using the `Edit config` option on the main menu or running the command `cyberdrop-dl config new`
 
 `cyberdrop-dl` will always look for a config file at these default locations:
 

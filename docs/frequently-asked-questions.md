@@ -40,9 +40,9 @@ Follow the instructions here: [How to extract cookies (DDoSGuard or login errors
 
 Quite simply, almost all of them will be HTTP Status codes. Such as: 404 - Not Found (dead link)
 
-You check [this page to learn about what each error code means](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+You can check [this page to learn about what each error code means](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
 
-These error are **NOT** bugs. They are errors from the website itself. If your try to download the files manually from your browser you will most likely
+These errors are **NOT** bugs. They are errors from the website itself. If your try to download the files manually from your browser you will most likely
 get the same error.
 
 The only exception is `422 Unprocessable Entity`, which `cyberdrop-dl` uses to report some internal errors
@@ -53,8 +53,8 @@ The only exception is `422 Unprocessable Entity`, which `cyberdrop-dl` uses to r
 
 ## Why do Simpcity URLs show as "Unsupported"?
 
-Support for SimpCity was removed on v5.6.3 in response to a request by the site admins. The site could not keep up with the high ammount of traffic generated
-by `cyberdrop-dl` on top of the constant DDOS attacks they recive.
+Support for SimpCity was removed on v5.6.3 in response to a request by the site admins. The site could not keep up with the high amount of traffic generated
+by `cyberdrop-dl` on top of the constant DDOS attacks they receive.
 
 ## Why are all the files skipped?
 
@@ -65,7 +65,7 @@ You can disable this behavior by using the `--ignore-history` CLI argument or se
 
 This issue is caused by an improper installation.
 
-Please revisit the [Getting Started](getting-started/README.md) guide and follow the steps provided to reinstall `cyberdrop-dl` with start scripts.
+Please revisit the [Getting Started](getting-started/README.md) guide and follow the steps provided to reinstall `cyberdrop-dl` with the start scripts.
 
 Run the `remove` file from the start scripts and them run the `install` file. Your config and database files will not be affected
 

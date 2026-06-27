@@ -40,7 +40,7 @@ uv tool update-shell
 ```
 
 {% hint style="warning" %}
-You will loose your config and database file if you ever uninstall termux. Use the CLI options to change the location of those files.
+You will loose your config and database file if you ever uninstall termux. Use the `--database-file` and `--config-file` CLI options to change the location of those files.
 
 ```shell
 mkdir /sdcard/cyberdrop-dl
