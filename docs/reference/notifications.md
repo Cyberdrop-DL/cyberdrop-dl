@@ -5,7 +5,7 @@ description: These are the options to setup notifications from CDL.
 
 # Notifications
 
-Cyberdrop-DL generates a report at the end of a run with stats about all the downloads, total runtime, errors, deduplication report, etc. By default, this report is only shown in the console and at the end of the main log file.
+`cyberdrop-dl` generates a report at the end of a run with stats about all the downloads, total runtime, errors, deduplication report, etc. By default, this report is only shown in the console and at the end of the main log file.
 
 You can set up CDL to sent you the report via discord, email, a native notification of your OS, telegram and many other services.
 
@@ -19,7 +19,7 @@ Optionally, you can add the tag `attach_logs=` as a prefix to your webhook url. 
 
 ## Notifications to other services (via Apprise)
 
-Cyberdrop-DL uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
+`cyberdrop-dl` uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
 
 {% hint style="info" %}
 `apprise` is an an optional dependency; It's not installed by default with CDL. To install `cyberdrop-dl` with `apprise`, especify it as an extra while installing cyberdrop:
@@ -44,7 +44,7 @@ You can build the URL interactively on their website: [https://appriseit.com/url
 
 ### Troubleshooting Apprise notifications
 
-Cyberdrop-DL will show you a message at the end of a run telling you if the apprise notifications were successfully sent or not. If you are having trouble getting notifications via Apprise, follow their [troubleshooting guide](https://github.com/caronc/apprise/wiki/Troubleshooting).
+`cyberdrop-dl` will show you a message at the end of a run telling you if the apprise notifications were successfully sent or not. If you are having trouble getting notifications via Apprise, follow their [troubleshooting guide](https://github.com/caronc/apprise/wiki/Troubleshooting).
 
 ## Examples
 
@@ -68,7 +68,7 @@ attach_logs=mailto://user:password@domain.com
 {% endtab %}
 
 {% tab title="Native OS notifications" %}
-Some operating systems require additional dependencies for notifications to work. Cyberdrop-DL includes the required dependencies for Windows. Follow the url on the OS name to get additional information on how to set them up.
+Some operating systems require additional dependencies for notifications to work. `cyberdrop-dl` includes the required dependencies for Windows. Follow the url on the OS name to get additional information on how to set them up.
 
 | OS                                                                                 | Syntax                                              |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------- |

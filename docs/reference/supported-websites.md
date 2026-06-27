@@ -1,5 +1,5 @@
 ---
-description: These are the websites supported by Cyberdrop-DL
+description: These are the websites supported by `cyberdrop-dl`
 icon: globe-pointer
 ---
 
@@ -11,29 +11,45 @@ For a full list of all supported sites, see [supported sites](#supported-sites)
 
 ## Password Protected Content Hosts
 
-Cyberdrop-DL can download password protected files and folders from these hosts. User must include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
+`cyberdrop-dl` can download password protected files and folders from these hosts. User must include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
 
-Example: `https://cyberfile.me/folder/xUGg?password=1234`
+Example: `https://gofile.io/d/xUGg-sghx?password=1234`
 
-| Domain                                              |
-| --------------------------------------------------- |
-| GoFile                                              |
-| Cyberfile                                           |
-| Chevereto Sites (`JPG5`, `ImagePond.net`,`ImgLike`) |
-| Filester                                            |
-| Iceyfile.com                                        |
-| Transfer.it                                         |
-| Koofr.eu                                            |
-| Sites supported by Real-Debrid                      |
+| Domain                              |
+| ----------------------------------- |
+| Chevereto sites (`JPG6`, `ImgLike`) |
+| Cyberfile                           |
+| Filester                            |
+| GoFile                              |
+| Iceyfile.com                        |
+| Imagepond.net                       |
+| Koofr.eu                            |
+| Transfer.it                         |
+| Sites supported by Real-Debrid      |
 
-## Additional Content Hosts with Real-Debrid
+## Additional supported sites with Real-Debrid
 
-Cyberdrop-DL has integration with Real-Debrid as download service to support additional hosts. In order to enable Real-Debrid, user must provide their API token inside the `authentication.yaml` file. You can get your API token from this URL (you must be logged in): [https://real-debrid.com/apitoken](https://real-debrid.com/apitoken)
+`cyberdrop-dl` has integration with Real-Debrid as download service to support additional hosts. In order to enable Real-Debrid, user must provide their API token
+inside their config file. You can get your API token from this URL (you must be logged into Real-Debrid to view it): <https://real-debrid.com/apitoken>
 
-Supported domains via Real-Debrid include `rapidgator`, `4shared.com`, `fikper.com`, `k2s`, `etc`. List of all supported domains can be found here (250+): [https://api.real-debrid.com/rest/1.0/hosts/domains](https://api.real-debrid.com/rest/1.0/hosts/domains)
+Supported domains via Real-Debrid include `rapidgator`, `4shared.com`, `fikper.com`, `k2s`, `etc`.
+List of all supported domains can be found here (250+): <https://api.real-debrid.com/rest/1.0/hosts/domains>
 
 {% hint style="info" %}
-CDL will only use Real-Debrid for unsupported sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler. See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
+Real-Debrid will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
+See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
+{% endhint %}
+
+## Additional supported sites with JDownloader
+
+`cyberdrop-dl` has integration with JDownloader as a backup downloader for unsupported sites hosts. `cyberdrop-dl` will send unsupported URLs to a running instance of JDownloader
+with a custom setup to make sure JDownloader put files on the same folder and with the same name `cyberdrop-dl` would have used.
+
+You must provide your MyJDownloader credentials in your config file to connect to JDownloader
+
+{% hint style="info" %}
+JDownloader will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
+See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
 {% endhint %}
 
 <!-- START_SUPPORTED_SITES -->

@@ -29,7 +29,7 @@ See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.co
 
 <summary>GoFile</summary>
 
-If you decide to pay for GoFile Premium (faster downloads, etc.) you can provide your API key to Cyberdrop-DL in order for the program to use it.
+If you decide to pay for GoFile Premium (faster downloads, etc.) you can provide your API key to `cyberdrop-dl` in order for the program to use it.
 
 - `api_key`
 
@@ -55,7 +55,7 @@ Under JDownloader 2 settings -> MyJDownloader:
 
 <summary>PixelDrain</summary>
 
-If you decide to pay for PixelDrain premium (faster downloads, etc.) you can provide your API key to Cyberdrop-DL in order for the program to use it.
+If you decide to pay for PixelDrain premium (faster downloads, etc.) you can provide your API key to `cyberdrop-dl` in order for the program to use it.
 
 - `api_key`
 

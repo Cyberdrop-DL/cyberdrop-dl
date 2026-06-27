@@ -36,7 +36,7 @@ For items not explained below, you can find their counterparts in the configurat
 | ------ | ----------------------------- |
 | `Path` | `<Current Working Directory>` |
 
-Folder where Cyberdrop-DL will store it's database, cache and config files.
+Folder where `cyberdrop-dl` will store it's database, cache and config files.
 
 ### `config-file`
 

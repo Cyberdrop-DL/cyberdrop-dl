@@ -16,7 +16,7 @@ Only log messages of this level or higher to the console. An empty or `None` val
 | ------ | ------- |
 | `bool` | `false` |
 
-Cyberdrop-DL uses a some tricks to try to reduce the number of requests it needs to make while scraping a site. However, this may cause a few links to be skipped. Use `--deep-scrape` to disable this functionality and always make a new request.
+`cyberdrop-dl` uses a some tricks to try to reduce the number of requests it needs to make while scraping a site. However, this may cause a few links to be skipped. Use `--deep-scrape` to disable this functionality and always make a new request.
 
 This setting is temporary and will always reset to `false` after each run
 
@@ -67,7 +67,7 @@ This option has no effect unless `send_unsupported_to_jdownloader` is `true`
 | ---------------- | ------- |
 | `Path` or `null` | `null`  |
 
-The `download_dir` jdownloader will use. A `null` value (the default) will make jdownloader use the same `download_dir` as Cyberdrop-DL. Use this option as path mapping when jdownloader is running on a different host / docker.
+The `download_dir` jdownloader will use. A `null` value (the default) will make jdownloader use the same `download_dir` as `cyberdrop-dl`. Use this option as path mapping when jdownloader is running on a different host / docker.
 
 {% hint style="info" %}
 This option has no effect unless `send_unsupported_to_jdownloader` is `true`
@@ -98,8 +98,8 @@ Only log messages of this level or higher to the main log file, according to [Py
 | `DEBUG`    | 10    | Offers detailed information, typically useful to troubleshoot problems                             |
 | `INFO`     | 20    | Provides general information about scrape and download progress                                    |
 | `WARNING`  | 30    | Potential issues or something that might need attention (e.g. `Login wasn't provided for <FORUM>`) |
-| `ERROR`    | 40    | Serious problem preventing Cyberdrop-DL to execute some function                                   |
-| `CRITICAL` | 50    | Fatal error that causes Cyberdrop-DL to exit immediately                                           |
+| `ERROR`    | 40    | Serious problem preventing `cyberdrop-dl` to execute some function                                 |
+| `CRITICAL` | 50    | Fatal error that causes `cyberdrop-dl` to exit immediately                                         |
 
 {% hint style="info" %}
 Using anything other that `DEBUG` makes troubleshooting issues harder. Practically speaking, you should _only_ change this if you expect CDL to run for an extended period (with a large number of input URLs) to minimize the log files sizes
@@ -111,7 +111,7 @@ Using anything other that `DEBUG` makes troubleshooting issues harder. Practical
 | ------ | ------- |
 | `bool` | `false` |
 
-Cyberdrop-DL has integration with jdownloader. This will allow you to download URLs that Cyberdrop-DL finds but do not support. However, this setting is disabled by default.
+`cyberdrop-dl` has integration with jdownloader. This will allow you to download URLs that `cyberdrop-dl` finds but do not support. However, this setting is disabled by default.
 
 Setting this to `true`, will send unsupported links over.
 

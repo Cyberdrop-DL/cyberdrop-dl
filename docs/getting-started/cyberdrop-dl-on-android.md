@@ -8,11 +8,11 @@ icon: android
 Cyberdrop-dl is a terminal app. That means you need a terminal emulator to run it. The defacto choice in Android is [termux](https://termux.dev/en/).
 
 {% hint style="info" %}
-Most of the dependencies need to be compiled from source. A rust compiler is required. This means the installation could take several minutes, especially on low end phones
+On Android, some of the dependencies need to be compiled from source. A rust compiler is required. This means the installation could take several minutes, especially on low end phones
 {% endhint %}
 
-{% hint style="warning" %}
-Compiling from source also requires a lot of extra storage. You will need at least 3.4GB just for the installation of CDL
+{% hint style="info" %}
+Compiling from source also requires a lot of extra storage. You will need at least 3.4GB of free space just for the installation
 {% endhint %}
 
 ## 1. Install `termux`
@@ -40,7 +40,7 @@ uv tool update-shell
 ```
 
 {% hint style="warning" %}
-You will loose your config and database file if you uninstall termux. Use the CLI options to change the location of those files.
+You will loose your config and database file if you ever uninstall termux. Use the CLI options to change the location of those files.
 
 ```shell
 mkdir /sdcard/cyberdrop-dl

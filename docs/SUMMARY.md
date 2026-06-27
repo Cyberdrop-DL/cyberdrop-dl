@@ -2,10 +2,9 @@
 
 - [Welcome!](README.md)
 - [Getting Started](getting-started/README.md)
-  - [Cyberdrop-DL Install](getting-started/cyberdrop-dl-install.md)
+  - [Install `cyberdrop-dl`](getting-started/cyberdrop-dl-install.md)
   - [Running CDL on Android](getting-started/cyberdrop-dl-on-android.md)
 - [Frequently Asked Questions](frequently-asked-questions.md)
-- [SimpCity Support Dropped](simpcity-support-dropped.md)
 
 ## Reference
 

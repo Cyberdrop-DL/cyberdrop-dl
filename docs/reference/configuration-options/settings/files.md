@@ -6,7 +6,7 @@
 | ------ | ----------- |
 | `Path` | `Downloads` |
 
-The path to the folder you want Cyberdrop-DL to download files to.
+The path to the folder you want `cyberdrop-dl` to download files to.
 
 ## `dump_json`
 
@@ -22,7 +22,7 @@ Each line in the file will contain the following details (this may change on fut
 {
   "url": "https://store9.gofile.io/download/web/7c88c147-ABCD-4e4d-9a6c-12345678/a_video.mp4",
   "referer": "https://gofile.io/d/ABC123",
-  "download_folder": "Downloads/Cyberdrop-DL Downloads/test_album (GoFile)",
+  "download_folder": "downloads/cyberdrop-dl/test_album (GoFile)",
   "filename": "0hxte0li0o931lwgcrzbz_source.mp4",
   "original_filename": "a_video.mp4",
   "download_filename": "0hxte0li0o931lwgcrzbz_source.mp4",
@@ -34,8 +34,8 @@ Each line in the file will contain the following details (this may change on fut
   "datetime": "2025-01-22T11:00:07",
   "parents": ["https://a_forum.com/threads/<name>.54321/post-123123"],
   "parent_threads": ["https://a_forum.com/threads/<name>.54321"],
-  "partial_file": "Downloads/Cyberdrop-DL Downloads/test_album (GoFile)/a_video.mp4.part",
-  "complete_file": "Downloads/Cyberdrop-DL Downloads/test_album (GoFile)/a_video.mp4",
+  "partial_file": "downloads/cyberdrop-dl/test_album (GoFile)/a_video.mp4.part",
+  "complete_file": "downloads/cyberdrop-dl/test_album (GoFile)/a_video.mp4",
   "hash": "xxh128:53ee56b7bfafa31b8780a572e9783df3",
   "downloaded": true,
   "attempts": 1
@@ -50,7 +50,7 @@ Each line in the file will contain the following details (this may change on fut
 
 The path to the text file containing the URLs you want to download. Each line should be a single URL.
 
-You can also use `html` code. Cyberdrop-DL will parse all the links on the HTML
+You can also use `html` code. `cyberdrop-dl` will parse all the links on the HTML
 
 ## `dump_responses`
 

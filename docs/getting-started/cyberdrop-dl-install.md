@@ -3,33 +3,35 @@ description:
 icon: download
 ---
 
-# Cyberdrop-DL Install
+# `cyberdrop-dl` Install
 
-## Using Start Scripts (From Release Page)
+## Using the start scripts (from GitHub release page)
 
-This is the simplest method to get the program up and running. Pre-configured start files are provided that will automatically install python, install cyberdrop-dl, update, and launch the program for you.
+This is the simplest method to get the program up and running. Pre-configured start files are provided that will
+automatically install python, install cyberdrop-dl, update, and launch the program for you.
 
 {% hint style="info" %}
-The start scripts only work on 64bits operating systems. If you are running a 32bit OS, you need to install directly from pypi and may need to compile some dependencies
+The start scripts only work on 64bits operating systems. If you are running a 32bit OS, you need to install directly
+from pypi and may need to compile some dependencies
 {% endhint %}
 
 You can download them here: [https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest)
 
 You only need to download the `Cyberdrop-DL_<version>.zip` file, you don't need to worry about the other files.
 
-Extract the contents of the zip file to any location where you'd like the program to run and store downloaded files. The extracted files will include an install files for Windows, macOS, and Linux
+Extract the contents of the zip file to any location. The extracted files will include an install files for Windows, macOS, and Linux
 
-Run the `install` file to install/update `cyberdrop-dl`, then use the `run` file to run it
+Run the `install` file to install/update `cyberdrop-dl`, then open the `run` file to run it. That's it!
 
 {% hint style="info" %}
-If you are using Windows, **DO NOT** run the script as admin
+If you are using Windows, **DO NOT** run the scripts as admin
 {% endhint %}
 
 ## Manual Install
 
 ### 1. Using `uv`
 
-The recommended way to install Cyberdrop-DL is using [`uv`](https://docs.astral.sh/uv).
+The recommended way to install `cyberdrop-dl` is using [`uv`](https://docs.astral.sh/uv).
 
 {% tabs %}
 
@@ -50,7 +52,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 {% endtab %}
 {% endtabs %}
 
-Once you have `uv`, you can install Cyberdrop-DL using:
+Once you have `uv`, you can install `cyberdrop-dl` using:
 
 ```shell
 uv tool install cyberdrop-dl-patched
@@ -60,22 +62,13 @@ uv tool install cyberdrop-dl-patched
 
 If you do not want to or can't use `uv`, you will need to install a compatible python version manually.
 
-If you don't have python, you can find and download it from their official website: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+If you don't have python, you can find and download it from their official website: <https://www.python.org/downloads/>
 
 {% hint style="info" %}
-Cyberdrop-DL requires python >=3.12
+`cyberdrop-dl` requires python >=3.12
 {% endhint %}
 
-{% hint style="warning" %}
-If you are using a version of Cyberdrop-DL from the previous repository (`cyberdrop-dl` instead of `cyberdrop-dl-patched`), you **MUST** uninstall it before installing the patched version.
-
-```shell
-pip uninstall cyberdrop-dl
-```
-
-{% endhint %}
-
-Once you have python, you can install Cyberdrop-DL directly from pypi using `pipx` or `pip`. In a command prompt/terminal window:
+Once you have python, you can install `cyberdrop-dl` directly from pypi using `pipx` or `pip`. In a command prompt/terminal window:
 
 {% tabs %}
 
@@ -87,7 +80,7 @@ Once you have python, you can install Cyberdrop-DL directly from pypi using `pip
 pip install pipx
 ```
 
-- Install cdl
+- Install `cyberdrop-dl`
 
 ```shell
 pipx install cyberdrop-dl-patched
@@ -97,7 +90,8 @@ pipx install cyberdrop-dl-patched
 
 {% tab title="pip" %}
 {% hint style="warning" %}
-Using bare `pip` to install `cyberdrop-dl-patched` is discouraged as it may lead to dependency conflicts with global installs and an inconsistent environment. Consider using `uv` or `pipx`
+Using bare `pip` to install `cyberdrop-dl` is discouraged as it may lead to dependency conflicts with global installs
+and an inconsistent environment. Please consider using `uv` or `pipx`
 {% endhint %}
 
 ```shell

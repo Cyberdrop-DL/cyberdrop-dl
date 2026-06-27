@@ -1,5 +1,5 @@
 ---
-description: This is Cyberdrop-DL wiki
+description: This is `cyberdrop-dl` wiki
 icon: hand-wave
 layout:
   title:
@@ -16,7 +16,7 @@ layout:
 
 # Welcome!
 
-Cyberdrop-DL is an open source asynchronous downloader maintained by [jbsparrow](https://github.com/jbsparrow). It's goal is to act as a bulk downloader for various sites you will find around the web.
+`cyberdrop-dl` is an open source asynchronous downloader maintained by [jbsparrow](https://github.com/jbsparrow). It's a bulk downloader for various sites you will find around the web.
 
 {% content-ref url="reference/supported-websites.md" %}
 [supported-websites.md](reference/supported-websites.md)
@@ -24,7 +24,7 @@ Cyberdrop-DL is an open source asynchronous downloader maintained by [jbsparrow]
 
 ## Want to jump right in?
 
-Explore the Getting Started guide to quickly familiarize yourself with the setup process and get started with the software.
+Explore the Getting Started guide to quickly familiarize yourself with the setup process of installing and using `cyberdrop-dl`.
 
 {% content-ref url="getting-started/" %}
 [getting-started](getting-started/)

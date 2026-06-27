@@ -8,7 +8,7 @@
 
 Path of the download error log. For relative paths, the final path will be `log_folder` / `download_error_urls`
 
-Cyberdrop-DL will output the links it fails to download, the reason and their origin in CSV format.
+`cyberdrop-dl` will output the links it fails to download, the reason and their origin in CSV format.
 
 ## `log_folder`
 
@@ -16,7 +16,7 @@ Cyberdrop-DL will output the links it fails to download, the reason and their or
 | ------ | ------------------------------- |
 | `Path` | `AppData/Configs/{config}/Logs` |
 
-The path to the location you want Cyberdrop-DL to store logs in.
+The path to the location you want `cyberdrop-dl` to store logs in.
 
 ## `log_line_width`
 
@@ -61,7 +61,7 @@ Path of main log file. For relative paths, the final path will be `log_folder` /
 | ------ | ------- |
 | `bool` | `false` |
 
-If enabled, Cyberdrop-DL will add the current date and time as a suffix to each log file, in the format `YYMMDD_HHMMSS`
+If enabled, `cyberdrop-dl` will add the current date and time as a suffix to each log file, in the format `YYMMDD_HHMMSS`
 
 Every log file will be created inside a sub folder with the current date
 
@@ -73,9 +73,9 @@ This will prevent overriding old log files
 | ------ | ----------------------- | --------------------------------------------- |
 | `Path` | `Scrape_Error_URLs.csv` | extension will always be overridden to `.csv` |
 
-What you want Cyberdrop-DL to call the scrape error log. For relative paths, the final path will be `log_folder` / `scrape_error_urls`
+What you want `cyberdrop-dl` to call the scrape error log. For relative paths, the final path will be `log_folder` / `scrape_error_urls`
 
-Cyberdrop-DL will output the links it fails to scrape, the reason and their origin in CSV format.
+`cyberdrop-dl` will output the links it fails to scrape, the reason and their origin in CSV format.
 
 ## `unsupported_urls`
 
@@ -85,7 +85,7 @@ Cyberdrop-DL will output the links it fails to scrape, the reason and their orig
 
 Path of the unsupported log file. For relative paths, the final path will be `log_folder` / `unsupported_urls`
 
-Cyberdrop-DL will output links it can't download to this file.
+`cyberdrop-dl` will output links it can't download to this file.
 
 ## `webhook`
 

@@ -1,6 +1,6 @@
 # Sorting
 
-Cyberdrop-DL has a file sorter built in, but it's disabled by default
+`cyberdrop-dl` has a file sorter built in, but it's disabled by default
 
 You can use the field names below to create a custom path format. You can also use essentially none of them and have a hard coded path.
 However, `filename` and `ext` must always be used.
@@ -19,7 +19,7 @@ Common fields for sorting format options (supported for `audio`, `videos`, `imag
 >
 > `filename`: the file's name (stem)
 >
-> `parent_dir`: the name of the folder where the file is located at (its parent folder).  This is normally the album name for photos or the post name for forums/reddit if `separate_post` is enabled
+> `parent_dir`: the name of the folder where the file is located at (its parent folder). This is normally the album name for photos or the post name for forums/reddit if `separate_post` is enabled
 >
 > `sort_dir`: the same path as `sort_folder` from the download options
 
@@ -33,7 +33,7 @@ Sets the starting point for the file scan
 
 Each direct child of the `scan_folder` is recursively scanned, and files are moved based on your settings.
 
-If this is set to `null` (the default), the value of `download_dir` from  the download options is used.
+If this is set to `null` (the default), the value of `download_dir` from the download options is used.
 
 ## `sort_downloads`
 
@@ -41,13 +41,13 @@ If this is set to `null` (the default), the value of `download_dir` from  the do
 | ------ | ------- |
 | `bool` | `false` |
 
-Setting this to `true` will allow Cyberdrop-DL to sort downloads after a run is complete.
+Setting this to `true` will allow `cyberdrop-dl` to sort downloads after a run is complete.
 
 ## `sort_folder`
 
-| Type   | Default                                   |
-| ------ | ----------------------------------------- |
-| `Path` | `Downloads/Cyberdrop-DL Sorted Downloads` |
+| Type   | Default                         |
+| ------ | ------------------------------- |
+| `Path` | `downloads/cyberdrop-dl sorted` |
 
 This is the path to the folder you'd like sorted downloads to be stored in.
 
@@ -61,7 +61,7 @@ Setting `sort_folder` to the same value as `scan_folder` is not supported and wi
 | ------------- | ------- |
 | `NonEmptyStr` | `({i})` |
 
-When naming collisions happen, Cyberdrop-DL will rename files automatically
+When naming collisions happen, `cyberdrop-dl` will rename files automatically
 
 > `image.jpg` -> `image (1).jpg`.
 
@@ -111,7 +111,7 @@ This is the format for the directory structure and naming scheme for video files
 
 In addition to the common sorting format fields, this option supports:
 
-> `codec`: ex. h264.  This is a `str`. It could potentially be `None` for some files
+> `codec`: ex. h264. This is a `str`. It could potentially be `None` for some files
 >
 > `duration`: video total runtime in seconds. This is an `int`
 >

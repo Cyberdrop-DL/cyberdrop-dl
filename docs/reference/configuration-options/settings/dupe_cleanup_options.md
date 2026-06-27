@@ -4,7 +4,7 @@ description: These are options for enable/disable hashing and auto dupe deletion
 
 # Dupe Cleanup Options
 
-Cyberdrop-DL maintains an internal database of all downloaded files, indexed by their hashes. This can be used to automatically delete newly downloaded files if they were downloaded before. To enable auto dupe cleanup:
+`cyberdrop-dl` maintains an internal database of all downloaded files, indexed by their hashes. This can be used to automatically delete newly downloaded files if they were downloaded before. To enable auto dupe cleanup:
 
 1. Set `hashing` to `IN_PLACE` or `POST_DOWNLOAD`
 2. Set `auto_dedupe` to `true`
