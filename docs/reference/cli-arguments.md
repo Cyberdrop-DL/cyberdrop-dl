@@ -30,14 +30,6 @@ For items not explained below, you can find their counterparts in the configurat
 
 ## CLI only arguments
 
-### `appdata-folder`
-
-| Type   | Default                       |
-| ------ | ----------------------------- |
-| `Path` | `<Current Working Directory>` |
-
-Folder where `cyberdrop-dl` will store it's database, cache and config files.
-
 ### `config-file`
 
 | Type   | Default |
@@ -50,66 +42,6 @@ Path to the CDL `settings.yaml` file to load
 If both `config` and `config-file` are supplied, `config-file` takes priority
 {% endhint %}
 
-### `download`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Skips UI, start download immediately
-
-### `download-tiktok-audios`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Download TikTok audios from posts and save them as separate files
-
-### `download-tiktok-src-quality-videos`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-By default, CDL will download the "optimized for streaming" version of tiktok videos. Setting this option to `True` will download videos in original (source) quality.
-
-`_original` will be added as a suffix to their filename.
-
-{% hint style="warning" %}
-This will make video downloads several times slower
-
-When it is set to `False` (the default) CDL can download 50 videos with a single request.
-When it is set to `True` , CDL needs to make at least 3 requests _per_ video to download them.
-
-There's also a daily limit of the API CDL uses: 5000 requests per day per IP
-
-Setting this option to `True` will consume the daily limit faster
-{% endhint %}
-
-### `impersonate`
-
-| Type                                                                             | Default | Action        |
-| -------------------------------------------------------------------------------- | ------- | ------------- |
-| `chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"` or `null` | `null`  | `store_const` |
-
-Impersonation allows CDL to make requests and appear to be a legitimate web browser. This helps bypass bot-protection on some sites and it's required for any site that only accepts HTTP2 connections.
-
-- The default value (`null`) means CDL will automatically use impersonation for crawlers that were programmed to use it.
-- Passing an specific target (ex: `--impersonate chrome_android`) will make CDL use impersonation for all requests, using that tarjet
-
-{% hint style="info" %}
-The current default target is `chrome`. The default target can change on any new release without notice
-{% endhint %}
-
-### `portrait`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Force CDL to run with a vertical layout
-
 ### `print-stats`
 
 | Type       | Default | Action        |
@@ -117,23 +49,6 @@ Force CDL to run with a vertical layout
 | `BoolFlag` | `True`  | `store_false` |
 
 Show stats report at the end of a run
-
-### `ui`
-
-| Type                     | Default      |
-| ------------------------ | ------------ |
-| `CaseInsensitiveStrEnum` | `FULLSCREEN` |
-
-UI can have 1 of these values:
-
-- `DISABLED` : no output at all
-- `ACTIVITY` : only shows a spinner with the text `running CDL...`
-- `SIMPLE`: shows spinner + simplified progress bar
-- `FULLSCREEN`: shows the normal UI/progress view
-
-{% hint style="info" %}
-Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
-{% endhint %}
 
 ## Overview
 

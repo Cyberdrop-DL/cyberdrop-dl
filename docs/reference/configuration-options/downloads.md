@@ -1,20 +1,19 @@
----
-description: These are limiting options for the program
----
+# Downloads
 
-# Rate Limiting Options
+```yaml
+downloads:
+  attempts: 2
+  concurrency: 15
+  concurrency_per_domain: 5
+  concurrent_segments: 10
+  delay: 0.0
+  jitter: 0.0
+  skip_and_mark_completed: false
+  slow_speed: 0B
+  speed_limit: 0B
+```
 
-## `connection_timeout`
-
-| Type          | Default |
-| ------------- | ------- |
-| `PositiveInt` | `15`    |
-
-The number of seconds to wait while connecting to a website before timing out
-
-{% hint style="info" %} This value will also be used for Flaresolverr (if enabled) as the max number of seconds to solve a CAPTCHA challenge {% endhint %}
-
-## `download_attempts`
+## `attempts`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -22,22 +21,30 @@ The number of seconds to wait while connecting to a website before timing out
 
 The number of download attempts per file. Some conditions are never retried (such as a `404` HTTP status)
 
-## `download_delay`
+```yaml
+downloads:
+  attempts: 2
+```
+
+## `delay`
 
 | Type               | Default |
 | ------------------ | ------- |
 | `NonNegativeFloat` | `0.0`   |
 
-This is the number of seconds to wait between downloads to the same domain.
+Number of seconds to wait inbetween downloads to the same domain.
 
 Some domains have internal limits set by the program, which can not be modified:
 
 - `bunkr`: 0.5
-- `coomer`: 0.5
-- `kemono`: 0.5
 - `nhentai.net`: 1
 
-## `download_speed_limit`
+```yaml
+downloads:
+  delay: 0.0
+```
+
+## `speed_limit`
 
 | Type       | Default |
 | ---------- | ------- |
@@ -49,6 +56,11 @@ This setting specifies speed and it's interpreted as `<value> / second`. ex: `8M
 
 This is the max rate of downloading in bytes (per second) for all downloads combined. Set to `0` to disable
 
+```yaml
+downloads:
+  speed_limit: 0B
+```
+
 ## `concurrent_segments`
 
 | Type          | Default |
@@ -56,6 +68,11 @@ This is the max rate of downloading in bytes (per second) for all downloads comb
 | `PositiveInt` | `10`    |
 
 Allow up to `<N>` HLS segments to be downloaded concurrently.
+
+```yaml
+downloads:
+  concurrent_segments: 10
+```
 
 ## `jitter`
 
@@ -65,7 +82,12 @@ Allow up to `<N>` HLS segments to be downloaded concurrently.
 
 Additional number of seconds to wait in between downloads. CDL will wait an additional random number of seconds in between 0 and the `jitter` value.
 
-## `max_simultaneous_downloads`
+```yaml
+downloads:
+  jitter: 0.0
+```
+
+## `concurrency`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -73,7 +95,12 @@ Additional number of seconds to wait in between downloads. CDL will wait an addi
 
 This is the maximum number of files that can be downloaded simultaneously.
 
-## `max_simultaneous_downloads_per_domain`
+```yaml
+downloads:
+  concurrency: 15
+```
+
+## `concurrency_per_domain`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -90,22 +117,37 @@ Some domains have internal limits set by the program, which can not be modified:
 - `pixeldrain`: 2
 - `xxxbunker`: 2
 
-## `rate_limit`
+```yaml
+downloads:
+  concurrency_per_domain: 5
+```
 
-| Type            | Default |
-| --------------- | ------- |
-| `PositiveFloat` | `25.0`  |
+## `skip_and_mark_completed`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+Skip the download process for every file and mark them as downloaded in the database.
+
+```yaml
+downloads:
+  skip_and_mark_completed: false
+```
+
+## `slow_speed`
+
+| Type       | Default |
+| ---------- | ------- |
+| `ByteSize` | `0`     |
 
 {% hint style="info" %}
-This setting specifies speed and it's interpreted as `<value> / second`. ex: `25` means `25 requests / second`
+This setting specifies speed and it's interpreted as `<value> / second`. ex: `8MB` means `8MB/s`
 {% endhint %}
 
-This is the maximum number of requests that can be made by the program per second.
+Downloads with a speed lower than this value for more than 10 seconds will be skipped. Set to `0` to disable
 
-## `read_timeout`
-
-| Type                      | Default |
-| ------------------------- | ------- |
-| `PositiveFloat` or `null` | `300.0` |
-
-The number of seconds to wait while reading data from a website before timing out. A `null` value will make CDL keep the socket connection open indefinitely, even if the server is not sending data anymore
+```yaml
+downloads:
+  slow_speed: 0B
+```

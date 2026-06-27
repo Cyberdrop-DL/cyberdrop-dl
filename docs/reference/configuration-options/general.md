@@ -4,46 +4,47 @@ description: These are some general settings that will be used regardless of whi
 
 # General
 
-## `disable_crawlers`
+## `download_folder`
 
-| Type                | Default | Additional Info                                                      |
-| ------------------- | ------- | -------------------------------------------------------------------- |
-| `list[NonEmptyStr]` | `[]`    | This is an [`AdditiveArg`](../special_setting_types.md#additiveargs) |
+| Type   | Default     |
+| ------ | ----------- |
+| `Path` | `Downloads` |
 
-You can supply a list of crawlers to disable for the current run. This will make CDL completely ignore the crawler, as if the site was not supported. However, links from the site will still be processed by Real-Debrid (if enabled), Jdownloader (If enabled) and the Generic crawler (If enabled), in that order.
+The path to the folder you want `cyberdrop-dl` to download files to.
 
-The list should be valid crawlers names. The name of the crawler is the name of the primary site they support. ex: `4Chan`, `Bunkrr`, `Dropbox`
-
-Crawlers names correspond to the column `site` in the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites).
-
-## `enable_generic_crawler`
+## `dump_json`
 
 | Type   | Default |
 | ------ | ------- |
-| `bool` | `false` |
+| `bool` | `False` |
 
-CDL has a generic crawler that will try to download from unsupported sites. Setting this to `true` will enable it.
+If enabled, CDL will created a [json lines](https://jsonlines.org/) files with the information about every file downloaded in the current run. The path to this file will be the same as `--main-log` but with the extension `.results.jsonl`
 
-{% hint style="info" %}
-CDL will always try to download from unsupported URLs if the last part of the URL has a known file extension. ex: `.jpg`
-{% endhint %}
+Each line in the file will contain the following details (this may change on future versions):
 
-## `flaresolverr`
-
-| Type                | Default |
-| ------------------- | ------- |
-| `HttpURL` or `null` | `null`  |
-
-[FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) is a proxy server to bypass Cloudflare and `DDoS-Guard` protection. The provided value must be a valid `http` URL of an existing flaresolverr instance. Ex: `http://192.168.1.44:4000`
-
-{% hint style="info" %}
-`0.0.0.0` is NOT a valid IP address. To set up a flaresolverr instance running on the same machine as CDL, use `127.0.0.1` as the IP
-{% endhint %}
-
-{% hint style="warning" %}
-This wiki does not cover flaresolverr setup process. If you need help, refer to their documentation. Please do not open issues related to flaresolverr or `DDoS-Guard`.
-See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839) for alternatives using cookies
-{% endhint %}
+```json
+{
+  "url": "https://store9.gofile.io/download/web/7c88c147-ABCD-4e4d-9a6c-12345678/a_video.mp4",
+  "referer": "https://gofile.io/d/ABC123",
+  "download_folder": "downloads/cyberdrop-dl/test_album (GoFile)",
+  "filename": "0hxte0li0o931lwgcrzbz_source.mp4",
+  "original_filename": "a_video.mp4",
+  "download_filename": "0hxte0li0o931lwgcrzbz_source.mp4",
+  "filesize": 12054723,
+  "ext": ".mp4",
+  "debrid_link": null,
+  "duration": null,
+  "album_id": "ABC123",
+  "datetime": "2025-01-22T11:00:07",
+  "parents": ["https://a_forum.com/threads/<name>.54321/post-123123"],
+  "parent_threads": ["https://a_forum.com/threads/<name>.54321"],
+  "partial_file": "downloads/cyberdrop-dl/test_album (GoFile)/a_video.mp4.part",
+  "complete_file": "downloads/cyberdrop-dl/test_album (GoFile)/a_video.mp4",
+  "hash": "xxh128:53ee56b7bfafa31b8780a572e9783df3",
+  "downloaded": true,
+  "attempts": 1
+}
+```
 
 ## `max_file_name_length`
 
@@ -61,14 +62,6 @@ This is the maximum number of characters a filename should have. CDL will trunca
 
 This is the maximum number of characters a folder should have. CDL will truncate folders longer that this.
 
-## `proxy`
-
-| Type                | Default |
-| ------------------- | ------- |
-| `HttpURL` or `null` | `null`  |
-
-The proxy you want CDL to use. Only `http` proxies are supported. Ex: `https://user:password@ip:port`
-
 ## `required_free_space`
 
 | Type       | Default | Restrictions |
@@ -79,55 +72,6 @@ This is the minimum amount of free space require to start new downloads.
 
 {% hint style="info" %}
 If you set a value lower than `512MB`, CDL will override it with `512MB`
-{% endhint %}
-
-## `ssl_context`
-
-| Type                  | Default              |
-| --------------------- | -------------------- |
-| `NonEmptyStr` or None | `truststore+certifi` |
-
-Context that will used to verify SSL connections. Valid values are:
-
-- `truststore`: Will use certificates already included with the OS
-
-- `certifi`: Will use certificates bundled with the `certifi` version available at the release of the current CDL version
-
-- `truststore+certifi`: Will use certificates already included with the OS, with a fallback to `certifi` for missing certificates
-
-- `None`: Will completely disable SSL verification, allowing insecure connections.
-
-Setting this to `None` will allow the program to connect to websites without SSL encryption (insecurely).
-
-{% hint style="danger" %}
-Sensitive data may be exposed using an insecure connection. For your safety, is recommended to always use a secure HTTPS connection.
-{% endhint %}
-
-## `user_agent`
-
-| Type          | Default                                                                  |
-| ------------- | ------------------------------------------------------------------------ |
-| `NonEmptyStr` | `Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0` |
-
-The user agent is the signature of your browser. Some sites use it to identify if the request came from a human or a robot.
-You can google "what is my user agent" to get yours.
-
-{% hint style="info" %}
-If you use flaresolverr, this value MUST match with flaresolverr's user agent. Otherwise, flaresolverr cookies won't work
-{% endhint %}
-
-{% hint style="info" %}
-These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/<version>`
-
-<!-- START_CUSTOM_UA_CRAWLERS -->
-
-- Archive.org
-- E621
-- MegaNz
-- RealDebrid
-- Transfer.it
-<!-- END_CUSTOM_UA_CRAWLERS -->
-
 {% endhint %}
 
 ## `cookies`
@@ -152,3 +96,197 @@ Multiple cookie files are supported. You could have a `SocialMediaGirls.txt` fil
 {% hint style="warning" %}
 The `user-agent` config value **MUST** match the `user-agent` of the browser from which you imported the cookies. If they do not match, the cookies will not work
 {% endhint %}
+
+## `deep_scrape`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+`cyberdrop-dl` uses a some tricks to try to reduce the number of requests it needs to make while scraping a site. However, this may cause a few links to be skipped.
+Use `--deep-scrape` to disable this and always make a new requests if required.
+
+{% hint style="warning" %}
+Use this option only when absolutely necessary, as it will significantly increase the number of requests being made.
+
+For example, scraping an album normally takes one single request.
+
+With `--deep-scrape`, CDL will make `n` requests per album, where `n` is the total number of items in the album
+{% endhint %}
+
+```yaml
+deep_scrape: false
+```
+
+## `delete_partial_files`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+Files downloaded by CDL have a `.part` extension (`.cdl_hls` for HLS segments). CDL only changes the extension to the original one after a successful download.
+This allows CDL to resume downloads on subsequent runs.
+
+Setting this to `true` will delete any `.part` and `.cdl_hls` files in the download folder.
+
+```yaml
+delete_partial_files: false
+```
+
+## `ignore_history`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+By default, the program tracks your downloads in a database to prevent downloading the same files multiple times, to save time and reduce strain on the servers you're downloading from.
+
+Setting this to `true` will cause the program to ignore the database, and will allow you to re-download files.
+
+## `delete_empty_folders`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+After a run is complete, the program will do a check (and remove) any empty files and folders in the download and scan folder.
+
+Setting this to `false` will disable it.
+
+```yaml
+delete_empty_folders: true
+```
+
+## `skip_check_for_partial_files`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+After a run is complete, the program will do a check to see if any partially downloaded files remain in the downloads folder and will notify you of them.
+
+Setting this to `true` will skip this check.
+
+## `mtime`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `True`  |
+
+By default the program will do it's absolute best to try and find the upload date of a file. It'll then set the `last modified` and `last accessed` dates on the file to match. On Windows and macOS, it will also try to set the `created` date.
+
+Setting this to `false` will disable this function, and the dates for those metadata entries will be the date the file was downloaded.
+
+```yaml
+mtime: true
+```
+
+## `max_thread_depth`
+
+| Type             | Default |
+| ---------------- | ------- |
+| `NonNegativeInt` | 0       |
+
+{% hint style="warning" %}
+It is not recommended to set this above the default value of `0`, as there is a high chance of infinite nesting in certain cases.
+
+For example, when dealing with Megathreads, if a Megathread is linked to another Megathread, you could end up scraping an undesirable amount of data.
+{% endhint %}
+
+Restricts how many levels deep the scraper is allowed to go while scraping a thread
+
+A value of `0` means only the top level thread will be scraped
+
+{% hint style="info" %}
+This setting is hardcoded to `0` for Discourse sites
+{% endhint %}
+
+### Example
+
+Consider CDL finds the following sub-threads while scraping an input URL:
+
+```shell
+└── thread_01
+    ├── thread_02
+    ├── thread_03
+    │   ├── thread_09
+    │   ├── thread_10
+    │   └── thread_11
+    ├── thread_04
+    ├── thread_05
+    ├── thread_06
+    ├── thread_07
+    │   └── thread_12
+    └── thread_08
+```
+
+- With `max_thread_depth` = 0, CDL will only download files in `thread_01`, all the other threads will be ignored
+- With `max_thread_depth` = 1, CDL will only download files in `thread_01` to `thread_08`. All threads from `thread_09` to `thread_12` will be ignored
+- With `max_thread_depth` >= 2, CDL will download files from all the threads in this case
+
+## `max_thread_folder_depth`
+
+| Type                       | Default |
+| -------------------------- | ------- |
+| `NonNegativeInt` or `None` | `None`  |
+
+Restricts the max number of nested folders CDL will create when `max_thread_depth` is greater that 0
+
+Values:
+
+- `None`: Create as many nested folders as required (AKA, the same number as `max_thread_depth` allows)
+- `0`: Do not create subfolders, use a flat structure for any nested thread.
+- `1+`: Create a max of `n` folders
+
+### Example
+
+- With `max_thread_folder_depth` = None:
+
+```shell
+└── thread_01
+    ├── thread_02
+    ├── thread_03
+    │   ├── thread_09
+    │   ├── thread_10
+    │   └── thread_11
+    ├── thread_04
+    ├── thread_05
+    ├── thread_06
+    ├── thread_07
+    │   └── thread_12
+    └── thread_08
+```
+
+- With `max_thread_folder_depth` = 0:
+
+```shell
+├── thread_01
+├── thread_02
+├── thread_03
+├── thread_09
+├── thread_10
+├── thread_11
+├── thread_04
+├── thread_05
+├── thread_06
+├── thread_07
+├── thread_12
+└── thread_08
+```
+
+- With `max_thread_folder_depth` = 1:
+
+```shell
+└── thread_01
+    ├── thread_02
+    ├── thread_03
+    ├── thread_09
+    ├── thread_10
+    ├── thread_11
+    ├── thread_04
+    ├── thread_05
+    ├── thread_06
+    ├── thread_07
+    ├── thread_12
+    └── thread_08
+```

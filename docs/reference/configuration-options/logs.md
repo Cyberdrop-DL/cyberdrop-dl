@@ -1,38 +1,38 @@
 # Logs
 
-## `download_error_urls`
+## `level`
 
-| Type   | Default                   | Restrictions                                  |
-| ------ | ------------------------- | --------------------------------------------- |
-| `Path` | `Download_Error_URLs.csv` | extension will always be overridden to `.csv` |
+| Type                                    | Default |
+| --------------------------------------- | ------- |
+| `DEBUG, INFO, WARNING, ERROR, CRITICAL` | `DEBUG` |
 
-Path of the download error log. For relative paths, the final path will be `log_folder` / `download_error_urls`
+Only log messages of this level or higher to the main log file, according to [Python logging levels](https://docs.python.org/3/library/logging.html#levels).
 
-`cyberdrop-dl` will output the links it fails to download, the reason and their origin in CSV format.
+| Level      | Value | Description                                                                                        |
+| ---------- | ----- | -------------------------------------------------------------------------------------------------- |
+| `DEBUG`    | 10    | Offers detailed information, typically useful to troubleshoot problems                             |
+| `INFO`     | 20    | Provides general information about scrape and download progress                                    |
+| `WARNING`  | 30    | Potential issues or something that might need attention (e.g. `Login wasn't provided for <FORUM>`) |
+| `ERROR`    | 40    | Serious problem preventing `cyberdrop-dl` to execute some function                                 |
+| `CRITICAL` | 50    | Fatal error that causes `cyberdrop-dl` to exit immediately                                         |
 
-## `log_folder`
+{% hint style="info" %}
+Using anything other that `DEBUG` makes troubleshooting issues harder. Practically speaking, you should _only_ change this if you expect CDL to run for an extended period
+(with a large number of input URLs) to minimize the log files sizes
+{% endhint %}
 
-| Type   | Default                         |
-| ------ | ------------------------------- |
-| `Path` | `AppData/Configs/{config}/Logs` |
+```yaml
+logs:
+  level: DEBUG
+```
 
-The path to the location you want `cyberdrop-dl` to store logs in.
-
-## `log_line_width`
-
-| Type          | Default | Restrictions |
-| ------------- | ------- | ------------ |
-| `PositiveInt` | `240`   | `>=50`       |
-
-Line width to use when writing to the main log file
-
-## `logs_expire_after`
+## `expire_after`
 
 | Type                  | Default |
 | --------------------- | ------- |
 | `timedelta` or `null` | `null`  |
 
-With `rotate_logs` enabled, this setting specifies the retention period for log files before they are deleted.
+if `logs.rotate` is enabled, this setting specifies the retention period for log files before they are deleted.
 
 - A `timedelta` input is expected to be a valid ISO 8601 timespan, ex: `P10DT2H30M10S`
 - An `int` input is assumed to be the number of days
@@ -47,15 +47,38 @@ Any `.log` or `.csv` file within `log_folder` will be deleted, even if CDL did n
 Log files with an absolute path not relative to `log_folder` will never be deleted
 {% endhint %}
 
-## `main_log`
+```yaml
+logs:
+  expire_after: null
+```
 
-| Type   | Default          | Restrictions                                  |
-| ------ | ---------------- | --------------------------------------------- |
-| `Path` | `downloader.log` | extension will always be overridden to `.log` |
+## `console_level`
 
-Path of main log file. For relative paths, the final path will be `log_folder` / `main_log`
+| Type                                                   | Default |
+| ------------------------------------------------------ | ------- |
+| `DEBUG`, `INFO, `WARNING`, `ERROR`, `CRITICAL`or`null` | `null`  |
 
-## `rotate_logs`
+Only log messages of this level or higher to the console. A `null` value will use the same level as `logs.level`
+
+## `folder`
+
+| Type             | Default |
+| ---------------- | ------- |
+| `Path` or `null` | `null`  |
+
+The path to the location you want `cyberdrop-dl` to store logs in. A `null` values will use the platform default
+
+```yaml
+logs:
+  folder: null
+```
+
+```yaml
+logs:
+  folder: null
+```
+
+## `rotate`
 
 | Type   | Default |
 | ------ | ------- |
@@ -67,17 +90,60 @@ Every log file will be created inside a sub folder with the current date
 
 This will prevent overriding old log files
 
-## `scrape_error_urls`
+```yaml
+logs:
+  rotate: false
+```
 
-| Type   | Default                 | Restrictions                                  |
-| ------ | ----------------------- | --------------------------------------------- |
-| `Path` | `Scrape_Error_URLs.csv` | extension will always be overridden to `.csv` |
+## Files
+
+## `main`
+
+| Type   | Default          | Restrictions                                  |
+| ------ | ---------------- | --------------------------------------------- |
+| `Path` | `downloader.log` | extension will always be overridden to `.log` |
+
+Path of main log file. For relative paths, the final path will be `logs.folder` / `logs.main`
+
+```yaml
+logs:
+  files:
+    main: downloader.log
+```
+
+### `download_errors`
+
+| Type   | Default               | Restrictions                                  |
+| ------ | --------------------- | --------------------------------------------- |
+| `Path` | `download_errors.csv` | extension will always be overridden to `.csv` |
+
+Path of the download error log. For relative paths, the final path will be `log_folder` / `download_error_urls`
+
+`cyberdrop-dl` will output the links it fails to download, the reason and their origin in CSV format.
+
+```yaml
+logs:
+  files:
+    download_errors: download_errors.csv
+```
+
+## `scrape_errors`
+
+| Type   | Default             | Restrictions                                  |
+| ------ | ------------------- | --------------------------------------------- |
+| `Path` | `scrape_errors.csv` | extension will always be overridden to `.csv` |
 
 What you want `cyberdrop-dl` to call the scrape error log. For relative paths, the final path will be `log_folder` / `scrape_error_urls`
 
 `cyberdrop-dl` will output the links it fails to scrape, the reason and their origin in CSV format.
 
-## `unsupported_urls`
+```yaml
+logs:
+  files:
+    scrape_errors: scrape_errors.csv
+```
+
+## `unsupported`
 
 | Type   | Default                | Restrictions                                  |
 | ------ | ---------------------- | --------------------------------------------- |
@@ -86,6 +152,12 @@ What you want `cyberdrop-dl` to call the scrape error log. For relative paths, t
 Path of the unsupported log file. For relative paths, the final path will be `log_folder` / `unsupported_urls`
 
 `cyberdrop-dl` will output links it can't download to this file.
+
+```yaml
+logs:
+  files:
+    unsupported: unsupported.csv
+```
 
 ## `webhook`
 
