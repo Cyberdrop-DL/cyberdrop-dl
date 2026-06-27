@@ -5,26 +5,26 @@
 
 ## Reporting issues
 
-You **SHOULD** search for existing issues before creating a new one. If a bug already has issue, you **MAY** comment on the existing issue
+You **SHOULD** search for existing issues before creating a new one. If a bug already has an issue open, you can comment on the existing issue
 with extra information that might help reproduce or fix the problem. Duplicate issues will be closed with a
 reference to the existing issue.
 
 You **SHOULD** [read the wiki](https://script-ware.gitbook.io/cyberdrop-dl/frequently-asked-questions) as it
 includes solutions to some common problems.
 
-If your issue hasn't been reported yet, you **MAY** open a new issue at <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/new/choose>.
+If your issue hasn't been reported yet, open a new issue at <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/new/choose>.
 
 ## Feature requests
 
-You **MAY** request a new feature by [opening an issue](#submitting-an-issue). If you would like to implement a new feature,
-you **SHOULD** open an issue/discussion with a proposal first and at least one use case. You **MAY** submit a PR directly if your feature is small
-with a narrow scope.
+You can request a new feature by [opening an issue](#submitting-an-issue). If you would like to implement a new feature,
+you **SHOULD** open an issue/discussion with a proposal first and at least one use case. You **SHOULD NOT** submit a PR directly unless your feature is small
+and has a narrow scope.
 
 ## Setting up the development environment
 
 `cyberdrop-dl` uses `uv` as a project management tool and requires python 3.12+. You can install it from <https://docs.astral.sh/uv/getting-started/installation/>.
 
-You do not need to manually install python as `uv` will automatically install a compatible python version (if required).
+You don't need to install python as `uv` will automatically install a compatible python version if required.
 
 Once you have `uv` installed, follow these steps:
 
@@ -49,9 +49,9 @@ Once you have `uv` installed, follow these steps:
 
 1. Optionally, run the tests suite to make sure your dev environment is setup correctly
 
-```powershell
+   ```powershell
    uv run pytest
-```
+   ```
 
 ## Code style
 
@@ -68,32 +68,31 @@ Not enforced but highly recommended. The project includes hardcoded config optio
 
 #### Line width
 
-120 character max
+120 characters max
 
 The project includes predefined [settings for the zed editor](https://github.com/Cyberdrop-DL/cyberdrop-dl/tree/main/.zed)
-with formatting options and a recipe to quickly launch CDL in debug mode for testing
+with formatting options and a recipe to quickly launch `cyberdrop-dl` with `pdb` (the Python debugger) for testing
 
 ### Code formatting with pre-commit hooks
 
-This project uses git pre-commit hooks to perform formatting and linting before a commit is created,
-to ensure consistent style and catch some common issues early on.
+This project uses pre-commit hooks to enforce consistent code style and identify common issues early on.
 
-Once installed, hooks will run every time you commit. If the formatting isn't quite right or a linter catches something,
-the commit will be rejected and `ruff` will try to fix the files. If `ruff` can not fix all the issues,
-you will need to look at the output and fix them manually. When everything is fixed (either by `ruff` itself or manually)
-all you need to do is `git add` those files again and retry your commit.
+These hooks run automatically on every `git commit`. If a check fails, the commit is blocked and `ruff` will attempt to
+automatically fix the files. You may need to fix the fix some errors manually if `ruff` can not do it automatically.
+
+Once everything is fixed, `git add` the changes and commit again.
 
 > [!TIP]
-> You can trigger a formatting manually by runnnig `uv run ruff check --fix` then `uv run ruff format`
+> You can trigger linting and formatting manually, run `uv run ruff check --fix` then `uv run ruff format`
 
 ## Implementing new changes
 
 > [!IMPORTANT]
-> `cyberdrop-dl` requires python 3.12+. You **MUST NOT** use any syntax features not compatible with it
+> `cyberdrop-dl` requires python 3.12+. You **MUST NOT** use syntax or features exclusive to newer versions without version guards
 
 > [!IMPORTANT]  
 > Before you start writing any code, you **SHOULD** search the [repository](https://github.com/Cyberdrop-DL/cyberdrop-dl/pulls)
-> for an open or closed PR that relates to your submission. You don't want to duplicate effort
+> for an open or closed PR that relates to your submission to prevent duplicated effort
 
 ### Submitting a Pull Request (PR)
 
@@ -118,21 +117,23 @@ and base your crawler on that. A simple crawler to use as base is [CloudFlareStr
 - All crawlers **MUST** inherit from the [base crawler](cyberdrop_dl/crawlers/crawler.py)
 - All crawlers **MUST** have the word `Crawler` at the end of their class name
 - All crawlers **MUST** override the `fetch` method. It's the primary method that decides what to do with an URL that matches with that crawler
-- You **MUST** not call any method that may fail (raise an exception) from within `fetch`
+- You **MUST** not call any method that may fail (raise an exception other that `ValueError`) from within `fetch`
 - All async method called from within fetch **MUST** be public methods
 - All public method **MUST** be decorated with `error_handling_wrapper` to catch any unknown error
-- You **SHOULD** catch **expected** errors and re-raise them as a `ScrapeError` with an appropiate code and message
-- You **SHOULD** use valid HTTP codes for any `ScrapeError`. ex: raise `ScrapeError(410)` if you know a file was deleted
+- You **SHOULD** catch **expected** errors and re-raise them as a `ScrapeError` with an appropiate code and message.
+  A file being deleted is common expected error
+- You **SHOULD** use valid HTTP codes for any `ScrapeError`. ex: raise `ScrapeError(410)` (GONE) for deleted files.
+  See the [Mozilla Developer documention](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status) for a list of HTTP codes
 - You **MAY** use HTTP code `422` (Unprocessable entity) for **expected** errors if no other HTTP code feels adequate
-- You **MAY** use a short string instead of an HTTP code to convey a better context for an error (if required)
+- You **MAY** use a short string instead of an HTTP code to convey a better context for an error (if required).
   The string **SHOULD** be at most 20 characters long as it will be shown on the `Scrape Errors` sections of the TUI
-- You **SHOULD NOT** write logic in a defensive way for **unexpected** errors. If you need to perform an operation that could fail
-  but is not **expected** to fail (ex: a dictionary key lookup on an API response), do not try to catch the exception, let it bubble up.
-  It will eventually be logged by the `error_handling_wrapper`
+- You **SHOULD NOT** write logic in a defensive way for **unexpected** errors. If you need to perform an operation that _could_ fail
+  but that you do not **expect** to fail (ex: a dictionary key lookup on an API response) and you can not continue the scrape process
+  if the operation fails, do not try to catch the exception. Let it bubble up. It will eventually be logged by the `error_handling_wrapper`
 - You **SHOULD** model site specific data into dataclasses, if possible
 - You **MUST** create a new task for any coroutine whose result is not needed to complete the current task
 - You **MUST NOT** create `MediaItem` objects manually. You **MUST** use the `handle_file` method
-- You **SHOULD** look at all methods on the base crawler for possible helper functions. Their doctrings explain expected usage of each one.
+- You **SHOULD** look at the methods on the base crawler for possible helper functions. Their doctrings explain expected use of each one
 - You **MAY** add site specific CLI/config options at [cyberdrop_dl/config/crawlers.py](cyberdrop_dl/config/crawlers.py) to use within the crawler
 - You **SHOULD NOT** add crawler specific CLI/options unless absolutely necessary
 - You **SHOULD** add at least 1 test case for the crawler
@@ -150,3 +151,7 @@ and base your crawler on that. A simple crawler to use as base is [CloudFlareStr
 ```powershell
 uv run pytest -x --test-crawlers <domain>
 ```
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [GNU General Public License v3.0](LICENSE).
