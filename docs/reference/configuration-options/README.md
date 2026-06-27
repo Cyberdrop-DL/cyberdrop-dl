@@ -17,7 +17,7 @@ You can manually create a config with all the default settings using the `Edit c
 - macOS/Linux/Android: `${XDG_CONFIG_HOME}/cyberdrop-dl/config.yaml` or `~/.config/cyberdrop-dl/config.yaml`
 
 You can also provide a config file manually via the `--config-file` CLI argument. If provided, the default config file will be ignored (if it exists).
-A file provided by `--config-file` _must_ already exists. `cyberdrop-dl` will refuse to run otherwise
+A file provided by `--config-file` _must_ exists already. `cyberdrop-dl` will refuse to run otherwise.
 
 Config files can have partial settings. You do not have to specific every single option on the files, just the ones you want to use/override.
 
