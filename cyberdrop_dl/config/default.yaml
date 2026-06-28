@@ -135,7 +135,6 @@ network:
 notifications:
   apprise: []
   webhook: null
-show_stats: true
 sort:
   enabled: false
   formats:
@@ -158,3 +157,4 @@ ui:
   mode: fullscreen
   portrait: false
   refresh_rate: 10.0
+  show_stats: true

@@ -911,6 +911,11 @@
           "exclusiveMinimum": 0,
           "title": "Refresh Rate",
           "type": "number"
+        },
+        "show_stats": {
+          "default": true,
+          "title": "Show Stats",
+          "type": "boolean"
         }
       },
       "title": "UIOptions",
@@ -1171,11 +1176,6 @@
     },
     "notifications": {
       "$ref": "#/$defs/Notifications"
-    },
-    "show_stats": {
-      "default": true,
-      "title": "Show Stats",
-      "type": "boolean"
     },
     "sort": {
       "$ref": "#/$defs/Sort"

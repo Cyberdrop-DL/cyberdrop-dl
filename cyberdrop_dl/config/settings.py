@@ -351,6 +351,9 @@ class UIOptions(ConfigGroup):
     "force CDL to run with a vertical layout"
     refresh_rate: PositiveFloat = 10.0
 
+    show_stats: Annotated[bool, Parameter(name="stats")] = True
+    "Show stats report at the end of a run"
+
 
 class MaxChildren(ConfigGroup, name=None):
     forum: NonNegativeInt = 0
