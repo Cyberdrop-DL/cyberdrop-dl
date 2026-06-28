@@ -74,9 +74,12 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
+cyberdrop-dl v10.0.0
+Bulk asynchronous downloader for multiple file hosts
+
 Usage: cyberdrop-dl COMMAND [OPTIONS]
 
-Bulk asynchronous downloader for multiple file hosts
+Run 'cyberdrop-dl' without arguments to start the interactive TUI
 
 ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
 │ cache      Cache operations                                                                      │
@@ -97,5 +100,8 @@ Bulk asynchronous downloader for multiple file hosts
 │ --cache-file     JSON file to use as cache                                                       │
 │ --database-file  SQLite file to use as database                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
+Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
 <!-- END_CLI_OVERVIEW -->
