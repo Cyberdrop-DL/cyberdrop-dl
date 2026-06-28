@@ -44,7 +44,7 @@ dependencies = [
     "truststore >=0.10.4",
     "typing-extensions>=4.15.0",
     "urllib3>=2.7.0",  # Transient dep with CVE
-    "xxhash >=3.7.1",
+    "xxhash >=3.8.0",
     "yarl >=1.24.2"
 ]
 description = "Bulk downloader for multiple file hosts"
