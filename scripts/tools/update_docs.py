@@ -48,6 +48,10 @@ def _get_help_message() -> str:
 
     with Console(record=True, width=100) as console:
         app.help_print([], console=console)
+        console.line()
+        console.rule(style="blue")
+        console.line()
+        app.help_print(["download"], console=console)
 
     return console.export_text()
 
