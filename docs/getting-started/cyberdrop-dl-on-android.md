@@ -5,13 +5,11 @@ icon: android
 
 # Installing cyberdrop-dl on Android
 
-Cyberdrop-dl is a terminal app. That means you need a terminal emulator to run it. The defacto choice in Android is [termux](https://termux.dev/en/).
+Cyberdrop-dl is a terminal app. That means you need a terminal emulator to run it. The defacto choice in Android is [`termux`](https://termux.dev/en/).
 
 {% hint style="info" %}
 On Android, some of the dependencies need to be compiled from source. A rust compiler is required. This means the installation could take several minutes, especially on low end phones
-{% endhint %}
 
-{% hint style="info" %}
 Compiling from source also requires a lot of extra storage. You will need at least 3.4GB of free space just for the installation
 {% endhint %}
 
@@ -19,17 +17,17 @@ Compiling from source also requires a lot of extra storage. You will need at lea
 
 Termux wiki: [https://wiki.termux.com/wiki/Installation](https://wiki.termux.com/wiki/Installation)
 
-Install termux from [F-droid (recommended)](https://f-droid.org/packages/com.termux/) or from the [Google Playstore (restricted version)](https://play.google.com/store/apps/details?id=com.termux):
+Install `termux` from [F-droid (recommended)](https://f-droid.org/packages/com.termux/) or from the [Google Playstore (restricted version)](https://play.google.com/store/apps/details?id=com.termux):
 
 ## 2. Install `cyberdrop-dl`
 
-Run the following commands inside termux
+Run the following commands inside `termux`
 
 ```shell
 #!/bin/sh
 termux-setup-storage
 pkg upgrade -y
-pkg install rust which micro ffmpeg python uv -y
+pkg install rust micro ffmpeg python uv -y
 
 # Making sure maturin knows we are building ON Android, not FOR Android
 ANDROID_API_LEVEL=24
@@ -40,7 +38,8 @@ uv tool update-shell
 ```
 
 {% hint style="warning" %}
-You will loose your config and database file if you ever uninstall termux. Use the `--database-file` and `--config-file` CLI options to change the location of those files.
+You will loose your config and database file if you ever uninstall `termux`.
+Use the `--database-file` and `--config-file` CLI options to change the location of those files:
 
 ```shell
 mkdir /sdcard/cyberdrop-dl
@@ -59,7 +58,7 @@ echo 'alias cyberdrop-dl="cyberdrop-dl --database-file /sdcard/cyberdrop-dl/cybe
 
 ## How to update `cyberdrop-dl`?
 
-Run this command inside termux:
+Run this command inside `termux`:
 
 ```shell
 uv tool upgrade cyberdrop-dl-patched

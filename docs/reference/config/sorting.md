@@ -1,10 +1,7 @@
-# Sorting
-
 `cyberdrop-dl` has a file sorter built in, but it's not enabled by default.
 
 You can use the field names below to create a custom path format. You can also use none of them and have a hard coded path for sorted files.
-
-However, `filename` and `ext` should always be used as files will overwrite each other otherwise
+However, `filename` and `ext` should always be used as files will overwrite each other otherwise.
 
 Common fields for sorting format options (supported for `audio`, `videos`, `images` and `other`):
 

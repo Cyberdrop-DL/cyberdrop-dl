@@ -53,7 +53,7 @@ However, `cyberdrop-dl` has a ton of configuration options if you want more cont
 [cli-arguments.md](../reference/cli-arguments.md)
 {% endcontent-ref %}
 
-{% content-ref url="../reference/notifications.md" %}
+{% content-ref url="../reference/config/notifications.md" %}
 [notifications.md](../reference/config/notifications.md)
 {% endcontent-ref %}
 
@@ -66,10 +66,8 @@ However, `cyberdrop-dl` has a ton of configuration options if you want more cont
 - A cache file (JSON)
 
 Additionally, a dedicated `logs` folder is created to store logs files of a session.
-
 On Windows, all files are stored in `%AppData%/cyberdrop-dl`, with the logs folder being `%AppData%/cyberdrop-dl/logs`
-
-On Unix systems, `cyberdrop-dl` follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/0.8/) to storage application files.
+On Unix systems, `cyberdrop-dl` follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/0.8/) to store application files.
 
 These are the default locations used on each platform
 

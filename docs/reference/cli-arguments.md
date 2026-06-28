@@ -46,18 +46,6 @@ Path to the config file to use for this session. The config file at the default 
 If provided, this file _must_ exists already, but it can be empty
 {% endhint %}
 
-### `--database-file`
-
-| Type   | Default |
-| ------ | ------- |
-| `Path` | `null`  |
-
-Path to the database file to use for this session. The database at the default location will be ignored. This file _must_ have a `.db` extension
-
-{% hint style="info" %}
-If provided, this file _must_ exists already, but it can be empty
-{% endhint %}
-
 ### `--cache-file`
 
 | Type   | Default |
@@ -65,6 +53,18 @@ If provided, this file _must_ exists already, but it can be empty
 | `Path` | `null`  |
 
 Path to the cache file to use for this session. The cache at the default location will be ignored. This file _must_ have a `.json` extension
+
+{% hint style="info" %}
+If provided, this file _must_ exists already, but it can be empty
+{% endhint %}
+
+### `--database-file`
+
+| Type   | Default |
+| ------ | ------- |
+| `Path` | `null`  |
+
+Path to the database file to use for this session. The database at the default location will be ignored. This file _must_ have a `.db` extension
 
 {% hint style="info" %}
 If provided, this file _must_ exists already, but it can be empty

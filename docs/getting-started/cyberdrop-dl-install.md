@@ -8,14 +8,14 @@ icon: download
 ## Using the start scripts (from GitHub release page)
 
 This is the simplest method to get the program up and running. Pre-configured start files are provided that will
-automatically install python, install cyberdrop-dl, update, and launch the program for you.
+automatically install python, install `cyberdrop-dl`, update, and launch the program for you.
 
 {% hint style="info" %}
 The start scripts only work on 64bits operating systems. If you are running a 32bit OS, you need to install directly
 from pypi and may need to compile some dependencies
 {% endhint %}
 
-You can download them here: [https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest)
+You can download them from here: <https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest>
 
 You only need to download the `Cyberdrop-DL_<version>.zip` file, you don't need to worry about the other files.
 

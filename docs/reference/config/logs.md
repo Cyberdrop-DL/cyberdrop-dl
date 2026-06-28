@@ -1,5 +1,3 @@
-# Logs
-
 # `level`
 
 | Type                                            | Default |
@@ -152,9 +150,9 @@ logs:
 
 ## `unsupported`
 
-| Type   | Default                | Restrictions                                  |
-| ------ | ---------------------- | --------------------------------------------- |
-| `Path` | `Unsupported_URLs.csv` | extension will always be overridden to `.csv` |
+| Type   | Default           | Restrictions                                  |
+| ------ | ----------------- | --------------------------------------------- |
+| `Path` | `unsupported.csv` | extension will always be overridden to `.csv` |
 
 Path of the unsupported log file. For relative paths, the final path will be `logs.folder` / `logs.files.unsupported`
 
@@ -164,4 +162,18 @@ Path of the unsupported log file. For relative paths, the final path will be `lo
 logs:
   files:
     unsupported: unsupported.csv
+```
+
+## `last_forum_post`
+
+| Type   | Default               | Restrictions                                  |
+| ------ | --------------------- | --------------------------------------------- |
+| `Path` | `last_forum_post.csv` | extension will always be overridden to `.csv` |
+
+Save the URL of the last scraped post from each thread to this file. For relative paths, the final path will be `logs.folder` / `logs.files.last_forum_post`
+
+```yaml
+logs:
+  files:
+    unsupported: last_forum_post.csv
 ```

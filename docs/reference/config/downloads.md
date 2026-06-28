@@ -1,5 +1,3 @@
-# Downloads
-
 # `attempts`
 
 | Type          | Default |
@@ -19,7 +17,7 @@ downloads:
 | ------------------ | ------- |
 | `NonNegativeFloat` | `0.0`   |
 
-Number of seconds to wait inbetween downloads to the same domain.
+Number of seconds to wait in between downloads to the same domain.
 
 Some domains have internal limits set by the program, which can not be modified:
 

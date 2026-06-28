@@ -1,5 +1,3 @@
-# JDownloader
-
 # `enabled`
 
 | Type   | Default |

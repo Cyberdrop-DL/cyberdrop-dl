@@ -9,7 +9,18 @@ However, links from the site will still be processed by Real-Debrid (if enabled)
 
 The list should be valid crawlers names. The name of the crawler is the name of the primary site they support. ex: `4Chan`, `Mega.nz`, `Dropbox`
 
-You can get the crawler's name from the column `site` on the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites).
+You can get the crawler' name from the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites)
+The name of the crawer is the title of their section in the page (in bold).
+
+```yaml
+crawlers:
+  generic:
+    chevereto: []
+    discourse: []
+    kvs: []
+    wordpress_html: []
+    wordpress_media: []
+```
 
 # `generic`
 

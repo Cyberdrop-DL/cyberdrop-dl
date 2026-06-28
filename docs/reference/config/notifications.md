@@ -3,8 +3,6 @@ icon: envelope-open-text
 description: These are the options to setup notifications from CDL.
 ---
 
-# Notifications
-
 `cyberdrop-dl` generates a report at the end of a run with stats about all the downloads, total runtime, errors, deduplication report, etc.
 By default, this report is only shown in the console and at the end of the main log file.
 
@@ -42,7 +40,7 @@ Example:
 {% hint style="info" %}
 `apprise` is an an optional dependency; It's not installed by default.
 
-To install `cyberdrop-dl` with `apprise`, add it as extra while installing cyberdrop:
+To install `cyberdrop-dl` with `apprise`, add it as extra during installation:
 
 ```shell
 uv tool install cyberdrop-dl-patched[apprise]

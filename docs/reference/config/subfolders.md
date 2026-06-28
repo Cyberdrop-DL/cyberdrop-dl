@@ -1,5 +1,3 @@
-# Subfolders
-
 # `create`
 
 | Type   | Default |

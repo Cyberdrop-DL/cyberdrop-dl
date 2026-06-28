@@ -2,8 +2,6 @@
 description: These are the options for controlling the UI of the program
 ---
 
-# UI Options
-
 # `mode`
 
 | Type                                            | Default      |

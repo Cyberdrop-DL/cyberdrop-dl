@@ -1,5 +1,3 @@
-# Network
-
 # `connection_timeout`
 
 | Type          | Default |
@@ -23,6 +21,11 @@ network:
 
 This is the maximum number of requests that can be made by the program per second.
 
+```yaml
+network:
+  rate_limit: 25.0
+```
+
 {% hint style="info" %}
 This setting specifies speed and it's interpreted as `<value> / second`. ex: `25` means `25 requests / second`
 {% endhint %}
@@ -30,11 +33,6 @@ This setting specifies speed and it's interpreted as `<value> / second`. ex: `25
 {% hint style="info" %}
 Rate limit is only taken into account while scraping, not for downloads
 {% endhint %}
-
-```yaml
-network:
-  rate_limit: 25.0
-```
 
 # `read_timeout`
 
@@ -58,6 +56,11 @@ network:
 
 [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) is a proxy server to bypass Cloudflare and `DDoS-Guard` protection. The provided value must be a valid `http` URL of an existing flaresolverr instance. Ex: `http://192.168.1.44:4000`
 
+```yaml
+network:
+  flaresolverr: null
+```
+
 {% hint style="info" %}
 `0.0.0.0` is NOT a valid IP address. To set up a flaresolverr instance running on the same machine as CDL, use `127.0.0.1` as the IP
 {% endhint %}
@@ -66,11 +69,6 @@ network:
 This wiki does not cover flaresolverr setup process. If you need help, refer to their documentation. Please do not open issues related to flaresolverr or `DDoS-Guard`.
 See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839) for alternatives using cookies
 {% endhint %}
-
-```yaml
-network:
-  flaresolverr: null
-```
 
 # `proxy`
 
@@ -93,14 +91,14 @@ network:
 
 CDL will save to disk a copy of every non binary request (text/HTML/JSON) as a single file. The files will be saved to a folder named `cdl_responses`, inside the parent folder of the main log file.
 
-{% hint style="info" %}
-Flaresolverr responses are excluded. They are never dumped to disk
-{% endhint %}
-
 ```yaml
 network:
   dump_responses: false
 ```
+
+{% hint style="info" %}
+Flaresolverr responses are excluded. They are never dumped to disk
+{% endhint %}
 
 # `impersonate`
 
@@ -113,14 +111,14 @@ Impersonation allows CDL to make requests and appear to be a legitimate web brow
 - The default value (`null`) means CDL will automatically use impersonation for crawlers that were programmed to use it.
 - Passing an specific target (ex: `--impersonate chrome_android`) will make CDL use impersonation for all requests, using that tarjet
 
-{% hint style="info" %}
-The current default target is `chrome`. The default target can change on any new release without notice
-{% endhint %}
-
 ```yaml
 network:
   impersonate: null
 ```
+
+{% hint style="info" %}
+The current default target is `chrome`. The default target can change on any new release without notice, even minor versions
+{% endhint %}
 
 # `ssl_context`
 
@@ -136,18 +134,18 @@ Context that will used to verify SSL connections. Valid values are:
 
 - `truststore+certifi`: Will use certificates already included with the OS, with a fallback to `certifi` for missing certificates
 
-- `null`: Will completely disable SSL verification, allowing insecure connections.
+- `null`: Will completely disable SSL verification, allowing insecure connections via `HTTP`.
 
 Setting this to `null` will allow the program to connect to websites without SSL encryption (insecurely).
-
-{% hint style="danger" %}
-Sensitive data may be exposed using an insecure connection. For your safety, is recommended to always use a secure HTTPS connection.
-{% endhint %}
 
 ```yaml
 network:
   ssl_context: truststore+certifi
 ```
+
+{% hint style="danger" %}
+Sensitive data may be exposed using an insecure connection. For your safety, is recommended to always use a secure HTTPS connection.
+{% endhint %}
 
 # `user_agent`
 
@@ -158,8 +156,13 @@ network:
 The user agent is the signature of your browser. Some sites use it to identify if the request came from a human or a robot.
 You can google "what is my user agent" to get yours.
 
+```yaml
+network:
+  user_agent: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0
+```
+
 {% hint style="info" %}
-If you use flaresolverr, this value MUST match with flaresolverr's user agent. Otherwise, flaresolverr cookies won't work
+If you use flaresolverr, this value **MUST** match with flaresolverr's user agent. Otherwise, flaresolverr cookies won't work
 {% endhint %}
 
 {% hint style="info" %}
@@ -175,8 +178,3 @@ These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/
 <!-- END_CUSTOM_UA_CRAWLERS -->
 
 {% endhint %}
-
-```yaml
-network:
-  user_agent: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0
-```

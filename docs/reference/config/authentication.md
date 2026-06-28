@@ -3,8 +3,6 @@ description: These are all of the configuration options for Authentication.
 icon: user-lock
 ---
 
-# Authentication
-
 These settings allow you to provide login credentials for sites. All of them go under the `auth` namespace of the config file and they only accept string as values (or `null`)
 
 | Type            | Default |

@@ -1,5 +1,3 @@
-# Filters
-
 # `before`
 
 | Type             | Default | Additional Info                                           |

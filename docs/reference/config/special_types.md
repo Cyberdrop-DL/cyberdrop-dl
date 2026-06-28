@@ -3,8 +3,6 @@ description: Configuration settings with special behavior or details.
 icon: sparkles
 ---
 
-# Special Setting Types
-
 # `AdditiveArgs`
 
 Special type for some settings that accept multiple values as input (`lists` or `sets`). When passing values as CLI arguments, if the first value is `+`, any value after it will be added to the values specified in the config file instead of overriding it. Similarly, if the first value is `-`, any value after it will be removed from the values specified in the config
@@ -38,10 +36,10 @@ A special kind of `bool`. Within a config file, it can have a `true` or `false` 
 
 ## Examples
 
-| Value you used     | Value CDL interpreted |
-| ------------------ | --------------------- |
-| `--auto-dedupe`    | auto-dedupe: `true`   |
-| `--no-auto-dedupe` | auto-dedupe: `false`  |
+| Value you used              | Value CDL interpreted         |
+| --------------------------- | ----------------------------- |
+| `--delete-partial-files`    | delete_partial_files: `true`  |
+| `--no-delete-partial-files` | delete_partial_files: `false` |
 
 # `ByteSize`
 
@@ -51,11 +49,11 @@ In conformance with IEC 80000-13 Standard, `1KB` means `1000 bytes`, and `1KiB` 
 
 ### Examples
 
-| Value you used | Value CDL interpreted |
-| -------------- | --------------------- |
-| `1GB`          | `1.000.000.000 bytes` |
-| `512`          | `512 bytes`           |
-| `1MiB`         | `1.048.576 bytes`     |
+| Value you used                | Value CDL interpreted                   |
+| ----------------------------- | --------------------------------------- |
+| `--min-free-space 1000000000` | min_free_space: `1.000.000.000` (bytes) |
+| `--min-free-space 1GB`        | min_free_space: `1.000.000.000` (bytes) |
+| `--min-free-space 1GiB`       | min_free_space: `1,073,741,824` (bytes) |
 
 {% hint style="info" %}
 `ByteSize` is also used for some settings to specify speed and it's interpreted as `<value> / second`. ex: `8MB` means `8MB/s`
