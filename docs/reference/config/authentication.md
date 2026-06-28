@@ -5,7 +5,7 @@ icon: user-lock
 
 # Authentication
 
-These settings allow you to provide login credentials for sites. All of them go under the `auth` namespace on the config file they only accept string as values (or `null`)
+These settings allow you to provide login credentials for sites. All of them go under the `auth` namespace of the config file and they only accept string as values (or `null`)
 
 | Type            | Default |
 | --------------- | ------- |
@@ -29,15 +29,15 @@ See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.co
 
 <summary>GoFile</summary>
 
-If you decide to pay for GoFile Premium (faster downloads, access to frozen files, etc.) you can provide your API key to `cyberdrop-dl` in order for the program to use it.
+If you decide to pay for GoFile Premium (faster downloads, access to frozen files, etc.) you can provide your API key to `cyberdrop-dl` to use it.
 
 ```yaml
 auth:
   gofile:
-    api_key: "<my_api_key>"
+    api_key: <my_api_key>
 ```
 
-You can get your API key here: [https://gofile.io/myProfile](https://gofile.io/myProfile)
+You can get your API key from <https://gofile.io/myProfile>
 
 </details>
 
@@ -45,15 +45,15 @@ You can get your API key here: [https://gofile.io/myProfile](https://gofile.io/m
 
 <summary>JDownloader</summary>
 
+These are the same values you use in `JDownloder 2` -> `settings` -> `MyJDownloader`
+
 ```yaml
 auth:
   jdownloader:
-    device: "<my_device_name>"
-    password: "<my_password>"
-    username: "<my_username>"
+    device: <my_device_name>
+    password: <my_password>
+    username: <my_username>
 ```
-
-These are the same values you use in JDownloder 2 -> settings -> MyJDownloader
 
 </details>
 
@@ -66,7 +66,7 @@ If you decide to pay for PixelDrain premium (faster downloads, unlimited concurr
 ```yaml
 auth:
   pixeldrain:
-    api_key: "<my_api_key>"
+    api_key: <my_api_key>
 ```
 
 You can get your API key from <https://pixeldrain.com/user/api_keys>
@@ -77,12 +77,12 @@ You can get your API key from <https://pixeldrain.com/user/api_keys>
 
 <summary>Real-Debrid</summary>
 
-In order to download files from sites supported by Real-Debrid, you'll need to get the API token from your account.
+To download files from sites supported by Real-Debrid, you'll need to get the API token from your account.
 
 ```yaml
 auth:
   real_debrid:
-    api_key: "<my_api_key>"
+    api_key: <my_api_key>
 ```
 
 You can get your API key here (you must be logged in): <https://real-debrid.com/apitoken>
@@ -93,13 +93,13 @@ You can get your API key here (you must be logged in): <https://real-debrid.com/
 
 <summary>Mega.nz</summary>
 
-If you have premium or want to download files/folders only shared with you, provide CDL these values:
+If you have premium or want to download files/folders only shared with you, provide CDL your account credentials:
 
 ```yaml
 auth:
   mega_nz:
-    email: "<my_email>"
-    password: "<my_password>"
+    email: <my_email>
+    password: <my_password>
 ```
 
 {% hint style="warning" %}

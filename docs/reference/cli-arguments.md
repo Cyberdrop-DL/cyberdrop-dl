@@ -21,25 +21,53 @@ CLI inputs always take priority over config values.
 {% endhint %}
 
 {% hint style="info" %}
-Use `-` instead of `_` to separate words in an config option name when using it as a CLI argument: Ex: `auto_dedupe` needs to be `auto-dedupe` when using it via the CLI
+Use `-` instead of `_` to separate words in an config option name when using it as a CLI argument:
+
+Ex: `delete_partial_files` needs to be `delete-partial-files` when using it via the CLI
 {% endhint %}
 
-You can pass any of the **Config Settings** and **Global Settings** options as a cli argument for the program.
+All config option except authentication credentials have a CLI equivalent to override them.
 
 For items not explained below, you can find their counterparts in the configuration options to see what they do.
 
 ## CLI only arguments
 
-### `config-file`
+These options can onlny be supplied via CLI argmunets. They are not included on the config file
+
+### `--config-file`
 
 | Type   | Default |
 | ------ | ------- |
 | `Path` | `null`  |
 
-Path to the CDL `config.yaml` file to load
+Path to the config file to use for this session. The config file at the default location will be ignored. This file _must_ have a `.yml` or `.yaml` extension
 
 {% hint style="info" %}
-If both `config` and `config-file` are supplied, `config-file` takes priority
+If provided, this file _must_ exists already, but it can be empty
+{% endhint %}
+
+### `--database-file`
+
+| Type   | Default |
+| ------ | ------- |
+| `Path` | `null`  |
+
+Path to the database file to use for this session. The database at the default location will be ignored. This file _must_ have a `.db` extension
+
+{% hint style="info" %}
+If provided, this file _must_ exists already, but it can be empty
+{% endhint %}
+
+### `--cache-file`
+
+| Type   | Default |
+| ------ | ------- |
+| `Path` | `null`  |
+
+Path to the cache file to use for this session. The cache at the default location will be ignored. This file _must_ have a `.json` extension
+
+{% hint style="info" %}
+If provided, this file _must_ exists already, but it can be empty
 {% endhint %}
 
 ## Overview

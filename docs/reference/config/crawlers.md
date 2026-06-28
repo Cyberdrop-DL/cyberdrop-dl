@@ -6,11 +6,12 @@
 | ------------------- | ------- | -------------------------------------------------------------------- |
 | `list[NonEmptyStr]` | `[]`    | This is an [`AdditiveArg`](../special_setting_types.md#additiveargs) |
 
-You can supply a list of crawlers to disable for the current run. This will make CDL completely ignore the crawler, as if the site was not supported. However, links from the site will still be processed by Real-Debrid (if enabled), Jdownloader (If enabled) and the Generic crawler (If enabled), in that order.
+You can supply a list of crawlers to disable for the current run. This will make CDL completely ignore the crawler, as if the site was not supported.
+However, links from the site will still be processed by Real-Debrid (if enabled), JDownloader (If enabled) and the Generic crawler (If enabled), in that order.
 
-The list should be valid crawlers names. The name of the crawler is the name of the primary site they support. ex: `4Chan`, `Bunkrr`, `Dropbox`
+The list should be valid crawlers names. The name of the crawler is the name of the primary site they support. ex: `4Chan`, `Mega.nz`, `Dropbox`
 
-Crawlers names correspond to the column `site` in the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites).
+You can get the crawler's name from the column `site` on the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites).
 
 ## `generic`
 
@@ -23,8 +24,8 @@ Supported generic crawlers:
 
 - `discourse`: This works on any forum that uses [Discourse](https://www.discourse.org/).
 
-- `kvs`: Works on any tube site using [Kernel Video Sharing](https://www.kernel-video-sharing.com/en/). Basically, any site that looks like one of these: <https://www.kernel-video-sharing.com/en/themes/>
-  ex: >https://www.kvs-demo.com/>
+- `kvs`: Works on any tube site using [Kernel Video Sharing](https://www.kernel-video-sharing.com/en/).
+  Basically, any site that looks like one of these: <https://www.kernel-video-sharing.com/en/themes/>, ex: <https://www.kvs-demo.com/>
 
 - `wordpress_media`: This crawler should work on any [WordPress](https://wordpress.com/) site where content primarily consists of images or galleries. The images need to be hosted on the site itself. It requires sites to have a public WordPress REST API.
 
@@ -60,6 +61,50 @@ Supported generic crawlers:
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
+## Bandcamp
+
+### `formats`
+
+| Type                                                                        | Default                                                               |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| List of `mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff`, `alas` | [`mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff`, `alas`] |
+
+Format to choose for downloads (if available), ordered by preference.
+
+```yaml
+crawlers:
+  bandcamp:
+    formats:
+      - mp3-320
+      - mp3
+      - aac-hi
+      - wav
+      - flac
+      - vorbis
+      - aiff
+      - alas
+```
+
+# Clyp.it
+
+### `prefer_mp3`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Download audios as `.mp3` files even if WAV (high quality) versions are available
+
+## OnePace
+
+### `prefer_dub`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Download episodes with english audio tracks instead of japanese (if available)
+
 ## Tiktok
 
 ### `original`
@@ -75,10 +120,10 @@ By default, CDL will download the "optimized for streaming" version of tiktok vi
 {% hint style="warning" %}
 This will make video downloads several times slower
 
-When it is set to `False` (the default) CDL can download 50 videos with a single request.
-When it is set to `True` , CDL needs to make at least 3 requests _per_ video to download them.
+When it is set to `false` (the default) CDL can download 50 videos with a single request.
+When it is set to `true` , CDL needs to make at least 3 requests _per_ video to download them.
 
 There's also a daily limit of the API CDL uses: 5000 requests per day per IP
 
-Setting this option to `True` will consume the daily limit faster
+Setting this option to `true` will consume the daily limit faster
 {% endhint %}

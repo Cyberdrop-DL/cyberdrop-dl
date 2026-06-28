@@ -6,7 +6,7 @@
 | ------ | ------- |
 | `bool` | `false` |
 
-Send unsupported URLs to JDdownloader. All other JDownloader settings are ignored if this is `false`
+Send unsupported URLs to JDownloader. All other JDownloader settings are ignored if this is `false`
 
 ```yaml
 jdownloader:
@@ -19,7 +19,9 @@ jdownloader:
 | ------ | ------- |
 | `bool` | `false` |
 
-Setting this to `true` will make JDownloader start downloads as soon as they are sent.
+Request to JDownloader start downloads as immediately.
+
+If disabled, downloads will be added to the LinkGrabber queue and you have to manually start them on JDDownloader itself
 
 ```yaml
 jdownloader:
@@ -32,7 +34,8 @@ jdownloader:
 | ---------------- | ------- |
 | `Path` or `null` | `null`  |
 
-The `download_dir` jdownloader will use. A `null` value (the default) will make JDownloader use the same `download_dir` as `cyberdrop-dl`.
+The `download_dir` jdownloader will use. A `null` value (the default) will use the same value as CDL download folder (`--download-folder`).
+
 Use this option as path mapping when JDownloader is running on a different host / docker.
 
 ```yaml
@@ -46,7 +49,9 @@ jdownloader:
 | ------------------- | ------- |
 | `list[NonEmptyStr]` | `[]`    |
 
-List of domain names. An unsupported URL will only be sent to jdownloader if its host is found on the list. An empty whitelist (the default) will disable this functionality, sending any unsupported URL to jdownloader.
+List of domain names. An unsupported URL will only be sent to JDownloader if its host is found on the list.
+
+An empty whitelist will send _any_ unsupported URL to jdownloader.
 
 ```yaml
 jdownloader:

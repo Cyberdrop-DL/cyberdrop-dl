@@ -92,7 +92,7 @@ You can provide the maximum and minimum duration for audio and video files.
 | `timedelta` | `0s`    |
 
 - A `timedelta` input is expected to be a valid ISO 8601 timespan, ex: `P10DT2H30M10S`
-- An `int` input is assumed to be the number of days
+- An `int` input is assumed to be seconds
 - A `str` input is expected to be in the format; `<value> <unit>`, ex: `10 days`.
 
 A value `0` means no limit

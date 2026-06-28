@@ -6,9 +6,10 @@ description: Here's how configuration works.
 # Configuration Options
 
 You can setup a configuration file to customize the default behaviour of `cyberdrop-dl`. All CLI options have a config equivalent
-but some options (like account credentials) can only be provided via config file.
+but some options (like account credentials) can only be provided using a config file.
 
-The config file format is YAML and it _must_ have a `.yaml` or `.yml` extension. `cyberdrop-dl` will not created a config file by default.
+The config file format is YAML and it _must_ have a `.yaml` or `.yml` extension. If a config file does noe exists, `cyberdrop-dl` will use its programmed defaults.
+
 You can manually create a config with all the default settings using the `Edit config` option on the main menu or running the command `cyberdrop-dl config new`
 
 `cyberdrop-dl` will always look for a config file at these default locations:
@@ -31,7 +32,7 @@ ignore_history: true
 {% hint style="info" %}
 Options provided explicit via CLI arguments will always take priority over config options.
 
-Option will apply in this order:
+Options will apply in this order:
 
 CLI Options > options from `--config-file` (if provided) > options from default config file (if it exists) > Internal defaults of the program
 {% endhint %}

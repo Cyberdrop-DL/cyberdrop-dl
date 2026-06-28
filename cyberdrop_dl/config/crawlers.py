@@ -44,7 +44,7 @@ class ClypitConfig(ConfigModel):
 
 class OnePaceConfig(ConfigModel):
     prefer_dub: bool = False
-    """Download episodes with english audio tracks instead of japanase (if available)"""
+    """Download episodes with english audio tracks instead of japanese (if available)"""
 
 
 class GenericCrawlers(ConfigModel):

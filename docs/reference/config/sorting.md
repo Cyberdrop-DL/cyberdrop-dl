@@ -1,9 +1,10 @@
 # Sorting
 
-`cyberdrop-dl` has a file sorter built in, but it's not enabled by default
+`cyberdrop-dl` has a file sorter built in, but it's not enabled by default.
 
-You can use the field names below to create a custom path format. You can also use essentially none of them and have a hard coded path.
-However, `filename` and `ext` must always be used.
+You can use the field names below to create a custom path format. You can also use none of them and have a hard coded path for sorted files.
+
+However, `filename` and `ext` should always be used as files will overwrite each other otherwise
 
 Common fields for sorting format options (supported for `audio`, `videos`, `images` and `other`):
 
@@ -29,7 +30,7 @@ Common fields for sorting format options (supported for `audio`, `videos`, `imag
 | ------ | ------- |
 | `bool` | `false` |
 
-Enable/Disabled file sorting at the end of a download session. All other sorting options ar eignored if this is `false`
+Enable/Disabled file sorting at the end of a download session. All other sorting options are ignored if this is `false`
 
 ```yaml
 sort:
@@ -42,11 +43,9 @@ sort:
 | ---------------- | ------- |
 | `Path` or `null` | `null`  |
 
-Sets the starting point for the file scan
+Sort all files within this folder. Subfolders are recursively scanned, and files are moved based on your settings.
 
-Each direct child is recursively scanned, and files are moved based on your settings.
-
-A value of `null` (the default) will use the save folder defined by `--download-folder`.
+A value of `null` (the default) will use the save folder as `--download-folder`.
 
 ```yaml
 sort:
@@ -62,7 +61,7 @@ sort:
 This is the path to the folder you'd like sorted downloads to be stored in.
 
 {% hint style="warning" %}
-Setting `--sort.output_folder` to the same value as `--sort.input_folder` or one of its subfolders is not supported and will lead to expected results
+Setting `--sort.output_folder` to the same value as `--sort.input_folder` (or a subfolder of it) is not supported and will lead to expected results
 {% endhint %}
 
 ```yaml
@@ -71,28 +70,6 @@ sort:
 ```
 
 ## Formats
-
-### `incrementer`
-
-| Type          | Default  |
-| ------------- | -------- |
-| `NonEmptyStr` | ` ({i})` |
-
-When naming collisions happen, `cyberdrop-dl` will rename files automatically
-
-> `image.jpg` -> `image (1).jpg`.
-
-You can modify the format as needed, but it must include `{i}` to specify where the auto-increment value should be placed
-
-```yaml
-sort:
-  formats:
-    audio: "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
-    image: "{sort_dir}/{base_dir}/Images/{filename}{ext}"
-    incrementer: " ({i})"
-    non_media: "{sort_dir}/{base_dir}/Other/{filename}{ext}"
-    video: "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
-```
 
 ### `audio`
 
@@ -184,6 +161,24 @@ sort:
     non_media: "{sort_dir}/{base_dir}/Other/{filename}{ext}"
 ```
 
+### `incrementer`
+
+| Type          | Default  |
+| ------------- | -------- |
+| `NonEmptyStr` | ` ({i})` |
+
+When naming collisions happen, `cyberdrop-dl` will rename files automatically
+
+> `image.jpg` -> `image (1).jpg`.
+
+You can modify the format as needed, but it must include `{i}` to specify where the auto-increment value should be placed
+
+```yaml
+sort:
+  formats:
+    incrementer: " ({i})"
+```
+
 ## Group URLs
 
 It is possible to treat a list of URLs as a group, allowing them to be downloaded to a single folder.
@@ -192,7 +187,7 @@ To define a group, put a title above the URLs you want to be in the group, using
 
 To define the end of a group, add a new group with no name. (`---` or `===`)
 
-Here is an example URL file with two groups:
+Here is an example `URLs.txt` file with two groups:
 
 ```text
 https://example.com/file1.jpg
@@ -215,3 +210,20 @@ Those downloads would be sorted as follows:
 | file1.jpg   | file2.jpg | file5.jpg |
 | file4.jpg   | file3.jpg | file6.jpg |
 | file7.jpg   |           |           |
+
+And downloaded to the following folders:
+
+```shell
+└── downloads
+    ├── Group 1
+    │   ├── file2.jpg
+    │   └── file3.jpg
+    ├── Group 2
+    │   ├── file5.jpg
+    │   └── file6.jpg
+    └── Loose Files
+        ├── file1.jpg
+        ├── file4.jpg
+        └── file7.jpg
+
+```

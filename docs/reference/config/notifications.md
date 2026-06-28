@@ -12,24 +12,37 @@ You can set up CDL to sent you the report via discord, email, a native notificat
 
 ## Notifications via Discord
 
-To get notifications via discord, you need to provide a discord webhook URL in the `config.yaml` of your config.
+To get notifications via discord, you need to provide a valid discord webhook URL in your config file.
 
 You can learn how to setup a webhook following the [official discord guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
 
 Optionally, you can add the tag `attach_logs=` as a prefix to your webhook url. This will tell CDL to include a copy of the main log as an attachment to Discord.
 
+| Type                   | Default | Restrictions                                    |
+| ---------------------- | ------- | ----------------------------------------------- |
+| `AppriseURL` or `null` | `null`  | The scheme of the URL must be `http` or `https` |
+
 ```yaml
 notifications:
-  apprise: []
   webhook: <URL>
 ```
+
+{% hint style="info" %}
+Attachments have a size limit of 25MB. If you use `attach_logs=` and the main log file exceeds this limit, CDL will ignore it and send the notification without it
+{% endhint %}
+
+Example:
+
+> `attach_logs=https://discord.com/api/webhooks/webhook_id/webhook_token`
 
 ## Notifications to other services (via Apprise)
 
 `cyberdrop-dl` uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
 
 {% hint style="info" %}
-`apprise` is an an optional dependency; It's not installed by default. To install `cyberdrop-dl` with `apprise`, add it as extra while installing cyberdrop:
+`apprise` is an an optional dependency; It's not installed by default.
+
+To install `cyberdrop-dl` with `apprise`, add it as extra while installing cyberdrop:
 
 ```shell
 uv tool install cyberdrop-dl-patched[apprise]
@@ -45,14 +58,14 @@ You can check the full list of supported services [here](https://appriseit.com/s
 
 Apprise services also support the `attach_logs=` tag to send the main log as an attachment.
 
-{% hint style="success" %}
-You can build the URL interactively on their website: [https://appriseit.com/url-builder](https://appriseit.com/url-builder/)
-{% endhint %}
-
 ```yaml
 notifications:
   apprise: []
 ```
+
+{% hint style="info" %}
+You can build the URL interactively on their website: <https://appriseit.com/url-builder>
+{% endhint %}
 
 ### Troubleshooting Apprise notifications
 
@@ -80,14 +93,15 @@ attach_logs=mailto://user:password@domain.com
 {% endtab %}
 
 {% tab title="Native OS notifications" %}
-Some operating systems require additional dependencies for notifications to work. `cyberdrop-dl` includes the required dependencies for Windows. Follow the url on the OS name to get additional information on how to set them up.
+Some operating systems require additional dependencies for notifications to work. `cyberdrop-dl` includes the required dependencies for Windows and macOS.
+Follow the url on the OS name to get additional information on how to set them up.
 
-| OS                                                                                 | Syntax                                              |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [Linux (DBus Notifications)](https://github.com/caronc/apprise/wiki/Notify_dbus)   | `dbus://` <br> `qt://` <br> `glib://` <br> `kde://` |
-| [Linux (Gnome Notifications)](https://github.com/caronc/apprise/wiki/Notify_gnome) | `gnome://`                                          |
-| [macOS](https://github.com/caronc/apprise/wiki/Notify_macosx)                      | `macosx://`                                         |
-| [Windows](https://github.com/caronc/apprise/wiki/Notify_windows)                   | `windows://`                                        |
+| OS                                                                   | Syntax                                              |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| [Linux (DBus Notifications)](https://appriseit.com/services/dbus/)   | `dbus://` <br> `qt://` <br> `glib://` <br> `kde://` |
+| [Linux (Gnome Notifications)](https://appriseit.com/services/gnome/) | `gnome://`                                          |
+| [macOS](https://appriseit.com/services/macosx/)                      | `macosx://`                                         |
+| [Windows](https://appriseit.com/services/windows/)                   | `windows://`                                        |
 
 {% endtab %}
 

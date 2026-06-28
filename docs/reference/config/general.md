@@ -1,5 +1,7 @@
 # General
 
+All setting on this section go at the root of the config file
+
 ## `download_folder`
 
 | Type   | Default                  |
@@ -18,9 +20,10 @@ download_folder: downloads/cyberdrop-dl
 | ------ | ------- |
 | `bool` | `False` |
 
-If enabled, CDL will created a [json lines](https://jsonlines.org/) files with the information about every file downloaded in the current run. The path to this file will be the same as `--main-log` but with the extension `.results.jsonl`
+If enabled, CDL will created a [json lines](https://jsonlines.org/) files with the information about every file downloaded in the current run.
+The path to this file will be the same as `--log-file` but with the extension `.results.jsonl`
 
-Each line in the file will contain the following details (this may change on future versions):
+Each line in the file will contain the following details:
 
 ```json
 {
@@ -49,6 +52,10 @@ Each line in the file will contain the following details (this may change on fut
 ```yaml
 dump_json: false
 ```
+
+{% hint style="warning" %}
+The schema of this JSON output is NOT stable may change without notice, even on minor version updates
+{% endhint %}
 
 ## `max_file_name_length`
 
@@ -82,13 +89,13 @@ max_folder_name_length: 60
 
 This is the minimum amount of free space require to start new downloads.
 
-{% hint style="info" %}
-If you set a value lower than `512MB`, CDL will override it with `512MB`
-{% endhint %}
-
 ```yaml
 min_free_space: 5.0GB
 ```
+
+{% hint style="info" %}
+Values lower than `512MB` will always be replaced with `512MB`
+{% endhint %}
 
 ## `cookies`
 
@@ -96,7 +103,7 @@ min_free_space: 5.0GB
 | ---------------- | ------- |
 | `Path` or `null` | `null`  |
 
-Path to a file/folder with Netscape cookies with a `.txt` extension. If the path is a folder, all `.txt` in the folder are read (Non recursive)
+Path to a file/folder with Netscape cookies. All cookie files must have a `.txt` extension. If the path is a folder, all `.txt` in the folder are read (non recursive)
 
 These can be used for websites that require login or to pass DDoS-Guard challenges.
 
@@ -104,10 +111,6 @@ You can extract the cookies from your browser using tools like [cookie-editor](h
 The file must be a Netscape formatted cookie file. You can use any name for the file as long as it has a `.txt` extension.
 
 See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839) for detailed instructions
-
-{% hint style="info" %}
-Multiple cookie files are supported. You could have a `SocialMediaGirls.txt` file and a `cyberdrop.txt` file, for example
-{% endhint %}
 
 {% hint style="warning" %}
 The `user-agent` config value **MUST** match the `user-agent` of the browser from which you imported the cookies. If they do not match, the cookies will not work
@@ -122,17 +125,17 @@ The `user-agent` config value **MUST** match the `user-agent` of the browser fro
 `cyberdrop-dl` uses a some tricks to try to reduce the number of requests it needs to make while scraping a site. However, this may cause a few links to be skipped.
 Use `--deep-scrape` to disable this and always make a new requests if required.
 
+```yaml
+deep_scrape: false
+```
+
 {% hint style="warning" %}
-Use this option only when absolutely necessary, as it will significantly increase the number of requests being made.
+Use this option only if when absolutely necessary, as it will significantly increase the number of requests being made.
 
 For example, scraping an album normally takes one single request.
 
 With `--deep-scrape`, CDL will make `n` requests per album, where `n` is the total number of items in the album
 {% endhint %}
-
-```yaml
-deep_scrape: false
-```
 
 ## `delete_partial_files`
 
@@ -140,10 +143,11 @@ deep_scrape: false
 | ------ | ------- |
 | `bool` | `false` |
 
-Files downloaded by CDL have a `.part` extension (`.cdl_hls` for HLS segments). CDL only changes the extension to the original one after a successful download.
+Files downloaded by CDL have a `.part` extension (or `.cdl_hls` for HLS segments) that will replaced with the original extension the download reaches 100%.
+
 This allows CDL to resume downloads on subsequent runs.
 
-Setting this to `true` will delete any `.part` and `.cdl_hls` files in the download folder.
+Set `true` will delete any `.part` and `.cdl_hls` files in the download folder at the end of a session.
 
 ```yaml
 delete_partial_files: false
@@ -155,9 +159,9 @@ delete_partial_files: false
 | ------ | ------- |
 | `bool` | `false` |
 
-By default, the program tracks your downloads in a database to prevent downloading the same files multiple times, to save time and reduce strain on the servers you're downloading from.
+By default, the program tracks your downloads in a database to prevent downloading the same file multiple times, to save time and reduce load on the servers you're downloading from.
 
-Setting this to `true` to disable it, ignoeing the database and allowing you to re-download files.
+Setting this to `true` to disable it, ignoring the database and allowing you to re-download files.
 
 ```yaml
 ignore_history: false
@@ -169,9 +173,7 @@ ignore_history: false
 | ------ | ------- |
 | `bool` | `false` |
 
-After a run is complete, the program will do a check (and remove) any empty files and folders in the download and scan folder.
-
-Setting this to `false` will disable it.
+Check (and remove) any empty files and folders in the `--download-folder` and `--sort.input_folder` at the end of a session.
 
 ```yaml
 delete_empty_folders: true
@@ -183,9 +185,13 @@ delete_empty_folders: true
 | ------ | ------- |
 | `bool` | `True`  |
 
-By default the program will do it's absolute best to try and find the upload date of a file. It'll then set the `last modified` and `last accessed` dates on the file to match. On Windows and macOS, it will also try to set the `created` date.
+CDL dos it's absolute best to extract the upload date of a files.
 
-Setting this to `false` will disable this function, and the dates for those metadata entries will be the date the file was downloaded.
+By default, this date will be set as the `last modified` and `last accessed` date on the downloaded file.
+
+On Windows and macOS, it will also try to set the `created` date.
+
+Change this to `false` and those dates will be the current datetime instead
 
 ```yaml
 mtime: true
@@ -197,23 +203,23 @@ mtime: true
 | ---------------- | ------- |
 | `NonNegativeInt` | 0       |
 
-{% hint style="warning" %}
-It is not recommended to set this above the default value of `0`, as there is a high chance of infinite nesting in certain cases.
-
-For example, when dealing with Megathreads, if a Megathread is linked to another Megathread, you could end up scraping an undesirable amount of data.
-{% endhint %}
-
 Restricts how many levels deep the scraper is allowed to go while scraping a thread
 
 A value of `0` means only the top level thread will be scraped
+
+```yaml
+max_thread_depth: 0
+```
 
 {% hint style="info" %}
 This setting is hardcoded to `0` for Discourse sites
 {% endhint %}
 
-```yaml
-max_thread_depth: 0
-```
+{% hint style="warning" %}
+It is not recommended to set this above the default value of `0`, as there is a high chance of infinite nesting in certain cases.
+
+For example, when dealing with Megathreads, if a Megathread is linked to another Megathread, you could end up scraping an undesirable amount of data.
+{% endhint %}
 
 ### Example
 
