@@ -31,17 +31,24 @@ class _SubFoldersInclude(ConfigModel):
     domain: bool = True
 
 
+@Parameter(name="*")
+class _SeparatePosts(ConfigModel):
+    format: Annotated[
+        FormatStr,
+        strings.format_validator({"default", "title", "id", "number", "date"}),
+        Parameter(name="separate-posts.format"),
+    ] = "{default}"
+
+    enabled: Annotated[bool, Parameter(name="separate-posts")] = False
+    "Create new subfolders for every post on a site"
+
+
 class SubFolders(ConfigGroup, name=None):
     create: Annotated[bool, Parameter(name="--subfolders")] = True
     "Enable/disable the createtion of nested sub-folders"
 
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
-    separate_posts_format: Annotated[
-        FormatStr, strings.format_validator({"default", "title", "id", "number", "date"})
-    ] = "{default}"
-
-    separate_posts: bool = False
-    "Create new subfolders for every post on a site"
+    separate_posts: _SeparatePosts = Field(default_factory=_SeparatePosts)
 
 
 class LogFiles(ConfigModel):

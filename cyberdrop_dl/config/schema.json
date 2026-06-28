@@ -854,14 +854,8 @@
         "include": {
           "$ref": "#/$defs/_SubFoldersInclude"
         },
-        "separate_posts_format": {
-          "$ref": "#/$defs/FormatStr",
-          "default": "{default}"
-        },
         "separate_posts": {
-          "default": false,
-          "title": "Separate Posts",
-          "type": "boolean"
+          "$ref": "#/$defs/_SeparatePosts"
         }
       },
       "title": "SubFolders",
@@ -1007,6 +1001,22 @@
         }
       },
       "title": "_FileSizes",
+      "type": "object"
+    },
+    "_SeparatePosts": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "$ref": "#/$defs/FormatStr",
+          "default": "{default}"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "_SeparatePosts",
       "type": "object"
     },
     "_SizeLimit": {

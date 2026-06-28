@@ -53,6 +53,8 @@ subfolders:
 
 # `separate_posts`
 
+## `enabled`
+
 | Type   | Default |
 | ------ | ------- |
 | `bool` | `false` |
@@ -73,10 +75,11 @@ For some sites, this value is hardcorded to `true` because each post is always a
 
 ```yaml
 subfolders:
-  separate_posts: false
+  separate_posts:
+    enabled: false
 ```
 
-# `separate_posts_format`
+## `format`
 
 | Type          | Default     |
 | ------------- | ----------- |
@@ -123,5 +126,6 @@ You can use any valid format string supported by python, with the following rest
 
 ```yaml
 subfolders:
-  separate_posts_format: "{default}"
+  separate_posts:
+    format: "{default}"
 ```

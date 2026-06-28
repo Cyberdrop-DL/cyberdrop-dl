@@ -151,8 +151,9 @@ subfolders:
     album_id: false
     domain: true
     thread_id: false
-  separate_posts: false
-  separate_posts_format: '{default}'
+  separate_posts:
+    enabled: false
+    format: '{default}'
 ui:
   mode: fullscreen
   portrait: false

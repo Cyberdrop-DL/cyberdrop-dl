@@ -363,7 +363,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @property
     def separate_posts(self) -> bool:
-        return self.config.subfolders.separate_posts
+        return self.config.subfolders.separate_posts.enabled
 
     @final
     @contextlib.contextmanager
@@ -662,7 +662,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     ) -> str:
         if not self.separate_posts:
             return ""
-        title_format = self.config.subfolders.separate_posts_format
+        title_format = self.config.subfolders.separate_posts.format
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
         if isinstance(date, int):
