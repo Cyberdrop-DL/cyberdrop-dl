@@ -91,8 +91,8 @@ attach_logs=mailto://user:password@domain.com
 {% endtab %}
 
 {% tab title="Native OS notifications" %}
-Some operating systems require additional dependencies for notifications to work. `cyberdrop-dl` includes the required dependencies for Windows and macOS.
-Follow the url on the OS name to get additional information on how to set them up.
+Some operating systems require additional dependencies for notifications to work. `cyberdrop-dl` includes the required dependencies for Windows if you installed it
+with the [`apprise`] extra. Follow the url on the OS name to get additional information on how to set them up.
 
 | OS                                                                   | Syntax                                              |
 | -------------------------------------------------------------------- | --------------------------------------------------- |
