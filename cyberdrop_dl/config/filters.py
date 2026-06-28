@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime  # noqa: TC003
 import re  # noqa: TC003
 from typing import TYPE_CHECKING, Self
 
@@ -8,15 +9,9 @@ from cyclopts import Parameter
 from pydantic import Field
 
 from cyberdrop_dl.models import ConfigGroup, ConfigModel
-from cyberdrop_dl.models.types import (  # noqa: TC001
-    ByteSizeSerilized,
-    FalsyAsNone,
-    NonEmptyStr,
-    Timedelta,
-)
+from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsNone, NonEmptyStr, Timedelta  # noqa: TC001
 
 if TYPE_CHECKING:
-    import datetime
     from collections.abc import Callable
 
 

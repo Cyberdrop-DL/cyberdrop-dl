@@ -148,12 +148,6 @@
         "generic": {
           "$ref": "#/$defs/GenericCrawlers"
         },
-        "kemono": {
-          "$ref": "#/$defs/KemonoConfig"
-        },
-        "coomer": {
-          "$ref": "#/$defs/KemonoConfig"
-        },
         "one_pace": {
           "$ref": "#/$defs/OnePaceConfig"
         },
@@ -609,23 +603,6 @@
         }
       },
       "title": "Jdownloader",
-      "type": "object"
-    },
-    "KemonoConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "ignore_ads": {
-          "default": false,
-          "title": "Ignore Ads",
-          "type": "boolean"
-        },
-        "ignore_post_content": {
-          "default": true,
-          "title": "Ignore Post Content",
-          "type": "boolean"
-        }
-      },
-      "title": "KemonoConfig",
       "type": "object"
     },
     "LogFiles": {

@@ -26,9 +26,6 @@ crawlers:
     - alas
   clypit:
     prefer_mp3: false
-  coomer:
-    ignore_ads: false
-    ignore_post_content: true
   disabled: []
   generic:
     chevereto: []
@@ -36,9 +33,6 @@ crawlers:
     kvs: []
     wordpress_html: []
     wordpress_media: []
-  kemono:
-    ignore_ads: false
-    ignore_post_content: true
   one_pace:
     prefer_dub: false
   tiktok:
