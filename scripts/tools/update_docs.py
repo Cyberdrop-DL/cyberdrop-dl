@@ -7,7 +7,7 @@ from cyberdrop_dl.constants import CDL_USER_AGENT
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
 SUPPORTED_SITES_MD = REPO_ROOT / "docs/reference/supported-websites.md"
-GENERAL_MD = REPO_ROOT / "docs/reference/configuration-options/global-settings/general.md"
+NETWORK_MD = REPO_ROOT / "docs/reference/config/network.md"
 
 
 def _write_if_updated(path: Path, old_content: str, new_content: str) -> None:
@@ -87,7 +87,7 @@ def update_cli_overview() -> None:
 def update_custom_ua_crawlers() -> None:
     new_content = "- " + "\n- ".join(_get_custom_ua_crawlers())
     _update_file(
-        GENERAL_MD,
+        NETWORK_MD,
         new_content,
         marker="CUSTOM_UA_CRAWLERS",
     )
