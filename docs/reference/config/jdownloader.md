@@ -28,19 +28,19 @@ jdownloader:
   autostart: false
 ```
 
-# `download_dir`
+# `download_folder`
 
 | Type             | Default |
 | ---------------- | ------- |
 | `Path` or `null` | `null`  |
 
-The `download_dir` jdownloader will use. A `null` value (the default) will use the same value as CDL download folder (`--download-folder`).
+The `download_folder` jdownloader will use. A `null` value (the default) will use the same value as CDL's download folder (`--download-folder`).
 
 Use this option as path mapping when JDownloader is running on a different host / docker.
 
 ```yaml
 jdownloader:
-  download_dir: null
+  download_folder: null
 ```
 
 # `whitelist`

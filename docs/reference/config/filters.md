@@ -87,25 +87,25 @@ filters:
 
 You can provide the maximum and minimum duration for audio and video files.
 
-| Type        | Default |
-| ----------- | ------- |
-| `timedelta` | `0s`    |
+| Type                  | Default |
+| --------------------- | ------- |
+| `timedelta` or `null` | `null`  |
 
 - A `timedelta` input is expected to be a valid ISO 8601 timespan, ex: `P10DT2H30M10S`
 - An `int` input is assumed to be seconds
 - A `str` input is expected to be in the format; `<value> <unit>`, ex: `10 days`.
 
-A value `0` means no limit
+A value of `0` or `null` means no limit
 
 ```yaml
 filters:
   duration:
     audio:
-      max: 0:00:00
-      min: 0:00:00
+      max: null
+      min: null
     video:
-      max: 0:00:00
-      min: 0:00:00
+      max: null
+      min: null
 ```
 
 # File Size Limits
@@ -114,27 +114,27 @@ You can provide the maximum and minimum file size for each file "type".
 
 All options on this category take a `ByteSize` input ([more info here](../special_setting_types.md#bytesize)).
 
-| Type       | Default |
-| ---------- | ------- |
-| `ByteSize` | `0`     |
+| Type                 | Default |
+| -------------------- | ------- |
+| `ByteSize` or `null` | `null`  |
 
-Setting any of these options to `0` means that limit is `disabled`
+Setting any of these options to `0` or `null` means that limit is disabled
 
 ```yaml
 filters:
   sizes:
     audio:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     image:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     non_media:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     video:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
 ```
 
 # Files
