@@ -8,13 +8,6 @@ from cyberdrop_dl.models.types import HttpURL, NonEmptyStr
 from cyberdrop_dl.models.validators import remove_duplicates
 
 
-class KemonoConfig(ConfigModel):
-    ignore_ads: bool = False
-    "Ignore advertisement posts"
-    ignore_post_content: bool = True
-    "Ignore URL in inside the content (text) of posts"
-
-
 class TikTokConfig(ConfigModel):
     original: bool = False
     "Download videos in original quality (slower)"
@@ -62,7 +55,5 @@ class Crawlers(ConfigGroup, name=None):
     bandcamp: BandcampConfig = Field(default_factory=BandcampConfig)
     clypit: ClypitConfig = Field(default_factory=ClypitConfig)
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
-    kemono: KemonoConfig = Field(default_factory=KemonoConfig)
-    coomer: KemonoConfig = Field(default_factory=KemonoConfig)
     one_pace: OnePaceConfig = Field(default_factory=OnePaceConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)

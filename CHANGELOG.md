@@ -165,6 +165,9 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 - All retry settings + menu option
 - `--log-level` and `--console-log-level` (`--logs.level` and `--logs.console-level`) no longer accept integers. Only log level names as valid, ex: `INFO`, `DEBUG`, `WARNING`
 - Posts filtering by URL params (Wordpress)
+- Kemono support
+- Coomer support
+- Coomerfans support
 - Auto cookie extraction support
 
 Several config options have been removed:
@@ -189,6 +192,8 @@ Several config options have been removed:
 - `--sites`
 - `--skip-check-for-partial-files`
 - `--update-last-forum-post`
+- `--ignore-coomer-post-content`
+- `--ignore-coomer-ads`
 
 The following authentication entries has been removed:
 
