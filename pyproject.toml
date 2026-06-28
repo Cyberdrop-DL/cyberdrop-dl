@@ -1,5 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
+version = "10.0.0"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -53,7 +54,6 @@ license-files = ["LICENSE"]
 maintainers = [{name = "NTFSvolume", email = "NTFSvolume@proton.me"}]
 readme = "README.md"
 requires-python = ">=3.12"
-version = "10.0.0rc5"
 
 [project.optional-dependencies]
 apprise = [
@@ -211,7 +211,7 @@ convention = "google"
 all = true
 ignore_case = true
 in_place = true
-sort_first = ["name", "project", "select"]
+sort_first = ["name", "project", "select", "version"]
 spaces_before_inline_comment = 2
 spaces_indent_inline_array = 4
 
