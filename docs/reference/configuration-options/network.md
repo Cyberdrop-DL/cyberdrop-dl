@@ -124,9 +124,9 @@ network:
 
 ## `ssl_context`
 
-| Type                  | Default              |
-| --------------------- | -------------------- |
-| `NonEmptyStr` or None | `truststore+certifi` |
+| Type                    | Default              |
+| ----------------------- | -------------------- |
+| `NonEmptyStr` or `null` | `truststore+certifi` |
 
 Context that will used to verify SSL connections. Valid values are:
 
@@ -136,9 +136,9 @@ Context that will used to verify SSL connections. Valid values are:
 
 - `truststore+certifi`: Will use certificates already included with the OS, with a fallback to `certifi` for missing certificates
 
-- `None`: Will completely disable SSL verification, allowing insecure connections.
+- `null`: Will completely disable SSL verification, allowing insecure connections.
 
-Setting this to `None` will allow the program to connect to websites without SSL encryption (insecurely).
+Setting this to `null` will allow the program to connect to websites without SSL encryption (insecurely).
 
 {% hint style="danger" %}
 Sensitive data may be exposed using an insecure connection. For your safety, is recommended to always use a secure HTTPS connection.

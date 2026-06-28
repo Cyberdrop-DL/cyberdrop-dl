@@ -1,18 +1,5 @@
 # Downloads
 
-```yaml
-downloads:
-  attempts: 2
-  concurrency: 15
-  concurrency_per_domain: 5
-  concurrent_segments: 10
-  delay: 0.0
-  jitter: 0.0
-  skip_and_mark_completed: false
-  slow_speed: 0B
-  speed_limit: 0B
-```
-
 ## `attempts`
 
 | Type          | Default |

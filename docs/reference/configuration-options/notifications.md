@@ -5,24 +5,31 @@ description: These are the options to setup notifications from CDL.
 
 # Notifications
 
-`cyberdrop-dl` generates a report at the end of a run with stats about all the downloads, total runtime, errors, deduplication report, etc. By default, this report is only shown in the console and at the end of the main log file.
+`cyberdrop-dl` generates a report at the end of a run with stats about all the downloads, total runtime, errors, deduplication report, etc.
+By default, this report is only shown in the console and at the end of the main log file.
 
 You can set up CDL to sent you the report via discord, email, a native notification of your OS, telegram and many other services.
 
 ## Notifications via Discord
 
-To get notifications via discord, you need to provide a discord `webhook_url` inside the `settings.yaml` of your config.
+To get notifications via discord, you need to provide a discord webhook URL in the `config.yaml` of your config.
 
 You can learn how to setup a webhook following the [official discord guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
 
 Optionally, you can add the tag `attach_logs=` as a prefix to your webhook url. This will tell CDL to include a copy of the main log as an attachment to Discord.
+
+```yaml
+notifications:
+  apprise: []
+  webhook: <URL>
+```
 
 ## Notifications to other services (via Apprise)
 
 `cyberdrop-dl` uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
 
 {% hint style="info" %}
-`apprise` is an an optional dependency; It's not installed by default with CDL. To install `cyberdrop-dl` with `apprise`, especify it as an extra while installing cyberdrop:
+`apprise` is an an optional dependency; It's not installed by default. To install `cyberdrop-dl` with `apprise`, add it as extra while installing cyberdrop:
 
 ```shell
 uv tool install cyberdrop-dl-patched[apprise]
@@ -32,7 +39,7 @@ uv tool install cyberdrop-dl-patched[apprise]
 
 ### How to setup Apprise
 
-To send notifications via Apprise, you need to create an `apprise.txt` file inside `AppData/Configs/Default`. The file must contain a list of URLs and they must be in the format of one of the supported apprise services.
+To send notifications via Apprise, paste all your Apprrise URLs in your config file. URLs must be in the format of one of the supported apprise services.
 
 You can check the full list of supported services [here](https://appriseit.com/services/).
 
@@ -41,6 +48,11 @@ Apprise services also support the `attach_logs=` tag to send the main log as an 
 {% hint style="success" %}
 You can build the URL interactively on their website: [https://appriseit.com/url-builder](https://appriseit.com/url-builder/)
 {% endhint %}
+
+```yaml
+notifications:
+  apprise: []
+```
 
 ### Troubleshooting Apprise notifications
 

@@ -2,9 +2,9 @@
 
 ## `level`
 
-| Type                                    | Default |
-| --------------------------------------- | ------- |
-| `DEBUG, INFO, WARNING, ERROR, CRITICAL` | `DEBUG` |
+| Type                                           | Default |
+| ---------------------------------------------- | ------- |
+| `DEBUG`, `INFO, `WARNING`, `ERROR`, `CRITICAL` | `DEBUG` |
 
 Only log messages of this level or higher to the main log file, according to [Python logging levels](https://docs.python.org/3/library/logging.html#levels).
 
@@ -24,6 +24,19 @@ Using anything other that `DEBUG` makes troubleshooting issues harder. Practical
 ```yaml
 logs:
   level: DEBUG
+```
+
+## `console_level`
+
+| Type                                                   | Default |
+| ------------------------------------------------------ | ------- |
+| `DEBUG`, `INFO, `WARNING`, `ERROR`, `CRITICAL`, `null` | `null`  |
+
+Only log messages of this level or higher to the console. A `null` value will use the same level as `logs.level`
+
+```yaml
+logs:
+  level: null
 ```
 
 ## `expire_after`
@@ -51,14 +64,6 @@ Log files with an absolute path not relative to `log_folder` will never be delet
 logs:
   expire_after: null
 ```
-
-## `console_level`
-
-| Type                                                   | Default |
-| ------------------------------------------------------ | ------- |
-| `DEBUG`, `INFO, `WARNING`, `ERROR`, `CRITICAL`or`null` | `null`  |
-
-Only log messages of this level or higher to the console. A `null` value will use the same level as `logs.level`
 
 ## `folder`
 

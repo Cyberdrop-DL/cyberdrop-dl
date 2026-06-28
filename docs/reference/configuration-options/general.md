@@ -1,16 +1,16 @@
----
-description: These are some general settings that will be used regardless of which config is loaded
----
-
 # General
 
 ## `download_folder`
 
-| Type   | Default     |
-| ------ | ----------- |
-| `Path` | `Downloads` |
+| Type   | Default                  |
+| ------ | ------------------------ |
+| `Path` | `downloads/cyberdrop-dl` |
 
 The path to the folder you want `cyberdrop-dl` to download files to.
+
+```yaml
+download_folder: downloads/cyberdrop-dl
+```
 
 ## `dump_json`
 
@@ -46,23 +46,35 @@ Each line in the file will contain the following details (this may change on fut
 }
 ```
 
+```yaml
+dump_json: false
+```
+
 ## `max_file_name_length`
 
 | Type          | Default |
 | ------------- | ------- |
 | `PositiveInt` | `95`    |
 
-This is the maximum number of characters a filename should have. CDL will truncate filenames longer that this.
+Maximum number of characters a filename should have. CDL will truncate filenames longer that this.
+
+```yaml
+max_file_name_length: 95
+```
 
 ## `max_folder_name_length`
 
 | Type          | Default |
 | ------------- | ------- |
-| `PositiveInt` | `95`    |
+| `PositiveInt` | `60`    |
 
-This is the maximum number of characters a folder should have. CDL will truncate folders longer that this.
+Maximum number of characters a folder should have. CDL will truncate folders longer that this.
 
-## `required_free_space`
+```yaml
+max_folder_name_length: 60
+```
+
+## `min_free_space`
 
 | Type       | Default | Restrictions |
 | ---------- | ------- | ------------ |
@@ -74,11 +86,15 @@ This is the minimum amount of free space require to start new downloads.
 If you set a value lower than `512MB`, CDL will override it with `512MB`
 {% endhint %}
 
+```yaml
+min_free_space: 5.0GB
+```
+
 ## `cookies`
 
 | Type             | Default |
 | ---------------- | ------- |
-| `Path` or `None` | `None`  |
+| `Path` or `null` | `null`  |
 
 Path to a file/folder with Netscape cookies with a `.txt` extension. If the path is a folder, all `.txt` in the folder are read (Non recursive)
 
@@ -141,7 +157,11 @@ delete_partial_files: false
 
 By default, the program tracks your downloads in a database to prevent downloading the same files multiple times, to save time and reduce strain on the servers you're downloading from.
 
-Setting this to `true` will cause the program to ignore the database, and will allow you to re-download files.
+Setting this to `true` to disable it, ignoeing the database and allowing you to re-download files.
+
+```yaml
+ignore_history: false
+```
 
 ## `delete_empty_folders`
 
@@ -156,16 +176,6 @@ Setting this to `false` will disable it.
 ```yaml
 delete_empty_folders: true
 ```
-
-## `skip_check_for_partial_files`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-After a run is complete, the program will do a check to see if any partially downloaded files remain in the downloads folder and will notify you of them.
-
-Setting this to `true` will skip this check.
 
 ## `mtime`
 
@@ -201,6 +211,10 @@ A value of `0` means only the top level thread will be scraped
 This setting is hardcoded to `0` for Discourse sites
 {% endhint %}
 
+```yaml
+max_thread_depth: 0
+```
+
 ### Example
 
 Consider CDL finds the following sub-threads while scraping an input URL:
@@ -228,19 +242,23 @@ Consider CDL finds the following sub-threads while scraping an input URL:
 
 | Type                       | Default |
 | -------------------------- | ------- |
-| `NonNegativeInt` or `None` | `None`  |
+| `NonNegativeInt` or `null` | `null`  |
 
 Restricts the max number of nested folders CDL will create when `max_thread_depth` is greater that 0
 
 Values:
 
-- `None`: Create as many nested folders as required (AKA, the same number as `max_thread_depth` allows)
+- `null`: Create as many nested folders as required (AKA, the same number as `max_thread_depth` allows)
 - `0`: Do not create subfolders, use a flat structure for any nested thread.
 - `1+`: Create a max of `n` folders
 
+```yaml
+max_thread_folder_depth: null
+```
+
 ### Example
 
-- With `max_thread_folder_depth` = None:
+- With `max_thread_folder_depth` = `null`:
 
 ```shell
 └── thread_01

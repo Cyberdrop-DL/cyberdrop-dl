@@ -34,25 +34,15 @@ For items not explained below, you can find their counterparts in the configurat
 
 | Type   | Default |
 | ------ | ------- |
-| `Path` | `None`  |
+| `Path` | `null`  |
 
-Path to the CDL `settings.yaml` file to load
+Path to the CDL `config.yaml` file to load
 
 {% hint style="info" %}
 If both `config` and `config-file` are supplied, `config-file` takes priority
 {% endhint %}
 
-### `print-stats`
-
-| Type       | Default | Action        |
-| ---------- | ------- | ------------- |
-| `BoolFlag` | `True`  | `store_false` |
-
-Show stats report at the end of a run
-
 ## Overview
-
-Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
 
 <!-- START_CLI_OVERVIEW -->
 
@@ -76,7 +66,7 @@ Bulk asynchronous downloader for multiple file hosts
 │                                      date                                                        │
 │ --completed-before                   only retry downloads that were completed on or before this  │
 │                                      date                                                        │
-│ --config-file                        path to the CDL settings.yaml file to load                  │
+│ --config-file                        path to the CDL config.yaml file to load                  │
 │ --download --no-download             skips UI, start download immediately [default: False]       │
 │ --download-tiktok-audios             download TikTok audios from posts and save them as separate │
 │   --no-download-tiktok-audios        files [default: False]                                      │

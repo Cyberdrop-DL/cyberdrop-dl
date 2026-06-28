@@ -1,10 +1,104 @@
 # Filters
 
+## `before`
+
+| Type             | Default | Additional Info                                           |
+| ---------------- | ------- | --------------------------------------------------------- |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, ex: `2021-12-23` |
+
+Only download files uploaded before this date.
+
+```yaml
+filters:
+  before: null
+```
+
+## `after`
+
+| Type             | Default | Additional Info                                           |
+| ---------------- | ------- | --------------------------------------------------------- |
+| `date` or `null` | `null`  | The date should a valid ISO 8601 format, ex: `2021-12-23` |
+
+Only download files uploaded after this date.
+
 ```yaml
 filters:
   after: null
+```
+
+## `filename_regex`
+
+| Type                    | Default |
+| ----------------------- | ------- |
+| `NonEmptyStr` or `null` | `null`  |
+
+Only download files if their filename match this regex expression
+
+```yaml
+filters:
+  filename_regex: null
+```
+
+## `only_hosts`
+
+| Type                | Default | Additional Info                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------- |
+| `list[NonEmptyStr]` | `[]`    | This is an [`AdditiveArg`](../special_setting_types.md#additiveargs) |
+
+You can supply hosts that you'd like the program to exclusively scrape/download from. This setting accepts any domain, even if they are no supported.
+
+```yaml
+filters:
+  only_hosts: []
+```
+
+## `skip_hosts`
+
+| Type                | Default | Additional Info                                                      |
+| ------------------- | ------- | -------------------------------------------------------------------- |
+| `list[NonEmptyStr]` | `[]`    | This is an [`AdditiveArg`](../special_setting_types.md#additiveargs) |
+
+You can supply hosts that you'd like the program to skip, to not scrape/download from them. This setting accepts any domain, even if they are no supported.
+
+```yaml
+filters:
+  skip_hosts: []
+```
+
+## `allow_files_with_no_extension`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+Download files without an extension. These files could potentially be dangerous
+
+{% hint style="info" %}
+CDL internally assumes any file without an extension is an `.mp4` file. That means any option that applies to videos like `--no-videos` and `--video.size.min` will apply to them.
+The actual file will still be downloaded without an extension
+{% endhint %}
+
+```yaml
+filters:
   allow_files_with_no_extension: false
-  before: null
+```
+
+## Duration Limits
+
+You can provide the maximum and minimum duration for audio and video files.
+
+| Type        | Default |
+| ----------- | ------- |
+| `timedelta` | `0s`    |
+
+- A `timedelta` input is expected to be a valid ISO 8601 timespan, ex: `P10DT2H30M10S`
+- An `int` input is assumed to be the number of days
+- A `str` input is expected to be in the format; `<value> <unit>`, ex: `10 days`.
+
+A value `0` means no limit
+
+```yaml
+filters:
   duration:
     audio:
       max: 0:00:00
@@ -12,13 +106,22 @@ filters:
     video:
       max: 0:00:00
       min: 0:00:00
-  filename_regex: null
-  files:
-    audio: true
-    images: true
-    non_media: true
-    videos: true
-  only_hosts: []
+```
+
+## File Size Limits
+
+You can provide the maximum and minimum file size for each file "type".
+
+All options on this category take a `ByteSize` input ([more info here](../special_setting_types.md#bytesize)).
+
+| Type       | Default |
+| ---------- | ------- |
+| `ByteSize` | `0`     |
+
+Setting any of these options to `0` means that limit is `disabled`
+
+```yaml
+filters:
   sizes:
     audio:
       max: 0B
@@ -32,47 +135,49 @@ filters:
     video:
       max: 0B
       min: 0B
-  skip_hosts: []
 ```
 
+## Files
+
+Enable/Disable downloads by file type
+
+### `audio`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `true`  |
+
+Download audio files.
+
+### `images`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+Download image files.
+
+### `videos`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `true`  |
+
+Download video files.
+
+### `non_media`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `false` |
+
+Download non media files files.
+
 ```yaml
-download_folder: downloads/cyberdrop-dl
-dump_json: false
-
-hashing:
-  algorithms:
-    - xxh128
-    - md5
-    - sha256
-  dedupe:
-    enabled: true
-    use_trash_bin: true
-  mode: in_place
-ignore_history: false
-
-max_file_name_length: 95
-max_folder_name_length: 60
-max_thread_depth: 0
-max_thread_folder_depth: null
-min_free_space: 5.0GB
-
-notifications:
-  apprise: []
-  webhook: null
-show_stats: true
-sort:
-  enabled: false
-  formats:
-    audio: "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
-    image: "{sort_dir}/{base_dir}/Images/{filename}{ext}"
-    incrementer: " ({i})"
-    non_media: "{sort_dir}/{base_dir}/Other/{filename}{ext}"
-    video: "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
-  input_folder: null
-  output_folder: downloads/cyberdrop-dl sorted
-
-ui:
-  mode: fullscreen
-  portrait: false
-  refresh_rate: 10.0
+filters:
+  files:
+    audio: true
+    images: true
+    non_media: true
+    videos: true
 ```
