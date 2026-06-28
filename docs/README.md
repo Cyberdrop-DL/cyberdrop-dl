@@ -42,6 +42,6 @@ Take a closer look and begin exploring the available configuration options and C
 [cli-arguments.md](reference/cli-arguments.md)
 {% endcontent-ref %}
 
-{% content-ref url="reference/notifications.md" %}
+{% content-ref url="reference/config/notifications.md" %}
 [notifications.md](reference/config/notifications.md)
 {% endcontent-ref %}
