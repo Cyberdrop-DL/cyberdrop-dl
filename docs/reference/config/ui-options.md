@@ -4,7 +4,7 @@ description: These are the options for controlling the UI of the program
 
 # UI Options
 
-### `mode`
+# `mode`
 
 | Type                                            | Default      |
 | ----------------------------------------------- | ------------ |
@@ -24,7 +24,7 @@ ui:
 Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
 {% endhint %}
 
-### `portrait`
+# `portrait`
 
 | Type   | Default |
 | ------ | ------- |
@@ -37,7 +37,7 @@ ui:
   portrait: false
 ```
 
-## `refresh_rate`
+# `refresh_rate`
 
 | Type            | Default |
 | --------------- | ------- |
@@ -50,7 +50,7 @@ ui:
   refresh_rate: 10.0
 ```
 
-### `show_stats`
+# `show_stats`
 
 | Type   | Default |
 | ------ | ------- |

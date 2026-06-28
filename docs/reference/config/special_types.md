@@ -5,11 +5,11 @@ icon: sparkles
 
 # Special Setting Types
 
-## `AdditiveArgs`
+# `AdditiveArgs`
 
 Special type for some settings that accept multiple values as input (`lists` or `sets`). When passing values as CLI arguments, if the first value is `+`, any value after it will be added to the values specified in the config file instead of overriding it. Similarly, if the first value is `-`, any value after it will be removed from the values specified in the config
 
-### Examples
+## Examples
 
 If you have the following `skip_hosts` setting in you config file:
 
@@ -22,8 +22,8 @@ skip_hosts:
 
 You will get the following results:
 
-| Value you used                                 | Value CDL interpreted                                          | Details                                        |
-| ---------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| Value you used                                  | Value CDL interpreted                                          | Details                                        |
+| ----------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
 | `--skip-hosts instagram.com`                    | `[instagram.com]`                                              | config values were overridden by CLI values    |
 | `--skip-hosts "+" instagram.com`                | `[drive.google.com, youtube.com, facebook.com, instagram.com]` | config values and CLI values were merged       |
 | `--skip-hosts "-" drive.google.com youtube.com` | `[facebook.com]`                                               | CLI values were removed from the config values |
@@ -32,18 +32,18 @@ You will get the following results:
 Always use quotes for "+" and "-" to make sure your shell does not try to parse them as additional flags
 {% endhint %}
 
-## `BoolFlag`
+# `BoolFlag`
 
 A special kind of `bool`. Within a config file, it can have a `true` or `false` value. However, when used via CLI, the value is assumed from the flag name. The normal name is `true`, and prefixing the name with `--no` means `false`.
 
-### Examples
+## Examples
 
 | Value you used     | Value CDL interpreted |
 | ------------------ | --------------------- |
 | `--auto-dedupe`    | auto-dedupe: `true`   |
 | `--no-auto-dedupe` | auto-dedupe: `false`  |
 
-## `ByteSize`
+# `ByteSize`
 
 A special kind of `int` that also accepts suffixes like `GB`, `MiB` and `KB` to specify valid values
 

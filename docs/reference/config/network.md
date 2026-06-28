@@ -1,6 +1,6 @@
 # Network
 
-## `connection_timeout`
+# `connection_timeout`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -15,7 +15,7 @@ network:
   connection_timeout: 15.0
 ```
 
-## `rate_limit`
+# `rate_limit`
 
 | Type            | Default |
 | --------------- | ------- |
@@ -36,7 +36,7 @@ network:
   rate_limit: 25.0
 ```
 
-## `read_timeout`
+# `read_timeout`
 
 | Type                      | Default |
 | ------------------------- | ------- |
@@ -50,7 +50,7 @@ network:
   read_timeout: 300.0
 ```
 
-## `flaresolverr`
+# `flaresolverr`
 
 | Type                | Default |
 | ------------------- | ------- |
@@ -72,7 +72,7 @@ network:
   flaresolverr: null
 ```
 
-## `proxy`
+# `proxy`
 
 | Type                | Default |
 | ------------------- | ------- |
@@ -85,7 +85,7 @@ network:
   proxy: null
 ```
 
-## `dump_responses`
+# `dump_responses`
 
 | Type   | Default |
 | ------ | ------- |
@@ -102,7 +102,7 @@ network:
   dump_responses: false
 ```
 
-### `impersonate`
+# `impersonate`
 
 | Type                                                                             | Default | Action        |
 | -------------------------------------------------------------------------------- | ------- | ------------- |
@@ -122,7 +122,7 @@ network:
   impersonate: null
 ```
 
-## `ssl_context`
+# `ssl_context`
 
 | Type                    | Default              |
 | ----------------------- | -------------------- |
@@ -149,7 +149,7 @@ network:
   ssl_context: truststore+certifi
 ```
 
-## `user_agent`
+# `user_agent`
 
 | Type          | Default                                                                  |
 | ------------- | ------------------------------------------------------------------------ |

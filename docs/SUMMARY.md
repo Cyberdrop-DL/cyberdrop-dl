@@ -10,7 +10,7 @@
 
 - [Supported Websites](reference/supported-websites.md)
 - [Configuration](reference/config/README.md)
-  - [Special Types](reference/config/special_setting_types.md)
+  - [Special Types](reference/config/special_types.md)
   - [Authentication](reference/config/authentication.md)
   - [Crawlers](reference/config/crawlers.md)
   - [Max Children](reference/config/max_children.md)

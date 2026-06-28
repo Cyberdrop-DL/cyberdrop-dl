@@ -63,7 +63,7 @@ However, `cyberdrop-dl` has a ton of configuration options if you want more cont
 
 - A config file (YAML)
 - A database file (SQLite)
-- A cache file
+- A cache file (JSON)
 
 Additionally, a dedicated `logs` folder is created to store logs files of a session.
 

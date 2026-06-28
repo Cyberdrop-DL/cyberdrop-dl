@@ -1,6 +1,6 @@
 # JDownloader
 
-## `enabled`
+# `enabled`
 
 | Type   | Default |
 | ------ | ------- |
@@ -13,7 +13,7 @@ jdownloader:
   enabled: false
 ```
 
-## `autostart`
+# `autostart`
 
 | Type   | Default |
 | ------ | ------- |
@@ -28,7 +28,7 @@ jdownloader:
   autostart: false
 ```
 
-## `download_dir`
+# `download_dir`
 
 | Type             | Default |
 | ---------------- | ------- |
@@ -43,7 +43,7 @@ jdownloader:
   download_dir: null
 ```
 
-## `whitelist`
+# `whitelist`
 
 | Type                | Default |
 | ------------------- | ------- |

@@ -24,7 +24,7 @@ Common fields for sorting format options (supported for `audio`, `videos`, `imag
 >
 > `sort_dir`: the same path as `sort_folder` from the download options
 
-## `enabled`
+# `enabled`
 
 | Type   | Default |
 | ------ | ------- |
@@ -37,7 +37,7 @@ sort:
   enabled: false
 ```
 
-## `input_folder`
+# `input_folder`
 
 | Type             | Default |
 | ---------------- | ------- |
@@ -52,7 +52,7 @@ sort:
   input_folder: null
 ```
 
-## `output_folder`
+# `output_folder`
 
 | Type   | Default                         |
 | ------ | ------------------------------- |
@@ -69,9 +69,9 @@ sort:
   output_folder: downloads/cyberdrop-dl sorted
 ```
 
-## Formats
+# Formats
 
-### `audio`
+## `audio`
 
 | Type                    | Default                                       |
 | ----------------------- | --------------------------------------------- |
@@ -95,7 +95,7 @@ sort:
     audio: "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
 ```
 
-### `image`
+## `image`
 
 | Type                    | Default                                        |
 | ----------------------- | ---------------------------------------------- |
@@ -117,7 +117,7 @@ sort:
     image: "{sort_dir}/{base_dir}/Images/{filename}{ext}"
 ```
 
-### `video`
+## `video`
 
 | Type                    | Default                                       |
 | ----------------------- | --------------------------------------------- |
@@ -147,7 +147,7 @@ sort:
     video: "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
 ```
 
-### `non_media`
+## `non_media`
 
 | Type                    | Default                                       |
 | ----------------------- | --------------------------------------------- |
@@ -161,7 +161,7 @@ sort:
     non_media: "{sort_dir}/{base_dir}/Other/{filename}{ext}"
 ```
 
-### `incrementer`
+## `incrementer`
 
 | Type          | Default  |
 | ------------- | -------- |
@@ -179,7 +179,7 @@ sort:
     incrementer: " ({i})"
 ```
 
-## Group URLs
+# Group URLs
 
 It is possible to treat a list of URLs as a group, allowing them to be downloaded to a single folder.
 

@@ -10,7 +10,7 @@ By default, this report is only shown in the console and at the end of the main 
 
 You can set up CDL to sent you the report via discord, email, a native notification of your OS, telegram and many other services.
 
-## Notifications via Discord
+# Notifications via Discord
 
 To get notifications via discord, you need to provide a valid discord webhook URL in your config file.
 
@@ -35,7 +35,7 @@ Example:
 
 > `attach_logs=https://discord.com/api/webhooks/webhook_id/webhook_token`
 
-## Notifications to other services (via Apprise)
+# Notifications to other services (via Apprise)
 
 `cyberdrop-dl` uses [Apprise](https://github.com/caronc/apprise) to send notifications to any of the services than they support.
 
@@ -50,7 +50,7 @@ uv tool install cyberdrop-dl-patched[apprise]
 
 {% endhint %}
 
-### How to setup Apprise
+## How to setup Apprise
 
 To send notifications via Apprise, paste all your Apprrise URLs in your config file. URLs must be in the format of one of the supported apprise services.
 
@@ -67,11 +67,11 @@ notifications:
 You can build the URL interactively on their website: <https://appriseit.com/url-builder>
 {% endhint %}
 
-### Troubleshooting Apprise notifications
+## Troubleshooting Apprise notifications
 
 `cyberdrop-dl` will show you a message at the end of a run telling you if the apprise notifications were successfully sent or not. If you are having trouble getting notifications via Apprise, follow their [troubleshooting guide](https://github.com/caronc/apprise/wiki/Troubleshooting).
 
-## Examples
+# Examples
 
 {% tabs %}
 {% tab title="Email" %}

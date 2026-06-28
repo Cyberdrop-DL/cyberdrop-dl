@@ -1,6 +1,6 @@
 # Logs
 
-## `level`
+# `level`
 
 | Type                                            | Default |
 | ----------------------------------------------- | ------- |
@@ -30,7 +30,7 @@ Using anything other that `DEBUG` makes troubleshooting issues harder. Practical
 `DEBUG` logs raw HTTP requests to the main log file. These requests may have personally identifiable information like your IP or login credentials for sites in cookies/headers
 {% endhint %}
 
-## `console_level`
+# `console_level`
 
 | Type                                                      | Default |
 | --------------------------------------------------------- | ------- |
@@ -43,7 +43,7 @@ logs:
   level: null
 ```
 
-## `expire_after`
+# `expire_after`
 
 | Type                  | Default |
 | --------------------- | ------- |
@@ -69,7 +69,7 @@ logs:
   expire_after: null
 ```
 
-## `folder`
+# `folder`
 
 | Type             | Default |
 | ---------------- | ------- |
@@ -85,7 +85,7 @@ logs:
   folder: null
 ```
 
-## `rotate`
+# `rotate`
 
 | Type   | Default |
 | ------ | ------- |
@@ -102,9 +102,9 @@ logs:
   rotate: false
 ```
 
-## Files
+# Files
 
-### `main`
+## `main`
 
 | Type   | Default          | Restrictions                                  |
 | ------ | ---------------- | --------------------------------------------- |
@@ -118,7 +118,7 @@ logs:
     main: downloader.log
 ```
 
-### `download_errors`
+## `download_errors`
 
 | Type   | Default               | Restrictions                                  |
 | ------ | --------------------- | --------------------------------------------- |
@@ -134,7 +134,7 @@ logs:
     download_errors: download_errors.csv
 ```
 
-### `scrape_errors`
+## `scrape_errors`
 
 | Type   | Default             | Restrictions                                  |
 | ------ | ------------------- | --------------------------------------------- |
@@ -150,7 +150,7 @@ logs:
     scrape_errors: scrape_errors.csv
 ```
 
-### `unsupported`
+## `unsupported`
 
 | Type   | Default                | Restrictions                                  |
 | ------ | ---------------------- | --------------------------------------------- |

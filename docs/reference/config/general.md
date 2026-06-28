@@ -1,8 +1,6 @@
-# General
-
 All setting on this section go at the root of the config file
 
-## `download_folder`
+# `download_folder`
 
 | Type   | Default                  |
 | ------ | ------------------------ |
@@ -14,7 +12,7 @@ The path to the folder you want `cyberdrop-dl` to download files to.
 download_folder: downloads/cyberdrop-dl
 ```
 
-## `dump_json`
+# `dump_json`
 
 | Type   | Default |
 | ------ | ------- |
@@ -57,7 +55,7 @@ dump_json: false
 The schema of this JSON output is NOT stable may change without notice, even on minor version updates
 {% endhint %}
 
-## `max_file_name_length`
+# `max_file_name_length`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -69,7 +67,7 @@ Maximum number of characters a filename should have. CDL will truncate filenames
 max_file_name_length: 95
 ```
 
-## `max_folder_name_length`
+# `max_folder_name_length`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -81,7 +79,7 @@ Maximum number of characters a folder should have. CDL will truncate folders lon
 max_folder_name_length: 60
 ```
 
-## `min_free_space`
+# `min_free_space`
 
 | Type       | Default | Restrictions |
 | ---------- | ------- | ------------ |
@@ -97,7 +95,7 @@ min_free_space: 5.0GB
 Values lower than `512MB` will always be replaced with `512MB`
 {% endhint %}
 
-## `cookies`
+# `cookies`
 
 | Type             | Default |
 | ---------------- | ------- |
@@ -116,7 +114,7 @@ See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.co
 The `user-agent` config value **MUST** match the `user-agent` of the browser from which you imported the cookies. If they do not match, the cookies will not work
 {% endhint %}
 
-## `deep_scrape`
+# `deep_scrape`
 
 | Type   | Default |
 | ------ | ------- |
@@ -137,7 +135,7 @@ For example, scraping an album normally takes one single request.
 With `--deep-scrape`, CDL will make `n` requests per album, where `n` is the total number of items in the album
 {% endhint %}
 
-## `delete_partial_files`
+# `delete_partial_files`
 
 | Type   | Default |
 | ------ | ------- |
@@ -153,7 +151,7 @@ Set `true` will delete any `.part` and `.cdl_hls` files in the download folder a
 delete_partial_files: false
 ```
 
-## `ignore_history`
+# `ignore_history`
 
 | Type   | Default |
 | ------ | ------- |
@@ -167,7 +165,7 @@ Setting this to `true` to disable it, ignoring the database and allowing you to 
 ignore_history: false
 ```
 
-## `delete_empty_folders`
+# `delete_empty_folders`
 
 | Type   | Default |
 | ------ | ------- |
@@ -179,7 +177,7 @@ Check (and remove) any empty files and folders in the `--download-folder` and `-
 delete_empty_folders: true
 ```
 
-## `mtime`
+# `mtime`
 
 | Type   | Default |
 | ------ | ------- |
@@ -197,7 +195,7 @@ Change this to `false` and those dates will be the current datetime instead
 mtime: true
 ```
 
-## `max_thread_depth`
+# `max_thread_depth`
 
 | Type             | Default |
 | ---------------- | ------- |
@@ -221,7 +219,7 @@ It is not recommended to set this above the default value of `0`, as there is a 
 For example, when dealing with Megathreads, if a Megathread is linked to another Megathread, you could end up scraping an undesirable amount of data.
 {% endhint %}
 
-### Example
+## Example
 
 Consider CDL finds the following sub-threads while scraping an input URL:
 
@@ -244,7 +242,7 @@ Consider CDL finds the following sub-threads while scraping an input URL:
 - With `max_thread_depth` = 1, CDL will only download files in `thread_01` to `thread_08`. All threads from `thread_09` to `thread_12` will be ignored
 - With `max_thread_depth` >= 2, CDL will download files from all the threads in this case
 
-## `max_thread_folder_depth`
+# `max_thread_folder_depth`
 
 | Type                       | Default |
 | -------------------------- | ------- |
@@ -262,7 +260,7 @@ Values:
 max_thread_folder_depth: null
 ```
 
-### Example
+## Example
 
 - With `max_thread_folder_depth` = `null`:
 

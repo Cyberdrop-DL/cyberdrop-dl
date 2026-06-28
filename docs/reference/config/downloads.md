@@ -1,6 +1,6 @@
 # Downloads
 
-## `attempts`
+# `attempts`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -13,7 +13,7 @@ downloads:
   attempts: 2
 ```
 
-## `delay`
+# `delay`
 
 | Type               | Default |
 | ------------------ | ------- |
@@ -31,7 +31,7 @@ downloads:
   delay: 0.0
 ```
 
-## `speed_limit`
+# `speed_limit`
 
 | Type       | Default |
 | ---------- | ------- |
@@ -48,7 +48,7 @@ downloads:
   speed_limit: 0B
 ```
 
-## `concurrent_segments`
+# `concurrent_segments`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -61,7 +61,7 @@ downloads:
   concurrent_segments: 10
 ```
 
-## `jitter`
+# `jitter`
 
 | Type               | Default |
 | ------------------ | ------- |
@@ -74,7 +74,7 @@ downloads:
   jitter: 0.0
 ```
 
-## `concurrency`
+# `concurrency`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -87,7 +87,7 @@ downloads:
   concurrency: 15
 ```
 
-## `concurrency_per_domain`
+# `concurrency_per_domain`
 
 | Type          | Default |
 | ------------- | ------- |
@@ -109,7 +109,7 @@ downloads:
   concurrency_per_domain: 5
 ```
 
-## `skip_and_mark_completed`
+# `skip_and_mark_completed`
 
 | Type   | Default |
 | ------ | ------- |
@@ -122,7 +122,7 @@ downloads:
   skip_and_mark_completed: false
 ```
 
-## `slow_speed`
+# `slow_speed`
 
 | Type       | Default |
 | ---------- | ------- |

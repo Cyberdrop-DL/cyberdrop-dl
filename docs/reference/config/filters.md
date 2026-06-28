@@ -1,6 +1,6 @@
 # Filters
 
-## `before`
+# `before`
 
 | Type             | Default | Additional Info                                           |
 | ---------------- | ------- | --------------------------------------------------------- |
@@ -13,7 +13,7 @@ filters:
   before: null
 ```
 
-## `after`
+# `after`
 
 | Type             | Default | Additional Info                                           |
 | ---------------- | ------- | --------------------------------------------------------- |
@@ -26,7 +26,7 @@ filters:
   after: null
 ```
 
-## `filename_regex`
+# `filename_regex`
 
 | Type                    | Default |
 | ----------------------- | ------- |
@@ -39,7 +39,7 @@ filters:
   filename_regex: null
 ```
 
-## `only_hosts`
+# `only_hosts`
 
 | Type                | Default | Additional Info                                                      |
 | ------------------- | ------- | -------------------------------------------------------------------- |
@@ -52,7 +52,7 @@ filters:
   only_hosts: []
 ```
 
-## `skip_hosts`
+# `skip_hosts`
 
 | Type                | Default | Additional Info                                                      |
 | ------------------- | ------- | -------------------------------------------------------------------- |
@@ -65,7 +65,7 @@ filters:
   skip_hosts: []
 ```
 
-## `allow_files_with_no_extension`
+# `allow_files_with_no_extension`
 
 | Type   | Default |
 | ------ | ------- |
@@ -83,7 +83,7 @@ filters:
   allow_files_with_no_extension: false
 ```
 
-## Duration Limits
+# Duration Limits
 
 You can provide the maximum and minimum duration for audio and video files.
 
@@ -108,7 +108,7 @@ filters:
       min: 0:00:00
 ```
 
-## File Size Limits
+# File Size Limits
 
 You can provide the maximum and minimum file size for each file "type".
 
@@ -137,41 +137,13 @@ filters:
       min: 0B
 ```
 
-## Files
+# Files
 
 Enable/Disable downloads by file type
 
-### `audio`
-
 | Type   | Default |
 | ------ | ------- |
 | `bool` | `true`  |
-
-Download audio files.
-
-### `images`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Download image files.
-
-### `videos`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `true`  |
-
-Download video files.
-
-### `non_media`
-
-| Type   | Default |
-| ------ | ------- |
-| `bool` | `false` |
-
-Download non media files files.
 
 ```yaml
 filters:

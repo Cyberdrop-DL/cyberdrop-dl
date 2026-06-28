@@ -1,6 +1,4 @@
-# Crawlers
-
-## `disabled`
+# `disabled`
 
 | Type                | Default | Additional Info                                                      |
 | ------------------- | ------- | -------------------------------------------------------------------- |
@@ -13,7 +11,7 @@ The list should be valid crawlers names. The name of the crawler is the name of 
 
 You can get the crawler's name from the column `site` on the [supported sites page](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites#supported-sites).
 
-## `generic`
+# `generic`
 
 Generic crawlers are designed to work on any site that uses a **specific** framework. Users can supply a list of sites to map to these crawlers,
 and CDL will then be able to download from them. The URL in the list should be the primary URL of the site. ex: `https://forums.docker.com/`
@@ -31,43 +29,43 @@ Supported generic crawlers:
 
 - `wordpress_html`: This works on any WordPress site. It scrapes the actual HTML of the site, which means it works on sites that have embedded third-party media like videos or links to hosting sites. It is always slower than `wordpress_media`.
 
-### `chevereto`
+## `chevereto`
 
 | Type            | Default |
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
-### `discourse`
+## `discourse`
 
 | Type            | Default |
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
-### `kvs`
+## `kvs`
 
 | Type            | Default |
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
-### `wordpress_media`
+## `wordpress_media`
 
 | Type            | Default |
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
-### `wordpress_html`
+## `wordpress_html`
 
 | Type            | Default |
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
-## Bandcamp
+# Bandcamp
 
-### `formats`
+## `formats`
 
-| Type                                                                        | Default                                                               |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| List of `mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff`, `alas` | [`mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff`, `alas`] |
+| Type                                                                          | Default                                                               |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| List of `mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff` or `alas` | [`mp3-320`, `mp3`, `aac-hi`, `wav`, `flac`, `vorbis`, `aiff`, `alas`] |
 
 Format to choose for downloads (if available), ordered by preference.
 
@@ -87,7 +85,7 @@ crawlers:
 
 # Clyp.it
 
-### `prefer_mp3`
+## `prefer_mp3`
 
 | Type   | Default |
 | ------ | ------- |
@@ -95,9 +93,9 @@ crawlers:
 
 Download audios as `.mp3` files even if WAV (high quality) versions are available
 
-## OnePace
+# OnePace
 
-### `prefer_dub`
+## `prefer_dub`
 
 | Type   | Default |
 | ------ | ------- |
@@ -105,9 +103,9 @@ Download audios as `.mp3` files even if WAV (high quality) versions are availabl
 
 Download episodes with english audio tracks instead of japanese (if available)
 
-## Tiktok
+# Tiktok
 
-### `original`
+## `original`
 
 | Type   | Default |
 | ------ | ------- |

@@ -1,17 +1,6 @@
 # Subfolders
 
-```yaml
-subfolders:
-  create: true
-  include:
-    album_id: false
-    domain: true
-    thread_id: false
-  separate_posts: false
-  separate_posts_format: "{default}"
-```
-
-## `create`
+# `create`
 
 | Type   | Default |
 | ------ | ------- |
@@ -25,9 +14,14 @@ If this si set to `false` will only create a single folder per URL place all its
 
 > `Downloads/folderA/image.jpg`
 
-## `include`
+```yaml
+subfolders:
+  create: true
+```
 
-### `album_id`
+# `include`
+
+## `album_id`
 
 | Type   | Default |
 | ------ | ------- |
@@ -35,7 +29,7 @@ If this si set to `false` will only create a single folder per URL place all its
 
 Include the album ID (random alphanumeric string) of the album in the subfolder name.
 
-### `thread_id`
+## `thread_id`
 
 | Type   | Default |
 | ------ | ------- |
@@ -43,7 +37,7 @@ Include the album ID (random alphanumeric string) of the album in the subfolder 
 
 Include the thread ID (random alphanumeric string) of the forum thread in the subfolder name.
 
-### `domain`
+## `domain`
 
 | Type   | Default |
 | ------ | ------- |
@@ -51,7 +45,15 @@ Include the thread ID (random alphanumeric string) of the forum thread in the su
 
 Include "(DOMAIN)" of the website in the subfolder name
 
-## `separate_posts`
+```yaml
+subfolders:
+  include:
+    album_id: false
+    domain: true
+    thread_id: false
+```
+
+# `separate_posts`
 
 | Type   | Default |
 | ------ | ------- |
@@ -71,7 +73,12 @@ For some sites, this value is hardcorded to `true` because each post is always a
 - `Wordpress`
 - `eFukt`
 
-## `separate_posts_format`
+```yaml
+subfolders:
+  separate_posts: false
+```
+
+# `separate_posts_format`
 
 | Type          | Default     |
 | ------------- | ----------- |
@@ -115,3 +122,8 @@ You can use any valid format string supported by python, with the following rest
 - You can not have unnamed fields in the format string. ex: `post {} from date {}`
 - You can not perform operations within the format string. ex: `post {id + 1} from date {date}`
 - All the fields named in the format string must be valid fields for that format option. CDL will validate this at startup
+
+```yaml
+subfolders:
+  separate_posts_format: "{default}"
+```
