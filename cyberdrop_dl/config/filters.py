@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime
+import datetime  # noqa: TC003
 import re  # noqa: TC003
 from typing import TYPE_CHECKING, Self
 
 from cyclopts import Parameter
-from pydantic import ByteSize, Field
+from pydantic import Field
 
 from cyberdrop_dl.models import ConfigGroup, ConfigModel
-from cyberdrop_dl.models.types import (  # noqa: TC001
-    ByteSizeSerilized,
-    FalsyAsNone,
-    NonEmptyStr,
-    Timedelta,
-)
+from cyberdrop_dl.models.types import ByteSizeSerilized, FalsyAsNone, NonEmptyStr, Timedelta  # noqa: TC001
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -40,23 +35,23 @@ class _FloatRange:
         return self.min <= value <= self.max
 
     @classmethod
-    def parse(cls, min: float, max: float | None) -> Self | None:  # noqa: A002
+    def parse(cls, min: float | None, max: float | None) -> Self | None:  # noqa: A002
         if not min and not max:
             return None
-        return cls(min, max or float("inf"))
+        return cls(min or 0, max or float("inf"))
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class _FileSizeRanges:
-    video: _FloatRange
-    image: _FloatRange
-    audio: _FloatRange
-    non_media: _FloatRange
+    video: _FloatRange | None
+    image: _FloatRange | None
+    audio: _FloatRange | None
+    non_media: _FloatRange | None
 
 
 class _SizeLimit(ConfigModel):
-    min: ByteSizeSerilized = ByteSize(0)
-    max: ByteSizeSerilized = ByteSize(0)
+    min: ByteSizeSerilized | None = None
+    max: ByteSizeSerilized | None = None
 
 
 @Parameter(name="*", name_transform=_limit_suffix("size"))
@@ -71,19 +66,19 @@ class _FileSizes(ConfigModel):
     def ranges(self) -> _FileSizeRanges:
         if self._ranges is None:
             self._ranges = _FileSizeRanges(
-                video=_FloatRange(
+                video=_FloatRange.parse(
                     self.video.min,
                     self.video.max,
                 ),
-                image=_FloatRange(
+                image=_FloatRange.parse(
                     self.image.min,
                     self.image.max,
                 ),
-                non_media=_FloatRange(
+                non_media=_FloatRange.parse(
                     self.non_media.min,
                     self.non_media.max,
                 ),
-                audio=_FloatRange(
+                audio=_FloatRange.parse(
                     self.audio.min,
                     self.audio.max,
                 ),
@@ -98,8 +93,8 @@ class _DurationRanges:
 
 
 class _DurationLimit(ConfigModel):
-    min: Timedelta = datetime.timedelta(seconds=0)
-    max: Timedelta = datetime.timedelta(seconds=0)
+    min: Timedelta | None = None
+    max: Timedelta | None = None
 
 
 @Parameter(name="*", name_transform=_limit_suffix("duration"))
@@ -117,12 +112,12 @@ class _DurationLimits(ConfigModel):
         if self._ranges is None:
             self._ranges = _DurationRanges(
                 video=_FloatRange.parse(
-                    self.video.min.total_seconds(),
-                    self.video.max.total_seconds(),
+                    self.video.min.total_seconds() if self.video.min else None,
+                    self.video.max.total_seconds() if self.video.max else None,
                 ),
                 audio=_FloatRange.parse(
-                    self.audio.min.total_seconds(),
-                    self.audio.max.total_seconds(),
+                    self.audio.min.total_seconds() if self.audio.min else None,
+                    self.audio.max.total_seconds() if self.audio.max else None,
                 ),
             )
         return self._ranges

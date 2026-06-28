@@ -40,7 +40,7 @@ class JDownloader:
 
     @classmethod
     def from_config(cls, config: Config, /) -> Self:
-        download_dir = config.jdownloader.download_dir or config.download_folder
+        download_dir = config.jdownloader.download_folder or config.download_folder
         jd_config = JDConfig(
             enabled=config.jdownloader.enabled,
             device=config.auth.jdownloader.device,

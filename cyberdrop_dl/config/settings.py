@@ -148,7 +148,7 @@ class Jdownloader(ConfigGroup, name=None):
     autostart: bool = False
     "Immediately start downloads as soon as they are sent"
 
-    download_dir: FalsyAsNone[Path] = None
+    download_folder: FalsyAsNone[Path] = None
     "Output path for Jdownloader. Defaults to `--download-folder`"
 
     whitelist: set[NonEmptyStr] = Field(default_factory=set)

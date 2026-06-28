@@ -376,13 +376,13 @@ class DownloadClient:
 
         assert media.size is not None
         if media.ext in FileExt.IMAGE:
-            return media.size in limits.image
+            return not limits.image or media.size in limits.image
         if media.ext in FileExt.VIDEO:
-            return media.size in limits.video
+            return not limits.video or media.size in limits.video
         if media.ext in FileExt.AUDIO:
-            return media.size in limits.audio
+            return not limits.image or media.size in limits.image
 
-        return media.size in limits.non_media
+        return not limits.non_media or media.size in limits.non_media
 
 
 def _check_content_type(content_type: str, ext: str) -> str | None:

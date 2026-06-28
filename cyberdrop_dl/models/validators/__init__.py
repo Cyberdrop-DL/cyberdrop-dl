@@ -86,7 +86,7 @@ def to_timedelta(input_date: datetime.timedelta | str | int | None) -> datetime.
     if isinstance(input_date, datetime.timedelta):
         return input_date
     if isinstance(input_date, int):
-        return datetime.timedelta(days=input_date)
+        return datetime.timedelta(seconds=input_date)
     try:
         return _str_to_timedelta(input_date)
     except Exception:  # noqa: BLE001

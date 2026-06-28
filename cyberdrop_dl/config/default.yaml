@@ -26,9 +26,6 @@ crawlers:
     - alas
   clypit:
     prefer_mp3: false
-  coomer:
-    ignore_ads: false
-    ignore_post_content: true
   disabled: []
   generic:
     chevereto: []
@@ -36,9 +33,6 @@ crawlers:
     kvs: []
     wordpress_html: []
     wordpress_media: []
-  kemono:
-    ignore_ads: false
-    ignore_post_content: true
   one_pace:
     prefer_dub: false
   tiktok:
@@ -64,11 +58,11 @@ filters:
   before: null
   duration:
     audio:
-      max: 0:00:00
-      min: 0:00:00
+      max: null
+      min: null
     video:
-      max: 0:00:00
-      min: 0:00:00
+      max: null
+      min: null
   filename_regex: null
   files:
     audio: true
@@ -78,17 +72,17 @@ filters:
   only_hosts: []
   sizes:
     audio:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     image:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     non_media:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
     video:
-      max: 0B
-      min: 0B
+      max: null
+      min: null
   skip_hosts: []
 hashing:
   algorithms:
@@ -102,7 +96,7 @@ hashing:
 ignore_history: false
 jdownloader:
   autostart: false
-  download_dir: null
+  download_folder: null
   enabled: false
   whitelist: []
 logs:

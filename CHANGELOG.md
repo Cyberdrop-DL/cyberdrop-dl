@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--input-file` is now a CLI only arg
 - If supplied, `--input-file` needs to be a valid file that already exists
 - Refuse to run if both URLs and `--input-file` are passed as arguments
+- Using number for any config option that expects a timedelta will be parsed as seconds instead of days
 - Detect and report BasedFlare anti-bot protection
 - Limit max queued downloads of a single site to the config concurrency limit x10 (capped at 50). All scraping for a site will be paused if its queue is full
 - Always remove generated id from filenames (Cyberdrop)
@@ -164,6 +165,9 @@ The behavior of `--before` and `--after` has been reversed and the `--exclude` p
 - All retry settings + menu option
 - `--log-level` and `--console-log-level` (`--logs.level` and `--logs.console-level`) no longer accept integers. Only log level names as valid, ex: `INFO`, `DEBUG`, `WARNING`
 - Posts filtering by URL params (Wordpress)
+- Kemono support
+- Coomer support
+- Coomerfans support
 - Auto cookie extraction support
 
 Several config options have been removed:
@@ -188,6 +192,8 @@ Several config options have been removed:
 - `--sites`
 - `--skip-check-for-partial-files`
 - `--update-last-forum-post`
+- `--ignore-coomer-post-content`
+- `--ignore-coomer-ads`
 
 The following authentication entries has been removed:
 
