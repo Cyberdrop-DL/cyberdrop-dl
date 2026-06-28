@@ -37,7 +37,7 @@ List of all supported domains can be found here (250+): <https://api.real-debrid
 
 {% hint style="info" %}
 Real-Debrid will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
-See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
+See: https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disabled
 {% endhint %}
 
 ## Additional supported sites with JDownloader
@@ -49,7 +49,7 @@ You must provide your MyJDownloader credentials in your config file to connect t
 
 {% hint style="info" %}
 JDownloader will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
-See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
+See: https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disabled
 {% endhint %}
 
 <!-- START_SUPPORTED_SITES -->

@@ -45,8 +45,8 @@ and choose `download` to start. That's it!
 
 However, `cyberdrop-dl` has a ton of configuration options if you want more control over the downloads. You may want to review the following:
 
-{% content-ref url="../reference/configuration-options/" %}
-[configuration-options](../reference/configuration-options/)
+{% content-ref url="../reference/config/" %}
+[configuration-options](../reference/config/)
 {% endcontent-ref %}
 
 {% content-ref url="../reference/cli-arguments.md" %}
@@ -54,7 +54,7 @@ However, `cyberdrop-dl` has a ton of configuration options if you want more cont
 {% endcontent-ref %}
 
 {% content-ref url="../reference/notifications.md" %}
-[notifications.md](../reference/notifications.md)
+[notifications.md](../reference/config/notifications.md)
 {% endcontent-ref %}
 
 ## AppData and Configuration

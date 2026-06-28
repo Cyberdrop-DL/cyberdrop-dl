@@ -34,8 +34,8 @@ Explore the Getting Started guide to quickly familiarize yourself with the setup
 
 Take a closer look and begin exploring the available configuration options and CLI arguments:
 
-{% content-ref url="reference/configuration-options/" %}
-[configuration-options](reference/configuration-options/)
+{% content-ref url="reference/config/" %}
+[configuration-options](reference/config/)
 {% endcontent-ref %}
 
 {% content-ref url="reference/cli-arguments.md" %}
@@ -43,5 +43,5 @@ Take a closer look and begin exploring the available configuration options and C
 {% endcontent-ref %}
 
 {% content-ref url="reference/notifications.md" %}
-[notifications.md](reference/notifications.md)
+[notifications.md](reference/config/notifications.md)
 {% endcontent-ref %}
