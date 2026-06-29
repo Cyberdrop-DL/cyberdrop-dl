@@ -112,7 +112,7 @@ async def _download_m3u8(
 
     logger.debug(f"Starting HLS download ({m3u8.media_type}, {len(segments):,} segments) for {media_item.real_url}")
     results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
-    await _merge_segments(tuple(result.item.path for result in results), output, m3u8.media_type)
+    await _merge_segments(tuple(result.item.path for result in results), output)
     return output
 
 
@@ -136,18 +136,12 @@ async def _download_segments(
     return results
 
 
-async def _merge_segments(seg_paths: Sequence[Path], output: Path, media_type: str) -> None:
+async def _merge_segments(seg_paths: Sequence[Path], output: Path) -> None:
     if len(seg_paths) == 1:
         _ = await aio.move(seg_paths[0], output)
         return
 
-    if media_type == "subtitle":
-        await ffmpeg.merge_subs(seg_paths, output)
-        return
-
-    ffmpeg_result = await ffmpeg.concat(seg_paths, output)
-    if not ffmpeg_result.success:
-        raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr)
+    await ffmpeg.raw_concat(seg_paths, output)
 
 
 def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:

@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use binary units instead of decimal units for file sizes
 - Increased database disk pre-allocation from 100 MiB to 250 MiB
 
+### Fixed
+
+- `FFmpeg Concat Error` on every stream (CloudflareStream)
+- M3U8 downloads of fragmented MP4s (HLS)
+
 ## [10.0.0] - 2026-06-28
 
 ⚠️**IMPORTANT**

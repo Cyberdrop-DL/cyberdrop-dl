@@ -307,6 +307,10 @@ class Downloader:
             if not ffmpeg_result.success:
                 raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
 
+        logger.debug(f"Running MP4 fixup ({media_item.real_url})")
+        ffmpeg_result = await ffmpeg.fixup_video(media_item.path)
+        if not ffmpeg_result.success:
+            raise DownloadError("FFmpeg Fixup Error", ffmpeg_result.stderr, media_item)
         await self.client.process_completed(media_item, media_item.domain)
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         await self.__finalize_download(media_item)
