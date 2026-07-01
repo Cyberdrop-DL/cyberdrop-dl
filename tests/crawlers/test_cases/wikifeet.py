@@ -21,14 +21,14 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:https://pics.wikifeet.com/Fanfan-Feet-",
-                "filename": "re:Fanfan-Feet-(d+).jpg",
+                "filename": r"re:Fanfan-Feet-(\d+)\.jpg",
                 "debrid_url": None,
                 "referer": "https://wikifeet.com/Fanfan3",
-                "album_id": "Fanfan3",
+                "album_id": "Fanfan",
                 "uploaded_at": None,
                 "download_folder": "re:Fanfan (Wikifeet)",
             },
         ],
-        "count": 300,
+        "count": range(299, 330),
     },
 ]

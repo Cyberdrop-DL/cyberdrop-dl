@@ -53,7 +53,7 @@ class WikiFeetMenCrawler(WikiFeetCrawler):
 
 class WikiFeetXCrawler(WikiFeetCrawler):
     DOMAIN: ClassVar[str] = "wikifeetx"
-    FOLDER_DOMAIN: ClassVar[str] = "WikifeetX"
+    FOLDER_DOMAIN: ClassVar[str] = "Wikifeet X"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://wikifeetx.com")
 
 
