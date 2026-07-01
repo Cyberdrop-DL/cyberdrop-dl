@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, parse_url
+from cyberdrop_dl.utils import css, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -42,9 +43,10 @@ class MultPornCrawler(Crawler):
         name, date = _extract_info(soup)
         scrape_item.uploaded_at = self.parse_iso_date(date)
         scrape_item.setup_as_album(self.create_title(name))
-        for img in _extract_images(soup):
-            await self.direct_file(scrape_item, img)
-            scrape_item.add_children()
+        async with self.new_task_group(scrape_item) as tg:
+            for img in _extract_images(soup):
+                tg.create_task(self.direct_file(scrape_item, img))
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
