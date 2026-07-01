@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -35,14 +36,14 @@ class MonstercatCrawler(Crawler):
         name, released = _extract_info(soup)
         scrape_item.uploaded_at = self.parse_date(released, "%B %d, %Y")
         scrape_item.setup_as_album(self.create_title(name, release_slug), album_id=release_slug)
-        results = await self.get_album_results(release_slug)
+        should_download = await self.make_album_checker(release_slug)
         for track in _extract_tracks(soup):
-            await self._track(scrape_item, track, results)
+            if not should_download(track.url):
+                continue
+            self.create_task(self._track(scrape_item, track))
             scrape_item.add_children()
 
-    async def _track(self, scrape_item: ScrapeItem, track: Track, results: dict[str, bool]) -> None:
-        if self.check_album_results(track.url, results):
-            return
+    async def _track(self, scrape_item: ScrapeItem, track: Track) -> None:
         with self.catch_errors(track.url):
             filename = self.create_custom_filename(track.name, ext := ".mp3")
             await self.handle_file(track.url, scrape_item, track.name, ext, custom_filename=filename)
