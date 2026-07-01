@@ -36,11 +36,12 @@ class WikiFeetCrawler(Crawler):
         html = await self.request_text(self.PRIMARY_URL / name)
         celeb = Celeb.parse(html)
         title = self.create_title(celeb.name)
-        scrape_item.setup_as_album(title, album_id=celeb.slug)
+        slug = celeb.name.replace(" ", "-")
+        scrape_item.setup_as_album(title, album_id=slug)
         await self.write_metadata(scrape_item, name, celeb)
 
         for photo in celeb.photos:
-            src = _PICS / f"{celeb.slug}-Feet-{photo.id}.jpg"
+            src = _PICS / f"{slug}-Feet-{photo.id}.jpg"
             self.create_task(self.direct_file(scrape_item, src))
             scrape_item.add_children()
 
@@ -57,7 +58,7 @@ class WikiFeetXCrawler(WikiFeetCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://wikifeetx.com")
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class Photo:
     TAGS: ClassVar[Mapping[str, str]] = {
         "A": "Arches",
@@ -78,23 +79,19 @@ class Photo:
             id=data["pid"],
             width=data["pw"],
             height=data["ph"],
-            tags=tuple(filter(None, map(cls.TAGS.get, data["tags"]))),
+            tags=tuple(tag for tag_id in sorted(data["tags"]) if (tag := cls.TAGS.get(tag_id))),
         )
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class Celeb:
     name: str
     height_us: str
-    birth_place: str
+    birthplace: str
     birthday: str
     shoe_size: int
     score: int
     photos: tuple[Photo, ...]
-    slug: str = dataclasses.field(init=False)
-
-    def __post_init__(self) -> None:
-        self.slug = self.name.replace(" ", "-")
 
     @classmethod
     def parse(cls, html: str) -> Self:
@@ -102,7 +99,7 @@ class Celeb:
         data = json.loads(content)
         return cls(
             name=data["cname"],
-            birth_place=data["bplace"],
+            birthplace=data["bplace"],
             birthday=data["bdate"],
             shoe_size=data["ssize"],
             score=data["score"],
