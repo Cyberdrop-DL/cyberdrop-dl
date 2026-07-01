@@ -113,13 +113,13 @@ def _parse_image(resource: dict[str, Any]) -> Image:
     )
 
 
-def _parse_links(links: dict[str, Any]) -> Generator[tuple[int, str]]:
-    for path, details in links.items():
-        if not path.startswith("/rels/rendition_type/"):
+def _parse_links(links: dict[str, dict[str, Any]]) -> Generator[tuple[int, str]]:
+    for name, rendition in links.items():
+        if rendition.get("templated") or not name.startswith("/rels/rendition_type/"):
             continue
         try:
-            size = int(path.rpartition("/")[-1])
+            size = int(name.rpartition("/")[-1])
         except ValueError:
             continue
 
-        yield size, details["href"]
+        yield size, rendition["href"]
