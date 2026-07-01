@@ -36,7 +36,7 @@ class WikiFeetCrawler(Crawler):
         html = await self.request_text(self.PRIMARY_URL / name)
         celeb = Celeb.parse(html)
         title = self.create_title(celeb.name)
-        scrape_item.setup_as_album(title, album_id=name)
+        scrape_item.setup_as_album(title, album_id=celeb.slug)
         await self.write_metadata(scrape_item, name, celeb)
 
         for photo in celeb.photos:
@@ -65,7 +65,7 @@ class Photo:
         "C": "Close-up",
         "N": "Nylons",
         "S": "Soles",
-        "T": "Toenails",
+        "T": "Toes",
     }
     id: int
     width: int
@@ -78,7 +78,7 @@ class Photo:
             id=data["pid"],
             width=data["pw"],
             height=data["ph"],
-            tags=tuple(cls.TAGS[tag] for tag in data["tags"]),
+            tags=tuple(filter(None, map(cls.TAGS.get, data["tags"]))),
         )
 
 
