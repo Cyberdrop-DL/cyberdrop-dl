@@ -52,13 +52,11 @@ class NaughtyMachinimaCrawler(Crawler):
         name = css.select_text(first_page, "title").rpartition(" Gallery - Naughty Machinima")[0]
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
-        results = await self.get_album_results(album_id)
+        should_download = await self.make_album_checker(album_id)
 
         async for soup in pages:
-            for photo in _extract_photos(soup):
-                if self.check_album_results(photo, results):
-                    continue
-                await self.direct_file(scrape_item, photo)
+            for photo in filter(should_download, _extract_photos(soup)):
+                self.create_task(self.direct_file(scrape_item, photo))
                 scrape_item.add_children()
 
 
