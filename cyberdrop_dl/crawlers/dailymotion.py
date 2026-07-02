@@ -105,15 +105,14 @@ class Video:
 @dataclasses.dataclass(slots=True, order=True)
 class Stream:
     resolution: Resolution
-    type: str
     fps: float | None
     url: AbsoluteHttpURL
 
 
 @dataclasses.dataclass(slots=True, order=True)
 class Playlist:
-    name: str
     id: str
+    name: str
     owner: str
 
 
@@ -170,7 +169,7 @@ def _parse_streams(qualities: dict[str, list[dict[str, str]]]) -> Generator[Stre
 
         for stream in streams:
             url = parse_url(stream["url"], trim=False)
-            yield Stream(res, stream["type"], fps, url)
+            yield Stream(res, fps, url)
 
 
 def _select_stream(video: Video) -> Stream:
@@ -178,9 +177,8 @@ def _select_stream(video: Video) -> Stream:
         case 0:
             raise ScrapeError(422, f"Unable to parse any stream for video {video.id}")
         case 1:
-            best = video.streams[0]
-            assert best.url.suffix == ".m3u8"
-            return best
+            assert video.streams[0].url.suffix == ".m3u8"
+            return video.streams[0]
         case _:
             logger.debug("Found multiple streams for video %s. Falling back to HLS auto", video.id)
             return next(s for s in video.streams if s.url.suffix == ".m3u8" and s.resolution == Resolution.unknown())
