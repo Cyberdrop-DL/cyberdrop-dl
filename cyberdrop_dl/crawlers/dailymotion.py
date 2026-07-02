@@ -35,9 +35,14 @@ class DailyMotionCrawler(Crawler):
     @classmethod
     @override
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any], /) -> None:
+        # https://developers.dailymotion.com/reference/api-errors
         if error := json_resp.get("error"):
-            # See https://developer.dailymotion.com/api#access-error
-            message, code = _VIDEO_ERRORS.get(error.get("code", ""), (error["message"], resp.status))
+            try:
+                message, code = _VIDEO_ERRORS[error["code"]]
+            except KeyError:
+                message = error.get("message") or str(error)
+                code = resp.status
+
             raise ScrapeError(code, message)
 
     def __post_init__(self) -> None:
