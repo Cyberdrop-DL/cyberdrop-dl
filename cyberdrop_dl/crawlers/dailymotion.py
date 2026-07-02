@@ -38,12 +38,8 @@ class DailyMotionCrawler(Crawler):
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any] | None, /) -> None:
         # https://developers.dailymotion.com/reference/api-errors
         if error := json_resp.get("error"):
-            try:
-                message, code = _VIDEO_ERRORS[error["code"]]
-            except KeyError:
-                message = error.get("message") or str(error)
-                code = resp.status if resp else 422
-
+            message = error.get("raw_message") or error.get("message")
+            code = _VIDEO_ERRORS.get(error.get("code", "")) or error.get("status_code") or resp.status if resp else 422
             raise ScrapeError(code, message)
 
     def __post_init__(self) -> None:
@@ -191,12 +187,9 @@ def _select_stream(video: Video) -> Stream:
 
 
 _VIDEO_ERRORS = {
-    "DM002": ("Content has been deleted", HTTPStatus.GONE),
-    "DM004": ("Copyrighted content, access forbidden", HTTPStatus.FORBIDDEN),
-    "DM005": (
-        "Content rejected (this video may have been removed due to a breach of the terms of use, a copyright claim or an infringement upon third party rights)",
-        HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
-    ),
-    "DM007": ("Video geo-restricted by its owner", HTTPStatus.FORBIDDEN),
-    "DM010": ("Private content", HTTPStatus.UNAUTHORIZED),
+    "DM002": HTTPStatus.GONE,
+    "DM004": HTTPStatus.FORBIDDEN,
+    "DM005": HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+    "DM007": HTTPStatus.FORBIDDEN,
+    "DM010": HTTPStatus.UNAUTHORIZED,
 }
