@@ -6,6 +6,7 @@ import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from cyberdrop_dl import signature
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -34,14 +35,14 @@ class DailyMotionCrawler(Crawler):
 
     @classmethod
     @override
-    def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any], /) -> None:
+    def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any] | None, /) -> None:
         # https://developers.dailymotion.com/reference/api-errors
         if error := json_resp.get("error"):
             try:
                 message, code = _VIDEO_ERRORS[error["code"]]
             except KeyError:
                 message = error.get("message") or str(error)
-                code = resp.status
+                code = resp.status if resp else 422
 
             raise ScrapeError(code, message)
 
@@ -72,7 +73,9 @@ class DailyMotionCrawler(Crawler):
         video = await self.api.video(video_id)
         scrape_item.uploaded_at = video.created_time
         best_stream = _select_stream(video)
-        m3u8, info = await self.request_m3u8_playlist(best_stream.url, headers={"priority": "u=1, i"})
+        m3u8, info = await self.request_m3u8_playlist(
+            best_stream.url, headers={"Referer": str(scrape_item.url), "priority": "u=1, i"}
+        )
         filename = self.create_custom_filename(
             video.title,
             ext := ".mp4",
@@ -122,18 +125,27 @@ class DailyMotionAPI(API):
     # https://developers.dailymotion.com/reference/perform-an-api-call
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.dailymotion.com")
 
+    @override
+    @signature.copy(API.request_json)
+    async def request_json(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        data = await super().request_json(*args, **kwargs)
+        # Check for errors even on 200 responses
+        DailyMotionCrawler.__json_resp_check__(data, None)
+        return data
+
     async def metadata(self, video_id: str) -> dict[str, Any]:
-        url = self.PRIMARY_URL / "player/metadata/video" / video_id
-        return await self.request_json(url)
+        api_url = self.PRIMARY_URL / "player/metadata/video" / video_id
+        video_url = self.PRIMARY_URL / "video" / video_id
+        return await self.request_json(api_url, headers={"Referer": str(video_url)})
 
     async def video(self, video_id: str) -> Video:
         metadata = await self.metadata(video_id)
-        # TODO: handle this
-        if metadata.get("is_password_protected"):
-            raise PasswordProtectedError
-
         if metadata.get("isOnAir"):
             raise ScrapeError(422, "Live streams are not supported")
+
+        # TODO: handle password protected videos
+        if metadata.get("is_password_protected"):
+            raise PasswordProtectedError
 
         return deserialize(Video, metadata, streams=tuple(_parse_streams(metadata["qualities"])))
 
