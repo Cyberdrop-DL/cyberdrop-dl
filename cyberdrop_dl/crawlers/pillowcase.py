@@ -41,12 +41,14 @@ class PillowCaseCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
+        name, src = await self.api.download(file_id)
+        _, ext = self.get_filename_and_ext(name)
+        filename = self.create_custom_filename(name, ext, file_id=file_id)
         if self.config.dump_json:
             metadata = await self.api.metadata(file_id)
+            metadata = f"FILENAME: {name}\n\n{metadata}"
             await self.write_metadata(scrape_item, file_id, metadata)
 
-        name, src = await self.api.download(file_id)
-        filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
 
 
