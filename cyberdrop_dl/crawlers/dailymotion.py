@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
+
+logger = logging.getLogger(__name__)
 
 
 class DailyMotionCrawler(Crawler):
@@ -39,9 +42,6 @@ class DailyMotionCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: DailyMotionAPI = DailyMotionAPI.from_crawler(self)
-
-    @override
-    async def __async_post_init__(self) -> None:
         self.update_cookies(
             {
                 "family_filter": "off",
@@ -66,14 +66,14 @@ class DailyMotionCrawler(Crawler):
 
         video = await self.api.video(video_id)
         scrape_item.uploaded_at = video.created_time
-        best = video.streams[0]
-        m3u8, info = await self.request_m3u8_playlist(best.url, headers={"priority": "u=1, i"})
+        best_stream = _select_stream(video)
+        m3u8, info = await self.request_m3u8_playlist(best_stream.url, headers={"priority": "u=1, i"})
         filename = self.create_custom_filename(
             video.title,
             ext := ".mp4",
             file_id=video_id,
             resolution=info.resolution,
-            fps=best.fps,
+            fps=best_stream.fps,
         )
         await self.handle_file(scrape_item.url, scrape_item, video.title, ext, m3u8=m3u8, custom_filename=filename)
 
@@ -92,6 +92,7 @@ class DailyMotionCrawler(Crawler):
 
 @dataclasses.dataclass(slots=True, order=True)
 class Video:
+    id: str
     title: str
     created_time: int
     streams: tuple[Stream, ...]
@@ -157,6 +158,19 @@ def _parse_streams(qualities: dict[str, list[dict[str, str]]]) -> Generator[Stre
         for stream in streams:
             url = parse_url(stream["url"], trim=False)
             yield Stream(res, stream["type"], fps, url)
+
+
+def _select_stream(video: Video) -> Stream:
+    match len(video.streams):
+        case 0:
+            raise ScrapeError(422, f"Unable to parse any stream for video {video.id}")
+        case 1:
+            best = video.streams[0]
+            assert best.url.suffix == ".m3u8"
+            return best
+        case _:
+            logger.debug("Found multiple streams for video %s. Falling back to HLS auto", video.id)
+            return next(s for s in video.streams if s.url.suffix == ".m3u8" and s.resolution == Resolution.unknown())
 
 
 _VIDEO_ERRORS = {
