@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
+import itertools
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import PasswordProtectedError
+from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
@@ -12,19 +14,28 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import AsyncGenerator, Generator
 
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
 class DailyMotionCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": "video/<video_uid>",
+        "Video": "/video/<video_uid>",
+        "Playlist": "/playlist/<slug>",
     }
 
     DOMAIN: ClassVar[str] = "dailymotion"
-    FOLDER_DOMAIN: ClassVar[str] = "CloudflareStream"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.dailymotion.com")
+
+    @classmethod
+    @override
+    def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any], /) -> None:
+        if error := json_resp.get("error"):
+            # See https://developer.dailymotion.com/api#access-error
+            message, code = _VIDEO_ERRORS.get(error.get("code", ""), (error["message"], resp.status))
+            raise ScrapeError(code, message)
 
     def __post_init__(self) -> None:
         self.api: DailyMotionAPI = DailyMotionAPI.from_crawler(self)
@@ -43,6 +54,8 @@ class DailyMotionCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["video", video_id]:
                 return await self.video(scrape_item, video_id)
+            case ["playlist", slug]:
+                return await self.playlist(scrape_item, slug)
             case _:
                 raise ValueError
 
@@ -64,6 +77,18 @@ class DailyMotionCrawler(Crawler):
         )
         await self.handle_file(scrape_item.url, scrape_item, video.title, ext, m3u8=m3u8, custom_filename=filename)
 
+    @error_handling_wrapper
+    async def playlist(self, scrape_item: ScrapeItem, slug: str) -> None:
+        playlist = await self.api.playlist(slug)
+        title = self.create_title(playlist.name, playlist.id)
+        scrape_item.setup_as_album(title, album_id=playlist.id)
+
+        async for videos in self.api.playlist_videos(playlist.id):
+            for video_url in videos:
+                new_item = scrape_item.create_child(video_url)
+                self.create_task(self.run(new_item))
+                scrape_item.add_children()
+
 
 @dataclasses.dataclass(slots=True, order=True)
 class Video:
@@ -80,7 +105,17 @@ class Stream:
     url: AbsoluteHttpURL
 
 
+@dataclasses.dataclass(slots=True, order=True)
+class Playlist:
+    name: str
+    id: str
+    owner: str
+
+
 class DailyMotionAPI(API):
+    # https://developers.dailymotion.com/reference/perform-an-api-call
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.dailymotion.com")
+
     async def metadata(self, video_id: str) -> dict[str, Any]:
         url = self.PRIMARY_URL / "player/metadata/video" / video_id
         return await self.request_json(url)
@@ -91,7 +126,24 @@ class DailyMotionAPI(API):
         if metadata.get("is_password_protected"):
             raise PasswordProtectedError
 
+        if metadata.get("isOnAir"):
+            raise ScrapeError(422, "Live streams are not supported")
+
         return deserialize(Video, metadata, streams=tuple(_parse_streams(metadata["qualities"])))
+
+    async def playlist(self, slug: str) -> Playlist:
+        url = self.ENTRYPOINT / "playlist" / slug
+        data = await self.request_json(url)
+        return deserialize(Playlist, data)
+
+    async def playlist_videos(self, playlist_id: str) -> AsyncGenerator[Generator[AbsoluteHttpURL]]:
+        url = (self.ENTRYPOINT / "playlist" / playlist_id / "videos").with_query(limit=100, fields="id")
+        for page in itertools.count(2):
+            data = await self.request_json(url)
+            yield (self.PRIMARY_URL / "video" / video["id"] for video in data["list"])
+            if not data["has_more"]:
+                break
+            url = url.update_query(page=page)
 
 
 def _parse_streams(qualities: dict[str, list[dict[str, str]]]) -> Generator[Stream]:
@@ -105,3 +157,15 @@ def _parse_streams(qualities: dict[str, list[dict[str, str]]]) -> Generator[Stre
         for stream in streams:
             url = parse_url(stream["url"], trim=False)
             yield Stream(res, stream["type"], fps, url)
+
+
+_VIDEO_ERRORS = {
+    "DM002": ("Content has been deleted", HTTPStatus.GONE),
+    "DM004": ("Copyrighted content, access forbidden", HTTPStatus.FORBIDDEN),
+    "DM005": (
+        "Content rejected (this video may have been removed due to a breach of the terms of use, a copyright claim or an infringement upon third party rights)",
+        HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+    ),
+    "DM007": ("Video geo-restricted by its owner", HTTPStatus.FORBIDDEN),
+    "DM010": ("Private content", HTTPStatus.UNAUTHORIZED),
+}
