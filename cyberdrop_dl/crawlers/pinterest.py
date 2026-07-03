@@ -4,7 +4,6 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -163,7 +162,7 @@ def _media_from_pin(pin: dict[str, Any]) -> Iterable[MediaDict]:
     if video := pin.get("videos"):
         return (_parse_video({"video": video}),)
 
-    raise ScrapeError(422)
+    raise ValueError("Unable to extract file data from PIN")
 
 
 def _parse_audio(block: dict[str, Any]) -> MediaDict:
