@@ -4,12 +4,13 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Mapping
+    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -45,7 +46,7 @@ class PinterestCrawler(Crawler):
         pin = await self.api.pin(pin_id)
         scrape_item.setup_as_album(self.create_title(pin_id))
         scrape_item.upload_date = dates.parse_http(pin["created_at"])
-        for media_dict in _media_from_story(pin["story_pin_data"]):
+        for media_dict in _media_from_pin(pin):
             media = Media(media_dict["id"], self.parse_url(media_dict["url"]))
             self.create_task(self._media(scrape_item, media))
             scrape_item.add_children()
@@ -118,6 +119,7 @@ class PinterestAPI(API):
         )
 
     async def pager(self, resource: str, options: dict[str, Any]) -> AsyncGenerator[dict[str, Any]]:
+        end_sentinel = "Y2JOb25lO"  # b64encode('cbNone')
         while True:
             resp = await self.get_resource(resource, options)
             data = resp["resource_response"]["data"]
@@ -128,7 +130,7 @@ class PinterestAPI(API):
             except KeyError:
                 break
 
-            if not bookmarks or bookmarks[0] == "-end-" or bookmarks[0].startswith("Y2JOb25lO"):
+            if not bookmarks or bookmarks[0] == "-end-" or bookmarks[0].startswith(end_sentinel):
                 break
             options["bookmarks"] = bookmarks
 
@@ -152,6 +154,16 @@ def _media_from_story(story: dict[str, Any]) -> Generator[MediaDict]:
 
                 case block_type:
                     raise ValueError(f"Unknown {block_type = }")
+
+
+def _media_from_pin(pin: dict[str, Any]) -> Iterable[MediaDict]:
+    if story := pin["story_pin_data"]:
+        return _media_from_story(story)
+
+    if video := pin.get("videos"):
+        return (_parse_video({"video": video}),)
+
+    raise ScrapeError(422)
 
 
 def _parse_audio(block: dict[str, Any]) -> MediaDict:
