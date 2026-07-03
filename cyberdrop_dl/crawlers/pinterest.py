@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class PinterestCrawler(Crawler):
     async def pin(self, scrape_item: ScrapeItem, pin_id: str) -> None:
         pin = await self.api.pin(pin_id)
         scrape_item.setup_as_album(self.create_title(pin_id))
+        scrape_item.upload_date = dates.parse_http(pin["created_at"])
         for media_dict in _media_from_story(pin["story_pin_data"]):
             media = Media(media_dict["id"], self.parse_url(media_dict["url"]))
             self.create_task(self._media(scrape_item, media))
