@@ -23,6 +23,7 @@ class PinterestCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "pinterest"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.pinterest.com")
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{id} - {date}"
 
     def __post_init__(self) -> None:
         self.api: PinterestAPI = PinterestAPI.from_crawler(self)
@@ -53,6 +54,30 @@ class PinterestCrawler(Crawler):
                 raise ValueError
 
     @error_handling_wrapper
+    async def board(self, scrape_item: ScrapeItem, user: str, slug: str) -> None:
+        board = await self.api.board(user, slug)
+        await self._board(scrape_item, board)
+
+    @error_handling_wrapper
+    async def _board(self, scrape_item: ScrapeItem, board: dict[str, Any]) -> None:
+        scrape_item.setup_as_album(self.create_title(board["owner"]["username"]))
+        scrape_item.append_folders(self.create_title(board["name"], board["id"]))
+        async for pins in self.api.board_feed(board["id"]):
+            for pin in pins:
+                url = self.PRIMARY_URL / "pin" / pin["id"]
+                self._pin(scrape_item.create_child(url), pin)
+                scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem, user: str) -> None:
+        scrape_item.setup_as_profile("")
+        async for boards in self.api.boards(user):
+            for board in boards:
+                url = self.parse_url(board["url"])
+                await self._board(scrape_item.create_child(url), board)
+                scrape_item.add_children()
+
+    @error_handling_wrapper
     async def pin(self, scrape_item: ScrapeItem, pin_id: str) -> None:
         pin = await self.api.pin(pin_id)
         self._pin(scrape_item, pin)
@@ -60,10 +85,12 @@ class PinterestCrawler(Crawler):
     @error_handling_wrapper
     def _pin(self, scrape_item: ScrapeItem, pin: dict[str, Any]) -> None:
         scrape_item.setup_as_post(self.create_title(pin["id"]))
-        scrape_item.upload_date = dates.parse_http(pin["created_at"])
-        for media_dict in _extract_media_from_pin(pin):
-            media = Media(media_dict["id"], self.parse_url(media_dict["url"]))
-            self.create_task(self._media(scrape_item, media))
+        scrape_item.upload_date = date = dates.parse_http(pin["created_at"])
+        pin_title = self.create_separate_post_title(pin.get("title"), pin["id"], date)
+        scrape_item.append_folders(pin_title)
+
+        for media in _extract_media_from_pin(pin):
+            self.create_task(self._media(scrape_item, Media(media["id"], self.parse_url(media["url"]))))
             scrape_item.add_children()
 
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
@@ -83,30 +110,6 @@ class PinterestCrawler(Crawler):
             video_codec=info.codecs.video,
         )
         await self.handle_file(media.url, scrape_item, filename, ext, m3u8=m3u8)
-
-    @error_handling_wrapper
-    async def board(self, scrape_item: ScrapeItem, user: str, slug: str) -> None:
-        board = await self.api.board(user, slug)
-        scrape_item.setup_as_album(self.create_title(board["owner"]["username"]))
-        scrape_item.append_folders(self.create_title(board["name"], board["id"]))
-
-        async for pins in self.api.board_feed(board["id"]):
-            for pin in pins:
-                url = self.PRIMARY_URL / "pin" / pin["id"]
-                new_item = scrape_item.create_child(url)
-                self._pin(new_item, pin)
-                scrape_item.add_children()
-
-    @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem, user: str) -> None:
-        scrape_item.setup_as_profile("")
-
-        async for boards in self.api.boards(user):
-            for board in boards:
-                url = self.parse_url(board["url"])
-                new_item = scrape_item.create_child(url)
-                self.create_task(self.run(new_item))
-                scrape_item.add_children()
 
 
 @dataclasses.dataclass(slots=True, order=True)
