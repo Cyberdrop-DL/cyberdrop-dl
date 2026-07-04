@@ -49,7 +49,7 @@ TEST_CASES = [
         "count": 1,
     },
     {
-        "url": "https://www..pinterest.com/monsetammy/webtoon",
+        "url": "https://www.pinterest.com/monsetammy/webtoon",
         "results": [
             {
                 "url": "ANY",
