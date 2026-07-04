@@ -48,4 +48,14 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://www..pinterest.com/monsetammy/webtoon",
+        "results": [
+            {
+                "url": "ANY",
+                "download_folder": "re:monsetammy (Pinterest)/Webtoon",
+            },
+        ],
+        "count": range(76, 90),
+    },
 ]
