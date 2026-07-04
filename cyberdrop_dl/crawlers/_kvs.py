@@ -92,9 +92,9 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 return await self.profile(scrape_item, member_id)
             case ["videos" | "video", _, *_]:
                 return await self.video(scrape_item)
-            case ["albums", _]:
+            case ["albums" | "album", _]:
                 return await self.album(scrape_item)
-            case ["albums", _, _, *_]:
+            case ["albums" | "album", _, _, *_]:
                 return await self.picture(scrape_item)
             case _:
                 if query := scrape_item.url.query.get("q"):
@@ -342,11 +342,6 @@ def _extract_user_name(soup: BeautifulSoup) -> str:
     return css.select_text(soup, Selector.USER_NAME).partition("'s Profile")[0].strip().removesuffix("'s Page")
 
 
-def _extract_album_id(soup: BeautifulSoup) -> str:
-    js_text = css.select_text(soup, Selector.Album.ID)
-    return extr_text(js_text, "params['album_id'] =", ";")
-
-
 class GenericKVSCrawler(KernelVideoSharingCrawler, is_generic=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
@@ -361,3 +356,11 @@ class GenericKVSCrawler(KernelVideoSharingCrawler, is_generic=True):
                 return await self.video(scrape_item)
             case _:
                 raise ValueError
+
+
+def _extract_album_id(soup: BeautifulSoup) -> str | None:
+    try:
+        js_text = css.select_text(soup, Selector.Album.ID)
+        return extr_text(js_text, "params['album_id'] =", ";")
+    except (css.SelectorError, ValueError):
+        return None
