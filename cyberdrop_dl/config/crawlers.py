@@ -8,6 +8,13 @@ from cyberdrop_dl.models.types import HttpURL, NonEmptyStr
 from cyberdrop_dl.models.validators import remove_duplicates
 
 
+class KemonoConfig(ConfigModel):
+    ignore_ads: bool = False
+    "Ignore advertisement posts"
+    ignore_post_content: bool = True
+    "Ignore URL in inside the content (text) of posts"
+
+
 class TikTokConfig(ConfigModel):
     original: bool = False
     "Download videos in original quality (slower)"
