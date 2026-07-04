@@ -1,90 +1,25 @@
 from __future__ import annotations
 
-import datetime  # noqa: TC003
-import itertools
 import re
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NamedTuple, override
+from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import BeforeValidator, Field
-
-from cyberdrop_dl import signature
-from cyberdrop_dl.cache import cached_method
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
-from cyberdrop_dl.models import DeferredModel
-from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
-from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable
+    from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
-    from cyberdrop_dl.url_objects import ScrapeItem
+    from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
+    from cyberdrop_dl.crawlers.kemono.models import File, Post, UserPost
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
-
-_DEFAULT_PAGE_SIZE = 50
-_DISCORD_CHANNEL_PAGE_SIZE = 150
 
 _find_http_urls = re.compile(r"(?:http(?!.*\.\.)[^ ]*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]|</|'))").finditer
-
-
-class User(NamedTuple):
-    service: str
-    id: str
-
-
-class File(NamedTuple):
-    path: str
-    name: str | None = None  # Sometimes present
-    server: str | None = None  # Sometimes present in attachments
-
-
-class Embed(NamedTuple):
-    url: str
-    subject: str
-    description: str
-
-
-class Post(DeferredModel):
-    id: str
-    content: str = ""
-    file: Annotated[File | None, BeforeValidator(falsy_as_none)] = None
-    attachments: tuple[File, ...] = ()
-    published: datetime.datetime | None = None
-    added: datetime.datetime | None = None
-    edited: datetime.datetime | None = None
-    timestamp: int | None = None
-    tags: Annotated[tuple[str, ...], BeforeValidator(lambda x: falsy_as(x, ()))] = ()
-    embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
-
-    @override
-    def model_post_init(self, *_: object) -> None:
-        if date := self.published or self.added:
-            self.timestamp = int(date.timestamp())
-
-    @property
-    def all_files(self) -> Generator[File]:
-        if self.file:
-            yield self.file
-        yield from self.attachments
-
-
-class UserPost(Post):
-    service: str
-    user_id: str = Field(validation_alias="user")
-    title: str
-
-    @property
-    def user(self) -> User:
-        return User(self.service, self.user_id)
-
-    @property
-    def web_path_qs(self) -> str:
-        return f"{self.service}/user/{self.user_id}/post/{self.id}"
 
 
 class KemonoBaseCrawler(Crawler, is_abc=True):
@@ -104,10 +39,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         ),
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {title}"
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        Crawler._assert_fields_overrides(cls, "SERVICES")
 
     def __post_init__(self) -> None:
         self.api: KemonoAPI = self.__kemono_api__.from_crawler(self)
@@ -158,7 +89,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         scrape_item.setup_as_profile("")
         if self.ignore_ads:
             self.log.info(f"filtering out all ad posts for {creator_id}. This could take a while")
-            await self.api.creator.filter_ads(service, creator_id)
+            await self.api.creator.gather_ads(service, creator_id)
 
         async for posts in self.api.creator.posts(service, creator_id):
             await self.__iter_user_posts(scrape_item, posts)
@@ -177,7 +108,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         title = f"My favorite {type_}s"
         scrape_item.setup_as_profile(self.create_title(title))
-        self.update_cookies({"session": session_cookie})
         resp = await self.api.account.favorites(type_)
         self.update_cookies({"session": ""})
 
@@ -283,129 +213,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             new_scrape_item = scrape_item.create_child(post_web_url)
             await self._handle_user_post(new_scrape_item, post)
             scrape_item.add_children()
-
-
-class KemonoAPI(API):
-    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pawchive.pw/api/v1")
-
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
-        assert cls.ENTRYPOINT
-
-    def __post_init__(self) -> None:
-        self.posts_w_ads: list[str] = []
-        self.post: PostEndpoint = PostEndpoint(self)
-        self.creator: CreatorEndpoint = CreatorEndpoint(self)
-        self.account: AccountEndpoint = AccountEndpoint(self)
-
-    @override
-    @signature.copy(API.request_json)
-    async def request_json(self, *args, **kwargs) -> Any:
-        async with self.request(*args, **kwargs) as resp:
-            return await resp.json(encoding="utf-8", content_type=False)
-
-    @cached_method(ttl=3600)
-    async def creators(self) -> dict[User, str]:
-        url = self.ENTRYPOINT / "creators"
-        resp: list[dict[str, Any]] = await self.request_json(url)
-        return {User(u["service"], u["id"]): u["name"] for u in resp}
-
-    async def search(
-        self, offset: int = 0, query: str | None = None, tags: str | None = None
-    ) -> AsyncGenerator[map[UserPost]]:
-        url = self.ENTRYPOINT / "posts"
-        async for posts in self.pager(url.update_query(q=query or "", o=offset, tag=tags or "")):
-            yield map(UserPost.model_validate, posts)
-
-    async def search_hash(self, file_hash: str):
-        url = self.ENTRYPOINT / "search_hash" / file_hash
-        return await self.request_json(url)
-
-    async def pager(
-        self,
-        url: AbsoluteHttpURL,
-        step_size: int = 50,
-        key: str | None = None,
-    ) -> AsyncGenerator[list[dict[str, Any]]]:
-        for offset in itertools.count(int(url.query.get("o") or 0), step_size):
-            data = await self.request_json(url.update_query(o=offset))
-            if key is not None:
-                data = data[key]
-            if not data:
-                break
-            yield data
-            if len(data) < step_size:
-                break
-
-
-class KemonoAPIEndpoint:
-    api: KemonoAPI
-
-    def __init__(self, api: KemonoAPI) -> None:
-        self.api = api
-
-    def __repr__(self) -> str:
-        return f"<{type(self).__name__}>"
-
-
-class AccountEndpoint(KemonoAPIEndpoint):
-    async def favorites(self, type: str):  # noqa: A002
-        endpoint = self.api.ENTRYPOINT / "account/favorites"
-        return await self.api.request_json(endpoint.update_query(type=type))
-
-
-class CreatorEndpoint(KemonoAPIEndpoint):
-    async def announcements(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "announcements"
-        return await self.api.request_json(url)
-
-    async def dms(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "dms"
-        return await self.api.request_json(url)
-
-    async def fancards(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "fancards"
-        return await self.api.request_json(url)
-
-    async def profile(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "profile"
-        return await self.api.request_json(url)
-
-    async def links(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "links"
-        return await self.api.request_json(url)
-
-    async def tags(self, service: str, creator_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "tags"
-        return await self.api.request_json(url)
-
-    async def posts(
-        self, service: str, creator_id: str, offset: int = 0, query: str | None = None, tags: str | None = None
-    ) -> AsyncGenerator[map[UserPost]]:
-        endpoint = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
-        _params = {"o": offset, "tag": tags, "q": query}
-        async for posts in self.api.pager(endpoint):
-            yield map(UserPost.model_validate, posts)
-
-    async def filter_ads(self, service: str, creator_id: str) -> None:
-        endpoint = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
-        async for posts in self.api.pager(endpoint):
-            self.api.posts_w_ads.extend(p["id"] for p in posts)
-
-
-class PostEndpoint(KemonoAPIEndpoint):
-    async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPost:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id
-        resp = await self.api.request_json(url)
-        return UserPost.model_validate(resp["post"])
-
-    async def comments(self, service: str, creator_id: str, post_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "comments"
-        return await self.api.request_json(url)
-
-    async def revisions(self, service: str, creator_id: str, post_id: str):
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "revisions"
-        return await self.api.request_json(url)
 
 
 def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
