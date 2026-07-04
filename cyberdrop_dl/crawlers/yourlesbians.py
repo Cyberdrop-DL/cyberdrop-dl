@@ -4,7 +4,8 @@ from typing import ClassVar
 
 from cyberdrop_dl.crawlers._kvs import KernelVideoSharingCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 
 class YourLesbiansCrawler(KernelVideoSharingCrawler):
@@ -19,6 +20,6 @@ class YourLesbiansCrawler(KernelVideoSharingCrawler):
         name = open_graph.title(soup)
         title = self.create_title(f"{name} [album]", album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
-        for _, img in self.iter_tags(soup, ".album-inner a.album-img"):
+        for img in self.iter_urls(soup, ".album-inner a.album-img"):
             await self.direct_file(scrape_item, img)
             scrape_item.add_children()
