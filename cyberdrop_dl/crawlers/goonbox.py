@@ -50,7 +50,7 @@ class GoonBoxCrawler(Crawler):
     async def _image(self, scrape_item: ScrapeItem, image: Image) -> None:
         scrape_item.uploaded_at = self.parse_iso_date(image.created_at)
         name = image.original_filename or image.src.name
-        filename, ext = self.get_filename_and_ext(name)
+        filename, ext = self.get_filename_and_ext(name, mime_type=image.mime, assume_ext=".jpg")
         await self.handle_file(image.src, scrape_item, name, ext, custom_filename=filename)
 
     @error_handling_wrapper
@@ -84,8 +84,9 @@ class GoonBoxCrawler(Crawler):
 
 @dataclasses.dataclass(slots=True)
 class Image:
-    created_at: str
     encoded_id: str
+    mime: str
+    created_at: str
     original_filename: str | None
     src: AbsoluteHttpURL
 
