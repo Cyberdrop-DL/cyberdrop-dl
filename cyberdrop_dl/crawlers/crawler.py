@@ -340,7 +340,15 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     def create_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+        """Use for coros that need to make HTTP requests
+
+        They will skip 1 loop iteration"""
         _ = self.scrape_mapper.create_task(coro)
+
+    @final
+    def create_priority_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+        """Only use for coros that DO NOT make any HTTP requests"""
+        _ = self.scrape_mapper.create_download_task(coro)
 
     @abstractmethod
     async def fetch(self, scrape_item: ScrapeItem) -> None:
