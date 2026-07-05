@@ -55,7 +55,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         self.api: KemonoAPI = self.__kemono_api__.from_crawler(self)
 
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get creators"):
+        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get list of creators from API"):
             _ = await self.api.creators()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -109,6 +109,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                     url = self.PRIMARY_URL / fav.web_path_qs
                     new_scrape_item = scrape_item.create_child(url)
                     self.create_task(self.run(new_scrape_item))
+                    scrape_item.add_children()
         finally:
             self.update_cookies({"session": ""})
 
