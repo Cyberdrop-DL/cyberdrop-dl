@@ -205,7 +205,7 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     with _timed_update("old database referers"):
         for fn_name, fn, domain in [
             ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
-            ("FIX_GOONBOX_REFERER", _generic_fix_referer(goonbox.GoonBoxCrawler), "jpg5.su"),
+            ("FIX_GOONBOX_REFERER", _generic_fix_referer(goonbox.GoonBoxCrawler), "goonbox"),
             ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
             ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
             ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
