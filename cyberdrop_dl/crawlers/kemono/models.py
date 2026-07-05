@@ -5,7 +5,7 @@ from typing import Annotated, NamedTuple, override
 from pydantic import BeforeValidator, Field
 
 from cyberdrop_dl.models import DeferredModel
-from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
+from cyberdrop_dl.models.validators import falsy_as_none
 
 
 class User(NamedTuple):
@@ -25,6 +25,16 @@ class Embed(NamedTuple):
     description: str
 
 
+def tags_validator(tags: object) -> object:
+    if not tags:
+        return {}
+    if type(tags) is str:
+        if tags.startswith("{") and tags.endswith("}"):
+            tags = tags[1:-1]
+        return tags.split(",")
+    return tags
+
+
 class Post(DeferredModel):
     id: str
     content: str = ""
@@ -34,8 +44,9 @@ class Post(DeferredModel):
     added: datetime.datetime | None = None
     edited: datetime.datetime | None = None
     timestamp: int | None = None
-    tags: Annotated[tuple[str, ...], BeforeValidator(lambda x: falsy_as(x, ()))] = ()
+    tags: Annotated[tuple[str, ...], BeforeValidator(tags_validator)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
+    has_full: bool = True
 
     @override
     def model_post_init(self, *_: object) -> None:

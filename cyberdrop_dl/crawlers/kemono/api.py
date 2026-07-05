@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 
 
 class KemonoAPI(API):
-    ENTRYPOINT: ClassVar[AbsoluteHttpURL]  # = AbsoluteHttpURL("https://pawchive.pw/api/v1")
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL]
 
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         assert cls.ENTRYPOINT
+        super().__init_subclass__(**kwargs)
 
     def __post_init__(self) -> None:
         self.posts_w_ads: list[str] = []
@@ -33,7 +33,7 @@ class KemonoAPI(API):
         async with self.request(*args, **kwargs) as resp:
             return await resp.json(encoding="utf-8", content_type=False)
 
-    @cached_method(ttl=3600)
+    @cached_method(ttl=1800)
     async def creators(self) -> dict[User, str]:
         url = self.ENTRYPOINT / "creators"
         resp: list[dict[str, Any]] = await self.request_json(url)

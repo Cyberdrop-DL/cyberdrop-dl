@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
-from cyberdrop_dl.utils import unique
+from cyberdrop_dl.utils import parse_url, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Container, Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
@@ -23,13 +23,13 @@ _find_http_urls = re.compile(r"(?:http(?!.*\.\.)[^ ]*?)(?=($|\n|\r\n|\r|\s|\"|\[
 
 
 class KemonoBaseCrawler(Crawler, is_abc=True):
-    __kemono_api__: ClassVar[KemonoAPI]
+    __kemono_api__: ClassVar[type[KemonoAPI]]
 
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Model": "/<service>/user/<user_id>",
         "Favorites": (
-            r"/favorites?type=post\|artist",
-            r"/account/favorites/posts\|artists",
+            r"/favorites?type=post|artist",
+            r"/account/favorites/posts|artists",
         ),
         "Search": "/search?q=...",
         "Individual Post": "/<service>/user/<user_id>/post/<post_id>",
@@ -97,7 +97,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, service: str, creator_id: str, post_id: str) -> None:
         post = await self.api.post(service, creator_id, post_id)
-        await self._handle_user_post(scrape_item, post)
+        await self._user_post(scrape_item, post)
 
     @error_handling_wrapper
     async def favorites(self, scrape_item: ScrapeItem, type_: str) -> None:
@@ -136,55 +136,20 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         await self.handle_file(link, scrape_item, link.name, ext, custom_filename=filename)
 
-    async def _handle_user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
+    async def _user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
+        if self.ignore_ads and self.__has_ads(post):
+            return
+
         user_name = (await self.api.creators())[post.user]
         title = self.create_title(user_name, post.user_id)
         scrape_item.setup_as_album(title, album_id=post.user_id)
         scrape_item.uploaded_at = post.timestamp
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
-        self.__handle_post(scrape_item, post)
+        self.__handle_post_files(scrape_item, post)
+        self._handle_post_content(scrape_item, post)
 
-    def _handle_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        """Gets links out of content in post and sends them to a new crawler."""
-        if not post.content or self.ignore_content:
-            return
-
-        for link in self.__parse_content_urls(post):
-            new_scrape_item = scrape_item.create_child(link)
-            self.handle_external_links(new_scrape_item)
-            scrape_item.add_children()
-
-    def __parse_content_urls(self, post: Post) -> Generator[AbsoluteHttpURL]:
-        seen: set[str] = set()
-        for match in _find_http_urls(post.content):
-            if (link := match.group().replace(".md.", ".")) not in seen:
-                seen.add(link)
-                try:
-                    url = self.parse_url(link)
-                except Exception:  # noqa: BLE001
-                    pass
-                else:
-                    if self.DOMAIN not in url.host:
-                        yield url
-
-    def __has_ads(self, post: Post) -> bool:
-        msg = f"skipping post #{post.id} (contains #advertisements)"
-        if "#ad" in post.content or post.id in self.api.posts_w_ads:
-            self.log.info(msg)
-            return True
-
-        ci_tags = {tag.casefold() for tag in post.tags}
-        if ci_tags.intersection({"ad", "#ad", "ads", "#ads"}):
-            self.log.info(msg)
-            return True
-
-        return False
-
-    def __handle_post(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if self.ignore_ads and self.__has_ads(post):
-            return
-
+    def __handle_post_files(self, scrape_item: ScrapeItem, post: Post) -> None:
         self.create_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
 
         files = (self.__make_file_url(file) for file in post.all_files)
@@ -198,7 +163,21 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.handle_external_links(new_scrape_item)
             scrape_item.add_children()
 
-        self._handle_post_content(scrape_item, post)
+    def _handle_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
+        """Gets links out of content in post and sends them to a new crawler."""
+        if not post.content or self.ignore_content:
+            return
+
+        for url in _parse_content_urls(post, self.DOMAIN):
+            new_scrape_item = scrape_item.create_child(url)
+            self.handle_external_links(new_scrape_item)
+            scrape_item.add_children()
+
+    def __has_ads(self, post: Post) -> bool:
+        if _has_ads(post, self.api.posts_w_ads):
+            self.log.info(f"skipping post #{post.id} (contains #advertisements)")
+            return True
+        return False
 
     def __make_file_url(self, file: File) -> AbsoluteHttpURL:
         path = file.path
@@ -211,7 +190,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 continue
             post_web_url = self.parse_url(post.web_path_qs)
             new_scrape_item = scrape_item.create_child(post_web_url)
-            await self._handle_user_post(new_scrape_item, post)
+            await self._user_post(new_scrape_item, post)
             scrape_item.add_children()
 
 
@@ -220,3 +199,30 @@ def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     if name := og_url.query.get("f"):
         return url.with_query(f=name)
     return url
+
+
+def _has_ads(post: Post, post_w_ads: Container[str] = ()) -> bool:
+    if "#ad" in post.content or post.id in post_w_ads:
+        return True
+
+    ci_tags = {tag.casefold() for tag in post.tags}
+    return bool(ci_tags.intersection({"ad", "#ad", "ads", "#ads"}))
+
+
+def _parse_content_urls(post: Post, host: str | None = None) -> Generator[AbsoluteHttpURL]:
+    for link in _extract_urls(post.content):
+        try:
+            url = parse_url(link, trim=False)
+        except Exception:  # noqa: BLE001
+            pass
+        else:
+            if not host or host not in url.host:
+                yield url
+
+
+def _extract_urls(content: str) -> Generator[str]:
+    seen: set[str] = set()
+    for match in _find_http_urls(content):
+        if (url := match.group().replace(".md.", ".")) not in seen:
+            seen.add(url)
+            yield url
