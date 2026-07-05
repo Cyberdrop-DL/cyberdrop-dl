@@ -23,6 +23,7 @@ class GoonBoxCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/img/<image_id>",
         "Album": "/a/<album_id>",
+        "Direct links": "",
     }
 
     DOMAIN: ClassVar[str] = "goonbox"
