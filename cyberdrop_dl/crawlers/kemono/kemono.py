@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
-from cyberdrop_dl.utils import parse_url, unique
+from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -158,9 +158,17 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if not (post.content and self.__kemono_config__.content_urls):
             return
 
-        for url in _parse_content_urls(post, self.DOMAIN):
-            new_scrape_item = scrape_item.create_child(url)
-            self.handle_external_links(new_scrape_item)
+        for link in _extract_urls(post.content):
+            try:
+                url = self.parse_url(link, trim=False)
+            except ValueError:
+                self.log.error("Unable to parse URL from %s in post #%s", link, post.id)
+                continue
+
+            if self.DOMAIN in url.host:
+                continue
+
+            self.handle_external_links(scrape_item.create_child(url))
             scrape_item.add_children()
 
     def __check_for_ads(self, post: Post) -> None:
@@ -212,22 +220,5 @@ def _has_ads(post: Post) -> bool:
     return bool(ci_tags.intersection({"ad", "#ad", "ads", "#ads"}))
 
 
-def _parse_content_urls(post: Post, host: str | None = None) -> Generator[AbsoluteHttpURL]:
-    if not post.content:
-        return
-    for link in _extract_urls(post.content):
-        try:
-            url = parse_url(link, trim=False)
-        except Exception:  # noqa: BLE001
-            pass
-        else:
-            if not host or host not in url.host:
-                yield url
-
-
 def _extract_urls(content: str) -> Generator[str]:
-    seen: set[str] = set()
-    for match in _find_http_urls(content):
-        if (url := match.group().replace(".md.", ".")) not in seen:
-            seen.add(url)
-            yield url
+    return unique(match.group() for match in _find_http_urls(content))
