@@ -51,6 +51,9 @@ class GoonBoxCrawler(Crawler):
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
+        if cls.is_subdomain(url):
+            return _fix_cdn(_thumb_src(url))
+
         match url.parts[1:]:
             case ["a" | "img" as part, slug]:
                 return (url.origin() / part / _id(slug)).with_query(url.query)
@@ -112,13 +115,6 @@ class GoonBoxCrawler(Crawler):
         async for images in self.api.album_images(album.encoded_id, init_page=2):
             yield filter_images(images)
 
-    @error_handling_wrapper
-    async def direct_file(
-        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
-    ) -> None:
-        link = _fix_cdn(url or scrape_item.url)
-        await super().direct_file(scrape_item, link, assume_ext or ".jpg")
-
 
 @dataclasses.dataclass(slots=True)
 class Image:
@@ -176,3 +172,10 @@ def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 def _id(slug: str) -> str:
     return slug.rsplit(".", maxsplit=1)[-1]
+
+
+def _thumb_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    new_name = url.name
+    for trash in (".md.", ".th.", ".fr."):
+        new_name = new_name.replace(trash, ".", 1)
+    return url.with_name(new_name)
