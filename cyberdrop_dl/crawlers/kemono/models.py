@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-from collections.abc import Generator
 from typing import Annotated, override
 
 from pydantic import BeforeValidator, Field
@@ -74,12 +73,6 @@ class Post(DeferredModel):
     def model_post_init(self, *_: object) -> None:
         if date := self.published or self.added:
             self.timestamp = int(date.timestamp())
-
-    @property
-    def all_files(self) -> Generator[File]:
-        if self.file:
-            yield self.file
-        yield from self.attachments
 
 
 class UserPost(Post):

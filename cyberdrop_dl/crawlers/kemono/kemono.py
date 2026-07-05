@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
-    from cyberdrop_dl.crawlers.kemono.models import Post, UserPost
+    from cyberdrop_dl.crawlers.kemono.models import File, Post, UserPost
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
@@ -148,14 +148,14 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.create_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
-        if post.embed:
+        if self.__kemono_config__.embed and post.embed:
             embed_url = self.parse_url(post.embed.url)
             new_scrape_item = scrape_item.create_child(embed_url)
             self.handle_external_links(new_scrape_item)
             scrape_item.add_children()
 
     def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if not post.content or self.__kemono_config__.ignore_post_content:
+        if not post.content or self.__kemono_config__.content_urls:
             return
 
         for url in _parse_content_urls(post, self.DOMAIN):
@@ -171,7 +171,13 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if not post.has_full:
             self.log.warning("Post #%s has not been fully imported. Some (or all) files may be missing", post.id)
 
-        for file in post.all_files:
+        def all_files() -> Generator[File]:
+            if self.__kemono_config__.file and post.file:
+                yield post.file
+            if self.__kemono_config__.attachments:
+                yield from post.attachments
+
+        for file in all_files():
             if file.deferred:
                 self.log.warning("Skipping file '%s' in post #%s [incomplete import]", file.name, post.id)
                 continue
@@ -184,7 +190,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         for post in posts:
             self.__check_for_ads(post)
             new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
-            if self.__kemono_config__.ignore_post_content or post.content is not None:
+            if not self.__kemono_config__.content_urls or post.content is not None:
                 await self._user_post(new_item, post)
             else:
                 self.create_task(self.run(new_item))

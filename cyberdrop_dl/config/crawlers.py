@@ -9,8 +9,17 @@ from cyberdrop_dl.models.validators import remove_duplicates
 
 
 class KemonoConfig(ConfigModel):
-    ignore_post_content: bool = False
-    "Ignore URLs inside the content (text) of posts (slower)"
+    file: bool = True
+    "Download the main file in a post (if any)"
+
+    attachments: bool = True
+    "Download all attachments in a post (may or may not include `file`)"
+
+    content_urls: bool = True
+    "Download any URL found inside the description (text) of a post (slower)"
+
+    embed: bool = True
+    "Download the embedded file from third party sites (if any)(mega.nz, pcloud, dropbox, etc..)"
 
 
 class TikTokConfig(ConfigModel):
