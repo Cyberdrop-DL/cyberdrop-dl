@@ -12,7 +12,7 @@ class KemonoConfig(ConfigModel):
     ignore_ads: bool = False
     "Ignore advertisement posts"
     ignore_post_content: bool = False
-    "Ignore URL in inside the content (text) of posts"
+    "Ignore URLs inside the content (text) of posts"
 
 
 class TikTokConfig(ConfigModel):

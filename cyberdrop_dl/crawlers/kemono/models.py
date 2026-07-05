@@ -57,7 +57,9 @@ def tags_validator(tags: object) -> object:
 
 class Post(DeferredModel):
     id: str
-    content: str = ""
+    content: str | None = None
+    # search result has no content key, only "substring"
+
     file: Annotated[File | None, BeforeValidator(falsy_as_none)] = None
     attachments: tuple[File, ...] = ()
     published: datetime.datetime | None = None

@@ -100,7 +100,7 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
     assert post.added == datetime.datetime(2026, 6, 10, 21, 30, 49, 920931)
     assert post.edited is None
     assert post.timestamp == 1746310367
-    assert post.tags == ('"Naughty ASMR"',)
+    assert post.tags == ("Naughty ASMR",)
     assert post.embed == Embed(
         url="https://u.pcloud.link/publink/show?code=XZDlYb5ZlyjdRy0vl0bJWMbT2L2cp5RbUCFX",
         subject="ASMR ~ Girl Next Door ~ Patreon EXCLUSIVE.mp4 - Shared with pCloud",

@@ -133,6 +133,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
+    @error_handling_wrapper
     async def _user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
         if self.__kemono_config__.ignore_ads and self.__has_ads(post):
             return
@@ -193,7 +194,10 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 continue
             post_web_url = self.parse_url(post.web_path_qs)
             new_scrape_item = scrape_item.create_child(post_web_url)
-            await self._user_post(new_scrape_item, post)
+            if self.__kemono_config__.ignore_post_content or post.content is not None:
+                await self._user_post(new_scrape_item, post)
+            else:
+                self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
 
 
@@ -205,7 +209,7 @@ def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 
 def _has_ads(post: Post, post_w_ads: Container[str] = ()) -> bool:
-    if "#ad" in post.content or post.id in post_w_ads:
+    if (post.content and "#ad" in post.content) or post.id in post_w_ads:
         return True
 
     ci_tags = {tag.casefold() for tag in post.tags}
@@ -213,6 +217,8 @@ def _has_ads(post: Post, post_w_ads: Container[str] = ()) -> bool:
 
 
 def _parse_content_urls(post: Post, host: str | None = None) -> Generator[AbsoluteHttpURL]:
+    if not post.content:
+        return
     for link in _extract_urls(post.content):
         try:
             url = parse_url(link, trim=False)
