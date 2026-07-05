@@ -4,7 +4,7 @@ import re
 from abc import abstractmethod
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
@@ -64,10 +64,9 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 return await self.post(scrape_item, service, creator_id, post_id)
             case [service, "user", creator_id]:
                 return await self.creator(scrape_item, service, creator_id)
-            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in {"post", "artist", None}:
-                type_ = type_ or "artist"
-                return await self.favorites(scrape_item, type_)
-            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in {"post", "artist"}:
+            case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in ("post", "artist", None):
+                return await self.favorites(scrape_item, type_ or "artist")
+            case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in ("post", "artist"):
                 return await self.favorites(scrape_item, type_)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)
@@ -99,7 +98,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         await self._user_post(scrape_item, post)
 
     @error_handling_wrapper
-    async def favorites(self, scrape_item: ScrapeItem, type_: str) -> None:
+    async def favorites(self, scrape_item: ScrapeItem, type_: Literal["post", "artist"]) -> None:
         session_cookie = self.cookies.get("session")
         if not session_cookie:
             msg = "No session cookie found, cannot scrape favorites"
@@ -107,14 +106,14 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         title = f"My favorite {type_}s"
         scrape_item.setup_as_profile(self.create_title(title))
-        assert type_ in ("post", "artist")
-        favorites = await self.api.account.favorites(type_)
-        self.update_cookies({"session": ""})
-
-        for fav in favorites:
-            url = self.PRIMARY_URL / fav.web_path_qs
-            new_scrape_item = scrape_item.create_child(url)
-            self.create_task(self.run(new_scrape_item))
+        try:
+            async for favorites in await self.api.account.favorites(type_):
+                for fav in favorites:
+                    url = self.PRIMARY_URL / fav.web_path_qs
+                    new_scrape_item = scrape_item.create_child(url)
+                    self.create_task(self.run(new_scrape_item))
+        finally:
+            self.update_cookies({"session": ""})
 
     @error_handling_wrapper
     async def _direct_file(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:

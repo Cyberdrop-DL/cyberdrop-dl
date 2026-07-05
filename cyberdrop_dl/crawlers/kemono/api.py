@@ -82,16 +82,22 @@ class KemonoAPIEndpoint:
 
 class AccountEndpoint(KemonoAPIEndpoint):
     @overload
-    async def favorites(self, type_: Literal["post"]) -> list[FavoritePost]: ...
+    async def favorites(self, type_: Literal["post"]) -> AsyncGenerator[map[FavoritePost]]: ...
 
     @overload
-    async def favorites(self, type_: Literal["artist"]) -> list[User]: ...
+    async def favorites(self, type_: Literal["artist"]) -> AsyncGenerator[map[User]]: ...
 
-    async def favorites(self, type_: Literal["artist", "post"]) -> list[FavoritePost] | list[User]:
+    async def favorites(
+        self, type_: Literal["artist", "post"]
+    ) -> AsyncGenerator[map[FavoritePost]] | AsyncGenerator[map[User]]:
         url = self.api.ENTRYPOINT / "account/favorites"
-        resp = await self.api.request_json(url.update_query(type=type_))
         cls_ = User if type_ == "artist" else FavoritePost
-        return [deserialize(cls_, item) for item in resp]  # pyright: ignore[reportReturnType]
+
+        def parse(item: dict[str, Any]):
+            return deserialize(cls_, item)
+
+        async for page in self.api.pager(url):
+            yield map(parse, page)  # pyright: ignore[reportReturnType]
 
 
 class CreatorEndpoint(KemonoAPIEndpoint):
