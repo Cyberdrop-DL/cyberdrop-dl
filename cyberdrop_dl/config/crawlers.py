@@ -11,7 +11,7 @@ from cyberdrop_dl.models.validators import remove_duplicates
 class KemonoConfig(ConfigModel):
     ignore_ads: bool = False
     "Ignore advertisement posts"
-    ignore_post_content: bool = True
+    ignore_post_content: bool = False
     "Ignore URL in inside the content (text) of posts"
 
 
@@ -64,3 +64,4 @@ class Crawlers(ConfigGroup, name=None):
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     one_pace: OnePaceConfig = Field(default_factory=OnePaceConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
+    pawchive: KemonoConfig = Field(default_factory=KemonoConfig)

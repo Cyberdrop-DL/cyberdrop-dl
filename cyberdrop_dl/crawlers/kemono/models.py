@@ -14,9 +14,10 @@ class User(NamedTuple):
 
 
 class File(NamedTuple):
-    path: str
+    path: str = ""
     name: str | None = None  # Sometimes present
     server: str | None = None  # Sometimes present in attachments
+    deferred: bool = False
 
 
 class Embed(NamedTuple):

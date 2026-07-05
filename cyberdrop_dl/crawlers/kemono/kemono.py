@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
+from abc import abstractmethod
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
-    from cyberdrop_dl.crawlers.kemono.models import File, Post, UserPost
+    from cyberdrop_dl.crawlers.kemono.models import Post, UserPost
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
@@ -24,15 +25,16 @@ _find_http_urls = re.compile(r"(?:http(?!.*\.\.)[^ ]*?)(?=($|\n|\r\n|\r|\s|\"|\[
 
 class KemonoBaseCrawler(Crawler, is_abc=True):
     __kemono_api__: ClassVar[type[KemonoAPI]]
+    __kemono_cdn__: ClassVar[AbsoluteHttpURL]
 
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Model": "/<service>/user/<user_id>",
+        "Creator": "/<service>/user/<user_id>",
         "Favorites": (
             r"/favorites?type=post|artist",
             r"/account/favorites/posts|artists",
         ),
         "Search": "/search?q=...",
-        "Individual Post": "/<service>/user/<user_id>/post/<post_id>",
+        "Post": "/<service>/user/<user_id>/post/<post_id>",
         "Direct links": (
             "/data/...",
             "/thumbnail/...",
@@ -40,20 +42,17 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {title}"
 
+    @property
+    @abstractmethod
+    def __kemono_config__(self) -> KemonoConfig: ...
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        assert cls.__kemono_api__
+        assert cls.__kemono_cdn__
+        return super().__init_subclass__(**kwargs)
+
     def __post_init__(self) -> None:
         self.api: KemonoAPI = self.__kemono_api__.from_crawler(self)
-
-    @property
-    def _my_config(self) -> KemonoConfig:
-        return getattr(self.config.crawlers, self.DOMAIN)
-
-    @property
-    def ignore_content(self) -> bool:
-        return self._my_config.ignore_post_content
-
-    @property
-    def ignore_ads(self) -> bool:
-        return self._my_config.ignore_ads
 
     async def __async_post_init__(self) -> None:
         with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get creators"):
@@ -73,7 +72,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)
             case ["thumbnail" | "thumbnails" | "data", _, *_]:
-                return await self.handle_direct_link(scrape_item)
+                return await self._direct_file(scrape_item)
             case _:
                 raise ValueError
 
@@ -87,7 +86,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def creator(self, scrape_item: ScrapeItem, service: str, creator_id: str) -> None:
         scrape_item.setup_as_profile("")
-        if self.ignore_ads:
+        if self.__kemono_config__.ignore_ads:
             self.log.info(f"filtering out all ad posts for {creator_id}. This could take a while")
             await self.api.creator.gather_ads(service, creator_id)
 
@@ -120,7 +119,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def handle_direct_link(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
+    async def _direct_file(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
         scrape_item.url = _thumbnail_to_src(scrape_item.url)
         link = _thumbnail_to_src(url or scrape_item.url)
         hash_value = Path(link.name).stem
@@ -137,7 +136,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         await self.handle_file(link, scrape_item, link.name, ext, custom_filename=filename)
 
     async def _user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
-        if self.ignore_ads and self.__has_ads(post):
+        if self.__kemono_config__.ignore_ads and self.__has_ads(post):
             return
 
         user_name = (await self.api.creators())[post.user]
@@ -146,15 +145,14 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         scrape_item.uploaded_at = post.timestamp
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
-        self.__handle_post_files(scrape_item, post)
-        self._handle_post_content(scrape_item, post)
+        self._extract_post_files(scrape_item, post)
+        self._extract_urls_from_post_content(scrape_item, post)
 
-    def __handle_post_files(self, scrape_item: ScrapeItem, post: Post) -> None:
+    def _extract_post_files(self, scrape_item: ScrapeItem, post: Post) -> None:
         self.create_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
 
-        files = (self.__make_file_url(file) for file in post.all_files)
-        for url in unique(files):
-            self.create_task(self.handle_direct_link(scrape_item, url))
+        for url in unique(self.__prepare_files(post)):
+            self.create_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
         if post.embed:
@@ -163,9 +161,8 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.handle_external_links(new_scrape_item)
             scrape_item.add_children()
 
-    def _handle_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        """Gets links out of content in post and sends them to a new crawler."""
-        if not post.content or self.ignore_content:
+    def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
+        if not post.content or self.__kemono_config__.ignore_post_content:
             return
 
         for url in _parse_content_urls(post, self.DOMAIN):
@@ -179,14 +176,22 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             return True
         return False
 
-    def __make_file_url(self, file: File) -> AbsoluteHttpURL:
-        path = file.path
-        url = self.parse_url(f"/data{path}")
-        return url.with_query(f=file.name or url.name)
+    def __prepare_files(self, post: Post) -> Generator[AbsoluteHttpURL]:
+        if not post.has_full:
+            self.log.warning("Post %s has not been fully imported. Some (or all) files may be missing", post.id)
+
+        for file in post.all_files:
+            if file.deferred:
+                self.log.warning("Skipping file '%s' in post %s [incomplete import]", file.name, post.id)
+                continue
+
+            assert file.path
+            url = self.__kemono_cdn__ / f"data{file.path}"
+            yield url.with_query(f=file.name or url.name)
 
     async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPost]) -> None:
         for post in posts:
-            if self.ignore_ads and self.__has_ads(post):
+            if self.__kemono_config__.ignore_ads and self.__has_ads(post):
                 continue
             post_web_url = self.parse_url(post.web_path_qs)
             new_scrape_item = scrape_item.create_child(post_web_url)
