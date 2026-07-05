@@ -180,7 +180,7 @@ class GoFileCrawler(Crawler):
             self.create_task(self.run(scrape_item))
             return
 
-        self.create_priority_task(self._file(scrape_item, node))
+        self.create_eager_task(self._file(scrape_item, node))
 
     async def _folder_pager(self, content_id: str, password: str | None = None) -> AsyncGenerator[Folder]:
         api_url = (_API_ENTRYPOINT / "contents" / content_id).with_query(
