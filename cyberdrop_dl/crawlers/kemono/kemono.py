@@ -107,6 +107,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         title = f"My favorite {type_}s"
         scrape_item.setup_as_profile(self.create_title(title))
+        assert type_ in ("post", "artist")
         favorites = await self.api.account.favorites(type_)
         self.update_cookies({"session": ""})
 
@@ -123,14 +124,15 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if await self.check_complete_by_hash(link, "sha256", checksum):
             return
 
+        name = link.query.get("f") or link.name
         try:
-            filename, ext = self.get_filename_and_ext(link.query.get("f") or link.name)
+            filename, ext = self.get_filename_and_ext(name)
         except NoExtensionError:
             # Some patreon URLs have another URL as the filename:
             # ex: https://kemono.su/data/7a...27ad7e40bd.jpg?f=https://www.patreon.com/media-u/Z0F..00672794_
             filename, ext = self.get_filename_and_ext(link.name)
 
-        await self.handle_file(link, scrape_item, link.name, ext, custom_filename=filename)
+        await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     async def _user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
         if self.__kemono_config__.ignore_ads and self.__has_ads(post):

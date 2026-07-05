@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
 from cyberdrop_dl import signature
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API
-from cyberdrop_dl.crawlers.kemono.models import AccountFavorite, User, UserPost
-from cyberdrop_dl.models import type_adapter
+from cyberdrop_dl.crawlers.kemono.models import FavoritePost, User, UserPost
+from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Mapping
@@ -81,10 +81,17 @@ class KemonoAPIEndpoint:
 
 
 class AccountEndpoint(KemonoAPIEndpoint):
-    async def favorites(self, type_: str) -> tuple[AccountFavorite, ...]:
+    @overload
+    async def favorites(self, type_: Literal["post"]) -> list[FavoritePost]: ...
+
+    @overload
+    async def favorites(self, type_: Literal["artist"]) -> list[User]: ...
+
+    async def favorites(self, type_: Literal["artist", "post"]) -> list[FavoritePost] | list[User]:
         url = self.api.ENTRYPOINT / "account/favorites"
         resp = await self.api.request_json(url.update_query(type=type_))
-        return type_adapter(tuple[AccountFavorite, ...]).validate_python(resp)
+        cls_ = User if type_ == "artist" else FavoritePost
+        return [deserialize(cls_, item) for item in resp]  # pyright: ignore[reportReturnType]
 
 
 class CreatorEndpoint(KemonoAPIEndpoint):
@@ -120,7 +127,7 @@ class PostEndpoint(KemonoAPIEndpoint):
     async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPost:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id
         resp = await self.api.request_json(url)
-        return UserPost.model_validate(resp["post"])
+        return UserPost.model_validate(resp.get("post", resp))
 
     async def comments(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "comments"

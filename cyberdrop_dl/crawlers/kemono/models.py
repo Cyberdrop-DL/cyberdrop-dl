@@ -9,13 +9,28 @@ from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.validators import falsy_as_none
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True, order=True)
 class User:
     service: str
     id: str
 
+    @property
+    def web_path_qs(self) -> str:
+        return f"{self.service}/user/{self.id}"
 
-@dataclasses.dataclass(slots=True)
+
+@dataclasses.dataclass(slots=True, frozen=True, order=True)
+class FavoritePost:
+    service: str
+    id: str
+    user: str | None = None
+
+    @property
+    def web_path_qs(self) -> str:
+        return f"{self.service}/user/{self.user}/post/{self.id}"
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
 class File:
     path: str = ""
     name: str | None = None  # Sometimes present
@@ -23,7 +38,7 @@ class File:
     deferred: bool = False
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Embed:
     url: str
     subject: str
@@ -77,16 +92,3 @@ class UserPost(Post):
     @property
     def web_path_qs(self) -> str:
         return f"{self.service}/user/{self.user_id}/post/{self.id}"
-
-
-@dataclasses.dataclass(slots=True)
-class AccountFavorite:
-    service: str
-    id: str
-    user: str | None = None
-
-    @property
-    def web_path_qs(self) -> str:
-        if self.service:
-            f"{self.service}/user/{self.user}/post/{self.id}"
-        return f"{self.service}/user/{self.id}"

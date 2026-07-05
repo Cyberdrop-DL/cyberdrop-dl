@@ -15,7 +15,7 @@ class PawchiveAPI(KemonoAPI):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pawchive.pw/api/v1")
 
 
-class Pawchive(KemonoBaseCrawler):
+class PawchiveCrawler(KemonoBaseCrawler):
     __kemono_api__: ClassVar[type[KemonoAPI]] = PawchiveAPI
     __kemono_cdn__: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://file.pawchive.pw")
 
