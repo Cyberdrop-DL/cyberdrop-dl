@@ -4,6 +4,7 @@ from typing import Annotated, override
 
 from pydantic import AfterValidator, BeforeValidator, Field
 
+from cyberdrop_dl import env
 from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 
@@ -19,10 +20,10 @@ class User:
 
 
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
-class FavoritePost:
+class Post:
     service: str
+    user: str
     id: str
-    user: str | None = None
 
     @property
     def web_path_qs(self) -> str:
@@ -44,7 +45,7 @@ class Embed:
     description: str
 
 
-def parse_tags(tags: object) -> object:
+def _parse_tags(tags: object) -> object:
     tags = falsy_as(tags, ())
     if type(tags) is str:
         if tags.startswith("{") and tags.endswith("}"):
@@ -53,16 +54,16 @@ def parse_tags(tags: object) -> object:
     return tags
 
 
-def assume_utc[T: datetime.datetime](date: T) -> T:
+def _assume_utc[T: datetime.datetime](date: T) -> T:
     if date.tzinfo is None:
         return date.replace(tzinfo=datetime.UTC)
     return date
 
 
-type AwareDatetime = Annotated[datetime.datetime, AfterValidator(assume_utc)]
+type AwareDatetime = Annotated[datetime.datetime, AfterValidator(_assume_utc)]
 
 
-class Post(DeferredModel):
+class PostModel(DeferredModel, extra="allow" if env.DEBUG_MODE else "ignore"):
     id: str
     content: str | None = None  # search results has no "content" key, only "substring"
 
@@ -72,7 +73,7 @@ class Post(DeferredModel):
     added: AwareDatetime | None = None
     edited: AwareDatetime | None = None
     timestamp: int | None = None
-    tags: Annotated[tuple[str, ...], BeforeValidator(parse_tags)] = ()
+    tags: Annotated[tuple[str, ...], BeforeValidator(_parse_tags)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
     has_full: bool = True
 
@@ -82,7 +83,7 @@ class Post(DeferredModel):
             self.timestamp = int(date.timestamp())
 
 
-class UserPost(Post):
+class UserPostModel(PostModel):
     service: str
     user_id: str = Field(validation_alias="user")
     title: str

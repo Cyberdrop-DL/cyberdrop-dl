@@ -6,7 +6,7 @@ import aiohttp
 import pytest
 
 from cyberdrop_dl.crawlers.kemono.kemono import _extract_urls, _has_ads
-from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPost, parse_tags
+from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPostModel, _parse_tags
 
 
 def request_json(url: str) -> Any:
@@ -28,12 +28,12 @@ def post_resp_w_embeds() -> dict[str, Any]:
 
 
 @pytest.fixture
-def post(post_resp: dict[str, Any]) -> UserPost:
-    return UserPost.model_validate(post_resp)
+def post(post_resp: dict[str, Any]) -> UserPostModel:
+    return UserPostModel.model_validate(post_resp)
 
 
 def test_post_validation(post_resp: dict[str, Any]) -> None:
-    post = UserPost.model_validate(post_resp)
+    post = UserPostModel.model_validate(post_resp)
 
     assert post.id == "129540190"
     assert (
@@ -86,7 +86,7 @@ def test_extract_urls_from_content(content: str, expected: list[str]) -> None:
 
 
 def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any]) -> None:
-    post = UserPost.model_validate(post_resp_w_embeds)
+    post = UserPostModel.model_validate(post_resp_w_embeds)
     assert post.id == "128071303"
     assert post.content == ""
     assert post.file == File(
@@ -131,5 +131,5 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
     ],
 )
 def test_tags_validation(tags: object, expected: list[str]) -> None:
-    result = parse_tags(tags)
+    result = _parse_tags(tags)
     assert result == expected

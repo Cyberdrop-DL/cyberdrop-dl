@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
-    from cyberdrop_dl.crawlers.kemono.models import File, Post, UserPost
+    from cyberdrop_dl.crawlers.kemono.models import File, PostModel, UserPostModel
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
@@ -85,7 +85,6 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def creator(self, scrape_item: ScrapeItem, service: str, creator_id: str) -> None:
         scrape_item.setup_as_profile("")
-
         async for posts in self.api.creator.posts(service, creator_id, scrape_item.url.query):
             await self.__iter_user_posts(scrape_item, posts)
 
@@ -101,14 +100,12 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             msg = "No session cookie found, cannot scrape favorites"
             raise ScrapeError(401, msg)
 
-        title = f"My favorite {type_}s"
-        scrape_item.setup_as_profile(self.create_title(title))
+        scrape_item.setup_as_profile(self.create_title(f"My favorite {type_}s"))
         try:
             async for favorites in await self.api.account.favorites(type_):
                 for fav in favorites:
                     url = self.PRIMARY_URL / fav.web_path_qs
-                    new_scrape_item = scrape_item.create_child(url)
-                    self.create_task(self.run(new_scrape_item))
+                    self.create_task(self.run(scrape_item.create_child(url)))
                     scrape_item.add_children()
         finally:
             self.update_cookies({"session": ""})
@@ -132,30 +129,31 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     @error_handling_wrapper
-    async def _user_post(self, scrape_item: ScrapeItem, post: UserPost) -> None:
+    async def _user_post(self, scrape_item: ScrapeItem, post: UserPostModel) -> None:
         self.__check_for_ads(post)
         user_name = (await self.api.creators())[post.user]
         title = self.create_title(user_name, post.user_id)
         scrape_item.setup_as_album(title, album_id=post.user_id)
-        scrape_item.uploaded_at = post.timestamp
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
+
+    def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
+        scrape_item.uploaded_at = post.timestamp
         self.create_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
         self._extract_post_files(scrape_item, post)
         self._extract_urls_from_post_content(scrape_item, post)
 
-    def _extract_post_files(self, scrape_item: ScrapeItem, post: Post) -> None:
+    def _extract_post_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         for url in unique(self.__prepare_files(post)):
             self.create_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
         if self.__kemono_config__.embed and post.embed:
             embed_url = self.parse_url(post.embed.url)
-            new_scrape_item = scrape_item.create_child(embed_url)
-            self.handle_external_links(new_scrape_item)
+            self.handle_external_links(scrape_item.create_child(embed_url))
             scrape_item.add_children()
 
-    def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
+    def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         if not (post.content and self.__kemono_config__.content_urls):
             return
 
@@ -172,30 +170,30 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.handle_external_links(scrape_item.create_child(url))
             scrape_item.add_children()
 
-    def __check_for_ads(self, post: Post) -> None:
+    def __check_for_ads(self, post: PostModel) -> None:
         if _has_ads(post):
             self.log.warning(f"Post #{post.id} contains advertisements")
 
-    def __prepare_files(self, post: Post) -> Generator[AbsoluteHttpURL]:
+    def __prepare_files(self, post: PostModel) -> Generator[AbsoluteHttpURL]:
         if not post.has_full:
             self.log.warning("Post #%s has not been fully imported. Some (or all) files may be missing", post.id)
 
-        def all_files() -> Generator[File]:
+        def files() -> Generator[File]:
             if self.__kemono_config__.file and post.file:
                 yield post.file
             if self.__kemono_config__.attachments:
                 yield from post.attachments
 
-        for file in all_files():
-            if file.deferred:
+        for file in files():
+            if file.deferred or not file.path:
                 self.log.warning("Skipping file '%s' in post #%s [incomplete import]", file.name, post.id)
                 continue
 
-            assert file.path
-            url = self.__kemono_cdn__ / f"data{file.path}"
+            server = self.parse_url(file.server) if file.server else self.__kemono_cdn__
+            url = server / f"data{file.path}"
             yield url.with_query(f=file.name or url.name)
 
-    async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPost]) -> None:
+    async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPostModel]) -> None:
         for post in posts:
             self.__check_for_ads(post)
             new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
@@ -213,7 +211,7 @@ def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url
 
 
-def _has_ads(post: Post) -> bool:
+def _has_ads(post: PostModel) -> bool:
     if post.content and "#ad" in post.content:
         return True
 

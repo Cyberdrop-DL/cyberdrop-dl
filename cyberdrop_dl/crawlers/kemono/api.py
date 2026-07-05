@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 from cyberdrop_dl import signature
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API
-from cyberdrop_dl.crawlers.kemono.models import FavoritePost, User, UserPost
+from cyberdrop_dl.crawlers.kemono.models import Post, User, UserPostModel
 from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
@@ -42,13 +42,13 @@ class KemonoAPI(API):
         resp: list[dict[str, Any]] = await self.request_json(url)
         return {User(u["service"], u["id"]): u["name"] for u in resp}
 
-    async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPost]]:
+    async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPostModel]]:
         url = self.ENTRYPOINT / "posts"
         query = dict(_filter_query(query))
         assert query
         url = url.update_query(query)
         async for posts in self.pager(url):
-            yield map(UserPost.model_validate, posts)
+            yield map(UserPostModel.model_validate, posts)
 
     async def search_hash(self, file_hash: str) -> dict[str, Any]:
         url = self.ENTRYPOINT / "search_hash" / file_hash
@@ -84,16 +84,16 @@ class KemonoAPIEndpoint:
 
 class AccountEndpoint(KemonoAPIEndpoint):
     @overload
-    async def favorites(self, type_: Literal["post"]) -> AsyncGenerator[map[FavoritePost]]: ...
+    async def favorites(self, type_: Literal["post"]) -> AsyncGenerator[map[Post]]: ...
 
     @overload
     async def favorites(self, type_: Literal["artist"]) -> AsyncGenerator[map[User]]: ...
 
     async def favorites(
         self, type_: Literal["artist", "post"]
-    ) -> AsyncGenerator[map[FavoritePost]] | AsyncGenerator[map[User]]:
+    ) -> AsyncGenerator[map[Post]] | AsyncGenerator[map[User]]:
         url = self.api.ENTRYPOINT / "account/favorites"
-        cls_ = User if type_ == "artist" else FavoritePost
+        cls_ = User if type_ == "artist" else Post
 
         def parse(item: dict[str, Any]):
             return deserialize(cls_, item)
@@ -117,20 +117,20 @@ class CreatorEndpoint(KemonoAPIEndpoint):
 
     async def posts(
         self, service: str, creator_id: str, query: Mapping[str, str] | None = None
-    ) -> AsyncGenerator[map[UserPost]]:
+    ) -> AsyncGenerator[map[UserPostModel]]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
         if query:
             url = url.update_query(dict(_filter_query(query)))
 
         async for posts in self.api.pager(url):
-            yield map(UserPost.model_validate, posts)
+            yield map(UserPostModel.model_validate, posts)
 
 
 class PostEndpoint(KemonoAPIEndpoint):
-    async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPost:
+    async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPostModel:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id
         resp = await self.api.request_json(url)
-        return UserPost.model_validate(resp.get("post", resp))
+        return UserPostModel.model_validate(resp.get("post", resp))
 
     async def comments(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "comments"
