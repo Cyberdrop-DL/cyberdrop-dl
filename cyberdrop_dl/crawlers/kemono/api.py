@@ -26,7 +26,6 @@ class KemonoAPI(API):
         super().__init_subclass__(**kwargs)
 
     def __post_init__(self) -> None:
-        self.posts_w_ads: list[str] = []
         self.post: PostEndpoint = PostEndpoint(self)
         self.creator: CreatorEndpoint = CreatorEndpoint(self)
         self.account: AccountEndpoint = AccountEndpoint(self)
@@ -125,11 +124,6 @@ class CreatorEndpoint(KemonoAPIEndpoint):
 
         async for posts in self.api.pager(url):
             yield map(UserPost.model_validate, posts)
-
-    async def gather_ads(self, service: str, creator_id: str) -> None:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
-        async for posts in self.api.pager(url):
-            self.api.posts_w_ads.extend(p["id"] for p in posts)
 
 
 class PostEndpoint(KemonoAPIEndpoint):

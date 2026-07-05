@@ -9,10 +9,8 @@ from cyberdrop_dl.models.validators import remove_duplicates
 
 
 class KemonoConfig(ConfigModel):
-    ignore_ads: bool = False
-    "Ignore advertisement posts"
     ignore_post_content: bool = False
-    "Ignore URLs inside the content (text) of posts"
+    "Ignore URLs inside the content (text) of posts (slower)"
 
 
 class TikTokConfig(ConfigModel):
