@@ -6,7 +6,7 @@ import aiohttp
 import pytest
 
 from cyberdrop_dl.crawlers.kemono.kemono import _extract_urls, _has_ads
-from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPost
+from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPost, parse_tags
 
 
 def request_json(url: str) -> Any:
@@ -109,3 +109,27 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
     assert post.service == "patreon"
     assert post.user_id == "47101380"
     assert post.title == "ASMR ~ Girl Next Door ~ Patreon EXCLUSIVE"
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected"),
+    [
+        (
+            '{animation,"animation 2d",anime,"fan animation",fanart,fedorartt,"genshin impact"}',
+            ["animation", "animation 2d", "anime", "fan animation", "fanart", "fedorartt", "genshin impact"],
+        ),
+        (
+            'animation,"animation 2d",anime,"fan animation",fanart,fedorartt,"genshin impact"',
+            ["animation", "animation 2d", "anime", "fan animation", "fanart", "fedorartt", "genshin impact"],
+        ),
+        (
+            ["animation", "animation 2d", "anime", "fan animation", "fanart", "fedorartt", "genshin impact"],
+            ["animation", "animation 2d", "anime", "fan animation", "fanart", "fedorartt", "genshin impact"],
+        ),
+        ("null", ()),
+        (None, ()),
+    ],
+)
+def test_tags_validation(tags: object, expected: list[str]) -> None:
+    result = parse_tags(tags)
+    assert result == expected

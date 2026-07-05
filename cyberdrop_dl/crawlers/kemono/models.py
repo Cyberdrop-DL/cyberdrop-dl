@@ -5,7 +5,7 @@ from typing import Annotated, override
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from cyberdrop_dl.models import DeferredModel
-from cyberdrop_dl.models.validators import falsy_as_none
+from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 
 
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
@@ -44,13 +44,12 @@ class Embed:
     description: str
 
 
-def tags_validator(tags: object) -> object:
-    if not tags:
-        return ()
+def parse_tags(tags: object) -> object:
+    tags = falsy_as(tags, ())
     if type(tags) is str:
         if tags.startswith("{") and tags.endswith("}"):
             tags = tags[1:-1]
-        return tags.split(",")
+        return [t.strip('"') for t in tags.split(",")]
     return tags
 
 
@@ -73,7 +72,7 @@ class Post(DeferredModel):
     added: AwareDatetime | None = None
     edited: AwareDatetime | None = None
     timestamp: int | None = None
-    tags: Annotated[tuple[str, ...], BeforeValidator(tags_validator)] = ()
+    tags: Annotated[tuple[str, ...], BeforeValidator(parse_tags)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
     has_full: bool = True
 
