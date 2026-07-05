@@ -55,7 +55,7 @@ class GoonBoxCrawler(Crawler):
             return _fix_cdn(_thumb_src(url))
 
         match url.parts[1:]:
-            case ["a" | "img" as part, slug]:
+            case ["a" | "img" as part, slug, *_]:
                 return (url.origin() / part / _id(slug)).with_query(url.query)
             case _:
                 return url
