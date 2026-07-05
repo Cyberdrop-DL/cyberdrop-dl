@@ -77,10 +77,10 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
-        title = self.create_title(f"{query} [search]")
+    async def search(self, scrape_item: ScrapeItem, search_query: str) -> None:
+        title = self.create_title(f"{search_query} [search]")
         scrape_item.setup_as_profile(title)
-        async for posts in self.api.search(query=query):
+        async for posts in self.api.search(scrape_item.url.query):
             await self.__iter_user_posts(scrape_item, posts)
 
     @error_handling_wrapper
@@ -90,7 +90,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             self.log.info(f"filtering out all ad posts for {creator_id}. This could take a while")
             await self.api.creator.gather_ads(service, creator_id)
 
-        async for posts in self.api.creator.posts(service, creator_id):
+        async for posts in self.api.creator.posts(service, creator_id, scrape_item.url.query):
             await self.__iter_user_posts(scrape_item, posts)
 
     @error_handling_wrapper
@@ -107,14 +107,11 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
         title = f"My favorite {type_}s"
         scrape_item.setup_as_profile(self.create_title(title))
-        resp = await self.api.account.favorites(type_)
+        favorites = await self.api.account.favorites(type_)
         self.update_cookies({"session": ""})
 
-        for item in resp:
-            url = self.PRIMARY_URL / item["service"] / "user" / (item.get("user") or item["name"])
-            if type_ == "post":
-                url = url / "post" / item["id"]
-
+        for fav in favorites:
+            url = self.PRIMARY_URL / fav.web_path_qs
             new_scrape_item = scrape_item.create_child(url)
             self.create_task(self.run(new_scrape_item))
 
@@ -122,8 +119,8 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     async def _direct_file(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
         scrape_item.url = _thumbnail_to_src(scrape_item.url)
         link = _thumbnail_to_src(url or scrape_item.url)
-        hash_value = Path(link.name).stem
-        if await self.check_complete_by_hash(link, "sha256", hash_value):
+        checksum = Path(link.name).stem
+        if await self.check_complete_by_hash(link, "sha256", checksum):
             return
 
         try:

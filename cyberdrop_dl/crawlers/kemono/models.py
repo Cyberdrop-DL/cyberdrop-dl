@@ -77,3 +77,16 @@ class UserPost(Post):
     @property
     def web_path_qs(self) -> str:
         return f"{self.service}/user/{self.user_id}/post/{self.id}"
+
+
+@dataclasses.dataclass(slots=True)
+class AccountFavorite:
+    service: str
+    id: str
+    user: str | None = None
+
+    @property
+    def web_path_qs(self) -> str:
+        if self.service:
+            f"{self.service}/user/{self.user}/post/{self.id}"
+        return f"{self.service}/user/{self.id}"

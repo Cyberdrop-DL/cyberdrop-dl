@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
 from cyberdrop_dl.crawlers.kemono.kemono import KemonoBaseCrawler
@@ -24,5 +24,6 @@ class Pawchive(KemonoBaseCrawler):
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("pawchive.st",)
 
     @property
+    @override
     def __kemono_config__(self) -> KemonoConfig:
         return self.config.crawlers.pawchive
