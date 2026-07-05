@@ -53,7 +53,7 @@ class FlickrCrawler(Crawler):
             for photo in page["photo"]:
                 web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
                 new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._photo(new_scrape_item, photo))
+                self.create_priority_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
     @error_handling_wrapper

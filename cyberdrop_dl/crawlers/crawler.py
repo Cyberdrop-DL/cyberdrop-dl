@@ -883,7 +883,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
             sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
             new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
-            self.create_task(
+            self.create_priority_task(
                 self.handle_file(
                     link,
                     new_scrape_item,

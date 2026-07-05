@@ -51,7 +51,7 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
                 new_scrape_item.append_folders(part)
 
             dl_link = self.core.create_download_url(transfer_id, file, password)
-            self.create_task(self._file(new_scrape_item, file, dl_link))
+            self.create_priority_task(self._file(new_scrape_item, file, dl_link))
             scrape_item.add_children()
 
     @error_handling_wrapper
