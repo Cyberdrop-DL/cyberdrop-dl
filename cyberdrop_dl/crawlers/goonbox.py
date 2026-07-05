@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 class GoonBoxCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/img/<image_id>",
-        "Album": "/album/<album_id>",
+        "Album": "/a/<album_id>",
     }
 
     DOMAIN: ClassVar[str] = "goonbox"
@@ -33,8 +33,8 @@ class GoonBoxCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["img", file_id]:
                 return await self.image(scrape_item, file_id)
-            case ["album", album_id]:
-                return await self.image(scrape_item, album_id)
+            case ["a", album_id]:
+                return await self.album(scrape_item, album_id)
             case _:
                 raise ValueError
 
