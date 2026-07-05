@@ -1,4 +1,5 @@
 # ruff : noqa: DTZ001
+import asyncio
 import datetime
 from typing import Any
 
@@ -9,19 +10,22 @@ from cyberdrop_dl.crawlers.kemono.kemono import _extract_urls, _has_ads
 from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPost
 
 
-async def request_json(url: str) -> Any:
-    async with aiohttp.request("GET", url) as resp:
-        return await resp.json(encoding="utf8", content_type=None)
+def request_json(url: str) -> Any:
+    async def fetch():
+        async with aiohttp.request("GET", url) as resp:
+            return await resp.json(encoding="utf8", content_type=None)
+
+    return asyncio.run(fetch())
 
 
 @pytest.fixture(scope="session")
-async def post_resp() -> dict[str, Any]:
-    return await request_json("https://pawchive.st/api/v1/patreon/user/3295915/post/129540190")
+def post_resp() -> dict[str, Any]:
+    return request_json("https://pawchive.st/api/v1/patreon/user/3295915/post/129540190")
 
 
 @pytest.fixture(scope="session")
-async def post_resp_w_embeds() -> dict[str, Any]:
-    return await request_json("https://pawchive.pw/api/v1/patreon/user/47101380/post/128071303")
+def post_resp_w_embeds() -> dict[str, Any]:
+    return request_json("https://pawchive.pw/api/v1/patreon/user/47101380/post/128071303")
 
 
 @pytest.fixture

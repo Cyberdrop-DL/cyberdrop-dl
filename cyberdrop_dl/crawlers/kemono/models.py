@@ -47,7 +47,7 @@ class Embed:
 
 def tags_validator(tags: object) -> object:
     if not tags:
-        return {}
+        return ()
     if type(tags) is str:
         if tags.startswith("{") and tags.endswith("}"):
             tags = tags[1:-1]
