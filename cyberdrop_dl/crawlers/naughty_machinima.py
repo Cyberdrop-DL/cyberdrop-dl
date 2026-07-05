@@ -18,7 +18,8 @@ if TYPE_CHECKING:
 
 class NaughtyMachinimaCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Video": "/video/<slug>",
+        "Video": "/video/<video_id>",
+        "Album": "/album/<album_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.naughtymachinima.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination li:has(.fa-caret-right) a"
