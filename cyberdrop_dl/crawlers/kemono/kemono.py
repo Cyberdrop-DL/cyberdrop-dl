@@ -155,7 +155,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
             scrape_item.add_children()
 
     def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if not post.content or self.__kemono_config__.content_urls:
+        if not (post.content and self.__kemono_config__.content_urls):
             return
 
         for url in _parse_content_urls(post, self.DOMAIN):
@@ -165,7 +165,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     def __check_for_ads(self, post: Post) -> None:
         if _has_ads(post):
-            self.log.warning(f"post #{post.id} contains advertisements")
+            self.log.warning(f"Post #{post.id} contains advertisements")
 
     def __prepare_files(self, post: Post) -> Generator[AbsoluteHttpURL]:
         if not post.has_full:
@@ -190,7 +190,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         for post in posts:
             self.__check_for_ads(post)
             new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
-            if not self.__kemono_config__.content_urls or post.content is not None:
+            if post.content or not self.__kemono_config__.content_urls:
                 await self._user_post(new_item, post)
             else:
                 self.create_task(self.run(new_item))
