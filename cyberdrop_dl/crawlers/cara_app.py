@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -115,6 +115,15 @@ class Post:
     title: str
     images: tuple[Image, ...]
 
+    @classmethod
+    def parse(cls, post: dict[str, Any]) -> Self:
+        return deserialize(
+            cls,
+            post,
+            user=deserialize(User, post),
+            images=tuple(deserialize(Image, img) for img in post["images"]),
+        )
+
 
 class CaraAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cara.app/api")
@@ -122,7 +131,7 @@ class CaraAPI(API):
     async def post(self, post_id: str) -> Post:
         api_url = self.ENTRYPOINT / "posts" / post_id
         resp: dict[str, Any] = await self.request_json(api_url)
-        return _parse_post(resp["data"])
+        return Post.parse(resp["data"])
 
     def user_posts(self, user: str) -> AsyncGenerator[map[Post]]:
         url = (self.ENTRYPOINT / "posts/getAllByUser").with_query(slug=user)
@@ -134,15 +143,6 @@ class CaraAPI(API):
             resp = await self.request_json(api_url.update_query(take=step_size, skip=skip))
             data = resp.get("data", ())
             n_posts = len(data)
-            yield map(_parse_post, data)
+            yield map(Post.parse, data)
             if n_posts < step_size:
                 break
-
-
-def _parse_post(post: dict[str, Any]) -> Post:
-    return deserialize(
-        Post,
-        post,
-        user=deserialize(User, post),
-        images=tuple(deserialize(Image, img) for img in post["images"]),
-    )
