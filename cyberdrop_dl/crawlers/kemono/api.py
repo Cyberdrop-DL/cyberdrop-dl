@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
+VALID_QUERY_PARAMS = {"o", "q", "tags", "order", "sort"}
+
+
 class KemonoAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL]
 
@@ -40,7 +43,7 @@ class KemonoAPI(API):
         resp: list[dict[str, Any]] = await self.request_json(url)
         return {User(u["service"], u["id"]): u["name"] for u in resp}
 
-    async def search(self, query: Mapping[str, Any]) -> AsyncGenerator[map[UserPost]]:
+    async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPost]]:
         url = self.ENTRYPOINT / "posts"
         query = dict(_filter_query(query))
         assert query
@@ -114,7 +117,7 @@ class CreatorEndpoint(KemonoAPIEndpoint):
         return await self.api.request_json(url)
 
     async def posts(
-        self, service: str, creator_id: str, query: Mapping[str, Any] | None = None
+        self, service: str, creator_id: str, query: Mapping[str, str] | None = None
     ) -> AsyncGenerator[map[UserPost]]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
         if query:
@@ -144,7 +147,7 @@ class PostEndpoint(KemonoAPIEndpoint):
         return await self.api.request_json(url)
 
 
-def _filter_query(query: Mapping[str, Any]) -> Generator[tuple[str, int | str]]:
+def _filter_query(query: Mapping[str, str]) -> Generator[tuple[str, str]]:
     for name, value in query.items():
-        if value and name in {"o", "q", "tags"}:
+        if value and name in VALID_QUERY_PARAMS:
             yield name, value
