@@ -1,6 +1,7 @@
+import dataclasses
 import datetime
 from collections.abc import Generator
-from typing import Annotated, NamedTuple, override
+from typing import Annotated, override
 
 from pydantic import BeforeValidator, Field
 
@@ -8,19 +9,22 @@ from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.validators import falsy_as_none
 
 
-class User(NamedTuple):
+@dataclasses.dataclass(slots=True)
+class User:
     service: str
     id: str
 
 
-class File(NamedTuple):
+@dataclasses.dataclass(slots=True)
+class File:
     path: str = ""
     name: str | None = None  # Sometimes present
     server: str | None = None  # Sometimes present in attachments
     deferred: bool = False
 
 
-class Embed(NamedTuple):
+@dataclasses.dataclass(slots=True)
+class Embed:
     url: str
     subject: str
     description: str
