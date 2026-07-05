@@ -1,4 +1,3 @@
-# ruff : noqa: DTZ001
 import asyncio
 import datetime
 from typing import Any
@@ -49,10 +48,10 @@ def test_post_validation(post_resp: dict[str, Any]) -> None:
             server=None,
         ),
     )
-    assert post.published == datetime.datetime(2025, 5, 21, 18, 11, 4)
-    assert post.added == datetime.datetime(2026, 6, 11, 21, 15, 32, 24479)
-    assert post.edited == datetime.datetime(2026, 7, 3, 0, 27, 24)
-    assert post.timestamp == 1747869064
+    assert post.published == datetime.datetime(2025, 5, 21, 18, 11, 4, tzinfo=datetime.UTC)
+    assert post.added == datetime.datetime(2026, 6, 11, 21, 15, 32, 24479, tzinfo=datetime.UTC)
+    assert post.edited == datetime.datetime(2026, 7, 3, 0, 27, 24, tzinfo=datetime.UTC)
+    assert post.timestamp == 1747851064
     assert post.tags == ("Animation", "Announcement")
     assert post.embed is None
     assert post.has_full is True
@@ -96,10 +95,10 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
         server=None,
     )
     assert post.attachments == ()
-    assert post.published == datetime.datetime(2025, 5, 3, 17, 12, 47)
-    assert post.added == datetime.datetime(2026, 6, 10, 21, 30, 49, 920931)
+    assert post.published == datetime.datetime(2025, 5, 3, 17, 12, 47, tzinfo=datetime.UTC)
+    assert post.added == datetime.datetime(2026, 6, 10, 21, 30, 49, 920931, tzinfo=datetime.UTC)
     assert post.edited is None
-    assert post.timestamp == 1746310367
+    assert post.timestamp == 1746292367
     assert post.tags == ("Naughty ASMR",)
     assert post.embed == Embed(
         url="https://u.pcloud.link/publink/show?code=XZDlYb5ZlyjdRy0vl0bJWMbT2L2cp5RbUCFX",

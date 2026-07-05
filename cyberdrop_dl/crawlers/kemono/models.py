@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 from typing import Annotated, override
 
-from pydantic import BeforeValidator, Field
+from pydantic import AfterValidator, BeforeValidator, Field
 
 from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.validators import falsy_as_none
@@ -54,16 +54,24 @@ def tags_validator(tags: object) -> object:
     return tags
 
 
+def assume_utc[T: datetime.datetime](date: T) -> T:
+    if date.tzinfo is None:
+        return date.replace(tzinfo=datetime.UTC)
+    return date
+
+
+type AwareDatetime = Annotated[datetime.datetime, AfterValidator(assume_utc)]
+
+
 class Post(DeferredModel):
     id: str
-    content: str | None = None
-    # search result has no content key, only "substring"
+    content: str | None = None  # search results has no "content" key, only "substring"
 
     file: Annotated[File | None, BeforeValidator(falsy_as_none)] = None
     attachments: tuple[File, ...] = ()
-    published: datetime.datetime | None = None
-    added: datetime.datetime | None = None
-    edited: datetime.datetime | None = None
+    published: AwareDatetime | None = None
+    added: AwareDatetime | None = None
+    edited: AwareDatetime | None = None
     timestamp: int | None = None
     tags: Annotated[tuple[str, ...], BeforeValidator(tags_validator)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
