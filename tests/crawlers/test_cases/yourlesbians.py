@@ -1,4 +1,4 @@
-DOMAIN = "yourlesbians_com"
+DOMAIN = "yourlesbians.com"
 TEST_CASES = [
     {
         "url": "https://yourlesbians.com/video/girlsway-angela-white-girlsway-newest-editor",
