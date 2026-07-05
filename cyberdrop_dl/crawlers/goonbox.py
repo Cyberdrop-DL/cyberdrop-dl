@@ -4,7 +4,7 @@ import dataclasses
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -15,8 +15,11 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
+_CDN = "cuckcapital.cr"
+
 
 class GoonBoxCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "selti-delivery.ru", "goonbox", _CDN
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/img/<image_id>",
         "Album": "/a/<album_id>",
@@ -24,12 +27,40 @@ class GoonBoxCrawler(Crawler):
 
     DOMAIN: ClassVar[str] = "goonbox"
     FOLDER_DOMAIN: ClassVar[str] = "GoonBox"
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
+        "host.church",
+        "jpg.homes",
+        "jpg.church",
+        "jpg.fish",
+        "jpg.fishing",
+        "jpg.pet",
+        "jpeg.pet",
+        "jpg1.su",
+        "jpg2.su",
+        "jpg3.su",
+        "jpg4.su",
+        "jpg5.su",
+        "jpg6.su",
+        "jpg7.cr",
+    )
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://goonbox.cr")
 
     def __post_init__(self) -> None:
         self.api: GoonBoxAPI = GoonBoxAPI.from_crawler(self)
 
+    @classmethod
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["a" | "img" as part, slug]:
+                return (url.origin() / part / _id(slug)).with_query(url.query)
+            case _:
+                return url
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
+        if self.is_subdomain(scrape_item.url):
+            return await self.direct_file(scrape_item)
+
         match scrape_item.url.parts[1:]:
             case ["img", file_id]:
                 return await self.image(scrape_item, file_id)
@@ -81,6 +112,13 @@ class GoonBoxCrawler(Crawler):
         async for images in self.api.album_images(album.encoded_id, init_page=2):
             yield filter_images(images)
 
+    @error_handling_wrapper
+    async def direct_file(
+        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
+    ) -> None:
+        link = _fix_cdn(url or scrape_item.url)
+        await super().direct_file(scrape_item, link, assume_ext or ".jpg")
+
 
 @dataclasses.dataclass(slots=True)
 class Image:
@@ -127,3 +165,14 @@ class GoonBoxAPI(API):
             yield map(Image.parse, resp["images"])
             if page >= resp["pagination"]["last_page"]:
                 break
+
+
+def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if GoonBoxCrawler.is_subdomain(url) and not url.host.endswith(_CDN):
+        server, *_ = url.host.rsplit(".", 2)
+        return url.with_host(f"{server}.{_CDN}")
+    return url
+
+
+def _id(slug: str) -> str:
+    return slug.rsplit(".", maxsplit=1)[-1]
