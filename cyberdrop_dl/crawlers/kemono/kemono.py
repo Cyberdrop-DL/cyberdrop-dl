@@ -140,7 +140,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         scrape_item.uploaded_at = post.timestamp
-        self.create_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
+        self.create_eager_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
         self._extract_post_files(scrape_item, post)
         self._extract_urls_from_post_content(scrape_item, post)
 

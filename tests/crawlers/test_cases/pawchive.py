@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "691949417.jpg",
                 "referer": "https://pawchive.pw/patreon/user/36069133/post/162746868",
                 "album_id": "36069133",
-                "uploaded_at": 1783112455,
+                "uploaded_at": 1783094455,
                 "download_folder": "re:Natalie Gold (Pawchive)",
             },
             {
@@ -20,7 +20,6 @@ TEST_CASES = [
                 "original_filename": "691949417.mp4",
                 "referer": "https://pawchive.pw/patreon/user/36069133/post/162746868",
                 "album_id": "36069133",
-                "uploaded_at": 1783112455,
                 "download_folder": "re:Natalie Gold (Pawchive)",
             },
             {
@@ -30,7 +29,6 @@ TEST_CASES = [
                 "original_filename": "691949550.png",
                 "referer": "https://pawchive.pw/patreon/user/36069133/post/162746868",
                 "album_id": "36069133",
-                "uploaded_at": 1783112455,
                 "download_folder": "re:Natalie Gold (Pawchive)",
             },
         ],
