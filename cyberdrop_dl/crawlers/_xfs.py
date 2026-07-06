@@ -27,6 +27,10 @@ class XFSCrawler(Crawler, is_abc=True):
     }
     NEEDS_REFERER: ClassVar[bool] = False
 
+    @staticmethod
+    def _raise_needs_referer():
+        raise ScrapeError(403, "Referer required to download this video")
+
     @classmethod
     def extract_file_id(cls, url: AbsoluteHttpURL) -> str | None:
         match url.parts[1:]:
@@ -59,9 +63,8 @@ class XVideoSharingCrawler(XFSCrawler, is_abc=True):
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, m3u8=m3u8, referer=referer)
 
     async def request_stream(self, video_id: str, referer: AbsoluteHttpURL | None = None) -> AbsoluteHttpURL:
-        missing_referer_msg = "Referer required to download this video"
         if self.NEEDS_REFERER and not referer:
-            raise ScrapeError(403, missing_referer_msg)
+            self._raise_needs_referer()
 
         return await self._stream_from_embed(video_id, referer or self.PRIMARY_URL)
 
@@ -71,7 +74,7 @@ class XVideoSharingCrawler(XFSCrawler, is_abc=True):
 
         if (msg := "Video embed restricted for this domain") in html:
             if referer == self.PRIMARY_URL:
-                msg = "Referer required to download this video"
+                self._raise_needs_referer()
             raise ScrapeError(403, msg)
 
         if "File is no longer available" in html:
