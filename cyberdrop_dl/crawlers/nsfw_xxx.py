@@ -80,7 +80,7 @@ class NsfwXXXCrawler(Crawler):
             for post in data["posts"]:
                 web_url = self.PRIMARY_URL / "post" / str(post["content"]["id"])
                 new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._post(new_scrape_item, post))
+                self.create_eager_task(self._post(new_scrape_item, post))
                 scrape_item.add_children()
 
     async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:

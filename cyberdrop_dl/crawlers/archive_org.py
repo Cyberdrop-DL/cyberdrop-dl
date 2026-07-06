@@ -63,7 +63,7 @@ class ArchiveOrgCrawler(Crawler, cdl_user_agent=True):
         for file in _filter_files(base_path, item.files):
             url = self.PRIMARY_URL / "details" / identifier / file.path
             new_item = scrape_item.create_child(url)
-            self.create_task(self._file(new_item, identifier, file))
+            self.create_eager_task(self._file(new_item, identifier, file))
             scrape_item.add_children()
 
     @error_handling_wrapper

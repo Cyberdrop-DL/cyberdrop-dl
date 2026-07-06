@@ -43,7 +43,7 @@ class TwitterCrawler(Crawler, is_debug=True):
         scrape_item.setup_as_profile(self.create_title(f"@{name}"))
         scrape_item.append_folders(post_title)
 
-        await self.write_metadata(scrape_item, tweet["id"], tweet)
+        self.create_eager_task(self.write_metadata(scrape_item, tweet["id"], tweet))
 
         for media in tweet["media"]["all"]:
             if media["type"] == "video":
