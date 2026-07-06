@@ -50,7 +50,7 @@ class ABStreamCrawler(Crawler):
         if await self.check_complete(scrape_item.url):
             return
 
-        referer = scrape_item.parents[-1] if scrape_item.parents else self.PRIMARY_URL
+        referer = scrape_item.referer or (scrape_item.parents[-1] if scrape_item.parents else self.PRIMARY_URL)
         m3u8_url = await self._request_stream(video_id, referer)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         filename = self.create_custom_filename(
