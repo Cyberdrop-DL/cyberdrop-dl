@@ -53,7 +53,7 @@ class GoonBoxCrawler(Crawler):
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         if cls.is_subdomain(url):
-            return _fix_cdn(_thumb_src(url))
+            return _fix_cdn(_thumb_to_src(url))
 
         match url.parts[1:]:
             case ["a" | "img" as part, slug, *_]:
@@ -135,7 +135,7 @@ class Album:
     title: str
     description: str | None
     encoded_id: str
-    images: tuple[Image, ...]
+    images: map[Image]
     has_more: bool
 
 
@@ -151,7 +151,7 @@ class GoonBoxAPI(API):
         return deserialize(
             Album,
             resp["album"],
-            images=tuple(map(Image.parse, resp["images"])),
+            images=map(Image.parse, resp["images"]),
             has_more=resp["pagination"]["total"] > 1,
         )
 
@@ -175,7 +175,7 @@ def _id(slug: str) -> str:
     return slug.rsplit(".", maxsplit=1)[-1]
 
 
-def _thumb_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     new_name = url.name
     for trash in (".md.", ".th.", ".fr."):
         new_name = new_name.replace(trash, ".", 1)
