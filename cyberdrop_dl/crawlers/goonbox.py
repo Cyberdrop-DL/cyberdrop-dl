@@ -98,7 +98,7 @@ class GoonBoxCrawler(Crawler):
             for img in images:
                 url = self.PRIMARY_URL / "img" / img.encoded_id
                 new_item = scrape_item.create_child(url)
-                await self._image(new_item, img)
+                self.create_eager_task(self._image(new_item, img))
                 scrape_item.add_children()
 
     async def _album_images(self, album: Album) -> AsyncGenerator[Iterable[Image]]:
