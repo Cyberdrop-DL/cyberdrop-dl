@@ -133,7 +133,7 @@ class RumbleCrawler(Crawler):
         video_name = self.create_custom_filename(video.title, ext, file_id=embed_id, resolution=best_format.resolution)
         scrape_item.uploaded_at = self.parse_iso_date(video.upload_date)
         scrape_item.url = video.url
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 best_format.url,
                 scrape_item,

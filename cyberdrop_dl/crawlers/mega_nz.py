@@ -158,7 +158,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             for part in path.parent.parts[1:]:
                 child_item.append_folders(part)
 
-            self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
+            self.create_eager_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()
 
     @override

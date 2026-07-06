@@ -151,5 +151,5 @@ class PimpBunnyCrawler(Crawler):
 
         async for soup in pages:
             for image in self.iter_urls(soup, Selector.ITEM):
-                self.create_task(self.direct_file(scrape_item, image))
+                self.create_eager_task(self.direct_file(scrape_item, image))
                 scrape_item.add_children()

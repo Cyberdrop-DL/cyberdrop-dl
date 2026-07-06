@@ -179,7 +179,7 @@ class XVideosCrawler(Crawler):
         should_download = await self.make_album_checker(album_id)
         async for soup in pages:
             for src in filter(should_download, self.iter_urls(soup, Selectors.GALLERY_IMG)):
-                self.create_task(self.direct_file(scrape_item, src))
+                self.create_eager_task(self.direct_file(scrape_item, src))
                 scrape_item.add_children()
 
     async def _get_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup:

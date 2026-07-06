@@ -176,8 +176,11 @@ class GoFileCrawler(Crawler):
         if not _check_node_is_accessible(node):
             return
 
-        coro = self.run(scrape_item) if node["type"] == "folder" else self._file(scrape_item, node)
-        self.create_task(coro)
+        if node["type"] == "folder":
+            self.create_task(self.run(scrape_item))
+            return
+
+        self.create_eager_task(self._file(scrape_item, node))
 
     async def _folder_pager(self, content_id: str, password: str | None = None) -> AsyncGenerator[Folder]:
         api_url = (_API_ENTRYPOINT / "contents" / content_id).with_query(

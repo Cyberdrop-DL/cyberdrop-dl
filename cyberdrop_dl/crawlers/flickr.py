@@ -47,13 +47,13 @@ class FlickrCrawler(Crawler):
         name = first_page["title"]
         title = self.create_title(name["_content"] if isinstance(name, dict) else name, photoset_id)
         scrape_item.setup_as_album(title, album_id=photoset_id)
-        await self.write_metadata(scrape_item, photoset_id, first_page)
+        self.create_eager_task(self.write_metadata(scrape_item, photoset_id, first_page))
 
-        async for first_page in pages:
-            for photo in first_page["photo"]:
+        async for page in pages:
+            for photo in page["photo"]:
                 web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
                 new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._photo(new_scrape_item, photo))
+                self.create_eager_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
     @error_handling_wrapper
