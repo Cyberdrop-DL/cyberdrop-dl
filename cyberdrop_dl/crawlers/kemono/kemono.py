@@ -136,6 +136,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         scrape_item.setup_as_album(title, album_id=post.user_id)
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
+        self._post(scrape_item, post)
 
     def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         scrape_item.uploaded_at = post.timestamp
