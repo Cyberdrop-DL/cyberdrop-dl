@@ -145,7 +145,7 @@ class ScrapeMapper:
 
         _ = self._task_groups.scrape.create_task(lazy())
 
-    def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
+    def create_eager_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
 
     def _init_crawlers(self) -> None:
@@ -227,7 +227,7 @@ class ScrapeMapper:
 
         stats, get_items = _parse_source(src, self.manager)
         async with contextlib.aclosing(get_items) as items:
-            self.create_download_task(self._wait_until_scrape_is_done(stats))
+            self.create_eager_task(self._wait_until_scrape_is_done(stats))
             max_children = _build_max_children_map(self.manager.config)
 
             async for item in items:
