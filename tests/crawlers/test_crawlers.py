@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-import importlib.util
 import re
+import runpy
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
@@ -54,31 +54,32 @@ class CrawlerTestCase:
         return f"{self.domain} - {self.url}"
 
 
+type TestData = dict[str, list[dict[str, Any]]]
+
 _TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
-_TEST_DATA: dict[str, list[dict[str, Any]]] = {}
+_TEST_DATA: TestData = {}
 
 
-def _load_test_cases(path: Path) -> None:
-    module_spec = importlib.util.spec_from_file_location(path.stem, path)
-    assert module_spec
-    assert module_spec.loader
-    module = importlib.util.module_from_spec(module_spec)
-    module_spec.loader.exec_module(module)
-    if module.DOMAIN in _TEST_DATA:
-        raise RuntimeError(f"Multiple tests files for {module.DOMAIN}")
-    _TEST_DATA[module.DOMAIN] = module.TEST_CASES
+def _load_test_cases(path: Path, test_data: TestData) -> None:
+    module_globals = runpy.run_path(str(path), run_name=path.stem)
+    if (domain := module_globals["DOMAIN"]) in test_data:
+        raise RuntimeError(f"Multiple tests files for {domain}")
+
+    test_data[domain] = module_globals["TEST_CASES"]
 
 
-def _load_test_data() -> None:
-    if _TEST_DATA:
-        return
+def _load_test_data() -> TestData:
+    test_data: TestData = {}
     for file in (Path(__file__).parent / "test_cases").iterdir():
         if not file.name.startswith("_") and file.suffix == ".py":
-            _load_test_cases(file)
+            _load_test_cases(file, test_data)
+
+    return test_data
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    _load_test_data()
+    if not _TEST_DATA:
+        _TEST_DATA.update(_load_test_data())
     if "test_case" in metafunc.fixturenames:
         valid_domains = set(_TEST_DATA)
         domains_to_tests: list[str] = getattr(metafunc.config, "test_crawlers_domains", [])
@@ -263,3 +264,15 @@ def test_public_methods_have_error_handling_wrapper() -> None:
         exc = BaseExceptionGroup("Some crawler has unsafe public methods that could crash CDL", errors)
         exc.add_note("Wrap them with @error_handling_wrapper or make them private")
         raise exc
+
+
+def test_load_test_data() -> None:
+    test_data = _load_test_data()
+    assert len(test_data) > 20
+    assert "dropbox" in test_data
+    assert type(test_data["dropbox"]) is list
+    assert len(test_data["dropbox"]) == 4
+
+    for case in test_data["dropbox"]:
+        assert type(case) is dict
+        assert "url" in case
