@@ -57,7 +57,7 @@ class NaughtyMachinimaCrawler(Crawler):
 
         async for soup in pages:
             for photo in filter(should_download, _extract_photos(soup)):
-                self.create_task(self.direct_file(scrape_item, photo))
+                self.create_eager_task(self.direct_file(scrape_item, photo))
                 scrape_item.add_children()
 
 
