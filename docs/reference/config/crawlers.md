@@ -147,7 +147,7 @@ Scan the description (text) in a post and download any URL found
 
 {% hint style="warning" %}
 This option slows down scraping significally. The default response from a search query does not return the content of each post.
-`cyberdrop-dl` needs to make an additional request for each post to get its content (50x more requests in total).
+`cyberdrop-dl` needs to make an additional request for each post to get its content (50x requests in total).
 {% endhint %}
 
 ## `embed`
