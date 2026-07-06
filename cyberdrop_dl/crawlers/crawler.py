@@ -569,7 +569,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return downloaded
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
-        self.create_eager_task(self._download(media_item, m3u8, skip=await self.__should_skip(media_item)))
+        self.scrape_mapper.create_download_task(
+            self._download(media_item, m3u8, skip=await self.__should_skip(media_item))
+        )
 
     async def __should_skip(self, media_item: MediaItem) -> bool:
         if await self.check_complete(media_item.url, media_item.referer):

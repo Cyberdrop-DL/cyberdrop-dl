@@ -231,7 +231,7 @@ class GoFileCrawler(Crawler):
                 self._api_key = await self._create_temp_account()
             self.update_cookies({"accountToken": self._api_key})
 
-    @disk_cached_method(key="account_token", ttl=86400 * 60)
+    @disk_cached_method(key="account_token", ttl=86400)
     async def _create_temp_account(self) -> str:
         self.log.info("Creating temp account")
         api_url = _API_ENTRYPOINT / "accounts"
