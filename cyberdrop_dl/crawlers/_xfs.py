@@ -58,9 +58,19 @@ class XVideoSharingCrawler(XFSCrawler, is_abc=True):
         m3u8_url = await self.request_stream(video_id, referer)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         filename = self.create_custom_filename(
-            video_id, ext := ".mp4", resolution=info.resolution, video_codec=info.codecs.video
+            video_id,
+            ext := ".mp4",
+            resolution=info.resolution,
+            video_codec=info.codecs.video,
         )
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, m3u8=m3u8, referer=referer)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            filename,
+            ext,
+            m3u8=m3u8,
+            referer=referer,
+        )
 
     async def request_stream(self, video_id: str, referer: AbsoluteHttpURL | None = None) -> AbsoluteHttpURL:
         if self.NEEDS_REFERER and not referer:
@@ -68,7 +78,7 @@ class XVideoSharingCrawler(XFSCrawler, is_abc=True):
 
         return await self._stream_from_embed(video_id, referer or self.PRIMARY_URL)
 
-    async def _stream_from_embed(self, video_id: str, referer: AbsoluteHttpURL):
+    async def _stream_from_embed(self, video_id: str, referer: AbsoluteHttpURL) -> AbsoluteHttpURL:
         iframe_url = self.PRIMARY_URL / f"embed-{video_id}.html"
         html = await self.request_text(iframe_url, headers={"Referer": str(referer)})
 
