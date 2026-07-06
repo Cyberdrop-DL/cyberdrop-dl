@@ -127,7 +127,7 @@ class Image:
 
     @classmethod
     def parse(cls, img: dict[str, Any]) -> Self:
-        return deserialize(cls, img, src=parse_url(img["original_url"], trim=False))
+        return deserialize(cls, img, src=parse_url(img["original_url"]))
 
 
 @dataclasses.dataclass(slots=True)
