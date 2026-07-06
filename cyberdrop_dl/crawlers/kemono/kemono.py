@@ -145,7 +145,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     def _extract_post_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         for url in unique(self.__prepare_files(post)):
-            self.create_task(self._direct_file(scrape_item, url))
+            self.create_eager_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
         if self.__kemono_config__.embed and post.embed:
