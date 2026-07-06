@@ -16,6 +16,7 @@ class ABStreamCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
             "/e/<video_id>",
+            "/d/<video_id>",
             "/embed/<video_id>",
             "/embed-<video_id>.html",
         )
@@ -37,7 +38,7 @@ class ABStreamCrawler(Crawler):
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         match url.parts[1:]:
-            case ["e", video_id]:
+            case ["e" | "d", video_id]:
                 return url.origin() / "embed" / video_id
             case [slug] if video_id := _video_id(slug):
                 return url.origin() / "embed" / video_id
