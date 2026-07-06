@@ -201,7 +201,7 @@ class XhamsterCrawler(Crawler):
         stem = f"{str(img['index']).zfill(3)} - {src.name.removesuffix(ext)}"
         filename = self.create_custom_filename(stem, ext, file_id=img["id"])
         new_scrape_item = scrape_item.create_child(page_url)
-        self.create_task(self.handle_file(src, new_scrape_item, src.name, ext, custom_filename=filename))
+        self.create_eager_task(self.handle_file(src, new_scrape_item, src.name, ext, custom_filename=filename))
         scrape_item.add_children()
 
     @error_handling_wrapper

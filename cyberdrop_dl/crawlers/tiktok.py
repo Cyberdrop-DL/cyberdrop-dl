@@ -145,7 +145,7 @@ class TikTokCrawler(Crawler):
             for post in posts:
                 new_scrape_item = scrape_item.create_child(post.canonical_url)
                 if not post.images and self.download_src_quality_videos:
-                    self.create_task(self.src_quality_media_task(new_scrape_item, post.id, post))
+                    self.create_eager_task(self.src_quality_media_task(new_scrape_item, post.id, post))
                 else:
                     self._handle_post(new_scrape_item, post)
                 scrape_item.add_children()
@@ -204,7 +204,7 @@ class TikTokCrawler(Crawler):
             link = self.parse_url(url, trim=False)
             img_url = post.canonical_url / str(index)
             filename = self.create_custom_filename(f"{post.id}_img{str(index).zfill(3)}", link.suffix)
-            self.create_task(
+            self.create_eager_task(
                 self.handle_file(
                     img_url,
                     scrape_item,
@@ -219,7 +219,7 @@ class TikTokCrawler(Crawler):
         audio, ext = post.music_info, ".mp3"
         audio_url = self.parse_url(audio.play, trim=False)
         filename = self.create_custom_filename(audio.title, ext, file_id=audio.id)
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 audio.canonical_url,
                 scrape_item,
@@ -238,7 +238,7 @@ class TikTokCrawler(Crawler):
         video_url = self.parse_url(post.play, trim=False)
         ext = ".mp4"
         custom_filename = f"{post.id}{'_original'}{ext}" if post.is_src_quality else None
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 scrape_item.url,
                 scrape_item,

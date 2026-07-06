@@ -340,7 +340,15 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     def create_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+        """Use for coros that need to make HTTP requests
+
+        They will skip 1 loop iteration"""
         _ = self.scrape_mapper.create_task(coro)
+
+    @final
+    def create_eager_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+        """Only use for coros that DO NOT make any HTTP requests"""
+        _ = self.scrape_mapper.create_eager_task(coro)
 
     @abstractmethod
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -562,11 +570,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
         self.scrape_mapper.create_download_task(
-            self._download(
-                media_item,
-                m3u8,
-                skip=await self.__should_skip(media_item),
-            )
+            self._download(media_item, m3u8, skip=await self.__should_skip(media_item))
         )
 
     async def __should_skip(self, media_item: MediaItem) -> bool:
@@ -881,7 +885,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
             sub_name, ext = self.get_filename_and_ext(f"{video_stem}.{suffix}")
             new_scrape_item = scrape_item.create_new(scrape_item.url.with_fragment(sub_name))
-            self.create_task(
+            self.create_eager_task(
                 self.handle_file(
                     link,
                     new_scrape_item,

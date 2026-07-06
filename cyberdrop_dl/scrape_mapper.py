@@ -145,6 +145,9 @@ class ScrapeMapper:
 
         _ = self._task_groups.scrape.create_task(lazy())
 
+    def create_eager_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
+        _ = self._task_groups.scrape.create_task(coro)
+
     def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
 

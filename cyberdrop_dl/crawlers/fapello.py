@@ -56,5 +56,5 @@ class FapelloComCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(model))
         soup = await self.request_soup(scrape_item.url)
         for link in self.iter_urls(soup, Selector.IMAGE_OR_VIDEO, "src"):
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()

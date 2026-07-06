@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Remove hardcoded limit of 1 concurrent download per server (Bunkr)
+- Do not dedupe files that were not downloaded in the current session
 
 ## [10.0.2] - 2026-07-05
 

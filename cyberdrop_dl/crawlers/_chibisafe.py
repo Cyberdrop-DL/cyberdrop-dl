@@ -86,7 +86,7 @@ class ChibiSafeCrawler(Crawler, is_abc=True):
             scrape_item.upload_date = file.createdAt
         name = file.original or file.name
         filename, ext = self.get_filename_and_ext(name)
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 scrape_item.url,
                 scrape_item,

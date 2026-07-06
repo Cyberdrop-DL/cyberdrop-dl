@@ -5,7 +5,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:https://pixeldrain.com/api/file/",
-                "debrid_link": None,
+                "debrid_url": None,
                 "referer": "re:https://pixeldrain.com/u",
                 "album_id": str,
                 "uploaded_at": int,

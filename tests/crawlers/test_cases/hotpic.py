@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/6-0-4436.mp4",
                 "filename": "6-0-4436.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6-0-4436.mp4",
                 "referer": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/6-0-4436.mp4",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/0-2026_05_23_23.54.04.jpg",
                 "filename": "0-2026_05_23_23.54.04.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "0-2026_05_23_23.54.04.jpg",
                 "referer": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/0-2026_05_23_23.54.04.jpg",
                 "album_id": None,
@@ -38,7 +38,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/0-2026_05_23_23.54.04.jpg",
                 "filename": "0-2026_05_23_23.54.04.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "0-2026_05_23_23.54.04.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP0",
                 "album_id": "oeNlKhNfXWdF7",
@@ -48,7 +48,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/5-2026_05_23_23.53.57.jpg",
                 "filename": "5-2026_05_23_23.53.57.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "5-2026_05_23_23.53.57.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP5",
                 "album_id": "oeNlKhNfXWdF7",
@@ -58,7 +58,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/1-2026_05_23_23.55.47.jpg",
                 "filename": "1-2026_05_23_23.55.47.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1-2026_05_23_23.55.47.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP1",
                 "album_id": "oeNlKhNfXWdF7",
@@ -68,7 +68,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/7-vid_20260523_105837_543.mp4",
                 "filename": "7-vid_20260523_105837_543.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "7-vid_20260523_105837_543.mp4",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP7",
                 "album_id": "oeNlKhNfXWdF7",
@@ -78,7 +78,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/2-2026_05_23_23.54.48.jpg",
                 "filename": "2-2026_05_23_23.54.48.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "2-2026_05_23_23.54.48.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP2",
                 "album_id": "oeNlKhNfXWdF7",
@@ -88,7 +88,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/3-2026_05_23_23.54.21.jpg",
                 "filename": "3-2026_05_23_23.54.21.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "3-2026_05_23_23.54.21.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP3",
                 "album_id": "oeNlKhNfXWdF7",
@@ -98,7 +98,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/4-2026_05_23_23.54.04.jpg",
                 "filename": "4-2026_05_23_23.54.04.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "4-2026_05_23_23.54.04.jpg",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP4",
                 "album_id": "oeNlKhNfXWdF7",
@@ -108,7 +108,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.myhostdata.space/uploads/2026/05/23/db0c4302bc4c1466201221f27eb5dc6c/6-0-4436.mp4",
                 "filename": "6-0-4436.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6-0-4436.mp4",
                 "referer": "https://hotpic.cc/i/oeNlKhNfXWdF7HP6",
                 "album_id": "oeNlKhNfXWdF7",

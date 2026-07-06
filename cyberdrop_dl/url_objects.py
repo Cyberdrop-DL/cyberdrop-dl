@@ -220,6 +220,7 @@ class ScrapeItem:
     parent_threads: set[AbsoluteHttpURL] = dataclasses.field(default_factory=set)
     max_children: Mapping[ScrapeItemType, int] | None = None
     password: str | None = None
+    referer: AbsoluteHttpURL | None = None
 
     _children_count: int = 0
     _children_limit: int = 0
@@ -233,7 +234,16 @@ class ScrapeItem:
     def from_url(cls, url: yarl.URL | str) -> Self:
         url = AbsoluteHttpURL(url)
         assert is_absolute_http_url(url)
-        return cls(url=url, password=url.query.get("password"))
+        get = url.query.get
+        try:
+            referer = _url_from_query(get("referer"))
+        except ValueError:
+            logger.exception(
+                "Unable to parse query 'referer' value (%s) from url %s , ignoring...", get("referer"), url
+            )
+            referer = None
+
+        return cls(url=url, password=get("password"), referer=referer)
 
     @property
     def uploaded_at(self) -> int | None:
@@ -396,3 +406,11 @@ def _extract_last_domain(folders: Sequence[str]) -> str | None:
                 pass
 
     return None
+
+
+def _url_from_query(query_url: str | None) -> AbsoluteHttpURL | None:
+    if query_url:
+        url = AbsoluteHttpURL(query_url)
+        if not is_absolute_http_url(url):
+            raise ValueError("URL needs to be a valid HTTP URL")
+        return url
