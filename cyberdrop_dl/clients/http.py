@@ -174,16 +174,6 @@ class HTTPClient:
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    async def check_http_status(self, response: AbstractResponse[Any]) -> None:
-        if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
-            # Check DDosGuard even on successful pages
-            await ddos_guard.check_resp(response)
-            return
-
-        await _check_json(response)
-        await ddos_guard.check_resp(response)
-        raise DownloadError(response.status)
-
     @contextlib.asynccontextmanager
     async def request(  # noqa: PLR0913
         self: object,
@@ -211,7 +201,7 @@ class HTTPClient:
             request_params=request_params,
         ) as resp:
             try:
-                await self.check_http_status(resp)
+                await check_http_status(resp)
             except DDOSGuardError:
                 await resp.aclose()
                 if not self.flaresolverr:
@@ -361,3 +351,14 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         timeout=config.network.curl_timeout,
         max_redirects=8,
     )
+
+
+async def check_http_status(response: AbstractResponse[Any]) -> None:
+    if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
+        # Check DDosGuard even on successful pages
+        await ddos_guard.check_resp(response)
+        return
+
+    await _check_json(response)
+    await ddos_guard.check_resp(response)
+    raise DownloadError(response.status)

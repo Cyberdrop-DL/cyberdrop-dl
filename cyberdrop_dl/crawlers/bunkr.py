@@ -58,7 +58,6 @@ class BunkrCrawler(Crawler):
         "bunkrr.su",
     )
     _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
-    _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
     _known_good_host: ClassVar[str | None] = None
 
     @staticmethod

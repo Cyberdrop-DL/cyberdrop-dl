@@ -161,7 +161,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
                 continue
 
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self.direct_file(new_scrape_item, src_url))
+            self.create_eager_task(self.direct_file(new_scrape_item, src_url))
             scrape_item.add_children()
 
     async def _unlock_pw_protected_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:

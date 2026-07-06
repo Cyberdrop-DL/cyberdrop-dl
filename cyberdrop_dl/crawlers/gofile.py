@@ -176,8 +176,11 @@ class GoFileCrawler(Crawler):
         if not _check_node_is_accessible(node):
             return
 
-        coro = self.run(scrape_item) if node["type"] == "folder" else self._file(scrape_item, node)
-        self.create_task(coro)
+        if node["type"] == "folder":
+            self.create_task(self.run(scrape_item))
+            return
+
+        self.create_eager_task(self._file(scrape_item, node))
 
     async def _folder_pager(self, content_id: str, password: str | None = None) -> AsyncGenerator[Folder]:
         api_url = (_API_ENTRYPOINT / "contents" / content_id).with_query(
@@ -228,7 +231,7 @@ class GoFileCrawler(Crawler):
                 self._api_key = await self._create_temp_account()
             self.update_cookies({"accountToken": self._api_key})
 
-    @disk_cached_method(key="account_token", ttl=86400 * 60)
+    @disk_cached_method(key="account_token", ttl=86400)
     async def _create_temp_account(self) -> str:
         self.log.info("Creating temp account")
         api_url = _API_ENTRYPOINT / "accounts"
