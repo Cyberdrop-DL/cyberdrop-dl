@@ -21,5 +21,5 @@ class YourLesbiansCrawler(KernelVideoSharingCrawler):
         title = self.create_title(f"{name} [album]", album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         for img in self.iter_urls(soup, ".album-inner a.album-img"):
-            await self.direct_file(scrape_item, img)
+            self.create_eager_task(self.direct_file(scrape_item, img))
             scrape_item.add_children()
