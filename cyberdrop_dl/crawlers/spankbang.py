@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -19,16 +19,20 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     STREAM_DATA = ".main-container script:-soup-contains('var stream_data')"
     PLAYLIST_TITLE = "[data-testid=playlist-title]"
     NEXT_PAGE = ".pagination li.next > a[href]"
 
     VIDEO_REMOVED = "#video_removed, .video_removed"
+    _playlist, _video = ".js-video-item > a[href*='/playlist/']", ".js-video-item > a[href*='/video/']"
     VIDEOS = ", ".join(
         (
-            ".video-list > .video-item > a[href]",
-            "[data-testid=search-result] [data-testid=video-item] > a[href]",
+            "#search_v2 " + _playlist,
+            "#search_v2 " + _video,
+            "#search_page " + _playlist,
+            "#search_page " + _video,
         )
     )
 

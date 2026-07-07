@@ -11,6 +11,7 @@ from cyberdrop_dl.cache import (
     _IN_MEMORY_CACHE,
     TTLCacheAdapter,
     _DiskCachedMethod,
+    _normalize_key,
     cache_context,
     cached_fn,
     disk_cached_method,
@@ -214,3 +215,56 @@ async def test_ttl_cache_method() -> None:
     assert await inst.compute() == 2
     await asyncio.sleep(0.2 + 0.1)
     assert await inst.compute() == 3
+
+
+@pytest.mark.parametrize(
+    ("key", "expected_parent_keys", "expected_key"),
+    [
+        ("key", [], "key"),
+        ("parent.inner", ["parent"], "inner"),
+        ("a.b.c", ["a", "b"], "c"),
+    ],
+)
+def test_normalize_key(key: tuple[str, ...], expected_parent_keys: list[str,], expected_key: str) -> None:
+    parents, real_key = _normalize_key(key)
+    assert parents == expected_parent_keys
+    assert real_key == expected_key
+
+
+def test_ttl_child() -> None:
+    cache = {}
+    ttl_cache = TTLCacheAdapter(cache, ("a", "b"))
+    ttl_cache["c"] = 1
+
+    assert cache == {
+        "a": {
+            "b": {
+                "c": {
+                    "value": 1,
+                    "ttl": None,
+                    "created_at": mock.ANY,
+                }
+            }
+        }
+    }
+    assert ttl_cache.create_child() is ttl_cache
+    inner = ttl_cache.create_child("d")
+    inner["f"] = 2
+    assert cache == {
+        "a": {
+            "b": {
+                "c": {
+                    "value": 1,
+                    "ttl": None,
+                    "created_at": mock.ANY,
+                },
+                "d": {
+                    "f": {
+                        "value": 2,
+                        "ttl": None,
+                        "created_at": mock.ANY,
+                    }
+                },
+            }
+        }
+    }

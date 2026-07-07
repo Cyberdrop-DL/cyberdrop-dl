@@ -77,7 +77,7 @@ class NHentaiCrawler(Crawler):
         padding = max(3, len(str(json_resp["num_pages"])))
         for index, link in _gen_image_urls(json_resp):
             filename = self.create_custom_filename(str(index).zfill(padding), link.suffix)
-            self.create_task(self.handle_file(link, scrape_item, link.name, custom_filename=filename))
+            self.create_eager_task(self.handle_file(link, scrape_item, link.name, custom_filename=filename))
             scrape_item.add_children()
 
 

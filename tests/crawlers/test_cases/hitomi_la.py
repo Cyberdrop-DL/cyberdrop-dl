@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://hitomi.la/reader/3953685.html#1",
                 "filename": "01.webp",
-                "debrid_link": "NOT_NONE",
+                "debrid_url": "NOT_NONE",
                 "original_filename": "01.webp",
                 "referer": "https://hitomi.la/reader/3953685.html#1",
                 "album_id": "3953685",
@@ -183,7 +183,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "ANY",
-                "debrid_link": "NOT_NONE",
+                "debrid_url": "NOT_NONE",
                 "album_id": "NOT_NONE",
                 "uploaded_at": int,
                 "download_folder": "re:tamabi [artist][all] (Hitomi.la)/",

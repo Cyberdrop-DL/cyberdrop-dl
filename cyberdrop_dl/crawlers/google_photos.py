@@ -75,7 +75,7 @@ class GooglePhotosCrawler(Crawler):
 
             web_url = self.PRIMARY_URL / type_ / album_id / "photo" / image.display_id
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._image(new_scrape_item, image, idx))
+            self.create_eager_task(self._image(new_scrape_item, image, idx))
             scrape_item.add_children()
             if photo_id:
                 break

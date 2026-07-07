@@ -112,7 +112,7 @@ class MediaFireCrawler(Crawler, db_path="name"):
                 for file in map(File.from_dict, files):
                     url = self.PRIMARY_URL / "file" / file.quickkey
                     new_scrape_item = scrape_item.create_child(url)
-                    self.create_task(self._file_task(new_scrape_item, file))
+                    self.create_eager_task(self._file_task(new_scrape_item, file))
                     scrape_item.add_children()
 
         if folder.has_folders:

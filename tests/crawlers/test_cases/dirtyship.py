@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn11.dirtyship.net/Roseasmrearlickis.mp4",
                 "filename": "Rose ASMR Intimate Ear licks And Kisses Patreon Video Leaked.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "Roseasmrearlickis.mp4",
                 "referer": "https://dirtyship.com/rose-asmr-intimate-ear-licks-and-kisses-patreon-video-leaked",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn6.dirtyship.net/cdndirtyship/aftynroselingerietryonhaulv.mp4",
                 "filename": "AftynRose Cuddly & Naughty Lingerie Try On Haul ASMR Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "aftynroselingerietryonhaulv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-cuddly-naughty-lingerie-try-on-haul-asmr-video",
                 "album_id": None,
@@ -38,7 +38,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn10.dirtyship.net/dirtyship/cdn2/aftynroseasmrrelaxtonighv.mp4",
                 "filename": "AftynRose ASMR Relax in My Lap Tonight Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "aftynroseasmrrelaxtonighv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-relax-in-my-lap-tonight-video",
                 "album_id": None,
@@ -48,7 +48,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn7.dirtyship.net/cdn2/aftyrosesexynightv.mp4",
                 "filename": "AftynRose ASMR Sleepy Sexy Night With Me Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "aftyrosesexynightv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-sleepy-sexy-night-with-me-video-1",
                 "album_id": None,
@@ -58,7 +58,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn7.dirtyship.net/cdn2/AftynRoseUndressingv.mp4",
                 "filename": "AftynRose ASMR Slowly Undressing For Bed Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "AftynRoseUndressingv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-slowly-undressing-for-bed-video-a",
                 "album_id": None,
@@ -68,7 +68,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn7.dirtyship.net/cdn2/aftynrosewetshirtv.mp4",
                 "filename": "AftynRose ASMR Wet T-Shirt Cheeky Spray Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "aftynrosewetshirtv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-wet-t-shirt-cheeky-spray-video-1",
                 "album_id": None,
@@ -78,7 +78,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn6.dirtyship.net/cdndirtyship/aftynrosefunwithtonguev.mp4",
                 "filename": "AftynRose ASMR Fun With The Tongue Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "aftynrosefunwithtonguev.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-fun-with-the-tongue-video",
                 "album_id": None,
@@ -88,7 +88,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn7.dirtyship.net/cdn2/Aftynroseballsv.mp4",
                 "filename": "AftynRose ASMR Bulmas Quest For More Balls Video [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "Aftynroseballsv.mp4",
                 "referer": "https://dirtyship.com/aftynrose-asmr-bulmas-quest-for-more-balls-video-1",
                 "album_id": None,

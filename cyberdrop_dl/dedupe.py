@@ -53,15 +53,17 @@ class Czkawka:
     async def _dedupe(self, file_hashes: FileHashes) -> None:
         async with asyncio.TaskGroup() as tg:
 
-            async def delete_dupes(hash_value: str, size: int) -> None:
+            async def delete_dupes(hash_value: str, size: int, paths: set[Path]) -> None:
                 db_matches = await self.database.hash.get_files_with_hash_matches(hash_value, size, "xxh128")
                 for file in _filter_db_matches(db_matches, self.base_dir):
+                    if file not in paths:
+                        continue
                     await self._sem.acquire()
                     tg.create_task(self._delete_and_log(file, hash_value))
 
             for hash_value, sizes in file_hashes.items():
-                for size in sizes:
-                    tg.create_task(delete_dupes(hash_value, size))
+                for size, paths in sizes.items():
+                    tg.create_task(delete_dupes(hash_value, size, paths))
 
     async def _delete_and_log(self, file: Path, xxh128_value: str) -> None:
         hash_string = f"xxh128:{xxh128_value}"

@@ -9,7 +9,7 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files \\(Ranoz.gg\\)",
                 "referer": "https://ranoz.gg/file/SSWIWRsb",
                 "uploaded_at": None,
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
             }
         ],
     }
