@@ -154,7 +154,13 @@ class PlutoAPI(API):
 
     async def media(self, media_id: str) -> dict[str, Any]:
         boot = await self.boot(seriesIDs=media_id)
-        media = next(v for v in boot.get("VOD", []) if v["id"] == media_id)
+        try:
+            media = next(v for v in boot.get("VOD", ()) if v["id"] == media_id)
+        except StopIteration:
+            boot = await self.boot(seriesIDs=media_id, drmCapabilities="widevine:L1")
+            has_drm = next((v for v in boot.get("VOD", ()) if v["id"] == media_id), None) is not None
+            raise ScrapeError("DRM protected" if has_drm else 404) from None
+
         _STITCHER.set(
             Stitcher(
                 server=self.parse_url(boot["servers"]["stitcher"]),
