@@ -19,9 +19,14 @@ if TYPE_CHECKING:
 
 class PlutoCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Gallery": "/gallery/<gallery_id>",
-        "Image": "/show/<image_id>",
-        "Thumbnail": "/thumbs/..",
+        "Series": (
+            "/on-demand/<series_id>",
+            "/<region>/on-demand/<series_id>",
+        ),
+        "Episode": (
+            ".../no-demand/<series_id>/episode/<episode_id>",
+            ".../no-demand/<series_id>/season/<season>/episode/<episode_id>",
+        ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv")
     DOMAIN: ClassVar[str] = "pluto.tv"
