@@ -45,15 +45,18 @@ class PlutoCrawler(Crawler):
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem, series_id: str) -> None:
         series = await self._series(scrape_item, series_id)
+        downloaded = await self.get_album_results(series.id)
         for ep in series.episodes():
             url = scrape_item.url / "episode" / ep.id
+            if self.check_album_results(url, downloaded):
+                continue
             new_item = scrape_item.create_child(url)
             self.create_task(self._episode(new_item, ep))
             scrape_item.add_children()
 
     async def _series(self, scrape_item: ScrapeItem, series_id: str) -> Series:
         series = await self.api.series(series_id)
-        scrape_item.setup_as_album(self.create_title(series.name, series.id))
+        scrape_item.setup_as_album(self.create_title(series.name, series.id), album_id=series.id)
         self.create_eager_task(self.write_metadata(scrape_item, series.id, series))
         return series
 
