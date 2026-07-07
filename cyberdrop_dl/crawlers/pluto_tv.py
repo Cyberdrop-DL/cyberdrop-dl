@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import uuid
-from typing import TYPE_CHECKING, Any, ClassVar, Self, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
@@ -46,6 +46,7 @@ class PlutoCrawler(Crawler):
     async def series(self, scrape_item: ScrapeItem, series_id: str, episode_id: str | None = None) -> None:
         boot, series = await self.api.series(series_id)
         scrape_item.setup_as_album(self.create_title(series.name, series.id))
+        self.create_eager_task(self.write_metadata(scrape_item, series.id, series))
         if episode_id:
             try:
                 episode = next(e for e in series.episodes() if e.id == episode_id)
@@ -68,15 +69,35 @@ class PlutoCrawler(Crawler):
         m3u8_url = _build_stream_url(boot, ep.stitched)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         filename = self.create_custom_filename(
-            ep.name,
+            ep_name(ep.season, ep.number, ep.name),
             ext := ".mp4",
             file_id=ep.id,
             resolution=info.resolution,
-            video_codec=info.codecs.video,
+            video_codec=info.codecs.video or "avc1",
             audio_codec=info.codecs.audio,
             fps=info.stream_info.frame_rate,
         )
-        await self.handle_file(scrape_item.url, scrape_item, ep.name, ext, m3u8=m3u8, custom_filename=filename)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            ep.name,
+            ext,
+            m3u8=m3u8,
+            custom_filename=filename,
+            metadata=ep,
+        )
+
+
+def ep_name(season: int | None, ep: int | None, name: str | None = None) -> str:
+    title = ""
+    if season is not None:
+        title += f"S{season:02}"
+    if ep is not None:
+        title += f"E{ep:03}"
+    if name:
+        title = f"{title} - {name}" if title else name
+    assert title
+    return title
 
 
 class PlutoAPI(API):
@@ -123,7 +144,7 @@ class PlutoAPI(API):
 
 def _build_stream_url(boot: Stitcher, path: str) -> AbsoluteHttpURL:
     return (
-        (boot.server / "v2" / path)
+        (boot.server / f"v2{path}")
         .update_query(boot.params)
         .update_query(
             jwt=boot.token,
@@ -153,7 +174,7 @@ class Season(TypedDict):
     episodes: list[dict[str, Any]]
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, order=True)
 class Media:
     id: str
     name: str
@@ -165,12 +186,10 @@ class Media:
 
 @dataclasses.dataclass(slots=True)
 class Episode(Media):
+    season: int
+    number: int
     duration: int
     stitched: str
-
-    @classmethod
-    def parse(cls, data: dict[str, Any]) -> Self:
-        return deserialize(cls, data, id=data.get("id") or data["_id"], stitched=data["stitched"]["path"])
 
 
 @dataclasses.dataclass(slots=True)
@@ -180,4 +199,9 @@ class Series(Media):
     def episodes(self) -> Generator[Episode]:
         for season in self.seasons:
             for ep in season["episodes"]:
-                yield Episode.parse(ep)
+                yield deserialize(
+                    Episode,
+                    ep,
+                    id=ep.get("id") or ep["_id"],
+                    stitched=ep["stitched"]["path"],
+                )
