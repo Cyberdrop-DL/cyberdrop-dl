@@ -72,7 +72,7 @@ class CaraCrawler(Crawler):
         for image in post.images:
             if image.order < 0:
                 continue
-            self.create_task(self._image(scrape_item, image))
+            self.create_eager_task(self._image(scrape_item, image))
             scrape_item.add_children()
 
     async def _image(self, scrape_item: ScrapeItem, image: Image) -> None:
