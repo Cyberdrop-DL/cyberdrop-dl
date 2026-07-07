@@ -5,14 +5,15 @@ import codecs
 import dataclasses
 import itertools
 import json
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, extr_text, parse_url, xor_decrypt
+from cyberdrop_dl.utils import extr_text, parse_url, xor_decrypt
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -200,12 +201,12 @@ class XhamsterCrawler(Crawler):
         stem = f"{str(img['index']).zfill(3)} - {src.name.removesuffix(ext)}"
         filename = self.create_custom_filename(stem, ext, file_id=img["id"])
         new_scrape_item = scrape_item.create_child(page_url)
-        self.create_task(self.handle_file(src, new_scrape_item, src.name, ext, custom_filename=filename))
+        self.create_eager_task(self.handle_file(src, new_scrape_item, src.name, ext, custom_filename=filename))
         scrape_item.add_children()
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         initials = await self._get_window_initials(scrape_item.url)

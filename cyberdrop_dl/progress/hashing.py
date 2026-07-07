@@ -32,7 +32,7 @@ class HashingStats:
 
     @property
     def computed_hashes(self) -> int:
-        return sum((self.xxh128, self.md5, self.sha256))
+        return self.xxh128 + self.md5 + self.sha256
 
 
 @final
@@ -84,12 +84,8 @@ class HashingUI(LiveUI):
         self._panel.subtitle = f"Files:  [white]{current_total:,}[/white], New Computed Hashes: [white]{self._stats.computed_hashes:,}[/white]"
         return self._panel
 
-    def new_file(self, file: Path):
-        task_id = self._files.add_task(
-            "[blue]" + escape(str(file.relative_to(self._base_dir))),
-            total=None,
-        )
-
+    def new_file(self, file: Path) -> ProgressHook:
+        task_id = self._files.add_task("[blue]" + escape(str(file.relative_to(self._base_dir))), total=None)
         return ProgressHook(lambda _: None, lambda: 0, lambda: self._files.remove_task(task_id))
 
     def add_completed(self, hash_type: Literal["xxh128", "md5", "sha256"]) -> None:

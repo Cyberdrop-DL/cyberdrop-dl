@@ -12,7 +12,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPa
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, m3u8, open_graph, parse_url
+from cyberdrop_dl.utils import m3u8, open_graph, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -124,7 +125,7 @@ class VoeSxCrawler(Crawler):
             msg = f"Unable to extract high resolution MP4 formats for {scrape_item.url}. Falling back to HLS"
             self.log.warning(msg)
 
-            m3u8 = await self.get_m3u8_from_index_url(video.hls_url, headers=_HEADERS)
+            m3u8, _ = await self.request_m3u8(video.hls_url, headers=_HEADERS)
 
         VoeSxCrawler._handle_video(self, scrape_item, video, m3u8)
 

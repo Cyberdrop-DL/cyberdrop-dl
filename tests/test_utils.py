@@ -7,7 +7,9 @@ from typing import Any
 import pytest
 
 from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
-from cyberdrop_dl.utils.filepath import get_filename_and_ext
+from cyberdrop_dl.filepath import get_filename_and_ext
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils._url import fix_multi_slashes, parse_http_url
 
 
 class TestGetFilenameAndExt:
@@ -92,3 +94,57 @@ class TestGetFilenameAndExt:
     def test_no_extension_should_raise_no_ext_error(self) -> None:
         with pytest.raises(NoExtensionError):
             get_filename_and_ext("README")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http:/s",
+        "https://google",
+        "/path/to/file",
+        "file",
+        "/example.com/file",
+    ],
+)
+def test_parsing_invalid_url(url: str) -> None:
+    with pytest.raises(ValueError, match="URL"):
+        parse_http_url(url)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("http:////google.com", "http://google.com"),
+        ("https://////google.com", "https://google.com"),
+        ("http:/google.com", "http:/google.com"),
+        ("//google.com", "//google.com"),
+        ("/google.com", "/google.com"),
+        ("https://example.com////bar", "https://example.com////bar"),
+    ],
+)
+def test_fix_multi_slashes(url: str, expected: str) -> None:
+    assert fix_multi_slashes(url) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "origin", "trim", "expected"),
+    [
+        ("http://localhost", None, False, "http://localhost/"),
+        ("https://////example.com/file//a//b/", None, False, "https://example.com/file//a//b/"),
+        ("https://////example.com/file//a//b/", None, True, "https://example.com/file//a//b"),
+        ("https://////example.com/file/", None, True, "https://example.com/file"),
+        ("https://example.com/file/video.mp4?a=1+b=2", None, True, "https://example.com/file/video.mp4?a=1 b%3D2"),
+        (
+            "https://example.com/video/file/%E6%92%AE%E5%BD%B1%E4%BC%9A",
+            None,
+            False,
+            "https://example.com/video/file/撮影会",
+        ),
+        ("//example.com/file", "https://example.net", False, "https://example.com/file"),
+        ("example.com/file", "https://example.net", False, "https://example.net/example.com/file"),
+        ("/example.com/file", "https://example.net", False, "https://example.net/example.com/file"),
+    ],
+)
+def test_parse_http(url: str, origin: str | None, expected: str, *, trim: bool) -> None:
+    result = parse_http_url(url, AbsoluteHttpURL(origin) if origin else None, trim=trim)
+    assert result.human_repr() == expected

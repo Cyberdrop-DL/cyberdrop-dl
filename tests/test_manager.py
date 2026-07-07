@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -15,10 +15,10 @@ from cyberdrop_dl.sorter import Sorter
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
-    _M = TypeVar("_M", bound=BaseModel)
+    from cyberdrop_dl.config.appdata import AppData
 
 
-def update_model(model: _M, **kwargs: Any) -> _M:
+def update_model[M: BaseModel](model: M, **kwargs: Any) -> M:
     return model.model_validate(model.model_dump() | kwargs)
 
 
@@ -32,8 +32,8 @@ def update_model(model: _M, **kwargs: Any) -> _M:
 def test_args_logging_should_censor_webhook(
     running_manager: Manager, logs: pytest.LogCaptureFixture, webhook: str, output: str
 ) -> None:
-    logs_model = running_manager.config.settings.logs
-    running_manager.config.settings.logs = update_model(logs_model, webhook=webhook)
+    logs_model = running_manager.config.notifications
+    running_manager.config.notifications = update_model(logs_model, webhook=webhook)
     running_manager.log_config_settings()
     assert logs.messages
     assert "Running cyberdrop-dl " in logs.text
@@ -44,9 +44,9 @@ def test_args_logging_should_censor_webhook(
     assert output == webhook_url
 
 
-def test_manager_context() -> None:
+def test_manager_context(appdata: AppData) -> None:
     config = Config.parse_args(["--refresh-rate", "40"])
-    manager = Manager(config=config)
+    manager = Manager(config=config, appdata=appdata)
 
     for attr in ("database", "deduper", "sorter"):
         with pytest.raises(AttributeError):

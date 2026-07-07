@@ -6,7 +6,7 @@ from asyncio import subprocess
 from typing import TYPE_CHECKING
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Registry
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.logs import setup_console_logging
 
 if TYPE_CHECKING:
@@ -48,9 +48,7 @@ async def try_ping(url: AbsoluteHttpURL) -> bool:
 
 
 async def main() -> None:
-    Registry.import_all()
-
-    urls = tuple(crawler.PRIMARY_URL for crawler in Registry.concrete)
+    urls = tuple(crawler.PRIMARY_URL for crawler in Registry.get_crawlers())
     logger.info(f"Pinning {len(urls):,} hosts")
     results = await aio.map(try_ping, urls, task_limit=30)
     success = sum(1 for _ in filter(None, results))

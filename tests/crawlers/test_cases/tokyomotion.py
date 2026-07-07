@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895409.jpg",
                 "filename": "895409.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895409.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -16,7 +16,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895410.jpg",
                 "filename": "895410.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895410.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -26,7 +26,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895411.jpg",
                 "filename": "895411.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895411.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -36,7 +36,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895412.jpg",
                 "filename": "895412.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895412.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -46,7 +46,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895413.jpg",
                 "filename": "895413.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895413.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -56,7 +56,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895414.jpg",
                 "filename": "895414.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895414.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -66,7 +66,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895415.jpg",
                 "filename": "895415.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895415.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -76,7 +76,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895416.jpg",
                 "filename": "895416.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895416.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -86,7 +86,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895417.jpg",
                 "filename": "895417.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895417.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -96,7 +96,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895418.jpg",
                 "filename": "895418.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895418.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -106,7 +106,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895419.jpg",
                 "filename": "895419.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895419.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -116,7 +116,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895420.jpg",
                 "filename": "895420.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895420.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -126,7 +126,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895421.jpg",
                 "filename": "895421.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895421.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -136,7 +136,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895422.jpg",
                 "filename": "895422.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895422.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -146,7 +146,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895423.jpg",
                 "filename": "895423.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895423.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -156,7 +156,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895424.jpg",
                 "filename": "895424.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895424.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -166,7 +166,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895425.jpg",
                 "filename": "895425.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895425.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -176,7 +176,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895426.jpg",
                 "filename": "895426.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895426.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -186,7 +186,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895427.jpg",
                 "filename": "895427.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895427.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -196,7 +196,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895428.jpg",
                 "filename": "895428.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895428.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -206,7 +206,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895429.jpg",
                 "filename": "895429.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895429.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -216,7 +216,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895430.jpg",
                 "filename": "895430.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895430.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -226,7 +226,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.tokyo-motion.net/media/photos/895431.jpg",
                 "filename": "895431.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "895431.jpg",
                 "referer": "https://www.tokyomotion.net/album/68827",
                 "album_id": "68827",
@@ -242,7 +242,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6347379.mp4",
                 "referer": "https://www.tokyomotion.net/video/6347379",
                 "album_id": None,
@@ -258,7 +258,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6347379.mp4",
                 "referer": "https://www.tokyomotion.net/video/6347379",
                 "album_id": None,
@@ -268,7 +268,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/ae2e1d5a43a5b51e4748",
                 "filename": "レイナ 13-1 [6347377].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6347377.mp4",
                 "referer": "https://www.tokyomotion.net/video/6347377",
                 "album_id": None,
@@ -284,7 +284,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/73ed951a49b29f184a98",
                 "filename": "レイナ 13-3 [6347379].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6347379.mp4",
                 "referer": "https://www.tokyomotion.net/video/6347379",
                 "album_id": None,
@@ -294,7 +294,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/ae2e1d5a43a5b51e4748",
                 "filename": "レイナ 13-1 [6347377].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6347377.mp4",
                 "referer": "https://www.tokyomotion.net/video/6347377",
                 "album_id": None,
@@ -304,7 +304,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/be73a49ae8a96a385e5a",
                 "filename": "３P [6075129].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6075129.mp4",
                 "referer": "https://www.tokyomotion.net/video/6075129",
                 "album_id": None,
@@ -314,7 +314,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/7e4e57f3ceaaff4737b4",
                 "filename": "FC2PPV 4828978 [6028400].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6028400.mp4",
                 "referer": "https://www.tokyomotion.net/video/6028400",
                 "album_id": None,
@@ -324,7 +324,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/38fdcb71df78655169af",
                 "filename": "LC [6010613].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6010613.mp4",
                 "referer": "https://www.tokyomotion.net/video/6010613",
                 "album_id": None,
@@ -334,7 +334,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/86007db51c27ccbe0d87",
                 "filename": "LC_SEX配信 [5932940].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "5932940.mp4",
                 "referer": "https://www.tokyomotion.net/video/5932940",
                 "album_id": None,
@@ -344,7 +344,7 @@ TEST_CASES = [
             {
                 "url": "https://www.tokyomotion.net/vsrc/sd/e9815ae3efe16dffdcbc",
                 "filename": "FC2-PPV-4799828 【衝撃映像】坂道系Gカップ美女の寄り道極秘 [5841705].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "5841705.mp4",
                 "referer": "https://www.tokyomotion.net/video/5841705",
                 "album_id": None,

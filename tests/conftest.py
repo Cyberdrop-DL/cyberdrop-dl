@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.manager import Manager
 
 if TYPE_CHECKING:
@@ -61,8 +62,13 @@ async def logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 
 
 @pytest.fixture
-def manager() -> Generator[Manager]:
-    with Manager()() as manager:
+def appdata(tmp_cwd: Path) -> AppData:
+    return AppData.from_dirs(AppDirs.from_path(tmp_cwd / "pytest_appdata"))
+
+
+@pytest.fixture
+def manager(appdata: AppData) -> Generator[Manager]:
+    with Manager(appdata=appdata)() as manager:
         yield manager
 
 

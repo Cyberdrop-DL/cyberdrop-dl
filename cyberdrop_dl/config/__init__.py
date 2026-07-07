@@ -1,67 +1,149 @@
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Annotated, Self, TypeVar
+import logging
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Literal, final
 
+import yaml
 from cyclopts import App, Parameter
 from cyclopts.bind import normalize_tokens
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
-from cyberdrop_dl import yaml
-from cyberdrop_dl.config.merge import merge_models
-from cyberdrop_dl.models import AppriseURL  # noqa: TC001
-from cyberdrop_dl.utils.apprise import read_apprise_urls
+from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
+from cyberdrop_dl.models import ConfigModel, merge_models
+from cyberdrop_dl.models.types import ByteSizeSerilized  # noqa: TC001
+from cyberdrop_dl.models.validators import to_bytesize
+from cyberdrop_dl.utils import cleanup
 
-from ._global import GlobalSettings
-from .auth import AuthSettings
-from .settings import ConfigSettings
+from .auth import Authentication, Notifications
+from .crawlers import Crawlers
+from .filters import Filters
+from .settings import Downloads, Hashing, Jdownloader, Logs, MaxChildren, Network, Sort, SubFolders, UIOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from cyberdrop_dl.manager import AppData, Manager
 
-    _BaseModelT = TypeVar("_BaseModelT", bound=BaseModel)
-
+MIN_REQUIRED_FREE_SPACE = to_bytesize("512MiB")
+MODULE_PATH = Path(__file__).parent
+logger = logging.getLogger(__name__)
 _app: App | None = None
 
 
+@final
+class Files:
+    DEFAULT: Path = MODULE_PATH / "default.yaml"
+    SCHEMA: Path = MODULE_PATH / "schema.json"
+
+    @staticmethod
+    def update() -> None:
+        import json
+
+        Files.SCHEMA.write_text(json.dumps(Config.model_json_schema(), indent=2, ensure_ascii=False))
+        Config().save_to(Files.DEFAULT)
+
+
 @Parameter(name="*")
-class Config(BaseModel):
-    source: Annotated[Path | None, Parameter(show=False)] = None
+class Config(ConfigModel, title="cyberdrop-dl config"):
+    __final__: Literal[True] = True
 
-    auth: AuthSettings = Field(default_factory=AuthSettings)
-    settings: ConfigSettings = Field(default_factory=ConfigSettings)
-    global_settings: GlobalSettings = Field(default_factory=GlobalSettings)
+    auth: Authentication = Field(default_factory=Authentication)
+    cookies: Path | None = None
+    "File/folder to import cookies from (.txt Netscape files)"
 
+    crawlers: Crawlers = Field(default_factory=Crawlers)
     deep_scrape: bool = False
-    apprise_urls: Annotated[tuple[AppriseURL, ...], Parameter(show=False)] = ()
+    "Make additional requests while scraping (slower)"
 
-    @classmethod
-    def create(cls, appdata: AppData, config_file: Path | None = None) -> Self:
+    delete_empty_folders: bool = True
+    "Delete empty files and folders after a run"
 
-        global_settings = appdata.configs / "global_settings.yaml"
-        auth_file = appdata.configs / "authentication.yaml"
-        config_file = config_file or appdata.config_file
-        apprise_file = config_file.parent / "apprise.txt"
+    delete_partial_files: bool = False
+    "Delete partial files after a run"
 
-        return cls(
-            source=config_file,
-            auth=_load_config_file(auth_file, AuthSettings),
-            settings=_load_config_file(config_file, ConfigSettings),
-            global_settings=_load_config_file(global_settings, GlobalSettings),
-            apprise_urls=read_apprise_urls(apprise_file),
-        )
+    download_folder: Annotated[Path, Parameter(alias=("--output", "-o", "-d"))] = Path("downloads/cyberdrop-dl")
+    "Base output path for all downloads"
 
-    @classmethod
-    def from_manager(cls, manager: Manager) -> Self:
-        return cls.create(manager.appdata, manager.cli_args.config_file)
+    downloads: Downloads = Field(default_factory=Downloads)
+    dump_json: Annotated[bool, Parameter(alias="-j")] = False
+    "Save details about each file (both skipped and downloaded) to a .jsonl file"
 
-    def update(self, other: Self) -> Self:
-        return merge_models(self, other)
+    filters: Filters = Field(default_factory=Filters)
+    hashing: Hashing = Field(default_factory=Hashing)
+    ignore_history: bool = False
+    "Download files even if the already are marked as downloaded on the database"
 
-    @classmethod
-    def parse_args(cls, tokens: str | Iterable[str]) -> Config:
+    jdownloader: Jdownloader = Field(default_factory=Jdownloader)
+    logs: Logs = Field(default_factory=Logs)
+    max_children: MaxChildren = Field(default_factory=MaxChildren)
+    "Limit the number of items to scrape per category"
+
+    max_file_name_length: PositiveInt = 95
+    "Max number of characters a filename should have. Filenames longer that this will be truncated"
+
+    max_folder_name_length: PositiveInt = 60
+    "Max number of characters a folder should have. Filenames longer that this will be truncated"
+
+    max_thread_depth: NonNegativeInt = 0
+    "Restricts how many levels of nested threads are scraped on a forum"
+
+    max_thread_folder_depth: NonNegativeInt | None = None
+    "Max number of nested folders CDL will create when maximum_thread_depth is greater that 0"
+
+    min_free_space: Annotated[ByteSizeSerilized, AfterValidator(lambda x: max(x, MIN_REQUIRED_FREE_SPACE))] = (
+        to_bytesize("5GiB")
+    )
+    "Minimum free space require to start new downloads"
+
+    mtime: bool = True
+    "Use original upload date as modification date for downloaded file"
+
+    network: Network = Field(default_factory=Network)
+    notifications: Notifications = Field(default_factory=Notifications)
+
+    sort: Sort = Field(default_factory=Sort)
+    subfolders: SubFolders = Field(default_factory=SubFolders)
+    ui: UIOptions = Field(default_factory=UIOptions)
+
+    _resolved: bool = False
+    _source: Path | None = None
+
+    def __repr_args__(self) -> list[tuple[str, Path | None]]:
+        return [("source", self._source)]
+
+    @property
+    def source(self) -> Path | None:
+        return self._source
+
+    def dump_yaml(self) -> str:
+        return yaml.safe_dump(self.model_dump(mode="json"), default_flow_style=False)
+
+    def save_to(self, file: Path) -> None:
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(self.dump_yaml(), encoding="utf8")
+
+    @staticmethod
+    def from_file(file: Path, *, _save_if_not_found: bool = False) -> Config:
+        try:
+            content = file.read_text()
+        except FileNotFoundError:
+            default = Config()
+            if _save_if_not_found:
+                default.save_to(file)
+            return default
+
+        try:
+            data = yaml.safe_load(content) or {}
+        except yaml.YAMLError as e:
+            raise CDLConfigRuntimeErrorsGroup("Invalid YAML file", (InvalidYamlError(file, e),)) from None
+
+        config = Config.model_validate(data)
+        config._source = file
+        return config
+
+    @staticmethod
+    def parse_args(tokens: str | Iterable[str]) -> Config:
         global _app  # noqa: PLW0603
         if _app is None:
             _app = App(print_error=False, exit_on_error=False)
@@ -70,16 +152,52 @@ class Config(BaseModel):
         assert fn is _coerce
         return _coerce(*bound.args, **bound.kwargs)
 
+    def resolve_paths(self) -> None:
+        if self._resolved:
+            return
 
-def _load_config_file(file: Path, model: type[_BaseModelT]) -> _BaseModelT:
-    try:
-        content = yaml.load(file)
-    except FileNotFoundError:
-        default = model()
-        yaml.save(file, default)
-        return default
-    else:
-        return model.model_validate(content)
+        default_log_folder = AppData.default().logs_folder
+        self.logs.resolve_filenames(default_log_folder)
+        _resolve_paths(self)
+        if self.logs.expire_after:
+            self.logs.delete_old_logs_and_folders()
+            cleanup.rm_empty_dirs(self.logs.effective_log_folder)
+        self._resolved = True
+
+    def __or__(self, other: Config) -> Config:
+        if not isinstance(other, Config):
+            return NotImplemented
+        me = merge_models(self, other)
+        me._source = self.source
+        me.logs._created_at = self.logs._created_at
+        return me
+
+
+def _resolve_paths(model: BaseModel) -> None:
+    for field_name, field_value in model:
+        if isinstance(field_value, Path):
+            if "{config}" in str(field_value):
+                error = ValueError(
+                    f"Using '{{config}}' as reference on a path is no longer supported: {field_value} ({field_name})"
+                )
+                raise CDLConfigRuntimeErrorsGroup("Invalid config", (error,))
+
+            object.__setattr__(model, field_name, field_value.expanduser().resolve().absolute())
+
+        elif isinstance(field_value, BaseModel):
+            _resolve_paths(field_value)
+
+
+def merge_additive_args[T: list[str] | tuple[str, ...]](cli_values: T, config_values: Iterable[str]) -> T:
+    match cli_values:
+        case ["+", *_]:
+            new_values = set(config_values).union(cli_values)
+        case ["-", *_]:
+            new_values = set(config_values) - set(cli_values)
+        case _:
+            return cli_values
+
+    return type(cli_values)(sorted(new_values - {"+", "-"}))
 
 
 def _coerce(*, config: Config | None = None) -> Config:
@@ -88,4 +206,4 @@ def _coerce(*, config: Config | None = None) -> Config:
     return config
 
 
-__all__ = ["AuthSettings", "Config", "ConfigSettings", "GlobalSettings"]
+__all__ = ["Config", "Files"]

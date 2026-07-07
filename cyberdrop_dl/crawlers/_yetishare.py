@@ -7,7 +7,8 @@ from bs4 import BeautifulSoup
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, PasswordProtectedError, ScrapeError
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -125,7 +126,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         soup = await self.request_soup(scrape_item.url)

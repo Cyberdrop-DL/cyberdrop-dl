@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
 import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from cyberdrop_dl.url_objects import ScrapeItem
 
 _PRIMARY_URL = AbsoluteHttpURL("https://real-debrid.com")
-_API_ENTRYPOINT = AbsoluteHttpURL("https://api.real-debrid.com/rest/1.0")
 _ERROR_CODES = {
     -1: "Internal error",
     1: "Missing parameter",
@@ -74,9 +71,10 @@ class RealDebridCrawler(Crawler, cdl_user_agent=True):
             raise ScrapeError(ui_failure, msg)
 
     def __post_init__(self) -> None:
-        token = self.manager.config.auth.realdebrid.api_key
+        token = self.config.auth.real_debrid.api_key
         self.disabled = not bool(token)
-        self.api: RealDebridAPI = RealDebridAPI(self, token)
+        self.api: RealDebridAPI = RealDebridAPI.from_crawler(self)
+        self.api.token = token
 
     async def __async_post_init__(self) -> None:
         await self._get_regexes()
@@ -95,7 +93,7 @@ class RealDebridCrawler(Crawler, cdl_user_agent=True):
         if self.disabled:
             return
 
-        with self.catch_errors(_API_ENTRYPOINT), self.disable_on_error("Setup failed. Unable to get URL regex"):
+        with self.catch_errors(self.api.ENTRYPOINT), self.disable_on_error("Setup failed. Unable to get URL regex"):
             await self.api.connect()
 
     @error_handling_wrapper
@@ -106,13 +104,13 @@ class RealDebridCrawler(Crawler, cdl_user_agent=True):
         links: list[str] = await self.api.unrestrict_folder(scrape_item.url)
         for link in links:
             new_scrape_item = scrape_item.create_child(self.parse_url(link))
-            self.create_task(self.file(new_scrape_item))
+            self.create_eager_task(self.file(new_scrape_item))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
         url = scrape_item.url
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         title = self.create_title(f"files [{url.host}]")
@@ -130,12 +128,11 @@ class RealDebridCrawler(Crawler, cdl_user_agent=True):
         )
 
 
-class RealDebridAPI:
-    def __init__(self, crawler: RealDebridCrawler, token: str) -> None:
-        self._crawler = crawler
-        self._folder_regex: re.Pattern[str]
-        self._file_regex: re.Pattern[str]
-        self._headers: Mapping[str, str] = {"Authorization": f"Bearer {token}"}
+class RealDebridAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.real-debrid.com/rest/1.0")
+    _folder_regex: re.Pattern[str]
+    _file_regex: re.Pattern[str]
+    token: str
 
     def is_supported(self, url: AbsoluteHttpURL) -> bool:
         match = self._file_regex.search(str(url))
@@ -145,9 +142,9 @@ class RealDebridAPI:
         return bool(self._folder_regex.search(str(url)))
 
     async def connect(self) -> None:
-        responses: tuple[list[str], list[str]] = await asyncio.gather(
-            self._api_request("hosts/regex"),
-            self._api_request("hosts/regexFolder"),
+        responses: tuple[list[str], list[str]] = await aio.safe_gather(
+            self._request("hosts/regex"),
+            self._request("hosts/regexFolder"),
         )
 
         file_regex = (pattern[1:-1] for pattern in responses[0])
@@ -156,20 +153,22 @@ class RealDebridAPI:
         self._folder_regex = re.compile("|".join(folder_regex))
 
     async def unrestrict(self, url: AbsoluteHttpURL, password: str | None) -> AbsoluteHttpURL:
-        json_resp: dict[str, Any] = await self._api_request(
-            "unrestrict/link", link=url, password=password, remote=False
-        )
-        return self._crawler.parse_url(json_resp["download"])
+        resp: dict[str, Any] = await self._request("unrestrict/link", link=url, password=password, remote=False)
+        return self.parse_url(resp["download"])
 
     async def unrestrict_folder(self, url: AbsoluteHttpURL) -> list[str]:
-        return await self._api_request("unrestrict/folder", url)
+        return await self._request("unrestrict/folder", url)
 
-    async def _api_request(self, path: str, /, link: AbsoluteHttpURL | None = None, **data: Any) -> Any:
+    async def _request(self, path: str, /, link: AbsoluteHttpURL | None = None, **data: Any) -> Any:
         if link:
             data["link"] = str(link)
-        method = "POST" if data else "GET"
-        url = _API_ENTRYPOINT / path
-        return await self._crawler.request_json(url, method, headers=self._headers, data=data or None)
+
+        return await self.request_json(
+            self.ENTRYPOINT / path,
+            "POST" if data else "GET",
+            headers={"Authorization": f"Bearer {self.token}"},
+            data=data or None,
+        )
 
 
 # TODO: delete this entire class in v9. Save URLs in the database as is. Move this logic to a transfer module

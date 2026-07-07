@@ -38,9 +38,10 @@ def open(file_path: Path) -> None:  # noqa: A001
 @functools.cache
 def _editor_cmd() -> tuple[str, ...] | None:
     if _CUSTOM_EDITOR:
-        path = shutil.which(_CUSTOM_EDITOR)
+        name, *rest = _CUSTOM_EDITOR.split(" ")
+        path = shutil.which(name)
         if path:
-            return (path,)
+            return path, *rest
         msg = f"Editor '{_CUSTOM_EDITOR}' from env bar $EDITOR is not available. Ignoring"
         logger.warning(msg)
 

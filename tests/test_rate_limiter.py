@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from cyberdrop_dl.aio import RateLimiter
+from cyberdrop_dl.aio import RateLimiter  # noqa: ICN003
 
 
 async def consume(limiter: RateLimiter, iterations: int) -> list[float]:

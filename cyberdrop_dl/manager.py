@@ -1,38 +1,34 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
-import dataclasses
+import datetime
 import logging
 import os
 import sys
 import time
-from datetime import timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, final
 
-from pydantic.types import ByteSize
-
-from cyberdrop_dl import __version__, cookies, env, ffmpeg, stats, yaml
+from cyberdrop_dl import ALL_DEPENDENCIES, __version__, aio, env, ffmpeg, stats
+from cyberdrop_dl.cache import cache_context
 from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
+from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
-from cyberdrop_dl.dependencies import ALL_DEPENDENCIES
 from cyberdrop_dl.hasher import Hasher
-from cyberdrop_dl.logs import _enter_context, capture_logs, log_spacer
+from cyberdrop_dl.logs import capture_logs, log_spacer
+from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.sorter import Sorter
-from cyberdrop_dl.utils import get_system_information
+from cyberdrop_dl.utils import enter_context, get_system_information
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from os import PathLike
-    from types import NotImplementedType
+    from pathlib import Path
 
-    from cyberdrop_dl.cli import CLIargs
+    from cyberdrop_dl.commands import CLIarguments
     from cyberdrop_dl.scrape_mapper import ScrapeMapper, ScrapeStats
     from cyberdrop_dl.url_objects import MediaItem
 
@@ -44,27 +40,36 @@ logger = logging.getLogger(__name__)
 class Manager:
     def __init__(
         self,
-        cli_args: CLIargs | None = None,
+        cli_args: CLIarguments | None = None,
         appdata: AppData | None = None,
         config: Config | None = None,
     ) -> None:
-        from cyberdrop_dl.cli import CLIargs
+        from cyberdrop_dl.commands import CLIarguments
 
         self.cache: dict[str, Any] = {}
         self._appdata: AppData | None = appdata
-        self.cli_args: CLIargs = cli_args or CLIargs()
+        self.cli_args: CLIarguments = cli_args or CLIarguments()
         self._config: Config | None = config
 
         self._completed_downloads: list[MediaItem] = []
-        self.hasher: Hasher = Hasher(self)
-        self.logs: CSVLogsManager = CSVLogsManager.from_manager(self)
-        self.http_client: HTTPClient = HTTPClient.from_manager(self)
-        self.download_client: DownloadClient = DownloadClient(self)
+        self._hasher: Hasher | None = None
+        self.logs: CSVLogsManager = CSVLogsManager.from_config(self.config)
 
+        self.http_client = HTTPClient(self.config)
+        if self.config.network.dump_responses:
+            self.http_client.request_done_callback = self.logs.write_response
+
+        self.download_client: DownloadClient = DownloadClient(self)
         self.scrape_mapper: ScrapeMapper
         self.database: Database
         self.deduper: Czkawka
         self.sorter: Sorter
+
+    @property
+    def hasher(self) -> Hasher:
+        if self._hasher is None:
+            self._hasher = Hasher.create(self.config, self.database)
+        return self._hasher
 
     @property
     def appdata(self) -> AppData:
@@ -75,28 +80,25 @@ class Manager:
     @property
     def config(self) -> Config:
         if self._config is None:
-            self._config = Config.from_manager(self)
+            self._config = Config.from_file(self.appdata.config_file)
         return self._config
 
     def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
-        self.config.settings.resolve_paths()
-        self.logs = CSVLogsManager.from_manager(self)
+        self.config.resolve_paths()
+        self.logs = CSVLogsManager.from_config(self.config)
         self.logs.delete_old_logs()
 
     @contextlib.contextmanager
     def __call__(self) -> Generator[Self]:
         self.__resolve_paths()
-        self.database = Database(
-            self.appdata.db_file,
-            self.config.settings.runtime_options.ignore_history,
-        )
+        self.database = Database(self.appdata.db_file, self.config.ignore_history)
         self.deduper = Czkawka.from_manager(self)
-        self.sorter = Sorter.from_manager(self)
+        self.sorter = Sorter.from_config(self.config)
         with (
-            _cache_context(self.appdata.cache_file, self.cache),
-            _enter_context(REFRESH_RATE, self.config.global_settings.ui_options.refresh_rate),
-            _enter_context(TUI_DISABLED, self.cli_args.ui.is_disabled),
+            cache_context(self.appdata.cache_file, self.cache),
+            enter_context(REFRESH_RATE, self.config.ui.refresh_rate),
+            enter_context(TUI_DISABLED, self.config.ui.mode.is_disabled),
         ):
             try:
                 yield self
@@ -116,14 +118,14 @@ class Manager:
     def log_config_settings(self) -> None:
         logger.info(f"Running cyberdrop-dl v{__version__}")
         _log_enviroment()
-        _log_cli_args(self.cli_args)
+        logger.debug({"CLI options": self.cli_args.__json__()})
         _log_config(self.config)
         _log_ffmpeg()
         _log_database(self.appdata.db_file)
         _log_dependencies()
 
     def print_stats(self, stats: ScrapeStats) -> str:
-        if not self.cli_args.print_stats:
+        if not self.config.ui.show_stats:
             return ""
 
         log_spacer()
@@ -135,15 +137,15 @@ class Manager:
 
     def __print_stats(self, scrape_stats: ScrapeStats) -> None:
 
-        elapsed = timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
-        total_data_written = ByteSize(self.scrape_mapper.tui.downloads.bytes_downloaded).human_readable(decimal=True)
+        elapsed = datetime.timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
+        total_data_written = bytesize_to_str(self.scrape_mapper.tui.downloads.bytes_downloaded)
 
         logger.info("Run Stats:", extra={"color": "cyan"})
         logger.info(f"  Config file: {self.config.source}")
         logger.info(f"  URLs source: {scrape_stats.source}")
         logger.info(f"  URLs: {scrape_stats.count:,}")
         logger.info(f"  URL groups: {len(scrape_stats.unique_groups):,}")
-        logger.info(f"  Logs folder: {self.config.settings.logs.log_folder}")
+        logger.info(f"  Logs folder: {self.config.logs.effective_log_folder}")
         logger.info(f"  Total runtime: {elapsed}")
         logger.info(f"  Total downloaded data: {total_data_written}")
 
@@ -168,98 +170,17 @@ class Manager:
         )
 
     async def get_cookie_files(self) -> list[Path]:
-        if self.config.settings.browser_cookies.auto_import:
-            assert self.config.settings.browser_cookies.browser
-            cookie_jar = await cookies.extract(self.config.settings.browser_cookies.browser)
-            await cookies.export(
-                cookies.filter(cookie_jar, self.config.settings.browser_cookies.sites),
-                output_path=self.appdata.cookies,
-            )
+        path = self.config.cookies
+        if not path:
+            return []
 
-        return await asyncio.to_thread(lambda: sorted(self.appdata.cookies.glob("*.txt")))
+        if await aio.is_file(path):
+            return [path]
 
+        if await aio.is_dir(path):
+            return [f async for f in aio.glob(path, "*.txt")]
 
-@contextlib.contextmanager
-def _cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
-    try:
-        cache.update(yaml.load(cache_file))
-    except FileNotFoundError:
-        cache_file.parent.mkdir(exist_ok=True, parents=True)
-        cache_file.touch()
-
-    try:
-        yield
-    finally:
-        cache["version"] = __version__
-        yaml.save(cache_file, cache)
-
-
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class AppData:
-    path: Path
-    cache_file: Path
-    config_file: Path
-    db_file: Path
-
-    cache: Path
-    cookies: Path
-    configs: Path
-
-    @classmethod
-    def default(cls) -> Self:
-        return cls.from_path(Path.cwd())
-
-    @staticmethod
-    def _resolve_win_path(path: Path) -> Path:
-        # Detect the real path when running in sandboxed interpreter (ex: UWP Python)
-        # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1700#issuecomment-4317561031
-        # https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization#default-msix-behavior
-        anchor = path / "cyberdrop_dl.anchor"
-        path.mkdir(parents=True, exist_ok=True)
-        anchor.touch()
-        real_path = anchor.resolve().parent
-        if path != real_path:
-            logger.warning("Windows virtualized path detected at '%s'. Real destination: '%s'", path, real_path)
-        anchor.unlink()
-        try:
-            real_path.rmdir()
-        except OSError:
-            pass
-        return real_path
-
-    @classmethod
-    def from_path(cls, path: Path) -> Self:
-        path = path.expanduser().resolve().absolute() / "AppData"
-        if os.name == "nt":
-            path = cls._resolve_win_path(path)
-
-        cache = path / "Cache"
-        configs = path / "Configs"
-        return cls(
-            path=path,
-            cache=cache,
-            configs=configs,
-            cookies=path / "Cookies",
-            config_file=configs / "Default" / "settings.yaml",
-            cache_file=cache / "cache.yaml",
-            db_file=cache / "cyberdrop.db",
-        )
-
-    def __truediv__(self, other: PathLike[str]) -> Path | NotImplementedType:
-        try:
-            return self.path / other
-        except TypeError:
-            return NotImplemented
-
-    def __fspath__(self) -> str:
-        return str(self)
-
-    def __str__(self) -> str:
-        return str(self.path)
-
-    def mkdirs(self) -> None:
-        for folder in (self.cache, self.configs, self.cookies):
-            folder.mkdir(parents=True, exist_ok=True)
+        return []
 
 
 def _log_dependencies() -> None:
@@ -274,7 +195,7 @@ def _log_database(path: Path) -> None:
     except FileNotFoundError:
         db_size = 0
 
-    logger.debug("Database file: %s (%s)", path, ByteSize(db_size).human_readable(decimal=True))
+    logger.debug("Database file: %s (%s)", path, bytesize_to_str(db_size))
 
 
 def _log_enviroment() -> None:
@@ -288,23 +209,10 @@ def _log_enviroment() -> None:
     )
 
 
-def _log_cli_args(cli_args: CLIargs) -> None:
-    logger.debug({"CLI options": cli_args.model_dump(mode="json")})
-
-
 def _log_config(config: Config) -> None:
-    auth = {site: all(credentials.values()) for site, credentials in config.auth.model_dump().items()}
-    logger.debug(
-        {
-            "Config file": config.source,
-            "URLs file": config.settings.files.input_file,
-            "Apprise URLs": tuple(url.format(dump_secret=False) for url in config.apprise_urls),
-            "Download folder": config.settings.files.download_folder,
-            "Auth": auth,
-            "Settings": config.settings.model_dump(mode="json"),
-            "Global settings": config.global_settings.model_dump(mode="json"),
-        }
-    )
+    logger.debug("Config file: %s", config.source)
+    logger.debug("Auth: \n%s", config.auth.censored_dump())
+    logger.debug(config.model_dump_json(exclude={"auth"}, indent=2))
 
 
 def _log_ffmpeg() -> None:

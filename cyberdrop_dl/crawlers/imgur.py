@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -37,11 +39,14 @@ class ImgurCrawler(Crawler):
 
     async def __async_post_init__(self) -> None:
         with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get client id"):
-            # TODO: cache this
-            soup = await self.request_soup(self.PRIMARY_URL)
-            js_src = css.select(soup, "script[src*='/desktop-assets/js/main']", "src")
-            js_text = await self.request_text(self.parse_url(js_src))
-            self.client_id = extr_text(js_text, 'apiClientId:"', '"')
+            self.client_id = await self._get_client_id()
+
+    @disk_cached_method("client_id", ttl=86400 * 90)
+    async def _get_client_id(self) -> str:
+        soup = await self.request_soup(self.PRIMARY_URL)
+        js_src = css.select(soup, "script[src*='/desktop-assets/js/main']", "src")
+        js_text = await self.request_text(self.parse_url(js_src))
+        return extr_text(js_text, 'apiClientId:"', '"')
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.host == _IMAGE_CDN.host:
@@ -88,12 +93,12 @@ class ImgurCrawler(Crawler):
                 continue
             web_url = self.PRIMARY_URL / image["id"]
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._image(new_scrape_item, image))
+            self.create_eager_task(self._image(new_scrape_item, image))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem, image_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
         image = await self._api_request("image", image_id)
         await self._image(scrape_item, image)

@@ -4,7 +4,8 @@ import base64
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import error_handling_wrapper, xor_decrypt
+from cyberdrop_dl.utils import xor_decrypt
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 from ._chevereto import CheveretoCrawler
 

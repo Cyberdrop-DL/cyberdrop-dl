@@ -7,12 +7,13 @@ import sys
 from pathlib import Path
 from typing import LiteralString
 
-from cyberdrop_dl.database import Database, connect
-from cyberdrop_dl.database.tables.history import apply_fixes
-from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
+from cyberdrop_dl import database
+from cyberdrop_dl.database import common
+from cyberdrop_dl.database.history import apply_fixes
+from cyberdrop_dl.database.schema import CURRENT_VERSION, Version
+from cyberdrop_dl.filepath import sanitize_filename
 from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils import dates
-from cyberdrop_dl.utils.filepath import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -149,15 +150,15 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
     logger.info("Detected schema version: %s", old_version)
 
-    if not force and old_version == CURRENT_APP_SCHEMA_VERSION:
+    if not force and old_version == CURRENT_VERSION:
         logger.info(
             "Database is already at the latest schema (%s). Use --force to re-run.",
-            CURRENT_APP_SCHEMA_VERSION,
+            CURRENT_VERSION,
         )
         return
 
     now = sanitize_filename(str(dates.now()))
-    new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
+    new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_VERSION}_{now}{db_path.suffix}")
 
     logger.debug("Creating new database at: %s", new_path)
     _create_new_database(new_path)
@@ -181,12 +182,12 @@ def run(db_path: Path, *, force: bool = False) -> None:
     new_path.rename(db_path)
     logger.info("Transfer complete", extra={"color": "green"})
     logger.info("Backup at: '%s'", backup_path)
-    logger.info("New schema version: %s", CURRENT_APP_SCHEMA_VERSION)
+    logger.info("New schema version: %s", CURRENT_VERSION)
 
 
 def _create_new_database(path: Path) -> None:
     async def connect() -> None:
-        async with Database(_db_path=path, ignore_history=True):
+        async with database.Database(path, ignore_history=True):
             pass
 
     asyncio.run(connect())
@@ -195,11 +196,8 @@ def _create_new_database(path: Path) -> None:
 def _apply_fixes(db_path: Path) -> None:
 
     async def fix() -> None:
-        conn = await connect(db_path)
-        try:
+        async with common.connect(db_path) as conn:
             await apply_fixes(conn)
-        finally:
-            await conn.close()
 
     asyncio.run(fix())
 

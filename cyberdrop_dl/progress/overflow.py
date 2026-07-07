@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from rich.progress import ProgressColumn, Task, TaskID
 
 
-def _plural(ammount: int, unit: str) -> str:
-    return f"{unit}{'s' if ammount > 1 else ''}"
+def _plural(amount: int, unit: str) -> str:
+    return f"{unit}{'s' if amount > 1 else ''}"
 
 
 @final

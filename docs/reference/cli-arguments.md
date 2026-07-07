@@ -21,406 +21,325 @@ CLI inputs always take priority over config values.
 {% endhint %}
 
 {% hint style="info" %}
-Use `-` instead of `_` to separate words in an config option name when using it as a CLI argument: Ex: `auto_dedupe` needs to be `auto-dedupe` when using it via the CLI
+Use `-` instead of `_` to separate words in an config option name when using it as a CLI argument:
+
+Ex: `delete_partial_files` needs to be `delete-partial-files` when using it via the CLI
 {% endhint %}
 
-You can pass any of the **Config Settings** and **Global Settings** options as a cli argument for the program.
+All config option except authentication credentials have a CLI equivalent to override them.
 
 For items not explained below, you can find their counterparts in the configuration options to see what they do.
 
 ## CLI only arguments
 
-### `appdata-folder`
+These options can onlny be supplied via CLI argmunets. They are not included on the config file
 
-| Type   | Default                       |
-| ------ | ----------------------------- |
-| `Path` | `<Current Working Directory>` |
-
-Folder where Cyberdrop-DL will store it's database, cache and config files.
-
-### `completed-after`
+### `--config-file`
 
 | Type   | Default |
 | ------ | ------- |
-| `date` | `None`  |
+| `Path` | `null`  |
 
-Only retry downloads that were completed on or after this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+Path to the config file to use for this session. The config file at the default location will be ignored. This file _must_ have a `.yml` or `.yaml` extension
 
 {% hint style="info" %}
-This option has no effect unless you run CDL with `--retry-all`
+If provided, this file _must_ exists already, but it can be empty
 {% endhint %}
 
-### `completed-before`
+### `--cache-file`
 
 | Type   | Default |
 | ------ | ------- |
-| `date` | `None`  |
+| `Path` | `null`  |
 
-Only retry downloads that were completed on or before this date. The date should be in ISO 8601 format, for example, `2021-12-23`
+Path to the cache file to use for this session. The cache at the default location will be ignored. This file _must_ have a `.json` extension
 
 {% hint style="info" %}
-This option has no effect unless you run CDL with `--retry-all`
+If provided, this file _must_ exists already, but it can be empty
 {% endhint %}
 
-### `config-file`
+### `--database-file`
 
 | Type   | Default |
 | ------ | ------- |
-| `Path` | `None`  |
+| `Path` | `null`  |
 
-Path to the CDL `settings.yaml` file to load
-
-{% hint style="info" %}
-If both `config` and `config-file` are supplied, `config-file` takes priority
-{% endhint %}
-
-### `download`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Skips UI, start download immediately
-
-### `download-tiktok-audios`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Download TikTok audios from posts and save them as separate files
-
-### `download-tiktok-src-quality-videos`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-By default, CDL will download the "optimized for streaming" version of tiktok videos. Setting this option to `True` will download videos in original (source) quality.
-
-`_original` will be added as a suffix to their filename.
-
-{% hint style="warning" %}
-This will make video downloads several times slower
-
-When it is set to `False` (the default) CDL can download 50 videos with a single request.
-When it is set to `True` , CDL needs to make at least 3 requests _per_ video to download them.
-
-There's also a daily limit of the API CDL uses: 5000 requests per day per IP
-
-Setting this option to `True` will consume the daily limit faster
-{% endhint %}
-
-### `impersonate`
-
-| Type                                                                             | Default | Action        |
-| -------------------------------------------------------------------------------- | ------- | ------------- |
-| `chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"` or `null` | `null`  | `store_const` |
-
-Impersonation allows CDL to make requests and appear to be a legitimate web browser. This helps bypass bot-protection on some sites and it's required for any site that only accepts HTTP2 connections.
-
-- The default value (`null`) means CDL will automatically use impersonation for crawlers that were programmed to use it.
-- Passing an specific target (ex: `--impersonate chrome_android`) will make CDL use impersonation for all requests, using that tarjet
+Path to the database file to use for this session. The database at the default location will be ignored. This file _must_ have a `.db` extension
 
 {% hint style="info" %}
-The current default target is `chrome`. The default target can change on any new release without notice
-{% endhint %}
-
-### `max-items-retry`
-
-| Type             | Default |
-| ---------------- | ------- |
-| `NonNegativeInt` | `0`     |
-
-Max number of links to retry. Using `0` means no limit
-
-{% hint style="info" %}
-This option has no effect unless you run CDL with one of the retry options: `--retry-all`, `--retry-failed` or `--retry-maintenance`
-{% endhint %}
-
-### `portrait`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Force CDL to run with a vertical layout
-
-### `print-stats`
-
-| Type       | Default | Action        |
-| ---------- | ------- | ------------- |
-| `BoolFlag` | `True`  | `store_false` |
-
-Show stats report at the end of a run
-
-### `retry-all`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry all downloads
-
-### `retry-failed`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry failed downloads
-
-### `retry-maintenance`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Retry download of maintenance files (bunkr). Requires files to be hashed
-
-### `show-supported-sites`
-
-| Type       | Default | Action       |
-| ---------- | ------- | ------------ |
-| `BoolFlag` | `False` | `store_true` |
-
-Shows a list of all supported sites and exits
-
-### `ui`
-
-| Type                     | Default      |
-| ------------------------ | ------------ |
-| `CaseInsensitiveStrEnum` | `FULLSCREEN` |
-
-UI can have 1 of these values:
-
-- `DISABLED` : no output at all
-- `ACTIVITY` : only shows a spinner with the text `running CDL...`
-- `SIMPLE`: shows spinner + simplified progress bar
-- `FULLSCREEN`: shows the normal UI/progress view
-
-{% hint style="info" %}
-Values are case insensitive, ex: both `disabled` and `DISABLED` are valid
+If provided, this file _must_ exists already, but it can be empty
 {% endhint %}
 
 ## Overview
 
-Bool arguments like options within `Download Options`, `Ignore Options`, `Runtime Options`, etc. can be prefixed with `--no-` to negate them. Ex: `--no-auto-dedupe` will disable auto dedupe, overriding whatever the config option was set to.
-
 <!-- START_CLI_OVERVIEW -->
 ```shell
-Usage: cyberdrop-dl COMMAND [OPTIONS] [ARGS]
-
+cyberdrop-dl v10.0.0
 Bulk asynchronous downloader for multiple file hosts
 
+Usage: cyberdrop-dl COMMAND [OPTIONS]
+
+Run 'cyberdrop-dl' without arguments to start the interactive TUI
+
 ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
-│ cleanup      Perform maintenance tasks                                                           │
-│ database     Commands for managing the database                                                  │
-│ show         Show a list of all supported sites                                                  │
-│ --help (-h)  Display this message and exit.                                                      │
-│ --version    Display application version.                                                        │
+│ cache      Cache operations                                                                      │
+│ cleanup    Perform maintenance tasks                                                             │
+│ config     Config file operations                                                                │
+│ database   Commands for managing the database                                                    │
+│ download   Download URLs                                                                         │
+│ hash       Compute and save hashes of every file in a folder (recursively)                       │
+│ report     Generate and display information about the system                                     │
+│ retry      Retry downloads from the database                                                     │
+│ show       Show a list of all supported sites                                                    │
+│ --help -h  Display this message and exit.                                                        │
+│ --version  Display application version.                                                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ LINKS --links                        link(s) to content to download (passing multiple links is   │
-│                                      supported) [default: ()]                                    │
-│ --appdata-folder                     AppData folder path                                         │
-│ --completed-after                    only retry downloads that were completed on or after this   │
-│                                      date                                                        │
-│ --completed-before                   only retry downloads that were completed on or before this  │
-│                                      date                                                        │
-│ --config-file                        path to the CDL settings.yaml file to load                  │
-│ --download --no-download             skips UI, start download immediately [default: False]       │
-│ --download-tiktok-audios             download TikTok audios from posts and save them as separate │
-│   --no-download-tiktok-audios        files [default: False]                                      │
-│ --download-tiktok-src-quality-video  download TikTok videos in source quality [default: False]   │
-│   s --no-download-tiktok-src-qualit                                                              │
-│   y-videos                                                                                       │
-│ --impersonate                        Use this target as impersonation for all scrape requests    │
-│                                      [choices: chrome, edge, safari, safari_ios, chrome_android, │
-│                                      firefox]                                                    │
-│ --max-items-retry                    max number of links to retry [default: 0]                   │
-│ --portrait --no-portrait             force CDL to run with a vertical layout [default: False]    │
-│ --print-stats --no-print-stats       show stats report at the end of a run [default: True]       │
-│ --retry-all --no-retry-all           retry all downloads [default: False]                        │
-│ --retry-failed --no-retry-failed     retry failed downloads [default: False]                     │
-│ --retry-maintenance                  retry download of maintenance files (bunkr). Requires files │
-│   --no-retry-maintenance             to be hashed [default: False]                               │
-│ --ui                                 DISABLED, ACTIVITY, SIMPLE or FULLSCREEN [choices:          │
-│                                      disabled, activity, simple, fullscreen] [default:           │
-│                                      fullscreen]                                                 │
-│ --deep-scrape --no-deep-scrape       [default: False]                                            │
+│ --input-file -i  Text/HTML file with URL(s) to download                                          │
+│ --config-file    YAML file to use as config                                                      │
+│ --cache-file     JSON file to use as cache                                                       │
+│ --database-file  SQLite file to use as database                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ BrowserCookies ─────────────────────────────────────────────────────────────────────────────────╮
-│ --auto-import --no-auto-import  [default: False]                                                 │
-│ --browser                       [choices: chrome, firefox, safari, edge, opera, brave,           │
-│                                 librewolf, opera-gx, vivaldi, chromium] [default: firefox]       │
-│ --sites                                                                                          │
+
+Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
+Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+cyberdrop-dl v10.0.0
+Bulk asynchronous downloader for multiple file hosts
+
+Usage: cyberdrop-dl download [OPTIONS] [ARGS]
+
+Download URLs
+
+╭─ Arguments ──────────────────────────────────────────────────────────────────────────────────────╮
+│ URLS  URL(s) to download                                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ DownloadOptions ────────────────────────────────────────────────────────────────────────────────╮
-│ --block-download-sub-folders         [default: False]                                            │
-│   --no-block-download-sub-folders                                                                │
-│ --disable-download-attempt-limit     [default: False]                                            │
-│   --no-disable-download-attempt-lim                                                              │
-│   it                                                                                             │
-│ --disable-file-timestamps            [default: False]                                            │
-│   --no-disable-file-timestamps                                                                   │
-│ --include-album-id-in-folder-name -  [default: False]                                            │
-│   -no-include-album-id-in-folder-na                                                              │
-│   me                                                                                             │
-│ --include-thread-id-in-folder-name   [default: False]                                            │
-│   --no-include-thread-id-in-folder-                                                              │
-│   name                                                                                           │
-│ --maximum-number-of-children         [default: []]                                               │
-│ --remove-domains-from-folder-names   [default: False]                                            │
-│   --no-remove-domains-from-folder-n                                                              │
-│   ames                                                                                           │
-│ --remove-generated-id-from-filename  [default: False]                                            │
-│   s --no-remove-generated-id-from-f                                                              │
-│   ilenames                                                                                       │
-│ --scrape-single-forum-post           [default: False]                                            │
-│   --no-scrape-single-forum-post                                                                  │
-│ --separate-posts-format              [default: {default}]                                        │
-│ --separate-posts                     [default: False]                                            │
-│   --no-separate-posts                                                                            │
-│ --skip-download-mark-completed       [default: False]                                            │
-│   --no-skip-download-mark-completed                                                              │
-│ --maximum-thread-depth               [default: 0]                                                │
-│ --maximum-thread-folder-depth                                                                    │
+╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
+│ --input-file -i                   Text/HTML file with URL(s) to download                         │
+│ --config-file                     YAML file to use as config                                     │
+│ --cache-file                      JSON file to use as cache                                      │
+│ --database-file                   SQLite file to use as database                                 │
+│ --cookies                         File/folder to import cookies from (.txt Netscape files)       │
+│ --deep-scrape --no-deep-scrape    Make additional requests while scraping (slower)               │
+│                                   [default: False]                                               │
+│ --delete-empty-folders            Delete empty files and folders after a run                     │
+│   --no-delete-empty-folders       [default: True]                                                │
+│ --delete-partial-files            Delete partial files after a run                               │
+│   --no-delete-partial-files       [default: False]                                               │
+│ --download-folder --output -o -d  Base output path for all downloads                             │
+│                                   [default: downloads/cyberdrop-dl]                              │
+│ --dump-json -j --no-dump-json     Save details about each file (both skipped and downloaded) to  │
+│                                   a .jsonl file                                                  │
+│                                   [default: False]                                               │
+│ --ignore-history                  Download files even if the already are marked as downloaded on │
+│   --no-ignore-history             the database                                                   │
+│                                   [default: False]                                               │
+│ --max-file-name-length            Max number of characters a filename should have. Filenames     │
+│                                   longer that this will be truncated                             │
+│                                   [default: 95]                                                  │
+│ --max-folder-name-length          Max number of characters a folder should have. Filenames       │
+│                                   longer that this will be truncated                             │
+│                                   [default: 60]                                                  │
+│ --max-thread-depth                Restricts how many levels of nested threads are scraped on a   │
+│                                   forum                                                          │
+│                                   [default: 0]                                                   │
+│ --max-thread-folder-depth         Max number of nested folders CDL will create when              │
+│                                   maximum_thread_depth is greater that 0                         │
+│ --min-free-space                  Minimum free space require to start new downloads              │
+│                                   [default: 5000000000]                                          │
+│ --mtime --no-mtime                Use original upload date as modification date for downloaded   │
+│                                   file                                                           │
+│                                   [default: True]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ DupeCleanup ────────────────────────────────────────────────────────────────────────────────────╮
-│ --add-md5-hash --no-add-md5-hash  [default: False]                                               │
-│ --add-sha256-hash                 [default: False]                                               │
-│   --no-add-sha256-hash                                                                           │
-│ --auto-dedupe --no-auto-dedupe    [default: True]                                                │
-│ --hashing                         [choices: off, in-place, post-download] [default: in-place]    │
-│ --send-deleted-to-trash           [default: True]                                                │
-│   --no-send-deleted-to-trash                                                                     │
+╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
+│ --crawlers.disabled                  Name of crawlers to disable for the current run             │
+│ --crawlers.bandcamp.formats          Format to choose for downloads (if available), ordered by   │
+│                                      preference                                                  │
+│                                      [choices: mp3-320, mp3, aac-hi, wav, flac, vorbis, aiff,    │
+│                                      alas]                                                       │
+│                                      [default: ('mp3-320', 'mp3', 'aac-hi', 'wav', 'flac',       │
+│                                      'vorbis', 'aiff', 'alas')]                                  │
+│ --crawlers.clypit.prefer-mp3         Download audios as .mp3 files even if WAV (high quality)    │
+│   --crawlers.clypit.no-prefer-mp3    versions are available                                      │
+│                                      [default: False]                                            │
+│ --crawlers.generic.wordpress-media   [default: ()]                                               │
+│ --crawlers.generic.wordpress-html    [default: ()]                                               │
+│ --crawlers.generic.discourse         [default: ()]                                               │
+│ --crawlers.generic.chevereto         [default: ()]                                               │
+│ --crawlers.generic.kvs               [default: ()]                                               │
+│ --crawlers.one-pace.prefer-dub       Download episodes with english audio tracks instead of      │
+│   --crawlers.one-pace.no-prefer-dub  japanese (if available)                                     │
+│                                      [default: False]                                            │
+│ --crawlers.tiktok.original           Download videos in original quality (slower)                │
+│   --crawlers.tiktok.no-original      [default: False]                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ FileSizeLimits ─────────────────────────────────────────────────────────────────────────────────╮
-│ --maximum-image-size  [default: 0]                                                               │
-│ --maximum-other-size  [default: 0]                                                               │
-│ --maximum-video-size  [default: 0]                                                               │
-│ --minimum-image-size  [default: 0]                                                               │
-│ --minimum-other-size  [default: 0]                                                               │
-│ --minimum-video-size  [default: 0]                                                               │
+╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
+│ --downloads                     Max number of files to download simultaneously                   │
+│                                 [default: 15]                                                    │
+│ --downloads.per-domain          Max number of files to download simultaneously per domain        │
+│                                 [default: 5]                                                     │
+│ --attempts                      [default: 2]                                                     │
+│ --delay                         Number of seconds to wait before starting downloads              │
+│                                 [default: 0.0]                                                   │
+│ --slow-speed                    Skip downloads if their speed is below this value for more than  │
+│                                 10 seconds. Set to 0 to disable                                  │
+│                                 [default: 0]                                                     │
+│ --speed-limit                   Max speed rate (in bytes per second) to limit downloads          │
+│                                 (combined)                                                       │
+│                                 [default: 0]                                                     │
+│ --jitter                        Wait a random additional number of seconds in between 0 and      │
+│                                 <jitter> before downloads                                        │
+│                                 [default: 0]                                                     │
+│ --skip-and-mark-completed       Skip all downloads and mark them as downloaded on the database   │
+│   --no-skip-and-mark-completed  [default: False]                                                 │
+│ --concurrent-segments           Allow up to `<N>` HLS segments to be downloaded concurrently     │
+│                                 [default: 10]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Files ──────────────────────────────────────────────────────────────────────────────────────────╮
-│ --download-folder --output -o -d  [default: Downloads]                                           │
-│ --dump-json -j --no-dump-json     [default: False]                                               │
-│ --input-file -i                   [default: URLs.txt]                                            │
-│ --save-pages-html                 [default: False]                                               │
-│   --no-save-pages-html                                                                           │
-│ --dump-responses                  Save text/HTML/JSON responses to disk (flaresolverr responses  │
-│   --no-dump-responses             are excluded) [default: False]                                 │
+╭─ Filters ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --audio --no-audio                   Download/skip audio files                                   │
+│                                      [default: True]                                             │
+│ --images --no-images                 Download/skip image files                                   │
+│                                      [default: True]                                             │
+│ --videos --no-videos                 Download/skip videos                                        │
+│                                      [default: True]                                             │
+│ --non-media --no-non-media           Download/skip non media files (.txt, zip, .rar, etc...)     │
+│                                      [default: True]                                             │
+│ --image.size.min                                                                                 │
+│ --image.size.max                                                                                 │
+│ --video.size.min                                                                                 │
+│ --video.size.max                                                                                 │
+│ --audio.size.min                                                                                 │
+│ --audio.size.max                                                                                 │
+│ --non_media.size.min                                                                             │
+│ --non_media.size.max                                                                             │
+│ --video.duration.min                                                                             │
+│ --video.duration.max                                                                             │
+│ --audio.duration.min                                                                             │
+│ --audio.duration.max                                                                             │
+│ --before                             Only download files uploaded before this date               │
+│ --after                              Only download files uploaded after this date                │
+│ --filename-regex                     Only download files that match this regex                   │
+│ --only-hosts                         Only scrape/download from these domains                     │
+│ --skip-hosts                         Skip scrape/download from these domains                     │
+│ --allow-files-with-no-extension      Download potentially dangerous files that have no extension │
+│   --no-allow-files-with-no-extensio  [default: False]                                            │
+│   n                                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ General ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --ssl-context             [choices: truststore, certifi, truststore+certifi] [default:           │
-│                           truststore+certifi]                                                    │
-│ --disable-crawlers        [default: []]                                                          │
-│ --flaresolverr                                                                                   │
-│ --max-file-name-length    [default: 95]                                                          │
-│ --max-folder-name-length  [default: 60]                                                          │
-│ --proxy                                                                                          │
-│ --required-free-space     [default: 5000000000]                                                  │
-│ --user-agent              [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101     │
-│                           Firefox/150.0]                                                         │
+╭─ Hashing ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --hashing                            [choices: off, in-place, post-download]                     │
+│                                      [default: in-place]                                         │
+│ --hashing.algorithms --hashes        List of hashes to compute for each download                 │
+│                                      [choices: xxh128, md5, sha256]                              │
+│                                      [default: ('xxh128', 'md5', 'sha256')]                      │
+│ --hashing.dedupe --auto-dedupe       Auto delete duplicate downloads by hash                     │
+│   --hashing.no-dedupe                [default: True]                                             │
+│   --no-auto-dedupe                                                                               │
+│ --hashing.dedupe.use-trash-bin       Send deleted files to the trash bin                         │
+│   --hashing.dedupe.no-use-trash-bin  [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ GenericCrawlerInstances ────────────────────────────────────────────────────────────────────────╮
-│ --wordpress-media  [default: []]                                                                 │
-│ --wordpress-html   [default: []]                                                                 │
-│ --discourse        [default: []]                                                                 │
-│ --chevereto        [default: []]                                                                 │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ IgnoreOptions ──────────────────────────────────────────────────────────────────────────────────╮
-│ --exclude-audio --no-exclude-audio   [default: False]                                            │
-│ --exclude-images                     [default: False]                                            │
-│   --no-exclude-images                                                                            │
-│ --exclude-other --no-exclude-other   [default: False]                                            │
-│ --exclude-videos                     [default: False]                                            │
-│   --no-exclude-videos                                                                            │
-│ --filename-regex-filter                                                                          │
-│ --ignore-coomer-ads                  [default: False]                                            │
-│   --no-ignore-coomer-ads                                                                         │
-│ --ignore-coomer-post-content         [default: True]                                             │
-│   --no-ignore-coomer-post-content                                                                │
-│ --only-hosts                         [default: []]                                               │
-│ --skip-hosts                         [default: []]                                               │
-│ --exclude-files-with-no-extension -  [default: True]                                             │
-│   -no-exclude-files-with-no-extensi                                                              │
-│   on                                                                                             │
-│ --exclude-before                                                                                 │
-│ --exclude-after                                                                                  │
+╭─ Jdownloader ────────────────────────────────────────────────────────────────────────────────────╮
+│ --jdownloader --no-jdownloader  Send unsupported URLs to Jdownloader                             │
+│                                 [default: False]                                                 │
+│ --jdownloader.autostart         Immediately start downloads as soon as they are sent             │
+│   --jdownloader.no-autostart    [default: False]                                                 │
+│ --jdownloader.download-folder   Output path for Jdownloader. Defaults to `--download-folder`     │
+│ --jdownloader.whitelist         Only send unsupported URLs from these domains to Jdownloader. An │
+│                                 empty list means 'send all URLs'                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --download-error-urls           [default: Download_Error_URLs.csv]                               │
-│ --last-forum-post               [default: Last_Scraped_Forum_Posts.csv]                          │
-│ --log-folder                    [default: AppData/Logs]                                          │
-│ --logs-expire-after                                                                              │
-│ --main-log                      [default: downloader.log]                                        │
-│ --rotate-logs --no-rotate-logs  [default: False]                                                 │
-│ --scrape-error-urls             [default: Scrape_Error_URLs.csv]                                 │
-│ --unsupported-urls              [default: Unsupported_URLs.csv]                                  │
+│ --logs.level                    Only log messages of this level or higher to the main log file   │
+│                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]                 │
+│                                 [default: DEBUG]                                                 │
+│ --logs.console-level            Only log messages of this level or higher to the console. An     │
+│                                 empty or `None` value will use the same level as `log_level`     │
+│ --logs.files.main --log-file    Path of main log file                                            │
+│                                 [default: downloader.log]                                        │
+│ --logs.files.download-errors    Save download errors to this file (MUST BE .csv)                 │
+│                                 [default: download_errors.csv]                                   │
+│ --logs.files.scrape-errors      Save scrape errors to this file (MUST BE .csv)                   │
+│                                 [default: scrape_errors.csv]                                     │
+│ --logs.files.unsupported        Save unsupported URLs to this file (MUST BE .csv)                │
+│                                 [default: unsupported.csv]                                       │
+│ --logs.files.last-forum-post    Save the URL of the last scraped post from each thread to this   │
+│                                 file (MUST BE .csv)                                              │
+│                                 [default: last_forum_post.csv]                                   │
+│ --logs.folder                   Base folder to prepend to log files paths (if they are not       │
+│                                 absolute)                                                        │
+│ --logs.expire-after             Delete all log files inside `--logs.folder` if they are older    │
+│                                 that this                                                        │
+│ --logs.rotate --logs.no-rotate  Append current datetimme to every log file on each run           │
+│                                 [default: False]                                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ MediaDurationLimits ────────────────────────────────────────────────────────────────────────────╮
-│ --maximum-video-duration  [default: 0:00:00]                                                     │
-│ --maximum-audio-duration  [default: 0:00:00]                                                     │
-│ --minimum-video-duration  [default: 0:00:00]                                                     │
-│ --minimum-audio-duration  [default: 0:00:00]                                                     │
+╭─ MaxChildren ────────────────────────────────────────────────────────────────────────────────────╮
+│ --max-children.forum       Do not scrape more that this number of URLs inside a forum thread     │
+│                            [default: 0]                                                          │
+│ --max-children.forum-post  Do not scrape more that this number of URLs inside an individual a    │
+│                            forum post                                                            │
+│                            [default: 0]                                                          │
+│ --max-children.profile     Do not scrape more that this number of URLs in a profile              │
+│                            [default: 0]                                                          │
+│ --max-children.album       Do not scrape more that this number of URLs in a album                │
+│                            [default: 0]                                                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ RateLimiting ───────────────────────────────────────────────────────────────────────────────────╮
-│ --download-attempts                  [default: 2]                                                │
-│ --download-delay                     [default: 0.0]                                              │
-│ --download-speed-limit               [default: 0]                                                │
-│ --jitter                             [default: 0]                                                │
-│ --max-simultaneous-downloads-per-do  [default: 5]                                                │
-│   main                                                                                           │
-│ --max-simultaneous-downloads         [default: 15]                                               │
-│ --rate-limit                         [default: 25]                                               │
-│ --connection-timeout                 [default: 15]                                               │
-│ --read-timeout                       [default: 300]                                              │
-│ --concurrent-segments                Allow up to <N> HLS segments to be downloaded concurrently  │
-│                                      [default: 10]                                               │
+╭─ Network ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --dump-responses       Save text/HTML/JSON responses to disk (flaresolverr responses are         │
+│   --no-dump-responses  excluded)                                                                 │
+│                        [default: False]                                                          │
+│ --flaresolverr         HTTP URL of an existing flaresolverr instance                             │
+│ --proxy                HTTP/HTTPS proxy                                                          │
+│ --rate-limit           Max number of requests per second (only used while scraping)              │
+│                        [default: 25]                                                             │
+│ --connection-timeout   [default: 15]                                                             │
+│ --read-timeout         [default: 300]                                                            │
+│ --ssl-context          [default: truststore+certifi]                                             │
+│ --user-agent           [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101        │
+│                        Firefox/150.0]                                                            │
+│ --impersonate          Use this target as impersonation for all scrape requests                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ RuntimeOptions ─────────────────────────────────────────────────────────────────────────────────╮
-│ --log-level                          Only log messages of this level or higher to the main log   │
-│                                      file [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]       │
-│                                      [default: DEBUG]                                            │
-│ --console-log-level                  Only log messages of this level or higher to the console.   │
-│                                      An empty or None value will use the same level as log_level │
-│                                      [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]            │
-│ --deep-scrape --no-deep-scrape       [default: False]                                            │
-│ --delete-partial-files               [default: False]                                            │
-│   --no-delete-partial-files                                                                      │
-│ --ignore-history                     [default: False]                                            │
-│   --no-ignore-history                                                                            │
-│ --jdownloader-autostart              [default: False]                                            │
-│   --no-jdownloader-autostart                                                                     │
-│ --jdownloader-download-dir                                                                       │
-│ --jdownloader-whitelist              [default: []]                                               │
-│ --send-unsupported-to-jdownloader -  [default: False]                                            │
-│   -no-send-unsupported-to-jdownload                                                              │
-│   er                                                                                             │
-│ --skip-check-for-empty-folders       [default: False]                                            │
-│   --no-skip-check-for-empty-folders                                                              │
-│ --skip-check-for-partial-files       [default: False]                                            │
-│   --no-skip-check-for-partial-files                                                              │
-│ --slow-download-speed                [default: 0]                                                │
-│ --update-last-forum-post             [default: True]                                             │
-│   --no-update-last-forum-post                                                                    │
+╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --sort --no-sort            Enable/Disable file sorting at the end of a run                      │
+│                             [default: False]                                                     │
+│ --sort.input-folder         Base folder to scan for files. Default to the same value as          │
+│                             `--download-folder`                                                  │
+│ --sort.output-folder        Output path to place sorted files in                                 │
+│                             [default: downloads/cyberdrop-dl sorted]                             │
+│ --sort.formats.audio        Format to generate sorted audio file                                 │
+│                             [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]               │
+│ --sort.formats.image        Format to generate sorted image file                                 │
+│                             [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]              │
+│ --sort.formats.non-media    Format to generate sorted files of unknown type                      │
+│                             [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]               │
+│ --sort.formats.video        Format to generate sorted video file                                 │
+│                             [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]              │
+│ --sort.formats.incrementer  Format for separator on name collisions                              │
+│                             [default:  ({i})]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Sorting ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --scan-folder                                                                                    │
-│ --sort-downloads           [default: False]                                                      │
-│   --no-sort-downloads                                                                            │
-│ --sort-folder              [default: Downloads/Cyberdrop-DL Sorted Downloads]                    │
-│ --sort-incrementer-format  [default:  ({i})]                                                     │
-│ --sorted-audio             [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]                │
-│ --sorted-image             [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]               │
-│ --sorted-other             [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]                │
-│ --sorted-video             [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]               │
+╭─ SubFolders ─────────────────────────────────────────────────────────────────────────────────────╮
+│ --subfolders --no-subfolders         Enable/disable the createtion of nested sub-folders         │
+│                                      [default: True]                                             │
+│ --subfolders.include.album-id        [default: False]                                            │
+│   --subfolders.include.no-album-id                                                               │
+│ --subfolders.include.thread-id       [default: False]                                            │
+│   --subfolders.include.no-thread-id                                                              │
+│ --subfolders.include.domain          [default: True]                                             │
+│   --subfolders.include.no-domain                                                                 │
+│ --subfolders.separate-posts.format   [default: {default}]                                        │
+│ --subfolders.separate-posts          Create new subfolders for every post on a site              │
+│   --subfolders.no-separate-posts     [default: False]                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ UIOptions ──────────────────────────────────────────────────────────────────────────────────────╮
-│ --refresh-rate  [default: 10.0]                                                                  │
+│ --ui                      [choices: disabled, activity, simple, fullscreen]                      │
+│                           [default: fullscreen]                                                  │
+│ --portrait --no-portrait  force CDL to run with a vertical layout                                │
+│                           [default: False]                                                       │
+│ --refresh-rate            [default: 10.0]                                                        │
+│ --stats --no-stats        Show stats report at the end of a run                                  │
+│                           [default: True]                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
+Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
 <!-- END_CLI_OVERVIEW -->

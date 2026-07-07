@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, final
+from typing import TYPE_CHECKING, Any, final, override
 
 from mega.chunker import MegaChunker, get_chunks
-from typing_extensions import override
 
 from cyberdrop_dl import aio, storage
 from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker
@@ -65,12 +64,9 @@ class MegaDownloader(Downloader):
     def __post_init__(self) -> None:
         super(MegaDownloader, self).__post_init__()
         self._client = MegaDownloadClient(self.manager)
+        self.max_attempts: int = 1
 
     @property
     @override
     def client(self) -> MegaDownloadClient:
         return self._client
-
-    @property
-    def max_attempts(self) -> int:
-        return 1

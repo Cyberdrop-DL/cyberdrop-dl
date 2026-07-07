@@ -3,81 +3,63 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import datetime
 import logging
-import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Self
 
-from pydantic.types import ByteSize
-
-from cyberdrop_dl import aio, plugins, storage
-from cyberdrop_dl.clients.jdownloader import JDownloader
+from cyberdrop_dl import env, filepath, storage
 from cyberdrop_dl.constants import BlockedDomains
-from cyberdrop_dl.crawlers import create_crawlers
-from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
-from cyberdrop_dl.crawlers.crawler import ALLOW_NO_EXT
-from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
-from cyberdrop_dl.crawlers.http_direct import DirectHttpFile
-from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
-from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler, WordPressMediaCrawler
-from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
+from cyberdrop_dl.crawlers import ALLOW_NO_EXT, create_crawlers
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
+from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.progress.scraping import ScrapingUI
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import dates, filepath, remove_trailing_slash
+from cyberdrop_dl.scrape_source import (
+    RetryQuery,
+    RetryScrapeSource,
+    URLsSource,
+    load_items_from_db,
+    load_items_from_file,
+    load_items_from_iterable,
+)
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
+from cyberdrop_dl.utils import remove_trailing_slash
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator, Sequence
+    from collections.abc import AsyncGenerator, Coroutine, Generator, Iterable, Iterator
 
-    import aiosqlite
-
-    from cyberdrop_dl.config._global import GenericCrawlerInstances
+    from cyberdrop_dl.clients.jdownloader import JDownloader
+    from cyberdrop_dl.config import Config
+    from cyberdrop_dl.config.crawlers import GenericCrawlers
     from cyberdrop_dl.crawlers.crawler import Crawler
+    from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
+    from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
     from cyberdrop_dl.manager import Manager
 
-    _T = TypeVar("_T")
-    _CrawlerT = TypeVar("_CrawlerT", bound=Crawler)
 
 logger = logging.getLogger(__name__)
 
 
-REGEX_LINKS = re.compile(r"(?:http.*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]))")
-
-
-def _filter_by_date(scrape_item: ScrapeItem, before: datetime.date | None, after: datetime.date | None) -> bool:
-    skip = False
-    item_date = scrape_item.completed_at or scrape_item.created_at
-    if not item_date:
-        return False
-    date = dates.from_timestamp(item_date).date()
-    if (after and date < after) or (before and date > before):
-        skip = True
-
-    return skip
-
-
-def _filter_by_domain(scrape_item: ScrapeItem, domain_list: Sequence[str]) -> bool:
-    return any(domain in scrape_item.url.host for domain in domain_list)
+def _filter_by_domain(url: AbsoluteHttpURL, domains: Iterable[str]) -> bool:
+    return any(domain in url.host for domain in domains)
 
 
 @dataclasses.dataclass(slots=True, eq=False)
 class CrawlerFactory:
-    manager: Manager
-    _instances: dict[type[Crawler], Crawler] = dataclasses.field(default_factory=dict)
+    manager: Manager = dataclasses.field(repr=False)
+    _instances: dict[type[Crawler], Crawler] = dataclasses.field(repr=False, default_factory=dict)
 
-    def __getitem__(self, obj: type[_CrawlerT]) -> _CrawlerT:
+    def __getitem__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT:
         instance = self.get(obj)
         if instance is None:
             instance = self._instances[obj] = obj(self.manager)
         return instance
 
-    def __contains__(self, obj: type[_CrawlerT]) -> bool:
+    def __contains__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> bool:
         return obj in self._instances
 
-    def get(self, obj: type[_CrawlerT]) -> _CrawlerT | None:
+    def get[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT | None:
         return self._instances.get(obj)  # pyright: ignore[reportReturnType]
 
     def __iter__(self) -> Iterator[Crawler]:
@@ -107,9 +89,9 @@ class ScrapeStats:
 
 
 @dataclasses.dataclass(slots=True)
-class TaskGroups:
-    scrape: asyncio.TaskGroup
-    downloads: asyncio.TaskGroup
+class TaskGroups[T: asyncio.TaskGroup]:
+    scrape: T
+    downloads: T
 
 
 @dataclasses.dataclass(slots=True)
@@ -119,17 +101,21 @@ class ScrapeMapper:
     manager: Manager
     crawlers: dict[str, type[Crawler]] = dataclasses.field(init=False, default_factory=dict)
 
-    _direct_http: DirectHttpFile = dataclasses.field(init=False)
+    _direct_http: DirectHttpFileCrawler = dataclasses.field(init=False)
     _jdownloader: JDownloader = dataclasses.field(init=False)
     _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
-    _task_groups: TaskGroups = dataclasses.field(
-        init=False, default_factory=lambda: TaskGroups(asyncio.TaskGroup(), asyncio.TaskGroup())
+    _task_groups: TaskGroups[asyncio.TaskGroup] = dataclasses.field(
+        init=False,
+        default_factory=lambda: TaskGroups(asyncio.TaskGroup(), asyncio.TaskGroup()),
     )
     _seen_urls: set[AbsoluteHttpURL] = dataclasses.field(init=False, default_factory=set)
-    _crawlers_disabled_at_runtime: set[str] = dataclasses.field(init=False, default_factory=set)
     _factory: CrawlerFactory = dataclasses.field(init=False)
     tui: ScrapingUI = dataclasses.field(init=False, default_factory=ScrapingUI)
     _done: asyncio.Event = dataclasses.field(init=False, default_factory=asyncio.Event)
+    _ready: bool = dataclasses.field(init=False, default=False)
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(seen_url={len(self._seen_urls):,}, done={self._done!r})>"
 
     def _scrape_queue(self) -> int:
         return sum(crawler.waiting_items for crawler in self._factory)
@@ -140,53 +126,70 @@ class ScrapeMapper:
         return total
 
     def __post_init__(self) -> None:
-        self._direct_http = DirectHttpFile(self.manager)
-        self._jdownloader = JDownloader.from_manager(self.manager)
+        from cyberdrop_dl.clients.jdownloader import JDownloader
+        from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
+        from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
+
+        self._direct_http = DirectHttpFileCrawler(self.manager)
+        self._jdownloader = JDownloader.from_config(self.manager.config)
         self._real_debrid = RealDebridCrawler(self.manager)
         self._factory = CrawlerFactory(self.manager)
         self.tui.scrape.get_queue = self._scrape_queue
         self.tui.downloads.get_queue = self._download_queue
 
-    def create_task(self, coro: Coroutine[Any, Any, _T]) -> None:
+    def create_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
+        # skip 1 loop iteration to give priority to download tasks
+        async def lazy() -> T:
+            await asyncio.sleep(0)
+            return await coro
+
+        _ = self._task_groups.scrape.create_task(lazy())
+
+    def create_eager_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.scrape.create_task(coro)
 
-    def create_download_task(self, coro: Coroutine[Any, Any, _T]) -> None:
+    def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
 
     def _init_crawlers(self) -> None:
+        crawlers = get_crawlers_mapping()
+        self.crawlers.update(crawlers)
 
-        self.crawlers.update(get_crawlers_mapping())
-
-        for crawler in _create_generic_crawlers(self.manager.config.global_settings.generic_crawlers_instances):
+        n_generics = 0
+        for crawler in _create_generic_crawlers(self.manager.config.crawlers.generic):
+            n_generics += 1
             register_crawler(self.crawlers, crawler, from_user=True)
 
-        _disable_crawlers_by_config(self.crawlers, *self.manager.config.global_settings.general.disable_crawlers)
+        msg = f"Loaded {len(crawlers) + n_generics:,} crawlers ({len(crawlers):,} concrete, {n_generics:,} generic)"
+        logger.debug(msg)
 
-        plugins.load(self.manager)
+        _disable_crawlers_by_config(self.crawlers, *self.manager.config.crawlers.disabled)
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
+        from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
+
         assert not self._done.is_set()
         config = self.manager.config
-        _ = filepath.MAX_FILE_LEN.set(config.global_settings.general.max_file_name_length)
-        _ = filepath.MAX_FOLDER_LEN.set(config.global_settings.general.max_folder_name_length)
-        _ = CONCURRENT_SEGMENTS.set(config.global_settings.rate_limiting_options.concurrent_segments)
-        _ = ALLOW_NO_EXT.set(not config.settings.ignore_options.exclude_files_with_no_extension)
+        _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
+        _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
+        _ = CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
+        _ = ALLOW_NO_EXT.set(config.filters.allow_files_with_no_extension)
+        if config.ui.portrait:
+            env.FORCE_PORTRAIT_MODE = True
 
-        config.settings.files.download_folder.mkdir(parents=True, exist_ok=True)
-        if config.settings.sorting.sort_downloads:
-            config.settings.sorting.sort_folder.mkdir(parents=True, exist_ok=True)
+        config.download_folder.mkdir(parents=True, exist_ok=True)
+        if config.sort.enabled:
+            config.sort.output_folder.mkdir(parents=True, exist_ok=True)
 
-        logger.debug(
-            "Using %s as chunk size", ByteSize(self.manager.download_client.chunk_size).human_readable(decimal=True)
-        )
+        logger.debug("Using %s as chunk size", bytesize_to_str(self.manager.download_client.chunk_size))
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
-        self.tui.mode = self.manager.cli_args.ui
+        self.tui.mode = self.manager.config.ui.mode
         ## IMPORTANT: Order of each context matters!
         with self.tui():
             async with (
                 self.manager.http_client,
-                storage.monitor(config.global_settings.general.required_free_space),
+                storage.monitor(config.min_free_space),
                 self.manager.logs.task_group,
                 self._task_groups.downloads,
             ):
@@ -200,7 +203,9 @@ class ScrapeMapper:
                     # The done event signals that all scraping is done, but there may still be downloads pending
                     self._done.set()
 
-    async def run(self) -> ScrapeStats:
+    async def __async_init__(self) -> None:
+        if self._ready:
+            return
         self._init_crawlers()
         try:
             await self._jdownloader.connect()
@@ -209,30 +214,29 @@ class ScrapeMapper:
 
         await self._real_debrid.__async_init__()
         await self._direct_http.__async_post_init__()
+        self._ready = True
 
-        item_limit = 0
-        if self.manager.cli_args.retry_any and self.manager.cli_args.max_items_retry:
-            item_limit = self.manager.cli_args.max_items_retry
+    async def _wait_until_scrape_is_done(self, stats: ScrapeStats) -> None:
+        _ = await self._done.wait()
+        self.tui.hide_scrape_panel()
+        stats.url_count.update(
+            (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
+        )
 
-        source_name, source = _source(self.manager)
-        async with contextlib.aclosing(source) as items:
-            stats = ScrapeStats(source_name)
+    async def run(self, src: URLsSource | RetryScrapeSource | None = None) -> ScrapeStats:
+        await self.__async_init__()
+        if src is None:
+            return ScrapeStats("")
 
-            async def wait_until_scrape_is_done() -> None:
-                _ = await self._done.wait()
-                self.tui.hide_scrape_panel()
-                stats.url_count.update(
-                    (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler._scraped_items))
-                )
-
-            self.create_download_task(wait_until_scrape_is_done())
+        stats, get_items = _parse_source(src, self.manager)
+        async with contextlib.aclosing(get_items) as items:
+            self.create_download_task(self._wait_until_scrape_is_done(stats))
+            max_children = _build_max_children_map(self.manager.config)
 
             async for item in items:
-                item.children_limits = self.manager.config.settings.download_options.maximum_number_of_children
-                item.download_folder = self.manager.config.settings.files.download_folder
+                item.max_children = max_children
+                item.download_folder = self.manager.config.download_folder
                 if self._should_scrape(item):
-                    if item_limit and stats.count >= item_limit:
-                        break
                     stats.update(item)
                     self.create_task(self._send_to_crawler(item))
 
@@ -268,13 +272,11 @@ class ScrapeMapper:
         if self._jdownloader.is_enabled_for(scrape_item.url):
             logger.info(f"Sending unsupported URL to JDownloader: {scrape_item.url}")
 
-            download_folder = scrape_item.compose_download_path("jdownloader")
-            relative_download_dir = download_folder.relative_to(self.manager.config.settings.files.download_folder)
             try:
                 await self._jdownloader.send(
                     scrape_item.url,
                     scrape_item.path.as_posix(),
-                    relative_download_dir,
+                    scrape_item.path,
                 )
 
             except JDownloaderError as e:
@@ -299,151 +301,18 @@ class ScrapeMapper:
             return False
 
         self._seen_urls.add(scrape_item.url)
-
-        if (
-            _filter_by_domain(scrape_item, BlockedDomains.partial_match)
-            or scrape_item.url.host in BlockedDomains.exact_match
-        ):
-            logger.info(f"Skipping {scrape_item.url} as it is a blocked domain")
+        if _skip_by_config(scrape_item.url, self.manager.config):
+            self.tui.files.stats.skipped += 1
             return False
-
-        before = self.manager.cli_args.completed_before
-        after = self.manager.cli_args.completed_after
-
-        if _filter_by_date(scrape_item, before, after):
-            logger.info(f"Skipping {scrape_item.url} as it is outside of the desired date range")
-            return False
-
-        skip_hosts = self.manager.config.settings.ignore_options.skip_hosts
-        if skip_hosts and _filter_by_domain(scrape_item, skip_hosts):
-            logger.info(f"Skipping {scrape_item.url} by skip_hosts config")
-            return False
-
-        only_hosts = self.manager.config.settings.ignore_options.only_hosts
-        if only_hosts and not _filter_by_domain(scrape_item, only_hosts):
-            logger.info(f"Skipping {scrape_item.url} by only_hosts config")
-            return False
-
         return True
 
-    def disable_crawler(self, domain: str) -> type[Crawler] | None:
-        """Disables a crawler at runtime, after the scrape mapper is already running.
 
-        It does not remove the crawler from the crawlers map, it just sets it as `disabled"`
-
-        This has the effect to silently ignore any URL that maps to that crawler, without any "unsupported" or "errors" log messages
-
-        `domain` must match _exactly_, AKA: it must be the value of `crawler.DOMAIN`
-
-        Returns the crawler instance that was disabled (if Any)
-
-        """
-
-        if domain in self._crawlers_disabled_at_runtime:
-            return None
-
-        crawler = next((crawler for crawler in self.crawlers.values() if domain == crawler.DOMAIN), None)
-        if not crawler or crawler.disabled:
-            return None
-
-        crawler.disabled = True
-        self._crawlers_disabled_at_runtime.add(domain)
-        if instance := self._factory.get(crawler):
-            instance.disabled = True
-        return crawler
-
-
-def _source(manager: Manager) -> tuple[str, AsyncGenerator[ScrapeItem]]:
-    cli_args = manager.cli_args
-
-    if cli_args.retry_failed:
-        return "--retry-failed", load_failed_links(manager)
-    if cli_args.retry_all:
-        return "--retry-all", load_all_links(manager)
-    if cli_args.retry_maintenance:
-        return "--retry-maintenance", load_all_bunkr_failed_links_via_hash(manager)
-    if cli_args.links:
-        return "--links (CLI args)", _load_cli_links(cli_args.links)
-
-    return str(manager.config.settings.files.input_file), _load_urls_from_file(manager.config.settings.files.input_file)
-
-
-async def _load_urls_from_file(file: Path) -> AsyncGenerator[ScrapeItem]:
-    async for group_name, urls in _parse_input_file_groups(file):
-        for url in urls:
-            item = ScrapeItem(url=url)
-            if group_name:
-                item.append_folders(group_name)
-                item.part_of_album = True
-            yield item
-
-
-async def _parse_input_file_groups(input_file: Path) -> AsyncGenerator[tuple[str, list[AbsoluteHttpURL]]]:
-    if not await aio.is_file(input_file):
-        yield ("", [])
-        return
-
-    block_quote = False
-    current_group_name = ""
-    async with aio.open(input_file, encoding="utf8") as f:
-        async for line in f:
-            if line.startswith(("---", "===")):  # New group begins here
-                current_group_name = line.replace("---", "").replace("===", "").strip()
-
-            if current_group_name:
-                yield (current_group_name, list(_regex_links(line)))
-                continue
-
-            block_quote = not block_quote if line == "#\n" else block_quote
-            if not block_quote:
-                yield ("", list(_regex_links(line)))
-
-
-async def _load_cli_links(links: Iterable[AbsoluteHttpURL]) -> AsyncGenerator[ScrapeItem]:
-    for url in links:
-        yield ScrapeItem(url=url)
-
-
-def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
-    """Regex grab the links from the URLs.txt file.
-
-    This allows code blocks or full paragraphs to be copy and pasted into the URLs.txt.
-    """
-
-    line = line.strip()
-    if line.startswith("#"):
-        return
-
-    http_urls = (url.group().replace(".md.", ".") for url in re.finditer(REGEX_LINKS, line))
-    for link in http_urls:
-        try:
-            encoded = "%" in link
-            yield AbsoluteHttpURL(link, encoded=encoded)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Unable to parse URL from input file: {link} {e:!r}")
-
-
-def _create_item_from_row(row: aiosqlite.Row) -> ScrapeItem:
-    referer: str = row["referer"]
-    url = AbsoluteHttpURL(referer, encoded="%" in referer)
-    item = ScrapeItem(url=url, retry_path=Path(row["download_path"]), part_of_album=True)
-    if completed_at := row["completed_at"]:
-        item.completed_at = int(datetime.datetime.fromisoformat(completed_at).timestamp())
-    if created_at := row["created_at"]:
-        item.created_at = int(datetime.datetime.fromisoformat(created_at).timestamp())
-    return item
-
-
-def get_crawlers_mapping(*, include_generics: bool = False) -> dict[str, type[Crawler]]:
-    from cyberdrop_dl.crawlers.crawler import Registry
-
-    Registry.import_all()
+def get_crawlers_mapping() -> dict[str, type[Crawler]]:
+    from cyberdrop_dl.crawlers import Registry
 
     crawlers_map: dict[str, type[Crawler]] = {}
 
-    crawlers = Registry.concrete | Registry.generic if include_generics else Registry.concrete
-
-    for crawler in sorted(crawlers, key=lambda c: c.NAME):
+    for crawler in sorted(Registry.get_crawlers(), key=lambda c: c.NAME):
         register_crawler(crawlers_map, crawler)
 
     copy = crawlers_map.copy()
@@ -483,16 +352,31 @@ def register_crawler(
         crawlers_map[domain] = crawler
 
 
-def _create_generic_crawlers(generics_config: GenericCrawlerInstances) -> Generator[type[Crawler]]:
+def _create_generic_crawlers(generics_config: GenericCrawlers) -> Generator[type[Crawler]]:
+    from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 
-    for domains, cls in (
-        (generics_config.wordpress_html, WordPressHTMLCrawler),
-        (generics_config.wordpress_media, WordPressMediaCrawler),
-        (generics_config.discourse, DiscourseCrawler),
-        (generics_config.chevereto, CheveretoCrawler),
-    ):
-        if domains:
-            yield from create_crawlers(domains, cls)
+    if generics_config.chevereto:
+        yield from create_crawlers(generics_config.chevereto, CheveretoCrawler)
+
+    if generics_config.wordpress_html:
+        from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler
+
+        yield from create_crawlers(generics_config.wordpress_html, WordPressHTMLCrawler)
+
+    if generics_config.wordpress_media:
+        from cyberdrop_dl.crawlers.wordpress import WordPressMediaCrawler
+
+        yield from create_crawlers(generics_config.wordpress_media, WordPressMediaCrawler)
+
+    if generics_config.discourse:
+        from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
+
+        yield from create_crawlers(generics_config.discourse, DiscourseCrawler)
+
+    if generics_config.kvs:
+        from cyberdrop_dl.crawlers._kvs import GenericKVSCrawler
+
+        yield from create_crawlers(generics_config.kvs, GenericKVSCrawler)
 
 
 def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *crawlers_to_disable: str) -> None:
@@ -527,7 +411,7 @@ def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *cra
     log_spacer()
 
 
-def _best_match(current_map: dict[str, _T], domain: str) -> _T | None:
+def _best_match[T](current_map: dict[str, T], domain: str) -> T | None:
     if found := current_map.get(domain):
         return found
 
@@ -540,21 +424,52 @@ def _best_match(current_map: dict[str, _T], domain: str) -> _T | None:
         return found
 
 
-async def load_failed_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    async for rows in manager.database.history.get_failed_items():
-        for row in rows:
-            yield _create_item_from_row(row)
+def _build_max_children_map(config: Config) -> dict[ScrapeItemType, int]:
+    max_children = config.max_children
+    return {
+        ScrapeItemType.FORUM: max_children.forum,
+        ScrapeItemType.FORUM_POST: max_children.forum_post,
+        ScrapeItemType.PROFILE: max_children.profile,
+        ScrapeItemType.ALBUM: max_children.album,
+    }
 
 
-async def load_all_links(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    after = manager.cli_args.completed_after or dates.MIN.date()
-    before = manager.cli_args.completed_before or dates.now_utc().date()
-    async for rows in manager.database.history.get_all_items(after, before):
-        for row in rows:
-            yield _create_item_from_row(row)
+def _parse_source(
+    src: RetryScrapeSource | Path | Iterable[AbsoluteHttpURL], manager: Manager
+) -> tuple[ScrapeStats, AsyncGenerator[ScrapeItem]]:
+    match src:
+        case RetryScrapeSource():
+            source = src.source.value
+            query = RetryQuery[src.source.name]
+            items = load_items_from_db(
+                manager.database.conn,
+                query,
+                after=src.after,
+                before=src.before,
+            )
+        case Path():
+            source = src
+            items = load_items_from_file(src)
+        case _:
+            source = "--links (CLI args)"
+            items = load_items_from_iterable(src)
+
+    return ScrapeStats(source), items
 
 
-async def load_all_bunkr_failed_links_via_hash(manager: Manager) -> AsyncGenerator[ScrapeItem]:
-    async for rows in manager.database.history.get_all_bunkr_failed():
-        for row in rows:
-            yield _create_item_from_row(row)
+def _skip_by_config(url: AbsoluteHttpURL, config: Config) -> bool:
+    if _filter_by_domain(url, BlockedDomains.partial_match) or url.host in BlockedDomains.exact_match:
+        logger.info("Skipping %s as it is a blocked domain", url)
+        return True
+
+    hosts = config.filters.skip_hosts
+    if hosts and _filter_by_domain(url, hosts):
+        logger.info("Skipping %s by skip_hosts config", url)
+        return True
+
+    hosts = config.filters.only_hosts
+    if hosts and _filter_by_domain(url, hosts):
+        logger.info("Skipping %s by only_hosts config", url)
+        return True
+
+    return False

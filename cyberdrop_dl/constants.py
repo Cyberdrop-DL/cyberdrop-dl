@@ -1,21 +1,43 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from enum import auto
-from pathlib import Path
-from typing import final
+import datetime
+from contextvars import ContextVar
+from enum import StrEnum, auto
+from typing import TYPE_CHECKING, final
 
-from rich.text import Text
+from cyclopts import Parameter
+from typing_extensions import Sentinel
 
 from cyberdrop_dl import __version__, env
-from cyberdrop_dl.compat import CIStrEnum, Enum, StrEnum
 
-# TIME
-STARTUP_TIME_UTC = datetime.now(UTC)
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 LOGS_DATETIME_FORMAT = "%Y%m%d_%H%M%S"
 LOGS_DATE_FORMAT = "%Y_%m_%d"
-STARTUP_TIME_STR = datetime.now().strftime(LOGS_DATETIME_FORMAT)  # noqa: DTZ005
+STARTUP_TIME_STR = datetime.datetime.now().strftime(LOGS_DATETIME_FORMAT)  # noqa: DTZ005
 CDL_USER_AGENT = f"cyberdrop-dl/{__version__}"
+MISSING = Sentinel("MISSING")
+
+MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
+
+DEFAULT_PARAMETER = Parameter(
+    negative_iterable=[],
+    json_dict=False,
+    json_list=False,
+    consume_multiple=True,
+    allow_repeating=False,
+)
+
+
+class CIStrEnum(StrEnum):
+    @classmethod
+    def _missing_(cls, value: object) -> CIStrEnum | None:
+        value = str(value).casefold()
+        for member in cls:
+            if member.name.casefold() == value:
+                return member
 
 
 class TempExt(StrEnum):
@@ -49,44 +71,14 @@ class BlockedDomains:
         exact_match = *exact_match, "x.com"
 
 
-DEFAULT_APP_STORAGE = Path("./AppData")
-DEFAULT_DOWNLOAD_STORAGE = Path("./Downloads")
-
-
-class HashType(StrEnum):
-    md5 = "md5"
-    sha256 = "sha256"
-    xxh128 = "xxh128"
-
-
-class Hashing(CIStrEnum):
+class HashMode(CIStrEnum):
     OFF = auto()
     IN_PLACE = auto()
     POST_DOWNLOAD = auto()
 
     @property
     def enabled(self) -> bool:
-        return self is not Hashing.OFF
-
-
-class Browser(StrEnum):
-    chrome = auto()
-    firefox = auto()
-    safari = auto()
-    edge = auto()
-    opera = auto()
-    brave = auto()
-    librewolf = auto()
-    opera_gx = auto()
-    vivaldi = auto()
-    chromium = auto()
-
-
-class NotificationResult(Enum):
-    SUCCESS = Text("Success", "green")
-    FAILED = Text("Failed", "bold red")
-    PARTIAL = Text("Partial Success", "yellow")
-    NONE = Text("No Notifications Sent", "yellow")
+        return self is not HashMode.OFF
 
 
 @final

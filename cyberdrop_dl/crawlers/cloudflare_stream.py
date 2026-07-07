@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.json import JSONWebToken
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ class CloudflareStreamCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str, token: str | None) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         m3u8_url = self.PRIMARY_URL / (token or video_id) / "manifest/video.m3u8"

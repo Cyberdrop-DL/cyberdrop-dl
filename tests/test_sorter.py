@@ -178,7 +178,7 @@ async def test_sorter(tmp_path: Path) -> None:
         audio_format="{sort_dir}/audio/{filename}{ext}",
         image_format="{sort_dir}/image/{filename}{ext}",
         video_format="{sort_dir}/video/{filename}{ext}",
-        other_format="{sort_dir}/other/{filename}{ext}",
+        non_media_format="{sort_dir}/other/{filename}{ext}",
     )
 
     for idx, file in enumerate(Files.ALL):

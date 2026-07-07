@@ -1,5 +1,5 @@
 ---
-description: These are the websites supported by Cyberdrop-DL
+description: These are the websites supported by `cyberdrop-dl`
 icon: globe-pointer
 ---
 
@@ -11,36 +11,52 @@ For a full list of all supported sites, see [supported sites](#supported-sites)
 
 ## Password Protected Content Hosts
 
-Cyberdrop-DL can download password protected files and folders from these hosts. User must include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
+`cyberdrop-dl` can download password protected files and folders from these hosts. User must include the password as a query parameter in the input URL, adding `?password=<URL_PASSWORD>` to it.
 
-Example: `https://cyberfile.me/folder/xUGg?password=1234`
+Example: `https://gofile.io/d/xUGg-sghx?password=1234`
 
-| Domain                                              |
-| --------------------------------------------------- |
-| GoFile                                              |
-| Cyberfile                                           |
-| Chevereto Sites (`JPG5`, `ImagePond.net`,`ImgLike`) |
-| Filester                                            |
-| Iceyfile.com                                        |
-| Transfer.it                                         |
-| Koofr.eu                                            |
-| Sites supported by Real-Debrid                      |
+| Domain                         |
+| ------------------------------ |
+| Chevereto sites (`ImgLike`)    |
+| Cyberfile                      |
+| Filester                       |
+| GoFile                         |
+| Iceyfile.com                   |
+| Imagepond.net                  |
+| Koofr.eu                       |
+| Transfer.it                    |
+| Sites supported by Real-Debrid |
 
-## Additional Content Hosts with Real-Debrid
+## Additional supported sites with Real-Debrid
 
-Cyberdrop-DL has integration with Real-Debrid as download service to support additional hosts. In order to enable Real-Debrid, user must provide their API token inside the `authentication.yaml` file. You can get your API token from this URL (you must be logged in): [https://real-debrid.com/apitoken](https://real-debrid.com/apitoken)
+`cyberdrop-dl` has integration with Real-Debrid as download service to support additional hosts. In order to enable Real-Debrid, user must provide their API token
+inside their config file. You can get your API token from this URL (you must be logged into Real-Debrid to view it): <https://real-debrid.com/apitoken>
 
-Supported domains via Real-Debrid include `rapidgator`, `4shared.com`, `fikper.com`, `k2s`, `etc`. List of all supported domains can be found here (250+): [https://api.real-debrid.com/rest/1.0/hosts/domains](https://api.real-debrid.com/rest/1.0/hosts/domains)
+Supported domains via Real-Debrid include `rapidgator`, `4shared.com`, `fikper.com`, `k2s`, `etc`.
+List of all supported domains can be found here (250+): <https://api.real-debrid.com/rest/1.0/hosts/domains>
 
 {% hint style="info" %}
-CDL will only use Real-Debrid for unsupported sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler. See: https://script-ware.gitbook.io/cyberdrop-dl/reference/configuration-options/global-settings/general#disable_crawlers
+Real-Debrid will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
+See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disabled>
+{% endhint %}
+
+## Additional supported sites with JDownloader
+
+`cyberdrop-dl` has integration with JDownloader as a backup downloader for unsupported sites hosts. `cyberdrop-dl` will send unsupported URLs to a running instance of JDownloader
+with a custom setup to make sure JDownloader put files on the same folder and with the same name `cyberdrop-dl` would have used.
+
+You must provide your MyJDownloader credentials in your config file to connect to JDownloader
+
+{% hint style="info" %}
+JDownloader will only be used for _unsupported_ sites. To use it for a site that CDL supports, ex: `mega.nz`, you have to disable the `mega.nz` crawler.
+See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disabled>
 {% endhint %}
 
 <!-- START_SUPPORTED_SITES -->
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 9.14.0
+List of sites supported by cyberdrop-dl-patched as of version 10.0.0
 
 ### 1fichier
 
@@ -212,11 +228,6 @@ List of sites supported by cyberdrop-dl-patched as of version 9.14.0
   - `/track/<slug>`
 
 
-**Notes**
-
-- You can set 'CDL_BANDCAMP_FORMATS' env var to a comma separated list of formats to download (Ordered by preference) [Default = 'mp3-320,mp3,aac-hi,wav,flac,vorbis,aiff,alas']
-
-
 ### Beeg.com
 
 **Primary URL**: [https://beeg.com](https://beeg.com)
@@ -299,9 +310,9 @@ ex: To only download categories from a date range: ,
 
 ### Bunkr
 
-**Primary URL**: [https://bunkr.site](https://bunkr.site)
+**Primary URL**: [https://bunkr.cr](https://bunkr.cr)
 
-**Supported Domains**: `bunkr.*`
+**Supported Domains**: `bunkr.*`, `bunkr.black`, `bunkr.cr`, `bunkr.is`, `bunkr.la`, `bunkr.se`, `bunkr.su`, `bunkrr.su`
 
 **Supported Paths**:
 
@@ -466,47 +477,6 @@ ex: To only download categories from a date range: ,
   - `/user/<user_id>`
 
 
-### Coomer
-
-**Primary URL**: [https://coomer.st](https://coomer.st)
-
-**Supported Domains**: `coomer.party`, `coomer.st`, `coomer.su`
-
-**Supported Paths**:
-
-- Direct links:
-  - `/data/...`
-  - `/thumbnail/...`
-- Favorites:
-  - `/account/favorites/posts\|artists`
-  - `/favorites?type=post\|artist`
-- Individual Post:
-  - `/<service>/user/<user_id>/post/<post_id>`
-- Model:
-  - `/<service>/user/<user_id>`
-- Search:
-  - `/search?q=...`
-
-
-### CoomerFans
-
-**Primary URL**: [https://coomerfans.com](https://coomerfans.com)
-
-**Supported Domains**: `coomerfans.*`
-
-**Supported Paths**:
-
-- Post:
-  - `/p/<post_id>/...`
-- User:
-  - `/u/<user_id>/...`
-
-
-**Notes**
-
-- `--ignore-coomer-post-content` affects this crawler. All other kemono config options are ignored
-
-
 ### Cyberdrop
 
 **Primary URL**: [https://cyberdrop.cr](https://cyberdrop.cr)
@@ -606,7 +576,7 @@ ex: To only download categories from a date range: ,
 
 **Primary URL**: [https://doodstream.com](https://doodstream.com)
 
-**Supported Domains**: `all3do.com`, `d000d.com`, `do7go.com`, `dood.re`, `dood.yt`, `doodcdn.*`, `doodstream.*`, `doodstream.co`, `myvidplay.com`, `playmogo.com`, `vidply.com`
+**Supported Domains**: `all3do.com`, `d000d.com`, `do7go.com`, `dood.re`, `dood.yt`, `doodcdn.*`, `doodstream.*`, `doodstream.co`, `dooodster.com`, `myvidplay.com`, `playmogo.com`, `vidply.com`
 
 **Supported Paths**:
 
@@ -818,7 +788,10 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - File:
+  - `/alpha7/<file_id>/<name>`
+  - `/beta123/<file_id>/<name>`
   - `/file.php?f=<file_id>`
+  - `/temp/<file_id>/<name>`
 
 
 ### Filester
@@ -906,6 +879,19 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
+
+### GenericKVS
+
+**Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
+
+**Supported Domains**:
+
+**Supported Paths**:
+
+- Video:
+  - `/video/<slug>`
+  - `/videos/<slug>`
 
 
 ### Giphy
@@ -1161,7 +1147,7 @@ spreadsheets:
 
 **Primary URL**: [https://hotpic.cc](https://hotpic.cc)
 
-**Supported Domains**: `2385290.xyz`, `hotpic.*`
+**Supported Domains**: `2385290.xyz`, `hotpic.*`, `myhostdata.space`
 
 **Supported Paths**:
 
@@ -1383,32 +1369,6 @@ spreadsheets:
   - `/<user_name>`
 
 
-### Kemono
-
-**Primary URL**: [https://kemono.cr](https://kemono.cr)
-
-**Supported Domains**: `kemono.cr`, `kemono.party`, `kemono.su`
-
-**Supported Paths**:
-
-- Direct links:
-  - `/data/...`
-  - `/thumbnail/...`
-- Discord Server:
-  - `/discord/<server_id>`
-- Discord Server Channel:
-  - `/discord/server/<server_id>/<channel_id>#...`
-- Favorites:
-  - `/account/favorites/posts\|artists`
-  - `/favorites?type=post\|artist`
-- Individual Post:
-  - `/<service>/user/<user_id>/post/<post_id>`
-- Model:
-  - `/<service>/user/<user_id>`
-- Search:
-  - `/search?q=...`
-
-
 ### Koofr
 
 **Primary URL**: [https://koofr.eu](https://koofr.eu)
@@ -1566,7 +1526,7 @@ spreadsheets:
 
 **Primary URL**: [https://missav.ws](https://missav.ws)
 
-**Supported Domains**: `missav.*`
+**Supported Domains**: `missav.ws`, `njavtv.com`
 
 **Supported Paths**:
 
@@ -1599,9 +1559,9 @@ spreadsheets:
 
 ### Motherless
 
-**Primary URL**: [https://motherless.com](https://motherless.com)
+**Primary URL**: [https://motherless.xxx](https://motherless.xxx)
 
-**Supported Domains**: `motherless.*`
+**Supported Domains**: `motherless.com`, `motherless.xxx`
 
 **Supported Paths**:
 
@@ -1689,6 +1649,22 @@ spreadsheets:
   - `/r/<subreddit>`
 - User:
   - `/user/<username>`
+
+
+### Nudeleted
+
+**Primary URL**: [https://nudeleted.com](https://nudeleted.com)
+
+**Supported Domains**: `nudeleted.*`
+
+**Supported Paths**:
+
+- Search:
+  - `/search/...`
+- Tags:
+  - `/tags/...`
+- Video:
+  - `/videos/...`
 
 
 ### NudoStar
@@ -2075,9 +2051,9 @@ spreadsheets:
 **Supported Paths**:
 
 - File:
-  - `?id=...`
+  - `?id=<file_id>`
 - Tags:
-  - `?tags=...`
+  - `?tags=<name>`
 
 
 ### RealDebrid
@@ -2492,7 +2468,7 @@ spreadsheets:
 
 - Chapter:
   - `/serie/<name>/chapter-<chapter-id>`
-- Serie:
+- Series:
   - `/serie/<name>`
 
 
@@ -2512,6 +2488,30 @@ spreadsheets:
   - `/search/<search_query>`
 - Video:
   - `/view/<video_id>`
+
+
+### TrannyGem
+
+**Primary URL**: [https://www.trannygem.com](https://www.trannygem.com)
+
+**Supported Domains**: `trannygem.*`
+
+**Supported Paths**:
+
+- Albums:
+  - `/albums/<album_name>`
+- Categories:
+  - `/categories/<name>`
+- Image:
+  - `/albums/<album_name>/<image_name>`
+- Members:
+  - `/members/<member_id>`
+- Search:
+  - `/search/?q=<query>`
+- Tags:
+  - `/tags/<name>`
+- Videos:
+  - `/videos/<slug>`
 
 
 ### Transfer.it

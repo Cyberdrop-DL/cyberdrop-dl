@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -45,6 +46,7 @@ class DoodStreamCrawler(Crawler):
         "myvidplay.com",
         "playmogo.com",
         "vidply.com",
+        "dooodster.com",
     )
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://doodstream.com/")
     UPDATE_UNSUPPORTED: ClassVar[bool] = True

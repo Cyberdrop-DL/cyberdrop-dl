@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -40,7 +41,7 @@ class SoundGasmCrawler(Crawler):
 
     @error_handling_wrapper
     async def audio(self, scrape_item: ScrapeItem, user: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         scrape_item.setup_as_profile(self.create_title(user))

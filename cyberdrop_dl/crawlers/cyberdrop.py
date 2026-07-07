@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
+from cyberdrop_dl.filepath import remove_file_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
-from cyberdrop_dl.utils.filepath import remove_file_id
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -66,7 +67,7 @@ class CyberdropCrawler(Crawler):
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         scrape_item.url = self.PRIMARY_URL / "f" / file_id
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         info, auth = await aio.safe_gather(self.api.file_info(file_id), self.api.file_auth(file_id))

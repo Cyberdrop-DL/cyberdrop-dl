@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-from cyberdrop_dl.logs import MAIN_LOG_FILE, export_logs, log_spacer
+from cyberdrop_dl.constants import MAIN_LOG_FILE
+from cyberdrop_dl.logs import export_logs, log_spacer
 
 if TYPE_CHECKING:
     import yarl
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def send_notification(webhook: AppriseURL, body: str) -> None:
+async def notify(webhook: AppriseURL, body: str) -> None:
     log_spacer()
     url, form = await _prepare(webhook)
     form.add_field("content", body)

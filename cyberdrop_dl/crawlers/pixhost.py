@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -52,12 +53,12 @@ class PixHostCrawler(Crawler):
         should_download = await self.make_album_checker(album_id)
         urls = map(_thumbnail_to_src, self.iter_urls(soup, Selector.GALLERY_IMAGES, "src"))
         for src in filter(should_download, urls):
-            self.create_task(self.direct_file(scrape_item, src))
+            self.create_eager_task(self.direct_file(scrape_item, src))
             scrape_item.add_children()
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)

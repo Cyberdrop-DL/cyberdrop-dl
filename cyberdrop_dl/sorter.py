@@ -14,11 +14,12 @@ import imagesize
 
 from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.constants import FileExt, TempExt
+from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.progress.sorting import SortingUI, SortStats
-from cyberdrop_dl.utils import delete_empty_files_and_folders, strings
+from cyberdrop_dl.utils import cleanup
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.config import Config
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class Sorter:
     audio_format: str | None
     image_format: str | None
     video_format: str | None
-    other_format: str | None
+    non_media_format: str | None
     incrementer_format: str = "{i}"
 
     _tui: SortingUI = dataclasses.field(init=False, repr=False)
@@ -45,16 +46,16 @@ class Sorter:
         return self._tui.stats
 
     @classmethod
-    def from_manager(cls, manager: Manager) -> Self:
-        settings = manager.config.settings.sorting
+    def from_config(cls, config: Config) -> Self:
+        settings = config.sort
         return cls(
-            input_dir=settings.scan_folder or manager.config.settings.files.download_folder,
-            output_dir=settings.sort_folder,
-            incrementer_format=settings.sort_incrementer_format,
-            audio_format=settings.sorted_audio,
-            image_format=settings.sorted_image,
-            video_format=settings.sorted_video,
-            other_format=settings.sorted_other,
+            input_dir=settings.input_folder or config.download_folder,
+            output_dir=settings.output_folder,
+            incrementer_format=settings.formats.incrementer,
+            audio_format=settings.formats.audio,
+            image_format=settings.formats.image,
+            video_format=settings.formats.video,
+            non_media_format=settings.formats.non_media,
         )
 
     async def run(self, *, disable_tui: bool = False) -> None:
@@ -84,7 +85,7 @@ class Sorter:
                     _ = tg.create_task(sort_subfolder(path))
 
         logger.info("DONE!", extra={"color": "green"})
-        delete_empty_files_and_folders(self.input_dir)
+        cleanup.rm_empty_dirs(self.input_dir)
 
     async def _sort_file(self, folder_name: str, file: Path) -> None:
         ext = file.suffix.lower()
@@ -186,10 +187,10 @@ class Sorter:
             self._tui.stats.videos += 1
 
     async def sort_other(self, file: Path, base_name: str) -> None:
-        if not self.other_format:
+        if not self.non_media_format:
             return
 
-        if await self._move_file(file, base_name, self.other_format):
+        if await self._move_file(file, base_name, self.non_media_format):
             self._tui.stats.others += 1
 
     async def _move_file(self, file: Path, base_name: str, format_str: str, /, **kwargs: object) -> bool:

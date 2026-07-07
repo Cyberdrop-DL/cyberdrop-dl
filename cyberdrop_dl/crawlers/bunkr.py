@@ -4,15 +4,15 @@ import asyncio
 import dataclasses
 import json
 import re
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from aiohttp import ClientConnectorError
-from typing_extensions import override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
@@ -58,7 +58,6 @@ class BunkrCrawler(Crawler):
         "bunkrr.su",
     )
     _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
-    _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = True
     _known_good_host: ClassVar[str | None] = None
 
     @staticmethod

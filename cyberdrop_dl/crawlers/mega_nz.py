@@ -5,13 +5,12 @@ This crawler does several CPU intensive operations
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
 from mega.api import MegaAPI
 from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
-from typing_extensions import override
 
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
@@ -19,12 +18,13 @@ from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
-from cyberdrop_dl.utils import error_handling_wrapper, m3u8
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from mega.filesystem import FileSystem
 
     from cyberdrop_dl.url_objects import ScrapeItem
+    from cyberdrop_dl.utils import m3u8
 
 
 class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
@@ -59,15 +59,15 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
 
     @property
     def user(self) -> str | None:
-        return self.manager.config.auth.meganz.email or None
+        return self.config.auth.mega_nz.email
 
     @property
     def password(self) -> str | None:
-        return self.manager.config.auth.meganz.password or None
+        return self.config.auth.mega_nz.password
 
     def __post_init__(self) -> None:
         self._decryption_keys: dict[AbsoluteHttpURL, tuple[Crypto, int]] = {}
-        api = MegaAPI(self.manager.http_client._session)
+        api = MegaAPI(self.client._session)
         api.user_agent = CDL_USER_AGENT
         self.core = MegaCore(api)
         speed_limiter = self.downloader.client.speed_limiter
@@ -158,7 +158,7 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             for part in path.parent.parts[1:]:
                 child_item.append_folders(part)
 
-            self.create_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
+            self.create_eager_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
             scrape_item.add_children()
 
     @override

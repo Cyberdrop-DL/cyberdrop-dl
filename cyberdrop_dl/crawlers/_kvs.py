@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
-from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph, parse_url
+from cyberdrop_dl.utils import css, extr_text, open_graph, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Generator, Sequence
@@ -59,6 +59,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         "Members": "/members/<member_id>",
     }
     NEXT_PAGE_SELECTOR: ClassVar[str] = "li.pagination-next > a"
+    THUMBNAIL_SELECTOR: ClassVar[str] = Selector.THUMBNAILS
     _RATE_LIMIT: ClassVar[RateLimit] = 6, 5
 
     def __init_subclass__(cls, *, ensure_trailing_slash: bool = False, **kwargs: Any) -> None:
@@ -89,11 +90,11 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 return await self.profile(scrape_item, member_id, entire_profile=False)
             case ["members", member_id, *_]:
                 return await self.profile(scrape_item, member_id)
-            case ["videos", _, *_]:
+            case ["videos" | "video", _, *_]:
                 return await self.video(scrape_item)
-            case ["albums", _]:
+            case ["albums" | "album", _]:
                 return await self.album(scrape_item)
-            case ["albums", _, _, *_]:
+            case ["albums" | "album", _, _, *_]:
                 return await self.picture(scrape_item)
             case _:
                 if query := scrape_item.url.query.get("q"):
@@ -150,26 +151,23 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     async def _iter_videos(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
         async for soup in self.web_pager(url or scrape_item.url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.THUMBNAILS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, self.THUMBNAIL_SELECTOR):
                 self.create_task(self.run(new_scrape_item))
+
+    def _extract_upload_date(self, soup: BeautifulSoup) -> float | None:
+        if date_str := _extract_upload_date(soup):
+            return self.parse_iso_date(date_str)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
         video = extract_kvs_video(self, soup)
-        filename, ext = self.get_filename_and_ext(video.url.name)
-
-        try:
-            date_str = css.json_ld(soup)["uploadDate"]
-        except (LookupError, ValueError, css.SelectorError):
-            # Human date parsing was removed from parse_date. This fallback
-            # no longer supports relative strings like "2 hours ago".
-            pass
-        else:
-            scrape_item.uploaded_at = self.parse_iso_date(date_str)
+        name = video.url.name or video.url.parent.name
+        filename, ext = self.get_filename_and_ext(name)
+        scrape_item.uploaded_at = self._extract_upload_date(soup)
 
         await self.handle_file(
             scrape_item.url,
@@ -197,7 +195,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def picture(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
@@ -254,6 +252,20 @@ def extract_kvs_video(cls: Crawler, soup: BeautifulSoup) -> KVSVideo:
     return video
 
 
+def _extract_upload_date(soup: BeautifulSoup) -> str | None:
+    try:
+        return open_graph.get("video:release_date", soup) or css.select(
+            soup, "meta[property='video:release_date']", "content"
+        )
+    except css.SelectorError:
+        try:
+            return css.json_ld(soup, "uploadDate")["uploadDate"]
+        except (LookupError, ValueError, css.SelectorError):
+            # Human date parsing was removed from parse_date. This fallback
+            # no longer supports relative strings like "2 hours ago".
+            return None
+
+
 # URL de-obfuscation code for kvs, adapted from yt-dlp
 # https://github.com/yt-dlp/yt-dlp/blob/e1847535e28788414a25546a45bebcada2f34558/yt_dlp/extractor/generic.py
 
@@ -306,7 +318,7 @@ def _get_license_token(license_code: str) -> tuple[int, ...]:
 
 def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> AbsoluteHttpURL:
     raw_url_str = video_url_str.removeprefix("function/0/")
-    url = parse_url(raw_url_str)
+    url = parse_url(raw_url_str, trim=False)
     is_obfuscated = raw_url_str != video_url_str
     if not is_obfuscated:
         return url
@@ -330,6 +342,25 @@ def _extract_user_name(soup: BeautifulSoup) -> str:
     return css.select_text(soup, Selector.USER_NAME).partition("'s Profile")[0].strip().removesuffix("'s Page")
 
 
-def _extract_album_id(soup: BeautifulSoup) -> str:
-    js_text = css.select_text(soup, Selector.Album.ID)
-    return extr_text(js_text, "params['album_id'] =", ";")
+def _extract_album_id(soup: BeautifulSoup) -> str | None:
+    try:
+        js_text = css.select_text(soup, Selector.Album.ID)
+        return extr_text(js_text, "params['album_id'] =", ";")
+    except (css.SelectorError, ValueError):
+        return None
+
+
+class GenericKVSCrawler(KernelVideoSharingCrawler, is_generic=True):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": (
+            "/video/<slug>",
+            "/videos/<slug>",
+        )
+    }
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["videos" | "video", _, *_]:
+                return await self.video(scrape_item)
+            case _:
+                raise ValueError

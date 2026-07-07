@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -62,10 +63,10 @@ class FSIBlogCrawler(Crawler):
 
         if video := open_graph.get("video", soup):
             link = self.parse_url(video)
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
 
         for image in self.iter_urls(soup, Selector.IMAGES):
-            self.create_task(self.direct_file(scrape_item, image))
+            self.create_eager_task(self.direct_file(scrape_item, image))
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

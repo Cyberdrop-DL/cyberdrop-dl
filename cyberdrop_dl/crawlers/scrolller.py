@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -41,7 +41,7 @@ class ScrolllerCrawler(Crawler):
                 if not src:
                     continue
 
-                self.create_task(self.direct_file(scrape_item, self.parse_url(src)))
+                self.create_eager_task(self.direct_file(scrape_item, self.parse_url(src)))
                 scrape_item.add_children()
 
     async def _api_pagination(self, subreddit: str) -> AsyncGenerator[list[dict[str, Any]]]:

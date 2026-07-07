@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, override
 
-from typing_extensions import override
-
-from cyberdrop_dl import ffmpeg
+from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.utils import m3u8
 
@@ -73,7 +70,7 @@ class HLSMixin(ABC):
                 return None
             return await self._request_m3u8(url, headers, media_type)
 
-        video, audio, subs = await asyncio.gather(
+        video, audio, subs = await aio.safe_gather(
             *(
                 resolve(url, name)
                 for name, url in zip(

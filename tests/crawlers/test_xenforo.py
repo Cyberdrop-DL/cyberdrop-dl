@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from bs4 import BeautifulSoup
 
+from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import _forum
 from cyberdrop_dl.crawlers import xenforo as crawlers
 from cyberdrop_dl.crawlers.xenforo import xenforo
@@ -12,10 +15,11 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
 def _item(url: str) -> ScrapeItem:
-    return ScrapeItem(url=AbsoluteHttpURL(url))
+    return ScrapeItem.from_url(url)
 
 
-manager = Manager()
+manager = Manager(appdata=AppData.from_dirs(AppDirs.from_path(Path(__file__).parent / "xenforo_appdata")))
+
 scrape_item = _item("https://xenforo.com/community")
 crawler_instances = {crawler: crawler(manager) for crawler in crawlers.XF_CRAWLERS}
 TEST_CRAWLER = crawler_instances[crawlers.CelebForumCrawler]
@@ -663,69 +667,6 @@ def test_is_attachment_string_false(link_str: str) -> None:
 
 def test_is_attachment_empty_string_should_be_false() -> None:
     assert TEST_CRAWLER.is_attachment("") is False
-
-
-class TestCheckPostId:
-    @pytest.mark.parametrize(
-        (
-            "init_post_id",
-            "current_post_id",
-            "scrape_single_forum_post",
-            "expected_continue_scraping",
-            "expected_scrape_this_post",
-        ),
-        [
-            # init_post_id > current_post_id
-            (100, 90, True, True, False),
-            (100, 90, False, True, False),
-            # case init_post_id == current_post_id
-            (100, 100, True, False, True),
-            (100, 100, False, True, True),
-            # case init_post_id < current_post_id
-            (100, 110, True, False, False),
-            (100, 110, False, True, True),
-        ],
-    )
-    def test_init_post_id_was_provided(
-        self,
-        init_post_id: int,
-        current_post_id: int,
-        *,
-        scrape_single_forum_post: bool,
-        expected_continue_scraping: bool,
-        expected_scrape_this_post: bool,
-    ) -> None:
-        continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id,
-            current_post_id,
-            scrape_single_forum_post=scrape_single_forum_post,
-        )
-        assert continue_scraping == expected_continue_scraping
-        assert scrape_this_post == expected_scrape_this_post
-
-    def test_no_init_post_id_and_scrape_single_post_false(self) -> None:
-        init_post_id = None
-        current_post_id = 100
-        scrape_single_forum_post = False
-        continue_scraping, scrape_this_post = _forum.check_post_id(
-            init_post_id,
-            current_post_id,
-            scrape_single_forum_post=scrape_single_forum_post,
-        )
-        assert continue_scraping is True
-        assert scrape_this_post is True
-
-    def test_no_init_post_id_and_scrape_single_post_true_raises_error(self) -> None:
-        init_post_id = None
-        current_post_id = 100
-        scrape_single_forum_post = True
-
-        with pytest.raises(AssertionError):
-            _forum.check_post_id(
-                init_post_id,
-                current_post_id,
-                scrape_single_forum_post=scrape_single_forum_post,
-            )
 
 
 # original post_id = 23549340

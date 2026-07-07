@@ -4,9 +4,10 @@ import asyncio
 import dataclasses
 import datetime
 import json
+import logging
 from abc import ABC, abstractmethod
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final
+from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final, override
 
 import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
@@ -14,7 +15,7 @@ from bs4 import BeautifulSoup
 from curl_cffi.requests.models import Response as CurlResponse
 from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
-from typing_extensions import TypeVar, override
+from typing_extensions import TypeVar
 
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
@@ -24,6 +25,7 @@ from cyberdrop_dl.utils import parse_url
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+logger = logging.getLogger(__name__)
 
 _ResponseT = TypeVar(
     "_ResponseT",
@@ -41,8 +43,8 @@ class ContentDisposition:
 
     @property
     def filename(self) -> str:
-        if name := self.raw_filename:
-            return name
+        if self.raw_filename:
+            return self.raw_filename
 
         msg = "Content disposition has no filename information"
         raise ScrapeError(422, msg)
@@ -91,12 +93,17 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         return self._text
 
     def __json__(self) -> dict[str, Any]:
+        try:
+            content = self._get_content()
+        except ValueError:
+            logger.exception("Unable to decode content of response %s", self.id)
+            content = "<ERROR DECODING CONTENT>"
         return {
             "url": str(self.url),
             "status_code": self.status,
             "created_at": str(self.created_at),
             "response_headers": dict(self.headers),
-            "content": self._get_content(),
+            "content": content,
         }
 
     @abstractmethod

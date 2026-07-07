@@ -1,72 +1,32 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import itertools
 import logging
 import platform
 import sys
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, cast
 
-from cyberdrop_dl.utils._dataclasses import DictDataclass, deserialize, filter_data, type_adapter  # noqa: F401
-from cyberdrop_dl.utils._errors import error_handling_context, error_handling_wrapper  # noqa: F401
-from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
-from cyberdrop_dl.utils._url import is_absolute_http_url, remove_trailing_slash  # noqa: F401
+from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils._url import parse_http_url as parse_url  # noqa: F401
+from cyberdrop_dl.utils._url import remove_trailing_slash  # noqa: F401
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
-    from pathlib import Path
-
-    from cyberdrop_dl.config import Config
+    from collections.abc import Callable, Generator, Iterable
+    from contextvars import ContextVar
 
 
-_T = TypeVar("_T")
 logger = logging.getLogger(__name__)
 
 
-def delete_empty_files_and_folders(path: Path) -> None:
-    """walks and removes in place"""
-
-    from cyberdrop_dl.logs import MAIN_LOG_FILE
-    from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
-
-    if not path.is_dir():
-        return
-
-    _ = delete_empty_files_and_folders_in_place(path, exclude=[MAIN_LOG_FILE.get(None)])
-
-
-def check_partials_and_empty_folders(config: Config) -> None:
-    download_folder = config.settings.files.download_folder
-
-    logger.info("Checking for partial downloads...")
-    if has_partial_files(download_folder):
-        logger.warning("There are partial downloads in the downloads folder")
-
-    settings = config.settings.runtime_options
-    if settings.delete_partial_files:
-        logger.info("Deleting partial downloads...")
-        delete_partial_files(download_folder)
-
-    if settings.skip_check_for_empty_folders:
-        return
-
-    logger.info("Deleting empty files and folders...")
-    delete_empty_files_and_folders(download_folder)
-
-    sorted_folder = config.settings.sorting.sort_folder
-    if sorted_folder and config.settings.sorting.sort_downloads:
-        delete_empty_files_and_folders(sorted_folder)
-
-
-def delete_partial_files(path: Path) -> None:
-    for file in partial_files(path):
-        try:
-            file.unlink()
-        except OSError as e:
-            logger.error(f"Unable to delete '{file}' ({e!r})")
-        else:
-            logger.debug(f"Deleted '{file}'")
+@contextlib.contextmanager
+def enter_context[T](context_var: ContextVar[T], value: T, /) -> Generator[None]:
+    token = context_var.set(value)
+    try:
+        yield
+    finally:
+        context_var.reset(token)
 
 
 def extr_text(text: str, /, start: str, end: str) -> str:
@@ -77,6 +37,8 @@ def extr_text(text: str, /, start: str, end: str) -> str:
 
 
 def get_system_information() -> dict[str, Any]:
+    import sqlite3
+    import ssl
 
     def get_common_name() -> str:
         system = platform.system()
@@ -111,6 +73,8 @@ def get_system_information() -> dict[str, Any]:
             "architecture": str(platform.architecture()),
             "python": f"{platform.python_version()} {platform.python_implementation()}",
             "common_name": get_common_name(),
+            "sqlite": sqlite3.sqlite_version,
+            "openSSL": ssl.OPENSSL_VERSION,
         }
     )
     _ = system_info.pop("node", None)
@@ -137,9 +101,24 @@ def basic_auth(username: str, password: str) -> str:
     return f"Basic {token}"
 
 
-def unique(itr: Iterable[_T], /) -> Generator[_T]:
-    seen: set[_T] = set()
+def unique[T](itr: Iterable[T], /) -> Generator[T]:
+    seen: set[T] = set()
     for ele in itr:
         if ele not in seen:
             seen.add(ele)
             yield ele
+
+
+def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:
+    "Like functools.cache but for single argument function and without all the stats logic"
+    cache: dict[T, R] = {}
+
+    def compute(obj: T) -> R:
+        val = cache.get(obj, MISSING)
+        if val is not MISSING:
+            return cast("R", val)
+
+        cache[obj] = val = fn(obj)
+        return val
+
+    return compute

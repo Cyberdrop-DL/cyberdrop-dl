@@ -71,7 +71,7 @@ def get(name: str, /, soup: bs4.BeautifulSoup) -> str | None:
 
 def _get_attr(meta: bs4.Tag, name: str) -> str:
     value = meta[name]
-    assert isinstance(value, str)
+    assert type(value) is str
     return value.strip()
 
 

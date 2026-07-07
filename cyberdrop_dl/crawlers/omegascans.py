@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, parse_url
+from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -68,7 +67,7 @@ class OmegaScansCrawler(Crawler):
         scrape_item.append_folders(chapter.name)
         scrape_item.uploaded_at = self.parse_iso_date(chapter.created_at)
         for img in chapter.images:
-            self.create_task(self.direct_file(scrape_item, img))
+            self.create_eager_task(self.direct_file(scrape_item, img))
             scrape_item.add_children()
 
 

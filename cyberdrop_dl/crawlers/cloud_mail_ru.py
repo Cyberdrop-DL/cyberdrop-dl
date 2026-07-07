@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -55,7 +55,7 @@ class CloudMailRuCrawler(Crawler):
     async def public(self, scrape_item: ScrapeItem, path: str) -> None:
         node = await self._request_info(path)
         if node["type"] == "file":
-            if await self.check_complete_from_referer(scrape_item):
+            if await self.check_complete_from_referer(scrape_item.url):
                 return None
 
             return await self._file(scrape_item, node)
@@ -73,7 +73,7 @@ class CloudMailRuCrawler(Crawler):
                 if node["type"] == "file":
                     web_url = self.PRIMARY_URL / "public" / node["weblink"]
                     new_item = scrape_item.create_child(web_url)
-                    self.create_task(self._file(new_item, node))
+                    self.create_eager_task(self._file(new_item, node))
                     scrape_item.add_children()
 
                 elif (node["count"]["files"] + node["count"]["folders"]) > 0:

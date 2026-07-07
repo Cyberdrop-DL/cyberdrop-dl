@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import dataclasses
 
-from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, next_js
+from cyberdrop_dl.utils import next_js
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -22,11 +22,6 @@ class PlayGroup:
     sub: str | None
     dub: str
     playlists: list[Playlist]
-
-    @property
-    def score(self) -> tuple[int, int]:
-        langs = ("ja", "en") if env.ONEPACE_PREFER_DUB else ("en", "ja")
-        return langs.index(self.dub), (None, "en").index(self.sub)
 
 
 @dataclasses.dataclass(slots=True)
@@ -52,6 +47,9 @@ class OnePaceCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "OnePace"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://onepace.net")
 
+    def __post_init__(self) -> None:
+        self._langs: tuple[str, str] = ("ja", "en") if self.config.crawlers.one_pace.prefer_dub else ("en", "ja")
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, "watch"]:
@@ -74,7 +72,13 @@ class OnePaceCrawler(Crawler):
 
     @error_handling_wrapper
     def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
-        best_group = max(ep.playlistGroups, key=lambda x: x.score)
+
+        def score(group: PlayGroup) -> tuple[int, int]:
+            dub_score = self._langs.index(group.dub)
+            sub_score = (None, "en").index(group.sub)
+            return dub_score, sub_score
+
+        best_group = max(ep.playlistGroups, key=score)
         self.log.info(
             "Downloading %s with subs=%s and lang=%s",
             scrape_item.url,

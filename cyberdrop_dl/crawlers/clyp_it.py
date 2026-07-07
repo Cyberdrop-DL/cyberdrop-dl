@@ -4,10 +4,10 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, extr_text, parse_url
+from cyberdrop_dl.utils import extr_text, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -89,7 +89,7 @@ class ClypItAPI(API):
         return next(a for a in audios if a.id == audio_id)
 
     async def wav(self, audio_id: str, token: str | None) -> AbsoluteHttpURL | None:
-        if env.CLYPIT_PREFER_MP3:
+        if self.config.crawlers.clypit.prefer_mp3:
             return None
         url = self.PRIMARY_URL / audio_id
         if token:

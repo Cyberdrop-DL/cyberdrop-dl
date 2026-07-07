@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import psutil
-from pydantic import ByteSize
+
+from cyberdrop_dl.models.validators import bytesize_to_str
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -68,6 +69,7 @@ def _disk_usage(path: Path) -> int:
 
 
 async def get_free_space(folder: Path) -> int:
+    await _check_nt_network_drive(folder)
     mount = _get_mount_point(folder)
     if not mount:
         return 0
@@ -117,7 +119,7 @@ def _partition_stats() -> Generator[dict[str, str]]:
         free_space = _free_space.get(partition.mountpoint)
         if free_space is not None:
             stats = partition.__json__()
-            stats["free_space"] = ByteSize(free_space).human_readable(decimal=True)
+            stats["free_space"] = bytesize_to_str(free_space)
             yield stats
 
 
@@ -137,10 +139,7 @@ async def start_loop() -> None:
         if not mountpoints:
             return
 
-        usage = await asyncio.gather(
-            *(asyncio.to_thread(_disk_usage, mount) for mount in mountpoints),
-            return_exceptions=False,
-        )
+        usage = await asyncio.gather(*(asyncio.to_thread(_disk_usage, mount) for mount in mountpoints))  # noqa: TID251
         _free_space.update(zip(mountpoints, usage, strict=True))
 
     last_check = -1

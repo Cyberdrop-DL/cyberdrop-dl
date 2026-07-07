@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-import logging
 import re
-from typing import TYPE_CHECKING
 
 import yarl
-from typing_extensions import TypeIs
 
-from cyberdrop_dl.exceptions import InvalidURLError
-
-if TYPE_CHECKING:
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL
-
-
-logger = logging.getLogger(__name__)
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, is_absolute_http_url
 
 
 def fix_query_params_encoding(link: str) -> str:
@@ -24,46 +15,54 @@ def fix_query_params_encoding(link: str) -> str:
     return f"{parts}?{query_and_frag}"
 
 
-def fix_multiple_slashes(link_str: str) -> str:
-    return re.sub(r"(?:https?)?:?(\/{3,})", "//", link_str)
+def fix_multi_slashes(url: str) -> str:
+    return re.sub(r"(^/|https?:/)/+", r"\1/", url, count=1)
 
 
-def str_to_url(link_str: str) -> yarl.URL:
-    if not link_str:
-        raise InvalidURLError("link_str is empty", url=link_str)
+def str_to_url(url: str) -> yarl.URL:
+    if not url:
+        raise ValueError("Empty URL", url)
 
-    try:
-        clean_link_str = fix_multiple_slashes(fix_query_params_encoding(link_str))
-        return yarl.URL(clean_link_str, encoded="%" in clean_link_str)
-
-    except (AttributeError, ValueError, TypeError) as e:
-        raise InvalidURLError(str(e), url=link_str) from e
+    clean_url = fix_multi_slashes(fix_query_params_encoding(url))
+    return yarl.URL(clean_url, encoded="%" in clean_url)
 
 
 def parse_http_url(
-    link_str: AbsoluteHttpURL | yarl.URL | str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool = True
+    link: yarl.URL | str,
+    relative_to: AbsoluteHttpURL | None = None,
+    *,
+    trim: bool = True,
 ) -> AbsoluteHttpURL:
-    """Parse a string into an absolute URL, handling relative URLs, encoding and optionally removes trailing slash (trimming).
-    Raises:
-        InvalidURLError: If the input string is not a valid URL or if any other error occurs during parsing.
-        TypeError: If `relative_to` is `None` and the parsed URL is relative or has no scheme.
-    """
+    """Parse a string into an absolute URL, handling relative URLs, encoding and optionally removes trailing slash (trimming)."""
 
-    url = str_to_url(link_str) if isinstance(link_str, str) else link_str
-    if not url.absolute:
+    url = str_to_url(link) if isinstance(link, str) else link
+    if not is_absolute_http_url(url):
         if not relative_to:
-            raise InvalidURLError("Relative URL with no known base", url=link_str)
-        url = relative_to.join(url)
-    if not url.scheme:
-        url = url.with_scheme(relative_to.scheme if relative_to else "https")
-    assert is_absolute_http_url(url)
+            raise ValueError("Relative URL with no known origin", url)
+        url = resolve_url(url, relative_to)
+
+    check_url(url)
     if not trim:
         return url
     return remove_trailing_slash(url)
 
 
-def is_absolute_http_url(url: yarl.URL) -> TypeIs[AbsoluteHttpURL]:
-    return url.absolute and url.scheme.startswith("http")
+def resolve_url(url: yarl.URL, origin: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    url = origin.join(url) if not url.absolute else url
+    if not url.scheme:
+        url = url.with_scheme(origin.scheme if origin else "https")
+    if not is_absolute_http_url(url):
+        raise ValueError(f"Unable to parse an absolute URL from {url}")
+    return url
+
+
+def check_url(url: yarl.URL) -> None:
+    if not url.host:
+        raise ValueError("URL has no host", url)
+    if "." not in url.host and url.host != "localhost":
+        raise ValueError("URL has no TLD", url)
+    if len(str(url)) > 2083:
+        raise ValueError("URL is too long")
 
 
 def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:

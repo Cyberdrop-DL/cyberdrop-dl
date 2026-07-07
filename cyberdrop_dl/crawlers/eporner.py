@@ -10,7 +10,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, parse_url
+from cyberdrop_dl.utils import css, extr_text, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -122,16 +123,16 @@ class EpornerCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, *, from_profile: bool = False) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title and not from_profile:
-                title = css.select_text(soup, "title")
-                title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
-                for trash in title_trash:
-                    title = title.rsplit(trash)[0].strip()
-                title = self.create_title(title)
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        if not from_profile:
+            title = css.select_text(soup, "title")
+            title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
+            for trash in title_trash:
+                title = title.rsplit(trash)[0].strip()
+            title = self.create_title(title)
+            scrape_item.setup_as_album(title)
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO):
                 self.create_task(self.run(new_scrape_item))
 

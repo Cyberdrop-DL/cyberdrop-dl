@@ -11,10 +11,11 @@ if TYPE_CHECKING:
 
 
 class CelebForumCrawler(XenforoCrawler):
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://celebforum.to")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://celebforum.cc")
     DOMAIN: ClassVar[str] = "celebforum"
     FOLDER_DOMAIN: ClassVar[str] = "CelebForum"
-    IGNORE_EMBEDED_IMAGES_SRC: ClassVar = True  # images src is always a thumbnail
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("celebforum.to", "celeb.su")
+    IGNORE_EMBEDED_IMAGES_SRC: ClassVar[bool] = True  # images src is always a thumbnail
     _IMPERSONATE: ClassVar[str | bool | None] = True
     _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 

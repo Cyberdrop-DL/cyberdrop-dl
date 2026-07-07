@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar, NamedTuple
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
 from cyberdrop_dl.mediaprops import Resolution
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -33,7 +34,7 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         soup = await self.request_soup(scrape_item.url)

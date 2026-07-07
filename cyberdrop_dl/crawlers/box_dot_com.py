@@ -10,9 +10,10 @@ from pydantic import Field
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.models import AliasModel
+from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -23,7 +24,7 @@ class ItemType(StrEnum):
     file = "file"
 
 
-class Item(AliasModel):
+class Item(DeferredModel):
     name: str
     type: str
     id: str = Field(validation_alias="itemID", coerce_numbers_to_str=True)
@@ -32,7 +33,7 @@ class Item(AliasModel):
     parent_id: str = Field(validation_alias="parentFolderID", coerce_numbers_to_str=True)
 
 
-class SharedFolder(AliasModel):
+class SharedFolder(DeferredModel):
     name: str = Field(validation_alias="currentFolderName")
     id: str = Field(validation_alias="currentFolderID", coerce_numbers_to_str=True)
     items: list[Item]
@@ -67,7 +68,7 @@ class BoxDotComCrawler(Crawler):
         for trash in ("/embed_widget/", "/embed/"):
             canonical_path = canonical_path.replace(trash, "")
         scrape_item.url = scrape_item.url.with_path(canonical_path, keep_query=True, keep_fragment=True)
-        if "file" in scrape_item.url.parts and await self.check_complete_from_referer(scrape_item):
+        if "file" in scrape_item.url.parts and await self.check_complete_from_referer(scrape_item.url):
             return None
 
         soup = await self.request_soup(scrape_item.url)

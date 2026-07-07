@@ -3,24 +3,33 @@
 from typing import Any, ClassVar, TypedDict
 
 from cyclopts import Parameter
-from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, model_serializer, model_validator
+from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, TypeAdapter, model_serializer, model_validator
+
+from cyberdrop_dl import env
+from cyberdrop_dl.constants import DEFAULT_PARAMETER
+from cyberdrop_dl.utils import fast_cache
 
 
-def get_model_fields(model: BaseModel, *, exclude_unset: bool = True) -> set[str]:
-    fields = set()
-    for submodel_name, submodel in model.model_dump(exclude_unset=exclude_unset).items():
-        for field_name in submodel:
-            fields.add(f"{submodel_name}.{field_name}")
+class DeferredModel(
+    BaseModel,
+    validate_by_name=True,
+    validate_by_alias=True,
+    defer_build=True,
+    allow_inf_nan=False,
+    url_preserve_empty_path=True,
+    val_temporal_unit="milliseconds",
+    validate_default=env.DEBUG_MODE,
+    validation_error_cause=env.DEBUG_MODE,
+): ...
 
-    return fields
+
+@DEFAULT_PARAMETER
+class ConfigModel(DeferredModel, extra="forbid"): ...
 
 
-class AliasModel(BaseModel, populate_by_name=True, defer_build=True): ...
-
-
-class SettingsGroup(AliasModel):
-    def __init_subclass__(cls, group: str | None = None) -> None:
-        _ = Parameter(group=group or cls.__name__, name="*")(cls)
+class ConfigGroup(ConfigModel):
+    def __init_subclass__(cls, *, group: str | None = None, name: str | None = "*") -> None:
+        _ = Parameter(group=group or cls.__name__, name=name)(cls)
         return super().__init_subclass__()
 
 
@@ -30,7 +39,7 @@ class _AppriseURLDict(TypedDict):
 
 
 @Parameter(name="*")
-class AppriseURL(AliasModel):
+class AppriseURL(ConfigModel):
     url: Secret[AnyUrl]
     tags: set[str] = set()
 
@@ -98,3 +107,33 @@ class AppriseURL(AliasModel):
                 url: str = obj
 
         return {"url": url, "tags": tags}
+
+
+def merge_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:
+    for key, val in dict1.items():
+        if isinstance(val, dict):
+            if key in dict2 and isinstance(dict2[key], dict):
+                merge_dicts(val, dict2[key])
+        elif key in dict2:
+            dict1[key] = dict2[key]
+
+    for key, val in dict2.items():
+        if key not in dict1:
+            dict1[key] = val
+
+    return dict1
+
+
+def merge_models[M: BaseModel](default: M, new: M) -> M:
+    default_dict = default.model_dump()
+    new_dict = new.model_dump(exclude_unset=True)
+    updated_dict = merge_dicts(default_dict, new_dict)
+    return default.model_validate(updated_dict)
+
+
+@fast_cache
+def type_adapter[T](cls: type[T]) -> TypeAdapter[T]:
+    """Get a type adapter for this class.
+
+    Type adapters are cached. Multiple calls return the same adapter"""
+    return TypeAdapter(cls)

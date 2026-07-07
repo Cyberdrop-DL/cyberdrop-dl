@@ -18,18 +18,19 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, final
 
 from bs4 import BeautifulSoup, Tag
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import LoginError, MaxChildrenError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, is_blob_or_svg
-from cyberdrop_dl.utils.dates import TimeStamp, to_timestamp
+from cyberdrop_dl.utils import css, extr_text, is_blob_or_svg
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable, Sequence
+    from collections.abc import Generator, Iterable, Sequence
 
     from aiohttp import ClientResponse
 
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
+    from cyberdrop_dl.url_objects import ScrapeItem
 
 LINK_TRASH_MAPPING = {".th.": ".", ".md.": ".", "ifr": "watch"}
 HTTP_REGEX_LINKS = re.compile(
@@ -94,9 +95,9 @@ class ForumPost:
         return ForumPost(post_id, date, article, content)
 
     @property
-    def timestamp(self) -> TimeStamp | None:
+    def timestamp(self) -> float | None:
         if self.date:
-            return to_timestamp(self.date)
+            return self.date.timestamp()
 
 
 class ForumPostProtocol(Protocol):
@@ -113,7 +114,7 @@ class ForumPostProtocol(Protocol):
     @property
     def content(self) -> Tag: ...
     @property
-    def timestamp(self) -> TimeStamp | None: ...
+    def timestamp(self) -> float | None: ...
 
 
 @dataclasses.dataclass(frozen=True, slots=True, order=True)
@@ -199,18 +200,13 @@ class MessageBoardCrawler(Crawler, is_abc=True):
 
     @final
     @property
-    def scrape_single_forum_post(self) -> bool:
-        return self.manager.config.settings.download_options.scrape_single_forum_post
-
-    @final
-    @property
     def max_thread_depth(self) -> int:
-        return self.manager.config.settings.download_options.maximum_thread_depth
+        return self.config.max_thread_depth
 
     @final
     @property
     def max_thread_folder_depth(self) -> int | None:
-        return self.manager.config.settings.download_options.maximum_thread_folder_depth
+        return self.config.max_thread_folder_depth
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in and self.login_required is True:
@@ -264,12 +260,13 @@ class MessageBoardCrawler(Crawler, is_abc=True):
     @final
     def _check_thread_recursion(self, scrape_item: ScrapeItem) -> None:
         if self.stop_thread_recursion(scrape_item):
-            parents = f"{len(scrape_item.parent_threads)} parent thread(s)"
+            threads = f"{len(scrape_item.parent_threads)} parent thread(s)"
+            origin, parent = (scrape_item.parents[0], scrape_item.parents[-1]) if scrape_item.parents else (None, None)
             msg = (
-                f"Skipping nested thread URL with {parents}:"
+                f"Skipping nested thread URL with {threads}:"
                 f"URL: {scrape_item.url}\n"
-                f"Parent:  {scrape_item.parent}\n"
-                f"Origin:  {scrape_item.origin}\n"
+                f"Parent:  {parent}\n"
+                f"Origin:  {origin}\n"
             )
             raise MaxChildrenError(msg)
 
@@ -319,18 +316,12 @@ class MessageBoardCrawler(Crawler, is_abc=True):
         new_scrape_item.part_of_album = True
         await self.handle_file(link, new_scrape_item, filename, ext)
 
-    @final
-    async def _write_last_forum_post(self, thread_url: AbsoluteHttpURL, last_post_url: AbsoluteHttpURL | None) -> None:
-        if not last_post_url or last_post_url == thread_url:
-            return
-        self.manager.logs.write_last_post_log(last_post_url)
-
     # TODO: Move this to the base crawler
     # TODO: Define an unified workflow for crawlers to perform and check login
     @final
     @error_handling_wrapper
     async def login(self, login_url: AbsoluteHttpURL) -> None:
-        session_cookie = self.get_cookie_value(self.LOGIN_USER_COOKIE_NAME)
+        session_cookie = self.cookies.get(self.LOGIN_USER_COOKIE_NAME)
         msg = f"No cookies found for {self.FOLDER_DOMAIN}"
         if not session_cookie and self.login_required:
             raise LoginError(message=msg)
@@ -371,7 +362,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     Concrete classes SHOULD define `ATTACHMENT_HOSTS` if internal images of the site are stored on servers with a different domain
     """
 
-    IGNORE_EMBEDED_IMAGES_SRC = True
+    IGNORE_EMBEDED_IMAGES_SRC: ClassVar[bool] = True
     SELECTORS: ClassVar[MessageBoardSelectors]
     POST_URL_PART_NAME: ClassVar[str]
     PAGE_URL_PART_NAME: ClassVar[str]
@@ -385,7 +376,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             assert getattr(cls, field_name, None), f"Subclass {cls.__name__} must override: {field_name}"
 
     def __post_init__(self) -> None:
-        self.scraped_threads = set()
+        self.scraped_threads: set[AbsoluteHttpURL] = set()
 
     @classmethod
     def is_thumbnail(cls, link: AbsoluteHttpURL) -> bool:
@@ -412,63 +403,45 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             return
 
         scrape_item.parent_threads.add(thread.url)
-        if self.scrape_single_forum_post and not thread.post_id:
-            msg = "`--scrape-single-forum-post` is `True`, but the provided URL has no post id"
-            raise ScrapeError("User Error", msg)
-
         self.scraped_threads.add(thread.url)
         await self._thread(scrape_item, thread)
 
     async def _thread(self, scrape_item: ScrapeItem, thread: ThreadProtocol) -> None:
-        title: str = ""
-        last_post_url = thread.url
-        async for soup in self.thread_pager(scrape_item):
-            if not title:
-                try:
-                    title = self.create_title(get_post_title(soup, self.SELECTORS), thread_id=thread.id)
-                except ScrapeError as e:
-                    self.log.debug("Got an unprocessable soup", exc_info=e)
-                    raise
-                scrape_item.append_folders(title)
+        first_page, pages = await aio.peek_first(self.web_pager(scrape_item.url, self.get_next_page))
+        try:
+            title = get_post_title(first_page, self.SELECTORS)
+        except ScrapeError as e:
+            self.log.debug("Got an unprocessable soup", exc_info=e)
+            raise
+        else:
+            scrape_item.append_folders(self.create_title(title, thread_id=thread.id))
 
-            continue_scraping, last_post_url = self._thread_page(scrape_item, thread, soup)
-            if not continue_scraping:
-                break
-
-        await self._write_last_forum_post(thread.url, last_post_url)
-
-    def _thread_page(
-        self, scrape_item: ScrapeItem, thread: ThreadProtocol, soup: BeautifulSoup
-    ) -> tuple[bool, AbsoluteHttpURL]:
-        continue_scraping = False
-        post_url = thread.url
-        for article in soup.select(self.SELECTORS.posts.article):
-            current_post = ForumPost.new(article, self.SELECTORS.posts)
-            continue_scraping, scrape_this_post = check_post_id(
-                thread.post_id,
-                current_post.id,
-                scrape_single_forum_post=self.scrape_single_forum_post,
-            )
-            if scrape_this_post:
-                post_url = self.make_post_url(thread, current_post.id)
-                new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
-                new_scrape_item.uploaded_at = current_post.timestamp
-                self.create_task(self.post(new_scrape_item, current_post))
-                try:
+        post_url = None
+        try:
+            async for soup in pages:
+                for post in self._iter_posts(thread, soup):
+                    post_url = self.make_post_url(thread, post.id)
+                    new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
+                    new_scrape_item.uploaded_at = post.timestamp
+                    self.create_task(self.post(new_scrape_item, post))
                     scrape_item.add_children()
-                except MaxChildrenError:
-                    break
+        finally:
+            if post_url and post_url != thread.url:
+                self.manager.logs.write_last_forum_post(post_url)
 
-            if not continue_scraping:
-                break
-        return continue_scraping, post_url
+    def _iter_posts(self, thread: ThreadProtocol, soup: BeautifulSoup) -> Generator[ForumPost]:
+        for article in soup.select(self.SELECTORS.posts.article):
+            post = ForumPost.new(article, self.SELECTORS.posts)
+            if thread.post_id and post.id < thread.post_id:
+                continue
+
+            yield post
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post: ForumPostProtocol) -> None:
         scrape_item.setup_as_post("")
         post_title = self.create_separate_post_title(None, str(post.id), post.date)
         scrape_item.append_folders(post_title)
-        seen = set()
         stats: dict[str, int] = {}
 
         async with self.new_task_group(scrape_item) as tg:
@@ -480,14 +453,13 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                 self._embeds,
                 self._lazy_load_embeds,
             ):
-                for link in scraper(post):
-                    seen.add(link)
+                for url in scraper(post):
                     scraper_name = scraper.__name__.removeprefix("_")
                     stats[scraper_name] = stats.get(scraper_name, 0) + 1
-                    tg.create_task(self.process_child(scrape_item, link, embeds="embeds" in scraper_name))
+                    tg.create_task(self.process_child(scrape_item, url, embeds="embeds" in scraper_name))
                     scrape_item.add_children()
 
-        if seen:
+        if stats:
             self.log.info(f"post #{post.id} {stats = }")
 
     def _external_links(self, post: ForumPostProtocol) -> Iterable[str]:
@@ -521,10 +493,6 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         for lazy_media in css.iselect(post.content, selector.element):
             yield extr_text(css.attr(lazy_media, selector.attribute), "loadMedia(this, '", "')")
 
-    async def thread_pager(self, scrape_item: ScrapeItem) -> AsyncGenerator[BeautifulSoup]:
-        async for soup in self.web_pager(scrape_item.url, self.get_next_page):
-            yield soup
-
     def get_next_page(self, soup: BeautifulSoup) -> str | None:
         try:
             return css.select(soup, *self.SELECTORS.next_page)
@@ -547,7 +515,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         await self.handle_link(scrape_item, link)
 
     async def get_absolute_link(self, link: str | AbsoluteHttpURL) -> AbsoluteHttpURL | None:
-        absolute_link = self.parse_url(clean_link_str(link)) if isinstance(link, str) else link
+        absolute_link = link if type(link) is AbsoluteHttpURL else self.parse_url(clean_link_str(link))
         if is_confirmation_link(absolute_link):
             return await self.resolve_confirmation_link(absolute_link)
         return absolute_link
@@ -684,26 +652,6 @@ def is_confirmation_link(link: AbsoluteHttpURL) -> bool:
     return (
         "masked" in link.parts or "link-confirmation" in link.path or ("redirect" in link.parts and "to" in link.query)
     )
-
-
-def check_post_id(
-    init_post_id: int | None,
-    current_post_id: int,
-    *,
-    scrape_single_forum_post: bool,
-) -> tuple[bool, bool]:
-    """Checks if the program should scrape the current post.
-
-    Returns (continue_scraping, scrape_this_post)"""
-    if init_post_id:
-        if init_post_id > current_post_id:
-            return (True, False)
-        if init_post_id == current_post_id:
-            return (not scrape_single_forum_post, True)
-        return (not scrape_single_forum_post, not scrape_single_forum_post)
-
-    assert not scrape_single_forum_post  # We should have raised an exception earlier
-    return True, True
 
 
 def pre_process_child(link_str: str, *, embeds: bool = False) -> str | None:

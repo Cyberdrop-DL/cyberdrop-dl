@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -113,7 +114,7 @@ def _parse_hls_formats(sources: dict[str, str]) -> Generator[Format]:
             )
 
 
-def _parse_mp4_formats(qualites: dict[str, list[dict[str, Any]]]) -> Generator[Format]:
-    for sources in qualites.values():
+def _parse_mp4_formats(qualities: dict[str, list[dict[str, Any]]]) -> Generator[Format]:
+    for sources in qualities.values():
         for source in sources:
             yield Format.from_dict(source, url=_VIDEO_CDN / source["url"])

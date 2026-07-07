@@ -1,12 +1,13 @@
 from pathlib import Path
 
-from cyberdrop_dl import __version__, supported_sites
+from cyberdrop_dl import __version__
+from cyberdrop_dl.commands import supported_sites
 from cyberdrop_dl.constants import CDL_USER_AGENT
 
 REPO_ROOT = Path(__file__).parents[2]
 CLI_ARGUMENTS_MD = REPO_ROOT / "docs/reference/cli-arguments.md"
 SUPPORTED_SITES_MD = REPO_ROOT / "docs/reference/supported-websites.md"
-GENERAL_MD = REPO_ROOT / "docs/reference/configuration-options/global-settings/general.md"
+NETWORK_MD = REPO_ROOT / "docs/reference/config/network.md"
 
 
 def _write_if_updated(path: Path, old_content: str, new_content: str) -> None:
@@ -43,10 +44,14 @@ def _replace_content(text: str, marker: str, new_content: str) -> str:
 def _get_help_message() -> str:
     from rich.console import Console
 
-    from cyberdrop_dl.__main__ import app
+    from cyberdrop_dl.cli import app
 
     with Console(record=True, width=100) as console:
         app.help_print([], console=console)
+        console.line()
+        console.rule(style="blue")
+        console.line()
+        app.help_print(["download"], console=console)
 
     return console.export_text()
 
@@ -61,10 +66,9 @@ def _update_file(file: Path, new_content: str, *, marker: str) -> None:
 
 
 def _get_custom_ua_crawlers() -> list[str]:
-    from cyberdrop_dl.crawlers.crawler import Registry
+    from cyberdrop_dl.crawlers import Registry
 
-    Registry.import_all()
-    return sorted(c.FOLDER_DOMAIN for c in Registry.concrete if c._DEFAULT_UA and CDL_USER_AGENT in c._DEFAULT_UA)
+    return sorted(c.FOLDER_DOMAIN for c in Registry.get_crawlers() if c._DEFAULT_UA and CDL_USER_AGENT in c._DEFAULT_UA)
 
 
 def update_supported_sites() -> None:
@@ -87,7 +91,7 @@ def update_cli_overview() -> None:
 def update_custom_ua_crawlers() -> None:
     new_content = "- " + "\n- ".join(_get_custom_ua_crawlers())
     _update_file(
-        GENERAL_MD,
+        NETWORK_MD,
         new_content,
         marker="CUSTOM_UA_CRAWLERS",
     )

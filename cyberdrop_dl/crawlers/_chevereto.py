@@ -7,7 +7,8 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, json, open_graph
+from cyberdrop_dl.utils import css, json, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
@@ -160,7 +161,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
                 continue
 
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self.direct_file(new_scrape_item, src_url))
+            self.create_eager_task(self.direct_file(new_scrape_item, src_url))
             scrape_item.add_children()
 
     async def _unlock_pw_protected_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
@@ -188,7 +189,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)

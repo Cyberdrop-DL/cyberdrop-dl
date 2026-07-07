@@ -3,13 +3,14 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, parse_url
+from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.utils.m3u8 import M3U8
 
 
-_GQL_ENDPOINT = AbsoluteHttpURL("https://gql.twitch.tv/gql")
 _CLIPS_URL = AbsoluteHttpURL("https://clips.twitch.tv")
 _M3U8_BASE = AbsoluteHttpURL("https://usher.ttvnw.net")
 
@@ -66,7 +66,7 @@ class TwitchCrawler(Crawler):
                 raise ValueError
 
     def __post_init__(self) -> None:
-        self.api = TwitchAPI(self)
+        self.api: TwitchAPI = TwitchAPI.from_crawler(self)
 
     async def _request_m3u8(
         self,
@@ -78,7 +78,7 @@ class TwitchCrawler(Crawler):
         m3u8_obj = await super()._request_m3u8(url, headers=headers, media_type=media_type)
 
         # Some formats are "hidden" unless the user is logged in (1080p+ resolutions)
-        # We can extract and parse them manually, bypasing the logging requirement
+        # We can extract and parse them manually, bypassing the logging requirement
         for data in m3u8_obj.session_data:
             if data.data_id == "com.amazon.ivs.unavailable-media" and data.value:
                 unavailable_media = json.loads(base64.b64decode(data.value))
@@ -91,7 +91,7 @@ class TwitchCrawler(Crawler):
     async def vod(self, scrape_item: ScrapeItem, video_id: str) -> None:
         video_id = video_id.removeprefix("v")
         scrape_item.url = self.PRIMARY_URL / "videos" / video_id
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         video = await self.api.video(video_id)
@@ -141,7 +141,7 @@ class TwitchCrawler(Crawler):
     @error_handling_wrapper
     async def clip(self, scrape_item: ScrapeItem, slug: str) -> None:
         scrape_item.url = _CLIPS_URL / slug
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         clip = await self.api.clip(slug)
@@ -161,16 +161,11 @@ class TwitchCrawler(Crawler):
         await self.handle_file(source, scrape_item, title, custom_filename=filename)
 
 
-class TwitchAPI:
+class TwitchAPI(API):
     """GraphQL API interface for twitch"""
 
-    _CLIENT_ID: Final = "kimne78kx3ncx6brgo4mv6wki5h1ko"
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(client_id={self._CLIENT_ID})"
-
-    def __init__(self, crawler: Crawler) -> None:
-        self._crawler = crawler
+    GQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://gql.twitch.tv/gql")
+    CLIENT_ID: ClassVar[str] = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
     @classmethod
     def _prepare_query(cls, name: str, variables: dict[str, Any], query_hash: str) -> dict[str, Any]:
@@ -186,12 +181,12 @@ class TwitchAPI:
         }
 
     async def _request_many(self, queries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return await self._crawler.request_json(
-            _GQL_ENDPOINT,
+        return await self.request_json(
+            self.GQL_ENDPOINT,
             method="POST",
             headers={
                 "Content-Type": "text/plain;charset=UTF-8",
-                "Client-ID": self._CLIENT_ID,
+                "Client-ID": self.CLIENT_ID,
             },
             json=queries,
         )

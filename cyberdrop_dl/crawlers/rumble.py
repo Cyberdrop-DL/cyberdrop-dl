@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, m3u8, parse_url
+from cyberdrop_dl.utils import css, m3u8, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -113,7 +114,7 @@ class RumbleCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
@@ -132,7 +133,7 @@ class RumbleCrawler(Crawler):
         video_name = self.create_custom_filename(video.title, ext, file_id=embed_id, resolution=best_format.resolution)
         scrape_item.uploaded_at = self.parse_iso_date(video.upload_date)
         scrape_item.url = video.url
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 best_format.url,
                 scrape_item,

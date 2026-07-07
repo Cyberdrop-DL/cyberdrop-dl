@@ -33,10 +33,9 @@ if TYPE_CHECKING:
     from curl_cffi.requests.session import HttpMethod
 
     from cyberdrop_dl.config import Config
-    from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-_JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("_JSON_CHECK", default=None)
+JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("JSON_CHECK", default=None)
 RequestContext = contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]  # pyright: ignore[reportPrivateUsage]
 
 logger = logging.getLogger(__name__)
@@ -67,6 +66,7 @@ class RequestDoneCallback(Protocol):
 @dataclasses.dataclass(slots=True)
 class HTTPClient:
     config: Config
+    request_done_callback: RequestDoneCallback | None = None
     impersonate: (
         Literal[
             "chrome",
@@ -77,8 +77,7 @@ class HTTPClient:
             "firefox",
         ]
         | None
-    ) = None
-    request_done_callback: RequestDoneCallback | None = None
+    ) = dataclasses.field(init=False)
 
     rate_limits: dict[str, aio.RateLimiter] = dataclasses.field(init=False, default_factory=dict)
     global_rate_limiter: aio.RateLimiter = dataclasses.field(init=False)
@@ -92,21 +91,10 @@ class HTTPClient:
     _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self._ssl_context = tcp.create_ssl_context(self.config.global_settings.general.ssl_context)
-        self.global_rate_limiter = aio.RateLimiter.w_no_burst(
-            self.config.global_settings.rate_limiting_options.rate_limit
-        )
-        self.global_download_limiter = asyncio.Semaphore(
-            self.config.global_settings.rate_limiting_options.max_simultaneous_downloads
-        )
-
-    @staticmethod
-    def from_manager(manager: Manager) -> HTTPClient:
-        client = HTTPClient(config=manager.config, impersonate=manager.cli_args.impersonate)
-        if manager.config.settings.files.save_pages_html or manager.config.settings.files.dump_responses:
-            client.request_done_callback = manager.logs.write_response
-
-        return client
+        self.impersonate = self.config.network.impersonate
+        self._ssl_context = tcp.create_ssl_context(self.config.network.ssl_context)
+        self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.network.rate_limit)
+        self.global_download_limiter = asyncio.Semaphore(self.config.downloads.concurrency)
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -123,7 +111,7 @@ class HTTPClient:
 
     @property
     def flaresolverr(self) -> flaresolverr.Client | None:
-        if self._flaresolverr is None and (url := self.config.global_settings.general.flaresolverr):
+        if self._flaresolverr is None and (url := self.config.network.flaresolverr):
             self._flaresolverr = flaresolverr.Client(url, self._session)
         if self._flaresolverr and self._flaresolverr.is_down:
             return None
@@ -166,11 +154,15 @@ class HTTPClient:
 
     def create_aiohttp_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
-            headers={"User-Agent": self.config.global_settings.general.user_agent},
+            headers={"User-Agent": self.config.network.user_agent},
             raise_for_status=False,
             cookie_jar=self.cookies,
-            timeout=self.config.global_settings.rate_limiting_options.aiohttp_timeout,
-            proxy=self.config.global_settings.general.proxy,
+            timeout=aiohttp.ClientTimeout(
+                total=None,
+                sock_connect=self.config.network.connection_timeout,
+                sock_read=self.config.network.read_timeout,
+            ),
+            proxy=self.config.network.proxy,
             connector=tcp.create_connector(self._ssl_context),
             requote_redirect_url=False,
         )
@@ -181,20 +173,6 @@ class HTTPClient:
 
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
-
-    async def check_http_status(self, response: aiohttp.ClientResponse | CurlResponse | AbstractResponse[Any]) -> None:
-        """Checks the HTTP status code and raises an exception if it's not acceptable."""
-        if not isinstance(response, AbstractResponse):
-            response = AbstractResponse.create(response)
-
-        if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
-            # Check DDosGuard even on successful pages
-            await ddos_guard.check_resp(response)
-            return
-
-        await _check_json(response)
-        await ddos_guard.check_resp(response)
-        raise DownloadError(status=response.status)
 
     @contextlib.asynccontextmanager
     async def request(  # noqa: PLR0913
@@ -223,7 +201,7 @@ class HTTPClient:
             request_params=request_params,
         ) as resp:
             try:
-                await self.check_http_status(resp)
+                await check_http_status(resp)
             except DDOSGuardError:
                 await resp.aclose()
                 if not self.flaresolverr:
@@ -258,7 +236,7 @@ class HTTPClient:
         )
 
         if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", default_ua or self.config.global_settings.general.user_agent)
+            _ = request.headers.setdefault("User-Agent", default_ua or self.config.network.user_agent)
 
         async with self._request(request) as resp:
             yield resp
@@ -323,23 +301,15 @@ class HTTPClient:
         assert self.flaresolverr
         solution = await self.flaresolverr.request(url, data)
         self.cookies.update_cookies(solution.cookies)
-        flaresolverr.verify_solution(self.config.global_settings.general.user_agent, solution)
+        flaresolverr.verify_solution(self.config.network.user_agent, solution)
         return AbstractResponse.create(solution)
-
-    @contextlib.contextmanager
-    def json_context(self, check: Callable[[Any, AbstractResponse[Any]], None], /):
-        token = _JSON_CHECK.set(check)
-        try:
-            yield
-        finally:
-            _JSON_CHECK.reset(token)
 
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
         return
 
-    if check := _JSON_CHECK.get():
+    if check := JSON_CHECK.get():
         check(await response.json(), response)
         return
 
@@ -376,8 +346,19 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         loop=loop,
         async_curl=acurl,
         impersonate="chrome",
-        verify=bool(config.global_settings.general.ssl_context),
-        proxy=str(proxy) if (proxy := config.global_settings.general.proxy) else None,
-        timeout=config.global_settings.rate_limiting_options.curl_timeout,
+        verify=bool(config.network.ssl_context),
+        proxy=str(proxy) if (proxy := config.network.proxy) else None,
+        timeout=config.network.curl_timeout,
         max_redirects=8,
     )
+
+
+async def check_http_status(response: AbstractResponse[Any]) -> None:
+    if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
+        # Check DDosGuard even on successful pages
+        await ddos_guard.check_resp(response)
+        return
+
+    await _check_json(response)
+    await ddos_guard.check_resp(response)
+    raise DownloadError(response.status)

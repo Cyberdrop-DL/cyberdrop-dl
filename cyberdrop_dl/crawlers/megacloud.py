@@ -8,7 +8,7 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -69,7 +69,7 @@ class MegaCloudCrawler(Crawler):
         video_name = self.create_custom_filename(
             video.title or video.id, ext, file_id=video.id, resolution=info.resolution
         )
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 video.embed_url,
                 scrape_item,

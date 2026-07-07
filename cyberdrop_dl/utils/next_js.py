@@ -9,7 +9,7 @@ import dataclasses
 import re
 from collections.abc import Generator
 from enum import IntEnum, StrEnum
-from typing import TYPE_CHECKING, Any, NewType, TypeAlias, final
+from typing import TYPE_CHECKING, Any, NewType, final
 
 from bs4 import BeautifulSoup
 
@@ -18,7 +18,7 @@ from cyberdrop_dl.utils import css, json
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
 
-_ChunkID: TypeAlias = str
+type _ChunkID = str
 FlightData = NewType("FlightData", str)
 NextJSFlight = dict[_ChunkID, list[dict[str, Any]]]
 # Map of chunk_id (hex index of the chunk) -> list of all the objects (components) created from that chunk
@@ -128,8 +128,8 @@ def _parse_raw_chunks(flight_data: FlightData) -> Generator[_FlightChunk]:
         marker = marker or None
         data = line[m.end() :].strip()
         if marker and marker.startswith("T"):
-            lenght = int(marker[1:-1], 16)
-            data, rest = data[:lenght], FlightData(data[lenght:])
+            length = int(marker[1:-1], 16)
+            data, rest = data[:length], FlightData(data[length:])
             yield _FlightChunk(chunk_id, "T", data)
             if rest:
                 yield from _parse_raw_chunks(rest)

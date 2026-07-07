@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -55,5 +56,5 @@ class FapelloComCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(model))
         soup = await self.request_soup(scrape_item.url)
         for link in self.iter_urls(soup, Selector.IMAGE_OR_VIDEO, "src"):
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()

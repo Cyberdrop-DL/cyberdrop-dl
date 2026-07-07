@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.leakedzone import LeakedZoneCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL

@@ -1,3 +1,0 @@
-tgram://bottoken/ChatID
-not_an_url
-also_not_an_url

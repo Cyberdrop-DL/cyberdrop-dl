@@ -16,7 +16,7 @@ body:
     id: site-homepage
     attributes:
       label: Site homepage
-      placeholder: https://cyberdrop.me
+      placeholder: https://mega.nz
     validations:
       required: true
 
@@ -25,9 +25,11 @@ body:
     attributes:
       label: Describe what kind of content this site provides
       placeholder: |
-        1. website that provides comic books and manga
-        2. forum which allows its users to share images and videos
-        3. specialized in high-res scanned images of physical paintings
+        1. file-sharing site
+        2. website that provides comic books and manga
+        3. forum which allows its users to share images and videos
+        4. specialized in high-res scanned images of physical paintings
+        5. streaming video platform
     validations:
       required: true
 
@@ -62,11 +64,9 @@ body:
   - type: checkboxes
     id: NSFW
     attributes:
-      label: Does this site offer adult content(NSFW)?
+      label: Does this site offer adult content (NSFW)?
       options:
         - label: "This site offers adult content (NSFW)"
-          required: false
-        - label: "Most of the content on the site is NSFW"
           required: false
 
   - type: dropdown
@@ -94,7 +94,7 @@ body:
     id: additional-context
 
 description: Request for a new site to be supported
-labels: [ "new website" ]
-assignees: [ jbsparrow ]
+labels: ["new website"]
+assignees: [jbsparrow]
 title: "[SITE SUPPORT] <enter site homepage URL here>"
 name: New Site Request

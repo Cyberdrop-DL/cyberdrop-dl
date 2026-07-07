@@ -3,12 +3,13 @@ from __future__ import annotations
 import binascii
 import dataclasses
 import itertools
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.compat import IntEnum
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -87,7 +88,7 @@ class LeakedZoneCrawler(Crawler):
                     self.create_task(self._video(scrape_item.create_child(post_url), post))
                 else:
                     post_url = self.PRIMARY_URL / model_name / "photo" / post.id
-                    self.create_task(self._image(scrape_item.create_child(post_url), post))
+                    self.create_eager_task(self._image(scrape_item.create_child(post_url), post))
                 scrape_item.add_children()
 
     async def api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[tuple[Post, ...]]:
@@ -121,7 +122,7 @@ class LeakedZoneCrawler(Crawler):
 
     @error_handling_wrapper
     async def _video(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
         await self._handle_video(scrape_item, post)
 

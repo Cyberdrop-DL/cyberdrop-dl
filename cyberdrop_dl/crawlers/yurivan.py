@@ -7,7 +7,9 @@ from pydantic import dataclasses
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, deserialize, error_handling_wrapper, next_js
+from cyberdrop_dl.utils import css, next_js
+from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup

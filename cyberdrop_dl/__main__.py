@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
-
-from cyberdrop_dl import tracebacks
-from cyberdrop_dl.cli import app
-from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from rich.console import RenderableType
     from rich.panel import Panel
-
-tracebacks.install_exception_hook()
 
 
 def _error_panel(message: RenderableType, title: str = "Error") -> Panel:
@@ -32,15 +25,25 @@ def _error_panel(message: RenderableType, title: str = "Error") -> Panel:
 
 
 def run_cdl(args: Sequence[str] | None = None) -> int:
+    from cyberdrop_dl import tracebacks
     from cyberdrop_dl.logs import setup_console_logging
 
+    tracebacks.install_exception_hook()
+
     with setup_console_logging():
+        from pydantic import ValidationError
+
+        from cyberdrop_dl.cli import app
+        from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, DatabaseError
+
         try:
             app(args)
-
+        except (ValidationError, DatabaseError) as exc:
+            tb = tracebacks.from_exception(exc.with_traceback(None))
+            app.console.print(_error_panel(tb))
         except CDLConfigRuntimeErrorsGroup as exc_group:
-            tb = tracebacks.from_exception(exc_group, chain_traceback=False)
-            app.console.print(_error_panel(tb, title="Invalid Config"))
+            tb = tracebacks.from_exception(exc_group)
+            app.console.print(_error_panel(tb, title=exc_group.message or "Invalid Config"))
         else:
             return 0
 
@@ -48,7 +51,10 @@ def run_cdl(args: Sequence[str] | None = None) -> int:
 
 
 def main(args: Sequence[str] | None = None) -> None:
-    sys.exit(run_cdl(args))
+    try:
+        raise SystemExit(run_cdl(args))
+    except KeyboardInterrupt:
+        raise SystemExit(130) from None
 
 
 if __name__ == "__main__":

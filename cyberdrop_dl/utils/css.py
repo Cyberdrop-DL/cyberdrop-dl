@@ -68,12 +68,14 @@ def attr_or_none(tag: Tag, attribute: str) -> str | None:
     """Same as `tag.get(attribute)` but asserts the result is a single str"""
     attribute_ = attribute
     if attribute_ == "srcset":
-        if (srcset := tag.get(attribute_)) and isinstance(srcset, str):
+        if (srcset := tag.get(attribute_)) and type(srcset) is str:
             return _parse_srcset(srcset)
         attribute_ = "src"
 
     value = tag.get("data-src") or tag.get(attribute_) if attribute_ == "src" else tag.get(attribute_)
-    if isinstance(value, list):
+    if value is None:
+        return None
+    if type(value) is not str:
         raise SelectorError(f"Expected a single value for {attribute = !r}, got multiple")
     return value
 
@@ -159,7 +161,11 @@ def page_title(soup: Tag, domain: str | None = None) -> str:
 
 
 def json_ld(soup: Tag, /, contains: str | None = None) -> JsonLD:
-    ld_json = next(iter_json_ld(soup, contains)) or {}
+    try:
+        ld_json = next(iter_json_ld(soup, contains)) or {}
+    except StopIteration:
+        details = f" (-contains:'{contains}')" if contains else ""
+        raise SelectorError(f"ld-json tag{details} not found") from None
     if type(ld_json) is list:
         ld_json = ld_json[0]
 

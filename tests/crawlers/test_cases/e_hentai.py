@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "re:h/d15d0155bc92ee5cde9cf55172eea151d279ed67-159326-1280-1790-wbp/keystamp",
                 "filename": "3973949-1.webp",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "001.webp",
                 "referer": "https://e-hentai.org/s/d86f3ec8b4/3973949-1",
                 "album_id": None,
@@ -21,7 +21,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "ANY",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "001.webp",
                 "referer": "re:https://e-hentai.org/s/",
                 "album_id": "f331562c1c",

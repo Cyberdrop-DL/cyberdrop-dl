@@ -3,10 +3,12 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers._kvs import extract_kvs_video
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.mediaprops import Resolution
@@ -122,7 +124,7 @@ class PimpBunnyCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
@@ -143,12 +145,11 @@ class PimpBunnyCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, name: str) -> None:
         album_url = scrape_item.url.origin() / "albums" / name / ""
-        title: str = ""
-        async for soup in self.web_pager(album_url):
-            if not title:
-                title = css.select_text(soup, Selector.ALBUM_TITLE)
-                scrape_item.setup_as_album(self.create_title(f"{title} [album]"))
+        soup, pages = await aio.peek_first(self.web_pager(album_url))
+        title = css.select_text(soup, Selector.ALBUM_TITLE)
+        scrape_item.setup_as_album(self.create_title(f"{title} [album]"))
 
+        async for soup in pages:
             for image in self.iter_urls(soup, Selector.ITEM):
-                self.create_task(self.direct_file(scrape_item, image))
+                self.create_eager_task(self.direct_file(scrape_item, image))
                 scrape_item.add_children()
