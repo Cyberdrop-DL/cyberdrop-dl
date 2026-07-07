@@ -23,6 +23,7 @@ class PlutoCrawler(Crawler):
             "/on-demand/<series_id>",
             "/<region>/on-demand/<series_id>",
         ),
+        "Season": ".../no-demand/<series_id>/season/<season>",
         "Episode": (
             ".../no-demand/<series_id>/episode/<episode_id>",
             ".../no-demand/<series_id>/season/<season>/episode/<episode_id>",
@@ -42,26 +43,34 @@ class PlutoCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_, "on-demand", *rest] | ["on-demand", *rest]:
-                match rest:
-                    case ["series", series_id, *_, "episode", episode_id]:
-                        return await self.episode(scrape_item, series_id, episode_id)
-                    case ["series", series_id, *_]:
-                        return await self.series(scrape_item, series_id)
+            case [_, "on-demand", *vod] | ["on-demand", *vod]:
+                match vod:
+                    case ["series", series_id, *rest]:
+                        match rest:
+                            case ["season", _, "episode", episode_id] | ["episode", episode_id]:
+                                return await self.episode(scrape_item, series_id, episode_id)
+                            case ["season", season]:
+                                return await self.series(scrape_item, series_id, int(season))
+                            case _:
+                                return await self.series(scrape_item, series_id)
                     case _:
                         raise ValueError
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def series(self, scrape_item: ScrapeItem, series_id: str) -> None:
+    async def series(self, scrape_item: ScrapeItem, series_id: str, season: int | None = None) -> None:
         series = await self._series(scrape_item, series_id)
         downloaded = await self.get_album_results(series.id)
         base_url = self.PRIMARY_URL / "on-demand/series" / series.id
         for ep in series.episodes():
+            if season is not None and ep.season != season:
+                continue
+
             url = base_url / "season" / str(ep.season) / "episode" / ep.id
             if self.check_album_results(url, downloaded):
                 continue
+
             new_item = scrape_item.create_child(url)
             self.create_task(self._episode(new_item, ep))
             scrape_item.add_children()
