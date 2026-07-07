@@ -135,14 +135,8 @@ class SpankBangCrawler(Crawler):
         title = self.create_title(f"{name} [playlist]", playlist_id)
         scrape_item.setup_as_album(title, album_id=playlist_id)
 
-        total = 0
         async for soup in pages:
-            n_count = len(soup.select(Selector.VIDEOS))
-            total = n_count + total
-            continue
             await self._iter_videos(scrape_item, soup)
-        if total:
-            pass
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
