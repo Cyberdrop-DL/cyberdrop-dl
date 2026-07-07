@@ -6,7 +6,7 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.cache import cached_method
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, compose_ep_name
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css
@@ -99,7 +99,7 @@ class PlutoCrawler(Crawler):
         m3u8_url = _compose_stream_url(self.api.stitcher, ep.stitched)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         filename = self.create_custom_filename(
-            ep_name(ep.season, ep.number, ep.name),
+            compose_ep_name(ep.season, ep.number, ep.name),
             ext := ".mp4",
             file_id=ep.id,
             resolution=info.resolution,
@@ -116,18 +116,6 @@ class PlutoCrawler(Crawler):
             custom_filename=filename,
             metadata=ep,
         )
-
-
-def ep_name(season: int | None, ep: int | None, name: str | None = None) -> str:
-    title = ""
-    if season is not None:
-        title += f"S{season:02}"
-    if ep is not None:
-        title += f"E{ep:03}"
-    if name:
-        title = f"{title} - {name}" if title else name
-    assert title
-    return title
 
 
 _STITCHER: ContextVar[Stitcher] = ContextVar("_STITCHER")
