@@ -27,8 +27,8 @@ class Selector:
     VIDEO_REMOVED = "#video_removed, .video_removed"
     VIDEOS = ", ".join(
         (
-            ".video-list > .video-item > a[href]",
-            "[data-testid=search-result] [data-testid=video-item] > a[href]",
+            "#search_v2 .js-video-item > a[href*='/playlist/']",
+            "#search_page .js-video-item > a[href*='/video/']",
         )
     )
 
