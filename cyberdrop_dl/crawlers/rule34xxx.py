@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
@@ -41,12 +42,11 @@ class Rule34XXXCrawler(Crawler):
 
     @error_handling_wrapper
     async def tag(self, scrape_item: ScrapeItem, tags: str) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url, relative_to=scrape_item.url):
-            if not title:
-                title = self.create_title(tags.strip())
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url, relative_to=scrape_item.url))
+        title = self.create_title(tags.strip())
+        scrape_item.setup_as_album(title)
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.CONTENT):
                 self.create_task(self.run(new_scrape_item))
 

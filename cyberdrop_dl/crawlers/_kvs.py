@@ -90,11 +90,11 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 return await self.profile(scrape_item, member_id, entire_profile=False)
             case ["members", member_id, *_]:
                 return await self.profile(scrape_item, member_id)
-            case ["videos", _, *_]:
+            case ["videos" | "video", _, *_]:
                 return await self.video(scrape_item)
-            case ["albums", _]:
+            case ["albums" | "album", _]:
                 return await self.album(scrape_item)
-            case ["albums", _, _, *_]:
+            case ["albums" | "album", _, _, *_]:
                 return await self.picture(scrape_item)
             case _:
                 if query := scrape_item.url.query.get("q"):
@@ -155,12 +155,8 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
                 self.create_task(self.run(new_scrape_item))
 
     def _extract_upload_date(self, soup: BeautifulSoup) -> float | None:
-        try:
-            date_str = css.json_ld(soup)["uploadDate"]
-        except (LookupError, ValueError, css.SelectorError):
-            return None
-
-        return self.parse_iso_date(date_str)
+        if date_str := _extract_upload_date(soup):
+            return self.parse_iso_date(date_str)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
@@ -256,6 +252,20 @@ def extract_kvs_video(cls: Crawler, soup: BeautifulSoup) -> KVSVideo:
     return video
 
 
+def _extract_upload_date(soup: BeautifulSoup) -> str | None:
+    try:
+        return open_graph.get("video:release_date", soup) or css.select(
+            soup, "meta[property='video:release_date']", "content"
+        )
+    except css.SelectorError:
+        try:
+            return css.json_ld(soup, "uploadDate")["uploadDate"]
+        except (LookupError, ValueError, css.SelectorError):
+            # Human date parsing was removed from parse_date. This fallback
+            # no longer supports relative strings like "2 hours ago".
+            return None
+
+
 # URL de-obfuscation code for kvs, adapted from yt-dlp
 # https://github.com/yt-dlp/yt-dlp/blob/e1847535e28788414a25546a45bebcada2f34558/yt_dlp/extractor/generic.py
 
@@ -332,9 +342,12 @@ def _extract_user_name(soup: BeautifulSoup) -> str:
     return css.select_text(soup, Selector.USER_NAME).partition("'s Profile")[0].strip().removesuffix("'s Page")
 
 
-def _extract_album_id(soup: BeautifulSoup) -> str:
-    js_text = css.select_text(soup, Selector.Album.ID)
-    return extr_text(js_text, "params['album_id'] =", ";")
+def _extract_album_id(soup: BeautifulSoup) -> str | None:
+    try:
+        js_text = css.select_text(soup, Selector.Album.ID)
+        return extr_text(js_text, "params['album_id'] =", ";")
+    except (css.SelectorError, ValueError):
+        return None
 
 
 class GenericKVSCrawler(KernelVideoSharingCrawler, is_generic=True):

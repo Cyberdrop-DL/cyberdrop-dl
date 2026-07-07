@@ -5,7 +5,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/bhrc4degufg9",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "filename": "Dr4gr4c3Fr4nc143x7Pv [bhrc4degufg9][720p].mp4",
                 "referer": "https://jilliandescribecompany.com/e/bhrc4degufg9",
                 "album_id": None,
@@ -30,7 +30,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/ueof3kkmzcal",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "filename": "wlkng.dd.ct.1x02.m720p.es [ueof3kkmzcal][720p].mp4",
                 "referer": "https://jilliandescribecompany.com/e/ueof3kkmzcal",
                 "album_id": None,
@@ -43,7 +43,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "https://jilliandescribecompany.com/e/a8pkxqgb5kvy",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "filename": "DAN.DA.DAN.S02E11.German.1080p.AAC.WebRip.x264-GSD [a8pkxqgb5kvy][1080p].mp4",
                 "referer": "https://jilliandescribecompany.com/e/a8pkxqgb5kvy",
                 "album_id": None,

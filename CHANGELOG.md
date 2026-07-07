@@ -22,6 +22,26 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+### Changed
+
+- Remove hardcoded limit of 1 concurrent download per server (Bunkr)
+- Do not dedupe files that were not downloaded in the current session
+
+### Fixed
+
+- No videos detected on profiles, playlists or search results (Spankbang)
+
+## [10.0.2] - 2026-07-05
+
+### Fixed
+
+- Wait until download is about to begin to request a download token, to prevent `403 Forbidden` errors due to expiration (Filester)
+- `Skipped by config` stats not taking into account URLs skipped by host
+- All downloads being limited to 1 per site
+- Some downloads still being rejected if the response has no `Content-Length` header
+
 ## [10.0.1] - 2026-06-29
 
 ### Changed

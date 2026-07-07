@@ -5,6 +5,7 @@ import dataclasses
 import time
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -57,26 +58,26 @@ class FilesterCrawler(Crawler):
         file = _parse_file(soup)
         scrape_item.uploaded_at = self.parse_iso_date(file.uploaded_at)
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
+
         await self.handle_file(
             scrape_item.url,
             scrape_item,
             file.name,
             ext,
             custom_filename=filename,
-            debrid_link=await self.api.download(slug),
+            # Downloads expire after 30 minutes so we delay the request for it
+            debrid_link=lambda: self.api.download(slug),
         )
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        title: str = ""
+        soup, pages = await aio.peek_first(self._folder_pager(scrape_item.url, scrape_item.password))
+        name = open_graph.title(soup)
         subfolders: list[str] = []
+        title = self.create_title(name, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-        async for soup in self._folder_pager(scrape_item.url, scrape_item.password):
-            if not title:
-                name = open_graph.title(soup)
-                title = self.create_title(name, album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
-
+        async for soup in pages:
             self._iter_children(scrape_item, _extract_files(soup))
             subfolders.extend(_extract_subfolders(soup))
 

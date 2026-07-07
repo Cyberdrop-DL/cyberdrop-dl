@@ -14,12 +14,7 @@ The name of the crawer is the title of their section in the page (in bold).
 
 ```yaml
 crawlers:
-  generic:
-    chevereto: []
-    discourse: []
-    kvs: []
-    wordpress_html: []
-    wordpress_media: []
+  disabled: []
 ```
 
 # `generic`
@@ -70,6 +65,16 @@ Supported generic crawlers:
 | --------------- | ------- |
 | `list[HttpURL]` | `[]`    |
 
+```yaml
+crawlers:
+  generic:
+    chevereto: []
+    discourse: []
+    kvs: []
+    wordpress_html: []
+    wordpress_media: []
+```
+
 # Bandcamp
 
 ## `formats`
@@ -113,6 +118,58 @@ Download audios as `.mp3` files even if WAV (high quality) versions are availabl
 | `Bool` | `false` |
 
 Download episodes with english audio tracks instead of japanese (if available)
+
+# Pawchive
+
+## `file`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Download the main file in a post (if any)
+
+## `attachments`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Download all attachments in a post (may or may not include `file`)
+
+## `content_urls`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Scan the description (text) in a post and download any URL found
+
+{% hint style="warning" %}
+This option slows down scraping significally. The default response from a search query does not return the content of each post.
+`cyberdrop-dl` needs to make an additional request for each post to get its content (50x requests in total).
+{% endhint %}
+
+## `embed`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Download the embedded file from third party sites (if any)(mega.nz, pcloud, dropbox, etc..)
+
+Embedded files show up as clickable boxes on the website:
+
+![embed preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/pawchive_embed.png)
+
+```yaml
+crawlers:
+  pawchive:
+    attachments: true
+    content_urls: true
+    embed: true
+    file: true
+```
 
 # Tiktok
 

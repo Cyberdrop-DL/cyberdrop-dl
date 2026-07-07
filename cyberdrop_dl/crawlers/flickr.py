@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -42,22 +43,17 @@ class FlickrCrawler(Crawler):
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, user: str, photoset_id: str) -> None:
         title: str = ""
-        async for data in self.api.photoset(photoset_id):
-            photos: list[dict[str, Any]] = data.pop("photo")
+        first_page, pages = await aio.peek_first(self.api.photoset(photoset_id))
+        name = first_page["title"]
+        title = self.create_title(name["_content"] if isinstance(name, dict) else name, photoset_id)
+        scrape_item.setup_as_album(title, album_id=photoset_id)
+        self.create_eager_task(self.write_metadata(scrape_item, photoset_id, first_page))
 
-            if not title:
-                name = data["title"]
-                title = self.create_title(
-                    name["_content"] if isinstance(name, dict) else name,
-                    photoset_id,
-                )
-                scrape_item.setup_as_album(title, album_id=photoset_id)
-                await self.write_metadata(scrape_item, photoset_id, data)
-
-            for photo in photos:
+        async for page in pages:
+            for photo in page["photo"]:
                 web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
                 new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._photo(new_scrape_item, photo))
+                self.create_eager_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
     @error_handling_wrapper

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -45,16 +46,14 @@ class EHentaiCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
-        title: str = ""
         scrape_item.url = scrape_item.url.with_query(None)
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = self.create_title(css.select_text(soup, Selector.TITLE))
-                date_str: str = css.select_text(soup, Selector.DATE)
-                title = self.create_title(title, gallery_id)
-                scrape_item.setup_as_album(title, album_id=gallery_id)
-                scrape_item.uploaded_at = self.parse_iso_date(date_str)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        name = self.create_title(css.select_text(soup, Selector.TITLE))
+        title = self.create_title(name, gallery_id)
+        scrape_item.setup_as_album(title, album_id=gallery_id)
+        scrape_item.uploaded_at = self.parse_iso_date(css.select_text(soup, Selector.DATE))
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM_IMAGES):
                 self.create_task(self.run(new_scrape_item))
 

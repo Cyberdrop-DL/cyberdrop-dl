@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, dates, parse_url
@@ -69,12 +70,11 @@ class EfuktCrawler(Crawler):
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = css.select_text(soup, Selector.TITLE)
-                scrape_item.setup_as_album(self.create_title(f"{title} [series]"))
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title = css.select_text(soup, Selector.TITLE)
+        scrape_item.setup_as_album(self.create_title(f"{title} [series]"))
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO_THUMBS):
                 self.create_task(self.run(new_scrape_item))
 

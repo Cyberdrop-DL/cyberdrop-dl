@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -71,18 +72,13 @@ class XXXBunkerCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, name: str, type_: str) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                name = name.replace("+", " ")
-                category = {
-                    "search": "search",
-                    "categories": "category",
-                    "favoritevideos": "favorites",
-                }[type_]
-                title = self.create_title(f"{name} [{category}]")
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        name = name.replace("+", " ")
+        category = {"search": "search", "categories": "category", "favoritevideos": "favorites"}[type_]
+        title = self.create_title(f"{name} [{category}]")
+        scrape_item.setup_as_album(title)
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 self.create_task(self.run(new_scrape_item))
 

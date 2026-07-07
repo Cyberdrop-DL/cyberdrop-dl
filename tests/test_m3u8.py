@@ -3,6 +3,7 @@ from typing import LiteralString
 
 import pytest
 
+from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import m3u8
 
@@ -210,3 +211,27 @@ def test_m3u8_master_w_no_codecs_should_not_raise_an_error() -> None:
     assert len(groups) == 2
     for group in groups:
         assert group.codecs == (None, None)
+
+
+def test_m3u8_selection_of_streams_w_no_resolution() -> None:
+    content = """
+    #EXTM3U
+    #EXT-X-VERSION:5
+    #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",LANGUAGE="es",NAME="English [Original]",AUTOSELECT=YES,DEFAULT=YES,CHANNELS="2",URI="audio/audio/English/audio.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7327812"
+    #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1042180,AUDIO="audio"
+    1042180/playlist.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7360e2d2
+    #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1577180,AUDIO="audio"
+    1577180/playlist.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7360e2d2
+    #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2294080,AUDIO="audio"
+    2294080/playlist.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7360e2d2
+    #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=3321280,AUDIO="audio"
+    3321280/playlist.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7360e2d2
+    #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=640930,AUDIO="audio"
+    640930/playlist.m3u8?sid=78b48d12-79ec-11f1-a9b4-761d7360e2d2
+    """
+    variant = _variant_parser(content)
+    best = variant.get_best_group()
+    assert best.resolution == Resolution.unknown()
+    assert best.stream_info.bandwidth == 3321280
+    assert best.media.filter(group_id="audio")
+    assert best.urls.video.path == "/4b4ef277/3321280/playlist.m3u8"

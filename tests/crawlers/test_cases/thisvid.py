@@ -41,7 +41,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/cake-dance-booty-cake",
                 "filename": "Cake Dance (Booty Cake!) [14295498].mp4",
-                "debrid_link": "https://thisvid.com/get_file/5/021865d76ffb8605044e6a141e23f8a205f10fe8cf/14295000/14295498/14295498.mp4",
+                "debrid_url": "https://thisvid.com/get_file/5/021865d76ffb8605044e6a141e23f8a205f10fe8cf/14295000/14295498/14295498.mp4",
                 "original_filename": "14295498.mp4",
                 "referer": "https://thisvid.com/videos/cake-dance-booty-cake",
                 "album_id": None,
@@ -51,7 +51,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/icing-on-the-cake5",
                 "filename": "Icing On The Cake [13720173].mp4",
-                "debrid_link": "https://thisvid.com/get_file/5/301aff8b86d3abb382e880631ab9173121be81d33c/13720000/13720173/13720173.mp4",
+                "debrid_url": "https://thisvid.com/get_file/5/301aff8b86d3abb382e880631ab9173121be81d33c/13720000/13720173/13720173.mp4",
                 "original_filename": "13720173.mp4",
                 "referer": "https://thisvid.com/videos/icing-on-the-cake5",
                 "album_id": None,
@@ -61,7 +61,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/booty-cake-delivered",
                 "filename": "Booty Cake Delivered [12835401].mp4",
-                "debrid_link": "https://thisvid.com/get_file/5/f477da4ddb227967b05943b15b80148dffcefd54df/12835000/12835401/12835401.mp4",
+                "debrid_url": "https://thisvid.com/get_file/5/f477da4ddb227967b05943b15b80148dffcefd54df/12835000/12835401/12835401.mp4",
                 "original_filename": "12835401.mp4",
                 "referer": "https://thisvid.com/videos/booty-cake-delivered",
                 "album_id": None,
@@ -71,7 +71,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/sudden-harsh-wet-sneeze-interupts",
                 "filename": "Sudden Harsh Wet Sneeze Interupts! [12462474].mp4",
-                "debrid_link": "https://thisvid.com/get_file/5/774153084e028c1765d9a29c0e6d488fb1d644b820/12462000/12462474/12462474.mp4",
+                "debrid_url": "https://thisvid.com/get_file/5/774153084e028c1765d9a29c0e6d488fb1d644b820/12462000/12462474/12462474.mp4",
                 "original_filename": "12462474.mp4",
                 "referer": "https://thisvid.com/videos/sudden-harsh-wet-sneeze-interupts",
                 "album_id": None,
@@ -81,7 +81,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/thicc-jiggly-booty-in-tight-pants",
                 "filename": "Thicc Jiggly Booty In Tight Pants [12012010].mp4",
-                "debrid_link": "https://thisvid.com/get_file/5/45280519865477661b8e1822342aa162abd5053095/12012000/12012010/12012010.mp4",
+                "debrid_url": "https://thisvid.com/get_file/5/45280519865477661b8e1822342aa162abd5053095/12012000/12012010/12012010.mp4",
                 "original_filename": "12012010.mp4",
                 "referer": "https://thisvid.com/videos/thicc-jiggly-booty-in-tight-pants",
                 "album_id": None,
@@ -91,7 +91,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/thicc-booty-in-sweat-pants",
                 "filename": "Thicc Booty In Sweat Pants [11700700].mp4",
-                "debrid_link": "https://thisvid.com/get_file/4/57597de49a32da1e46d672cc18a21a05efe54c8ee8/11700000/11700700/11700700.mp4",
+                "debrid_url": "https://thisvid.com/get_file/4/57597de49a32da1e46d672cc18a21a05efe54c8ee8/11700000/11700700/11700700.mp4",
                 "original_filename": "11700700.mp4",
                 "referer": "https://thisvid.com/videos/thicc-booty-in-sweat-pants",
                 "album_id": None,
@@ -101,7 +101,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/sneezing-fit-in-the-car2",
                 "filename": "Sneezing Fit In The Car [5658887].mp4",
-                "debrid_link": "https://thisvid.com/get_file/4/782d1e37e18684900103fe5d354f9413f2e0b02226/5658000/5658887/5658887.mp4",
+                "debrid_url": "https://thisvid.com/get_file/4/782d1e37e18684900103fe5d354f9413f2e0b02226/5658000/5658887/5658887.mp4",
                 "original_filename": "5658887.mp4",
                 "referer": "https://thisvid.com/videos/sneezing-fit-in-the-car2",
                 "album_id": None,
@@ -111,7 +111,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/glasses-girl-mini-wet-sneeze-fit",
                 "filename": "Glasses Girl Mini Wet Sneeze Fit [5658871].mp4",
-                "debrid_link": "https://thisvid.com/get_file/4/55c3e64323410ac3e767cca14501d4972d8b1a7b3e/5658000/5658871/5658871.mp4",
+                "debrid_url": "https://thisvid.com/get_file/4/55c3e64323410ac3e767cca14501d4972d8b1a7b3e/5658000/5658871/5658871.mp4",
                 "original_filename": "5658871.mp4",
                 "referer": "https://thisvid.com/videos/glasses-girl-mini-wet-sneeze-fit",
                 "album_id": None,
@@ -121,7 +121,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/black-haired-girl-sneezing-fit",
                 "filename": "Black Haired Girl Sneezing Fit [5113285].mp4",
-                "debrid_link": "https://thisvid.com/get_file/4/7260e109787f406756fa812a50fb6ba0140629bb23/5113000/5113285/5113285.mp4",
+                "debrid_url": "https://thisvid.com/get_file/4/7260e109787f406756fa812a50fb6ba0140629bb23/5113000/5113285/5113285.mp4",
                 "original_filename": "5113285.mp4",
                 "referer": "https://thisvid.com/videos/black-haired-girl-sneezing-fit",
                 "album_id": None,
@@ -131,7 +131,7 @@ TEST_CASES = [
             {
                 "url": "https://thisvid.com/videos/brazilian-booty-rub-down",
                 "filename": "Brazilian Booty Rub Down [5113273].mp4",
-                "debrid_link": "https://thisvid.com/get_file/4/76ed0f803842a93fa5a6e08952aded8b273e381548/5113000/5113273/5113273.mp4",
+                "debrid_url": "https://thisvid.com/get_file/4/76ed0f803842a93fa5a6e08952aded8b273e381548/5113000/5113273/5113273.mp4",
                 "original_filename": "5113273.mp4",
                 "referer": "https://thisvid.com/videos/brazilian-booty-rub-down",
                 "album_id": None,

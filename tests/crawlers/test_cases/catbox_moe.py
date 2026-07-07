@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://files.catbox.moe/ey8s2h.zip",
                 "filename": "ey8s2h.zip",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "ey8s2h.zip",
                 "referer": "https://files.catbox.moe/ey8s2h.zip",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "https://files.fatbox.moe/ey8s2h.zip",
                 "filename": "ey8s2h.zip",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "ey8s2h.zip",
                 "referer": "https://files.fatbox.moe/ey8s2h.zip",
                 "album_id": None,

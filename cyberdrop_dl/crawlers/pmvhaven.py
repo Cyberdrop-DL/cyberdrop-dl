@@ -5,6 +5,7 @@ import dataclasses
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -86,14 +87,13 @@ class PMVHavenCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-        title: str = ""
         # TODO: use playlist as album_id to skip downloads faster
         api_url = self.PRIMARY_URL / "api/playlists" / playlist_id
-        async for data in self._api_pager(api_url):
-            if not title:
-                title = self.create_title(f"{data['name']} [playlist]")
-                scrape_item.setup_as_album(title)
+        data, pages = await aio.peek_first(self._api_pager(api_url))
+        title = self.create_title(f"{data['name']} [playlist]")
+        scrape_item.setup_as_album(title)
 
+        async for data in pages:
             for video in _parse_videos(data["videoDetails"]):
                 await self._video(scrape_item.copy(), video)
                 scrape_item.add_children()
