@@ -4,6 +4,7 @@ import dataclasses
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import extr_text
@@ -38,12 +39,14 @@ class WikiFeetCrawler(Crawler):
         title = self.create_title(celeb.name)
         slug = celeb.name.replace(" ", "-")
         scrape_item.setup_as_album(title, album_id=slug)
-        await self.write_metadata(scrape_item, name, celeb)
+        self.create_eager_task(self.write_metadata(scrape_item, name, celeb))
 
+        sleep = aio.periodic_sleep(100)
         for photo in celeb.photos:
             src = _PICS / f"{slug}-Feet-{photo.id}.jpg"
-            self.create_task(self.direct_file(scrape_item, src))
+            self.create_eager_task(self.direct_file(scrape_item, src))
             scrape_item.add_children()
+            await sleep()
 
 
 class WikiFeetMenCrawler(WikiFeetCrawler):
