@@ -31,42 +31,47 @@ class PlutoCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [*_, "on-demand", "series", series_id, "season", _, "episode", episode_id] | [
-                *_,
-                "on-demand",
-                "series",
-                series_id,
-                "episode",
-                episode_id,
-            ]:
-                return await self.series(scrape_item, series_id, episode_id)
+            case [_, "on-demand", *rest] | ["on-demand", *rest]:
+                match rest:
+                    case ["series", series_id, *_, "episode", episode_id]:
+                        return await self.episode(scrape_item, series_id, episode_id)
+                    case ["series", series_id, *_]:
+                        return await self.series(scrape_item, series_id)
+                    case _:
+                        raise ValueError
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def series(self, scrape_item: ScrapeItem, series_id: str, episode_id: str | None = None) -> None:
-        series = await self.api.series(series_id)
-        scrape_item.setup_as_album(self.create_title(series.name, series.id))
-        self.create_eager_task(self.write_metadata(scrape_item, series.id, series))
-        if episode_id:
-            try:
-                episode = next(e for e in series.episodes() if e.id == episode_id)
-            except StopIteration:
-                raise ScrapeError(404) from None
-
-            return await self._episode(scrape_item, episode)
-
+    async def series(self, scrape_item: ScrapeItem, series_id: str) -> None:
+        series = await self._series(scrape_item, series_id)
         for ep in series.episodes():
-            base_url = scrape_item.url / "episode" / ep.id
-            new_item = scrape_item.create_child(base_url)
+            url = scrape_item.url / "episode" / ep.id
+            new_item = scrape_item.create_child(url)
             self.create_task(self._episode(new_item, ep))
             scrape_item.add_children()
 
+    async def _series(self, scrape_item: ScrapeItem, series_id: str) -> Series:
+        series = await self.api.series(series_id)
+        scrape_item.setup_as_album(self.create_title(series.name, series.id))
+        self.create_eager_task(self.write_metadata(scrape_item, series.id, series))
+        return series
+
     @error_handling_wrapper
-    async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
+    async def episode(self, scrape_item: ScrapeItem, series_id: str, episode_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
+        series = await self._series(scrape_item, series_id)
+        try:
+            episode = next(e for e in series.episodes() if e.id == episode_id)
+        except StopIteration:
+            raise ScrapeError(404) from None
+
+        await self._episode(scrape_item, episode)
+
+    @error_handling_wrapper
+    async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
         m3u8_url = _compose_stream_url(self.api.stitcher, ep.stitched)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         filename = self.create_custom_filename(
