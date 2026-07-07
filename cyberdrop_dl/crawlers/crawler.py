@@ -511,6 +511,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             parents=tuple(scrape_item.parents),
             uploaded_at=scrape_item.uploaded_at,
             debrid_url=debrid_link,
+            json_check=self.__json_resp_check__,
         )
 
         media_item.headers.update(self._prepare_headers(scrape_item))

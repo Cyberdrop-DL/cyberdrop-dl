@@ -309,8 +309,14 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
         return
 
+    try:
+        data = await response.json()
+    except Exception:
+        logger.exception("Unable to decode JSON response from %s", response.url)
+        return
+
     if check := JSON_CHECK.get():
-        check(await response.json(), response)
+        check(data, response)
         return
 
 
