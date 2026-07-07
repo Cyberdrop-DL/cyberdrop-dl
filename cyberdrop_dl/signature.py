@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import reprlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import functools
@@ -30,14 +30,16 @@ else:
         return decorator
 
 
+def repr_fields(*fields: tuple[str, Any]) -> Generator[str]:
+    for name, value in fields:
+        yield f"{name}={value!r}"
+
+
 def simple_repr(*names: str) -> Callable[..., str]:
 
     @reprlib.recursive_repr()
     def repr_(self: object) -> str:
-        def fields() -> Generator[str]:
-            for name in names:
-                yield f"{name}={getattr(self, name)!r}"
-
-        return f"<{type(self).__name__}({', '.join(fields())}>"
+        fields = ((name, getattr(self, name)) for name in names)
+        return f"<{type(self).__name__}({', '.join(repr_fields(*fields))}>"
 
     return repr_

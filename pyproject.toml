@@ -121,9 +121,10 @@ filterwarnings = [
     "error"
 ]
 markers = [
-    "crawler_test_case: tests that do full run with a crawler (making actual network requests)"
+    "crawler_test_case: tests that do full run with a crawler (making actual network requests)",
+    "http: tests that makes real network requests"
 ]
-minversion = "8.4.1"
+minversion = "9.1.1"
 strict_config = true
 strict_markers = true
 

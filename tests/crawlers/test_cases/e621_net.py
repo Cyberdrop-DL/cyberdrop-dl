@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://static1.e621.net/data/1e/bf/1ebf10a52839f429062026804ef9ae40.jpg",
                 "filename": "1ebf10a52839f429062026804ef9ae40.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1ebf10a52839f429062026804ef9ae40.jpg",
                 "referer": "https://e621.net/posts/6409634",
                 "album_id": None,

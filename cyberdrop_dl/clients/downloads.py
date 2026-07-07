@@ -11,11 +11,11 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
-from cyberdrop_dl.clients.http import check_http_status
+from cyberdrop_dl.clients.http import JSON_CHECK, check_http_status
 from cyberdrop_dl.constants import FileExt, HashMode
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.hasher import compute_in_place_hash
-from cyberdrop_dl.utils import dates
+from cyberdrop_dl.utils import dates, enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -79,12 +79,13 @@ class DownloadClient:
         await asyncio.sleep(self.config.downloads.total_delay)
 
         download_url = await media_item.resolve()
-        async with self.http_client.raw_request(
-            download_url,
-            headers=media_item.headers,
-            impersonate=media_item.domain in _USE_IMPERSONATION or None,
-        ) as resp:
-            return await self._process_response(media_item, domain, resume_point, resp)
+        with enter_context(JSON_CHECK, media_item.json_check):
+            async with self.http_client.raw_request(
+                download_url,
+                headers=media_item.headers,
+                impersonate=media_item.domain in _USE_IMPERSONATION or None,
+            ) as resp:
+                return await self._process_response(media_item, domain, resume_point, resp)
 
     async def _predownload_skip(self, media_item: MediaItem, domain: str) -> bool | None:
         should_download, should_skip = await self.get_final_file_info(media_item, domain)

@@ -294,8 +294,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             ):
                 yield resp
 
-    @classmethod
-    def __json_resp_check__(cls, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
+    def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
         """Custom check for JSON responses.
 
         This method is called automatically by the `HttpClient` when a JSON response is received from `cls.DOMAIN`
@@ -512,6 +511,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             parents=tuple(scrape_item.parents),
             uploaded_at=scrape_item.uploaded_at,
             debrid_url=debrid_link,
+            json_check=self.__json_resp_check__,
         )
 
         media_item.headers.update(self._prepare_headers(scrape_item))
@@ -663,7 +663,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     def create_title(self, title: str, album_id: str | None = None, thread_id: int | None = None) -> str:
         """Creates the title for the scrape item."""
-        return create_title(self.config, self.FOLDER_DOMAIN, title, album_id, thread_id)
+        return compose_title(self.config, self.FOLDER_DOMAIN, title, album_id, thread_id)
 
     @final
     def create_separate_post_title(
@@ -873,7 +873,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     def handle_subs(self, scrape_item: ScrapeItem, video_filename: str, subtitles: Iterable[ISO639Subtitle]) -> None:
-        counter = Counter()
+        counter: Counter[str] = Counter()
         video_stem = Path(video_filename).stem
         for sub in subtitles:
             link = self.parse_url(sub.url)
@@ -1042,7 +1042,7 @@ def _prepare_download_path(item: ScrapeItem, domain: str) -> Path:
     return path
 
 
-def create_title(
+def compose_title(
     config: Config,
     domain: str,
     title: str,
@@ -1062,3 +1062,16 @@ def create_title(
 
     # Remove double spaces
     return " ".join(title.split(" "))
+
+
+def compose_ep_name(season: int | None, ep: int | None, name: str | None) -> str:
+    prefix = ""
+    if season is not None:
+        prefix += f"S{season:02}"
+    if ep is not None:
+        prefix += f"E{ep:03}"
+
+    name = " - ".join(filter(None, (prefix, name)))
+    if not name:
+        raise ValueError("Empty episode title")
+    return name

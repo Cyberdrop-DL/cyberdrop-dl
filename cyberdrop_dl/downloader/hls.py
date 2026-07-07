@@ -83,7 +83,7 @@ def _create_media_segments(
 def _segments(m3u8: M3U8) -> list[Segment | InitializationSection]:
     segments = m3u8.segment_map + m3u8.segments
     if not segments:
-        msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.base_uri}) has no valid segments"
+        msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.source}) has no valid segments"
         raise DownloadError(HTTPStatus.NO_CONTENT, msg)
     return segments
 
@@ -110,7 +110,13 @@ async def _download_m3u8(
         download_folder=temp_dir / m3u8.media_type,
     )
 
-    logger.debug(f"Starting HLS download ({m3u8.media_type}, {len(segments):,} segments) for {media_item.real_url}")
+    logger.debug(
+        "Starting HLS download (%s, %s segments) for %s (%s)",
+        m3u8.media_type,
+        f"{len(segments):,}",
+        media_item.real_url,
+        m3u8.source,
+    )
     results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
     await _merge_segments(tuple(result.item.path for result in results), output)
     return output

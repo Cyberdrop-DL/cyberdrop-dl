@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://live.staticflickr.com/1779/42279501790_b008687536_o.png",
                 "filename": "LONE SURVIVOR [42279501790].png",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "LONE SURVIVOR",
                 "referer": "https://www.flickr.com/photos/jillblack33/42279501790",
                 "album_id": None,
@@ -21,7 +21,7 @@ TEST_CASES = [
             {
                 "url": "re:https://live.staticflickr.com/video/52448052841/e96cd3ae34/1080p.mp4",
                 "filename": "Happy Birthday, to My Wonderful, Husband, Gerry [52448052841].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "Happy Birthday, to My Wonderful, Husband, Gerry",
                 "referer": "https://www.flickr.com/photos/soniaadammurray/52448052841",
                 "album_id": None,

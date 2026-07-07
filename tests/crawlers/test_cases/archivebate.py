@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://mixdrop.sb/e/67pwzwz6uxjggd",
                 "filename": "7e73779e-d4be-4e7d-982c-5244ad4f6b33.mp4",
-                "debrid_link": "NOT_NONE",
+                "debrid_url": "NOT_NONE",
                 "original_filename": "7e73779e-d4be-4e7d-982c-5244ad4f6b33.mp4",
                 "referer": "https://www.archivebate.store/watch/16321694",
                 "album_id": None,
