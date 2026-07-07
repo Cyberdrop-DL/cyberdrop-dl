@@ -232,6 +232,6 @@ def test_m3u8_selection_of_streams_w_no_resolution() -> None:
     variant = _variant_parser(content)
     best = variant.get_best_group()
     assert best.resolution == Resolution.unknown()
-    assert best.bandwidth == 3321280
+    assert best.stream_info.bandwidth == 3321280
     assert best.media.filter(group_id="audio")
     assert best.urls.video.path == "/4b4ef277/3321280/playlist.m3u8"
