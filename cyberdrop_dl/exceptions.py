@@ -224,7 +224,7 @@ class ScrapeError(CDLBaseError):
 
     @staticmethod
     def unsupported() -> ScrapeError:
-        return ScrapeError("Unknown yarl.URL path")
+        return ScrapeError("Unknown URL path")
 
 
 class LoginError(CDLBaseError):

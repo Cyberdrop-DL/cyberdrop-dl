@@ -62,7 +62,7 @@ class E621Crawler(Crawler):
 
                 new_scrape_item = scrape_item.create_child(self.parse_url(file_url))
                 new_scrape_item.uploaded_at = self.parse_iso_date(post["created_at"])
-                self.create_task(self.direct_file(new_scrape_item))
+                self.create_eager_task(self.direct_file(new_scrape_item))
                 scrape_item.add_children()
 
     @error_handling_wrapper

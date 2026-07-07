@@ -9,7 +9,7 @@ TEST_CASES = [
                 "original_filename": "9722373.mp4",
                 "referer": "https://www.camwhores.tv/videos/9722373/shadory-eula-cosplay/",
                 "album_id": None,
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
             }
         ],
     },
@@ -24,7 +24,7 @@ TEST_CASES = [
             {
                 "url": "https://www.camwhores.tv/videos/16553911/bellacle-ticket-show-1/",
                 "filename": "Bellacle Ticket Show 1 [16553911].mp4",
-                "debrid_link": str,
+                "debrid_url": str,
                 "original_filename": "16553911.mp4",
                 "referer": "https://www.camwhores.tv/videos/16553911/bellacle-ticket-show-1/",
                 "album_id": None,

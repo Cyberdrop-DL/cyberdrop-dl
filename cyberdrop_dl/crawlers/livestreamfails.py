@@ -47,7 +47,7 @@ class LivestreamFailsCrawler(Crawler):
             for video in videos:
                 url = self.PRIMARY_URL / f"clip/{video.id}"
                 new_item = scrape_item.create_child(url)
-                self.create_task(self._clip(new_item, video))
+                self.create_eager_task(self._clip(new_item, video))
                 scrape_item.add_children()
 
     @error_handling_wrapper

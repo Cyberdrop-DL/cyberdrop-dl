@@ -88,7 +88,7 @@ class LeakedZoneCrawler(Crawler):
                     self.create_task(self._video(scrape_item.create_child(post_url), post))
                 else:
                     post_url = self.PRIMARY_URL / model_name / "photo" / post.id
-                    self.create_task(self._image(scrape_item.create_child(post_url), post))
+                    self.create_eager_task(self._image(scrape_item.create_child(post_url), post))
                 scrape_item.add_children()
 
     async def api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[tuple[Post, ...]]:

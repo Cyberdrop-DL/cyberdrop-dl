@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "re:fe88322e8f1441acb3ee40ea26c71baa",
                 "filename": "jjk 3x7 copy.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "jjk 3x7 copy.jpg",
                 "referer": "https://www.patreon.com/posts/jujutsu-kaisen-1-150611726",
                 "album_id": None,
@@ -16,7 +16,7 @@ TEST_CASES = [
             {
                 "url": "re:https://stream.mux.com/DsTORxvBjFq2mt2QRJ1cVNOROMjeg4OYpATQxxl5yWU.m3u8",
                 "filename": "DsTORxvBjFq2mt2QRJ1cVNOROMjeg4OYpATQxxl5yWU [avc1][mp4a][1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "DsTORxvBjFq2mt2QRJ1cVNOROMjeg4OYpATQxxl5yWU [avc1][mp4a][1080p].mp4",
                 "referer": "https://www.patreon.com/posts/jujutsu-kaisen-1-150611726",
                 "album_id": None,

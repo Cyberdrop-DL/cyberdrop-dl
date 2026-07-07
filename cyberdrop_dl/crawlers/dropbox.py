@@ -86,7 +86,7 @@ class DropboxCrawler(Crawler):
         scrape_item.url = view_url = scrape_item.url.with_query(rlkey=scrape_item.url.query["rlkey"], dl=0)
         download_url = view_url.update_query(dl=1)
         custom_filename, ext = self.get_filename_and_ext(filename)
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 view_url,
                 scrape_item,
