@@ -5,6 +5,8 @@ import uuid
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
+import yarl
+
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, compose_ep_name
 from cyberdrop_dl.exceptions import ScrapeError
@@ -15,6 +17,8 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from cyberdrop_dl.utils.m3u8 import Rendition
 
 
 class PlutoCrawler(Crawler):
@@ -98,6 +102,7 @@ class PlutoCrawler(Crawler):
     async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
         m3u8_url = _compose_stream_url(self.api.stitcher, ep.stitched)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
+        _remove_ads_segments(m3u8)
         filename = self.create_custom_filename(
             compose_ep_name(ep.season, ep.number, ep.name),
             ext := ".mp4",
@@ -234,3 +239,17 @@ class Series(Media):
                     id=ep.get("id") or ep["_id"],
                     stitched=ep["stitched"]["path"],
                 )
+
+
+def _remove_ads_segments(rendition: Rendition) -> None:
+    for m3u8 in rendition:
+        if not m3u8:
+            continue
+
+        m3u8.data["segments"] = [s for s in m3u8.data["segments"] if not _is_ad(s["uri"])]
+        m3u8._initialize_attributes()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+
+
+def _is_ad(uri: str) -> bool:
+    path = yarl.URL(uri).path.casefold()
+    return any(ad_name in path for ad_name in ("_ad%2f", "_ad/", "_ad_bumper", "plutotv_filler"))
