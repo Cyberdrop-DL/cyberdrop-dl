@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -19,16 +19,20 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     STREAM_DATA = ".main-container script:-soup-contains('var stream_data')"
     PLAYLIST_TITLE = "[data-testid=playlist-title]"
     NEXT_PAGE = ".pagination li.next > a[href]"
 
     VIDEO_REMOVED = "#video_removed, .video_removed"
+    _playlist, _video = ".js-video-item > a[href*='/playlist/']", ".js-video-item > a[href*='/video/']"
     VIDEOS = ", ".join(
         (
-            "#search_v2 .js-video-item > a[href*='/playlist/']",
-            "#search_page .js-video-item > a[href*='/video/']",
+            "#search_v2 " + _playlist,
+            "#search_v2 " + _video,
+            "#search_page " + _playlist,
+            "#search_page " + _video,
         )
     )
 
@@ -131,8 +135,14 @@ class SpankBangCrawler(Crawler):
         title = self.create_title(f"{name} [playlist]", playlist_id)
         scrape_item.setup_as_album(title, album_id=playlist_id)
 
+        total = 0
         async for soup in pages:
+            n_count = len(soup.select(Selector.VIDEOS))
+            total = n_count + total
+            continue
             await self._iter_videos(scrape_item, soup)
+        if total:
+            pass
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

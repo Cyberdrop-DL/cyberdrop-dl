@@ -33,6 +33,22 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://de.spankbang.com/profile/fmsh7827/videos",
+        "results": [
+            {
+                "url": "re:/1/4/14308081-480p.mp4",
+                "filename": "kbj1561 [8io6p][480p].mp4",
+                "debrid_url": None,
+                "original_filename": "kbj1561",
+                "referer": "https://spankbang.com/8io6p/video/kbj1561",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:fmsh7827 [user] (SpankBang)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://spankbang.com/a0cyk-tsmnwz/playlist/korbj",
         "results": [
             {
