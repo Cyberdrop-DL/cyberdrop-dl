@@ -104,6 +104,7 @@ class StreamInfo:
 @dataclasses.dataclass(frozen=True, slots=True, order=True)
 class RenditionDetails:
     resolution: Resolution
+    bandwidth: int
     codecs: Codecs
     stream_info: StreamInfo
     media: MediaList
@@ -125,7 +126,10 @@ class RenditionDetails:
         if playlist.stream_info.resolution is not None:
             resolution: Resolution = Resolution(*playlist.stream_info.resolution)
         else:
-            resolution = get_resolution_from_url(video_url)
+            try:
+                resolution = get_resolution_from_url(video_url)
+            except RuntimeError:
+                resolution = Resolution.unknown()
 
         codecs = Codecs.parse(playlist.stream_info.codecs)
         media = MediaList(playlist.media)
@@ -140,7 +144,7 @@ class RenditionDetails:
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)
         stream_info = StreamInfo(**vars(playlist.stream_info))
-        return RenditionDetails(resolution, codecs, stream_info, media, media_urls)
+        return RenditionDetails(resolution, stream_info.bandwidth or 0, codecs, stream_info, media, media_urls)
 
 
 class M3U8(_M3U8):
