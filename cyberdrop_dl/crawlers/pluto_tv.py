@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
@@ -31,6 +31,12 @@ class PlutoCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv")
     DOMAIN: ClassVar[str] = "pluto.tv"
 
+    @staticmethod
+    @override
+    def __db_path__(url: AbsoluteHttpURL, /) -> str:
+        _region, sep, rest = url.path.partition("/on-demand/")
+        return sep + rest
+
     def __post_init__(self) -> None:
         self.api: PlutoAPI = PlutoAPI.from_crawler(self)
 
@@ -51,8 +57,9 @@ class PlutoCrawler(Crawler):
     async def series(self, scrape_item: ScrapeItem, series_id: str) -> None:
         series = await self._series(scrape_item, series_id)
         downloaded = await self.get_album_results(series.id)
+        base_url = self.PRIMARY_URL / "on-demand/series" / series.id
         for ep in series.episodes():
-            url = scrape_item.url / "episode" / ep.id
+            url = base_url / "season" / str(ep.season) / "episode" / ep.id
             if self.check_album_results(url, downloaded):
                 continue
             new_item = scrape_item.create_child(url)
