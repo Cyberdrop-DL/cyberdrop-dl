@@ -67,7 +67,7 @@ class CaraCrawler(Crawler):
         scrape_item.uploaded_at = date = int(self.parse_iso_date(post.createdAt))
         post_title = self.create_separate_post_title(post.title, post.id, date)
         scrape_item.append_folders(post_title)
-        self.create_task(self.write_metadata(scrape_item, f"post {post.id}", post))
+        self.create_eager_task(self.write_metadata(scrape_item, f"post {post.id}", post))
 
         for image in post.images:
             if image.order < 0:
