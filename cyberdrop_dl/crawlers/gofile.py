@@ -100,10 +100,14 @@ class GoFileCrawler(Crawler):
 
         return headers
 
-    @classmethod
-    def __json_resp_check__(cls, json_resp: dict[str, Any], _=None) -> None:
-        if "notFound" in json_resp["status"]:
+    def __json_resp_check__(self, json_resp: dict[str, Any], _=None) -> None:
+        status = json_resp.get("status", "")
+        if "notFound" in status:
             raise ScrapeError(404)
+        if "wrongToken" in status:
+            self._create_temp_account.clear()
+            msg = "Invalid API key" if self.config.auth.gofile.api_key else "token expired, please retry"
+            raise ScrapeError(401, msg)
 
     async def __async_post_init__(self) -> None:
         await self._get_credentials(_API_ENTRYPOINT)
@@ -176,8 +180,11 @@ class GoFileCrawler(Crawler):
         if not _check_node_is_accessible(node):
             return
 
-        coro = self.run(scrape_item) if node["type"] == "folder" else self._file(scrape_item, node)
-        self.create_task(coro)
+        if node["type"] == "folder":
+            self.create_task(self.run(scrape_item))
+            return
+
+        self.create_eager_task(self._file(scrape_item, node))
 
     async def _folder_pager(self, content_id: str, password: str | None = None) -> AsyncGenerator[Folder]:
         api_url = (_API_ENTRYPOINT / "contents" / content_id).with_query(
@@ -228,7 +235,7 @@ class GoFileCrawler(Crawler):
                 self._api_key = await self._create_temp_account()
             self.update_cookies({"accountToken": self._api_key})
 
-    @disk_cached_method(key="account_token", ttl=86400 * 60)
+    @disk_cached_method(key="account_token", ttl=86400)
     async def _create_temp_account(self) -> str:
         self.log.info("Creating temp account")
         api_url = _API_ENTRYPOINT / "accounts"

@@ -10,7 +10,7 @@ TEST_CASES = [
                 "referer": "https://0101.bandcamp.com/track/mal-damour",
                 "uploaded_at": 1529416422,
                 "downloa_folder": "re:Loose Files (BandCamp)",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
             }
         ],
     },
@@ -23,7 +23,7 @@ TEST_CASES = [
                 "download_folder": "re:moisturizer (Bandcamp)",
                 "filename": "Wet Leg - CPR.mp3",
                 "original_filename": "Wet Leg - CPR.mp3",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
             },
             {"url": "https://wetleg.bandcamp.com/track/mangetout#mp3-128", "filename": "Wet Leg - mangetout.mp3"},
             {"url": "https://wetleg.bandcamp.com/track/pillow-talk#mp3-128", "filename": "Wet Leg - pillow talk.mp3"},

@@ -30,6 +30,7 @@ def get_probe_args(mock: AsyncMock) -> list[Any]:
     return last_call_args(mock)[len(ffmpeg._FFPROBE_CALL_PREFIX) :]
 
 
+@pytest.mark.http
 async def test_probe_url_command() -> None:
     url = AbsoluteHttpURL("https://example.com/stream.m3u8")
     with mock_call() as m:
@@ -49,6 +50,7 @@ async def test_probe_url_command() -> None:
     ]
 
 
+@pytest.mark.http
 async def test_probe_url_w_headers() -> None:
     url = AbsoluteHttpURL("https://example.com/stream.m3u8")
 
@@ -73,6 +75,7 @@ async def test_probe_url_w_headers() -> None:
     ]
 
 
+@pytest.mark.http
 async def test_probe_url_w_proxy() -> None:
     url = AbsoluteHttpURL("https://example.com/stream.m3u8")
     proxy = AbsoluteHttpURL("http://proxy.internal:8080")
@@ -84,6 +87,7 @@ async def test_probe_url_w_proxy() -> None:
     assert args[idx + 1] == "http://proxy.internal:8080"
 
 
+@pytest.mark.http
 async def test_probe_url_w_verify_disabled() -> None:
     url = AbsoluteHttpURL("https://example.com/stream.m3u8")
     with mock_call() as m:
@@ -93,6 +97,7 @@ async def test_probe_url_w_verify_disabled() -> None:
     assert args == ["-tls_verify", "0", "https://example.com/stream.m3u8"]
 
 
+@pytest.mark.http
 async def test_probe_url_proxy_headers_no_verify() -> None:
     url = AbsoluteHttpURL("https://example.com/stream.m3u8")
     proxy = AbsoluteHttpURL("http://proxy:8080")
@@ -111,6 +116,7 @@ async def test_probe_url_proxy_headers_no_verify() -> None:
     ]
 
 
+@pytest.mark.http
 async def test_ffprobe_video_url() -> None:
     output = await ffmpeg.probe_url(
         AbsoluteHttpURL("https://videos.pexels.com/video-files/29691053/12769314_360_640_60fps.mp4")

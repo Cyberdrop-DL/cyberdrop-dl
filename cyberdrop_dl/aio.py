@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import contextlib
 import dataclasses
 import shutil
@@ -53,7 +54,7 @@ chain = _AsyncChain()
 
 async def next[T](async_iterator: AsyncIterator[T]) -> T:
     try:
-        return await anext(async_iterator)
+        return await builtins.anext(async_iterator)
     except StopAsyncIteration as e:
         raise e.__cause__ or e from None
 
@@ -158,7 +159,7 @@ class AsyncIteratorWrapper[T]:
     async def __anext__(self) -> T:
         if self._iterator is None:
             self._iterator = iter(await self._coro)
-        value = await asyncio.to_thread(next, self._iterator, MISSING)
+        value = await asyncio.to_thread(builtins.next, self._iterator, MISSING)
         if value is MISSING:
             raise StopAsyncIteration from None
 

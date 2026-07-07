@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn-images.imagevenue.com/73/7a/ef/ME1CO3FX_o.png",
                 "filename": "20260423200059937_480x320.png",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "20260423200059937_480x320.png",
                 "referer": "https://www.imagevenue.com/ME1CO3FX",
                 "album_id": None,

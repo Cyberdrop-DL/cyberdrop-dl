@@ -17,7 +17,7 @@ TEST_CASES = [
             {
                 "url": "https://noodlemagazine.com/videofile/-146082307_456239302.mp4",
                 "filename": "Sp azumi mizushima,asian red black nylon jav,japanese dance st [-146082307_456239302][480p].mp4",
-                "debrid_link": "NOT_NONE",
+                "debrid_url": "NOT_NONE",
                 "original_filename": "Sp azumi mizushima,asian red black nylon jav,japanese dance strip on the six,гимнастка доводит до оргазма,solo dildo fetish",
                 "referer": "https://noodlemagazine.com/watch/-146082307_456239302",
                 "album_id": None,

@@ -32,7 +32,7 @@ class Version(NamedTuple):
         return ".".join(map(str, self))
 
 
-CURRENT_VERSION = Version(10, 0, 0)
+CURRENT_VERSION = Version(10, 1, 0)
 REQUIRED_VERSION = Version(9, 15, 0)
 
 logger = logging.getLogger(__name__)
