@@ -11,6 +11,7 @@ from unittest import mock
 import pytest
 from pydantic import TypeAdapter
 
+from cyberdrop_dl.crawlers.crawler import compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import parse_url
@@ -276,3 +277,24 @@ def test_load_test_data() -> None:
     for case in test_data["dropbox"]:
         assert type(case) is dict
         assert "url" in case
+
+
+@pytest.mark.parametrize(
+    ("season", "ep", "name", "expected"),
+    [
+        (20, 34, "episode a", "S20E034 - episode a"),
+        (9, 2, "episode b", "S09E002 - episode b"),
+        (2, 4, None, "S02E004"),
+        (None, 2, None, "E002"),
+        (None, None, "episode d", "episode d"),
+        (120, 0, "episode e", "S120E000 - episode e"),
+    ],
+)
+def test_compose_ep_name(season: int | None, ep: int | None, name: str | None, expected: str) -> None:
+    name = compose_ep_name(season, ep, name)
+    assert name == expected
+
+
+def test_compose_ep_name_raise_value_error_if_empty() -> None:
+    with pytest.raises(ValueError):
+        compose_ep_name(None, None, "")

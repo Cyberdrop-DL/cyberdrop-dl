@@ -61,8 +61,6 @@ def check_url(url: yarl.URL) -> None:
         raise ValueError("URL has no host", url)
     if "." not in url.host and url.host != "localhost":
         raise ValueError("URL has no TLD", url)
-    if len(str(url)) > 2083:
-        raise ValueError("URL is too long")
 
 
 def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:

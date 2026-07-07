@@ -26,6 +26,8 @@ class CachedAsyncFunc[T](Protocol):
 
     def clear(self) -> None: ...
 
+    def get(self) -> T | None: ...
+
 
 class _CachedValue[T](TypedDict):
     value: T
@@ -247,6 +249,7 @@ def cached_fn[T](
             return value
 
     wrapper.clear = lambda: cache.discard(key)  # pyright: ignore[reportAttributeAccessIssue]
+    wrapper.get = lambda: cache.get(key)  # pyright: ignore[reportAttributeAccessIssue]
     return cast("CachedAsyncFunc[T]", cast("object", wrapper))
 
 

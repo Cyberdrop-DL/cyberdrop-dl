@@ -122,11 +122,8 @@ class RenditionDetails:
         video_url = get_url(playlist)
         subtitle_url = audio_url = None
 
-        if playlist.stream_info.resolution is not None:
-            resolution: Resolution = Resolution(*playlist.stream_info.resolution)
-        else:
-            resolution = get_resolution_from_url(video_url)
-
+        stream_info = StreamInfo(**vars(playlist.stream_info))
+        resolution = _parse_stream_resolution(stream_info, video_url)
         codecs = Codecs.parse(playlist.stream_info.codecs)
         media = MediaList(playlist.media)
 
@@ -139,8 +136,19 @@ class RenditionDetails:
             subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)
-        stream_info = StreamInfo(**vars(playlist.stream_info))
+
         return RenditionDetails(resolution, codecs, stream_info, media, media_urls)
+
+
+def _parse_stream_resolution(stream_info: StreamInfo, video_url: AbsoluteHttpURL) -> Resolution:
+    if stream_info.resolution is not None:
+        return Resolution(*stream_info.resolution)
+    try:
+        return get_resolution_from_url(video_url)
+    except RuntimeError:
+        if stream_info.bandwidth is None:
+            raise ValueError("Stream has no resolution or bandwidth information") from None
+        return Resolution.unknown()
 
 
 class M3U8(_M3U8):
