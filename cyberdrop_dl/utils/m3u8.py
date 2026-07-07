@@ -11,10 +11,12 @@ from m3u8 import M3U8 as _M3U8
 from m3u8 import Media, Playlist
 
 from cyberdrop_dl.mediaprops import Codecs, Resolution
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.utils import parse_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator
+    from pathlib import Path
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -122,11 +124,8 @@ class RenditionDetails:
         video_url = get_url(playlist)
         subtitle_url = audio_url = None
 
-        if playlist.stream_info.resolution is not None:
-            resolution: Resolution = Resolution(*playlist.stream_info.resolution)
-        else:
-            resolution = get_resolution_from_url(video_url)
-
+        stream_info = StreamInfo(**vars(playlist.stream_info))
+        resolution = _parse_stream_resolution(stream_info, video_url)
         codecs = Codecs.parse(playlist.stream_info.codecs)
         media = MediaList(playlist.media)
 
@@ -139,8 +138,19 @@ class RenditionDetails:
             subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)
-        stream_info = StreamInfo(**vars(playlist.stream_info))
+
         return RenditionDetails(resolution, codecs, stream_info, media, media_urls)
+
+
+def _parse_stream_resolution(stream_info: StreamInfo, video_url: AbsoluteHttpURL) -> Resolution:
+    if stream_info.resolution is not None:
+        return Resolution(*stream_info.resolution)
+    try:
+        return get_resolution_from_url(video_url)
+    except RuntimeError:
+        if stream_info.bandwidth is None:
+            raise ValueError("Stream has no resolution or bandwidth information") from None
+        return Resolution.unknown()
 
 
 class M3U8(_M3U8):
@@ -149,20 +159,19 @@ class M3U8(_M3U8):
         content: str,
         base_uri: AbsoluteHttpURL | None = None,
         media_type: Literal["video", "audio", "subtitle"] | None = None,
+        source: AbsoluteHttpURL | Path | None = None,
     ) -> None:
         if base_uri and base_uri.suffix.casefold() == ".m3u8":
             base_uri = base_uri.parent
         self.media_type: Literal["video", "audio", "subtitle"] | None = media_type
+        self.source: AbsoluteHttpURL | Path | None = source
         super().__init__(content, base_uri=str(base_uri) if base_uri else None)
 
     @property
     def total_segments(self) -> int:
         return len(self.segment_map) + len(self.segments)
 
-    def __repr__(self) -> str:
-        return (
-            f"{type(self)}(media_type={self.media_type!r}, base_uri={self.base_uri!r}, is_variant={self.is_variant!r})"
-        )
+    __repr__ = simple_repr("media_type", "base_uri", "is_variant", "source")
 
     @property
     def total_duration(self) -> datetime.timedelta:
@@ -172,7 +181,7 @@ class M3U8(_M3U8):
 
 class _LazyRenditionLog:
     def __init__(self, groups: list[RenditionDetails]) -> None:
-        self.groups = groups
+        self.groups: list[RenditionDetails] = groups
 
     def __json__(self) -> tuple[dict[str, Any], ...]:
         return tuple(rendition.__json__() for rendition in self.groups)

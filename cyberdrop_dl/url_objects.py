@@ -155,6 +155,7 @@ class MediaItem:
     id: tuple[str, ...] = dataclasses.field(init=False)
     base64_id: str = dataclasses.field(init=False)
     headers: dict[str, str] = dataclasses.field(init=False, default_factory=dict)
+    json_check: Callable[..., None] | None = None
 
     def __post_init__(self) -> None:
         self.ext = self.ext or Path(self.filename).suffix
@@ -193,7 +194,7 @@ class MediaItem:
             me["debrid_url"] = None
         if self.xxhash:
             me["xxhash"] = f"xxh128:{self.xxhash}"
-        for name in ("is_segment",):
+        for name in ("is_segment", "json_check"):
             del me[name]
         return me
 
