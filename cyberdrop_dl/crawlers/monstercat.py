@@ -36,11 +36,11 @@ class MonstercatCrawler(Crawler):
         name, released = _extract_info(soup)
         scrape_item.uploaded_at = self.parse_date(released, "%B %d, %Y")
         scrape_item.setup_as_album(self.create_title(name, release_slug), album_id=release_slug)
-        should_download = await self.make_album_checker(release_slug)
+        downloaded = await self.get_album_results(release_slug)
         for track in _extract_tracks(soup):
-            if not should_download(track.url):
+            if self.check_album_results(track.url, downloaded):
                 continue
-            self.create_task(self._track(scrape_item, track))
+            self.create_eager_task(self._track(scrape_item, track))
             scrape_item.add_children()
 
     async def _track(self, scrape_item: ScrapeItem, track: Track) -> None:
