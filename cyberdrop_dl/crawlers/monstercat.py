@@ -33,8 +33,8 @@ class MonstercatCrawler(Crawler):
     @error_handling_wrapper
     async def release(self, scrape_item: ScrapeItem, release_slug: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name, released = _extract_info(soup)
-        scrape_item.uploaded_at = self.parse_date(released, "%B %d, %Y")
+        name, release_date = _extract_info(soup)
+        scrape_item.uploaded_at = self.parse_date(release_date, "%B %d, %Y")
         scrape_item.setup_as_album(self.create_title(name, release_slug), album_id=release_slug)
         downloaded = await self.get_album_results(release_slug)
         for track in _extract_tracks(soup):
@@ -70,4 +70,5 @@ def _extract_tracks(soup: BeautifulSoup) -> Generator[Track]:
 def _extract_info(soup: BeautifulSoup) -> tuple[str, str]:
     name = css.select_text(soup, "h1")
     released = css.select_text(soup, "#content p.font-italic.mb-medium:-soup-contains-own(Released)")
-    return name, released.partition("Released ")[-1].strip()
+    release_date = released.partition("Released ")[-1].strip()
+    return name, release_date
