@@ -11,7 +11,7 @@ TEST_CASES = [
                 "referer": "https://crazyshit.com/cnt/medias/214810-17-people-definitely-having-a-shittier-day-than-you",
                 "album_id": None,
                 "uploaded_at": None,
-                "download_folder": "re:Loose Files (Crazyshit)",
+                "download_folder": "re:Loose Files (CrazyShit)",
             }
         ],
         "count": 1,

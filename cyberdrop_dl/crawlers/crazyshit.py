@@ -19,6 +19,7 @@ class CrazyShitCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://crazyshit.com")
     DOMAIN: ClassVar[str] = "crazyshit"
+    FOLDER_DOMAIN: ClassVar[str] = "CrazyShit"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
