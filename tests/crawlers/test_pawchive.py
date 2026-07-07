@@ -36,12 +36,9 @@ def post(post_resp: dict[str, Any]) -> UserPostModel:
 
 def test_post_validation(post_resp: dict[str, Any]) -> None:
     post = UserPostModel.model_validate(post_resp)
-
+    content = """<p>Hey everyone! Its been a long time in the making. I'm really proud of this one and I hope you all like is as much as I do! I really tried my</p><p>Hey everyone!</p><p>Its been a long time in the making. I'm really proud of this one and I hope you all like is as much as I do! I really tried my best to do the characters justice and add a bit more comedy in this one!</p><p>In the next week I'll be doing an update on the other projects and when they're projected to finish! Right now I just have Alya and Sono Bisque Doll in the making but I'll probably be planning another in the next month or so using a poll!</p><h3><strong>Here is the </strong><a href="https://www.dropbox.com/scl/fi/msac9283y2oieluv3pfcz/DDN-PATRON-ONLY.mp4?rlkey=l1vofvgtumm0cimqr0k5dm47p&st=mvhmkx04&dl=0">LINK </a><strong>to the full animation!</strong></h3><p>Thanks for your patience and everything!</p>"""
     assert post.id == "129540190"
-    assert (
-        post.content
-        == "<p>Hey everyone! Its been a long time in the making. I'm really proud of this one and I hope you all like is as much as I do! I really tried my</p><p>Hey everyone!</p><p>Its been a long time in the making. I'm really proud of this one and I hope you all like is as much as I do! I really tried my best to do the characters justice and add a bit more comedy in this one!</p><p>In the next week I'll be doing an update on the other projects and when they're projected to finish! Right now I just have Alya and Sono Bisque Doll in the making but I'll probably be planning another in the next month or so using a poll!</p><h3><strong>Here is the </strong><a href=\"https://www.dropbox.com/scl/fi/ze2v1bih3lwvdjqn9syde/DDN-PATRON-ONLY.mp4?rlkey=oidlzqufodhr0nra3jfrgguxx&st=urfuvf73&dl=0\">LINK </a><strong>to the full animation!</strong></h3><p>Thanks for your patience and everything!</p>"
-    )
+    assert post.content == content
     assert post.file is None
     assert post.attachments == (
         File(
@@ -52,7 +49,7 @@ def test_post_validation(post_resp: dict[str, Any]) -> None:
     )
     assert post.published == datetime.datetime(2025, 5, 21, 18, 11, 4, tzinfo=datetime.UTC)
     assert post.added == datetime.datetime(2026, 6, 11, 21, 15, 32, 24479, tzinfo=datetime.UTC)
-    assert post.edited == datetime.datetime(2026, 7, 3, 0, 27, 24, tzinfo=datetime.UTC)
+    assert post.edited == datetime.datetime(2026, 7, 3, 21, 13, 46, tzinfo=datetime.UTC)
     assert post.timestamp == 1747851064
     assert post.tags == ("Animation", "Announcement")
     assert post.embed is None
