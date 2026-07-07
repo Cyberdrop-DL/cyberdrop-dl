@@ -5,14 +5,18 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
 class CrazyShitCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/cnt/medias/<slug>", "Series": "/series/<name>"}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Video": "/cnt/medias/<slug>",
+        "Series": "/series/<name>",
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://crazyshit.com")
     DOMAIN: ClassVar[str] = "crazyshit"
 
@@ -41,5 +45,5 @@ class CrazyShitCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(title))
         sleep = aio.periodic_sleep(10)
         for new_item in self.iter_children(scrape_item, soup, ".row.tiles a.thumb"):
-            self.create_task(self.run(new_item))
+            self.create_eager_task(self.run(new_item))
             await sleep()
