@@ -42,7 +42,7 @@ class AdobeLightroomCrawler(Crawler):
 
         async for images in self.api.images(album.assets_url):
             for image in images:
-                self.create_task(self._image(scrape_item.copy(), image, space_id))
+                self.create_eager_task(self._image(scrape_item.copy(), image, space_id))
                 scrape_item.add_children()
 
     async def _image(self, scrape_item: ScrapeItem, image: Image, space_id: str) -> None:
