@@ -9,7 +9,7 @@ TEST_CASES = [
                 "download_folder": "re:heliaabbaszadeh (VSCO)",
                 "filename": "6966cb5dff125db06d53e4ee.jpg",
                 "original_filename": "vsco_011326.jpg",
-                "debrid_link": "https://im.vsco.co/aws-us-west-2/b62a22/417332/6966cb5dff125db06d53e4ee/vsco_011326.jpg",
+                "debrid_url": "https://im.vsco.co/aws-us-west-2/b62a22/417332/6966cb5dff125db06d53e4ee/vsco_011326.jpg",
                 "album_id": None,
                 "uploaded_at": 1768344414,
             }
@@ -21,7 +21,7 @@ TEST_CASES = [
             {
                 "url": "http://vsco.co/jollyt/media/693f6a601d2d2bba406eb093",
                 "filename": "693f6a601d2d2bba406eb093.jpg",
-                "debrid_link": "https://im.vsco.co/aws-us-west-2/48de72/5979464/693f6a601d2d2bba406eb093/981efca9-7bc7-4094-838e-37614e7b0ee23057935271654318106.jpg",
+                "debrid_url": "https://im.vsco.co/aws-us-west-2/48de72/5979464/693f6a601d2d2bba406eb093/981efca9-7bc7-4094-838e-37614e7b0ee23057935271654318106.jpg",
                 "original_filename": "981efca9-7bc7-4094-838e-37614e7b0ee23057935271654318106.jpg",
                 "referer": "http://vsco.co/jollyt/media/693f6a601d2d2bba406eb093",
                 "album_id": None,
@@ -57,7 +57,7 @@ TEST_CASES = [
             {
                 "url": "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
                 "filename": "6b31aa8f-de5d-452b-baf2-81d2b080997a [1080p].mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "6b31aa8f-de5d-452b-baf2-81d2b080997a.mp4",
                 "referer": "https://vsco.co/philippswildlife/video/6b31aa8f-de5d-452b-baf2-81d2b080997a",
                 "album_id": None,

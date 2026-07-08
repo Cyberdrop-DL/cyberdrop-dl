@@ -59,5 +59,5 @@ class ToonilyCrawler(Crawler):
         scrape_item.uploaded_at = self.parse_iso_date(iso_date)
 
         for link in self.iter_urls(soup, Selector.IMAGE, "src"):
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()

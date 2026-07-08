@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://anysex.com/video/475758/2-sexy-latina-fitness-girls-get-dicked-hard-by-2-beefy-dudes-outdoor-indoor",
                 "filename": "2 Sexy Latina Fitness-girls Get Dicked Hard By 2 Beefy Dudes Outdoor  Indoo [475758][1080p].mp4",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "referer": "https://anysex.com/video/475758/2-sexy-latina-fitness-girls-get-dicked-hard-by-2-beefy-dudes-outdoor-indoor",
                 "uploaded_at": 1761678940,
             }
@@ -19,7 +19,7 @@ TEST_CASES = [
             {
                 "url": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud",
                 "filename": "Amazing blond slut makes a horny dude to suck the dick of the other stud [89167].mp4",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "referer": "https://anysex.com/video/89167/amazing-blond-slut-makes-a-horny-dude-to-suck-the-dick-of-the-other-stud",
                 "uploaded_at": 1381968000,
             }

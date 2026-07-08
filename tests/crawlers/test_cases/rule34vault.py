@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://r34xyz.b-cdn.net/posts/1233/1233301/1233301.mp4",
                 "filename": "1233301.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1233301.mp4",
                 "referer": "https://rule34vault.com/post/1233301",
                 "album_id": None,

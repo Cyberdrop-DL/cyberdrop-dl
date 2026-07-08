@@ -207,9 +207,10 @@ class Downloader:
             return
 
         self.capacity.waiting += 1
-        async with self.lock(media_item.real_url), self.capacity.condition:
+        async with self.lock(media_item.real_url):
             self._processed_items.add(media_item.db_path)
-            self.capacity.condition.notify()
+            async with self.capacity.condition:
+                self.capacity.condition.notify()
             self.capacity.waiting -= 1
             yield
 

@@ -26,11 +26,27 @@ class CachedAsyncFunc[T](Protocol):
 
     def clear(self) -> None: ...
 
+    def get(self) -> T | None: ...
+
 
 class _CachedValue[T](TypedDict):
     value: T
     ttl: float | None
     created_at: float
+
+
+def _load_cache(content: str) -> dict[str, Any]:
+    if not content:
+        return {}
+    data = json.loads(content)
+    if type(data) is not dict:
+        raise TypeError("Cache content should be a JSON map")
+    return data
+
+
+def _dump_cache(cache_file: Path, cache: dict[str, Any]):
+    cache["version"] = __version__
+    cache_file.write_text(json.dumps(cache, indent=2, ensure_ascii=False, sort_keys=True))
 
 
 @contextlib.contextmanager
@@ -42,14 +58,16 @@ def cache_context(cache_file: Path, cache: dict[str, Any]) -> Generator[None]:
         cache_file.parent.mkdir(exist_ok=True, parents=True)
         cache_file.touch()
     else:
-        data = json.loads(content)
-        assert type(data) is dict
-        cache.update(data)
+        try:
+            cache.update(_load_cache(content))
+        except (json.JSONDecodeError, TypeError) as e:
+            error = RuntimeError(f"Unable to read cache file at '{cache_file}'")
+            error.add_note("Cache is corrupted. Run `cyberdrop-dl cache clear` to delete the file")
+            raise error from e
     try:
         yield
     finally:
-        cache["version"] = __version__
-        cache_file.write_text(json.dumps(cache, indent=2, ensure_ascii=False, sort_keys=True))
+        _dump_cache(cache_file, cache)
 
 
 @dataclasses.dataclass(slots=True)
@@ -57,6 +75,11 @@ class TTLCacheAdapter[T]:
     _cache: dict[str, Any]
     _keys: tuple[str, ...] = ()
     __root: dict[str, _CachedValue[Any]] = dataclasses.field(init=False, repr=False)
+
+    def create_child(self, *keys: str) -> Self:
+        if not keys:
+            return self
+        return type(self)(self._root, keys)
 
     def _lookup_path(self, *keys: str) -> str:
         return ".".join([*self._keys, *keys])
@@ -150,11 +173,11 @@ type _SupportsDiskCacheCallable[T] = Callable[[_HasTTLCache[Any]], Awaitable[T]]
 class _CachedMethod[T, R]:
     """Use as a class method decorator."""
 
-    def __init__(self, fn: Callable[[Any], Awaitable[R]], key: str | None, ttl: float | None) -> None:
+    def __init__(self, fn: Callable[[Any], Awaitable[R]], key: tuple[str, ...] | str | None, ttl: float | None) -> None:
         self.wrapped: Callable[[Any], Awaitable[R]] = fn
         self.__doc__ = fn.__doc__
         self.name: str = fn.__name__
-        self.key: str = key or fn.__name__
+        self.key: tuple[str, ...] | str = key or fn.__name__
         self.ttl: float | None = ttl
         self._cached_fn: CachedAsyncFunc[R] | None = None
 
@@ -190,16 +213,26 @@ class _DiskCachedMethod[R](_CachedMethod[_HasTTLCache[Any], R]):
         return inst.cache
 
 
+def _normalize_key(key: tuple[str, ...] | str) -> tuple[list[str], str]:
+    keys = key
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    *parent_keys, key = keys
+    return parent_keys, key
+
+
 def cached_fn[T](
     fn: Callable[[], Awaitable[T]],
     cache: TTLCacheAdapter[T] | None = None,
     *,
-    key: str | None = None,
+    key: tuple[str, ...] | str | None = None,
     ttl: float | None = None,
 ) -> CachedAsyncFunc[T]:
 
-    key = key or fn.__name__
+    parent_keys, key = _normalize_key(key or fn.__name__)
     cache = cache or _ttl_from_callable(fn)
+    cache = cache.create_child(*parent_keys)
     lock = asyncio.Lock()
 
     @functools.wraps(fn)
@@ -216,11 +249,12 @@ def cached_fn[T](
             return value
 
     wrapper.clear = lambda: cache.discard(key)  # pyright: ignore[reportAttributeAccessIssue]
+    wrapper.get = lambda: cache.get(key)  # pyright: ignore[reportAttributeAccessIssue]
     return cast("CachedAsyncFunc[T]", cast("object", wrapper))
 
 
 def cached_method[T](
-    key: str | None = None, *, ttl: float | None = None
+    key: tuple[str, ...] | str | None = None, *, ttl: float | None = None
 ) -> Callable[[Callable[[Any], Coroutine[Any, Any, T]]], _InMemoryCachedMethod[T]]:
     """Keep the last result of this method in memory until TTL expires
 
@@ -233,7 +267,7 @@ def cached_method[T](
 
 
 def disk_cached_method[T](
-    key: str | None = None, *, ttl: float | None = None
+    key: tuple[str, ...] | str | None = None, *, ttl: float | None = None
 ) -> Callable[[Callable[[Any], Coroutine[Any, Any, T]]], _DiskCachedMethod[T]]:
     """Keep the last result of this method in memory until TTL expires
 

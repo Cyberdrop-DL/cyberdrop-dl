@@ -63,10 +63,10 @@ class FSIBlogCrawler(Crawler):
 
         if video := open_graph.get("video", soup):
             link = self.parse_url(video)
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
 
         for image in self.iter_urls(soup, Selector.IMAGES):
-            self.create_task(self.direct_file(scrape_item, image))
+            self.create_eager_task(self.direct_file(scrape_item, image))
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

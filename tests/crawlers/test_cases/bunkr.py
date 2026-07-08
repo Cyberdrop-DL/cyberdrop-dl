@@ -84,7 +84,7 @@ TEST_CASES = [
             {
                 "url": "re:/Laura-Perea-en-modo-Perra-l0dNCH9E.mp4",
                 "filename": "Laura Perea en modo Perra.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "Laura Perea en modo Perra.mp4",
                 "referer": "https://bunkr.cr/f/Laura-Perea-en-modo-Perra-l0dNCH9E.mp4",
                 "album_id": "bFfln2uj",
@@ -115,7 +115,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:/storage/media/",
-                "debrid_link": None,
+                "debrid_url": None,
                 "referer": "re:https://bunkr.cr/f/",
                 "album_id": "A3k5ktj4",
                 "uploaded_at": int,
@@ -163,7 +163,7 @@ TEST_CASES = [
             {
                 "url": "re:/acba241d-c1e8-40c3-aa73-94daf75fcd13.jpg",
                 "filename": ".jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "'\"'.jpg",
                 "referer": "https://bunkr.cr/f/Nzt1ID7lsgwR4",
                 "album_id": "z5Xt6NqH",

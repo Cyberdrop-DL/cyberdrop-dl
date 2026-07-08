@@ -57,7 +57,7 @@ class AnonTransferCrawler(Crawler):
         urls = map(self.transform_url, self.iter_urls(soup, *Selector.FILES))
         for file in filter(should_download, urls):
             file = self.transform_url(file)
-            self.create_task(self.direct_file(scrape_item, file))
+            self.create_eager_task(self.direct_file(scrape_item, file))
             scrape_item.add_children()
 
     @error_handling_wrapper

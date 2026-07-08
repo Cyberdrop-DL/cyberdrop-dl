@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772229579282188.jpg",
                 "filename": "1721679422587858.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772229579282188.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -16,7 +16,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772229618623720.jpg",
                 "filename": "1721679462267124.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772229618623720.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -26,7 +26,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772229845208678.jpg",
                 "filename": "1679317543266345.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772229845208678.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -36,7 +36,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772230012496094.jpg",
                 "filename": "1582653914932.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772230012496094.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -46,7 +46,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772580813916586.jpg",
                 "filename": "pexels-jodaarba-3254036.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772580813916586.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -56,7 +56,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772741190457608.jpg",
                 "filename": "2150044197.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772741190457608.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -66,7 +66,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772839481404900.jpg",
                 "filename": "1653775158127.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772839481404900.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -76,7 +76,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1772839528758378.jpg",
                 "filename": "François-Antoine Bossuet - Granada.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1772839528758378.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -86,7 +86,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1773205209056503.jpg",
                 "filename": "1501864637261.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1773205209056503.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -96,7 +96,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1774044270225055.png",
                 "filename": "Screenshot_20250605-042403.png",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1774044270225055.png",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -106,7 +106,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1774994218477765.png",
                 "filename": "Screenshot_20250615-094019.png",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1774994218477765.png",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -116,7 +116,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775075417678932.jpg",
                 "filename": "dc821bc71370fdbc2737f79ba7620ed5.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775075417678932.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -126,7 +126,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775821908934617.jpg",
                 "filename": "La_Fuite_en_Egypte,_par_Ziani,_huile_sur_toile,_2015.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775821908934617.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -136,7 +136,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775821975421436.png",
                 "filename": "1664768119485462.png",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775821975421436.png",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -146,7 +146,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775822014155017.jpg",
                 "filename": "Nasir Al-Mulk Mosque, Iran.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775822014155017.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -156,7 +156,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775822046035196.jpg",
                 "filename": "somewhere in isfahan.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775822046035196.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -166,7 +166,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775822102289319.jpg",
                 "filename": "Welcome-to-Jerusalem.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775822102289319.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -176,7 +176,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775822165948596.jpg",
                 "filename": "akbar-nemati-aldc3QDhE28-unsplash.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775822165948596.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",
@@ -186,7 +186,7 @@ TEST_CASES = [
             {
                 "url": "https://i.4cdn.org/wg/1775822211664472.jpg",
                 "filename": "Nasir Al-Mulk Mosque, Iran(2).jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "1775822211664472.jpg",
                 "referer": "https://boards.4chan.org/wg/thread/8131148/muslim-islamic-persian",
                 "album_id": "8131148",

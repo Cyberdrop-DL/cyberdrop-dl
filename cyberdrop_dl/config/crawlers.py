@@ -8,6 +8,20 @@ from cyberdrop_dl.models.types import HttpURL, NonEmptyStr
 from cyberdrop_dl.models.validators import remove_duplicates
 
 
+class KemonoConfig(ConfigModel):
+    file: bool = True
+    "Download the main file in a post (if any)"
+
+    attachments: bool = True
+    "Download all attachments in a post (may or may not include `file`)"
+
+    content_urls: bool = True
+    "Download any URL found inside the description (text) of a post (slower)"
+
+    embed: bool = True
+    "Download the embedded file from third party sites (if any)(mega.nz, pcloud, dropbox, etc..)"
+
+
 class TikTokConfig(ConfigModel):
     original: bool = False
     "Download videos in original quality (slower)"
@@ -57,3 +71,4 @@ class Crawlers(ConfigGroup, name=None):
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     one_pace: OnePaceConfig = Field(default_factory=OnePaceConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
+    pawchive: KemonoConfig = Field(default_factory=KemonoConfig)
