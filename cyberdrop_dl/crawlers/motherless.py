@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -121,19 +122,20 @@ class MotherlessCrawler(Crawler):
     async def collection_items(
         self, scrape_item: ScrapeItem, media_type: Literal["videos", "images"], collection_id: str | None = None
     ) -> None:
-        title = ""
-        name = media_type.capitalize()
-        async for soup in self.web_pager(scrape_item.url):
-            check_soup(soup)
-            if not title:
-                title_tag = soup.select_one(GALLERY_TITLE_SELECTOR) or soup.select_one(GROUP_TITLE_SELECTOR)
-                assert title_tag
-                title: str = title_tag.get_text(strip=True)
-                title = self.create_title(title, collection_id)
-                scrape_item.setup_as_album(title, album_id=collection_id)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        check_soup(soup)
 
+        try:
+            title = css.select_text(soup, GALLERY_TITLE_SELECTOR)
+        except css.SelectorError:
+            title = css.select_text(soup, GROUP_TITLE_SELECTOR)
+
+        title = self.create_title(title, collection_id)
+        scrape_item.setup_as_album(title, album_id=collection_id)
+
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
-                new_scrape_item.append_folders(name)
+                new_scrape_item.append_folders(media_type.capitalize())
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper

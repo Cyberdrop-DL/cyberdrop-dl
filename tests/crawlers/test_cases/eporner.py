@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://www.eporner.com/video-ia7DS1X427X",
                 "filename": "Yoga PMV [ia7DS1X427X][h264][4K].mp4",
-                "debrid_link": "re:11435843-2160p.mp4",
+                "debrid_url": "re:11435843-2160p.mp4",
                 "original_filename": '"Yoga" PMV',
                 "referer": "https://www.eporner.com/video-ia7DS1X427X",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "https://www.eporner.com/video-5XdtfLAMNOV",
                 "filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Bl [5XdtfLAMNOV][h264][4K@60fps].mp4",
-                "debrid_link": "re:12538936-2160p.mp4",
+                "debrid_url": "re:12538936-2160p.mp4",
                 "original_filename": "I’m A Tubera And I Love It In The Tubo, Full Tubo. Horny Blonde Fucks With Her Boss",
                 "referer": "https://www.eporner.com/video-5XdtfLAMNOV",
                 "album_id": None,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -29,23 +30,23 @@ class PimpAndHostCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "PimpAndHost"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "album" in scrape_item.url.parts:
-            return await self.album(scrape_item)
-        await self.image(scrape_item)
+        match scrape_item.url.parts[1:]:
+            case ["album", album_id, *_]:
+                return await self.album(scrape_item, album_id)
+            case _:
+                await self.image(scrape_item)
 
     @error_handling_wrapper
-    async def album(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                album_id = scrape_item.url.parts[2]
-                title_portion = css.select_text(soup, Selector.ALBUM_TITLE)
-                title = self.create_title(title_portion, album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title_portion = css.select_text(soup, Selector.ALBUM_TITLE)
+        title = self.create_title(title_portion, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-                if date_tag := soup.select_one(Selector.DATE):
-                    scrape_item.uploaded_at = self.parse_date(css.attr(date_tag, "title"), DATE_FORMAT)
+        if date_tag := soup.select_one(Selector.DATE):
+            scrape_item.uploaded_at = self.parse_date(css.attr(date_tag, "title"), DATE_FORMAT)
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.FILES):
                 self.create_task(self.run(new_scrape_item))
 

@@ -104,7 +104,7 @@ class RealDebridCrawler(Crawler, cdl_user_agent=True):
         links: list[str] = await self.api.unrestrict_folder(scrape_item.url)
         for link in links:
             new_scrape_item = scrape_item.create_child(self.parse_url(link))
-            self.create_task(self.file(new_scrape_item))
+            self.create_eager_task(self.file(new_scrape_item))
             scrape_item.add_children()
 
     @error_handling_wrapper

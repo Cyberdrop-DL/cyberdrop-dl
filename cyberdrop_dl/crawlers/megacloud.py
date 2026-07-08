@@ -69,7 +69,7 @@ class MegaCloudCrawler(Crawler):
         video_name = self.create_custom_filename(
             video.title or video.id, ext, file_id=video.id, resolution=info.resolution
         )
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 video.embed_url,
                 scrape_item,

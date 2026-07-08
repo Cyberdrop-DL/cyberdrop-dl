@@ -41,8 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _filter_by_domain(scrape_item: ScrapeItem, domains: Iterable[str]) -> bool:
-    return any(domain in scrape_item.url.host for domain in domains)
+def _filter_by_domain(url: AbsoluteHttpURL, domains: Iterable[str]) -> bool:
+    return any(domain in url.host for domain in domains)
 
 
 @dataclasses.dataclass(slots=True, eq=False)
@@ -144,6 +144,9 @@ class ScrapeMapper:
             return await coro
 
         _ = self._task_groups.scrape.create_task(lazy())
+
+    def create_eager_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
+        _ = self._task_groups.scrape.create_task(coro)
 
     def create_download_task[T](self, coro: Coroutine[Any, Any, T]) -> None:
         _ = self._task_groups.downloads.create_task(coro)
@@ -298,24 +301,9 @@ class ScrapeMapper:
             return False
 
         self._seen_urls.add(scrape_item.url)
-
-        if (
-            _filter_by_domain(scrape_item, BlockedDomains.partial_match)
-            or scrape_item.url.host in BlockedDomains.exact_match
-        ):
-            logger.info(f"Skipping {scrape_item.url} as it is a blocked domain")
+        if _skip_by_config(scrape_item.url, self.manager.config):
+            self.tui.files.stats.skipped += 1
             return False
-
-        skip_hosts = self.manager.config.filters.skip_hosts
-        if skip_hosts and _filter_by_domain(scrape_item, skip_hosts):
-            logger.info(f"Skipping {scrape_item.url} by skip_hosts config")
-            return False
-
-        only_hosts = self.manager.config.filters.only_hosts
-        if only_hosts and not _filter_by_domain(scrape_item, only_hosts):
-            logger.info(f"Skipping {scrape_item.url} by only_hosts config")
-            return False
-
         return True
 
 
@@ -467,3 +455,21 @@ def _parse_source(
             items = load_items_from_iterable(src)
 
     return ScrapeStats(source), items
+
+
+def _skip_by_config(url: AbsoluteHttpURL, config: Config) -> bool:
+    if _filter_by_domain(url, BlockedDomains.partial_match) or url.host in BlockedDomains.exact_match:
+        logger.info("Skipping %s as it is a blocked domain", url)
+        return True
+
+    hosts = config.filters.skip_hosts
+    if hosts and _filter_by_domain(url, hosts):
+        logger.info("Skipping %s by skip_hosts config", url)
+        return True
+
+    hosts = config.filters.only_hosts
+    if hosts and _filter_by_domain(url, hosts):
+        logger.info("Skipping %s by only_hosts config", url)
+        return True
+
+    return False

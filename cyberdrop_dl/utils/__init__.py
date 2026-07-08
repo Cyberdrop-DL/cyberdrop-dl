@@ -37,6 +37,8 @@ def extr_text(text: str, /, start: str, end: str) -> str:
 
 
 def get_system_information() -> dict[str, Any]:
+    import sqlite3
+    import ssl
 
     def get_common_name() -> str:
         system = platform.system()
@@ -71,6 +73,8 @@ def get_system_information() -> dict[str, Any]:
             "architecture": str(platform.architecture()),
             "python": f"{platform.python_version()} {platform.python_implementation()}",
             "common_name": get_common_name(),
+            "sqlite": sqlite3.sqlite_version,
+            "openSSL": ssl.OPENSSL_VERSION,
         }
     )
     _ = system_info.pop("node", None)

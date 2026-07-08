@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -35,15 +36,14 @@ class NudoStarTVCrawler(Crawler):
 
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem) -> None:
-        title = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = self.create_title(css.select(soup, "title").get_text().split("/")[0])
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title = self.create_title(css.select(soup, "title").get_text().split("/")[0])
+        scrape_item.setup_as_album(title)
 
-            if "Last OnlyFans Updates" in title or not soup.select_one(Selector.CONTENT):
-                raise ScrapeError(404)
+        if "Last OnlyFans Updates" in title or not soup.select_one(Selector.CONTENT):
+            raise ScrapeError(404)
 
+        async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.CONTENT):
                 self.create_task(self.run(new_scrape_item))
 

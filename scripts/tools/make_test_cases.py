@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl.__main__ import run_cdl
+from cyberdrop_dl.config import Config
 from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import SKIP_DOWNLOAD
 
@@ -22,7 +23,7 @@ TestCase = dict[str, Any]
 
 
 def parse_jsonl(file: Path) -> Generator[tuple[str, str, TestCase]]:
-    base = Path.cwd() / "downloads"
+    base = Path.cwd() / Config().download_folder
     for line in file.read_text(encoding="utf-8").splitlines():
         media = json.loads(line)
         url = media["parents"][0] if media["parents"] else media["referer"]
@@ -35,6 +36,7 @@ def run(url_txt: Path, main_log: Path) -> None:
         appdata = AppData.from_dirs(AppDirs.from_path(Path(temp) / "test_appdata"))
         appdata.config_file.parent.mkdir(parents=True, exist_ok=True)
         appdata.config_file.touch()
+        appdata.db_file.touch()
         _ = SKIP_DOWNLOAD.set(True)
         _ = run_cdl(
             [
@@ -64,7 +66,6 @@ def create_test_files(file: Path) -> None:
 
     test_files: list[Path] = []
     for domain, cases in all_results.items():
-        domain = domain.replace(".", "_")
         test_cases = [
             {
                 "url": url,
@@ -73,7 +74,7 @@ def create_test_files(file: Path) -> None:
             }
             for url, results in cases.items()
         ]
-        test_file = TEST_FOLDER / f"test_case_{domain}.py"
+        test_file = TEST_FOLDER / f"test_case_{domain.replace('.', '_')}.py"
         _ = test_file.write_text(f"DOMAIN = {domain!r}\nTEST_CASES = {test_cases}")
         test_files.append(test_file)
 

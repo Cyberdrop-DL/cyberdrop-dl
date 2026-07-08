@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.twitter_images import TwimgCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -70,12 +71,11 @@ class TwPornstarsCrawler(TwimgCrawler):
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                name = css.select_text(soup, Selector.TITLE)
-                title = self.create_title(name.removesuffix("'s pics and videos"))
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        name = css.select_text(soup, Selector.TITLE)
+        title = self.create_title(name.removesuffix("'s pics and videos"))
+        scrape_item.setup_as_album(title)
 
+        async for soup in pages:
             for new_item in self.iter_children(scrape_item, soup, Selector.THUMBS):
                 self.create_task(self.run(new_item))

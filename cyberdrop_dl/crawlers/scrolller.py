@@ -41,7 +41,7 @@ class ScrolllerCrawler(Crawler):
                 if not src:
                     continue
 
-                self.create_task(self.direct_file(scrape_item, self.parse_url(src)))
+                self.create_eager_task(self.direct_file(scrape_item, self.parse_url(src)))
                 scrape_item.add_children()
 
     async def _api_pagination(self, subreddit: str) -> AsyncGenerator[list[dict[str, Any]]]:

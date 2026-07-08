@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://fapello.com/content/a/l/alessandra-ambrosio/7000/alessandra-ambrosio_6124.jpg",
                 "filename": "alessandra-ambrosio_6124.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "alessandra-ambrosio_6124.jpg",
                 "referer": "https://fapello.com/alessandra-ambrosio/6124",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn.fapello.com/content/s/o/soyloruga/1000/soyloruga_0054.mp4",
                 "filename": "soyloruga_0054.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "soyloruga_0054.mp4",
                 "referer": "https://fapello.com/soyloruga/54",
                 "album_id": None,

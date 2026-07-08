@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, ClassVar, Self
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -124,12 +125,11 @@ class ImagePondCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = css.select_text(soup, "h1")
-                scrape_item.setup_as_album(self.create_title(title), album_id=scrape_item.url.name)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title = css.select_text(soup, "h1")
+        scrape_item.setup_as_album(self.create_title(title), album_id=scrape_item.url.name)
 
+        async for soup in pages:
             for js in css.iselect(soup, *Selector.ALBUM_FILES):
                 web_url = js[js.index("'http") :].strip("'")
                 new_item = scrape_item.create_child(self.parse_url(web_url))

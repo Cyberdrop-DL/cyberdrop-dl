@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://bt7.api.mega.co.nz/cs/g?x=mgxqsZtVCZCJ&n=Ac1XhBCD&fn=start_linux.sh",
                 "filename": "start_linux.sh",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "start_linux.sh",
                 "referer": "https://transfer.it/t/mgxqsZtVCZCJ#Ac1XhBCD",
                 "album_id": "mgxqsZtVCZCJ",

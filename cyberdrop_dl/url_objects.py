@@ -18,7 +18,7 @@ from cyberdrop_dl.exceptions import MaxChildrenError
 from cyberdrop_dl.filepath import sanitize_folder
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Mapping, Sequence
+    from collections.abc import Awaitable, Callable, Generator, Iterable, Mapping, Sequence
 
     @final
     class AbsoluteHttpURL(yarl.URL):
@@ -134,7 +134,7 @@ class MediaItem:
     download_filename: str | None = None
     ext: str = ""
     size: int | None = None
-    debrid_url: AbsoluteHttpURL | None = None
+    debrid_url: Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None = None
     duration: float | None = None
     is_segment: bool = False
     album_id: str | None = None
@@ -155,6 +155,7 @@ class MediaItem:
     id: tuple[str, ...] = dataclasses.field(init=False)
     base64_id: str = dataclasses.field(init=False)
     headers: dict[str, str] = dataclasses.field(init=False, default_factory=dict)
+    json_check: Callable[..., None] | None = None
 
     def __post_init__(self) -> None:
         self.ext = self.ext or Path(self.filename).suffix
@@ -177,13 +178,23 @@ class MediaItem:
 
     @property
     def real_url(self) -> AbsoluteHttpURL:
+        if self.debrid_url and not callable(self.debrid_url):
+            return self.debrid_url
+        return self.url
+
+    async def resolve(self) -> AbsoluteHttpURL:
+        if callable(self.debrid_url):
+            self.debrid_url = await self.debrid_url()
+
         return self.debrid_url or self.url
 
     def serialize(self) -> dict[str, Any]:
         me = dataclasses.asdict(self)
+        if callable(self.debrid_url):
+            me["debrid_url"] = None
         if self.xxhash:
             me["xxhash"] = f"xxh128:{self.xxhash}"
-        for name in ("is_segment",):
+        for name in ("is_segment", "json_check"):
             del me[name]
         return me
 
@@ -210,6 +221,7 @@ class ScrapeItem:
     parent_threads: set[AbsoluteHttpURL] = dataclasses.field(default_factory=set)
     max_children: Mapping[ScrapeItemType, int] | None = None
     password: str | None = None
+    referer: AbsoluteHttpURL | None = None
 
     _children_count: int = 0
     _children_limit: int = 0
@@ -223,7 +235,16 @@ class ScrapeItem:
     def from_url(cls, url: yarl.URL | str) -> Self:
         url = AbsoluteHttpURL(url)
         assert is_absolute_http_url(url)
-        return cls(url=url, password=url.query.get("password"))
+        get = url.query.get
+        try:
+            referer = _url_from_query(get("referer"))
+        except ValueError:
+            logger.exception(
+                "Unable to parse query 'referer' value (%s) from url %s , ignoring...", get("referer"), url
+            )
+            referer = None
+
+        return cls(url=url, password=get("password"), referer=referer)
 
     @property
     def uploaded_at(self) -> int | None:
@@ -386,3 +407,11 @@ def _extract_last_domain(folders: Sequence[str]) -> str | None:
                 pass
 
     return None
+
+
+def _url_from_query(query_url: str | None) -> AbsoluteHttpURL | None:
+    if query_url:
+        url = AbsoluteHttpURL(query_url)
+        if not is_absolute_http_url(url):
+            raise ValueError("URL needs to be a valid HTTP URL")
+        return url
