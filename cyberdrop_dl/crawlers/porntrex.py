@@ -7,7 +7,8 @@ from cyberdrop_dl.crawlers._kvs import extract_kvs_video
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -73,7 +74,7 @@ class PorntrexCrawler(Crawler):
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        for _, link in self.iter_tags(soup, Selector.IMAGES):
+        for link in self.iter_urls(soup, Selector.IMAGES):
             await self.direct_file(scrape_item, link)
             scrape_item.add_children()
 
@@ -122,7 +123,7 @@ class PorntrexCrawler(Crawler):
         else:
             last_page = 1
 
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
             self.create_task(self.run(new_scrape_item))
 
         await self._ajax_pagination(scrape_item, last_page)
@@ -135,7 +136,7 @@ class PorntrexCrawler(Crawler):
             albums_url = scrape_item.url / "albums"
             soup = await self.request_soup(albums_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
                 new_scrape_item.append_folders("albums")
                 self.create_task(self.run(new_scrape_item))
 
@@ -176,5 +177,5 @@ class PorntrexCrawler(Crawler):
             page_url = page_url.update_query({from_param_name: page})
             soup = await self.request_soup(page_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_OR_ALBUMS):
                 self.create_task(self.run(new_scrape_item))

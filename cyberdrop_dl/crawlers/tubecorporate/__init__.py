@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -47,7 +47,7 @@ class TubeCorporateCrawler(Crawler, is_abc=True):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         video = await self._request_video(scrape_item.url.origin(), video_id)

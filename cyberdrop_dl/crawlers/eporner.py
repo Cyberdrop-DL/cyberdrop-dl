@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from bs4 import BeautifulSoup
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, parse_url
+from cyberdrop_dl.utils import css, extr_text, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -115,40 +117,39 @@ class EpornerCrawler(Crawler):
             part, selector = parts
             url = canonical_url / part
             async for soup in self.web_pager(url):
-                for _, new_scrape_item in self.iter_children(scrape_item, soup, selector):
+                for new_scrape_item in self.iter_children(scrape_item, soup, selector):
                     new_scrape_item.append_folders(name)
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, *, from_profile: bool = False) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title and not from_profile:
-                title = css.select_text(soup, "title")
-                title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
-                for trash in title_trash:
-                    title = title.rsplit(trash)[0].strip()
-                title = self.create_title(title)
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        if not from_profile:
+            title = css.select_text(soup, "title")
+            title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
+            for trash in title_trash:
+                title = title.rsplit(trash)[0].strip()
+            title = self.create_title(title)
+            scrape_item.setup_as_album(title)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO):
+        async for soup in pages:
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEO):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
-        title: str = ""
-        async for soup in self.web_pager(scrape_item.url):
-            if not title:
-                title = css.select_text(soup, Selector.GALLERY_TITLE)
-                title = self.create_title(title)
-                scrape_item.setup_as_album(title)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title = css.select_text(soup, Selector.GALLERY_TITLE)
+        scrape_item.setup_as_album(self.create_title(title))
 
-            for thumb, new_scrape_item in self.iter_children(scrape_item, soup, Selector.PROFILE_GALLERY):
-                assert thumb
-                filename = thumb.name.rsplit("-", 1)[0]
-                filename, ext = self.get_filename_and_ext(f"{filename}{thumb.suffix}")
-                link = thumb.with_name(filename)
-                await self.handle_file(link, new_scrape_item, filename, ext)
+        async for soup in pages:
+            for tag in css.iselect(soup, Selector.PROFILE_GALLERY):
+                thumb, web_url = map(self.parse_url, (css.select(tag, "img", "src"), css.attr(tag, "href")))
+                name = thumb.name.rsplit("-", 1)[0]
+                filename, ext = self.get_filename_and_ext(f"{name}{thumb.suffix}")
+                src = thumb.with_name(name)
+                await self.handle_file(src, scrape_item.create_child(web_url), filename, ext)
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
@@ -168,7 +169,7 @@ class EpornerCrawler(Crawler):
     async def search_photos(self, scrape_item: ScrapeItem, query: str) -> None:
         scrape_item.setup_as_album(self.create_title(f"{query} [photo search]"))
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, ".mbphoto2 > a"):
+            for new_scrape_item in self.iter_children(scrape_item, soup, ".mbphoto2 > a"):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper

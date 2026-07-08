@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://fuckingfast.co/auo9lgho1u8d",
                 "filename": "Burnout_Paradise_Remastered_--_fitgirl-repacks.site_--_.part1.rar",
-                "debrid_link": "re:https://fuckingfast.co/dl/",
+                "debrid_url": "re:https://fuckingfast.co/dl/",
                 "referer": "https://fuckingfast.co/auo9lgho1u8d",
                 "uploaded_at": None,
             }

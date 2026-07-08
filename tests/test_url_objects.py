@@ -1,6 +1,14 @@
+from pathlib import Path
+
 import pytest
 
-from cyberdrop_dl.url_objects import _extract_last_domain, _has_domain, _remove_domain_if_duplicate
+from cyberdrop_dl.url_objects import (
+    AbsoluteHttpURL,
+    MediaItem,
+    _extract_last_domain,
+    _has_domain,
+    _remove_domain_if_duplicate,
+)
 
 
 @pytest.mark.parametrize(
@@ -35,3 +43,20 @@ def test_extract_last_domain() -> None:
 )
 def test_remove_domain_if_duplicate(folder: str, domain: str, expected: str) -> None:
     assert _remove_domain_if_duplicate(folder, domain) == expected
+
+
+def test_media_item_serialization() -> None:
+    item = MediaItem(
+        url=AbsoluteHttpURL("https://www.example.com"),
+        domain="example.com",
+        download_folder=Path(),
+        filename="filename",
+        db_path="db_path",
+        referer=AbsoluteHttpURL("https://www.example.com"),
+        album_id=None,
+        ext=".mp4",
+        original_filename="filename.mp4",
+        uploaded_at=None,
+    )
+    result = item.serialize()
+    assert type(result) is dict

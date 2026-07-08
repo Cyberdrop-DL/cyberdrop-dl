@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, final, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.models import type_adapter
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import basic_auth, error_handling_wrapper, type_adapter
+from cyberdrop_dl.utils import basic_auth
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -130,7 +130,7 @@ class PixelDrainCrawler(Crawler):
     def __post_init__(self) -> None:
         self.api: PixelDrainAPI = PixelDrainAPI.from_crawler(self)
         if self.api.logged_in:
-            self.downloader.download_slots = None
+            self.downloader.slots = None
 
     @classmethod
     @override

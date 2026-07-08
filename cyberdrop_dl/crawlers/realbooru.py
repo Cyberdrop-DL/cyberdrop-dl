@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -44,7 +45,7 @@ class RealBooruCrawler(Crawler):
     async def tags(self, scrape_item: ScrapeItem, tags: str) -> None:
         scrape_item.setup_as_album(self.create_title(tags.strip()))
         async for soup in self.web_pager(scrape_item.url, relative_to=scrape_item.url):
-            for _, new_item in self.iter_children(scrape_item, soup, Selector.CONTENT):
+            for new_item in self.iter_children(scrape_item, soup, Selector.CONTENT):
                 self.create_task(self.run(new_item))
 
     @error_handling_wrapper

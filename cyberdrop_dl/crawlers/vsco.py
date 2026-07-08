@@ -7,7 +7,8 @@ from pydantic.alias_generators import to_snake
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -40,7 +41,7 @@ class VSCOCrawler(Crawler):
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, user: str, type_: str, id_: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         scrape_item.setup_as_profile(self.create_title(user))
@@ -96,7 +97,7 @@ class VSCOCrawler(Crawler):
         m3u8 = res = None
         ext = url.suffix
         if ext == ".m3u8":
-            if await self.check_complete_from_referer(scrape_item):
+            if await self.check_complete_from_referer(scrape_item.url):
                 return
 
             ext = ".mp4"

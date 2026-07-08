@@ -9,7 +9,7 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (GUpload)",
                 "filename": "26011780d54f [720p]_thumb.jpg",
                 "original_filename": "26011780d54f_thumb.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "album_id": None,
             },
             {
@@ -18,7 +18,7 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (GUpload)",
                 "filename": "26011780d54f [720p].mp4",
                 "original_filename": "26011780d54f.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "album_id": None,
             },
         ],

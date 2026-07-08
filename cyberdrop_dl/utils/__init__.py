@@ -2,251 +2,31 @@ from __future__ import annotations
 
 import base64
 import contextlib
-import functools
-import inspect
 import itertools
 import logging
 import platform
-import re
 import sys
-from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, cast
 
-import yarl
-from aiohttp import ClientConnectorError, TooManyRedirects
-from mega.errors import MegaNzError
-from pydantic import ValidationError
-from typing_extensions import TypeIs
-
-from cyberdrop_dl.exceptions import CDLBaseError, ErrorLogMessage, InvalidURLError, create_error_msg, get_origin
-from cyberdrop_dl.utils._dataclasses import DictDataclass as DictDataclass
-from cyberdrop_dl.utils._dataclasses import deserialize as deserialize
-from cyberdrop_dl.utils._dataclasses import filter_data as filter_data
-from cyberdrop_dl.utils._dataclasses import type_adapter as type_adapter
-from cyberdrop_dl.utils._path_traverse import has_partial_files, partial_files
+from cyberdrop_dl.constants import MISSING
+from cyberdrop_dl.utils._url import parse_http_url as parse_url  # noqa: F401
+from cyberdrop_dl.utils._url import remove_trailing_slash  # noqa: F401
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Generator
-    from pathlib import Path
-
-    from cyberdrop_dl.downloader.http import Downloader
-    from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
-
-    class _HasManager(Protocol):
-        manager: Manager
-
-    _HasManagerT = TypeVar("_HasManagerT", bound=_HasManager)
-    _Origin = TypeVar("_Origin", bound=ScrapeItem | MediaItem | yarl.URL)
-
-_P = ParamSpec("_P")
-_T = TypeVar("_T")
-_R = TypeVar("_R")
+    from collections.abc import Callable, Generator, Iterable
+    from contextvars import ContextVar
 
 
 logger = logging.getLogger(__name__)
 
-_ERROR_WRAPPER_ATTR = "__cdl_error_wrapped__"
-
-
-def is_error_wrapped(method: object) -> bool:
-    return getattr(method, _ERROR_WRAPPER_ATTR, False)
-
-
-def mark_as_safe(fn: _T) -> _T:
-    setattr(fn, _ERROR_WRAPPER_ATTR, True)
-    return fn
-
 
 @contextlib.contextmanager
-def group_exceptions(message: str | None = None) -> Generator[None]:
+def enter_context[T](context_var: ContextVar[T], value: T, /) -> Generator[None]:
+    token = context_var.set(value)
     try:
         yield
-    except ExceptionGroup as e:
-        raise ExceptionGroup(message or _exc_group_msg(e), e.exceptions) from None
-
-
-def _exc_group_msg(e: ExceptionGroup) -> str:
-    if e.message and "unhandled errors in a TaskGroup" not in e.message:
-        return e.message
-
-    first = e.exceptions[0]
-    return getattr(first, "ui_failure", None) or str(first)
-
-
-@contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:  # noqa: C901, PLR0912
-    link: yarl.URL = item if isinstance(item, yarl.URL) else item.url
-    error_log_msg = origin = exc_info = None
-    link_to_show: yarl.URL | str = ""
-    is_segment: bool = getattr(item, "is_segment", False)
-    try:
-        with group_exceptions():
-            yield
-    except ExceptionGroup as e:
-        error_log_msg = ErrorLogMessage(_exc_group_msg(e), str(e))
-        exc_info = e.with_traceback(None)
-    except CDLBaseError as e:
-        error_log_msg = ErrorLogMessage(e.ui_failure, str(e))
-        origin = e.origin
-        link_to_show = getattr(e, "url", None) or link_to_show
-        exc_info = e.__cause__
-    except NotImplementedError as e:
-        error_log_msg = ErrorLogMessage("NotImplemented")
-        exc_info = e
-    except TooManyRedirects as e:
-        ui_failure = "Too Many Redirects"
-        info = {
-            "url": str(e.request_info.real_url),
-            "history": tuple(str(r.real_url) for r in e.history),
-        }
-        error_log_msg = ErrorLogMessage(ui_failure, f"{ui_failure}\n{info}")
-    except MegaNzError as e:
-        if code := getattr(e, "code", None):
-            if http_code := {
-                -4: HTTPStatus.TOO_MANY_REQUESTS,
-                -8: HTTPStatus.GONE,
-                -9: HTTPStatus.GONE,
-                -16: HTTPStatus.FORBIDDEN,
-                -17: 509,
-                -24: 509,
-                -401: 509,
-            }.get(code):
-                ui_failure = create_error_msg(http_code)
-            else:
-                ui_failure = f"MegaNZ Error [{code}]"
-        else:
-            ui_failure = "MegaNZ Error"
-
-        error_log_msg = ErrorLogMessage(ui_failure, f"{ui_failure} {e!s}")
-
-    except TimeoutError as e:
-        error_log_msg = ErrorLogMessage("Timeout", repr(e))
-    except ClientConnectorError as e:
-        ui_failure = "Client Connector Error"
-        suffix = "" if (link.host or "").startswith(e.host) else f" from {link}"
-        log_msg = f"{e}{suffix}. If you're using a VPN, try turning it off"
-        error_log_msg = ErrorLogMessage(ui_failure, log_msg)
-    except ValidationError as e:
-        exc_info = e
-        ui_failure = create_error_msg(422)
-        log_msg = str(e).partition("For further information")[0].strip()
-        error_log_msg = ErrorLogMessage(ui_failure, log_msg)
-    except Exception as e:  # noqa: BLE001
-        exc_info = e
-        error_log_msg = ErrorLogMessage.from_unknown_exc(e)
-
-    if error_log_msg is None or is_segment:
-        return
-
-    _log_error(self, link_to_show or link, item, error_log_msg, exc_info, origin)
-
-
-def _log_error(  # noqa: PLR0913
-    self: _HasManager,
-    link_to_show: yarl.URL | str,
-    item: ScrapeItem | MediaItem | yarl.URL,
-    error_log_msg: ErrorLogMessage,
-    exc_info: BaseException | None,
-    origin: ScrapeItem | MediaItem | yarl.URL | Path | None,
-) -> None:
-    origin = origin or get_origin(item)
-    is_downloader = bool(getattr(self, "log_prefix", False))
-    if is_downloader:
-        self, item = cast("Downloader", self), cast("MediaItem", item)
-        logger.error(
-            f"{self.log_prefix} Failed: {item.url} ({error_log_msg.main_log_msg}) \n -> Referer: {item.referer}",
-            exc_info=exc_info,
-        )
-        self.manager.logs.write_download_error(item, error_log_msg.csv_log_msg)
-        self.manager.scrape_mapper.tui.files.stats.failed += 1
-        self.manager.scrape_mapper.tui.download_errors.add(error_log_msg.ui_failure)
-        return
-
-    logger.error(f"Scrape Failed: {link_to_show} ({error_log_msg.main_log_msg})", exc_info=exc_info)
-    self.manager.logs.write_scrape_error(link_to_show, error_log_msg.csv_log_msg, origin)  # pyright: ignore[reportArgumentType]
-    self.manager.scrape_mapper.tui.scrape_errors.add(error_log_msg.ui_failure)
-
-
-@overload
-def error_handling_wrapper(
-    func: Callable[Concatenate[_HasManagerT, _Origin, _P], _R],
-) -> Callable[Concatenate[_HasManagerT, _Origin, _P], _R]: ...
-
-
-@overload
-def error_handling_wrapper(
-    func: Callable[Concatenate[_HasManagerT, _Origin, _P], Coroutine[None, None, _R]],
-) -> Callable[Concatenate[_HasManagerT, _Origin, _P], Coroutine[None, None, _R]]: ...
-
-
-def error_handling_wrapper(
-    func: Callable[Concatenate[_HasManagerT, _Origin, _P], _R | Coroutine[None, None, _R]],
-) -> Callable[Concatenate[_HasManagerT, _Origin, _P], _R | Coroutine[None, None, _R]]:
-    """Wrapper handles errors for url scraping."""
-
-    if inspect.iscoroutinefunction(func):
-
-        @functools.wraps(func)
-        async def async_wrapper(self: _HasManagerT, item: _Origin, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-            with error_handling_context(self, item):
-                return await func(self, item, *args, **kwargs)
-
-        return mark_as_safe(async_wrapper)
-
-    @functools.wraps(func)
-    def wrapper(self: _HasManagerT, item: _Origin, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        with error_handling_context(self, item):
-            result = func(self, item, *args, **kwargs)
-            assert not inspect.isawaitable(result)
-            return result
-
-    return mark_as_safe(wrapper)
-
-
-def delete_empty_files_and_folders(path: Path) -> None:
-    """walks and removes in place"""
-
-    from cyberdrop_dl.logs import MAIN_LOG_FILE
-    from cyberdrop_dl.utils._path_traverse import delete_empty_files_and_folders_in_place
-
-    if not path.is_dir():
-        return
-
-    _ = delete_empty_files_and_folders_in_place(path, exclude=[MAIN_LOG_FILE.get(None)])
-
-
-def check_partials_and_empty_folders(manager: Manager) -> None:
-    download_folder = manager.config.settings.files.download_folder
-
-    logger.info("Checking for partial downloads...")
-    if has_partial_files(download_folder):
-        logger.warning("There are partial downloads in the downloads folder")
-
-    settings = manager.config.settings.runtime_options
-    if settings.delete_partial_files:
-        logger.info("Deleting partial downloads...")
-        delete_partial_files(download_folder)
-
-    if settings.skip_check_for_empty_folders:
-        return
-
-    logger.info("Deleting empty files and folders...")
-    delete_empty_files_and_folders(download_folder)
-
-    sorted_folder = manager.config.settings.sorting.sort_folder
-    if sorted_folder and manager.config.settings.sorting.sort_downloads:
-        delete_empty_files_and_folders(sorted_folder)
-
-
-def delete_partial_files(path: Path) -> None:
-    for file in partial_files(path):
-        try:
-            file.unlink()
-        except OSError as e:
-            logger.error(f"Unable to delete '{file}' ({e!r})")
-        else:
-            logger.debug(f"Deleted '{file}'")
+    finally:
+        context_var.reset(token)
 
 
 def extr_text(text: str, /, start: str, end: str) -> str:
@@ -256,61 +36,9 @@ def extr_text(text: str, /, start: str, end: str) -> str:
     return text[start_index:end_index].strip()
 
 
-def _str_to_url(link_str: str) -> yarl.URL:
-    if not link_str:
-        raise InvalidURLError("link_str is empty", url=link_str)
-
-    def fix_query_params_encoding(link: str) -> str:
-        if "?" not in link:
-            return link
-        parts, query_and_frag = link.split("?", 1)
-        query_and_frag = query_and_frag.replace("+", "%20")
-        return f"{parts}?{query_and_frag}"
-
-    def fix_multiple_slashes(link_str: str) -> str:
-        return re.sub(r"(?:https?)?:?(\/{3,})", "//", link_str)
-
-    try:
-        clean_link_str = fix_multiple_slashes(fix_query_params_encoding(link_str))
-        return yarl.URL(clean_link_str, encoded="%" in clean_link_str)
-
-    except (AttributeError, ValueError, TypeError) as e:
-        raise InvalidURLError(str(e), url=link_str) from e
-
-
-def parse_url(
-    link_str: AbsoluteHttpURL | yarl.URL | str, relative_to: AbsoluteHttpURL | None = None, *, trim: bool = True
-) -> AbsoluteHttpURL:
-    """Parse a string into an absolute URL, handling relative URLs, encoding and optionally removes trailing slash (trimming).
-    Raises:
-        InvalidURLError: If the input string is not a valid URL or if any other error occurs during parsing.
-        TypeError: If `relative_to` is `None` and the parsed URL is relative or has no scheme.
-    """
-
-    url = _str_to_url(link_str) if isinstance(link_str, str) else link_str
-    if not url.absolute:
-        if not relative_to:
-            raise InvalidURLError("Relative URL with no known base", url=link_str)
-        url = relative_to.join(url)
-    if not url.scheme:
-        url = url.with_scheme(relative_to.scheme if relative_to else "https")
-    assert is_absolute_http_url(url)
-    if not trim:
-        return url
-    return remove_trailing_slash(url)
-
-
-def is_absolute_http_url(url: yarl.URL) -> TypeIs[AbsoluteHttpURL]:
-    return url.absolute and url.scheme.startswith("http")
-
-
-def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    if url.name or url.path == "/":
-        return url
-    return url.parent.with_fragment(url.fragment).with_query(url.query)
-
-
 def get_system_information() -> dict[str, Any]:
+    import sqlite3
+    import ssl
 
     def get_common_name() -> str:
         system = platform.system()
@@ -345,6 +73,8 @@ def get_system_information() -> dict[str, Any]:
             "architecture": str(platform.architecture()),
             "python": f"{platform.python_version()} {platform.python_implementation()}",
             "common_name": get_common_name(),
+            "sqlite": sqlite3.sqlite_version,
+            "openSSL": ssl.OPENSSL_VERSION,
         }
     )
     _ = system_info.pop("node", None)
@@ -369,3 +99,26 @@ def truncated_preview(content: str, max_len: int = 100) -> str:
 def basic_auth(username: str, password: str) -> str:
     token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
     return f"Basic {token}"
+
+
+def unique[T](itr: Iterable[T], /) -> Generator[T]:
+    seen: set[T] = set()
+    for ele in itr:
+        if ele not in seen:
+            seen.add(ele)
+            yield ele
+
+
+def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:
+    "Like functools.cache but for single argument function and without all the stats logic"
+    cache: dict[T, R] = {}
+
+    def compute(obj: T) -> R:
+        val = cache.get(obj, MISSING)
+        if val is not MISSING:
+            return cast("R", val)
+
+        cache[obj] = val = fn(obj)
+        return val
+
+    return compute

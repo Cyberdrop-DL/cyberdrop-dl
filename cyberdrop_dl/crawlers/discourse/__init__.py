@@ -6,16 +6,15 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
 from cyberdrop_dl.crawlers._forum import MessageBoardCrawler
-from cyberdrop_dl.exceptions import MaxChildrenError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
-from cyberdrop_dl.utils.dates import to_timestamp
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 from .models import AvailablePost, PostStream, Topic
 
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 _MAX_POSTS_PER_REQUEST = 50
-_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
@@ -66,7 +64,9 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
             case _:
                 raise ValueError
 
-    async def make_request(self, model_cls: type[_ModelT], path: str, params: dict[str, Any] | None = None) -> _ModelT:
+    async def make_request[ModelT: BaseModel](
+        self, model_cls: type[ModelT], path: str, params: dict[str, Any] | None = None
+    ) -> ModelT:
         api_url = self.PRIMARY_URL.joinpath(path)
         json_text = await self.request_text(api_url, params=params)
         return model_cls.model_validate_json(json_text, by_alias=True, by_name=True)
@@ -84,7 +84,7 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     async def topic(self, scrape_item: ScrapeItem, topic: Topic) -> None:
         title = self.create_title(topic.title, thread_id=topic.id)
         scrape_item.setup_as_forum(title)
-        scrape_item.uploaded_at = to_timestamp(topic.created_at)
+        scrape_item.upload_date = topic.created_at
         if topic.image_url:
             await self.handle_link(scrape_item, self.parse_url(topic.image_url))
         await self.process_posts(scrape_item, topic)
@@ -99,21 +99,11 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
 
     @error_handling_wrapper
     async def process_posts(self, scrape_item: ScrapeItem, topic: Topic) -> None:
-        last_post_id = None
         async for post in self.iter_posts(topic):
             new_scrape_item = scrape_item.create_child(self.PRIMARY_URL / post.path.removeprefix("/"))
-            new_scrape_item.uploaded_at = to_timestamp(post.created_at)
+            new_scrape_item.upload_date = post.created_at
             await self.post(new_scrape_item, post)
-            last_post_id = post.id
-            try:
-                scrape_item.add_children()
-            except MaxChildrenError:
-                break
-
-        if last_post_id:
-            topic_url = self.PRIMARY_URL / topic.path.removeprefix("/")
-            post_url = topic_url / str(last_post_id)
-            await self._write_last_forum_post(topic_url, post_url)
+            scrape_item.add_children()
 
     async def iter_posts(self, topic: Topic) -> AsyncIterable[AvailablePost]:
         for offset in itertools.count(topic.init_post_number - 1, _MAX_POSTS_PER_REQUEST):
@@ -123,8 +113,6 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
             stream = await self.make_request(PostStream, f"t/{topic.id}/posts.json", {"post_ids[]": remaining})
             for post in stream.posts:
                 yield post
-                if topic.init_post_number != 1 and self.scrape_single_forum_post:
-                    return
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, /, post: AvailablePost) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -62,7 +62,7 @@ class E621Crawler(Crawler):
 
                 new_scrape_item = scrape_item.create_child(self.parse_url(file_url))
                 new_scrape_item.uploaded_at = self.parse_iso_date(post["created_at"])
-                self.create_task(self.direct_file(new_scrape_item))
+                self.create_eager_task(self.direct_file(new_scrape_item))
                 scrape_item.add_children()
 
     @error_handling_wrapper

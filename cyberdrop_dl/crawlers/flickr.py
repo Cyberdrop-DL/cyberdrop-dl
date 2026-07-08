@@ -3,10 +3,12 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_context, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -34,33 +36,29 @@ class FlickrCrawler(Crawler):
                 raise ValueError
 
     async def __async_post_init__(self) -> None:
-        self.api: FlickrAPI = FlickrAPI(self)
-        await self.api.get_site_key()
+        self.api: FlickrAPI = FlickrAPI.from_crawler(self)
+        with self.catch_errors(self.api.ENDPOINT), self.disable_on_error("Unable to get public API key"):
+            await self.api.get_site_key()
 
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, user: str, photoset_id: str) -> None:
         title: str = ""
-        async for data in self.api.photoset(photoset_id):
-            photos: list[dict[str, Any]] = data.pop("photo")
+        first_page, pages = await aio.peek_first(self.api.photoset(photoset_id))
+        name = first_page["title"]
+        title = self.create_title(name["_content"] if isinstance(name, dict) else name, photoset_id)
+        scrape_item.setup_as_album(title, album_id=photoset_id)
+        self.create_eager_task(self.write_metadata(scrape_item, photoset_id, first_page))
 
-            if not title:
-                name = data["title"]
-                title = self.create_title(
-                    name["_content"] if isinstance(name, dict) else name,
-                    photoset_id,
-                )
-                scrape_item.setup_as_album(title, album_id=photoset_id)
-                await self.write_metadata(scrape_item, photoset_id, data)
-
-            for photo in photos:
+        async for page in pages:
+            for photo in page["photo"]:
                 web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
                 new_scrape_item = scrape_item.create_child(web_url)
-                self.create_task(self._photo(new_scrape_item, photo))
+                self.create_eager_task(self._photo(new_scrape_item, photo))
                 scrape_item.add_children()
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         photo = await self.api.photo(photo_id)
@@ -90,27 +88,22 @@ class FlickrCrawler(Crawler):
         return await self.api.photo_source(photo["id"])
 
 
-class FlickrAPI:
-    API_ENDPOINT = AbsoluteHttpURL("https://api.flickr.com/services/rest")
+class FlickrAPI(API):
+    ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.flickr.com/services/rest")
 
-    def __init__(self, crawler: Crawler) -> None:
-        self._crawler = crawler
+    def __post_init__(self) -> None:
         self.api_key: str = ""
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(api_key={self.api_key!r})"
 
     async def get_site_key(self) -> None:
-        prints = self._crawler.PRIMARY_URL / "prints"
-        with (
-            error_handling_context(self._crawler, prints),
-            self._crawler.disable_on_error("Unable to get public API key"),
-        ):
-            text = await self._crawler.request_text(prints)
-            self.api_key = extr_text(text, 'flickr.api.site_key = "', '"')
+        prints = self.PRIMARY_URL / "prints"
+        text = await self.request_text(prints)
+        self.api_key = extr_text(text, 'flickr.api.site_key = "', '"')
 
     async def _request(self, method: str, **params: Any) -> dict[str, Any]:
-        api_url = self.API_ENDPOINT.with_query(
+        api_url = self.ENDPOINT.with_query(
             method="flickr." + method,
             format="json",
             nojsoncallback=1,
@@ -119,7 +112,7 @@ class FlickrAPI:
         if params:
             api_url = api_url.update_query(params)
 
-        return await self._crawler.request_json(api_url)
+        return await self.request_json(api_url)
 
     async def photo(self, photo_id: str) -> dict[str, Any]:
         resp = await self._request("photos.getInfo", photo_id=photo_id)
@@ -128,22 +121,13 @@ class FlickrAPI:
     async def photo_source(self, photo_id: str) -> AbsoluteHttpURL:
         resp = await self._request("photos.getSizes", photo_id=photo_id)
         best_src = resp["sizes"]["size"][-1]["source"]
-        return self._crawler.parse_url(best_src)
+        return self.parse_url(best_src)
 
     async def video_source(self, video_id: str, secret: str) -> AbsoluteHttpURL:
         resp = await self._request("video.getStreamInfo", photo_id=video_id, secret=secret)
-
-        def parse_resolution(stream_name: str) -> Resolution:
-            if stream_name == "orig":
-                return Resolution.highest()
-            try:
-                return Resolution.parse(stream_name)
-            except ValueError:
-                return Resolution.unknown()
-
         streams: dict[str, str] = {s["type"]: s["_content"] for s in resp["streams"]["stream"]}
-        best_src = max(streams, key=parse_resolution)
-        return self._crawler.parse_url(streams[best_src])
+        best_src = max(streams, key=_parse_resolution)
+        return self.parse_url(streams[best_src])
 
     async def photoset(self, photoset_id: str) -> AsyncGenerator[dict[str, Any]]:
         for page in itertools.count(1):
@@ -158,3 +142,12 @@ class FlickrAPI:
             yield data
             if page >= data["pages"]:
                 break
+
+
+def _parse_resolution(stream_name: str) -> Resolution:
+    if stream_name == "orig":
+        return Resolution.highest()
+    try:
+        return Resolution.parse(stream_name)
+    except ValueError:
+        return Resolution.unknown()

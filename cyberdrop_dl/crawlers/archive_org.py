@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -62,7 +63,7 @@ class ArchiveOrgCrawler(Crawler, cdl_user_agent=True):
         for file in _filter_files(base_path, item.files):
             url = self.PRIMARY_URL / "details" / identifier / file.path
             new_item = scrape_item.create_child(url)
-            self.create_task(self._file(new_item, identifier, file))
+            self.create_eager_task(self._file(new_item, identifier, file))
             scrape_item.add_children()
 
     @error_handling_wrapper

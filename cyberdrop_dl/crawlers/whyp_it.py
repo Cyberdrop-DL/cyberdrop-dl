@@ -3,9 +3,12 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import deserialize, error_handling_wrapper, parse_url
+from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
@@ -43,19 +46,19 @@ class WhypItCrawler(Crawler):
         collection = await self.api.collection(collection_id)
         scrape_item.setup_as_profile(self.create_title(collection.user))
         scrape_item.append_folders(self.create_title(collection.title, collection_id))
-        await self.write_metadata(scrape_item, f"collection {collection_id}", collection.metadata)
+        self.create_eager_task(self.write_metadata(scrape_item, f"collection {collection_id}", collection.metadata))
         async for tracks in self.api.collection_tracks(collection_id, collection.token):
             self._iter_tracks(scrape_item, tracks)
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, user_id: str) -> None:
-        title: str = ""
-        async for tracks in self.api.user_tracks(user_id):
-            if not title:
-                tracks = tuple(tracks)
-                title = self.create_title(tracks[0].user)
-                scrape_item.setup_as_profile(title)
+        pages = self.api.user_tracks(user_id)
+        tracks = tuple(await aio.next(pages))
+        title = self.create_title(tracks[0].user)
+        scrape_item.setup_as_profile(title)
+        self._iter_tracks(scrape_item, tracks)
 
+        async for tracks in pages:
             self._iter_tracks(scrape_item, tracks)
 
     def _iter_tracks(self, scrape_item: ScrapeItem, tracks: Iterable[Track]) -> None:
@@ -66,7 +69,7 @@ class WhypItCrawler(Crawler):
 
     @error_handling_wrapper
     async def track(self, scrape_item: ScrapeItem, track_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         track = await self.api.track(track_id, token=scrape_item.url.query.get("token"))

@@ -6,20 +6,20 @@ import hashlib
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, Self
 
 import xxhash
 
-from cyberdrop_dl import aio, stats
-from cyberdrop_dl.constants import Hashing, TempExt
+from cyberdrop_dl import aio
+from cyberdrop_dl.constants import TempExt
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
 
 if TYPE_CHECKING:
-    from yarl import URL
+    from collections.abc import Iterable
 
-    from cyberdrop_dl.config.settings import DupeCleanup
-    from cyberdrop_dl.manager import Manager
-    from cyberdrop_dl.url_objects import MediaItem
+    from cyberdrop_dl.config import Config
+    from cyberdrop_dl.database._db import Database
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 FileHashes = dict[str, dict[int, set[Path]]]
 
@@ -45,55 +45,57 @@ def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> 
     return hasher.hexdigest()
 
 
-async def hash_directory_scanner(manager: Manager, path: Path) -> None:
-    async with manager.database:
-        hash_stats = await hash_directory(manager, path)
+async def hash_directory(hasher: Hasher) -> HashingStats:
+    if not await aio.is_dir(hasher.path):
+        raise NotADirectoryError(None, hasher.path)
 
-    stats.print(hash_stats)
+    async with hasher.database:
+        with hasher.tui():
+            async with asyncio.TaskGroup() as tg:
+                async for file in aio.rglob(hasher.path, "*"):
+                    _ = tg.create_task(hasher.update_db_and_retrive_hash(file))
 
-
-async def hash_directory(manager: Manager, path: Path) -> HashingStats:
-    hasher = Hasher(manager)
-    hasher._tui = tui = HashingUI(path)
-    with tui():
-        if not await aio.is_dir(path):
-            raise NotADirectoryError(None, path)
-
-        async with asyncio.TaskGroup() as tg:
-            async for file in aio.rglob(path, "*"):
-                _ = tg.create_task(hasher.update_db_and_retrive_hash(file))
-
-    return tui.stats
+    return hasher.stats
 
 
 @dataclasses.dataclass(slots=True)
 class Hasher:
-    manager: Manager
-    hashed_media_items: list[MediaItem] = dataclasses.field(init=False, repr=False, default_factory=list)
-    hashes_dict: FileHashes = dataclasses.field(
+    extra_hashes: tuple[Literal["md5", "sha256"], ...]
+    database: Database
+    path: Path
+    tui: HashingUI = dataclasses.field(init=False, repr=False)
+
+    _cwd: Path = dataclasses.field(init=False, default_factory=Path.cwd)
+    _hashes_map: FileHashes = dataclasses.field(
         init=False,
         repr=False,
         default_factory=lambda: defaultdict(lambda: defaultdict(set)),
     )
-    _sem: asyncio.BoundedSemaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.BoundedSemaphore(20))
-    _cwd: Path = dataclasses.field(init=False, default_factory=Path.cwd)
-    _hashed_items: set[tuple[str, ...]] = dataclasses.field(default_factory=set, repr=False)
-    _tui: HashingUI = dataclasses.field(init=False)
+    _sem: asyncio.BoundedSemaphore = dataclasses.field(
+        init=False,
+        repr=False,
+        default_factory=lambda: asyncio.BoundedSemaphore(20),
+    )
+    _hashed_items: set[tuple[str, ...]] = dataclasses.field(
+        init=False,
+        repr=False,
+        default_factory=set,
+    )
 
     def __post_init__(self) -> None:
-        self._tui = HashingUI(self.download_folder)
+        self.tui = HashingUI(self.path)
+
+    @classmethod
+    def create(cls, config: Config, db: Database, path: Path | None = None) -> Self:
+        return cls(
+            config.hashing.extra_hashes,
+            db,
+            path=(path or config.download_folder).expanduser().resolve().absolute(),
+        )
 
     @property
-    def download_folder(self) -> Path:
-        return self.manager.config.settings.files.download_folder.expanduser().resolve().absolute()
-
-    @property
-    def stats(self):
-        return self._tui.stats
-
-    @property
-    def config(self) -> DupeCleanup:
-        return self.manager.config.settings.dupe_cleanup_options
+    def stats(self) -> HashingStats:
+        return self.tui.stats
 
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
@@ -109,27 +111,11 @@ class Hasher:
         )
         await self.save_hash_data(media_item, hash_value)
 
-    async def hash_item_during_download(self, media_item: MediaItem) -> None:
-        if media_item.is_segment:
-            return
-
-        if self.config.hashing != Hashing.IN_PLACE:
-            return
-
-        try:
-            assert media_item.original_filename
-            hash_value = await self.update_db_and_retrive_hash(
-                media_item.path, media_item.original_filename, media_item.referer
-            )
-            await self.save_hash_data(media_item, hash_value)
-        except Exception:
-            logger.exception("After hash processing failed: '%s'", media_item.path)
-
     async def update_db_and_retrive_hash(
         self,
         file: Path | str,
         original_filename: str | None = None,
-        referer: URL | None = None,
+        referer: AbsoluteHttpURL | None = None,
     ) -> str | None:
         file = Path(file)
 
@@ -142,17 +128,16 @@ class Hasher:
         except IsADirectoryError:
             return None
 
+        def compute_hash(algo: Literal["xxh128", "md5", "sha256"]) -> asyncio.Task[str | None]:
+            return tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, algo))
+
         async with self._sem:
-            with self._tui.new_file(file):
+            with self.tui.new_file(file):
                 async with asyncio.TaskGroup() as tg:
                     logger.info("Computing hashes of '%s'", file)
-                    xxxhash = tg.create_task(
-                        self._update_db_and_retrive_hash(file, original_filename, referer, "xxh128")
-                    )
-                    if self.config.add_md5_hash:
-                        tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, "md5"))
-                    if self.config.add_sha256_hash:
-                        tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, "sha256"))
+                    xxxhash = compute_hash("xxh128")
+                    for algo in self.extra_hashes:
+                        _ = compute_hash(algo)
 
         return xxxhash.result()
 
@@ -160,26 +145,26 @@ class Hasher:
         self,
         file: Path,
         original_filename: str | None,
-        referer: URL | None,
+        referer: AbsoluteHttpURL | None,
         hash_type: Literal["xxh128", "md5", "sha256"],
     ) -> str | None:
         """Generates hash of a file."""
 
-        hash_value = await self.manager.database.hash.get_file_hash_exists(file, hash_type)
+        hash_value = await self.database.hash.get_file_hash_exists(file, hash_type)
         try:
             if not hash_value:
                 hash_value = await self.hash_file(file, hash_type)
-                await self.manager.database.hash.insert_or_update_hash_db(
+                await self.database.hash.insert_or_update_hash_db(
                     hash_value,
                     hash_type,
                     file,
                     original_filename,
                     referer,
                 )
-                self._tui.add_completed(hash_type)
+                self.tui.add_completed(hash_type)
             else:
-                self._tui.stats.prev_hashed += 1
-                await self.manager.database.hash.insert_or_update_hash_db(
+                self.tui.stats.prev_hashed += 1
+                await self.database.hash.insert_or_update_hash_db(
                     hash_value,
                     hash_type,
                     file,
@@ -198,25 +183,18 @@ class Hasher:
         absolute_path = await aio.resolve(media_item.path)
         size = await aio.get_size(media_item.path)
         assert size
-        self.hashed_media_items.append(media_item)
         if hash_value:
-            media_item.hash = hash_value
-        self.hashes_dict[hash_value][size].add(absolute_path)
+            media_item.xxhash = hash_value
+        self._hashes_map[hash_value][size].add(absolute_path)
         self._hashed_items.add(media_item.id)
 
-    async def run(self) -> FileHashes:
-        with self._tui():
-            return await self._get_file_hashes_dict()
+    async def run(self, downloads: Iterable[MediaItem]) -> FileHashes:
+        with self.tui():
+            return await self._get_file_hashes_dict(downloads)
 
-    async def _get_file_hashes_dict(self) -> FileHashes:
+    async def _get_file_hashes_dict(self, downloads: Iterable[MediaItem]) -> FileHashes:
 
-        async def exists(item: MediaItem) -> MediaItem | None:
-            if await aio.is_file(item.path):
-                return item
-
-        results = await asyncio.gather(
-            *(exists(item) for item in self.manager.completed_downloads if item.id not in self._hashed_items)
-        )
+        results = await aio.gather(*(_exists(item) for item in downloads if item.id not in self._hashed_items))
         for media_item in results:
             if media_item is None:
                 continue
@@ -224,4 +202,20 @@ class Hasher:
                 await self.hash_item(media_item)
             except Exception:
                 logger.exception(msg=f"Unable to hash '{media_item.path}'")
-        return self.hashes_dict
+        return self._hashes_map
+
+
+async def _exists(item: MediaItem) -> MediaItem | None:
+    if await aio.is_file(item.path):
+        return item
+
+
+async def compute_in_place_hash(hasher: Hasher, media_item: MediaItem) -> None:
+    try:
+        assert media_item.original_filename
+        hash_value = await hasher.update_db_and_retrive_hash(
+            media_item.path, media_item.original_filename, media_item.referer
+        )
+        await hasher.save_hash_data(media_item, hash_value)
+    except Exception:
+        logger.exception("After hash processing failed: '%s'", media_item.path)

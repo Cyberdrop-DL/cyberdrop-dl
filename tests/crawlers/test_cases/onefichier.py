@@ -10,7 +10,7 @@ TEST_CASES = [
                 "filename": "Arcane.League.of.Legends.S01E04.German.DL.1080.p.WEB.h.264-OHD.part1.rar",
                 "original_filename": "Arcane.League.of.Legends.S01E04.German.DL.1080.p.WEB.h.264-OHD.part1.rar",
                 "download_filename": "Arcane.League.of.Legends.S01E04.German.DL.1080.p.WEB.h.264-OHD.part1.rar",
-                "debrid_link": "NOT_NONE",
+                "debrid_url": "NOT_NONE",
                 "uploaded_at": None,
                 "album_id": None,
             }

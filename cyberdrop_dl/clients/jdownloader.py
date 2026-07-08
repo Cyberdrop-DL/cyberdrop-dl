@@ -15,48 +15,42 @@ if TYPE_CHECKING:
 
     from myjdapi.myjdapi import Jddevice
 
-    from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class Config:
+class JDConfig:
     enabled: bool
-    username: str
-    password: str
-    device: str
+    username: str | None
+    password: str | None
+    device: str | None
     download_dir: Path
     autostart: bool
     whitelist: tuple[str, ...]
-
-    @staticmethod
-    def from_manager(manager: Manager) -> Config:
-        download_dir = (
-            manager.config.settings.runtime_options.jdownloader_download_dir
-            or manager.config.settings.files.download_folder
-        )
-        return Config(
-            enabled=manager.config.settings.runtime_options.send_unsupported_to_jdownloader,
-            device=manager.config.auth.jdownloader.device,
-            username=manager.config.auth.jdownloader.username,
-            password=manager.config.auth.jdownloader.password,
-            download_dir=download_dir.resolve(),
-            autostart=manager.config.settings.runtime_options.jdownloader_autostart,
-            whitelist=tuple(manager.config.settings.runtime_options.jdownloader_whitelist),
-        )
 
 
 @dataclasses.dataclass(slots=True)
 class JDownloader:
     """Class that handles connecting and sending links to JDownloader."""
 
-    config: Config
+    config: JDConfig
     _enabled: bool = dataclasses.field(init=False)
     _device: Jddevice | None = dataclasses.field(default=None, init=False)
 
     @classmethod
-    def from_manager(cls, manager: Manager, /) -> Self:
-        return cls(Config.from_manager(manager))
+    def from_config(cls, config: Config, /) -> Self:
+        download_dir = config.jdownloader.download_folder or config.download_folder
+        jd_config = JDConfig(
+            enabled=config.jdownloader.enabled,
+            device=config.auth.jdownloader.device,
+            username=config.auth.jdownloader.username,
+            password=config.auth.jdownloader.password,
+            download_dir=download_dir.resolve(),
+            autostart=config.jdownloader.autostart,
+            whitelist=tuple(config.jdownloader.whitelist),
+        )
+        return cls(jd_config)
 
     @property
     def enabled(self) -> bool:

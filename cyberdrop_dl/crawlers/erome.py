@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -45,7 +46,7 @@ class EromeCrawler(Crawler):
         scrape_item.setup_as_profile(title)
 
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
+            for new_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
                 self.create_task(self.run(new_item))
 
     @error_handling_wrapper
@@ -53,19 +54,20 @@ class EromeCrawler(Crawler):
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
+            for new_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
                 self.create_task(self.run(new_item))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        results = await self.get_album_results(album_id)
         soup = await self.request_soup(scrape_item.url)
         name = open_graph.title(soup).removesuffix("- EroMe")
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        for _, link in self.iter_tags(soup, Selector.MEDIA, "src", results=results):
-            self.create_task(self.direct_file(scrape_item, link))
+        should_download = await self.make_album_checker(album_id)
+        images = filter(should_download, self.iter_urls(soup, Selector.MEDIA, "src"))
+        for link in images:
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
 
 

@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -78,10 +79,9 @@ class ImageBamCrawler(Crawler):
         gallery_id = scrape_item.url.name
         title = self.create_title(gallery_name, gallery_id)
         scrape_item.setup_as_album(title, album_id=gallery_id)
-        results = await self.get_album_results(gallery_id)
 
         while True:
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selectors.THUMBNAILS, results=results):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selectors.THUMBNAILS):
                 self.create_task(self._image_task(new_scrape_item))
 
             try:
@@ -93,7 +93,7 @@ class ImageBamCrawler(Crawler):
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem, soup: BeautifulSoup | None = None) -> None:
         if not soup:
-            if await self.check_complete_from_referer(scrape_item):
+            if await self.check_complete_from_referer(scrape_item.url):
                 return
 
             soup = await self.request_soup(scrape_item.url)

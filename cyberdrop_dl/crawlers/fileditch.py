@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -18,7 +17,12 @@ HOMEPAGE_CATCHALL_FILE = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 class FileditchCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File": "/file.php?f=<file_id>",
+        "File": (
+            "/file.php?f=<file_id>",
+            "/beta123/<file_id>/<name>",
+            "/temp/<file_id>/<name>",
+            "/alpha7/<file_id>/<name>",
+        )
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fileditchfiles.me/")
     DOMAIN: ClassVar[str] = "fileditch"
@@ -26,6 +30,8 @@ class FileditchCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, "file.php"]:
+                return await self.file(scrape_item)
+            case [a, _, *_] if a.startswith(("beta", "temp", "alpha")):
                 return await self.file(scrape_item)
             case _:
                 raise ValueError

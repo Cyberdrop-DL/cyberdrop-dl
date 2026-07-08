@@ -3,6 +3,7 @@
 /Test-AppData-Dir/
 /AppData*/
 /Downloads/
+/downloads/
 /Old Files/
 *.log
 *.profiling

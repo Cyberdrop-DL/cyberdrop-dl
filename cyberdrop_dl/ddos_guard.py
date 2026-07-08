@@ -6,11 +6,10 @@ import hashlib
 import json
 import os
 import sys
-from typing import TYPE_CHECKING, Protocol, final
+from typing import TYPE_CHECKING, Protocol, final, override
 
 import yarl
 from bs4 import BeautifulSoup
-from typing_extensions import override
 
 from cyberdrop_dl.exceptions import DDOSGuardError
 
@@ -39,7 +38,7 @@ async def check_resp(resp: _Response, /) -> None:
         return
 
     mitigations: list[type[DDosGuard]] = []
-    for cls in (DDosGuard, CloudFlareTurnstile, Anubis):
+    for cls in _ALL_PROTECTIONS:
         if not cls.may_be_challenge(resp):
             continue
         if cls._is_challenge(resp):
@@ -59,7 +58,7 @@ def check_html(html: str) -> None:
 
 def check_soup(soup: BeautifulSoup, /, posibilities: Iterable[type[DDosGuard]] | None = None) -> None:
     if posibilities is None:
-        posibilities = (DDosGuard, CloudFlareTurnstile, Anubis)
+        posibilities = _ALL_PROTECTIONS
     for protection in posibilities:
         if protection.check(soup):
             raise DDOSGuardError(f"{protection.__name__} anti-bot protection detected")
@@ -75,6 +74,9 @@ class DDosGuard:
             "#turnstile-wrapper",
         )
     )
+
+    def __init_subclass__(cls) -> None:
+        _ALL_PROTECTIONS.append(cls)
 
     @classmethod
     def may_be_challenge(cls, resp: _Response) -> bool:
@@ -101,6 +103,9 @@ class DDosGuard:
             return True
 
         return bool(soup.select_one(cls.SELECTOR))
+
+
+_ALL_PROTECTIONS = [DDosGuard]
 
 
 class CloudFlareTurnstile(DDosGuard):
@@ -133,6 +138,17 @@ class CloudFlareTurnstile(DDosGuard):
     @override
     def check(cls, soup: BeautifulSoup) -> bool:
         return super().check(soup) and bool(soup.select_one("script[src*='challenges.cloudflare.com/turnstile/v']"))
+
+
+class BasedFlare(DDosGuard):
+    # TODO: add logic to solve it: https://gitgud.io/fatchan/haproxy-protection/-/blob/71015f402c49afcdcb3e70bc98dbaddc5ccbc74c/src/js/ch.js#L105
+    TITLES = ("Hold on...",)
+    SELECTOR = ", ".join(("head[data-langjson*='Performance & security by BasedFlare']", "body[data-pow][data-mode]"))
+
+    @classmethod
+    @override
+    def check(cls, soup: BeautifulSoup) -> bool:
+        return bool(soup.select_one(cls.SELECTOR))
 
 
 class Anubis(DDosGuard):
@@ -197,7 +213,7 @@ class Anubis(DDosGuard):
                 pass
 
             elapsed = time.monotonic() - start_time
-            raise DDOSGuardError(f"Unable to solve challenge after {elapsed:0.2f} seconds: {challenge}")
+            raise DDOSGuardError(f"Unable to solve Anubis challenge after {elapsed:0.2f} seconds: {challenge}")
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
-from cyberdrop_dl.utils import DictDataclass
+from cyberdrop_dl import aio
+from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
@@ -92,7 +93,7 @@ def ffprobe_version() -> str | None:
 async def merge(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
     result = await _merge(input_files, output_file)
     if result.success:
-        await _delete_files(input_files, same_folder=False)
+        await aio.gather(*map(_try_delete, input_files))
     return result
 
 
@@ -102,13 +103,13 @@ async def _merge(input_files: Iterable[Path], output_file: Path) -> SubProcessRe
     return await _run_command(command)
 
 
-async def concat(input_files: Iterable[Path], output_file: Path, *, same_folder: bool = True) -> SubProcessResult:
+async def concat(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
     concat_file = output_file.with_suffix(output_file.suffix + ".ffmpeg_concat.txt")
     await _create_concat_file(input_files, output_file=concat_file)
     try:
         result = await _concat(concat_file, output_file)
         if result.success:
-            await _delete_files(input_files, same_folder=same_folder)
+            await aio.gather(*map(_try_delete, input_files))
     finally:
         await _try_delete(concat_file)
 
@@ -116,12 +117,14 @@ async def concat(input_files: Iterable[Path], output_file: Path, *, same_folder:
 
 
 async def _concat(input_file: Path, /, output: Path) -> SubProcessResult:
-    concatenated_file = output.with_suffix(".concat" + output.suffix)
-    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input_file, *Args.CODEC_COPY, concatenated_file
+    temp_file = output.with_suffix(".concat" + output.suffix)
+    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input_file, *Args.CODEC_COPY, temp_file
     result = await _run_command(command)
-    if not result.success:
-        return result
-    return await _fixup_concat_video(concatenated_file, output)
+    if result.success:
+        await aio.move(temp_file, output)
+    else:
+        await _try_delete(temp_file)
+    return result
 
 
 async def _create_concat_file(input_files: Iterable[Path], output_file: Path) -> None:
@@ -134,37 +137,34 @@ async def _create_concat_file(input_files: Iterable[Path], output_file: Path) ->
     return await asyncio.to_thread(write)
 
 
-async def _fixup_concat_video(input_file: Path, output_file: Path) -> SubProcessResult:
-    command = *_FFMPEG_CALL_PREFIX, "-i", input_file, *Args.FIXUP_MP4
-    probe_result = await probe(input_file)
+async def fixup_video(file: Path) -> SubProcessResult:
+    temp_file = file.with_suffix(".fixup" + file.suffix)
+    command = *_FFMPEG_CALL_PREFIX, "-i", file, *Args.FIXUP_MP4
+    probe_result = await probe(file)
     if probe_result and (audio := probe_result.audio) and audio.codec == "aac":
         command = *command, *Args.FIXUP_AUDIO_DTS_FILTER
-    command = *command, output_file
+    command = *command, temp_file
     result = await _run_command(command)
     if result.success:
-        await _try_delete(input_file)
+        await aio.unlink(file)
+        await aio.move(temp_file, file)
+    else:
+        await _try_delete(temp_file)
+
     return result
 
 
 async def _try_delete(file: Path) -> None:
     try:
-        await asyncio.to_thread(file.unlink, missing_ok=True)
+        await aio.unlink(file, missing_ok=True)
     except OSError as e:
         logger.warning(f"Unable to delete '{file}' {e}")
 
 
-async def _delete_files(files: Iterable[Path], *, same_folder: bool) -> None:
-    if same_folder:
-        folder = next(iter(files)).parent
-        logger.debug("Deleting all files inside '%s'", folder)
-        await asyncio.to_thread(shutil.rmtree, folder, ignore_errors=True)
-    else:
-        _ = await asyncio.gather(*map(_try_delete, files))
-
-
-async def merge_subs(files: Iterable[Path], output: Path) -> None:
+async def raw_concat(files: Iterable[Path], output: Path) -> None:
     logger.debug("Merging subs to '%s'", output)
     await asyncio.to_thread(_raw_concat, files, output)
+    await aio.gather(*map(_try_delete, files))
 
 
 def _raw_concat(files: Iterable[Path], output: Path) -> None:
@@ -172,8 +172,6 @@ def _raw_concat(files: Iterable[Path], output: Path) -> None:
         for file in files:
             with file.open("rb") as fp_in:
                 out.write(fp_in.read())
-
-            file.unlink()
 
 
 async def probe(file: Path, /) -> FFprobeResult:

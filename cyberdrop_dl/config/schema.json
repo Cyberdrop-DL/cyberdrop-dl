@@ -1,0 +1,1232 @@
+{
+  "$defs": {
+    "ApiKeyAuth": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key"
+        }
+      },
+      "title": "ApiKeyAuth",
+      "type": "object"
+    },
+    "AppriseURL": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "tags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "AppriseURL",
+      "type": "object"
+    },
+    "Authentication": {
+      "additionalProperties": false,
+      "properties": {
+        "gofile": {
+          "$ref": "#/$defs/ApiKeyAuth"
+        },
+        "jdownloader": {
+          "$ref": "#/$defs/JDownloaderAuth"
+        },
+        "mega_nz": {
+          "$ref": "#/$defs/EmailAuth"
+        },
+        "pixeldrain": {
+          "$ref": "#/$defs/ApiKeyAuth"
+        },
+        "real_debrid": {
+          "$ref": "#/$defs/ApiKeyAuth"
+        }
+      },
+      "title": "Authentication",
+      "type": "object"
+    },
+    "BandcampConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "formats": {
+          "default": [
+            "mp3-320",
+            "mp3",
+            "aac-hi",
+            "wav",
+            "flac",
+            "vorbis",
+            "aiff",
+            "alas"
+          ],
+          "items": {
+            "enum": [
+              "mp3-320",
+              "mp3",
+              "aac-hi",
+              "wav",
+              "flac",
+              "vorbis",
+              "aiff",
+              "alas"
+            ],
+            "type": "string"
+          },
+          "title": "Formats",
+          "type": "array"
+        }
+      },
+      "title": "BandcampConfig",
+      "type": "object"
+    },
+    "ByteSizeSerilized": {
+      "anyOf": [
+        {
+          "pattern": "^\\s*(\\d*\\.?\\d+)\\s*(\\w+)?",
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    },
+    "CSVPath": {
+      "format": "path",
+      "type": "string"
+    },
+    "ClypitConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "prefer_mp3": {
+          "default": false,
+          "title": "Prefer Mp3",
+          "type": "boolean"
+        }
+      },
+      "title": "ClypitConfig",
+      "type": "object"
+    },
+    "Crawlers": {
+      "additionalProperties": false,
+      "properties": {
+        "disabled": {
+          "items": {
+            "$ref": "#/$defs/NonEmptyStr"
+          },
+          "title": "Disabled",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "bandcamp": {
+          "$ref": "#/$defs/BandcampConfig"
+        },
+        "clypit": {
+          "$ref": "#/$defs/ClypitConfig"
+        },
+        "generic": {
+          "$ref": "#/$defs/GenericCrawlers"
+        },
+        "one_pace": {
+          "$ref": "#/$defs/OnePaceConfig"
+        },
+        "tiktok": {
+          "$ref": "#/$defs/TikTokConfig"
+        },
+        "pawchive": {
+          "$ref": "#/$defs/KemonoConfig"
+        }
+      },
+      "title": "Crawlers",
+      "type": "object"
+    },
+    "Dedupe": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "use_trash_bin": {
+          "default": true,
+          "title": "Use Trash Bin",
+          "type": "boolean"
+        }
+      },
+      "title": "Dedupe",
+      "type": "object"
+    },
+    "Downloads": {
+      "additionalProperties": false,
+      "properties": {
+        "concurrency": {
+          "default": 15,
+          "exclusiveMinimum": 0,
+          "title": "Concurrency",
+          "type": "integer"
+        },
+        "concurrency_per_domain": {
+          "default": 5,
+          "exclusiveMinimum": 0,
+          "title": "Concurrency Per Domain",
+          "type": "integer"
+        },
+        "attempts": {
+          "default": 2,
+          "exclusiveMinimum": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "delay": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Delay",
+          "type": "number"
+        },
+        "slow_speed": {
+          "$ref": "#/$defs/ByteSizeSerilized",
+          "default": 0
+        },
+        "speed_limit": {
+          "$ref": "#/$defs/ByteSizeSerilized",
+          "default": 0
+        },
+        "jitter": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Jitter",
+          "type": "number"
+        },
+        "skip_and_mark_completed": {
+          "default": false,
+          "title": "Skip And Mark Completed",
+          "type": "boolean"
+        },
+        "concurrent_segments": {
+          "default": 10,
+          "exclusiveMinimum": 0,
+          "title": "Concurrent Segments",
+          "type": "integer"
+        }
+      },
+      "title": "Downloads",
+      "type": "object"
+    },
+    "EmailAuth": {
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password"
+        }
+      },
+      "title": "EmailAuth",
+      "type": "object"
+    },
+    "FalsyAsNone_Annotated_Literal__truststore____certifi____truststore_certifi____BeforeValidator__": {
+      "anyOf": [
+        {
+          "enum": [
+            "truststore",
+            "certifi",
+            "truststore+certifi"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Annotated_float__Gt__": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_AppriseURL_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AppriseURL"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_FormatStr_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FormatStr"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_HttpURL_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HttpURL"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Literal__chrome____edge____safari____safari_ios____chrome_android____firefox___": {
+      "anyOf": [
+        {
+          "enum": [
+            "chrome",
+            "edge",
+            "safari",
+            "safari_ios",
+            "chrome_android",
+            "firefox"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_LogLevel_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LogLevel"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Path_": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Pattern_str__": {
+      "anyOf": [
+        {
+          "format": "regex",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_Timedelta_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Timedelta"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "FalsyAsNone_date_": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Filters": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "$ref": "#/$defs/_FileFilter"
+        },
+        "sizes": {
+          "$ref": "#/$defs/_FileSizes"
+        },
+        "duration": {
+          "$ref": "#/$defs/_DurationLimits"
+        },
+        "before": {
+          "$ref": "#/$defs/FalsyAsNone_date_",
+          "default": null
+        },
+        "after": {
+          "$ref": "#/$defs/FalsyAsNone_date_",
+          "default": null
+        },
+        "filename_regex": {
+          "$ref": "#/$defs/FalsyAsNone_Pattern_str__",
+          "default": null
+        },
+        "only_hosts": {
+          "items": {
+            "$ref": "#/$defs/NonEmptyStr"
+          },
+          "title": "Only Hosts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "skip_hosts": {
+          "items": {
+            "$ref": "#/$defs/NonEmptyStr"
+          },
+          "title": "Skip Hosts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "allow_files_with_no_extension": {
+          "default": false,
+          "title": "Allow Files With No Extension",
+          "type": "boolean"
+        }
+      },
+      "title": "Filters",
+      "type": "object"
+    },
+    "FormatStr": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "GenericCrawlers": {
+      "additionalProperties": false,
+      "properties": {
+        "wordpress_media": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Wordpress Media",
+          "type": "array"
+        },
+        "wordpress_html": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Wordpress Html",
+          "type": "array"
+        },
+        "discourse": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Discourse",
+          "type": "array"
+        },
+        "chevereto": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Chevereto",
+          "type": "array"
+        },
+        "kvs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Kvs",
+          "type": "array"
+        }
+      },
+      "title": "GenericCrawlers",
+      "type": "object"
+    },
+    "HashMode": {
+      "enum": [
+        "off",
+        "in_place",
+        "post_download"
+      ],
+      "title": "HashMode",
+      "type": "string"
+    },
+    "Hashing": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/HashMode",
+          "default": "in_place"
+        },
+        "algorithms": {
+          "default": [
+            "xxh128",
+            "md5",
+            "sha256"
+          ],
+          "items": {
+            "enum": [
+              "xxh128",
+              "md5",
+              "sha256"
+            ],
+            "type": "string"
+          },
+          "title": "Algorithms",
+          "type": "array"
+        },
+        "dedupe": {
+          "$ref": "#/$defs/Dedupe"
+        }
+      },
+      "title": "Hashing",
+      "type": "object"
+    },
+    "HttpURL": {
+      "format": "uri",
+      "type": "string"
+    },
+    "JDownloaderAuth": {
+      "additionalProperties": false,
+      "properties": {
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Username"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password"
+        },
+        "device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device"
+        }
+      },
+      "title": "JDownloaderAuth",
+      "type": "object"
+    },
+    "Jdownloader": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "autostart": {
+          "default": false,
+          "title": "Autostart",
+          "type": "boolean"
+        },
+        "download_folder": {
+          "$ref": "#/$defs/FalsyAsNone_Path_",
+          "default": null
+        },
+        "whitelist": {
+          "items": {
+            "$ref": "#/$defs/NonEmptyStr"
+          },
+          "title": "Whitelist",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "title": "Jdownloader",
+      "type": "object"
+    },
+    "KemonoConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "default": true,
+          "title": "File",
+          "type": "boolean"
+        },
+        "attachments": {
+          "default": true,
+          "title": "Attachments",
+          "type": "boolean"
+        },
+        "content_urls": {
+          "default": true,
+          "title": "Content Urls",
+          "type": "boolean"
+        },
+        "embed": {
+          "default": true,
+          "title": "Embed",
+          "type": "boolean"
+        }
+      },
+      "title": "KemonoConfig",
+      "type": "object"
+    },
+    "LogFiles": {
+      "additionalProperties": false,
+      "properties": {
+        "main": {
+          "$ref": "#/$defs/LogPath",
+          "default": "downloader.log"
+        },
+        "download_errors": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "download_errors.csv"
+        },
+        "scrape_errors": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "scrape_errors.csv"
+        },
+        "unsupported": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "unsupported.csv"
+        },
+        "last_forum_post": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "last_forum_post.csv"
+        }
+      },
+      "title": "LogFiles",
+      "type": "object"
+    },
+    "LogLevel": {
+      "enum": [
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL"
+      ],
+      "type": "string"
+    },
+    "LogPath": {
+      "format": "path",
+      "type": "string"
+    },
+    "Logs": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/LogLevel",
+          "default": "DEBUG"
+        },
+        "console_level": {
+          "$ref": "#/$defs/FalsyAsNone_LogLevel_",
+          "default": null
+        },
+        "files": {
+          "$ref": "#/$defs/LogFiles"
+        },
+        "folder": {
+          "$ref": "#/$defs/FalsyAsNone_Path_",
+          "default": null
+        },
+        "expire_after": {
+          "$ref": "#/$defs/FalsyAsNone_Timedelta_",
+          "default": null
+        },
+        "rotate": {
+          "default": false,
+          "title": "Rotate",
+          "type": "boolean"
+        }
+      },
+      "title": "Logs",
+      "type": "object"
+    },
+    "MaxChildren": {
+      "additionalProperties": false,
+      "properties": {
+        "forum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Forum",
+          "type": "integer"
+        },
+        "forum_post": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Forum Post",
+          "type": "integer"
+        },
+        "profile": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Profile",
+          "type": "integer"
+        },
+        "album": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Album",
+          "type": "integer"
+        }
+      },
+      "title": "MaxChildren",
+      "type": "object"
+    },
+    "Network": {
+      "additionalProperties": false,
+      "properties": {
+        "dump_responses": {
+          "default": false,
+          "title": "Dump Responses",
+          "type": "boolean"
+        },
+        "flaresolverr": {
+          "$ref": "#/$defs/FalsyAsNone_HttpURL_",
+          "default": null
+        },
+        "proxy": {
+          "$ref": "#/$defs/FalsyAsNone_HttpURL_",
+          "default": null
+        },
+        "rate_limit": {
+          "default": 25,
+          "exclusiveMinimum": 0,
+          "title": "Rate Limit",
+          "type": "number"
+        },
+        "connection_timeout": {
+          "default": 15,
+          "exclusiveMinimum": 0,
+          "title": "Connection Timeout",
+          "type": "number"
+        },
+        "read_timeout": {
+          "$ref": "#/$defs/FalsyAsNone_Annotated_float__Gt__",
+          "default": 300
+        },
+        "ssl_context": {
+          "$ref": "#/$defs/FalsyAsNone_Annotated_Literal__truststore____certifi____truststore_certifi____BeforeValidator__",
+          "default": "truststore+certifi"
+        },
+        "user_agent": {
+          "$ref": "#/$defs/NonEmptyStr",
+          "default": "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
+        },
+        "impersonate": {
+          "$ref": "#/$defs/FalsyAsNone_Literal__chrome____edge____safari____safari_ios____chrome_android____firefox___",
+          "default": null
+        }
+      },
+      "title": "Network",
+      "type": "object"
+    },
+    "NonEmptyStr": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "Notifications": {
+      "additionalProperties": false,
+      "properties": {
+        "apprise": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AppriseURL"
+          },
+          "title": "Apprise",
+          "type": "array"
+        },
+        "webhook": {
+          "$ref": "#/$defs/FalsyAsNone_AppriseURL_",
+          "default": null
+        }
+      },
+      "title": "Notifications",
+      "type": "object"
+    },
+    "OnePaceConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "prefer_dub": {
+          "default": false,
+          "title": "Prefer Dub",
+          "type": "boolean"
+        }
+      },
+      "title": "OnePaceConfig",
+      "type": "object"
+    },
+    "Sort": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "input_folder": {
+          "$ref": "#/$defs/FalsyAsNone_Path_",
+          "default": null
+        },
+        "output_folder": {
+          "default": "downloads/cyberdrop-dl sorted",
+          "format": "path",
+          "title": "Output Folder",
+          "type": "string"
+        },
+        "formats": {
+          "$ref": "#/$defs/SortFormats"
+        }
+      },
+      "title": "Sort",
+      "type": "object"
+    },
+    "SortFormats": {
+      "additionalProperties": false,
+      "properties": {
+        "audio": {
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
+          "default": "{sort_dir}/{base_dir}/Audio/{filename}{ext}"
+        },
+        "image": {
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
+          "default": "{sort_dir}/{base_dir}/Images/{filename}{ext}"
+        },
+        "non_media": {
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
+          "default": "{sort_dir}/{base_dir}/Other/{filename}{ext}"
+        },
+        "video": {
+          "$ref": "#/$defs/FalsyAsNone_FormatStr_",
+          "default": "{sort_dir}/{base_dir}/Videos/{filename}{ext}"
+        },
+        "incrementer": {
+          "$ref": "#/$defs/FormatStr",
+          "default": " ({i})"
+        }
+      },
+      "title": "SortFormats",
+      "type": "object"
+    },
+    "SubFolders": {
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "default": true,
+          "title": "Create",
+          "type": "boolean"
+        },
+        "include": {
+          "$ref": "#/$defs/_SubFoldersInclude"
+        },
+        "separate_posts": {
+          "$ref": "#/$defs/_SeparatePosts"
+        }
+      },
+      "title": "SubFolders",
+      "type": "object"
+    },
+    "TikTokConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "original": {
+          "default": false,
+          "title": "Original",
+          "type": "boolean"
+        }
+      },
+      "title": "TikTokConfig",
+      "type": "object"
+    },
+    "Timedelta": {
+      "format": "duration",
+      "ge": "PT0S",
+      "type": "string"
+    },
+    "UIMode": {
+      "enum": [
+        "disabled",
+        "activity",
+        "simple",
+        "fullscreen"
+      ],
+      "title": "UIMode",
+      "type": "string"
+    },
+    "UIOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/UIMode",
+          "default": "fullscreen"
+        },
+        "portrait": {
+          "default": false,
+          "title": "Portrait",
+          "type": "boolean"
+        },
+        "refresh_rate": {
+          "default": 10.0,
+          "exclusiveMinimum": 0,
+          "title": "Refresh Rate",
+          "type": "number"
+        },
+        "show_stats": {
+          "default": true,
+          "title": "Show Stats",
+          "type": "boolean"
+        }
+      },
+      "title": "UIOptions",
+      "type": "object"
+    },
+    "_DurationLimit": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Timedelta"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "max": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Timedelta"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "_DurationLimit",
+      "type": "object"
+    },
+    "_DurationLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "video": {
+          "$ref": "#/$defs/_DurationLimit"
+        },
+        "audio": {
+          "$ref": "#/$defs/_DurationLimit"
+        }
+      },
+      "title": "_DurationLimits",
+      "type": "object"
+    },
+    "_FileFilter": {
+      "additionalProperties": false,
+      "properties": {
+        "audio": {
+          "default": true,
+          "title": "Audio",
+          "type": "boolean"
+        },
+        "images": {
+          "default": true,
+          "title": "Images",
+          "type": "boolean"
+        },
+        "videos": {
+          "default": true,
+          "title": "Videos",
+          "type": "boolean"
+        },
+        "non_media": {
+          "default": true,
+          "title": "Non Media",
+          "type": "boolean"
+        }
+      },
+      "title": "_FileFilter",
+      "type": "object"
+    },
+    "_FileSizes": {
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "video": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "audio": {
+          "$ref": "#/$defs/_SizeLimit"
+        },
+        "non_media": {
+          "$ref": "#/$defs/_SizeLimit"
+        }
+      },
+      "title": "_FileSizes",
+      "type": "object"
+    },
+    "_SeparatePosts": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "$ref": "#/$defs/FormatStr",
+          "default": "{default}"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "_SeparatePosts",
+      "type": "object"
+    },
+    "_SizeLimit": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ByteSizeSerilized"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "max": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ByteSizeSerilized"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "_SizeLimit",
+      "type": "object"
+    },
+    "_SubFoldersInclude": {
+      "additionalProperties": false,
+      "properties": {
+        "album_id": {
+          "default": false,
+          "title": "Album Id",
+          "type": "boolean"
+        },
+        "thread_id": {
+          "default": false,
+          "title": "Thread Id",
+          "type": "boolean"
+        },
+        "domain": {
+          "default": true,
+          "title": "Domain",
+          "type": "boolean"
+        }
+      },
+      "title": "_SubFoldersInclude",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "$ref": "#/$defs/Authentication"
+    },
+    "cookies": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cookies"
+    },
+    "crawlers": {
+      "$ref": "#/$defs/Crawlers"
+    },
+    "deep_scrape": {
+      "default": false,
+      "title": "Deep Scrape",
+      "type": "boolean"
+    },
+    "delete_empty_folders": {
+      "default": true,
+      "title": "Delete Empty Folders",
+      "type": "boolean"
+    },
+    "delete_partial_files": {
+      "default": false,
+      "title": "Delete Partial Files",
+      "type": "boolean"
+    },
+    "download_folder": {
+      "default": "downloads/cyberdrop-dl",
+      "format": "path",
+      "title": "Download Folder",
+      "type": "string"
+    },
+    "downloads": {
+      "$ref": "#/$defs/Downloads"
+    },
+    "dump_json": {
+      "default": false,
+      "title": "Dump Json",
+      "type": "boolean"
+    },
+    "filters": {
+      "$ref": "#/$defs/Filters"
+    },
+    "hashing": {
+      "$ref": "#/$defs/Hashing"
+    },
+    "ignore_history": {
+      "default": false,
+      "title": "Ignore History",
+      "type": "boolean"
+    },
+    "jdownloader": {
+      "$ref": "#/$defs/Jdownloader"
+    },
+    "logs": {
+      "$ref": "#/$defs/Logs"
+    },
+    "max_children": {
+      "$ref": "#/$defs/MaxChildren"
+    },
+    "max_file_name_length": {
+      "default": 95,
+      "exclusiveMinimum": 0,
+      "title": "Max File Name Length",
+      "type": "integer"
+    },
+    "max_folder_name_length": {
+      "default": 60,
+      "exclusiveMinimum": 0,
+      "title": "Max Folder Name Length",
+      "type": "integer"
+    },
+    "max_thread_depth": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Max Thread Depth",
+      "type": "integer"
+    },
+    "max_thread_folder_depth": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Thread Folder Depth"
+    },
+    "min_free_space": {
+      "$ref": "#/$defs/ByteSizeSerilized",
+      "default": 5368709120
+    },
+    "mtime": {
+      "default": true,
+      "title": "Mtime",
+      "type": "boolean"
+    },
+    "network": {
+      "$ref": "#/$defs/Network"
+    },
+    "notifications": {
+      "$ref": "#/$defs/Notifications"
+    },
+    "sort": {
+      "$ref": "#/$defs/Sort"
+    },
+    "subfolders": {
+      "$ref": "#/$defs/SubFolders"
+    },
+    "ui": {
+      "$ref": "#/$defs/UIOptions"
+    }
+  },
+  "title": "cyberdrop-dl config",
+  "type": "object"
+}

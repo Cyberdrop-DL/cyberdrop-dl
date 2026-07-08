@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, TypedDict
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -172,7 +173,7 @@ class PornHubCrawler(Crawler):
     @error_handling_wrapper
     async def iter_profile_pages(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, selector: str) -> None:
         async for soup in self.web_pager(url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, selector):
+            for new_scrape_item in self.iter_children(scrape_item, soup, selector):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -194,7 +195,7 @@ class PornHubCrawler(Crawler):
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
@@ -234,12 +235,11 @@ class PornHubCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-        results = await self.get_album_results(playlist_id)
         soup = await self.request_soup(scrape_item.url)
         title: str = css.select_text(soup, Selector.PLAYLIST_TITLE)
         title = self.create_title(title, playlist_id)
         scrape_item.setup_as_album(f"{title} [playlist]", album_id=playlist_id)
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.PLAYLIST_VIDEOS, results=results):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.PLAYLIST_VIDEOS):
             self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper

@@ -6,10 +6,12 @@ import json
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -169,18 +171,16 @@ class XVideosCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        title: str = ""
-        results = await self.get_album_results(album_id)
-        async for soup in self.web_pager(scrape_item.url, relative_to=scrape_item.url.origin()):
-            if not title:
-                title_tag = css.select(soup, Selectors.GALLERY_TITLE)
-                for tag in title_tag.select("*"):
-                    tag.decompose()
-                title = self.create_title(css.text(title_tag).split(">", 1)[-1].strip(), album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url, relative_to=scrape_item.url.origin()))
+        name = css.select_text(soup, Selectors.GALLERY_TITLE, decompose="*")
+        title = self.create_title(name.split(">", 1)[-1].strip(), album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-            for _, src in self.iter_tags(soup, Selectors.GALLERY_IMG, results=results):
-                self.create_task(self.direct_file(scrape_item, src))
+        should_download = await self.make_album_checker(album_id)
+        async for soup in pages:
+            for src in filter(should_download, self.iter_urls(soup, Selectors.GALLERY_IMG)):
+                self.create_eager_task(self.direct_file(scrape_item, src))
+                scrape_item.add_children()
 
     async def _get_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup:
         if url.host not in self._seen_domains:

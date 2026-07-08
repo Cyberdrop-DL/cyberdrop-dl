@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.url_objects import FILE_HOST_PROFILE, AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 
 class Selector:
@@ -17,7 +18,7 @@ class Selector:
 class ToonilyCrawler(Crawler):
     # TODO: Make this a general crawler for any site that uses wordpress madara
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Serie": "/serie/<name>",
+        "Series": "/serie/<name>",
         "Chapter": "/serie/<name>/chapter-<chapter-id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://toonily.com")
@@ -40,7 +41,7 @@ class ToonilyCrawler(Crawler):
         css.decompose(title_tag, "*")
         series_title = self.create_title(css.text(title_tag))
         scrape_item.setup_as_profile(series_title)
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.CHAPTER):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.CHAPTER):
             self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -49,7 +50,7 @@ class ToonilyCrawler(Crawler):
 
         *_, series_name, chapter_title = (css.text(bc) for bc in soup.select(Selector.NAV_BREADCUMBS))
 
-        if scrape_item.type != FILE_HOST_PROFILE:
+        if scrape_item.type != ScrapeItemType.PROFILE:
             series_title = self.create_title(series_name)
             scrape_item.append_folders(series_title)
 
@@ -57,6 +58,6 @@ class ToonilyCrawler(Crawler):
         iso_date = css.json_ld(soup)["@graph"][0]["datePublished"]
         scrape_item.uploaded_at = self.parse_iso_date(iso_date)
 
-        for _, link in self.iter_tags(soup, Selector.IMAGE, "src"):
-            self.create_task(self.direct_file(scrape_item, link))
+        for link in self.iter_urls(soup, Selector.IMAGE, "src"):
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()

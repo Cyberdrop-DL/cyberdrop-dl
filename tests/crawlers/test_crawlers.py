@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import dataclasses
-import importlib.util
 import re
+import runpy
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 from unittest import mock
 
 import pytest
 from pydantic import TypeAdapter
-from typing_extensions import TypedDict
 
+from cyberdrop_dl.crawlers.crawler import compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import parse_url
@@ -55,31 +55,32 @@ class CrawlerTestCase:
         return f"{self.domain} - {self.url}"
 
 
+type TestData = dict[str, list[dict[str, Any]]]
+
 _TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
-_TEST_DATA: dict[str, list[dict[str, Any]]] = {}
+_TEST_DATA: TestData = {}
 
 
-def _load_test_cases(path: Path) -> None:
-    module_spec = importlib.util.spec_from_file_location(path.stem, path)
-    assert module_spec
-    assert module_spec.loader
-    module = importlib.util.module_from_spec(module_spec)
-    module_spec.loader.exec_module(module)
-    if module.DOMAIN in _TEST_DATA:
-        raise RuntimeError(f"Multiple tests files for {module.DOMAIN}")
-    _TEST_DATA[module.DOMAIN] = module.TEST_CASES
+def _load_test_cases(path: Path, test_data: TestData) -> None:
+    module_globals = runpy.run_path(str(path), run_name=path.stem)
+    if (domain := module_globals["DOMAIN"]) in test_data:
+        raise RuntimeError(f"Multiple tests files for {domain}")
+
+    test_data[domain] = module_globals["TEST_CASES"]
 
 
-def _load_test_data() -> None:
-    if _TEST_DATA:
-        return
+def _load_test_data() -> TestData:
+    test_data: TestData = {}
     for file in (Path(__file__).parent / "test_cases").iterdir():
         if not file.name.startswith("_") and file.suffix == ".py":
-            _load_test_cases(file)
+            _load_test_cases(file, test_data)
+
+    return test_data
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    _load_test_data()
+    if not _TEST_DATA:
+        _TEST_DATA.update(_load_test_data())
     if "test_case" in metafunc.fixturenames:
         valid_domains = set(_TEST_DATA)
         domains_to_tests: list[str] = getattr(metafunc.config, "test_crawlers_domains", [])
@@ -110,10 +111,8 @@ async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> 
             assert cls, f"{test_case.domain} is not a valid crawler domain. Test case is invalid"
             crawler = cls(running_manager)
             await crawler.__async_init__()
-            item = ScrapeItem(
-                url=crawler.parse_url(test_case.url),
-                download_folder=running_manager.config.settings.files.download_folder,
-            )
+            item = ScrapeItem.from_url(crawler.parse_url(test_case.url))
+            item.download_folder = running_manager.config.download_folder
             await crawler.run(item)
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
@@ -213,7 +212,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
             await scrape_mapper.run()
             item = ScrapeItem(
                 url=parse_url(test_case.url),
-                download_folder=running_manager.config.settings.files.download_folder,
+                download_folder=running_manager.config.download_folder,
             )
             await crawler.fetch(item)
 
@@ -223,7 +222,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
 
 
 def test_invalid_crawler_modules_should_raise_import_error() -> None:
-    from cyberdrop_dl.crawlers.crawler import Registry
+    from cyberdrop_dl.crawlers import Registry
 
     with pytest.raises(ImportError, match="Could not import crawlers from module"):
         Registry._import_module("cyberdrop_dl.crawler.fake_crawler_12345")
@@ -232,8 +231,9 @@ def test_invalid_crawler_modules_should_raise_import_error() -> None:
 def test_public_methods_have_error_handling_wrapper() -> None:
     import inspect
 
-    from cyberdrop_dl.crawlers.crawler import Crawler, Registry
-    from cyberdrop_dl.utils import is_error_wrapped
+    from cyberdrop_dl.crawlers import Registry
+    from cyberdrop_dl.crawlers.crawler import Crawler
+    from cyberdrop_dl.utils.errors import is_error_wrapped
 
     def returns_none(func: Callable[..., Any]) -> bool:
         return_ = inspect.signature(func).return_annotation
@@ -255,10 +255,8 @@ def test_public_methods_have_error_handling_wrapper() -> None:
             if name not in base_methods and not is_error_wrapped(method) and returns_none(method)
         )
 
-    Registry.import_all()
-
     errors: list[Exception] = []
-    for crawler in sorted(Registry.concrete | Registry.generic, key=lambda x: x.__name__):
+    for crawler in sorted(Registry.get_crawlers(generic=True), key=lambda x: x.__name__):
         unwrapped_methods = sorted(unsafe_public_methods(crawler))
         if unwrapped_methods:
             errors.append(ValueError(crawler.__name__, unwrapped_methods))
@@ -267,3 +265,36 @@ def test_public_methods_have_error_handling_wrapper() -> None:
         exc = BaseExceptionGroup("Some crawler has unsafe public methods that could crash CDL", errors)
         exc.add_note("Wrap them with @error_handling_wrapper or make them private")
         raise exc
+
+
+def test_load_test_data() -> None:
+    test_data = _load_test_data()
+    assert len(test_data) > 20
+    assert "dropbox" in test_data
+    assert type(test_data["dropbox"]) is list
+    assert len(test_data["dropbox"]) == 4
+
+    for case in test_data["dropbox"]:
+        assert type(case) is dict
+        assert "url" in case
+
+
+@pytest.mark.parametrize(
+    ("season", "ep", "name", "expected"),
+    [
+        (20, 34, "episode a", "S20E034 - episode a"),
+        (9, 2, "episode b", "S09E002 - episode b"),
+        (2, 4, None, "S02E004"),
+        (None, 2, None, "E002"),
+        (None, None, "episode d", "episode d"),
+        (120, 0, "episode e", "S120E000 - episode e"),
+    ],
+)
+def test_compose_ep_name(season: int | None, ep: int | None, name: str | None, expected: str) -> None:
+    name = compose_ep_name(season, ep, name)
+    assert name == expected
+
+
+def test_compose_ep_name_raise_value_error_if_empty() -> None:
+    with pytest.raises(ValueError):
+        compose_ep_name(None, None, "")

@@ -10,22 +10,22 @@ from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, ClassVar, final, override
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
 from rich.logging import RichHandler
 from rich.padding import Padding
 from rich.text import Text, TextType
-from typing_extensions import override
 
 from cyberdrop_dl import env
+from cyberdrop_dl.constants import MAIN_LOG_FILE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.utils import dates
+from cyberdrop_dl.utils import dates, enter_context
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import Callable, Generator, Iterable
-    from datetime import datetime
 
     from rich.console import ConsoleRenderable
 
@@ -34,14 +34,15 @@ logger = logging.getLogger("cyberdrop_dl")
 for noisy_package in ("aiosqlite", "markdown_it"):
     logging.getLogger(noisy_package).setLevel(logging.ERROR)
 
-_T = TypeVar("_T")
+if not env.DEBUG_MODE:
+    logging.getLogger("asyncio").setLevel(logging.ERROR)
+
+
 _USER_NAME = Path.home().name
 _DEFAULT_CONSOLE_WIDTH = 240
 _MAIN_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_MAIN_LOG_LISTENER")
 _CONSOLE_LOG_LISTENER: ContextVar[QueueListener] = ContextVar("_CONSOLE_LOG_LISTENER")
 _LOG_TO_CONSOLE: ContextVar[bool] = ContextVar("LOG_TO_CONSOLE", default=True)
-
-MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
 
 
 class HandlerName(StrEnum):
@@ -73,18 +74,23 @@ class JsonLogRecord(logging.LogRecord):
     @override
     def getMessage(self) -> str:
         msg = str(self._proccess_msg(self.msg))
-        if self.args:
-            args = tuple(map(self._proccess_msg, self.args))
-            if "%" in msg:
-                try:
-                    return msg % args
-                except TypeError as e:
-                    if not e.args or "not all arguments converted" in e.args[0]:
-                        raise
+        args = self.args
+        if not args:
+            return msg
 
-            return msg.format(*args)
+        if type(self.args) is dict:
+            # Override std special case for mappings
+            args = [self.args]
 
-        return msg
+        args = tuple(map(self._proccess_msg, args))
+        if "%" in msg:
+            try:
+                return msg % args
+            except TypeError as e:
+                if not e.args or "not all arguments converted" in e.args[0]:
+                    raise
+
+        return msg.format(*args)
 
     @staticmethod
     def _proccess_msg(obj: object) -> object:
@@ -165,8 +171,8 @@ class LogHandler(RichHandler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             return super().emit(record)
-        except Exception:  # noqa: BLE001
-            self.handleError(record)
+        except Exception:
+            logger.critical("Unable to log", exc_info=True)
 
 
 class BareQueueHandler(QueueHandler):
@@ -197,7 +203,7 @@ def _threaded_logger(
     q_listener: QueueListener = QueueListener(q, log_handler, respect_handler_level=True)
     q_listener.start()
 
-    with _enter_context(context_var, q_listener) if context_var else contextlib.nullcontext():
+    with enter_context(context_var, q_listener) if context_var else contextlib.nullcontext():
         logging.getLogger().addHandler(q_handler)
         try:
             yield q_handler
@@ -211,15 +217,6 @@ def _threaded_logger(
                     handler.close()
 
 
-@contextlib.contextmanager
-def _enter_context(context_var: ContextVar[_T], value: _T, /) -> Generator[None]:
-    token = context_var.set(value)
-    try:
-        yield
-    finally:
-        context_var.reset(token)
-
-
 @final
 class NoPaddingLogRender(LogRender):
     _cdl_padding: int = 0
@@ -229,8 +226,8 @@ class NoPaddingLogRender(LogRender):
         self,
         console: Console,
         renderables: Iterable[ConsoleRenderable],
-        log_time: datetime | None = None,
-        time_format: str | Callable[[datetime], Text] | None = None,
+        log_time: datetime.datetime | None = None,
+        time_format: str | Callable[[datetime.datetime], Text] | None = None,
         level: TextType = "",
         path: str | None = None,
         line_no: int | None = None,
@@ -335,9 +332,9 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
     with (
         _setup_debug_logger() as debug_log_file,
         file.open("w", encoding="utf8") as fp,
-        _enter_context(MAIN_LOG_FILE, file),
-        _enter_context(mega.LOG_HTTP_TRAFFIC, True),
-        _enter_context(mega.LOG_FILE_PROGRESS, False),
+        enter_context(MAIN_LOG_FILE, file),
+        enter_context(mega.LOG_HTTP_TRAFFIC, True),
+        enter_context(mega.LOG_FILE_PROGRESS, False),
         _threaded_logger(
             log_handler=LogHandler(
                 level=logging.DEBUG,
@@ -353,11 +350,11 @@ def setup_file_logging(file: Path, /, *, level: int = logging.DEBUG) -> Generato
         try:
             yield
         except CDLConfigRuntimeErrorsGroup as e:
-            with _enter_context(_LOG_TO_CONSOLE, False):
+            with enter_context(_LOG_TO_CONSOLE, False):
                 logger.critical("Unrecoverable error", exc_info=e.with_traceback(None))
             raise
         except Exception:
-            with _enter_context(_LOG_TO_CONSOLE, False):
+            with enter_context(_LOG_TO_CONSOLE, False):
                 logger.critical("Unrecoverable error", exc_info=True)
             raise
 
@@ -435,7 +432,7 @@ def disable_console_logging():
     else:
         listener.stop()
         listener.start()
-    return _enter_context(_LOG_TO_CONSOLE, False)
+    return enter_context(_LOG_TO_CONSOLE, False)
 
 
 @contextlib.contextmanager

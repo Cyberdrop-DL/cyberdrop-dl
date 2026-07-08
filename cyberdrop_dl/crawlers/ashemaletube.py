@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, m3u8
+from cyberdrop_dl.utils import css, extr_text, m3u8
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
@@ -96,7 +97,7 @@ class AShemaleTubeCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
         async for soup in self.web_pager(scrape_item.url, impersonate=True):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_ALBUM):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_ALBUM):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -120,7 +121,7 @@ class AShemaleTubeCrawler(Crawler):
                     scrape_item.setup_as_profile(collection_title)
                 else:
                     scrape_item.setup_as_album(collection_title)
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, MEDIA_SELECTOR_MAP[collection_type]):
+            for new_scrape_item in self.iter_children(scrape_item, soup, MEDIA_SELECTOR_MAP[collection_type]):
                 self.create_task(self.run(new_scrape_item))
 
     def create_collection_title(self, soup: BeautifulSoup, collection_type: CollectionType) -> str:

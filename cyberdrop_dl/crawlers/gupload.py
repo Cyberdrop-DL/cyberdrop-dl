@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper, extr_text, xor_decrypt
+from cyberdrop_dl.utils import extr_text, xor_decrypt
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -38,12 +39,12 @@ class GUploadCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         config = await self._request_video_config(scrape_item.url)
         m3u8_url = self.parse_url(config["videoUrl"])
-        m3u8 = await self.get_m3u8_from_index_url(m3u8_url)
+        m3u8, _ = await self.request_m3u8(m3u8_url)
 
         filename, ext = self.get_filename_and_ext(video_id + ".mp4")
         custom_filename = self.create_custom_filename(video_id, ext, resolution=Resolution.parse(m3u8_url))

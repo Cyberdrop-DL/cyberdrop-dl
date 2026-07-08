@@ -3,10 +3,12 @@ from __future__ import annotations
 import urllib.parse
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, json, open_graph
+from cyberdrop_dl.utils import css, json, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping
@@ -110,14 +112,13 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem, *, albums: bool = False) -> None:
-        title: str = ""
-        async for soup in self.web_pager(_sort_by_new(scrape_item.url), trim=False):
-            if not title:
-                title = self.create_title(open_graph.title(soup))
-                scrape_item.setup_as_profile(title)
+        soup, pages = await aio.peek_first(self.web_pager(_sort_by_new(scrape_item.url), trim=False))
+        name = open_graph.title(soup)
+        scrape_item.setup_as_profile(self.create_title(name))
 
+        async for soup in pages:
             if albums:
-                for _, sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
+                for sub_album in scrape_item.create_children(self.iter_urls(soup, Selector.ITEM)):
                     self.create_task(self.run(sub_album))
 
                 continue
@@ -131,21 +132,21 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
         scrape_item.url = await self._get_final_album_url(scrape_item.url)
 
-        async for soup in self.web_pager(_sort_by_new(scrape_item.url), trim=False):
-            if not title:
-                if soup.select_one("form"):
-                    await self._unlock_pw_protected_album(scrape_item, soup)
-                    return await self.album(scrape_item, album_id)
+        soup, pages = await aio.peek_first(self.web_pager(_sort_by_new(scrape_item.url), trim=False))
+        if soup.select_one("form"):
+            await self._unlock_pw_protected_album(scrape_item, soup)
+            return await self.album(scrape_item, album_id)
 
-                results = await self.get_album_results(album_id)
-                title = open_graph.get_title(soup) or open_graph.description(soup)
-                title = self.create_title(title, album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
+        results = await self.get_album_results(album_id)
+        title = open_graph.get_title(soup) or open_graph.description(soup)
+        title = self.create_title(title, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
+        async for soup in pages:
             self._iter_album_files(scrape_item, soup, results)
 
         async for soup in self.web_pager(_sort_by_new(scrape_item.url / "sub"), trim=False):
-            for _, sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
+            for sub_album in scrape_item.create_children(self.iter_urls(soup, Selector.ITEM)):
                 self.create_task(self.run(sub_album))
 
     def _iter_album_files(
@@ -156,11 +157,11 @@ class CheveretoCrawler(Crawler, is_generic=True):
     ) -> None:
         results = results or {}
         for web_url, src_url in self._get_album_files(soup):
-            if self.check_album_results(web_url, results):
+            if self.check_album_results(src_url, results):
                 continue
 
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self.direct_file(new_scrape_item, src_url))
+            self.create_eager_task(self.direct_file(new_scrape_item, src_url))
             scrape_item.add_children()
 
     async def _unlock_pw_protected_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
@@ -188,7 +189,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)

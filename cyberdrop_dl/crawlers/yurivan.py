@@ -7,7 +7,9 @@ from pydantic import dataclasses
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, deserialize, error_handling_wrapper, next_js
+from cyberdrop_dl.utils import css, next_js
+from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -49,7 +51,7 @@ class YuriVanCrawler(Crawler):
 
     def _chapters(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup):
         selector = f"a[href*='/story/{story_id}/read?chapter=']"
-        for _, new_item in self.iter_children(scrape_item, soup, selector):
+        for new_item in scrape_item.create_children(self.iter_urls(soup, selector)):
             self.create_task(self.run(new_item))
             scrape_item.add_children()
 

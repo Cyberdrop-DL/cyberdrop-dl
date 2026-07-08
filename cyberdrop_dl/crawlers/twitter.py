@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -43,7 +43,7 @@ class TwitterCrawler(Crawler, is_debug=True):
         scrape_item.setup_as_profile(self.create_title(f"@{name}"))
         scrape_item.append_folders(post_title)
 
-        await self.write_metadata(scrape_item, tweet["id"], tweet)
+        self.create_eager_task(self.write_metadata(scrape_item, tweet["id"], tweet))
 
         for media in tweet["media"]["all"]:
             if media["type"] == "video":

@@ -16,59 +16,65 @@ layout:
 
 ## What does this do?
 
-This is a bulk downloader for the supported sites. It supports resumable downloading (you can close and reopen the program at any time and it will pick up where it left off), and keeps track of your download history to avoid downloading files you've already downloaded in the past.
+This is a bulk downloader for several sites on the internet. It supports resuming downloads (you can close and reopen
+the program at any time and it will pick up where it left off), and keeps track of your download history and hashes to avoid
+downloading files you've already downloaded in the past.
 
-## How do I update this?
+## How do I update?
 
-If you are using one of the provided start files, it should do so automatically. Keep in mind that they will only update to the newest version within the same major version. ex: if you are using v8 start scripts, they will update to the latest v8 release. When v9 is out, you will need to download the new start scripts
+If you are using one of the provided start files, it should do so automatically. Keep in mind that they will only update to
+the newest release of the same major version. ex: if you are using v9 start scripts, they will update to the latest v9 release.
 
-## Why do i get `DDoS-Guard` error downloading from `x` site?
+This is because every new major release has breaking changes and is not safe to automatically update to them.
+Each time there is a new major release, you will need to download new start scripts. Be sure to read the changelog to know about the breaking changes.
+You may need to perform some manual actions to update successfully
 
-You may need to import cookies. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
+## Why do I get `DDoS-Guard` error downloading from `x` site?
 
-## I'm trying to report a bug and they ask me for a logs file. Where is this file?
+DDoS-Guard is a protecting some websites use to block automated activity from bots/applications. You can visit the site on your browser to pass
+the DDoS-Guard check, export the cookies from your browser and them to import them into `cyberdrop-dl`.
 
-By default, it'll be in `./AppData/configs/Default/logs/`
-
-The `AppData` folder is created inside the folder where you run cyberdrop-dl from
+Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
 
 ## What does `SCRAPE_ERRORS` and `DOWNLOAD_ERRORS` mean?
 
-Quite simply, almost all of them you see will be HTTP Status codes. Such as: 404 - Not Found (dead link)
+Quite simply, almost all of them will be HTTP Status codes. Such as: 404 - Not Found (dead link)
 
-You check [this page to learn about what each error code means](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+You can check [this page to learn about what each error code means](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+
+These errors are **NOT** bugs. They are errors from the website itself. If your try to download the files manually from your browser you will most likely
+get the same error.
+
+The only exception is `422 Unprocessable Entity`, which `cyberdrop-dl` uses to report some internal errors
 
 {% hint style="info" %}
-Any "Unknown" error, is usually coding related, or it'll be something like the program not being able to find a file extension for a file.
-You can report unknown error on the issue tracker: <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues>
+"Unknown" errors are **definitely** bugs. Please report them on the issue tracker: <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues>
 {% endhint %}
+
+## Why do Simpcity URLs show as "Unsupported"?
+
+Support for SimpCity was removed on v5.6.3 in response to a request by the site admins. The site could not keep up with the high amount of traffic generated
+by `cyberdrop-dl` on top of the constant DDOS attacks they receive.
 
 ## Why are all the files skipped?
 
-The program tracks your download history and will skip any files you've previously downloaded to avoid duplicates. You can disable this behavior by using the `--ignore-history` CLI argument or setting `ignore_history` to `true` in the config
-
-## The screen is flickering?
-
-This issue is likely related to the limitations of the traditional command prompt, which has remained largely unchanged over time. For Windows 10 users, it's recommended to install and use [Windows Terminal](https://aka.ms/terminal) to run Cyberdrop-DL. Windows Terminal is the default on Windows 11.
+The program tracks your download history and will skip any files you've been previously downloaded to avoid duplicates.
+You can disable this behavior by using the `--ignore-history` CLI argument or setting `ignore_history` to `true` in your config file
 
 ## `cyberdrop-dl` is not a recognized internal command
 
-This issue is caused by an improper installation of Python, specifically Python not being added to the system PATH.
+This issue is caused by an improper installation.
 
-It is recommended to revisit the [Getting Started](getting-started/README.md) guide and follow the steps provided to reinstall or use one of the latest start scripts
+Please revisit the [Getting Started](getting-started/README.md) guide and follow the steps provided to reinstall `cyberdrop-dl` with the start scripts.
+
+Run the `remove` file from the start scripts and them run the `install` file. Your config and database files will not be affected
 
 ## How do I scrape forum threads?
 
-You need to import cookies to use as authentication for those sites. Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
+You need to import cookies to use as authentication for those sites.
+
+Follow the instructions here: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839)
 
 ## Why are the filenames the way they are?
 
 Filenames are taken directly from the source website. Blame whoever uploaded it.
-
-## How do I fix `[SSL: CERTIFICATE_VERIFY_FAILED]`?
-
-This should only appear on macOS, so these instructions are for mac users.
-
-Go to your applications folder, find the python folder inside of it. Run the `Install Certificates` file in that folder.
-
-Go back to where you are running Cyberdrop-DL and delete the `venv` folder if one exists (if not, don't worry). Then try running the program again.

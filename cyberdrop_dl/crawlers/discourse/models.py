@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003
+import datetime  # noqa: TC003
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import AliasPath, BaseModel, Field
@@ -28,11 +28,11 @@ class AvailablePost(Post):
     id: int
     title: str | None = None
     username: str
-    created_at: datetime
+    created_at: datetime.datetime
     number: int = Field(validation_alias="post_number")
     content_html: str = Field(validation_alias="cooked")
     type: int = Field(validation_alias="post_type")
-    updated_at: datetime
+    updated_at: datetime.datetime
     content: str = Field(default="", validation_alias="raw")  # Only request to the `/posts` endpoint have it
     topic_id: int
     topic_slug: str
@@ -57,8 +57,8 @@ class PostStream(BaseModel):
 
 class Topic(PostStream):
     title: str
-    created_at: datetime
-    last_posted_at: datetime
+    created_at: datetime.datetime
+    last_posted_at: datetime.datetime
     slug: str
     category_id: int
     user_id: int

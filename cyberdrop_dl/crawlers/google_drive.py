@@ -32,13 +32,14 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -123,12 +124,12 @@ class GoogleDriveCrawler(Crawler):
         title = self.create_title(folder_name, folder_id)
         scrape_item.setup_as_album(title, album_id=folder_id)
 
-        for index, (_, child) in enumerate(self.iter_tags(soup, _FOLDER_ITEM_SELECTOR), 1):
+        sleep = aio.periodic_sleep(100)
+        for child in self.iter_urls(soup, _FOLDER_ITEM_SELECTOR):
             new_scrape_item = scrape_item.create_child(child)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
-            if index % 200 == 0:
-                await asyncio.sleep(0)
+            await sleep()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str = "", doc: str | None = None) -> None:
@@ -176,7 +177,7 @@ class GoogleDriveCrawler(Crawler):
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, export_url: AbsoluteHttpURL) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         link, name = await self._get_file_info(export_url)

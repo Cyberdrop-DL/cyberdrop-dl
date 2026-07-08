@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -62,17 +63,17 @@ class FSIBlogCrawler(Crawler):
 
         if video := open_graph.get("video", soup):
             link = self.parse_url(video)
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
 
-        for _, image in self.iter_tags(soup, Selector.IMAGES):
-            self.create_task(self.direct_file(scrape_item, image))
+        for image in self.iter_urls(soup, Selector.IMAGES):
+            self.create_eager_task(self.direct_file(scrape_item, image))
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(query)
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ARTICLE):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ARTICLE):
                 self.create_task(self._post_task(new_scrape_item))
 
     _post_task = auto_task_id(post)

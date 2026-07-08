@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 
 from cyberdrop_dl.models import AppriseURL
-from cyberdrop_dl.webhook import send_notification
+from cyberdrop_dl.webhook import notify
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -31,7 +31,7 @@ async def test_send_webhook_success(caplog: pytest.LogCaptureFixture) -> None:
 
     with _mock_aiohttp_request(mock_response):
         with caplog.at_level(10):
-            await send_notification(webhook, "test")
+            await notify(webhook, "test")
 
         assert "Webhook notifications: Success" in caplog.text
 
@@ -44,7 +44,7 @@ async def test_send_webhook_failure_with_json_error(caplog: pytest.LogCaptureFix
 
     with _mock_aiohttp_request(mock_response):
         with caplog.at_level(10):
-            await send_notification(webhook, "test")
+            await notify(webhook, "test")
 
         assert "Webhook notification failed:" in caplog.text
         assert "Bad Request" in caplog.text
@@ -66,6 +66,6 @@ async def test_send_webhook_failure_with_non_json_error(caplog: pytest.LogCaptur
 
     with _mock_aiohttp_request(mock_response):
         with caplog.at_level(10):
-            await send_notification(webhook, "test")
+            await notify(webhook, "test")
 
         assert "ClientResponseError" in caplog.text

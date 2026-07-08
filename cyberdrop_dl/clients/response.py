@@ -4,9 +4,11 @@ import asyncio
 import dataclasses
 import datetime
 import json
+import logging
 from abc import ABC, abstractmethod
+from enum import StrEnum
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final
+from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final, override
 
 import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
@@ -14,7 +16,7 @@ from bs4 import BeautifulSoup
 from curl_cffi.requests.models import Response as CurlResponse
 from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
-from typing_extensions import TypeVar, override
+from typing_extensions import TypeVar
 
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
@@ -24,6 +26,7 @@ from cyberdrop_dl.utils import parse_url
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+logger = logging.getLogger(__name__)
 
 _ResponseT = TypeVar(
     "_ResponseT",
@@ -31,6 +34,8 @@ _ResponseT = TypeVar(
     infer_variance=True,
     default=Any,
 )
+
+EMPTY_CONTENT = StrEnum("ResponseContentPlaceHolder", [("EMPTY", "")]).EMPTY
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -41,8 +46,8 @@ class ContentDisposition:
 
     @property
     def filename(self) -> str:
-        if name := self.raw_filename:
-            return name
+        if self.raw_filename:
+            return self.raw_filename
 
         msg = "Content disposition has no filename information"
         raise ScrapeError(422, msg)
@@ -65,7 +70,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     id: str = dataclasses.field(init=False, default="")
 
     _resp: _ResponseT
-    _text: str = ""
+    _text: str = EMPTY_CONTENT
     _cache: dict[str, Any] = dataclasses.field(init=False, compare=False, default_factory=dict)
     _lock: asyncio.Lock = dataclasses.field(init=False, compare=False, default_factory=asyncio.Lock)
     created_at: datetime.datetime = dataclasses.field(
@@ -91,12 +96,21 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         return self._text
 
     def __json__(self) -> dict[str, Any]:
+        try:
+            content = self._get_content()
+        except ValueError:
+            logger.exception("Unable to decode content of response %s", self.id)
+            content = "<ERROR DECODING CONTENT>"
+
+        if content is EMPTY_CONTENT:
+            content = "<DID NOT AWAIT FOR CONTENT>"
+
         return {
             "url": str(self.url),
             "status_code": self.status,
             "created_at": str(self.created_at),
             "response_headers": dict(self.headers),
-            "content": self._get_content(),
+            "content": content,
         }
 
     @abstractmethod
@@ -302,7 +316,6 @@ class _AIOHTTPResponse(AbstractResponse[ClientResponse]):
             headers=resp.headers,
             url=url,
             location=location,
-            _text="",
             _resp=resp,
         )
 
@@ -343,7 +356,6 @@ class _CurlResponse(AbstractResponse[CurlResponse]):
             headers=headers,
             url=url,
             location=location,
-            _text="",
             _resp=resp,
         )
 

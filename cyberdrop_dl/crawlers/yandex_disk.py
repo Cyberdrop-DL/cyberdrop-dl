@@ -3,13 +3,14 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import json
-from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import DictDataclass, css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -64,7 +65,7 @@ class YandexDiskCrawler(Crawler):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         with self._request_context():
@@ -119,7 +120,7 @@ class YandexDiskCrawler(Crawler):
 
     @error_handling_wrapper
     async def _process_file(self, scrape_item: ScrapeItem, file: YandexFile) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         referer = str(file.url)
@@ -191,7 +192,7 @@ class YandexFolder(YandexItem):
     resources: dict[str, Any]
     children_ids: list[str]
 
-    @cached_property
+    @property
     def public_id(self) -> str:
         return self.short_url.name
 
@@ -216,7 +217,7 @@ class YandexFolder(YandexItem):
                 continue
         raise NotImplementedError
 
-    @cached_property
+    @property
     def url(self) -> AbsoluteHttpURL:
         return _PRIMARY_URL / "d" / self.id
 
@@ -243,7 +244,7 @@ class YandexFile(YandexItem):
     parent_folder_public_id: str = ""
     file_url: AbsoluteHttpURL | None = None
 
-    @cached_property
+    @property
     def url(self) -> AbsoluteHttpURL:
         if self.parent_folder_public_id:
             return _PRIMARY_URL / "d" / self.parent_folder_public_id / self.name

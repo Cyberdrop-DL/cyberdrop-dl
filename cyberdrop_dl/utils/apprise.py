@@ -3,23 +3,20 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
-import importlib
-import importlib.util
 import logging
 from typing import TYPE_CHECKING
 
-from pydantic import ValidationError
-
 from cyberdrop_dl import aio
-from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.logs import MAIN_LOG_FILE, borrow_logger, export_logs, log_spacer
-from cyberdrop_dl.models import AppriseURL
+from cyberdrop_dl.constants import MAIN_LOG_FILE
+from cyberdrop_dl.logs import borrow_logger, export_logs, log_spacer
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Sequence
     from pathlib import Path
 
     import apprise
+
+    from cyberdrop_dl.models import AppriseURL
 
 logger = logging.getLogger(__name__)
 
@@ -33,44 +30,7 @@ class _AppriseMessage:
     attachment: str | None = None
 
 
-def read_apprise_urls(file: Path) -> tuple[AppriseURL, ...]:
-    return _parse_apprise_url(*_read_apprise_urls(file))
-
-
-def _read_apprise_urls(file: Path) -> tuple[str, ...]:
-    try:
-        with file.open(encoding="utf8") as fp:
-            return tuple(url for line in fp if (url := line.strip()) and not url.startswith("#"))
-    except FileNotFoundError:
-        return ()
-    except OSError:
-        logger.exception(f"Unable to read apprise URL from '{file}'. Ignoring")
-        return ()
-
-
-def _parse_apprise_url(*urls: str) -> tuple[AppriseURL, ...]:
-    if not urls:
-        return ()
-
-    if importlib.util.find_spec("apprise") is None:
-        logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
-        return ()
-
-    models: list[AppriseURL] = []
-    errors: list[ValueError] = []
-    for url in dict.fromkeys(urls):
-        try:
-            models.append(AppriseURL.model_validate({"url": url}))
-        except ValidationError as e:
-            errors.append(ValueError(f"Not a valid apprise URL: {e.errors(include_url=False)[0]['input']}"))
-
-    if errors:
-        raise CDLConfigRuntimeErrorsGroup("Invalid Apprise file", errors)
-
-    return tuple(models)
-
-
-async def send_notifications(urls: Sequence[AppriseURL], body: str) -> None:
+async def notify(urls: Sequence[AppriseURL], body: str) -> None:
     if not urls:
         return
 
@@ -103,7 +63,7 @@ async def send_notifications(urls: Sequence[AppriseURL], body: str) -> None:
 
 async def _notify(apprise_obj: apprise.Apprise, messages: Iterable[_AppriseMessage]) -> None:
     with borrow_logger("apprise", level=logging.INFO):
-        _ = await asyncio.gather(
+        _ = await aio.gather(
             *(
                 apprise_obj.async_notify(
                     title=msg.title,

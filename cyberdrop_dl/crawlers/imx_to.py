@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -54,7 +55,7 @@ class ImxToCrawler(Crawler):
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(
@@ -75,6 +76,5 @@ class ImxToCrawler(Crawler):
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        results = await self.get_album_results(album_id)
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_IMAGES, results=results):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_IMAGES):
             self.create_task(self.run(new_scrape_item))

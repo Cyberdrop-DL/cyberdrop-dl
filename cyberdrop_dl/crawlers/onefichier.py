@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -108,7 +107,7 @@ class OneFichierCrawler(Crawler):
 
     async def _request_download(self, url: AbsoluteHttpURL, password: str | None) -> AbsoluteHttpURL:
         data = {"pass": password} if password else {}
-        if not self.manager.config.global_settings.general.ssl_context:
+        if not self.config.network.ssl_context:
             data["dl_no_ssl"] = "on"
 
         soup = await self.request_soup(url, method="POST", data=data or None)

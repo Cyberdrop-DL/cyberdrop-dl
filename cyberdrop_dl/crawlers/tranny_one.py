@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -54,7 +55,7 @@ class TrannyOneCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return None
 
         soup = await self.request_soup(scrape_item.url)
@@ -75,7 +76,7 @@ class TrannyOneCrawler(Crawler):
             page_url = scrape_item.url.with_query(pageId=page)
             soup = await self.request_soup(page_url)
             n_videos = 0
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM_THUMBS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM_THUMBS):
                 n_videos += 1
                 self.create_task(self.run(new_scrape_item))
 
@@ -87,9 +88,10 @@ class TrannyOneCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         name = css.select_text(soup, Selector.ALBUM_TITLE)
         scrape_item.setup_as_album(self.create_title(f"{name} [album]"), album_id=album_id)
-        results = await self.get_album_results(album_id)
-        for _, pic in self.iter_tags(soup, Selector.IMAGES, results=results):
-            self.create_task(self.direct_file(scrape_item, pic))
+        should_download = await self.make_album_checker(album_id)
+        for pic in filter(should_download, self.iter_urls(soup, Selector.IMAGES)):
+            self.create_eager_task(self.direct_file(scrape_item, pic))
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem, model_id: str) -> None:
@@ -99,7 +101,7 @@ class TrannyOneCrawler(Crawler):
 
         ajax_url = self.PRIMARY_URL.with_query(area="pornstarsViewer", ajax=1, id=model_id, tab="albums")
         soup = await self.request_soup(ajax_url)
-        for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM_THUMBS):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM_THUMBS):
             self.create_task(self.run(new_scrape_item))
 
         await self._iter_videos(scrape_item)

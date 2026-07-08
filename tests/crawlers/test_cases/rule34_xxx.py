@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://wimg.rule34.xxx//images/1857/766a9a425fc394e77f810a7d0586b7f3.jpeg?17519843",
                 "filename": "766a9a425fc394e77f810a7d0586b7f3.jpeg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "766a9a425fc394e77f810a7d0586b7f3.jpeg",
                 "referer": "https://rule34.xxx/index.php?page=post&s=view&id=17519843",
                 "album_id": None,

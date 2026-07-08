@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import dataclasses
 import json
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Image:
     base_url: str
     width: int
@@ -74,7 +75,7 @@ class GooglePhotosCrawler(Crawler):
 
             web_url = self.PRIMARY_URL / type_ / album_id / "photo" / image.display_id
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._image(new_scrape_item, image, idx))
+            self.create_eager_task(self._image(new_scrape_item, image, idx))
             scrape_item.add_children()
             if photo_id:
                 break

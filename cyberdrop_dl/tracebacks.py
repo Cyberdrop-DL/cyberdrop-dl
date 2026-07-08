@@ -61,7 +61,7 @@ def install_exception_hook(*, show_locals: bool = False) -> None:
     )
 
 
-def from_exception(exc: Exception, *, chain_traceback: bool = True) -> Traceback:
+def from_exception(exc: Exception, *, chain_traceback: bool = False) -> Traceback:
     from rich.traceback import Traceback
 
     return Traceback.from_exception(type(exc), exc, None if not chain_traceback else exc.__traceback__)

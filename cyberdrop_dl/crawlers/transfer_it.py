@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from mega.transfer_it import TransferItClient
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from mega.data_structures import Node
@@ -22,7 +23,7 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
     DOMAIN: ClassVar[str] = "transfer.it"
 
     def __post_init__(self) -> None:
-        self.core: TransferItClient = TransferItClient(self.manager.http_client._session, user_agent=CDL_USER_AGENT)
+        self.core: TransferItClient = TransferItClient(self.client._session, user_agent=CDL_USER_AGENT)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -38,11 +39,12 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
         root = next(iter(fs))
         title = self.create_title(root.attributes.name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
-        self._filesystem(scrape_item, fs, transfer_id)
+        await self._filesystem(scrape_item, fs, transfer_id)
 
-    def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
+    async def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
         password = scrape_item.url.query.get("pw") or scrape_item.password
 
+        sleep = aio.periodic_sleep(50)
         for file in fs.files:
             path = fs.relative_path(file.id)
             canonical_url = scrape_item.url.with_fragment(file.id)
@@ -51,8 +53,9 @@ class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
                 new_scrape_item.append_folders(part)
 
             dl_link = self.core.create_download_url(transfer_id, file, password)
-            self.create_task(self._file(new_scrape_item, file, dl_link))
+            self.create_eager_task(self._file(new_scrape_item, file, dl_link))
             scrape_item.add_children()
+            await sleep()
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node, dl_link: str) -> None:

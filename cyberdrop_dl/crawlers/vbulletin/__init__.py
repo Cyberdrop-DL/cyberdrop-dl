@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 from xml.etree import ElementTree as ET
 
-from typing_extensions import override
-
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
-from cyberdrop_dl.exceptions import MaxChildrenError, ScrapeError
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     import datetime
@@ -87,10 +85,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     @override
     async def _thread(self, scrape_item: ScrapeItem, thread: Thread) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title: str = ""
-        if thread.post_id and self.scrape_single_forum_post:
-            api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_POST_QUERY_PARAM: str(thread.post_id)})
-        else:
-            api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_THREAD_QUERY_PARAM: str(thread.id)})
+        api_url = self.VBULLETIN_API_ENDPOINT.with_query({self.VBULLETIN_THREAD_QUERY_PARAM: str(thread.id)})
 
         root_xml = _parse_xml(await self.request_text(api_url))
         if (thread_element := root_xml.find("thread")) is not None:
@@ -107,7 +102,6 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
         else:
             posts = root_xml.iter("post")
 
-        last_post_id = thread.post_id
         for element in posts:
             post = Post.new(element)
             if thread.post_id and thread.post_id > post.id:
@@ -116,15 +110,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
                 thread.url.update_query({self.VBULLETIN_POST_QUERY_PARAM: str(post.id)})
             )
             await self.post(new_scrape_item, post)
-            last_post_id = post.id
-            try:
-                scrape_item.add_children()
-            except MaxChildrenError:
-                break
-
-        if last_post_id:
-            last_post_url = thread.url.update_query({self.VBULLETIN_POST_QUERY_PARAM: str(last_post_id)})
-            await self._write_last_forum_post(thread.url, last_post_url)
+            scrape_item.add_children()
 
     @override
     @error_handling_wrapper

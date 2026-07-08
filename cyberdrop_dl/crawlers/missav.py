@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
@@ -29,6 +30,7 @@ class MissAVCrawler(Crawler):
         "Video": "/...",
         **{name.capitalize(): f"/{name}/<{name.removesuffix('s')}>" for name in _COLLECTION_TYPES},
     }
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "njavtv.com", "missav.ws"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://missav.ws")
     DOMAIN: ClassVar[str] = "missav"
     FOLDER_DOMAIN: ClassVar[str] = "MissAV"
@@ -50,7 +52,7 @@ class MissAVCrawler(Crawler):
         scrape_item.setup_as_album(title)
 
         async for soup in self.web_pager(scrape_item.url.update_query(page=1)):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper

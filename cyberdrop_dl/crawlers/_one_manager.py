@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import InvalidContentTypeError
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from bs4 import Tag
@@ -40,7 +41,7 @@ class OneManagerCrawler(Crawler, is_abc=True):
         await self._path(scrape_item)
 
     async def __async_post_init__(self) -> None:
-        self.downloader.download_slots = 2
+        self.downloader.slots = 2
 
     @error_handling_wrapper
     async def _path(self, scrape_item: ScrapeItem) -> None:

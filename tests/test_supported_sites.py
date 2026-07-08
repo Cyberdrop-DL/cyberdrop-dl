@@ -1,4 +1,4 @@
-from cyberdrop_dl.supported_sites import as_markdown, as_rich_table
+from cyberdrop_dl.commands.supported_sites import as_markdown, as_rich_table
 
 
 def test_rich_table() -> None:

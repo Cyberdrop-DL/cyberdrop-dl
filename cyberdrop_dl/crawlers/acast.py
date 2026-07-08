@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import error_handling_wrapper
-from cyberdrop_dl.utils._dataclasses import DictDataclass
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -38,7 +38,7 @@ class ACastCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(show.title))
         for ep in show.episodes:
             new_item = scrape_item.create_child(self.parse_url(ep.link))
-            self.create_task(self._episode(new_item, ep))
+            self.create_eager_task(self._episode(new_item, ep))
             scrape_item.add_children()
 
     @error_handling_wrapper

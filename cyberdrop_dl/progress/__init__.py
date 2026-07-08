@@ -6,14 +6,12 @@ import shutil
 import sys
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
-from enum import auto
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
 from cyberdrop_dl import env
-from cyberdrop_dl.compat import CIStrEnum
 from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
@@ -31,17 +29,6 @@ _in_portrait: bool = False
 class Color:
     PLUM: str = "plum3"
     YELLOW: str = "yellow"
-
-
-class UIOptions(CIStrEnum):
-    DISABLED = auto()
-    ACTIVITY = auto()
-    SIMPLE = auto()
-    FULLSCREEN = auto()
-
-    @property
-    def is_disabled(self) -> bool:
-        return self is UIOptions.DISABLED
 
 
 class JsonableRenderableType(Protocol):
@@ -100,12 +87,13 @@ def create_test_live(renderable: JsonableRenderableType, *, transient: bool = Fa
     )
 
 
-def hyperlink(file_path: Path, text: str | None = None) -> Text:
+def hyperlink(file_path: Path | str, text: str | None = None) -> Text:
     from rich.markup import escape
     from rich.text import Text
 
     text = escape(text or str(file_path))
-    return Text.from_markup(f"[link={file_path.as_uri()}]{text}[/link]", style="blue")
+    link = file_path if isinstance(file_path, str) else file_path.as_uri()
+    return Text.from_markup(f"[link={link}]{text}[/link]", style="blue")
 
 
 class DictProgress(Progress):

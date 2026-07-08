@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+import reprlib
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    _P = ParamSpec("_P")
-    _R = TypeVar("_R")
-    _T = TypeVar("_T")
     import functools
     import inspect
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
 
-    def copy(target: Callable[_P, _R], /) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
-        def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
+    def copy[**P, T, R](target: Callable[P, R], /) -> Callable[[Callable[..., T]], Callable[P, T]]:
+        def decorator(func: Callable[..., T]) -> Callable[P, T]:
             @functools.wraps(func)
-            def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 return func(*args, **kwargs)
 
             wrapper.__signature__ = inspect.signature(target).replace(  # pyright: ignore[reportAttributeAccessIssue]
@@ -25,8 +23,23 @@ if TYPE_CHECKING:
 
 else:
 
-    def copy(_target: Callable[_P, _R]) -> Callable[[Callable[..., _T]], Callable[_P, _T]]:
-        def decorator(func: Callable[..., _T]) -> Callable[_P, _T]:
+    def copy[**P, T, R](_target: Callable[P, R]) -> Callable[[Callable[..., T]], Callable[P, T]]:
+        def decorator(func: Callable[..., T]) -> Callable[P, T]:
             return func
 
         return decorator
+
+
+def repr_fields(*fields: tuple[str, Any]) -> Generator[str]:
+    for name, value in fields:
+        yield f"{name}={value!r}"
+
+
+def simple_repr(*names: str) -> Callable[..., str]:
+
+    @reprlib.recursive_repr()
+    def repr_(self: object) -> str:
+        fields = ((name, getattr(self, name)) for name in names)
+        return f"<{type(self).__name__}({', '.join(repr_fields(*fields))}>"
+
+    return repr_

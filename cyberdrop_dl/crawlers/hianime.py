@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import bs4
 
-from cyberdrop_dl.aio import WeakAsyncLocks
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.crawlers.megacloud import MegaCloudCrawler
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -67,7 +67,7 @@ class HiAnimeCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self._animes: dict[int, Anime] = {}
-        self._anime_locks = WeakAsyncLocks[int]()
+        self._anime_locks: aio.WeakAsyncLocks[int] = aio.WeakAsyncLocks()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         episode = int(scrape_item.url.query.get("ep", 0)) or None
@@ -114,7 +114,7 @@ class HiAnimeCrawler(Crawler):
     async def _request_anime_info(self, web_url: AbsoluteHttpURL, anime_id: int) -> Anime:
         episodes_url = web_url.origin() / "ajax/v2/episode/list/" / str(anime_id)
 
-        anime_soup, episodes_resp = await asyncio.gather(
+        anime_soup, episodes_resp = await aio.safe_gather(
             self.request_soup(web_url),
             self.request_json(episodes_url),
         )

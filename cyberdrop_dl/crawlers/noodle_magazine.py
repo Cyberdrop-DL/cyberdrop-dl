@@ -9,7 +9,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, parse_url
+from cyberdrop_dl.utils import css, extr_text, parse_url
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -71,7 +72,7 @@ class NoodleMagazineCrawler(Crawler):
             page_url = scrape_item.url.with_query(p=page)
             soup = await self.request_soup(page_url)
 
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
                 if new_scrape_item.url not in seen_urls:
                     seen_urls.add(new_scrape_item.url)
                     n_videos += 1

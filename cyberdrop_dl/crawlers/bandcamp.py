@@ -6,19 +6,16 @@ import random
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl import env
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, dates, error_handling_wrapper
+from cyberdrop_dl.utils import css, dates
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from cyberdrop_dl.url_objects import ScrapeItem
-
-SUPPORTED_FORMATS = "mp3-320", "mp3", "aac-hi", "wav", "flac", "vorbis", "aiff", "alas"  # Ordered by compatibility
-USE_FORMATS = tuple(dict.fromkeys((env.BANDCAMP_FORMATS).split(","))) if env.BANDCAMP_FORMATS else SUPPORTED_FORMATS
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -33,13 +30,14 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/album/<slug>",
         "Song": "/track/<slug>",
-        "**NOTE**": (
-            f"You can set 'CDL_BANDCAMP_FORMATS' env var to a comma separated list of formats to download (Ordered by preference)"
-            f" [Default = {','.join(SUPPORTED_FORMATS)!r}]"
-        ),
     }
     DOMAIN: ClassVar[str] = "bandcamp"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bandcamp.com")
+
+    def __post_init__(self) -> None:
+        formats = self.config.crawlers.bandcamp.formats
+        get_scores = _create_score_fn(formats)
+        self._best_score: Callable[[str], int] = lambda x: max(get_scores(x))
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -80,7 +78,7 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
     _song_task = auto_task_id(song)
 
     async def _track(self, scrape_item: ScrapeItem, track: dict[str, Any]) -> None:
-        scrape_item.uploaded_at = dates.parse_http(track["publish_date"])
+        scrape_item.upload_date = dates.parse_http(track["publish_date"])
         best_format = await self._get_best_format(track.pop("free_download"), track["file"])
         full_name = f"{track['artist']} - {track['title']}{best_format.ext}"
         filename, ext = self.get_filename_and_ext(full_name)
@@ -109,7 +107,7 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
         if not file_info:
             raise ScrapeError(402, "No streaming or download formats available (purchase only)")
 
-        return max(self._parse_formats(file_info), key=lambda x: _score(x.codec))
+        return max(self._parse_formats(file_info), key=lambda x: self._best_score(x.codec))
 
     def _parse_formats(self, file_info: dict[str, str]) -> Generator[Format]:
         for name, format_url in file_info.items():
@@ -125,7 +123,7 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
         blob = await self._get_page_info(free_download_url, "blob")
         downloads: dict[str, dict[str, str]] = blob["download_items"][0]["downloads"]
 
-        name = max(downloads, key=_score)
+        name = max(downloads, key=self._best_score)
         download_url = downloads[name]["url"]
         ext_map: dict[str, str] = {fmt["name"]: fmt["file_extension"] for fmt in blob["download_formats"]}
 
@@ -144,11 +142,11 @@ class BandcampCrawler(Crawler, db_path="path_qs_frag"):
         return json.loads(stat[stat.find("{") : stat.rfind("}") + 1])
 
 
-def _score(name: str) -> int:
-    def scores() -> Generator[int]:
-        for idx, fmt in enumerate(reversed(USE_FORMATS)):
+def _create_score_fn(formats: tuple[str, ...]) -> Callable[[str], Generator[int]]:
+    def scores(name: str) -> Generator[int]:
+        for idx, fmt in enumerate(reversed(formats)):
             if fmt in name.casefold():
                 yield idx
         yield -1
 
-    return max(scores())
+    return scores

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from cyberdrop_dl.exceptions import FileNameError, PathTraversalError
-from cyberdrop_dl.utils.filepath import check_dangerous_filename, check_path_traversal
+from cyberdrop_dl.filepath import check_dangerous_filename, check_path_traversal
 
 
 def test_path_inside_dl_folder_are_ok(tmp_path: Path) -> None:

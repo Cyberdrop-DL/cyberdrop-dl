@@ -1,39 +1,39 @@
 {
-    "disable_ai": true,
-    "format_on_save": "on",
-    "project_name": "cyberdrop-dl",
-    "languages": {
-        "Python": {
-            "show_whitespaces": "all",
-            "show_edit_predictions": true,
-            "hard_tabs": false,
-            "format_on_save": "on",
-            "formatter": {
-                "language_server": {
-                    "name": "ruff"
-                }
-            },
-            "language_servers": ["ruff", "basedpyright"]
-        }
+  "disable_ai": true,
+  "format_on_save": "on",
+  "languages": {
+    "Python": {
+      "show_whitespaces": "all",
+      "show_edit_predictions": true,
+      "hard_tabs": false,
+      "format_on_save": "on",
+      "formatter": {
+        "language_server": {
+          "name": "ruff",
+        },
+      },
+      "language_servers": ["ruff", "basedpyright"],
     },
-    "lsp": {
-        "basedpyright": {
-            "settings": {
-                "python": {
-                    "pythonPath": ".venv/bin/python"
-                },
-                "basedpyright.analysis": {
-                    "diagnosticMode": "openFilesOnly"
-                }
-            }
-        }
+  },
+  "lsp": {
+    "basedpyright": {
+      "settings": {
+        "python": {
+          "pythonPath": ".venv/bin/python",
+        },
+        "basedpyright.analysis": {
+          "diagnosticMode": "openFilesOnly",
+        },
+      },
     },
-    "file_scan_exclusions": [
-        "**/.git",
-        "**/.vscode",
-        "**/.venv",
-        "**/.ruff_cache",
-        "**/.pytest_cache",
-        "**/.tox"
-    ]
+  },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.vscode",
+    "**/__pycache__",
+    "**/.venv",
+    "**/.ruff_cache",
+    "**/.pytest_cache",
+    "**/.tox",
+  ],
 }

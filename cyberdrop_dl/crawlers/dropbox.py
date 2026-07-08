@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import DictDataclass, error_handling_wrapper
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -85,7 +86,7 @@ class DropboxCrawler(Crawler):
         scrape_item.url = view_url = scrape_item.url.with_query(rlkey=scrape_item.url.query["rlkey"], dl=0)
         download_url = view_url.update_query(dl=1)
         custom_filename, ext = self.get_filename_and_ext(filename)
-        self.create_task(
+        self.create_eager_task(
             self.handle_file(
                 view_url,
                 scrape_item,
@@ -168,7 +169,7 @@ class DropboxCrawler(Crawler):
     async def _get_web_token(self) -> None:
         with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get token from dropbox"):
             async with self.request(self.PRIMARY_URL, method="HEAD"):
-                token = self.get_cookie_value("t")
+                token = self.cookies.get("t")
                 if not token:
                     raise LoginError
                 self._token = token

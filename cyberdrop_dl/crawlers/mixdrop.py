@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, js_unpacker
+from cyberdrop_dl.utils import css, js_unpacker
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -51,14 +52,14 @@ class MixDropCrawler(Crawler):
             ext,
             custom_filename=filename,
             debrid_link=link,
-            referer=scrape_item.parent or scrape_item.url,
+            referer=scrape_item.parents[-1] if scrape_item.parents else scrape_item.url,
         )
 
     async def _request_file_info(self, file_id: str) -> tuple[str, AbsoluteHttpURL]:
         video_url = self.PRIMARY_URL / "f" / file_id
         embed_url = self.PRIMARY_URL / "e" / file_id
 
-        soup, embed_html = await asyncio.gather(self.request_soup(video_url), self.request_text(embed_url))
+        soup, embed_html = await aio.safe_gather(self.request_soup(video_url), self.request_text(embed_url))
         title = css.select_text(soup, "div.tbl-c.title b")
         md_props = dict(_extract_properties(embed_html))
         return title, self.parse_url(md_props["wurl"])

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import error_handling_wrapper
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -58,7 +58,7 @@ class WeTransferCrawler(Crawler):
     async def file(
         self, scrape_item: ScrapeItem, file_id: str, security_hash: str, recipient_id: str | None = None
     ) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         payload = {"intent": "entire_transfer", "security_hash": security_hash}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import dataclasses
 import datetime
 import enum
@@ -10,17 +11,13 @@ import json.decoder
 import json.scanner
 import re
 import time
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, ParamSpec, Protocol, Self, TypeGuard, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Protocol, Self, TypeGuard
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Generator, Iterable
     from pathlib import Path
 
     from pydantic import BaseModel
-
-    _P = ParamSpec("_P")
-    _R = TypeVar("_R")
 
 
 _scanstring: Callable[..., tuple[str, int]] = json.decoder.scanstring  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
@@ -82,15 +79,21 @@ class JSDecoder(json.JSONDecoder):
 JSONDecodeError = json.JSONDecodeError
 
 
-def _verbose(func: Callable[_P, _R]) -> Callable[_P, _R]:
+@contextlib.contextmanager
+def _verbose_context() -> Generator[None]:
+    try:
+        yield
+    except json.JSONDecodeError as e:
+        sub_string = e.doc[e.pos - 10 : e.pos + 10]
+        msg = f"{e.msg} at around '{sub_string}', char: '{e.doc[e.pos]}'"
+        raise json.JSONDecodeError(msg, e.doc, e.pos) from None
+
+
+def _verbose[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(func)
-    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        try:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        with _verbose_context():
             return func(*args, **kwargs)
-        except json.JSONDecodeError as e:
-            sub_string = e.doc[e.pos - 10 : e.pos + 10]
-            msg = f"{e.msg} at around '{sub_string}', char: '{e.doc[e.pos]}'"
-            raise json.JSONDecodeError(msg, e.doc, e.pos) from None
 
     return wrapper
 
@@ -147,9 +150,9 @@ def dump_jsonl(data: Iterable[dict[str, Any]], /, file: Path) -> None:
             f.write("\n")
 
 
-loads = _verbose(json.loads)
 _JS_DECODER = JSDecoder()
 _DEFAULT_ENCODER = _get_encoder()
+loads = _verbose(json.loads)
 
 
 @_verbose
@@ -180,7 +183,7 @@ class JSONWebToken:
 
     @classmethod
     def decode(cls, jwt: str, /) -> Self:
-        if not is_jwt(jwt):
+        if not looks_like_jwt(jwt):
             raise ValueError("Not a valid JSON Web Token", jwt)
         b64_headers, b64_payload, b64_signature = jwt.split(".")
         headers = cls._decode(b64_headers)
@@ -204,7 +207,7 @@ class JSONWebToken:
         return self.encoded
 
 
-def is_jwt(string: str) -> bool:
+def looks_like_jwt(string: str) -> bool:
     return string.startswith("eyJ") and string.count(".") == 2
 
 

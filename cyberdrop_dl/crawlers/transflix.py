@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, open_graph
+from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -60,7 +61,7 @@ class TransflixCrawler(Crawler):
         scrape_item.setup_as_album(title)
 
         async for soup in self.web_pager(scrape_item.url, Selector.NEXT_PAGE):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.SEARCH_RESULTS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.SEARCH_RESULTS):
                 self.create_task(self.run(new_scrape_item))
 
 

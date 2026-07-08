@@ -8,10 +8,12 @@ import itertools
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import DictDataclass, css, error_handling_wrapper, is_blob_or_svg
+from cyberdrop_dl.utils import css, is_blob_or_svg
+from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -41,8 +43,6 @@ class File(DictDataclass):
     hash: str
 
 
-_PRIMARY_URL = AbsoluteHttpURL("https://www.mediafire.com/")
-_API_URL = _PRIMARY_URL / "api/1.4"
 _API_ERRORS_OVERRIDES: dict[int, int] = {
     110: HTTPStatus.GONE,
     105: HTTPStatus.GONE,
@@ -58,16 +58,16 @@ class MediaFireCrawler(Crawler, db_path="name"):
         ),
         "Folder": "/folder/<folder_key>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.mediafire.com/")
     DOMAIN: ClassVar[str] = "mediafire"
     ALLOW_EMPTY_PATH: ClassVar[bool] = True
 
     def __post_init__(self) -> None:
-        self.api = MediaFireAPI(self)
+        self.api: MediaFireAPI = MediaFireAPI.from_crawler(self)
 
     @classmethod
     def __json_resp_check__(cls, json_resp: Any, _) -> None:
-        if not isinstance(json_resp, dict) or "response" not in json_resp:
+        if type(json_resp) is not dict or "response" not in json_resp:
             return
 
         resp: dict[str, Any] = json_resp["response"]
@@ -109,11 +109,10 @@ class MediaFireCrawler(Crawler, db_path="name"):
 
         if folder.has_files:
             async for files in self.api.folder_content(folder_key, "files"):
-                for file in files:
-                    file_ = File.from_dict(file)
-                    url = _PRIMARY_URL / "file" / file_.quickkey
+                for file in map(File.from_dict, files):
+                    url = self.PRIMARY_URL / "file" / file.quickkey
                     new_scrape_item = scrape_item.create_child(url)
-                    self.create_task(self._file_task(new_scrape_item, file_))
+                    self.create_eager_task(self._file_task(new_scrape_item, file))
                     scrape_item.add_children()
 
         if folder.has_folders:
@@ -135,11 +134,11 @@ class MediaFireCrawler(Crawler, db_path="name"):
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: File, *, check_referer: bool = True) -> None:
-        if check_referer and await self.check_complete_from_referer(scrape_item):
+        if check_referer and await self.check_complete_from_referer(scrape_item.url):
             return
 
         hash_algo = "sha256" if len(file.hash) == 64 else "md5"
-        if await self.check_complete_by_hash(scrape_item, hash_algo, file.hash):
+        if await self.check_complete_by_hash(scrape_item.url, hash_algo, file.hash):
             return
 
         soup = await self.request_soup(scrape_item.url, impersonate=True)
@@ -151,15 +150,14 @@ class MediaFireCrawler(Crawler, db_path="name"):
     _file_task = auto_task_id(_file)
 
 
-class MediaFireAPI:
-    def __init__(self, crawler: Crawler) -> None:
-        self._crawler = crawler
+class MediaFireAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.mediafire.com/api/1.4")
 
     async def _api_request(self, path: str, **params: int | str) -> dict[str, Any]:
         assert params
         params["response_format"] = "json"
-        api_url = (_API_URL / path).with_query(params)
-        return (await self._crawler.request_json(api_url))["response"]
+        api_url = (self.ENTRYPOINT / path).with_query(params)
+        return (await self.request_json(api_url))["response"]
 
     async def folder_content(
         self, folder_key: str, content_type: Literal["files", "folders"]

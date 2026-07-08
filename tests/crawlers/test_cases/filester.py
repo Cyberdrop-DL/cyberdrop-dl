@@ -15,7 +15,11 @@ TEST_CASES = [
     {
         "url": "https://filester.si/d/4h9lQtR",
         "results": [
-            {"url": "re:.filester.si/d/", "filename": "Linda Lan - Meanbitches slave orders.mp4", "album_id": None}
+            {
+                "url": "re:.filester.si/d/",
+                "filename": "Linda Lan - Meanbitches slave orders.mp4",
+                "album_id": None,
+            }
         ],
     },
     {
@@ -73,7 +77,12 @@ TEST_CASES = [
     {
         "url": "https://filester.me/f/c1a31c9ca510870b",
         "description": "folder with subfolders",
-        "results": [{"url": "re:.filester.me/d/", "download_folder": "re:Natalie (Filester)/Pics"}],
+        "results": [
+            {
+                "url": "re:.filester.me/d/",
+                "download_folder": "re:Natalie (Filester)/Pics",
+            }
+        ],
         "count": range(150, 160),
     },
 ]

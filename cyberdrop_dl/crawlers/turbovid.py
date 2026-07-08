@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -63,7 +62,7 @@ class TurboVidCrawler(Crawler):
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url):
-            for _, new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
@@ -83,12 +82,12 @@ class TurboVidCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, file_id: str) -> None:
         scrape_item.url = self.PRIMARY_URL / "d" / file_id
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
         checksum = css.select_text(soup, Selector.MD5)
-        if await self.check_complete_by_hash(scrape_item, "md5", checksum):
+        if await self.check_complete_by_hash(scrape_item.url, "md5", checksum):
             return
 
         scrape_item.uploaded_at = self.parse_iso_date(css.select_text(soup, Selector.UPLOAD_DATE))

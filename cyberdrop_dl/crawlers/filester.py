@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import base64
 import dataclasses
-import random
 import time
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper, extr_text, open_graph
+from cyberdrop_dl.utils import css, extr_text, open_graph
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -17,8 +18,6 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
-
-_CDN_URLS = AbsoluteHttpURL("https://cache1.filester.me"), AbsoluteHttpURL("https://cache6.filester.me")
 
 
 class Selector:
@@ -36,6 +35,7 @@ class FilesterCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://filester.me")
     DOMAIN: ClassVar[str] = "filester"
     _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
+    _DOWNLOAD_SLOTS: ClassVar[int | None] = 4
 
     def __post_init__(self) -> None:
         self.api: FilesterAPI = FilesterAPI.from_crawler(self)
@@ -51,33 +51,33 @@ class FilesterCrawler(Crawler):
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, slug: str) -> None:
-        if await self.check_complete_from_referer(scrape_item):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
         file = _parse_file(soup)
         scrape_item.uploaded_at = self.parse_iso_date(file.uploaded_at)
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
+
         await self.handle_file(
             scrape_item.url,
             scrape_item,
             file.name,
             ext,
             custom_filename=filename,
-            debrid_link=await self.api.download(slug),
+            # Downloads expire after 30 minutes so we delay the request for it
+            debrid_link=lambda: self.api.download(slug),
         )
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        title: str = ""
+        soup, pages = await aio.peek_first(self._folder_pager(scrape_item.url, scrape_item.password))
+        name = open_graph.title(soup)
         subfolders: list[str] = []
+        title = self.create_title(name, album_id)
+        scrape_item.setup_as_album(title, album_id=album_id)
 
-        async for soup in self._folder_pager(scrape_item.url, scrape_item.password):
-            if not title:
-                name = open_graph.title(soup)
-                title = self.create_title(name, album_id)
-                scrape_item.setup_as_album(title, album_id=album_id)
-
+        async for soup in pages:
             self._iter_children(scrape_item, _extract_files(soup))
             subfolders.extend(_extract_subfolders(soup))
 
@@ -144,10 +144,10 @@ class File:
 
 class FilesterAPI(API):
     async def download(self, slug: str) -> AbsoluteHttpURL:
-        api_url = self.origin / "api/public/download"
+        api_url = self.origin / "v2/api/public/download"
         resp = await self.request_json(api_url, method="POST", json={"file_slug": slug})
-        dl_link = random.choice(_CDN_URLS).with_path(resp["download_url"])
-        return dl_link.with_query(download="true")
+        dl_link = self.parse_url(resp["server"]) / "v2" / resp["file"]
+        return dl_link.with_query(token=resp["token"], download="true")
 
 
 def _encode_password(password: str, nonce: str) -> str:

@@ -15,11 +15,10 @@ if TYPE_CHECKING:
 
 
 def find_subclasses_of(domain: str):
-    from cyberdrop_dl.crawlers.crawler import Registry
+    from cyberdrop_dl.crawlers import Registry
 
-    Registry.import_all()
+    crawlers = tuple(Registry.get_crawlers(generic=True, abc=True))
 
-    crawlers = tuple(Registry.abc | Registry.generic | Registry.concrete)
     if domain.endswith("Crawler"):
         target = next(c for c in crawlers if c.__name__ == domain)
     else:

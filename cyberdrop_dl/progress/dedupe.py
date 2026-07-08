@@ -69,7 +69,7 @@ class DedupeUI(LiveUI):
     def _init_tasks(self) -> Generator[tuple[str, TaskID]]:
         yield "deleted", self._progress.add_task("[yellow]Deleted", total=None)
 
-    def new_file(self, file: Path):
+    def new_file(self, file: Path) -> ProgressHook:
         task_id = self._files.add_task(
             "[blue]" + escape(str(file.relative_to(self._base_dir))),
             total=None,

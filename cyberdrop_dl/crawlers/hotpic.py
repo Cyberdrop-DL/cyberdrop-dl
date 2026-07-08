@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, error_handling_wrapper
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -52,7 +51,7 @@ class HotPicCrawler(Crawler):
         title = self.create_title(title, scrape_item.album_id)
         scrape_item.setup_as_profile(title, album_id=album_id)
 
-        for _, new_item in self.iter_children(scrape_item, soup, Selector.ALBUM_ITEM):
+        for new_item in self.iter_children(scrape_item, soup, Selector.ALBUM_ITEM):
             self.create_task(self.run(new_item))
             scrape_item.add_children()
 

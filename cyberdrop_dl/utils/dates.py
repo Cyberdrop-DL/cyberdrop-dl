@@ -6,7 +6,7 @@ import email.utils
 import shutil
 import subprocess
 import sys
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -88,49 +88,34 @@ else:
     async def set_creation_time(file: Path, timestamp: float) -> None: ...
 
 
-TimeStamp = NewType("TimeStamp", int)
-UTCAwareDatetime = NewType("UTCAwareDatetime", datetime.datetime)
-
-
-def _normalize(date_time: datetime.datetime) -> UTCAwareDatetime:
-    date_time = date_time.astimezone(datetime.UTC)
+def _normalize(date_time: datetime.datetime) -> datetime.datetime:
+    if date_time.tzinfo is not datetime.UTC:
+        date_time = date_time.astimezone(datetime.UTC)
     if date_time.microsecond:
-        date_time = date_time.replace(microsecond=0)
-    return UTCAwareDatetime(date_time)
+        return date_time.replace(microsecond=0)
+    return date_time
 
 
-def parse_iso(date_or_datetime: str, /) -> UTCAwareDatetime:
+def parse_iso(date_or_datetime: str, /) -> datetime.datetime:
     return _normalize(datetime.datetime.fromisoformat(date_or_datetime))
 
 
-def parse_format(date_or_datetime: str, /, format: str) -> UTCAwareDatetime:  # noqa: A002
+def parse_format(date_or_datetime: str, /, format: str) -> datetime.datetime:  # noqa: A002
     return _normalize(datetime.datetime.strptime(date_or_datetime, format))  # noqa: DTZ007
 
 
-def parse_http(date: str, /) -> TimeStamp:
+def parse_http(date: str, /) -> datetime.datetime:
     """parse rfc 2822 or an "HTTP-date" format as defined by RFC 9110"""
-    return to_timestamp(_normalize(email.utils.parsedate_to_datetime(date)))
+    return _normalize(email.utils.parsedate_to_datetime(date))
 
 
-def parse_timestamp_from_iso(date_or_datetime: str, /) -> TimeStamp:
-    return to_timestamp(parse_iso(date_or_datetime))
-
-
-def to_timestamp(date: datetime.datetime) -> TimeStamp:
-    return TimeStamp(int(date.timestamp()))
-
-
-def from_timestamp(timestamp: float) -> UTCAwareDatetime:
+def from_timestamp(timestamp: float) -> datetime.datetime:
     return _normalize(datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC))
 
 
-def now() -> datetime.datetime:
-    return datetime.datetime.now()  # noqa: DTZ005
+def now(*, utc: bool = False) -> datetime.datetime:
+    return datetime.datetime.now(datetime.UTC if utc else None)
 
 
-def now_utc() -> UTCAwareDatetime:
-    return _normalize(now())
-
-
-MIN = _normalize(datetime.datetime.min.replace(tzinfo=datetime.UTC))
-MAX = _normalize(datetime.datetime.max.replace(tzinfo=datetime.UTC))
+MIN = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+MAX = datetime.datetime.max.replace(tzinfo=datetime.UTC)

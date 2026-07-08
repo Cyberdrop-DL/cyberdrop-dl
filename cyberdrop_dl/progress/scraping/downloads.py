@@ -7,7 +7,7 @@ import itertools
 import random
 from contextvars import ContextVar
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, final, override
 
 from rich.jupyter import JupyterMixin
 from rich.measure import Measurement
@@ -24,7 +24,6 @@ from rich.progress import (
 )
 from rich.table import Column
 from rich.text import Text
-from typing_extensions import override
 
 from cyberdrop_dl.progress import (
     Color,
@@ -36,6 +35,7 @@ from cyberdrop_dl.progress import (
     truncate_float,
 )
 from cyberdrop_dl.progress.overflow import OverFlowPanel
+from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -177,13 +177,12 @@ class DownloadsPanel(OverFlowPanel):
             },
         )
 
-        token = _current_hls_task.set(segments_task.id)
-        try:
-            yield
-        finally:
-            self._remove_task(segments_task)
-            self._hls_progress.remove_task(task_id)
-            _current_hls_task.reset(token)
+        with enter_context(_current_hls_task, segments_task.id):
+            try:
+                yield
+            finally:
+                self._remove_task(segments_task)
+                self._hls_progress.remove_task(task_id)
 
     def download_file(
         self, description: object, /, domain: str, total: float | None, *, url: AbsoluteHttpURL | None = None
