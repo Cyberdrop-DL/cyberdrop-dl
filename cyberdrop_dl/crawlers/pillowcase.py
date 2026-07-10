@@ -47,7 +47,7 @@ class PillowCaseCrawler(Crawler):
         if self.config.dump_json:
             metadata = await self.api.metadata(file_id)
             metadata = f"FILENAME: {name}\n\n{metadata}"
-            await self.write_metadata(scrape_item, file_id, metadata)
+            self.create_eager_task(self.write_metadata(scrape_item, file_id, metadata))
 
         await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
 
