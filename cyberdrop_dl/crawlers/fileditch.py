@@ -56,6 +56,8 @@ class FileditchCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
+        if soup.select_one(".gone-path"):
+            raise ScrapeError(410)
         src = _extract_dl_url(soup)
         if src.path == _HOMEPAGE_CATCH_ALL:
             raise ScrapeError(422)
