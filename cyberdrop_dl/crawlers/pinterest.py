@@ -90,7 +90,7 @@ class PinterestCrawler(Crawler):
         scrape_item.append_folders(pin_title)
 
         for media in _extract_media_from_pin(pin):
-            self.create_task(self._media(scrape_item, Media(media["id"], self.parse_url(media["url"]))))
+            self.create_eager_task(self._media(scrape_item, Media(media["id"], self.parse_url(media["url"]))))
             scrape_item.add_children()
 
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
