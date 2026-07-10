@@ -5,7 +5,7 @@ import contextlib
 import dataclasses
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
@@ -102,10 +102,10 @@ class Capacity:
 class Downloader:
     """High level class that handles limiters, database checks, skip by config checks and retries"""
 
-    manager: Manager
+    SUPPORTS_RETRIES: ClassVar[bool] = True
+    manager: Manager = dataclasses.field(repr=False)
     log_prefix: str = "Download"
     use_server_lock: bool = False
-    max_attempts: int = dataclasses.field(init=False)
 
     _slots: int | None = None
     _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
@@ -115,14 +115,11 @@ class Downloader:
         init=False, default_factory=aio.WeakAsyncLocks, repr=False
     )
     capacity: Capacity = dataclasses.field(default_factory=Capacity)
+    config: Config = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
+        self.config = self.manager.config
         self.slots = self._slots
-        self.max_attempts = self.config.downloads.attempts
-
-    @property
-    def waiting_items(self) -> int:
-        return self.capacity.waiting
 
     @property
     def slots(self) -> int | None:
@@ -147,14 +144,6 @@ class Downloader:
     def client(self) -> DownloadClient:
         return self.manager.download_client
 
-    @property
-    def config(self) -> Config:
-        return self.manager.config
-
-    @property
-    def _ignore_history(self) -> bool:
-        return self.manager.config.ignore_history
-
     @error_handling_wrapper
     async def __download_w_retries(self, media_item: MediaItem) -> bool:
         while True:
@@ -162,12 +151,10 @@ class Downloader:
                 return bool(await self.__download_file(media_item))
 
             except DownloadError as e:
-                if not e.retry:
+                if not self.SUPPORTS_RETRIES or not e.retry or media_item.attempts >= self.config.downloads.attempts:
                     raise
 
                 logger.error(f"{self.log_prefix} failed: {media_item.url} with error: {e!s}")
-                if media_item.attempts >= self.max_attempts:
-                    raise
 
                 logger.info(
                     f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
@@ -265,7 +252,7 @@ class Downloader:
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
-        if media_item.url.path in self._processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self.config.ignore_history:
             return False
 
         async with self.__download_context(media_item):
@@ -273,7 +260,7 @@ class Downloader:
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if media_item.url.path in self._processed_items and not self._ignore_history:
+        if media_item.url.path in self._processed_items and not self.config.ignore_history:
             return
 
         assert ffmpeg.is_installed()

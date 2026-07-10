@@ -8,7 +8,7 @@ import pytest
 from cyberdrop_dl.crawlers.kemono.kemono import _extract_urls, _has_ads
 from cyberdrop_dl.crawlers.kemono.models import Embed, File, UserPostModel, _parse_tags
 
-pytestmark = pytest.mark.crawler_test_case
+pytestmark = pytest.mark.http
 
 
 def request_json(url: str) -> Any:
