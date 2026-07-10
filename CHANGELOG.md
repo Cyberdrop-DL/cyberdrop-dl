@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- ABStream support
+- Adobe Lightroom support
+- APKMirror support
+- Cara.app support
+- Crazyshit support
+- Daftporn support
+- Dailymotion support
+- GoonBox support
+- Monstercat support
+- Multporn support
+- NaughtyMachinima support
+- Pawchive support
+- Pillowcase support
+- Pinterest support
+- Wikifeet support
+- Yourlesbian support
+
 ### Changed
 
 - Remove hardcoded limit of 1 concurrent download per server (Bunkr)
