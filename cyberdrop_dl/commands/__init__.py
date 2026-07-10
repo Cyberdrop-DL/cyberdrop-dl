@@ -1,5 +1,5 @@
 import dataclasses
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -32,5 +32,9 @@ class CLIarguments:
     database_file: SQLiteFile | None = None
     "SQLite file to use as database"
 
+    def __iter__(self) -> Generator[tuple[str, Path | None]]:
+        for field in dataclasses.fields(self):
+            yield field.name, getattr(self, field.name)
+
     def __json__(self) -> dict[str, Any]:
-        return {k: None if v is None else str(v) for k, v in dataclasses.asdict(self).items()}
+        return {k: None if v is None else str(v) for k, v in self}

@@ -80,6 +80,9 @@ class SortingUI(LiveUI):
     def stats(self) -> SortStats:
         return self._stats
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(stats={self.stats!r})>"
+
     def __rich__(self) -> Panel:
         current_total = self._stats.total
         if current_total != self._total:

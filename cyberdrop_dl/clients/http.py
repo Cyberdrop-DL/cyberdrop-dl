@@ -43,17 +43,23 @@ logger = logging.getLogger(__name__)
 
 class _LazyResponseLog:
     def __init__(self, response: AbstractResponse[Any]) -> None:
-        self.response: AbstractResponse[Any] = response
+        self.resp: AbstractResponse[Any] = response
 
     def __json__(self) -> dict[str, Any]:
-        resp = self.response.__json__()
+        resp = self.resp.__json__()
         del resp["created_at"]
         if type(resp["content"]) is str:
             resp["content"] = truncated_preview(resp["content"])
         return resp
 
+    def content(self) -> dict[str, Any]:
+        return {"content": self.__json__()["content"]}
+
     def __str__(self) -> str:
         return str(self.__json__())
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(resp={self.resp!r})>"
 
 
 class RequestDoneCallback(Protocol):
@@ -87,8 +93,8 @@ class HTTPClient:
     _cookies: aiohttp.CookieJar | None = dataclasses.field(init=False, default=None)
     _flaresolverr: flaresolverr.Client | None = dataclasses.field(init=False, default=None)
     _curl_session: AsyncSession[CurlResponse] | None = dataclasses.field(init=False, default=None)
-    _session: aiohttp.ClientSession = dataclasses.field(init=False)
-    _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
+    _session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
+    _download_session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.impersonate = self.config.network.impersonate
@@ -254,6 +260,13 @@ class HTTPClient:
                 exc = e
                 raise
             finally:
+                if resp.has_content_not_logged:
+                    logger.debug(
+                        "Content from %s request [id=%s]\n%s",
+                        request.method,
+                        request.id,
+                        _LazyResponseLog(resp).content(),
+                    )
                 if self.request_done_callback:
                     self.request_done_callback(request.url, resp, exc)
                 del exc
