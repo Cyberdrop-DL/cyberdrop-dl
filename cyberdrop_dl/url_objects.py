@@ -188,14 +188,18 @@ class MediaItem:
 
         return self.debrid_url or self.url
 
+    def __iter__(self) -> Generator[tuple[str, Any]]:
+        for field in dataclasses.fields(self):
+            if field.name in ("is_segment", "json_check"):
+                continue
+            yield field.name, getattr(self, field.name)
+
     def serialize(self) -> dict[str, Any]:
-        me = dataclasses.asdict(self)
+        me = dict(self)
         if callable(self.debrid_url):
             me["debrid_url"] = None
         if self.xxhash:
             me["xxhash"] = f"xxh128:{self.xxhash}"
-        for name in ("is_segment", "json_check"):
-            del me[name]
         return me
 
 

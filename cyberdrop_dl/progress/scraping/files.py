@@ -63,6 +63,9 @@ class FileStatsPanel:
         ):
             yield name, self._progress.add_task(f"[{color}]{desc}", total=1)
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(stats={self.stats!r})>"
+
     def __rich__(self) -> Panel:
         self._refresh()
         return self._panel

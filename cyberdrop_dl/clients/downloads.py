@@ -15,6 +15,7 @@ from cyberdrop_dl.clients.http import JSON_CHECK, check_http_status
 from cyberdrop_dl.constants import FileExt, HashMode
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.hasher import compute_in_place_hash
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.utils import dates, enter_context
 
 if TYPE_CHECKING:
@@ -57,6 +58,8 @@ class DownloadClient:
                 self.chunk_size,
                 upper_limit,
             )
+
+    __repr__ = simple_repr("config", "_supports_ranges", "speed_limiter", "chunk_size")
 
     @property
     def http_client(self) -> HTTPClient:
