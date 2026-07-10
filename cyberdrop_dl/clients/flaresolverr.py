@@ -94,18 +94,23 @@ class _LazyResponseLog:
     def __str__(self) -> str:
         return str(self.__json__())
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(resp={self.resp!r})>"
+
 
 @dataclasses.dataclass(slots=True)
 class Client:
     """Class that handles communication with Flaresolverr."""
 
     url: AbsoluteHttpURL
-    _aiohttp_session: aiohttp.ClientSession
+    _aiohttp_session: aiohttp.ClientSession = dataclasses.field(repr=False)
 
     _session_id: str = dataclasses.field(init=False, default="")
     _session_lock: asyncio.Lock = dataclasses.field(init=False, default_factory=asyncio.Lock)
     _request_lock: asyncio.Lock = dataclasses.field(init=False, default_factory=asyncio.Lock)
-    _request_id: Callable[[], int] = dataclasses.field(init=False, default_factory=lambda: itertools.count(1).__next__)
+    _request_id: Callable[[], int] = dataclasses.field(
+        init=False, repr=False, default_factory=lambda: itertools.count(1).__next__
+    )
     _down: bool = dataclasses.field(init=False, default=False)
 
     @property

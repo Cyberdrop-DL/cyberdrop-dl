@@ -5,6 +5,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Self
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.signature import simple_repr
 
 from .common import pre_allocate_250mb, raw_connect
 from .hash import HashTable
@@ -29,6 +30,8 @@ class Database:
 
     conn: aiosqlite.Connection = dataclasses.field(init=False)
     is_new: bool = dataclasses.field(init=False)
+
+    __repr__ = simple_repr("path", "ignore_history")
 
     async def _connect(self) -> None:
         self.is_new = not await aio.get_size(self.path)

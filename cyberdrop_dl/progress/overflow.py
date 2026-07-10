@@ -73,6 +73,9 @@ class OverFlowPanel:
             padding=(1, 1),
         )
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(tasks={len(self._progress):,}, overflow={self._overflow!r})>"
+
     @final
     def __rich__(self) -> Panel:
         self._overflow.count = len(self._progress) - self._visible_rows

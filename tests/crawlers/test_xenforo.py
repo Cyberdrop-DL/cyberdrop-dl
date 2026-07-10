@@ -9,6 +9,7 @@ from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import _forum
 from cyberdrop_dl.crawlers import xenforo as crawlers
 from cyberdrop_dl.crawlers.xenforo import xenforo
+from cyberdrop_dl.crawlers.xenforo.celebforum import CelebForumCrawler
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.manager import Manager
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -21,8 +22,7 @@ def _item(url: str) -> ScrapeItem:
 manager = Manager(appdata=AppData.from_dirs(AppDirs.from_path(Path(__file__).parent / "xenforo_appdata")))
 
 scrape_item = _item("https://xenforo.com/community")
-crawler_instances = {crawler: crawler(manager) for crawler in crawlers.XF_CRAWLERS}
-TEST_CRAWLER = crawler_instances[crawlers.CelebForumCrawler]
+TEST_CRAWLER = CelebForumCrawler
 
 
 def _html(string: str) -> str:
@@ -39,7 +39,7 @@ def _post(
     message_body: str = "",
     message_attachments: str = "",
     id: int = 12345,  # noqa: A002
-    crawler: xenforo.XenforoCrawler | None = None,
+    crawler: type[xenforo.XenforoCrawler] | None = None,
 ) -> _forum.ForumPost:
     crawler = crawler or TEST_CRAWLER
     html = _html(POST_TEMPLATE.format(id=id, message_body=message_body, message_attachments=message_attachments))
@@ -393,7 +393,7 @@ def test_lazy_load_embeds() -> None:
 
 
 @pytest.mark.parametrize(
-    ("cls", "post_content", "expected_result"),
+    ("crawler", "post_content", "expected_result"),
     [
         (
             crawlers.AllPornComixCrawler,
@@ -450,8 +450,7 @@ def test_lazy_load_embeds() -> None:
         ),
     ],
 )
-def test_post_images(cls: type[xenforo.XenforoCrawler], post_content: str, expected_result: list[str]) -> None:
-    crawler = crawler_instances[cls]
+def test_post_images(crawler: type[xenforo.XenforoCrawler], post_content: str, expected_result: list[str]) -> None:
     post = _post(post_content, crawler=crawler)
     results = list(crawler._images(post))
     count, expected_count = len(results), len(expected_result)
@@ -461,7 +460,7 @@ def test_post_images(cls: type[xenforo.XenforoCrawler], post_content: str, expec
 
 def test_embeds_can_extract_google_drive_links() -> None:
     # https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/775
-    crawler = crawler_instances[crawlers.SimpCityCrawler]
+    crawler = crawlers.SimpCityCrawler
     content = """
     <div itemprop="text">
         <div class="bbWrapper">
@@ -541,7 +540,7 @@ def test_post_smg_extract_attachments() -> None:
             </li>
         </ul>
     """
-    crawler = crawler_instances[crawlers.SocialMediaGirlsCrawler]
+    crawler = crawlers.SocialMediaGirlsCrawler
     post = _post(message_attachments=attachments, crawler=crawler)
     expected_result = [
         "https://smgmedia2.socialmediagirls.com/forum/2022/04/33E3EDFF-B0ED-4AE3-8D5D-4D2BC6D7EFD4_3526918.jpeg",
@@ -562,7 +561,7 @@ def test_post_celebforum_should_use_href_for_images() -> None:
         src="https://celebforum.to/data/attachments/321/321141-2d66067afbf5cd3d546479380c08929d.jpg" style=""
         title="JC6HUqrju9" width="150" /></a>
     """
-    crawler = crawler_instances[crawlers.CelebForumCrawler]
+    crawler = crawlers.CelebForumCrawler
     post = _post(content, crawler=crawler)
     expected_result = ["https://celebforum.to/attachments/jc6huqrju9-jpg.321620/"]
     result = list(crawler._images(post))

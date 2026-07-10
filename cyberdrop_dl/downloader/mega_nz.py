@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, final, override
 
 from mega.chunker import MegaChunker, get_chunks
 
@@ -60,11 +60,11 @@ class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIs
 @dataclasses.dataclass(slots=True)
 class MegaDownloader(Downloader):
     _client: MegaDownloadClient = dataclasses.field(init=False)
+    SUPPORTS_RETRIES: ClassVar[bool] = False
 
     def __post_init__(self) -> None:
         super(MegaDownloader, self).__post_init__()
         self._client = MegaDownloadClient(self.manager)
-        self.max_attempts: int = 1
 
     @property
     @override
