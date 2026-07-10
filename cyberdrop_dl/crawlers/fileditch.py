@@ -70,8 +70,15 @@ def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
     js_join = '].join("")'
     js_text = css.select_text(soup, f"script:-soup-contains-own('{js_join}')")
     array = extr_text(js_text, "= [", js_join)
-    parts = json.loads(f"[{array}]")
+    try:
+        return _parse_url_parts(f"[{array}]")
+    except ValueError as e:
+        raise ScrapeError(422, "Unable to extract download URL") from e
+
+
+def _parse_url_parts(js_array: str) -> AbsoluteHttpURL:
+    parts: list[str] = json.loads(js_array)
     url = parse_url("".join(parts), trim=False)
     if not (url.query.get("md5") and url.query.get("expires")):
-        raise ScrapeError(422, "Unable to extract download URL")
+        raise ValueError(url)
     return url
