@@ -73,8 +73,9 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
+
 ```shell
-cyberdrop-dl v10.0.0
+cyberdrop-dl v10.1.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +107,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.0.0
+cyberdrop-dl v10.1.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -148,7 +149,7 @@ Download URLs
 │ --max-thread-folder-depth         Max number of nested folders CDL will create when              │
 │                                   maximum_thread_depth is greater that 0                         │
 │ --min-free-space                  Minimum free space require to start new downloads              │
-│                                   [default: 5000000000]                                          │
+│                                   [default: 5368709120]                                          │
 │ --mtime --no-mtime                Use original upload date as modification date for downloaded   │
 │                                   file                                                           │
 │                                   [default: True]                                                │
@@ -174,6 +175,17 @@ Download URLs
 │                                      [default: False]                                            │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
+│ --crawlers.pawchive.file             Download the main file in a post (if any)                   │
+│   --crawlers.pawchive.no-file        [default: True]                                             │
+│ --crawlers.pawchive.attachments      Download all attachments in a post (may or may not include  │
+│   --crawlers.pawchive.no-attachment  `file`)                                                     │
+│   s                                  [default: True]                                             │
+│ --crawlers.pawchive.content-urls     Download any URL found inside the description (text) of a   │
+│   --crawlers.pawchive.no-content-ur  post (slower)                                               │
+│   ls                                 [default: True]                                             │
+│ --crawlers.pawchive.embed            Download the embedded file from third party sites (if       │
+│   --crawlers.pawchive.no-embed       any)(mega.nz, pcloud, dropbox, etc..)                       │
+│                                      [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --downloads                     Max number of files to download simultaneously                   │
@@ -342,4 +354,5 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
+
 <!-- END_CLI_OVERVIEW -->
