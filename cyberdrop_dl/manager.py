@@ -21,6 +21,7 @@ from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import capture_logs, log_spacer
 from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.utils import enter_context, get_system_information
 
@@ -64,6 +65,8 @@ class Manager:
         self.database: Database
         self.deduper: Czkawka
         self.sorter: Sorter
+
+    __repr__ = simple_repr("cli_args", "_config", "http_client", "download_client")
 
     @property
     def hasher(self) -> Hasher:

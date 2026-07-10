@@ -462,34 +462,40 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         if stats:
             self.log.info(f"post #{post.id} {stats = }")
 
-    def _external_links(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.links
+    @classmethod
+    def _external_links(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.links
         links = css.iselect(post.content, selector.element)
-        valid_links = (link for link in links if not self.is_username_or_attachment(link))
+        valid_links = (link for link in links if not cls.is_username_or_attachment(link))
         return iter_links(valid_links, selector.attribute)
 
-    def _images(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.a_tag_w_image if self.IGNORE_EMBEDED_IMAGES_SRC else self.SELECTORS.posts.images
+    @classmethod
+    def _images(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.a_tag_w_image if cls.IGNORE_EMBEDED_IMAGES_SRC else cls.SELECTORS.posts.images
         images = css.iselect(post.content, selector.element)
         return iter_links(images, selector.attribute)
 
-    def _videos(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.videos
+    @classmethod
+    def _videos(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.videos
         videos = css.iselect(post.content, selector.element)
         return iter_links(videos, selector.attribute)
 
-    def _attachments(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.attachments
+    @classmethod
+    def _attachments(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.attachments
         attachments = css.iselect(post.article, selector.element)
         return iter_links(attachments, selector.attribute)
 
-    def _embeds(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.embeds
+    @classmethod
+    def _embeds(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.embeds
         embeds = css.iselect(post.content, selector.element)
         return iter_links(embeds, selector.attribute)
 
-    def _lazy_load_embeds(self, post: ForumPostProtocol) -> Iterable[str]:
-        selector = self.SELECTORS.posts.lazy_load_embeds
+    @classmethod
+    def _lazy_load_embeds(cls, post: ForumPostProtocol) -> Iterable[str]:
+        selector = cls.SELECTORS.posts.lazy_load_embeds
         for lazy_media in css.iselect(post.content, selector.element):
             yield extr_text(css.attr(lazy_media, selector.attribute), "loadMedia(this, '", "')")
 
@@ -548,12 +554,13 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
         await super().handle_internal_link(scrape_item, link)
 
-    def is_username_or_attachment(self, link_obj: Tag) -> bool:
+    @classmethod
+    def is_username_or_attachment(cls, link_obj: Tag) -> bool:
         if link_obj.select_one(".username"):
             return True
         try:
-            if link_str := css.attr(link_obj, self.SELECTORS.posts.links.element):
-                return self.is_attachment(link_str)
+            if link_str := css.attr(link_obj, cls.SELECTORS.posts.links.element):
+                return cls.is_attachment(link_str)
         except Exception:  # noqa: BLE001
             pass
         return False
