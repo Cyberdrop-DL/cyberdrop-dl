@@ -37,9 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Monstercat support
 - Multporn support
 - NaughtyMachinima support
+- Nudedeleted support
 - Pawchive support
 - Pillowcase support
 - Pinterest support
+- Trannygem support
 - Wikifeet support
 - Yourlesbian support
 
