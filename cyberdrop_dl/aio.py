@@ -1,4 +1,4 @@
-"""Async versions of builtins and some path operations"""
+"""Async versions of some builtins, itertools and path operations"""
 
 # ruff: noqa: A001
 from __future__ import annotations
@@ -8,9 +8,10 @@ import builtins
 import contextlib
 import dataclasses
 import shutil
+import sys
 from pathlib import Path
 from stat import S_ISREG
-from typing import IO, TYPE_CHECKING, Any, Self, cast, overload
+from typing import IO, TYPE_CHECKING, Any, Self, TypeVar, cast, overload, override
 from weakref import WeakValueDictionary
 
 from aiolimiter.leakybucket import AsyncLimiter
@@ -29,8 +30,77 @@ if TYPE_CHECKING:
         Iterator,
         Sequence,
     )
+    from contextvars import Context
+    from types import TracebackType
 
     from _typeshed import OpenBinaryMode, OpenTextMode
+
+_T_co = TypeVar("_T_co", covariant=True)
+
+
+class EagerTaskGroup(asyncio.TaskGroup):
+    def __init__(self) -> None:
+        super().__init__()
+        self.done: asyncio.Event = asyncio.Event()
+
+    if sys.version_info < (3, 14, 0):
+
+        @override
+        def create_task(
+            self,
+            coro: Coroutine[Any, Any, _T_co],
+            *,
+            name: str | None = None,
+            context: Context | None = None,
+            eager_start: bool | None = None,
+        ) -> asyncio.Task[_T_co]:
+            if eager_start is False:
+
+                async def lazy() -> _T_co:
+                    await asyncio.sleep(0)
+                    return await coro
+
+                run = lazy()
+            else:
+                run = coro
+
+            return super().create_task(run, name=name, context=context)
+
+    async def __aexit__(
+        self,
+        et: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        try:
+            return await super().__aexit__(et, exc, tb)
+        finally:
+            self.done.set()
+            et = exc = tb = None  # prevent ref cycles for GC
+
+    def create_lazy_task(
+        self,
+        coro: Coroutine[Any, Any, _T_co],
+        *,
+        name: str | None = None,
+        context: Context | None = None,
+    ) -> asyncio.Task[_T_co]:
+        return self.create_task(coro, name=name, context=context, eager_start=False)
+
+    def create_eager_task(
+        self,
+        coro: Coroutine[Any, Any, _T_co],
+        *,
+        name: str | None = None,
+        context: Context | None = None,
+    ) -> asyncio.Task[_T_co]:
+        return self.create_task(coro, name=name, context=context, eager_start=True)
+
+
+@dataclasses.dataclass(slots=True, eq=False)
+class TaskManager:
+    scrape: EagerTaskGroup = dataclasses.field(default_factory=EagerTaskGroup)
+    downloads: EagerTaskGroup = dataclasses.field(default_factory=EagerTaskGroup)
 
 
 class _AsyncChain:
@@ -116,6 +186,9 @@ class AsyncIOWrapper[AnyStr: (bytes, str)]:
 
     _coro: Awaitable[IO[AnyStr]]
     _io: IO[AnyStr] = dataclasses.field(init=False)
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(io={getattr(self, '_io', None)!r})>"
 
     async def __aenter__(self) -> Self:
         self._io = await self._coro

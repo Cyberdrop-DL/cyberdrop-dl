@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, extr_text, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
-DOWNLOAD_SELECTOR = 'a.btn[href*="md5="]'
-HOMEPAGE_CATCHALL_FILE = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
+
+_HOMEPAGE_CATCH_ALL = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 
 class FileditchCrawler(Crawler):
@@ -53,10 +56,29 @@ class FileditchCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        link_str: str = css.select(soup, DOWNLOAD_SELECTOR, "href")
-        link = self.parse_url(link_str)
-        if link.path == HOMEPAGE_CATCHALL_FILE:
+        if soup.select_one(".gone-path"):
+            raise ScrapeError(410)
+        src = _extract_dl_url(soup)
+        if src.path == _HOMEPAGE_CATCH_ALL:
             raise ScrapeError(422)
 
-        filename, ext = self.get_filename_and_ext(link.name)
-        await self.handle_file(link, scrape_item, filename, ext)
+        filename, ext = self.get_filename_and_ext(src.name)
+        await self.handle_file(src, scrape_item, filename, ext)
+
+
+def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
+    js_join = '].join("")'
+    js_text = css.select_text(soup, f"script:-soup-contains-own('{js_join}')")
+    array = extr_text(js_text, "= [", js_join)
+    try:
+        return _parse_url_parts(f"[{array}]")
+    except ValueError as e:
+        raise ScrapeError(422, "Unable to extract download URL") from e
+
+
+def _parse_url_parts(js_array: str) -> AbsoluteHttpURL:
+    parts: list[str] = json.loads(js_array)
+    url = parse_url("".join(parts), trim=False)
+    if not (url.query.get("md5") and url.query.get("expires")):
+        raise ValueError(url)
+    return url
