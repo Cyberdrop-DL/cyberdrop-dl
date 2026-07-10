@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "re:https://audio.clyp.it/x1ujleej.wav?",
                 "filename": "Monkeys favourite songs MASHUP! [x1ujleej].wav",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "Monkey's favourite songs MASHUP!",
                 "referer": "https://clyp.it/x1ujleej",
                 "album_id": None,
@@ -22,7 +22,7 @@ TEST_CASES = [
             {
                 "url": "re:https://audio.clyp.it/b04p1odi.mp3",
                 "filename": "GJ! (Reward Edit) [b04p1odi].mp3",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "GJ! (Reward Edit)",
                 "referer": "https://clyp.it/b04p1odi?token=b0078e077e15835845c528a44417719d",
                 "album_id": None,

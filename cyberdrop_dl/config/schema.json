@@ -153,6 +153,9 @@
         },
         "tiktok": {
           "$ref": "#/$defs/TikTokConfig"
+        },
+        "pawchive": {
+          "$ref": "#/$defs/KemonoConfig"
         }
       },
       "title": "Crawlers",
@@ -603,6 +606,33 @@
         }
       },
       "title": "Jdownloader",
+      "type": "object"
+    },
+    "KemonoConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "default": true,
+          "title": "File",
+          "type": "boolean"
+        },
+        "attachments": {
+          "default": true,
+          "title": "Attachments",
+          "type": "boolean"
+        },
+        "content_urls": {
+          "default": true,
+          "title": "Content Urls",
+          "type": "boolean"
+        },
+        "embed": {
+          "default": true,
+          "title": "Embed",
+          "type": "boolean"
+        }
+      },
+      "title": "KemonoConfig",
       "type": "object"
     },
     "LogFiles": {

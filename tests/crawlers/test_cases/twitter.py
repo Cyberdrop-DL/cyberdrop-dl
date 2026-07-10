@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://video.twimg.com/amplify_video/2014443278259609602/vid/avc1/2744x2160/KfifaGUZoO2lsD79.mp4?tag=21",
                 "filename": "KfifaGUZoO2lsD79.mp4",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "KfifaGUZoO2lsD79.mp4",
                 "referer": "https://x.com/matthewisabel/status/2014444098690613718",
                 "album_id": None,

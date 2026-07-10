@@ -73,7 +73,7 @@ class CloudMailRuCrawler(Crawler):
                 if node["type"] == "file":
                     web_url = self.PRIMARY_URL / "public" / node["weblink"]
                     new_item = scrape_item.create_child(web_url)
-                    self.create_task(self._file(new_item, node))
+                    self.create_eager_task(self._file(new_item, node))
                     scrape_item.add_children()
 
                 elif (node["count"]["files"] + node["count"]["folders"]) > 0:

@@ -35,6 +35,11 @@ crawlers:
     wordpress_media: []
   one_pace:
     prefer_dub: false
+  pawchive:
+    attachments: true
+    content_urls: true
+    embed: true
+    file: true
   tiktok:
     original: false
 deep_scrape: false

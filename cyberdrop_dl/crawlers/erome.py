@@ -67,7 +67,7 @@ class EromeCrawler(Crawler):
         should_download = await self.make_album_checker(album_id)
         images = filter(should_download, self.iter_urls(soup, Selector.MEDIA, "src"))
         for link in images:
-            self.create_task(self.direct_file(scrape_item, link))
+            self.create_eager_task(self.direct_file(scrape_item, link))
             scrape_item.add_children()
 
 

@@ -92,7 +92,7 @@ class HLSMixin(ABC):
     ) -> m3u8.M3U8:
         check_ffmpeg_is_installed()
         content = await self.request_text(url, headers=headers)
-        return m3u8.M3U8(content, url.parent, media_type)
+        return m3u8.M3U8(content, url.parent, media_type, source=url)
 
 
 @dataclasses.dataclass(slots=True)

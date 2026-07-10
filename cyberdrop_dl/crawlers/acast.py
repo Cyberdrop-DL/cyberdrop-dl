@@ -38,7 +38,7 @@ class ACastCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(show.title))
         for ep in show.episodes:
             new_item = scrape_item.create_child(self.parse_url(ep.link))
-            self.create_task(self._episode(new_item, ep))
+            self.create_eager_task(self._episode(new_item, ep))
             scrape_item.add_children()
 
     @error_handling_wrapper

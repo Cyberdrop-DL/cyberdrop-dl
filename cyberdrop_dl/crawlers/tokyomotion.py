@@ -114,7 +114,7 @@ class TokioMotionCrawler(Crawler):
     def _iter_album_images(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         for link in css.iselect(soup, Selector.THUMBNAIL, "src"):
             src = self.parse_url(link.replace("/tmb/", "/"))
-            self.create_task(self.direct_file(scrape_item, src))
+            self.create_eager_task(self.direct_file(scrape_item, src))
 
     @error_handling_wrapper
     async def profile(self, scrape_item: ScrapeItem) -> None:

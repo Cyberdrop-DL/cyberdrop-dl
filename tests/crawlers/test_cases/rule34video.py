@@ -5,7 +5,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "https://rule34video.com/video/4113319/fubuki-outdoor-resort-sex",
-                "debrid_link": "ANY",
+                "debrid_url": "ANY",
                 "filename": "Fubuki Outdoor Resort Sex [4113319][720p].mp4",
                 "original_filename": "4113319_720p.mp4",
                 "referer": "https://rule34video.com/video/4113319/fubuki-outdoor-resort-sex",

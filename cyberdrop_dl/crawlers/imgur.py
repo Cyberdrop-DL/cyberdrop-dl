@@ -93,7 +93,7 @@ class ImgurCrawler(Crawler):
                 continue
             web_url = self.PRIMARY_URL / image["id"]
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self._image(new_scrape_item, image))
+            self.create_eager_task(self._image(new_scrape_item, image))
             scrape_item.add_children()
 
     @error_handling_wrapper

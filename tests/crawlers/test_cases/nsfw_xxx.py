@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "https://cdn4.nsfw.xxx/uploads12/images/1/95/underwear-cherricali-picsjpg-YdJuVW.jpg",
                 "filename": "underwear-cherricali-picsjpg-YdJuVW.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "underwear-cherricali-picsjpg-YdJuVW.jpg",
                 "referer": "https://nsfw.xxx/post/17668088",
                 "album_id": "17668088",

@@ -39,7 +39,7 @@ TEST_CASES = [
             {
                 "url": "https://i7.vipr.im/i/00021/kcd5jcuhgs3v.jpg/sommer01035.jpg",
                 "filename": "sommer01035.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "sommer01035.jpg",
                 "referer": "https://vipr.im/kcd5jcuhgs3v",
                 "album_id": None,
@@ -55,7 +55,7 @@ TEST_CASES = [
             {
                 "url": "https://i7.vipr.im/i/00021/kcd5jcuhgs3v.jpg/sommer01035.jpg",
                 "filename": "sommer01035.jpg",
-                "debrid_link": None,
+                "debrid_url": None,
                 "original_filename": "sommer01035.jpg",
                 "referer": "https://vipr.im/kcd5jcuhgs3v.html",
                 "album_id": None,

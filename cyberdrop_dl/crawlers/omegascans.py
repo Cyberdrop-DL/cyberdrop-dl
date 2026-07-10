@@ -67,7 +67,7 @@ class OmegaScansCrawler(Crawler):
         scrape_item.append_folders(chapter.name)
         scrape_item.uploaded_at = self.parse_iso_date(chapter.created_at)
         for img in chapter.images:
-            self.create_task(self.direct_file(scrape_item, img))
+            self.create_eager_task(self.direct_file(scrape_item, img))
             scrape_item.add_children()
 
 

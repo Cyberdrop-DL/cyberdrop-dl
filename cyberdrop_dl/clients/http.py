@@ -43,17 +43,23 @@ logger = logging.getLogger(__name__)
 
 class _LazyResponseLog:
     def __init__(self, response: AbstractResponse[Any]) -> None:
-        self.response: AbstractResponse[Any] = response
+        self.resp: AbstractResponse[Any] = response
 
     def __json__(self) -> dict[str, Any]:
-        resp = self.response.__json__()
+        resp = self.resp.__json__()
         del resp["created_at"]
         if type(resp["content"]) is str:
             resp["content"] = truncated_preview(resp["content"])
         return resp
 
+    def content(self) -> dict[str, Any]:
+        return {"content": self.__json__()["content"]}
+
     def __str__(self) -> str:
         return str(self.__json__())
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(resp={self.resp!r})>"
 
 
 class RequestDoneCallback(Protocol):
@@ -87,8 +93,8 @@ class HTTPClient:
     _cookies: aiohttp.CookieJar | None = dataclasses.field(init=False, default=None)
     _flaresolverr: flaresolverr.Client | None = dataclasses.field(init=False, default=None)
     _curl_session: AsyncSession[CurlResponse] | None = dataclasses.field(init=False, default=None)
-    _session: aiohttp.ClientSession = dataclasses.field(init=False)
-    _download_session: aiohttp.ClientSession = dataclasses.field(init=False)
+    _session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
+    _download_session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.impersonate = self.config.network.impersonate
@@ -174,16 +180,6 @@ class HTTPClient:
         async for cookie in cookies.read_netscape_files(cookie_files):
             self.cookies.update_cookies(cookie)
 
-    async def check_http_status(self, response: AbstractResponse[Any]) -> None:
-        if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
-            # Check DDosGuard even on successful pages
-            await ddos_guard.check_resp(response)
-            return
-
-        await _check_json(response)
-        await ddos_guard.check_resp(response)
-        raise DownloadError(response.status)
-
     @contextlib.asynccontextmanager
     async def request(  # noqa: PLR0913
         self: object,
@@ -211,7 +207,7 @@ class HTTPClient:
             request_params=request_params,
         ) as resp:
             try:
-                await self.check_http_status(resp)
+                await check_http_status(resp)
             except DDOSGuardError:
                 await resp.aclose()
                 if not self.flaresolverr:
@@ -264,6 +260,13 @@ class HTTPClient:
                 exc = e
                 raise
             finally:
+                if resp.has_content_not_logged:
+                    logger.debug(
+                        "Content from %s request [id=%s]\n%s",
+                        request.method,
+                        request.id,
+                        _LazyResponseLog(resp).content(),
+                    )
                 if self.request_done_callback:
                     self.request_done_callback(request.url, resp, exc)
                 del exc
@@ -319,8 +322,14 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
         return
 
+    try:
+        data = await response.json()
+    except Exception:
+        logger.exception("Unable to decode JSON response from %s", response.url)
+        return
+
     if check := JSON_CHECK.get():
-        check(await response.json(), response)
+        check(data, response)
         return
 
 
@@ -361,3 +370,14 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         timeout=config.network.curl_timeout,
         max_redirects=8,
     )
+
+
+async def check_http_status(response: AbstractResponse[Any]) -> None:
+    if HTTPStatus.OK <= response.status < HTTPStatus.BAD_REQUEST:
+        # Check DDosGuard even on successful pages
+        await ddos_guard.check_resp(response)
+        return
+
+    await _check_json(response)
+    await ddos_guard.check_resp(response)
+    raise DownloadError(response.status)

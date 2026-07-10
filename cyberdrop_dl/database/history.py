@@ -178,9 +178,10 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
             f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
             for current, old in [
                 ("bunkr", "bunkrr"),
-                ("jpg5.su", "sharex"),
+                ("goonbox", "sharex"),
                 ("turbovid", "saint"),
                 ("nudostar.tv", "nudostartv"),
+                ("goonbox", "jpg5.su"),
             ]
         )
         await db_conn.executescript(updates)
@@ -188,7 +189,7 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
 
 
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import bunkr, cyberdrop, jpg5, redgifs, turbovid
+    from cyberdrop_dl.crawlers import bunkr, cyberdrop, goonbox, redgifs, turbovid
 
     def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
         def call(*args: Any, **kwargs: Any) -> T:
@@ -204,7 +205,7 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     with _timed_update("old database referers"):
         for fn_name, fn, domain in [
             ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
-            ("FIX_JPG5_REFERER", _generic_fix_referer(jpg5.JPG5Crawler), "jpg5.su"),
+            ("FIX_GOONBOX_REFERER", _generic_fix_referer(goonbox.GoonBoxCrawler), "goonbox"),
             ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
             ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
             ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),

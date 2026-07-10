@@ -32,9 +32,9 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -124,12 +124,12 @@ class GoogleDriveCrawler(Crawler):
         title = self.create_title(folder_name, folder_id)
         scrape_item.setup_as_album(title, album_id=folder_id)
 
-        for index, child in enumerate(self.iter_urls(soup, _FOLDER_ITEM_SELECTOR), 1):
+        sleep = aio.periodic_sleep(100)
+        for child in self.iter_urls(soup, _FOLDER_ITEM_SELECTOR):
             new_scrape_item = scrape_item.create_child(child)
             self.create_task(self.run(new_scrape_item))
             scrape_item.add_children()
-            if index % 200 == 0:
-                await asyncio.sleep(0)
+            await sleep()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str = "", doc: str | None = None) -> None:
