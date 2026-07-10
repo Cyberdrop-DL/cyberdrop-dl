@@ -91,7 +91,8 @@ class AppDirs:
         return _default_app_dirs
 
     def __iter__(self) -> Iterator[tuple[str, Path]]:
-        return iter(dataclasses.asdict(self).items())
+        for field in dataclasses.fields(self):
+            yield field.name, getattr(self, field.name)
 
     def __json__(self) -> dict[str, str]:
         return {k: str(v) for k, v in self}

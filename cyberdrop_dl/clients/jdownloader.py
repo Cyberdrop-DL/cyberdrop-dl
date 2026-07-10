@@ -41,16 +41,17 @@ class JDownloader:
     @classmethod
     def from_config(cls, config: Config, /) -> Self:
         download_dir = config.jdownloader.download_folder or config.download_folder
-        jd_config = JDConfig(
-            enabled=config.jdownloader.enabled,
-            device=config.auth.jdownloader.device,
-            username=config.auth.jdownloader.username,
-            password=config.auth.jdownloader.password,
-            download_dir=download_dir.resolve(),
-            autostart=config.jdownloader.autostart,
-            whitelist=tuple(config.jdownloader.whitelist),
+        return cls(
+            JDConfig(
+                enabled=config.jdownloader.enabled,
+                device=config.auth.jdownloader.device,
+                username=config.auth.jdownloader.username,
+                password=config.auth.jdownloader.password,
+                download_dir=download_dir.resolve(),
+                autostart=config.jdownloader.autostart,
+                whitelist=tuple(config.jdownloader.whitelist),
+            )
         )
-        return cls(jd_config)
 
     @property
     def enabled(self) -> bool:

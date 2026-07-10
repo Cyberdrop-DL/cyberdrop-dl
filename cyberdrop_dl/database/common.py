@@ -18,6 +18,9 @@ class Table(ABC):
     db_conn: aiosqlite.Connection
     ignore_history: bool = False
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}(name={self.NAME!r})>"
+
     def __init_subclass__(cls, name: str | None = None) -> None:
         if name:
             cls.NAME = name
