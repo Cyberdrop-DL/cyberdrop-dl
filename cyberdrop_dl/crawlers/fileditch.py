@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
+import hashlib
 import json
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
-from cyberdrop_dl import ddos_guard
+from cyberdrop_dl import multi_process
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -72,9 +74,8 @@ class FileditchCrawler(Crawler):
         soup = await self.request_soup(url)
         if form := soup.select_one("form#pow-form"):
             pow = POW.parse(form)  # noqa: A001
-            solution = await ddos_guard.Anubis.solve(
-                ddos_guard._AnubisChallenge(id=pow.challenge, data=pow.challenge + ":", difficulty=pow.difficulty)
-            )
+            solution = await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
+            nonce, _cheksum = solution.value
             soup = await self.request_soup(
                 url,
                 "POST",
@@ -84,7 +85,7 @@ class FileditchCrawler(Crawler):
                     "pow_ts": pow.ts,
                     "pow_diff": pow.difficulty,
                     "pow_sig": pow.signature,
-                    "pow_nonce": solution.nonce,
+                    "pow_nonce": nonce,
                 },
             )
         return soup
@@ -101,7 +102,8 @@ class POW:
     @classmethod
     def parse(cls, form: bs4.Tag) -> Self:
         def get(name: str) -> str:
-            return css.select(form, f"pow_{name}", "value")
+            name = name if "_" in name else f"pow_{name}"
+            return css.select(form, f"input[name={name}]", "value")
 
         return cls(
             orig_ref=get("orig_ref"),
@@ -110,6 +112,16 @@ class POW:
             difficulty=int(get("diff")),
             signature=get("sig"),
         )
+
+
+def _pow_worker(start: int, step: int, challenge: str, difficulty: int) -> tuple[int, str] | None:
+    nonce = start
+    target = "0" * difficulty
+    while True:
+        checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).hexdigest()
+        if checksum.startswith(target):
+            return nonce, checksum
+        nonce += step
 
 
 def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
