@@ -4,13 +4,12 @@ import asyncio
 import dataclasses
 import hashlib
 import json
-import os
-import sys
 from typing import TYPE_CHECKING, Protocol, final, override
 
 import yarl
 from bs4 import BeautifulSoup
 
+from cyberdrop_dl import multi_process
 from cyberdrop_dl.exceptions import DDOSGuardError
 
 if TYPE_CHECKING:
@@ -184,36 +183,16 @@ class Anubis(DDosGuard):
         return await asyncio.to_thread(cls._solve, challenge)
 
     @classmethod
-    def _solve(cls, challenge: _AnubisChallenge, *, timeout: int | None = 30) -> _AnubisSolution:
-        import multiprocessing as mp
-        import time
-        from concurrent.futures import ProcessPoolExecutor, as_completed
+    def _solve(cls, challenge: _AnubisChallenge, *, timeout: float = 30.0) -> _AnubisSolution:
+        try:
+            with multi_process.ctx(timeout=timeout):
+                result = multi_process.race(_anubis_worker, challenge.data, challenge.difficulty)
+        except TimeoutError:
+            msg = f"Unable to solve Anubis challenge after {timeout:0.2f} seconds: {challenge}"
+            raise DDOSGuardError(msg) from None
 
-        max_workers = max(cpu_count() // 2, 1)
-        start_time = time.monotonic()
-
-        with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context("spawn")) as executor:
-            futures = [
-                executor.submit(_anubis_worker, idx, max_workers, challenge.data, challenge.difficulty)
-                for idx in range(max_workers)
-            ]
-
-            try:
-                for future in as_completed(futures, timeout=timeout):
-                    result = future.result()
-                    if result is not None:
-                        nonce, checksum = result
-                        elapsed = time.monotonic() - start_time
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        return _AnubisSolution(
-                            challenge.id, nonce, checksum, challenge.difficulty, max_workers, elapsed
-                        )
-
-            except TimeoutError:
-                pass
-
-            elapsed = time.monotonic() - start_time
-            raise DDOSGuardError(f"Unable to solve Anubis challenge after {elapsed:0.2f} seconds: {challenge}")
+        nonce, checksum = result.value
+        return _AnubisSolution(challenge.id, nonce, checksum, challenge.difficulty, result.elapsed)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -229,7 +208,6 @@ class _AnubisSolution:
     nonce: int
     hash: str
     difficulty: int
-    workers: int = dataclasses.field(compare=False)
     total_time: float = dataclasses.field(compare=False)
 
     @property
@@ -251,15 +229,3 @@ def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tu
         if checksum.startswith(target):
             return nonce, checksum
         nonce += step
-
-
-if sys.platform not in {"win32", "darwin"} and hasattr(os, "sched_getaffinity"):
-
-    def cpu_count() -> int:
-        return len(os.sched_getaffinity(0))
-
-
-else:
-
-    def cpu_count() -> int:
-        return os.cpu_count() or 1

@@ -58,7 +58,6 @@ async def test_solve_anubis_challenge() -> None:
         id="019abb13-2859-7587-bec3-16e0a3f67ce9",
         nonce=1676094,
         hash="00000e426afc08534b13bb3f75bad02dc20d73d70674b9dc174416cc7d3685e6",
-        workers=2,
         difficulty=5,
         total_time=0,
     )
