@@ -68,7 +68,7 @@ class FileditchCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(src, scrape_item, filename, ext)
 
-    async def _solve_pow(self, url: AbsoluteHttpURL, pow: POW) -> dict[str, str | int]:  # noqa: A002
+    async def _solve_pow(self, url: AbsoluteHttpURL, pow: ProofOfWork) -> dict[str, str | int]:  # noqa: A002
         try:
             async with self._startup_lock:
                 self.log.warning("Solving proof of work challenge for %s\n%s", url, pow)
@@ -91,7 +91,7 @@ class FileditchCrawler(Crawler):
     async def request_pow_soup(self, url: AbsoluteHttpURL) -> bs4.BeautifulSoup:
         soup = await self.request_soup(url)
         if form := soup.select_one("form#pow-form"):
-            solution = await self._solve_pow(url, POW.parse(form))
+            solution = await self._solve_pow(url, ProofOfWork.parse(form))
             soup = await self.request_soup(
                 url,
                 "POST",
@@ -104,7 +104,7 @@ class FileditchCrawler(Crawler):
 
 
 @dataclasses.dataclass(slots=True)
-class POW:
+class ProofOfWork:
     orig_ref: str
     challenge: str
     ts: int
@@ -134,12 +134,11 @@ class POW:
 
 
 def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
-    nonce = worker_idx * 15_000
-    while True:
+    step = 15_000
+    for nonce in range(worker_idx * step, (worker_idx + 1) * step):
         checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).digest()
         if _is_valid_solution(checksum, difficulty):
             return nonce
-        nonce += 1
 
 
 def _is_valid_solution(digest: bytes, difficulty: int) -> bool:

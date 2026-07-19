@@ -55,7 +55,7 @@ def race[**P, R](
                 executor.shutdown(wait=False, cancel_futures=True)
                 return RaceResult(result, elapsed, max_workers)
 
-    raise RuntimeError
+    raise RuntimeError("None of the workers found a solution")
 
 
 if sys.platform not in {"win32", "darwin"} and hasattr(os, "sched_getaffinity"):
