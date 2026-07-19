@@ -75,7 +75,7 @@ class FileditchCrawler(Crawler):
         if form := soup.select_one("form#pow-form"):
             pow = POW.parse(form)  # noqa: A001
             solution = await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
-            nonce, _cheksum = solution.value
+            nonce, _checksum = solution.value
             soup = await self.request_soup(
                 url,
                 "POST",
@@ -109,19 +109,19 @@ class POW:
             orig_ref=get("orig_ref"),
             challenge=get("challenge"),
             ts=int(get("ts")),
-            difficulty=int(get("diff")),
+            difficulty=int(get("diff")) >> 3,
             signature=get("sig"),
         )
 
 
-def _pow_worker(start: int, step: int, challenge: str, difficulty: int) -> tuple[int, str] | None:
-    nonce = start
-    target = "0" * difficulty
+def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> tuple[int, str] | None:
+    nonce = worker_idx * 15_000
+    target = "00" * difficulty
     while True:
         checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).hexdigest()
         if checksum.startswith(target):
             return nonce, checksum
-        nonce += step
+        nonce += 1
 
 
 def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
