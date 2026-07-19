@@ -7,7 +7,7 @@ import json
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from cyberdrop_dl import multi_process
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, parse_url
@@ -36,6 +36,7 @@ class FileditchCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fileditchfiles.me/")
     DOMAIN: ClassVar[str] = "fileditch"
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -67,25 +68,35 @@ class FileditchCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(src, scrape_item, filename, ext)
 
+    async def _solve_pow(self, url: AbsoluteHttpURL, pow: POW) -> dict[str, str | int]:  # noqa: A002
+        try:
+            async with self._startup_lock:
+                self.log.warning("Solving proof of work challenge for %s\n%s", url, pow)
+                solution = await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
+
+        except TimeoutError:
+            msg = f"Unable to solve challenge {pow.challenge} after {multi_process.TIMEOUT.get()} seconds"
+            raise TimeoutError(msg) from None
+
+        self.log.debug("Solved pow %s after %s seconds", pow.challenge, solution.elapsed)
+        return {
+            "orig_ref": pow.orig_ref,
+            "pow_challenge": pow.challenge,
+            "pow_ts": pow.ts,
+            "pow_diff": pow.difficulty,
+            "pow_sig": pow.signature,
+            "pow_nonce": solution.value,
+        }
+
     async def request_pow_soup(self, url: AbsoluteHttpURL) -> bs4.BeautifulSoup:
         soup = await self.request_soup(url)
         if form := soup.select_one("form#pow-form"):
-            pow = POW.parse(form)  # noqa: A001
-            self.log.warning("Solving proof of work challenge for %s\n%s", url, pow)
-            solution = await _solve_pow(pow)
-            self.log.debug("Solved pow %s after %s seconds", pow.challenge, solution.elapsed)
+            solution = await self._solve_pow(url, POW.parse(form))
             soup = await self.request_soup(
                 url,
                 "POST",
                 headers={"Referer": str(url), "Origin": "https://fileditchfiles.me"},
-                data={
-                    "orig_ref": pow.orig_ref,
-                    "pow_challenge": pow.challenge,
-                    "pow_ts": pow.ts,
-                    "pow_diff": pow.difficulty,
-                    "pow_sig": pow.signature,
-                    "pow_nonce": solution.value,
-                },
+                data=solution,
             )
             if soup.select_one("form#pow-form"):
                 raise ScrapeError(422, "Proof of work verification failed")
@@ -138,15 +149,6 @@ def _is_valid_solution(digest: bytes, difficulty: int) -> bool:
     if rem:
         return (digest[idx] & (0xFF << (8 - rem) & 0xFF)) == 0
     return True
-
-
-async def _solve_pow(pow: POW) -> multi_process.RaceResult[int]:  # noqa: A002
-    try:
-        return await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
-    except TimeoutError:
-        raise TimeoutError(
-            f"Unable to solve pow {pow.challenge} after {multi_process._TIMEOUT.get()} seconds"
-        ) from None
 
 
 def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
