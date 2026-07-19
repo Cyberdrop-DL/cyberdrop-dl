@@ -10,13 +10,11 @@ from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, parse_url
+from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     import bs4
-    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -67,35 +65,29 @@ class FileditchCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(src, scrape_item, filename, ext)
 
-    async def _solve_pow(self, url: AbsoluteHttpURL, pow: ProofOfWork) -> dict[str, str | int]:  # noqa: A002
+    async def _solve_pow(self, url: AbsoluteHttpURL, pow: ProofOfWork) -> int:  # noqa: A002
         try:
             async with self._startup_lock:
-                self.log.warning("Solving proof of work challenge for %s\n%s", url, pow)
-                solution = await multi_process.async_race(_pow_worker, pow.challenge, pow.difficulty)
+                self.log.warning("Solving proof of work challenge for %s\n%s", url, dict(pow))
+                solution = await multi_process.async_race(_pow_worker, pow.pow_challenge, pow.pow_diff)
 
         except TimeoutError:
-            msg = f"Unable to solve challenge {pow.challenge} after {multi_process.TIMEOUT.get()} seconds"
+            msg = f"Unable to solve challenge {pow.pow_challenge} after {multi_process.TIMEOUT.get()} seconds"
             raise TimeoutError(msg) from None
 
-        self.log.debug("Solved pow %s after %s seconds", pow.challenge, solution.elapsed)
-        return {
-            "orig_ref": pow.orig_ref,
-            "pow_challenge": pow.challenge,
-            "pow_ts": pow.ts,
-            "pow_diff": pow.difficulty,
-            "pow_sig": pow.signature,
-            "pow_nonce": solution.value,
-        }
+        self.log.debug("Solved pow %s after %s seconds", pow.pow_challenge, solution.elapsed)
+        return solution.value
 
     async def request_pow_soup(self, url: AbsoluteHttpURL) -> bs4.BeautifulSoup:
         soup = await self.request_soup(url)
         if form := soup.select_one("form#pow-form"):
-            solution = await self._solve_pow(url, ProofOfWork.parse(form))
+            pow = ProofOfWork.parse(form)  # noqa: A001
+            nonce = await self._solve_pow(url, pow)
             soup = await self.request_soup(
                 url,
                 "POST",
                 headers={"Referer": str(url), "Origin": "https://fileditchfiles.me"},
-                data=solution,
+                data=dict(pow) | {"pow_nonce": nonce},
             )
             if soup.select_one("form#pow-form"):
                 raise ScrapeError(422, "Proof of work verification failed")
@@ -103,33 +95,24 @@ class FileditchCrawler(Crawler):
 
 
 @dataclasses.dataclass(slots=True)
-class ProofOfWork:
+class ProofOfWork(DictDataclass):
     orig_ref: str
-    challenge: str
-    ts: int
-    difficulty: int
-    signature: str
+    pow_challenge: str
+    pow_ts: int
+    pow_diff: int
+    pow_sig: str
 
-    def __iter__(self) -> Iterator[tuple[str, str | int]]:
-        for field in dataclasses.fields(self):
-            yield field.name, getattr(self, field.name)
-
-    def __json__(self) -> dict[str, str | int]:
-        return dict(self)
+    def __post_init__(self) -> None:
+        self.pow_ts = int(self.pow_ts)
+        self.pow_diff = int(self.pow_diff)
 
     @classmethod
     def parse(cls, form: bs4.Tag) -> Self:
-        def get(name: str) -> str:
-            name = name if "_" in name else f"pow_{name}"
-            return css.select(form, f"input[name={name}]", "value")
+        def inputs():
+            for field in css.iselect(form, "input[name]"):
+                yield css.attr(field, "name"), css.attr(field, "value")
 
-        return cls(
-            orig_ref=get("orig_ref"),
-            challenge=get("challenge"),
-            ts=int(get("ts")),
-            difficulty=int(get("diff")),
-            signature=get("sig"),
-        )
+        return cls.from_dict(dict(inputs()))
 
 
 def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
@@ -140,16 +123,16 @@ def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int
             return nonce
 
 
-def _is_valid_solution(digest: bytes, difficulty: int) -> bool:
+def _is_valid_solution(checksum: bytes, difficulty: int) -> bool:
     idx, rem = difficulty >> 3, difficulty & 7
-    if idx and digest[:idx] != b"\x00" * idx:
+    if idx and checksum[:idx] != b"\x00" * idx:
         return False
     if rem:
-        return (digest[idx] & (0xFF << (8 - rem) & 0xFF)) == 0
+        return (checksum[idx] & (0xFF << (8 - rem) & 0xFF)) == 0
     return True
 
 
-def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
+def _extract_dl_url(soup: bs4.BeautifulSoup) -> AbsoluteHttpURL:
     js_join = '].join("")'
     js_text = css.select_text(soup, f"script:-soup-contains-own('{js_join}')")
     array = extr_text(js_text, "= [", js_join)
