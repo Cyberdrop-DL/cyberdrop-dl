@@ -24,9 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed
+
+- Hardcoded a new limit of 1 scrape URL at a time (Fileditch)
+
 ### Fixed
 
 - Dead lock if more that 50 downloads are queued (Filester)
+- Solve proof of work challenge (Fileditch)
 
 ## [10.2.0] - 2026-07-13
 
