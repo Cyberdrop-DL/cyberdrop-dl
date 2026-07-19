@@ -116,11 +116,12 @@ class ProofOfWork(DictDataclass):
 
 
 def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
-    step = 15_000
-    for nonce in range(worker_idx * step, (worker_idx + 1) * step):
+    nonce = worker_idx * 15_000
+    while True:
         checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).digest()
         if _is_valid_solution(checksum, difficulty):
             return nonce
+        nonce += 1
 
 
 def _is_valid_solution(checksum: bytes, difficulty: int) -> bool:
