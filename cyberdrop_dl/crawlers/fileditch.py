@@ -39,9 +39,7 @@ class FileditchCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [*_, "file.php"]:
-                return await self.file(scrape_item)
-            case [a, _, *_] if a.startswith(("beta", "temp", "alpha")):
+            case [_, _, *_]:
                 return await self.file(scrape_item)
             case _:
                 raise ValueError
@@ -50,11 +48,8 @@ class FileditchCrawler(Crawler):
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
-        if url.name == "file.php" and (file_id := url.query.get("f")):
-            # Their servers accept any number of empty parts before the file
-            # Remove them to get a canonical URL
-            # https:/fileditchfiles.me////////file.php?f=/b70/1234 -> https:/fileditchfiles.me/file.php?f=/b70/1234
-            return (url.origin() / "file.php").with_query(f=file_id)
+        if url.name == "file.php" and (path := url.query.get("f")):
+            return url.with_path(path)
         return url
 
     @error_handling_wrapper
