@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import json
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -10,6 +12,7 @@ from cyberdrop_dl.utils import css, extr_text, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    import bs4
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -55,7 +58,7 @@ class FileditchCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
+        soup = await self.request_pow_soup(scrape_item.url)
         if soup.select_one(".gone-path"):
             raise ScrapeError(410)
         src = _extract_dl_url(soup)
@@ -64,6 +67,49 @@ class FileditchCrawler(Crawler):
 
         filename, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(src, scrape_item, filename, ext)
+
+    async def request_pow_soup(self, url: AbsoluteHttpURL) -> bs4.BeautifulSoup:
+        soup = await self.request_soup(url)
+        if form := soup.select_one("form#pow-form"):
+            pow = POW.parse(form)  # noqa: A001
+            solution = await ddos_guard.Anubis.solve(
+                ddos_guard._AnubisChallenge(id=pow.challenge, data=pow.challenge + ":", difficulty=pow.difficulty)
+            )
+            soup = await self.request_soup(
+                url,
+                "POST",
+                data={
+                    "orig_ref": pow.orig_ref,
+                    "pow_challenge": pow.challenge,
+                    "pow_ts": pow.ts,
+                    "pow_diff": pow.difficulty,
+                    "pow_sig": pow.signature,
+                    "pow_nonce": solution.nonce,
+                },
+            )
+        return soup
+
+
+@dataclasses.dataclass(slots=True)
+class POW:
+    orig_ref: str
+    challenge: str
+    ts: int
+    difficulty: int
+    signature: str
+
+    @classmethod
+    def parse(cls, form: bs4.Tag) -> Self:
+        def get(name: str) -> str:
+            return css.select(form, f"pow_{name}", "value")
+
+        return cls(
+            orig_ref=get("orig_ref"),
+            challenge=get("challenge"),
+            ts=int(get("ts")),
+            difficulty=int(get("diff")),
+            signature=get("sig"),
+        )
 
 
 def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
