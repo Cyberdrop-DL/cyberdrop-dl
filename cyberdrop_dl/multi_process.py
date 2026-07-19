@@ -7,13 +7,15 @@ import sys
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Concatenate
 
+from cyberdrop_dl import aio
+from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-TIMEOUT: ContextVar[float] = ContextVar("_Timeout", default=30.0)
-MAX_WORKERS: ContextVar[int | None] = ContextVar("_MAX_WORKERS", default=None)
+TIMEOUT: ContextVar[float | None] = ContextVar("TIMEOUT", default=30.0)
+MAX_WORKERS: ContextVar[int | None] = ContextVar("MAX_WORKERS", default=None)
 
 
 @dataclasses.dataclass(slots=True)
@@ -24,8 +26,15 @@ class RaceResult[T]:
 
 
 @contextlib.contextmanager
-def ctx(max_workers: int | None = None, timeout: float = 30.0) -> Generator[None]:
-    with enter_context(MAX_WORKERS, max_workers), enter_context(TIMEOUT, timeout):
+def ctx(
+    max_workers: int | None | MISSING = MISSING,  # pyright: ignore[reportInvalidTypeForm]
+    timeout: float | None | MISSING = MISSING,  # pyright: ignore[reportInvalidTypeForm]
+) -> Generator[None]:
+    with contextlib.ExitStack() as stack:
+        if max_workers is not MISSING:
+            stack.enter_context(enter_context(MAX_WORKERS, max_workers))
+        if timeout is not MISSING:
+            stack.enter_context(enter_context(TIMEOUT, timeout))
         yield
 
 
@@ -57,6 +66,8 @@ def race[**P, R](
 
     raise RuntimeError("None of the workers found a solution")
 
+
+async_race = aio.to_thread(race)
 
 if sys.platform not in {"win32", "darwin"} and hasattr(os, "sched_getaffinity"):
 
