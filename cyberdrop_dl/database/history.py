@@ -189,7 +189,7 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
 
 
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import bunkr, cyberdrop, goonbox, redgifs, turbovid
+    from cyberdrop_dl.crawlers import bunkr, cyberdrop, fileditch, goonbox, redgifs, turbovid
 
     def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
         def call(*args: Any, **kwargs: Any) -> T:
@@ -207,6 +207,11 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
             ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
             ("FIX_GOONBOX_REFERER", _generic_fix_referer(goonbox.GoonBoxCrawler), "goonbox"),
             ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
+            (
+                "FIX_FILEDITCH_REFERER",
+                _generic_fix_referer(fileditch.FileditchCrawler),
+                fileditch.FileditchCrawler.DOMAIN,
+            ),
             ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
             ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
         ]:
