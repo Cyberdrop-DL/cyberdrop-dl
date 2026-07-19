@@ -14,6 +14,8 @@ from cyberdrop_dl.utils import css, extr_text, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import bs4
     from bs4 import BeautifulSoup
 
@@ -74,20 +76,24 @@ class FileditchCrawler(Crawler):
         soup = await self.request_soup(url)
         if form := soup.select_one("form#pow-form"):
             pow = POW.parse(form)  # noqa: A001
-            solution = await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
-            nonce, _checksum = solution.value
+            self.log.warning("Solving proof of work challenge for %s\n%s", url, pow)
+            solution = await _solve_pow(pow)
+            self.log.debug("Solved pow %s after %s seconds", pow.challenge, solution.elapsed)
             soup = await self.request_soup(
                 url,
                 "POST",
+                headers={"Referer": str(url), "Origin": "https://fileditchfiles.me"},
                 data={
                     "orig_ref": pow.orig_ref,
                     "pow_challenge": pow.challenge,
                     "pow_ts": pow.ts,
                     "pow_diff": pow.difficulty,
                     "pow_sig": pow.signature,
-                    "pow_nonce": nonce,
+                    "pow_nonce": solution.value,
                 },
             )
+            if soup.select_one("form#pow-form"):
+                raise ScrapeError(422, "Proof of work verification failed")
         return soup
 
 
@@ -99,6 +105,13 @@ class POW:
     difficulty: int
     signature: str
 
+    def __iter__(self) -> Iterator[tuple[str, str | int]]:
+        for field in dataclasses.fields(self):
+            yield field.name, getattr(self, field.name)
+
+    def __json__(self) -> dict[str, str | int]:
+        return dict(self)
+
     @classmethod
     def parse(cls, form: bs4.Tag) -> Self:
         def get(name: str) -> str:
@@ -109,19 +122,28 @@ class POW:
             orig_ref=get("orig_ref"),
             challenge=get("challenge"),
             ts=int(get("ts")),
-            difficulty=int(get("diff")) >> 3,
+            difficulty=int(get("diff")),
             signature=get("sig"),
         )
 
 
-def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> tuple[int, str] | None:
+def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
     nonce = worker_idx * 15_000
-    target = "00" * difficulty
+    target = "00" * (difficulty >> 3)
     while True:
         checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).hexdigest()
         if checksum.startswith(target):
-            return nonce, checksum
+            return nonce
         nonce += 1
+
+
+async def _solve_pow(pow: POW) -> multi_process.RaceResult[int]:  # noqa: A002
+    try:
+        return await asyncio.to_thread(multi_process.race, _pow_worker, pow.challenge, pow.difficulty)
+    except TimeoutError:
+        raise TimeoutError(
+            f"Unable to solve pow {pow.challenge} after {multi_process._TIMEOUT.get()} seconds"
+        ) from None
 
 
 def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:

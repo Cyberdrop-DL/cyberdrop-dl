@@ -17,9 +17,10 @@ _MAX_WORKERS: ContextVar[int | None] = ContextVar("_MAX_WORKERS", default=None)
 
 
 @dataclasses.dataclass(slots=True)
-class PowResult[T]:
+class RaceResult[T]:
     value: T
     elapsed: float
+    workers: int
 
 
 @contextlib.contextmanager
@@ -30,7 +31,7 @@ def ctx(max_workers: int | None = None, timeout: float = 30.0) -> Generator[None
 
 def race[**P, R](
     worker: Callable[Concatenate[int, int, P], R | None], *args: P.args, **kwargs: P.kwargs
-) -> PowResult[R]:
+) -> RaceResult[R]:
     """Execute a worker function across multiple processes in a race condition, returning the first non-None result.
 
     All other processes are cancelled on exit.
@@ -52,7 +53,7 @@ def race[**P, R](
             if result is not None:
                 elapsed = time.monotonic() - start_time
                 executor.shutdown(wait=False, cancel_futures=True)
-                return PowResult(result, elapsed)
+                return RaceResult(result, elapsed, max_workers)
 
     raise RuntimeError
 
