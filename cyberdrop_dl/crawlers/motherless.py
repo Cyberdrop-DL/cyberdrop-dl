@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://motherless.xxx")
 MEDIA_INFO_JS_SELECTOR = "script:-soup-contains('__fileurl')"
 ITEM_SELECTOR = "div.thumb-container a.img-container"
 ITEM_TITLE_SELECTOR = "div.media-meta-title"
@@ -39,40 +38,25 @@ class MotherlessCrawler(Crawler):
         "Video": "pending",
         "**NOTE**": "Galleries are NOT supported",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://motherless.xxx")
     NEXT_PAGE_SELECTOR: ClassVar[str] = "div.pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("motherless.com",)
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
-    async def fetch(self, scrape_item: ScrapeItem, collection_id: str = "") -> None:
-        parts = scrape_item.url.parts
-        n_parts = len(parts)
-        item_id = collection_id or scrape_item.url.name
-        is_gallery_homepage = scrape_item.url.name.startswith("G") and n_parts == 2
-        is_group_homepage = "g" in parts and n_parts == 3
-        is_user = any(p in parts for p in ("u", "f"))  # /member/ is for user galleries, not supported yet
-        is_videos_or_images = any(p in parts for p in ("videos", "images"))
-        is_supported_user_url = is_user and (n_parts == 3 or (n_parts > 3 and is_videos_or_images))
-
-        if "gi" in parts:  # group images
-            return await self.collection_items(scrape_item, "images", item_id)
-        if "gv" in parts:  # group videos
-            return await self.collection_items(scrape_item, "videos", item_id)
-        if is_group_homepage or is_gallery_homepage:  # gallery or group
-            return await self.collection(scrape_item)
-        if is_supported_user_url:
-            return await self.user(scrape_item)
-        if is_user:
-            raise ValueError
-        return await self.media(scrape_item)
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case [media_id]:
+                return await self.media(scrape_item, media_id)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem) -> None:
         n_parts = len(scrape_item.url.parts)
         assert n_parts >= 3
         username = scrape_item.url.parts[2]
-        canonical_url = PRIMARY_URL / "f" / username
+        canonical_url = self.PRIMARY_URL / "f" / username
         videos_url = canonical_url / "videos"
         images_url = canonical_url / "images"
         is_homepage = n_parts == 3
@@ -83,14 +67,14 @@ class MotherlessCrawler(Crawler):
 
         if is_homepage or "images" in scrape_item.url.parts:
             async for soup in self.web_pager(images_url):
-                check_soup(soup)
+                _check_soup(soup)
                 for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
                     new_scrape_item.append_folders("Images")
                     self.create_task(self.run(new_scrape_item))
 
         if is_homepage or "videos" in scrape_item.url.parts:
             async for soup in self.web_pager(videos_url):
-                check_soup(soup)
+                _check_soup(soup)
                 for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
                     new_scrape_item.append_folders("Videos")
                     self.create_task(self.run(new_scrape_item))
@@ -108,10 +92,10 @@ class MotherlessCrawler(Crawler):
             gallery_id = gallery_id.removeprefix(prefix)
 
         if is_group:
-            new_urls = [PRIMARY_URL / part / group_id for part in ("gi", "gv")]
+            new_urls = [self.PRIMARY_URL / part / group_id for part in ("gi", "gv")]
 
         else:
-            new_urls = [PRIMARY_URL / f"{part}{gallery_id}" for part in ("GI", "GV")]
+            new_urls = [self.PRIMARY_URL / f"{part}{gallery_id}" for part in ("GI", "GV")]
 
         collection_id = group_id if is_group else gallery_id
         for media_type, url in zip(media_types, new_urls, strict=True):
@@ -123,7 +107,7 @@ class MotherlessCrawler(Crawler):
         self, scrape_item: ScrapeItem, media_type: Literal["videos", "images"], collection_id: str | None = None
     ) -> None:
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
-        check_soup(soup)
+        _check_soup(soup)
 
         try:
             title = css.select_text(soup, GALLERY_TITLE_SELECTOR)
@@ -139,16 +123,15 @@ class MotherlessCrawler(Crawler):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def media(self, scrape_item: ScrapeItem) -> None:
-        media_id = scrape_item.url.parts[-1]
-        canonical_url = PRIMARY_URL / media_id
+    async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
+        canonical_url = self.PRIMARY_URL / media_id
 
         if await self.check_complete_from_referer(canonical_url):
             return
 
         soup = await self.request_soup(scrape_item.url)
 
-        check_soup(soup)
+        _check_soup(soup)
         media_info = self.process_media_soup(scrape_item, soup)
         link = self.parse_url(media_info.url)
         scrape_item.url = canonical_url
@@ -181,7 +164,7 @@ class MotherlessCrawler(Crawler):
             parent_title: str = css.attr(title_tag, "title") if from_gallery else title_tag.get_text(strip=True)
 
         parent_path = parent_id if from_gallery else f"g/{parent_id}"
-        parent_url = PRIMARY_URL / parent_path
+        parent_url = self.PRIMARY_URL / parent_path
         if parent_url not in scrape_item.parents and parent_title:
             scrape_item.parents.append(parent_url)
             title = self.create_title(parent_title, parent_id)
@@ -191,7 +174,7 @@ class MotherlessCrawler(Crawler):
         return media_info
 
 
-def check_soup(soup: BeautifulSoup) -> None:
+def _check_soup(soup: BeautifulSoup) -> None:
     soup_str = soup.get_text()
     if any(p in soup_str for p in NOT_FOUND_TEXTS):
         raise ScrapeError(404)
@@ -200,9 +183,9 @@ def check_soup(soup: BeautifulSoup) -> None:
 
 
 def get_media_info(soup: BeautifulSoup) -> MediaInfo:
-    media_js = soup.select_one(MEDIA_INFO_JS_SELECTOR)
-    js_text = css.text(media_js) if media_js else None
-    if not js_text:
+    try:
+        js_text = css.select_text(soup, MEDIA_INFO_JS_SELECTOR)
+    except css.SelectorError:
         return MediaInfo("gallery", "")
     media_type = js_text.split("__mediatype", 1)[-1].split("=", 1)[-1].split(",", 1)[0].strip()
     url = js_text.split("__fileurl", 1)[-1].split("=", 1)[-1].split(";", 1)[0].strip()
