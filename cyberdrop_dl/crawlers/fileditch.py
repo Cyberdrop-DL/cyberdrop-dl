@@ -129,12 +129,20 @@ class POW:
 
 def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
     nonce = worker_idx * 15_000
-    target = "00" * (difficulty >> 3)
     while True:
-        checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).hexdigest()
-        if checksum.startswith(target):
+        checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).digest()
+        if _is_valid_solution(checksum, difficulty):
             return nonce
         nonce += 1
+
+
+def _is_valid_solution(digest: bytes, difficulty: int) -> bool:
+    idx, rem = difficulty >> 3, difficulty & 7
+    if idx and digest[:idx] != b"\x00" * idx:
+        return False
+    if rem:
+        return (digest[idx] & (0xFF << (8 - rem) & 0xFF)) == 0
+    return True
 
 
 async def _solve_pow(pow: POW) -> multi_process.RaceResult[int]:  # noqa: A002
