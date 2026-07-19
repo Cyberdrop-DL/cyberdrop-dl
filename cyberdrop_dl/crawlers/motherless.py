@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -15,14 +15,18 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-MEDIA_INFO_JS_SELECTOR = "script:-soup-contains('__fileurl')"
-ITEM_SELECTOR = "div.thumb-container a.img-container"
-ITEM_TITLE_SELECTOR = "div.media-meta-title"
-GALLERY_TITLE_SELECTOR = "div.gallery-title > h2"
-GROUP_TITLE_SELECTOR = "div.group-bio > h1"
-ITEM_GALLERY_TITLE_SELECTOR = "div.gallery-captions > a.gallery-data"
+@final
+class Selector:
+    MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
+    ITEM = "div.thumb-container a.img-container"
+    ITEM_TITLE = "div.media-meta-title"
+    GALLERY_TITLE = "div.gallery-title > h2"
+    GROUP_TITLE = "div.group-bio > h1"
+    ITEM_GALLERY_TITLE = "div.gallery-captions > a.gallery-data"
+    USER_NAME = "div.member-bio-username"
+
+
 NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
-USER_NAME_SELECTOR = "div.member-bio-username"
 
 
 class MediaInfo(NamedTuple):
@@ -39,7 +43,7 @@ class MotherlessCrawler(Crawler):
         "**NOTE**": "Galleries are NOT supported",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://motherless.xxx")
-    NEXT_PAGE_SELECTOR: ClassVar[str] = "div.pagination_link > a[rel=next]"
+    NEXT_PAGE: ClassVar[str] = "div.pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("motherless.com",)
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
@@ -68,14 +72,14 @@ class MotherlessCrawler(Crawler):
         if is_homepage or "images" in scrape_item.url.parts:
             async for soup in self.web_pager(images_url):
                 _check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+                for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
                     new_scrape_item.append_folders("Images")
                     self.create_task(self.run(new_scrape_item))
 
         if is_homepage or "videos" in scrape_item.url.parts:
             async for soup in self.web_pager(videos_url):
                 _check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+                for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
                     new_scrape_item.append_folders("Videos")
                     self.create_task(self.run(new_scrape_item))
 
@@ -110,15 +114,15 @@ class MotherlessCrawler(Crawler):
         _check_soup(soup)
 
         try:
-            title = css.select_text(soup, GALLERY_TITLE_SELECTOR)
+            title = css.select_text(soup, Selector.GALLERY_TITLE)
         except css.SelectorError:
-            title = css.select_text(soup, GROUP_TITLE_SELECTOR)
+            title = css.select_text(soup, Selector.GROUP_TITLE)
 
         title = self.create_title(title, collection_id)
         scrape_item.setup_as_album(title, album_id=collection_id)
 
         async for soup in pages:
-            for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
                 new_scrape_item.append_folders(media_type.capitalize())
                 self.create_task(self.run(new_scrape_item))
 
@@ -135,7 +139,7 @@ class MotherlessCrawler(Crawler):
         media_info = self.process_media_soup(scrape_item, soup)
         link = self.parse_url(media_info.url)
         scrape_item.url = canonical_url
-        title = css.select_text(soup, ITEM_TITLE_SELECTOR)
+        title = css.select_text(soup, Selector.ITEM_TITLE)
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(title, ext, file_id=media_id)
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
@@ -155,10 +159,10 @@ class MotherlessCrawler(Crawler):
 
         parent_id = scrape_item.url.parts[2] if from_group else scrape_item.url.parts[1]
         parent_title = ""
-        title_tag = soup.select_one(ITEM_GALLERY_TITLE_SELECTOR)
+        title_tag = soup.select_one(Selector.ITEM_GALLERY_TITLE)
         if from_gallery:
             parent_id = parent_id.removeprefix("G")
-            title_tag = soup.select_one(GROUP_TITLE_SELECTOR)
+            title_tag = soup.select_one(Selector.GROUP_TITLE)
 
         if title_tag:
             parent_title: str = css.attr(title_tag, "title") if from_gallery else title_tag.get_text(strip=True)
@@ -184,7 +188,7 @@ def _check_soup(soup: BeautifulSoup) -> None:
 
 def get_media_info(soup: BeautifulSoup) -> MediaInfo:
     try:
-        js_text = css.select_text(soup, MEDIA_INFO_JS_SELECTOR)
+        js_text = css.select_text(soup, Selector.MEDIA_INFO_JS)
     except css.SelectorError:
         return MediaInfo("gallery", "")
     media_type = js_text.split("__mediatype", 1)[-1].split("=", 1)[-1].split(",", 1)[0].strip()
