@@ -39,12 +39,13 @@ class MotherlessCrawler(Crawler):
             "/GV<gallery_id>",
         ),
         "User": (
-            "/m/<username>",
-            "/member/<username>",
-            "/u/<username>",
-            "/u/<username>?t=v",
-            "/u/<username>?t=i",
+            "/m/<user_name>",
+            "/member/<user_name>",
+            "/u/<user_name>",
+            "/u/<user_name>?t=v",
+            "/u/<user_name>?t=i",
         ),
+        "User galleries": "/galleries/member/<user_name>/...",
         "Image or Video": (
             "/<media_id>",
             "/g/<group_name>/<media_id>",
@@ -81,7 +82,10 @@ class MotherlessCrawler(Crawler):
                 if type_ not in ("v", "i"):
                     return await self.user(scrape_item, username)
                 name = "images" if type_ == "i" else "videos"
-                await self.user_uploads(scrape_item, username, name)
+                await self.user_collection(scrape_item, username, name)
+
+            case ["galleries", "member", username, *_]:
+                await self.user_collection(scrape_item, username, "galleries")
 
             case _:
                 raise ValueError
@@ -122,7 +126,7 @@ class MotherlessCrawler(Crawler):
             self.create_task(self.run(new_item))
 
     @error_handling_wrapper
-    async def user_uploads(self, scrape_item: ScrapeItem, username: str, name: str) -> None:
+    async def user_collection(self, scrape_item: ScrapeItem, username: str, name: str) -> None:
         scrape_item.setup_as_album(self.create_title(f"{username} [user]"))
         scrape_item.append_folders(name)
 
