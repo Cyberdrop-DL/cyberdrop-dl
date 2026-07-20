@@ -21,12 +21,9 @@ if TYPE_CHECKING:
 @final
 class Selector:
     MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
-    ITEM = "div.thumb-container a.img-container"
+    MEDIA = "div.thumb-container a.img-container"
     COLLECTION_TITLE = ".gallery-title > h2, .group-bio > h1"
     USER_NAME = "div.member-bio-username"
-
-
-NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
 
 
 class MotherlessCrawler(Crawler):
@@ -133,7 +130,7 @@ class MotherlessCrawler(Crawler):
         _check_soup(soup)
 
         async for soup in pages:
-            for new_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+            for new_item in self.iter_children(scrape_item, soup, Selector.MEDIA):
                 self.create_eager_task(self.run(new_item))
 
     @error_handling_wrapper
@@ -145,19 +142,17 @@ class MotherlessCrawler(Crawler):
         scrape_item.append_folders(name)
 
         async for soup in pages:
-            for new_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+            for new_item in self.iter_children(scrape_item, soup, Selector.MEDIA):
                 self.create_eager_task(self.run(new_item))
 
     @error_handling_wrapper
-    async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
-        canonical_url = self.PRIMARY_URL / media_id
-        if await self.check_complete_from_referer(canonical_url):
+    async def media(self, scrape_item: ScrapeItem, _media_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
         _check_soup(soup)
         media = _extract_media(soup)
-        scrape_item.url = canonical_url
         scrape_item.upload_date = media.upload_date
         _, ext = self.get_filename_and_ext(media.url.name)
         filename = self.create_custom_filename(media.name, ext, file_id=media.code)
@@ -165,10 +160,11 @@ class MotherlessCrawler(Crawler):
 
 
 def _check_soup(soup: BeautifulSoup) -> None:
-    soup_str = soup.get_text()
-    if any(p in soup_str for p in NOT_FOUND_TEXTS):
-        raise ScrapeError(404)
-    if "The content you are trying to view is for friends only" in soup_str:
+    html = soup.get_text()
+    for txt in ("The page you're looking for cannot be found", "File not Found. Nothing to see here"):
+        if txt in html:
+            raise ScrapeError(404)
+    if "The content you are trying to view is for friends only" in html:
         raise ScrapeError(401)
 
 
