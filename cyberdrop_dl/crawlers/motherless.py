@@ -29,20 +29,24 @@ class Selector:
 NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class Gallery:
-    id: str
-    videos: bool
-    images: bool
-
-
 class MotherlessCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Group": ("/g/<group_name>", "/gi/<image>", "/gv/<video>"),
+        "Group": (
+            "/g/<group_name>",
+            "/gi/<group_name>",
+            "/gv/<group_name>",
+        ),
+        "Gallery": (
+            "/G<gallery_id>",
+            "/GI<gallery_id>",
+            "/GV<gallery_id>",
+        ),
         "User": ("/u/...", "/f/..."),
-        "Image": "/...",
-        "Video": "pending",
-        "**NOTE**": "Galleries are NOT supported",
+        "Image or Video": (
+            "/<media_id>",
+            "/g/<group_name>/<media_id>",
+            "/G<gallery_id>/<media_id>",
+        ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://motherless.xxx")
     NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination_link > a[rel=next]"
@@ -52,9 +56,14 @@ class MotherlessCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case ["g", slug]:
+                return await self.group(scrape_item, slug)
+            case ["gv" | "gi" as prefix, slug]:
+                name = "images" if prefix == "gi" else "videos"
+                return await self.collection(scrape_item, slug, name)
+
             case [slug] if slug.startswith("G") and (gallery_id := slug[2:]):
-                prefix = slug[:2]
-                if prefix in ("GV", "GI"):
+                if (prefix := slug[:2]) in ("GV", "GI"):
                     name = "images" if prefix == "GI" else "videos"
                     return await self.collection(scrape_item, gallery_id, name)
 
@@ -72,6 +81,8 @@ class MotherlessCrawler(Crawler):
         url = super().transform_url(url)
         match url.parts[1:]:
             case [slug, media_id] if slug.startswith("G") and slug[1:]:
+                return url.origin() / media_id
+            case ["g", _, media_id]:
                 return url.origin() / media_id
             case _:
                 return url
@@ -106,9 +117,16 @@ class MotherlessCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
-        for url in (self.PRIMARY_URL / f"GI{gallery_id}", self.PRIMARY_URL / f"GI{gallery_id}"):
+        for part in ("GI", "GV"):
             new_item = scrape_item.copy()
-            new_item.url = url
+            new_item.url = self.PRIMARY_URL / f"{part}{gallery_id}"
+            self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def group(self, scrape_item: ScrapeItem, slug: str) -> None:
+        for part in ("gi", "gv"):
+            new_item = scrape_item.copy()
+            new_item.url = self.PRIMARY_URL / part / slug
             self.create_task(self.run(new_item))
 
     @error_handling_wrapper
