@@ -48,4 +48,16 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://motherless.xxx/u/MysticX?t=v",
+        "results": [
+            {
+                "url": "re:.motherlessmedia.com/videos/",
+                "album_id": None,
+                "uploaded_at": int,
+                "download_folder": "re:MysticX [user] (Motherless)/videos",
+            },
+        ],
+        "count": range(78, 90),
+    },
 ]
