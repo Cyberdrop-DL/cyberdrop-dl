@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple, final
+import dataclasses
+from typing import TYPE_CHECKING, ClassVar, Literal, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import TextExtractor, css, dates, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    import datetime
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -27,11 +30,6 @@ class Selector:
 
 
 NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
-
-
-class MediaInfo(NamedTuple):
-    type: str
-    url: str
 
 
 class MotherlessCrawler(Crawler):
@@ -129,25 +127,22 @@ class MotherlessCrawler(Crawler):
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
         canonical_url = self.PRIMARY_URL / media_id
-
         if await self.check_complete_from_referer(canonical_url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-
         _check_soup(soup)
-        media_info = self.process_media_soup(scrape_item, soup)
-        link = self.parse_url(media_info.url)
+        media = _extract_media(soup)
         scrape_item.url = canonical_url
-        title = css.select_text(soup, Selector.ITEM_TITLE)
-        filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(title, ext, file_id=media_id)
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        scrape_item.upload_date = media.upload_date
+        _, ext = self.get_filename_and_ext(media.url.name)
+        filename = self.create_custom_filename(media.name, ext, file_id=media.code)
+        await self.handle_file(media.url, scrape_item, media.name, ext, custom_filename=filename)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def process_media_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> MediaInfo:
-        media_info = get_media_info(soup)
+    def process_media_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> Media:
+        media_info = _extract_media(soup)
         if media_info.type == "gallery":
             raise ScrapeError(422)
 
@@ -186,16 +181,25 @@ def _check_soup(soup: BeautifulSoup) -> None:
         raise ScrapeError(401)
 
 
-def get_media_info(soup: BeautifulSoup) -> MediaInfo:
-    try:
-        js_text = css.select_text(soup, Selector.MEDIA_INFO_JS)
-    except css.SelectorError:
-        return MediaInfo("gallery", "")
-    media_type = js_text.split("__mediatype", 1)[-1].split("=", 1)[-1].split(",", 1)[0].strip()
-    url = js_text.split("__fileurl", 1)[-1].split("=", 1)[-1].split(";", 1)[0].strip()
-    parts = remove_quotes(media_type.lower()), remove_quotes(url)
-    return MediaInfo(*parts)
+@dataclasses.dataclass(slots=True)
+class Media:
+    type: str
+    code: str
+    group: str
+    name: str
+    url: AbsoluteHttpURL
+    upload_date: datetime.datetime
 
 
-def remove_quotes(text: str) -> str:
-    return text.removeprefix("'").removesuffix("'").removeprefix('"').removesuffix('"')
+def _extract_media(soup: BeautifulSoup) -> Media:
+    js_text = css.select_text(soup, Selector.MEDIA_INFO_JS)
+    extract = TextExtractor(js_text)
+    props = css.json_ld(soup, "uploadDate")
+    return Media(
+        name=props["name"],
+        upload_date=dates.parse_iso(props["uploadDate"]),
+        type=extract("__mediatype = '", "'"),
+        code=extract("__codename = '", "'"),
+        group=extract("__group = '", "'"),
+        url=parse_url(extract("__fileurl = '", "'")),
+    )
