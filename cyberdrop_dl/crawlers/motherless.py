@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar, Literal, final
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -23,13 +23,20 @@ class Selector:
     MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
     ITEM = "div.thumb-container a.img-container"
     ITEM_TITLE = "div.media-meta-title"
-    GALLERY_TITLE = "div.gallery-title > h2"
+    GALLERY_TITLE = ".gallery-title > h2"
     GROUP_TITLE = "div.group-bio > h1"
     ITEM_GALLERY_TITLE = "div.gallery-captions > a.gallery-data"
     USER_NAME = "div.member-bio-username"
 
 
 NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Gallery:
+    id: str
+    videos: bool
+    images: bool
 
 
 class MotherlessCrawler(Crawler):
@@ -48,6 +55,18 @@ class MotherlessCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
+            case [slug] if slug.startswith("GV") and (gallery_id := slug[:2]):
+                return await self.collection(scrape_item, gallery_id, "videos")
+            case [slug] if slug.startswith("GI") and (gallery_id := slug[:2]):
+                return await self.collection(scrape_item, gallery_id, "images")
+
+            case [slug, *rest] if slug.startswith("G") and (gallery_id := slug[:1]):
+                match rest:
+                    case []:
+                        return await self.gallery(scrape_item, gallery_id)
+                    case _:
+                        raise ValueError
+
             case [media_id]:
                 return await self.media(scrape_item, media_id)
             case _:
@@ -82,35 +101,16 @@ class MotherlessCrawler(Crawler):
                     self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem) -> None:
-        group_id = scrape_item.url.name
-        gallery_id = group_id.removeprefix("G")
-        media_types = "images", "videos"
-        is_group = "g" in scrape_item.url.parts
-        if not is_group and gallery_id.startswith("G"):  # No support for subgalleries
-            raise ScrapeError(422)
-
-        for prefix in ("I", "V"):
-            gallery_id = gallery_id.removeprefix(prefix)
-
-        if is_group:
-            new_urls = [self.PRIMARY_URL / part / group_id for part in ("gi", "gv")]
-
-        else:
-            new_urls = [self.PRIMARY_URL / f"{part}{gallery_id}" for part in ("GI", "GV")]
-
-        collection_id = group_id if is_group else gallery_id
-        for media_type, url in zip(media_types, new_urls, strict=True):
-            new_scrape_item = scrape_item.create_child(url)
-            await self.collection_items(new_scrape_item, media_type, collection_id)
+    async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
+        for url in (self.PRIMARY_URL / f"GI{gallery_id}", self.PRIMARY_URL / f"GI{gallery_id}"):
+            new_item = scrape_item.copy()
+            new_item.url = url
+            self.create_task(self.run(new_item))
 
     @error_handling_wrapper
-    async def collection_items(
-        self, scrape_item: ScrapeItem, media_type: Literal["videos", "images"], collection_id: str | None = None
-    ) -> None:
+    async def collection(self, scrape_item: ScrapeItem, collection_id: str, name: str) -> None:
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
         _check_soup(soup)
-
         try:
             title = css.select_text(soup, Selector.GALLERY_TITLE)
         except css.SelectorError:
@@ -118,11 +118,11 @@ class MotherlessCrawler(Crawler):
 
         title = self.create_title(title, collection_id)
         scrape_item.setup_as_album(title, album_id=collection_id)
+        scrape_item.append_folders(name)
 
         async for soup in pages:
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
-                new_scrape_item.append_folders(media_type.capitalize())
-                self.create_task(self.run(new_scrape_item))
+            for new_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+                self.create_eager_task(self.run(new_item))
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
@@ -138,39 +138,6 @@ class MotherlessCrawler(Crawler):
         _, ext = self.get_filename_and_ext(media.url.name)
         filename = self.create_custom_filename(media.name, ext, file_id=media.code)
         await self.handle_file(media.url, scrape_item, media.name, ext, custom_filename=filename)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def process_media_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> Media:
-        media_info = _extract_media(soup)
-        if media_info.type == "gallery":
-            raise ScrapeError(422)
-
-        n_parts = len(scrape_item.url.parts)
-        from_gallery = n_parts > 2 and scrape_item.url.parts[1].startswith("G")
-        from_group = n_parts > 3 and "g" in scrape_item.url.parts
-        if not (from_gallery or from_group):
-            return media_info
-
-        parent_id = scrape_item.url.parts[2] if from_group else scrape_item.url.parts[1]
-        parent_title = ""
-        title_tag = soup.select_one(Selector.ITEM_GALLERY_TITLE)
-        if from_gallery:
-            parent_id = parent_id.removeprefix("G")
-            title_tag = soup.select_one(Selector.GROUP_TITLE)
-
-        if title_tag:
-            parent_title: str = css.attr(title_tag, "title") if from_gallery else title_tag.get_text(strip=True)
-
-        parent_path = parent_id if from_gallery else f"g/{parent_id}"
-        parent_url = self.PRIMARY_URL / parent_path
-        if parent_url not in scrape_item.parents and parent_title:
-            scrape_item.parents.append(parent_url)
-            title = self.create_title(parent_title, parent_id)
-            scrape_item.setup_as_album(title, album_id=parent_id)
-            scrape_item.append_folders(f"{media_info.type.capitalize()}s")
-
-        return media_info
 
 
 def _check_soup(soup: BeautifulSoup) -> None:

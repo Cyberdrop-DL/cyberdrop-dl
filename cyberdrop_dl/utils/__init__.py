@@ -30,14 +30,18 @@ def enter_context[T](context_var: ContextVar[T], value: T, /) -> Generator[None]
 
 
 def extract_text(text: str, /, start: str, end: str, pos: int | None = None) -> tuple[int, str]:
-    """Extracts the text between two strings in a larger text. Result will be stripped"""
+    """Extracts the text between two strings in a larger text.
+
+    Result will be stripped"""
     start_index = text.index(start, pos) + len(start)
     end_index = text.index(end, start_index)
     return end_index + len(end), text[start_index:end_index].strip()
 
 
 def extr_text(text: str, /, start: str, end: str) -> str:
-    """Extracts the text between two strings in a larger text. Result will be stripped"""
+    """Extracts the text between two strings in a larger text.
+
+    Result will be stripped"""
     _, txt = extract_text(text, start, end)
     return txt
 
