@@ -32,4 +32,20 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://motherless.xxx/G6323A2B/6D45EE7",
+        "results": [
+            {
+                "url": "re:.motherlessmedia.com/videos/6D45EE7.mp4",
+                "filename": "Ava [6D45EE7].mp4",
+                "debrid_url": None,
+                "original_filename": "Ava",
+                "referer": "https://motherless.xxx/6D45EE7",
+                "album_id": None,
+                "uploaded_at": 1754164557,
+                "download_folder": "re:Loose Files (Motherless)",
+            }
+        ],
+        "count": 1,
+    },
 ]

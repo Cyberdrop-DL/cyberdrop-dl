@@ -52,7 +52,7 @@ class TextExtractor:
         self.cursor: int | None = pos
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(text={self.text!r}, pos={self.cursor!r})"
+        return f"{type(self).__name__}(text={self.text!r}, cursor={self.cursor!r})"
 
     def __call__(self, start: str, end: str) -> str:
         self.cursor, txt = extract_text(self.text, start, end, self.cursor)

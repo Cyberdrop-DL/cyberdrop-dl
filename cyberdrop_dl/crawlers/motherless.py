@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar, final
+from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -22,10 +22,7 @@ if TYPE_CHECKING:
 class Selector:
     MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
     ITEM = "div.thumb-container a.img-container"
-    ITEM_TITLE = "div.media-meta-title"
-    GALLERY_TITLE = ".gallery-title > h2"
-    GROUP_TITLE = "div.group-bio > h1"
-    ITEM_GALLERY_TITLE = "div.gallery-captions > a.gallery-data"
+    COLLECTION_TITLE = ".gallery-title > h2, .group-bio > h1"
     USER_NAME = "div.member-bio-username"
 
 
@@ -48,29 +45,36 @@ class MotherlessCrawler(Crawler):
         "**NOTE**": "Galleries are NOT supported",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://motherless.xxx")
-    NEXT_PAGE: ClassVar[str] = "div.pagination_link > a[rel=next]"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("motherless.com",)
     _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [slug] if slug.startswith("GV") and (gallery_id := slug[:2]):
-                return await self.collection(scrape_item, gallery_id, "videos")
-            case [slug] if slug.startswith("GI") and (gallery_id := slug[:2]):
-                return await self.collection(scrape_item, gallery_id, "images")
+            case [slug] if slug.startswith("G") and (gallery_id := slug[2:]):
+                prefix = slug[:2]
+                if prefix in ("GV", "GI"):
+                    name = "images" if prefix == "GI" else "videos"
+                    return await self.collection(scrape_item, gallery_id, name)
 
-            case [slug, *rest] if slug.startswith("G") and (gallery_id := slug[:1]):
-                match rest:
-                    case []:
-                        return await self.gallery(scrape_item, gallery_id)
-                    case _:
-                        raise ValueError
+                gallery_id = slug[1:]
+                return await self.gallery(scrape_item, gallery_id)
 
             case [media_id]:
                 return await self.media(scrape_item, media_id)
             case _:
                 raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case [slug, media_id] if slug.startswith("G") and slug[1:]:
+                return url.origin() / media_id
+            case _:
+                return url
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem) -> None:
@@ -111,12 +115,7 @@ class MotherlessCrawler(Crawler):
     async def collection(self, scrape_item: ScrapeItem, collection_id: str, name: str) -> None:
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
         _check_soup(soup)
-        try:
-            title = css.select_text(soup, Selector.GALLERY_TITLE)
-        except css.SelectorError:
-            title = css.select_text(soup, Selector.GROUP_TITLE)
-
-        title = self.create_title(title, collection_id)
+        title = self.create_title(css.select_text(soup, Selector.COLLECTION_TITLE), collection_id)
         scrape_item.setup_as_album(title, album_id=collection_id)
         scrape_item.append_folders(name)
 
