@@ -41,7 +41,13 @@ class MotherlessCrawler(Crawler):
             "/GI<gallery_id>",
             "/GV<gallery_id>",
         ),
-        "User": ("/u/...", "/f/..."),
+        "User": (
+            "/m/<username>",
+            "/member/<username>",
+            "/u/<username>",
+            "/u/<username>?t=v",
+            "/u/<username>?t=i",
+        ),
         "Image or Video": (
             "/<media_id>",
             "/g/<group_name>/<media_id>",
@@ -57,10 +63,10 @@ class MotherlessCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["g", slug]:
-                return await self.group(scrape_item, slug)
+                await self.group(scrape_item, slug)
             case ["gv" | "gi" as prefix, slug]:
                 name = "images" if prefix == "gi" else "videos"
-                return await self.collection(scrape_item, slug, name)
+                await self.collection(scrape_item, slug, name)
 
             case [slug] if slug.startswith("G") and (gallery_id := slug[2:]):
                 if (prefix := slug[:2]) in ("GV", "GI"):
@@ -68,10 +74,18 @@ class MotherlessCrawler(Crawler):
                     return await self.collection(scrape_item, gallery_id, name)
 
                 gallery_id = slug[1:]
-                return await self.gallery(scrape_item, gallery_id)
+                await self.gallery(scrape_item, gallery_id)
 
             case [media_id]:
-                return await self.media(scrape_item, media_id)
+                await self.media(scrape_item, media_id)
+
+            case ["u", username]:
+                type_ = scrape_item.url.query.get("t")
+                if type_ not in ("v", "i"):
+                    return await self.user(scrape_item, username)
+                name = "images" if type_ == "i" else "videos"
+                await self.user_uploads(scrape_item, username, name)
+
             case _:
                 raise ValueError
 
@@ -84,36 +98,10 @@ class MotherlessCrawler(Crawler):
                 return url.origin() / media_id
             case ["g", _, media_id]:
                 return url.origin() / media_id
+            case ["member" | "m", username]:
+                return url.origin() / "u" / username
             case _:
                 return url
-
-    @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem) -> None:
-        n_parts = len(scrape_item.url.parts)
-        assert n_parts >= 3
-        username = scrape_item.url.parts[2]
-        canonical_url = self.PRIMARY_URL / "f" / username
-        videos_url = canonical_url / "videos"
-        images_url = canonical_url / "images"
-        is_homepage = n_parts == 3
-
-        title: str = f"{username} [user]"
-        title = self.create_title(title)
-        scrape_item.setup_as_album(title)
-
-        if is_homepage or "images" in scrape_item.url.parts:
-            async for soup in self.web_pager(images_url):
-                _check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
-                    new_scrape_item.append_folders("Images")
-                    self.create_task(self.run(new_scrape_item))
-
-        if is_homepage or "videos" in scrape_item.url.parts:
-            async for soup in self.web_pager(videos_url):
-                _check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
-                    new_scrape_item.append_folders("Videos")
-                    self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
@@ -128,6 +116,25 @@ class MotherlessCrawler(Crawler):
             new_item = scrape_item.copy()
             new_item.url = self.PRIMARY_URL / part / slug
             self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem, username: str) -> None:
+        for part in ("i", "v"):
+            new_item = scrape_item.copy()
+            new_item.url = (self.PRIMARY_URL / "u" / username).with_query(t=part)
+            self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def user_uploads(self, scrape_item: ScrapeItem, username: str, name: str) -> None:
+        scrape_item.setup_as_album(self.create_title(f"{username} [user]"))
+        scrape_item.append_folders(name)
+
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        _check_soup(soup)
+
+        async for soup in pages:
+            for new_item in self.iter_children(scrape_item, soup, Selector.ITEM):
+                self.create_eager_task(self.run(new_item))
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_id: str, name: str) -> None:
