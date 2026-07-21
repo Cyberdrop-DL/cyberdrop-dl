@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "re:/videos/1764757703719_yxthkzjbhbp_Hookers.mp4",
                 "filename": "Real Hookers - PMV [69301129194866d69ec96b5d][1080p].mp4",
-                "original_filename": "1764757703719_yxthkzjbhbp_Hookers.mp4",
+                "original_filename": "Real Hookers - PMV",
                 "download_folder": "re:Loose Files (PMVHaven)",
                 "referer": "https://pmvhaven.com/video/real-hookers-pmv_69301129194866d69ec96b5d",
                 "uploaded_at": 1764757801,
@@ -21,7 +21,7 @@ TEST_CASES = [
                 "url": "https://pmvhavencloud.s3.eu-west-par.io.cloud.ovh.net/videos/LordOfShade_-_Big_Ass_Compilation__1766106016843_gs09jmf7.mp4",
                 "filename": "Big Ass Compilation [6944a3a0c7a6aeae188b1fa8].mp4",
                 "debrid_url": None,
-                "original_filename": "LordOfShade_-_Big_Ass_Compilation__1766106016843_gs09jmf7.mp4",
+                "original_filename": "Big Ass Compilation",
                 "referer": "https://pmvhaven.com/video/6944a3a0c7a6aeae188b1fa8",
                 "album_id": None,
                 "uploaded_at": 1766106016,

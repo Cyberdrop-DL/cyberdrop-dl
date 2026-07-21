@@ -123,14 +123,14 @@ class PMVHavenCrawler(Crawler):
     async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         scrape_item.uploaded_at = self.parse_iso_date(video.uploadDate)
         link = self.parse_url(video.videoUrl)
-        filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
+        _, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
         custom_filename = self.create_custom_filename(
             video.title,
             ext,
             file_id=video.id,
             resolution=Resolution(video.width, video.height) if video.width and video.height else None,
         )
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename, metadata=video)
+        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=custom_filename, metadata=video)
 
 
 _deserialize = Deserializer(aliases={"id": "_id"}, converters={"thumbnail": parse_url})
