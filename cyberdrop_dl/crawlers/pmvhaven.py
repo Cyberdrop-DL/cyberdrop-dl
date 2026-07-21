@@ -3,18 +3,19 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+import operator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import nuxt
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils import nuxt, unique
+from cyberdrop_dl.utils.dataclass import _DataClass, deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable
+    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
     from typing import Any
 
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -23,8 +24,23 @@ if TYPE_CHECKING:
 PRIMARY_URL = AbsoluteHttpURL("https://pmvhaven.com")
 
 
+def with_aliases(aliases: Mapping[str, str]):
+    def _deserialize[T: _DataClass](cls: type[T], data: Mapping[str, Any], **overrides: Any) -> T:
+        for name, alias in aliases.items():
+            if name in data or name in overrides:
+                continue
+            try:
+                overrides[name] = data[alias]
+            except KeyError:
+                pass
+
+        return deserialize(cls, data, **overrides)
+
+    return _deserialize
+
+
 @dataclasses.dataclass(slots=True)
-class Video(DictDataclass):
+class Video:
     # TODO: parse and download previews and thumbnails
     id: str
     title: str
@@ -35,15 +51,21 @@ class Video(DictDataclass):
 
     hlsMasterPlaylistUrl: str | None = None
 
-    @classmethod
-    def filter_dict(cls, data: dict[str, Any]) -> dict[str, Any]:
-        data["id"] = data["_id"]
-        return super(Video, cls).filter_dict(data)
-
     @property
     def web_url(self) -> AbsoluteHttpURL:
         # The title does not matter, the website parses the id from the url and redirects to the correct video
         return PRIMARY_URL / f"video/{self.title.lower()}_{self.id}"
+
+
+@dataclasses.dataclass(slots=True)
+class Playlist:
+    id: str
+    name: str
+    descrption: str
+    thumbnail: AbsoluteHttpURL
+    createdAt: str
+    updatedAt: str
+    videos: list[str]
 
 
 class PMVHavenCrawler(Crawler):
@@ -141,9 +163,39 @@ class PMVHavenCrawler(Crawler):
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename, metadata=video)
 
 
-def _parse_videos(videos: Iterable[dict[str, Any]]) -> Generator[Video]:
-    ids: set[str] = set()
-    for data in videos:
-        if data["_id"] not in ids:
-            ids.add(data["_id"])
-            yield Video.from_dict(data)
+class PMVAPI(API):
+    async def video(self, video_id: str) -> Video:
+        api_url = self.PRIMARY_URL / "api/videos" / video_id
+        data = (await self.request_json(api_url))["data"]
+        return deserialize(Video, data, id=data["_id"])
+
+    async def search(self, query: str) -> AsyncGenerator[Generator[Video]]:
+        api_url = (self.PRIMARY_URL / "api/videos/search").with_query(q=query)
+        data: list[dict[str, Any]]
+        async for data in self.pager(api_url):
+            yield _parse_videos(data)
+
+    async def playlist(self, playlist_id: str) -> tuple[Playlist, AsyncGenerator[Generator[Video]]]:
+        api_url = self.PRIMARY_URL / "api/playlists" / playlist_id
+        data, pages = await aio.peek_first(self.pager(api_url))
+        playlist = deserialize(Playlist, data, id=data["_id"])
+
+        async def videos():
+            async for data in pages:
+                yield _parse_videos(data["videoDetails"])
+
+        return playlist, videos()
+
+    async def pager(self, api_url: AbsoluteHttpURL, init_page: int = 1) -> AsyncGenerator[Any]:
+        for page in itertools.count(init_page):
+            resp: dict[str, Any] = await self.request_json(api_url.update_query(limit=100, page=page))
+            yield resp["data"]
+            if not resp["pagination"]["hasMore"]:
+                break
+
+
+def _parse_videos(videos: Iterable[dict[str, Any]]) -> map[Video]:
+    videos = unique(videos, operator.itemgetter("_id"))
+    return map(
+        _deserialize,
+    )
