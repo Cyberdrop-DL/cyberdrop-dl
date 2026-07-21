@@ -10,6 +10,7 @@ from cyclopts.bind import normalize_tokens
 from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveInt
 
 from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
 from cyberdrop_dl.models import ConfigModel, merge_models
 from cyberdrop_dl.models.types import ByteSizeSerilized  # noqa: TC001
@@ -19,7 +20,7 @@ from cyberdrop_dl.utils import cleanup
 from .auth import Authentication, Notifications
 from .crawlers import Crawlers
 from .filters import Filters
-from .settings import Downloads, Hashing, Jdownloader, Logs, MaxChildren, Network, Sort, SubFolders, UIOptions
+from .settings import ALIASES, Downloads, Hashing, Jdownloader, Logs, MaxChildren, Network, Sort, SubFolders, UIOptions
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -146,9 +147,9 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     def parse_args(tokens: str | Iterable[str]) -> Config:
         global _app  # noqa: PLW0603
         if _app is None:
-            _app = App(print_error=False, exit_on_error=False)
+            _app = App(print_error=False, exit_on_error=False, default_parameter=DEFAULT_PARAMETER)
             _ = _app.command(name="coerce")(_coerce)
-        fn, bound, *_ = _app.parse_args(["coerce", *normalize_tokens(tokens)])
+        fn, bound, *_ = _app.parse_args(["coerce", *parse_tokens(tokens)])
         assert fn is _coerce
         return _coerce(*bound.args, **bound.kwargs)
 
@@ -171,6 +172,10 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
         me._source = self.source
         me.logs._created_at = self.logs._created_at
         return me
+
+
+def parse_tokens(tokens: Iterable[str] | str | None) -> list[str]:
+    return [ALIASES.get(token, token) for token in normalize_tokens(tokens)]
 
 
 def _resolve_paths(model: BaseModel) -> None:

@@ -24,6 +24,15 @@ from cyberdrop_dl.models.types import (
 )
 from cyberdrop_dl.models.validators import strings
 
+ALIASES: dict[str, str] = {}
+
+
+def _alias(name: str) -> Parameter:
+    aliases = (f"--{name}", f"--{name}.enabled")
+    negative_aliases = (f"--{name}.no-enabled", f"--no-{name}")
+    ALIASES.update([aliases, negative_aliases])
+    return Parameter(alias=aliases, negative_alias=negative_aliases)
+
 
 class _SubFoldersInclude(ConfigModel):
     album_id: bool = False
@@ -149,7 +158,7 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
 
 class Jdownloader(ConfigGroup, name=None):
-    enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
+    enabled: Annotated[bool, _alias("jdownloader")] = False
     "Send unsupported URLs to Jdownloader"
 
     autostart: bool = False
@@ -212,7 +221,7 @@ class SortFormats(ConfigModel):
 
 
 class Sort(ConfigGroup, name=None):
-    enabled: Annotated[bool, Parameter(name="--sort")] = False
+    enabled: Annotated[bool, _alias("sort")] = False
     "Enable/Disable file sorting at the end of a run"
 
     input_folder: FalsyAsNone[Path] = None

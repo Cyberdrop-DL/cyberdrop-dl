@@ -8,6 +8,7 @@ from cyberdrop_dl import __version__
 from cyberdrop_dl.__main__ import run_cdl
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands.report import generate_report
+from cyberdrop_dl.config import Config
 
 app = App(result_action="return_value", exit_on_error=False, suppress_keyboard_interrupt=False)
 
@@ -60,3 +61,16 @@ def test_cli_args_parsing(tmp_cwd: Path) -> None:
     assert cli.config_file == tmp_cwd / config_yaml
     assert cli.database_file is None
     assert cli.cache_file is None
+
+
+def test_custom_bool_parsing() -> None:
+    config = Config.parse_args("--jdownloader")
+    assert config.jdownloader.enabled
+    config = Config.parse_args("--no-jdownloader")
+    assert not config.jdownloader.enabled
+    config = Config.parse_args("--jdownloader.no-enabled")
+    assert not config.jdownloader.enabled
+    config = Config.parse_args("--sort")
+    assert config.sort.enabled
+    config = Config.parse_args("--no-sort")
+    assert not config.sort.enabled
