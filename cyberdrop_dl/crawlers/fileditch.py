@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import hashlib
 import json
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from cyberdrop_dl import multi_process
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
 _HOMEPAGE_CATCH_ALL = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 
+@Registry.database.fix_referer
 class FileditchCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
@@ -69,7 +72,7 @@ class FileditchCrawler(Crawler):
         try:
             async with self._startup_lock:
                 self.log.warning("Solving proof of work challenge for %s\n%s", url, dict(pow))
-                solution = await multi_process.async_race(_pow_worker, pow.pow_challenge, pow.pow_diff)
+                solution = await asyncio.to_thread(multi_process.race, _pow_worker, pow.pow_challenge, pow.pow_diff)
 
         except TimeoutError:
             msg = f"Unable to solve challenge {pow.pow_challenge} after {multi_process.TIMEOUT.get()} seconds"

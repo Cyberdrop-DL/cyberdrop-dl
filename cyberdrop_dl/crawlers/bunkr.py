@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from aiohttp import ClientConnectorError
 
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -283,6 +284,7 @@ def _fix_encoding(val: str) -> str:
     return val.replace(r"\/", "/")
 
 
+@Registry.database.referer_fix_for(BunkrCrawler)
 def fix_db_referer(referer: str) -> str:
     url = BunkrCrawler.transform_url(AbsoluteHttpURL(referer))
     if BunkrCrawler.is_subdomain(url):

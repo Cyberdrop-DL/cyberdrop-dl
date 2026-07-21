@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -102,6 +103,7 @@ class TurboVidCrawler(Crawler):
         return name, self.parse_url(resp["url"])
 
 
+@Registry.database.referer_fix_for(TurboVidCrawler)
 def fix_turbovid_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer.replace("/embed/", "/d/"))
     return str(TurboVidCrawler.transform_url(url))

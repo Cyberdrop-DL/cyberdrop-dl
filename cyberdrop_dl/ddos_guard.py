@@ -180,19 +180,18 @@ class Anubis(DDosGuard):
 
     @classmethod
     async def solve(cls, challenge: _AnubisChallenge) -> _AnubisSolution:
-        return await asyncio.to_thread(cls._solve, challenge)
+        return await asyncio.to_thread(_solve_anubis_challenge, challenge)
 
-    @classmethod
-    def _solve(cls, challenge: _AnubisChallenge, *, timeout: float = 30.0) -> _AnubisSolution:
-        try:
-            with multi_process.ctx(timeout=timeout):
-                result = multi_process.race(_anubis_worker, challenge.data, challenge.difficulty)
-        except TimeoutError:
-            msg = f"Unable to solve Anubis challenge after {timeout:0.2f} seconds: {challenge}"
-            raise DDOSGuardError(msg) from None
 
-        nonce, checksum = result.value
-        return _AnubisSolution(challenge.id, nonce, checksum, challenge.difficulty, result.elapsed)
+def _solve_anubis_challenge(challenge: _AnubisChallenge) -> _AnubisSolution:
+    try:
+        result = multi_process.race(_anubis_worker, challenge.data, challenge.difficulty)
+    except TimeoutError:
+        msg = f"Unable to solve Anubis challenge after {multi_process.TIMEOUT.get():0.2f} seconds: {challenge}"
+        raise DDOSGuardError(msg) from None
+
+    nonce, checksum = result.value
+    return _AnubisSolution(challenge.id, nonce, checksum, challenge.difficulty, result.elapsed)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -221,11 +220,11 @@ class _AnubisSolution:
         )
 
 
-def _anubis_worker(start: int, step: int, challenge: str, difficulty: int) -> tuple[int, str] | None:
-    nonce = start
+def _anubis_worker(worker_idx: int, max_workers: int, challenge: str, difficulty: int) -> tuple[int, str]:
+    nonce = worker_idx
     target = "0" * difficulty
     while True:
         checksum = hashlib.sha256(f"{challenge}{nonce}".encode()).hexdigest()
         if checksum.startswith(target):
             return nonce, checksum
-        nonce += step
+        nonce += max_workers

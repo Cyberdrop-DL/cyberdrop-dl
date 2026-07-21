@@ -4,6 +4,7 @@ import importlib
 import pkgutil
 import re
 import weakref
+from collections.abc import Callable
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, ClassVar
 
@@ -54,10 +55,14 @@ def _make_crawler_name(input_string: str) -> str:
     return f"{cap_name}Crawler"
 
 
+type DBFix = Callable[[str], str]
+
+
 class Registry:
     abc: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
     concrete: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
     generic: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
+    _db_fixes: weakref.WeakKeyDictionary[type[Crawler], DBFix | None] = weakref.WeakKeyDictionary()
     names: ClassVar[set[str]] = set()
     # generics are concrete crawlers that are not bound to any specific site
     # They can be mapped to a site by just subclassing and setting a PRIMARY URL. ex: Chevereto
@@ -114,3 +119,22 @@ class Registry:
             yield from cls.generic
         if abc:
             yield from cls.abc
+
+    class database:  # noqa: N801
+        @staticmethod
+        def fix_referer[T: Crawler](crawler: type[T]) -> type[T]:
+            Registry._db_fixes[crawler] = None
+            return crawler
+
+        @staticmethod
+        def referer_fix_for[T: DBFix](crawler: type[Crawler]) -> Callable[[T], T]:
+            def register(fn: T) -> T:
+                Registry._db_fixes[crawler] = fn
+                return fn
+
+            return register
+
+    @classmethod
+    def db_fixes(cls) -> list[tuple[type[Crawler], DBFix | None]]:
+        cls.import_all()
+        return sorted(cls._db_fixes.items(), key=lambda x: x[0].DOMAIN.casefold())

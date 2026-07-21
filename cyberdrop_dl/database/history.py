@@ -189,7 +189,7 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
 
 
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import bunkr, cyberdrop, fileditch, goonbox, redgifs, turbovid
+    from cyberdrop_dl.crawlers import Registry
 
     def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
         def call(*args: Any, **kwargs: Any) -> T:
@@ -203,20 +203,11 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
 
     updates = ""
     with _timed_update("old database referers"):
-        for fn_name, fn, domain in [
-            ("FIX_REDGIFS_REFERER", redgifs.fix_redgifs_referer, "redgifs"),
-            ("FIX_GOONBOX_REFERER", _generic_fix_referer(goonbox.GoonBoxCrawler), "goonbox"),
-            ("FIX_CYBERDROP_REFERER", _generic_fix_referer(cyberdrop.CyberdropCrawler), "cyberdrop"),
-            (
-                "FIX_FILEDITCH_REFERER",
-                _generic_fix_referer(fileditch.FileditchCrawler),
-                fileditch.FileditchCrawler.DOMAIN,
-            ),
-            ("FIX_TURBOVID_REFERER", turbovid.fix_turbovid_referer, "turbovid"),
-            ("FIX_BUNKR_REFERER", bunkr.fix_db_referer, "bunkr"),
-        ]:
-            await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
-            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
+        for crawler, fix in Registry.db_fixes():
+            fix = fix or _generic_fix_referer(crawler)
+            fn_name = f"FIX_{crawler.DOMAIN.upper()}_REFERER"
+            await db_conn.create_function(fn_name, 1, try_wrap(fix), deterministic=True)
+            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{crawler.DOMAIN}';"  # noqa: S608
 
         await db_conn.executescript(updates)
         await db_conn.commit()
