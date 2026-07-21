@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Solve proof of work challenge (Fileditch)
 - User downloads (Motherless)
 - Accept embeded URLs with no metadata (Pawchive)
+- Handle videos with no resolution information (PMVHaven)
 
 ## [10.2.0] - 2026-07-13
 

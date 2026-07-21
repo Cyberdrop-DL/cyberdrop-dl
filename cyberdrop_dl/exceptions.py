@@ -302,7 +302,7 @@ class CDLAppError(RuntimeError):
         e_status = getattr(e, "status", None)
         e_message = getattr(e, "message", None)
         ui_failure = create_error_msg(e_status) if e_status else "Unknown"
-        log_msg = _format_error(ui_failure, e_message or str(e), _notes(e))
+        log_msg = _format_error(ui_failure, e_message or f"{type(e).__name__}({e!s})", _notes(e))
         return CDLAppError(ui_failure, log_msg)
 
 
