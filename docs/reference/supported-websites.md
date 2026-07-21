@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.1.0
+List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 
 ### 1fichier
 
@@ -1554,21 +1554,26 @@ spreadsheets:
 
 **Supported Paths**:
 
+- Gallery:
+  - `/G<gallery_id>`
+  - `/GI<gallery_id>`
+  - `/GV<gallery_id>`
 - Group:
   - `/g/<group_name>`
-  - `/gi/<image>`
-  - `/gv/<video>`
-- Image:
-  - `/...`
+  - `/gi/<group_name>`
+  - `/gv/<group_name>`
+- Image or Video:
+  - `/<media_id>`
+  - `/G<gallery_id>/<media_id>`
+  - `/g/<group_name>/<media_id>`
 - User:
-  - `/f/...`
-  - `/u/...`
-- Video:
-  - `pending`
-
-**Notes**
-
-- Galleries are NOT supported
+  - `/m/<user_name>`
+  - `/member/<user_name>`
+  - `/u/<user_name>`
+  - `/u/<user_name>?t=i`
+  - `/u/<user_name>?t=v`
+- User galleries:
+  - `/galleries/member/<user_name>/...`
 
 ### Multporn.net
 
