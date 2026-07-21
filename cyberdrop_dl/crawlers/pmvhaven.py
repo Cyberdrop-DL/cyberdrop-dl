@@ -70,7 +70,16 @@ class PMVHavenCrawler(Crawler):
         title = self.create_title(f"{playlist.name} [playlist]")
         scrape_item.setup_as_album(title)
         await self._playlist(scrape_item, playlist)
-        await self._iter_videos(scrape_item, video_pages)
+        video_ids = await self._iter_videos(scrape_item, video_pages)
+        missing_videos = set(playlist.videos) - video_ids
+        if missing_videos:
+            self.log.warning(
+                "Playlist %s reports %s videos but only %s video were returned. The following videos have been removed: %s",
+                scrape_item.url,
+                len(playlist.videos),
+                len(video_ids),
+                sorted(missing_videos),
+            )
 
     async def _playlist(self, scrape_item: ScrapeItem, playlist: Playlist) -> None:
         self.create_eager_task(self.write_metadata(scrape_item, playlist.id, playlist))
@@ -86,11 +95,15 @@ class PMVHavenCrawler(Crawler):
                 custom_filename=filename,
             )
 
-    async def _iter_videos(self, scrape_item: ScrapeItem, video_pages: AsyncIterable[Iterable[Video]]) -> None:
-        async for videos in video_pages:
-            for video in videos:
-                await self._video(scrape_item.copy(), video)
-                scrape_item.add_children()
+    async def _iter_videos(self, scrape_item: ScrapeItem, video_pages: AsyncIterable[Iterable[Video]]) -> set[str]:
+        seen: set[str] = set()
+        async with self.new_task_group(scrape_item) as tg:
+            async for videos in video_pages:
+                for video in videos:
+                    seen.add(video.id)
+                    tg.create_task(self._video(scrape_item.copy(), video))
+                    scrape_item.add_children()
+        return seen
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
@@ -116,7 +129,7 @@ class PMVHavenCrawler(Crawler):
             video.title,
             ext,
             file_id=video.id,
-            resolution=Resolution(video.width, video.height),
+            resolution=Resolution(video.width, video.height) if video.width and video.height else None,
         )
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename, metadata=video)
 
@@ -131,8 +144,8 @@ class Video:
     title: str
     videoUrl: str
     uploadDate: str
-    width: int
-    height: int
+    width: int | None = None
+    height: int | None = None
 
     hlsMasterPlaylistUrl: str | None = None
 
@@ -148,7 +161,7 @@ class Video:
 class Playlist:
     id: str
     name: str
-    descrption: str
+    description: str
     thumbnail: AbsoluteHttpURL
     createdAt: str
     updatedAt: str
