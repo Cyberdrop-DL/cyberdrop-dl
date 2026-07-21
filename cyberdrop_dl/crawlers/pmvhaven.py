@@ -68,7 +68,7 @@ class PMVHavenCrawler(Crawler):
         missing_videos = set(playlist.videos) - video_ids
         if missing_videos:
             self.log.warning(
-                "Playlist %s reports %s videos but only %s video were returned. The following videos have been removed: %s",
+                "Playlist %s reports %s videos but only %s videos were found. The following videos have been removed: %s",
                 scrape_item.url,
                 len(playlist.videos),
                 len(video_ids),
