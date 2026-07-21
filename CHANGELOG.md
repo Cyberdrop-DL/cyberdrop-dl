@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dead lock if more that 50 downloads are queued (Filester)
 - Solve proof of work challenge (Fileditch)
+- User downloads (Motherless)
 
 ## [10.2.0] - 2026-07-13
 
