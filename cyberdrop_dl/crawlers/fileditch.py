@@ -7,6 +7,7 @@ import json
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from cyberdrop_dl import multi_process
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 _HOMEPAGE_CATCH_ALL = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 
 
+@Registry.database.fix_referer
 class FileditchCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (

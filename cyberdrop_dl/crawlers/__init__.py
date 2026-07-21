@@ -120,15 +120,16 @@ class Registry:
         if abc:
             yield from cls.abc
 
-    @staticmethod
-    def generic_db_referer_fix[T: Crawler](crawler: type[T]) -> type[T]:
-        Registry.db_fixes[crawler] = None
-        return crawler
+    class database:  # noqa: N801
+        @staticmethod
+        def fix_referer[T: Crawler](crawler: type[T]) -> type[T]:
+            Registry.db_fixes[crawler] = None
+            return crawler
 
-    @staticmethod
-    def db_referer_fix[T: DBFix](crawler: type[Crawler]) -> Callable[[T], T]:
-        def register(fn: T) -> T:
-            Registry.db_fixes[crawler] = fn
-            return fn
+        @staticmethod
+        def referer_fix_for[T: DBFix](crawler: type[Crawler]) -> Callable[[T], T]:
+            def register(fn: T) -> T:
+                Registry.db_fixes[crawler] = fn
+                return fn
 
-        return register
+            return register

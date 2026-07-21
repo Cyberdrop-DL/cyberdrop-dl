@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.filepath import remove_file_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -19,6 +20,7 @@ class Selector:
     ALBUM_ITEM = "a#file"
 
 
+@Registry.database.fix_referer
 class CyberdropCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "k1-cd.cdn.gigachad-cdn.ru", "cyberdrop"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {

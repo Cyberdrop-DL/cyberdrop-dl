@@ -189,7 +189,7 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
 
 
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
-    from cyberdrop_dl.crawlers import bunkr, cyberdrop, fileditch, goonbox, redgifs, turbovid
+    from cyberdrop_dl.crawlers import Registry
 
     def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
         def call(*args: Any, **kwargs: Any) -> T:
@@ -203,14 +203,10 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
 
     updates = ""
     with _timed_update("old database referers"):
-        for fn, domain in [
-            (redgifs.fix_redgifs_referer, "redgifs"),
-            _generic_fix_referer(goonbox.GoonBoxCrawler),
-            _generic_fix_referer(cyberdrop.CyberdropCrawler),
-            _generic_fix_referer(fileditch.FileditchCrawler),
-            (turbovid.fix_turbovid_referer, "turbovid"),
-            (bunkr.fix_db_referer, "bunkr"),
-        ]:
+        Registry.import_all()
+        for crawler, fn in Registry.db_fixes.items():
+            fn = fn or _generic_fix_referer(crawler)
+            domain = crawler.DOMAIN
             fn_name = f"FIX_{domain.upper()}_REFERER"
             await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
             updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
@@ -230,10 +226,10 @@ def _timed_update(name: str) -> Generator[None]:
         logger.info(f"Finished update of {name}. Took: {took:0.2f} seconds")
 
 
-def _generic_fix_referer(crawler: type[Crawler]) -> tuple[Callable[[str], str], str]:
+def _generic_fix_referer(crawler: type[Crawler]) -> Callable[[str], str]:
     def fix_db_referer(referer: str) -> str:
         url = crawler.parse_url(referer, trim=False)
         return str(crawler.transform_url(url))
 
     fix_db_referer.__name__ = f"fix_{crawler.DOMAIN}_referer"
-    return fix_db_referer, crawler.DOMAIN
+    return fix_db_referer

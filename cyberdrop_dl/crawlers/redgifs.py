@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -159,6 +160,7 @@ def _canonical_url(name_or_id: str) -> AbsoluteHttpURL:
     return RedGifsCrawler.PRIMARY_URL / "watch" / _id(name_or_id)
 
 
+@Registry.database.referer_fix_for(RedGifsCrawler)
 def fix_redgifs_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer)
     name = url.name or url.parent.name
