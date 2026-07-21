@@ -122,18 +122,31 @@ class PMVHavenCrawler(Crawler):
     @error_handling_wrapper
     async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         scrape_item.uploaded_at = self.parse_iso_date(video.uploadDate)
-        link = self.parse_url(video.videoUrl)
-        _, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
+        _, ext = self.get_filename_and_ext(video.videoUrl.name, assume_ext=".mp4")
         custom_filename = self.create_custom_filename(
             video.title,
             ext,
             file_id=video.id,
             resolution=Resolution(video.width, video.height) if video.width and video.height else None,
         )
-        await self.handle_file(link, scrape_item, video.title, ext, custom_filename=custom_filename, metadata=video)
+        await self.handle_file(
+            video.videoUrl,
+            scrape_item,
+            video.title,
+            ext,
+            custom_filename=custom_filename,
+            metadata=video,
+        )
 
 
-_deserialize = Deserializer(aliases={"id": "_id"}, converters={"thumbnail": parse_url})
+_deserialize = Deserializer(
+    aliases={"id": "_id"},
+    converters={
+        "thumbnail": parse_url,
+        "videoUrl": parse_url,
+        "hlsMasterPlaylistUrl": lambda url: url and parse_url(url),
+    },
+)
 
 
 @dataclasses.dataclass(slots=True)
@@ -141,12 +154,11 @@ class Video:
     # TODO: parse and download previews and thumbnails
     id: str
     title: str
-    videoUrl: str
+    videoUrl: AbsoluteHttpURL
     uploadDate: str
     width: int | None = None
     height: int | None = None
-
-    hlsMasterPlaylistUrl: str | None = None
+    hlsMasterPlaylistUrl: AbsoluteHttpURL | None = None
 
     @property
     def href(self) -> str:
