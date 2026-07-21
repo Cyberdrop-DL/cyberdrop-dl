@@ -203,13 +203,11 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
 
     updates = ""
     with _timed_update("old database referers"):
-        Registry.import_all()
-        for crawler, fn in Registry.db_fixes.items():
-            fn = fn or _generic_fix_referer(crawler)
-            domain = crawler.DOMAIN
-            fn_name = f"FIX_{domain.upper()}_REFERER"
-            await db_conn.create_function(fn_name, 1, try_wrap(fn), deterministic=True)
-            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{domain}';"  # noqa: S608
+        for crawler, fix in Registry.db_fixes():
+            fix = fix or _generic_fix_referer(crawler)
+            fn_name = f"FIX_{crawler.DOMAIN.upper()}_REFERER"
+            await db_conn.create_function(fn_name, 1, try_wrap(fix), deterministic=True)
+            updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{crawler.DOMAIN}';"  # noqa: S608
 
         await db_conn.executescript(updates)
         await db_conn.commit()

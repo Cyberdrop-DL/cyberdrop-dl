@@ -62,7 +62,7 @@ class Registry:
     abc: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
     concrete: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
     generic: weakref.WeakSet[type[Crawler]] = weakref.WeakSet()
-    db_fixes: weakref.WeakKeyDictionary[type[Crawler], DBFix | None] = weakref.WeakKeyDictionary()
+    _db_fixes: weakref.WeakKeyDictionary[type[Crawler], DBFix | None] = weakref.WeakKeyDictionary()
     names: ClassVar[set[str]] = set()
     # generics are concrete crawlers that are not bound to any specific site
     # They can be mapped to a site by just subclassing and setting a PRIMARY URL. ex: Chevereto
@@ -123,13 +123,18 @@ class Registry:
     class database:  # noqa: N801
         @staticmethod
         def fix_referer[T: Crawler](crawler: type[T]) -> type[T]:
-            Registry.db_fixes[crawler] = None
+            Registry._db_fixes[crawler] = None
             return crawler
 
         @staticmethod
         def referer_fix_for[T: DBFix](crawler: type[Crawler]) -> Callable[[T], T]:
             def register(fn: T) -> T:
-                Registry.db_fixes[crawler] = fn
+                Registry._db_fixes[crawler] = fn
                 return fn
 
             return register
+
+    @classmethod
+    def db_fixes(cls) -> list[tuple[type[Crawler], DBFix | None]]:
+        cls.import_all()
+        return sorted(cls._db_fixes.items(), key=lambda x: x[0].DOMAIN.casefold())
