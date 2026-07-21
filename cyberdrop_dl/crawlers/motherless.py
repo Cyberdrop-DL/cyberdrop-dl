@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
@@ -12,6 +13,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     import datetime
+    from collections.abc import AsyncIterable, Generator
 
     from bs4 import BeautifulSoup
 
@@ -21,7 +23,7 @@ if TYPE_CHECKING:
 @final
 class Selector:
     MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
-    MEDIA = "div.thumb-container a.img-container"
+    THUMB = ".thumb-container [data-codename]"
     COLLECTION_TITLE = ".gallery-title > h2, .group-bio > h1"
     USER_NAME = "div.member-bio-username"
 
@@ -132,10 +134,7 @@ class MotherlessCrawler(Crawler):
 
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
         _check_soup(soup)
-
-        async for soup in pages:
-            for new_item in self.iter_children(scrape_item, soup, Selector.MEDIA):
-                self.create_eager_task(self.run(new_item))
+        await self._iter_media(scrape_item, pages)
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_id: str, name: str) -> None:
@@ -144,10 +143,19 @@ class MotherlessCrawler(Crawler):
         title = self.create_title(css.select_text(soup, Selector.COLLECTION_TITLE), collection_id)
         scrape_item.setup_as_album(title, album_id=collection_id)
         scrape_item.append_folders(name)
+        await self._iter_media(scrape_item, pages)
 
+    async def _iter_media(self, scrape_item: ScrapeItem, pages: AsyncIterable[BeautifulSoup]) -> None:
         async for soup in pages:
-            for new_item in self.iter_children(scrape_item, soup, Selector.MEDIA):
-                self.create_eager_task(self.run(new_item))
+            for media in _extract_media_from_thumbs(soup):
+                url = self.parse_url(media.href)
+                new_item = scrape_item.create_child(url)
+                if media.type == "image" and Path(url.name).stem == media.code:
+                    self.create_eager_task(self._media(new_item, media))
+                else:
+                    self.create_eager_task(self.run(new_item))
+
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, _media_id: str) -> None:
@@ -156,11 +164,15 @@ class MotherlessCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         _check_soup(soup)
-        media = _extract_media(soup)
+        await self._media(scrape_item, _extract_media(soup))
+
+    @error_handling_wrapper
+    async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
         scrape_item.upload_date = media.upload_date
-        _, ext = self.get_filename_and_ext(media.url.name)
+        scrape_item.url = self.PRIMARY_URL / media.code
+        _, ext = self.get_filename_and_ext(media.src.name)
         filename = self.create_custom_filename(media.name, ext, file_id=media.code)
-        await self.handle_file(media.url, scrape_item, media.name, ext, custom_filename=filename)
+        await self.handle_file(media.src, scrape_item, media.name, ext, custom_filename=filename)
 
 
 def _check_soup(soup: BeautifulSoup) -> None:
@@ -176,10 +188,24 @@ def _check_soup(soup: BeautifulSoup) -> None:
 class Media:
     type: str
     code: str
-    group: str
     name: str
-    url: AbsoluteHttpURL
-    upload_date: datetime.datetime
+    href: str
+    src: AbsoluteHttpURL
+    upload_date: datetime.datetime | None
+
+
+def _extract_media_from_thumbs(soup: BeautifulSoup) -> Generator[Media]:
+    for thumb in css.iselect(soup, Selector.THUMB):
+        static = css.select(thumb, "img.static")
+        type_ = css.attr(thumb, "data-mediatype")
+        yield Media(
+            type=type_,
+            code=css.attr(thumb, "data-codename"),
+            name=css.attr(static, "alt"),
+            href=css.select(thumb, "a.img-container", "href"),
+            src=parse_url(css.attr(static, "src").replace("thumb", type_)),
+            upload_date=None,
+        )
 
 
 def _extract_media(soup: BeautifulSoup) -> Media:
@@ -190,7 +216,7 @@ def _extract_media(soup: BeautifulSoup) -> Media:
         name=props["name"],
         upload_date=dates.parse_iso(props["uploadDate"]),
         type=extract("__mediatype = '", "'"),
-        code=extract("__codename = '", "'"),
-        group=extract("__group = '", "'"),
-        url=parse_url(extract("__fileurl = '", "'")),
+        code=(code := extract("__codename = '", "'")),
+        href=f"/{code}",
+        src=parse_url(extract("__fileurl = '", "'")),
     )
