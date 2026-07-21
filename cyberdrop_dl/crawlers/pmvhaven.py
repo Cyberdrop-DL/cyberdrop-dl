@@ -26,10 +26,10 @@ class PMVHavenCrawler(Crawler):
         "Playlist": "/playlists/<playlist_id>",
         "Search results": "/search?q=<query>",
         "Users": (
-            "/profile/<user>",
-            "/users/<user>",
+            "/profile/<user_id>",
+            "/users/<user_id>",
         ),
-        "Video": "/video/...",
+        "Video": "/video/<video_name>_<video_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pmvhaven.com")
     DOMAIN: ClassVar[str] = "pmvhaven"
@@ -44,24 +44,18 @@ class PMVHavenCrawler(Crawler):
                 return await self.video(scrape_item, video_id)
             case ["search"] if query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, query)
-            case ["users" | "profile", _]:
-                return await self.profile(scrape_item)
+            case ["users" | "profile", user_id]:
+                return await self.profile(scrape_item, user_id)
             case ["playlists", playlist_id]:
                 return await self.playlist(scrape_item, playlist_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        data = nuxt.extract(soup)
-        username: str = nuxt.find(data, "username")["username"]
-        title = self.create_title(f"{username} [user]")
-        scrape_item.setup_as_profile(title)
-
-        for video in _parse_videos(nuxt.ifind(data, "videoUrl", "title")):
-            await self._video(scrape_item.copy(), video)
-            scrape_item.add_children()
+    async def profile(self, scrape_item: ScrapeItem, user_id: str) -> None:
+        username, videos = await self.api.profile(user_id)
+        scrape_item.setup_as_profile(self.create_title(f"{username} [user]"))
+        self._iter_videos(scrape_item, videos)
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
@@ -70,7 +64,7 @@ class PMVHavenCrawler(Crawler):
         title = self.create_title(f"{playlist.name} [playlist]")
         scrape_item.setup_as_album(title)
         await self._playlist(scrape_item, playlist)
-        video_ids = await self._iter_videos(scrape_item, video_pages)
+        video_ids = await self._iter_video_pages(scrape_item, video_pages)
         missing_videos = set(playlist.videos) - video_ids
         if missing_videos:
             self.log.warning(
@@ -95,21 +89,27 @@ class PMVHavenCrawler(Crawler):
                 custom_filename=filename,
             )
 
-    async def _iter_videos(self, scrape_item: ScrapeItem, video_pages: AsyncIterable[Iterable[Video]]) -> set[str]:
+    async def _iter_video_pages(self, scrape_item: ScrapeItem, video_pages: AsyncIterable[Iterable[Video]]) -> set[str]:
         seen: set[str] = set()
-        async with self.new_task_group(scrape_item) as tg:
-            async for videos in video_pages:
-                for video in videos:
-                    seen.add(video.id)
-                    tg.create_task(self._video(scrape_item.copy(), video))
-                    scrape_item.add_children()
+        async for videos in video_pages:
+            seen.update(self._iter_videos(scrape_item, videos))
+        return seen
+
+    def _iter_videos(self, scrape_item: ScrapeItem, videos: Iterable[Video]) -> set[str]:
+        seen: set[str] = set()
+        for video in videos:
+            seen.add(video.id)
+            new_item = scrape_item.copy()
+            new_item.url = self.PRIMARY_URL / video.href
+            self.create_eager_task(self._video(new_item, video))
+            scrape_item.add_children()
         return seen
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_profile(title)
-        await self._iter_videos(scrape_item, self.api.search(query))
+        await self._iter_video_pages(scrape_item, self.api.search(query))
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -121,7 +121,6 @@ class PMVHavenCrawler(Crawler):
 
     @error_handling_wrapper
     async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
-        scrape_item.url = self.PRIMARY_URL / video.href
         scrape_item.uploaded_at = self.parse_iso_date(video.uploadDate)
         link = self.parse_url(video.videoUrl)
         filename, ext = self.get_filename_and_ext(link.name, assume_ext=".mp4")
@@ -197,6 +196,14 @@ class PMVAPI(API):
             yield resp["data"]
             if not resp["pagination"]["hasMore"]:
                 break
+
+    async def profile(self, user_id: str) -> tuple[str, map[Video]]:
+        url = self.PRIMARY_URL / "profile" / user_id
+        soup = await self.request_soup(url)
+        data = nuxt.extract(soup)
+        username: str = nuxt.find(data, "username")["username"]
+        videos = _parse_videos(nuxt.ifind(data, "videoUrl", "title"))
+        return username, videos
 
 
 def _parse_videos(videos: Iterable[dict[str, Any]]) -> map[Video]:
