@@ -140,7 +140,7 @@ class Hasher:
             with self.tui.new_file(file):
                 async with asyncio.TaskGroup() as tg:
                     logger.info("Computing hashes of '%s'", file)
-                    xxxhash = [] = compute_hash("xxh128")
+                    xxxhash = compute_hash("xxh128")
                     for algo in self.extra_hashes:
                         _ = compute_hash(algo)
 
