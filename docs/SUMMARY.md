@@ -13,6 +13,8 @@
   - [Authentication](reference/config/authentication.md)
   - [Notifications](reference/config/notifications.md)
   - [Crawlers](reference/config/crawlers.md)
+  - [Downloads](reference/config/downloads.md)
+  - [Filters](reference/config/filters.md)
   - [General](reference/config/general.md)
   - [Hashing](reference/config/hashing.md)
   - [JDownloader](reference/config/jdownloader.md)
@@ -20,6 +22,7 @@
   - [Max Children](reference/config/max_children.md)
   - [Network](reference/config/network.md)
   - [Sorting](reference/config/sorting.md)
+  - [Subfolders](reference/config/subfolders.md)
   - [UI](reference/config/ui-options.md)
 
 - [CLI Arguments](reference/cli-arguments.md)
