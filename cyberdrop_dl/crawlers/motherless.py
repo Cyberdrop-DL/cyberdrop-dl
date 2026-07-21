@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -28,6 +29,7 @@ class Selector:
     USER_NAME = "div.member-bio-username"
 
 
+@Registry.database.fix_referer
 class MotherlessCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Group": (
