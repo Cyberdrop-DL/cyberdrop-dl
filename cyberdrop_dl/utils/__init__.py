@@ -131,12 +131,13 @@ def basic_auth(username: str, password: str) -> str:
     return f"Basic {token}"
 
 
-def unique[T](itr: Iterable[T], /) -> Generator[T]:
-    seen: set[T] = set()
-    for ele in itr:
-        if ele not in seen:
-            seen.add(ele)
-            yield ele
+def unique[T](itr: Iterable[T], /, key: Callable[[T], Any] | None = None) -> Generator[T]:
+    seen: set[Any] = set()
+    for elem in itr:
+        lookup = elem if key is None else key(elem)
+        if lookup not in seen:
+            seen.add(lookup)
+            yield elem
 
 
 def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:
