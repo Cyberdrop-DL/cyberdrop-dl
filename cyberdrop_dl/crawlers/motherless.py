@@ -197,13 +197,13 @@ class Media:
 def _extract_media_from_thumbs(soup: BeautifulSoup) -> Generator[Media]:
     for thumb in css.iselect(soup, Selector.THUMB):
         static = css.select(thumb, "img.static")
-        type_ = css.attr(thumb, "data-mediatype")
+        media_type = css.attr(thumb, "data-mediatype")
         yield Media(
-            type=type_,
+            type=media_type,
             code=css.attr(thumb, "data-codename"),
             name=css.attr(static, "alt"),
             href=css.select(thumb, "a.img-container", "href"),
-            src=parse_url(css.attr(static, "src").replace("thumb", type_)),
+            src=parse_url(css.attr(static, "src").replace("thumb", media_type)),
             upload_date=None,
         )
 
@@ -216,7 +216,7 @@ def _extract_media(soup: BeautifulSoup) -> Media:
         name=props["name"],
         upload_date=dates.parse_iso(props["uploadDate"]),
         type=extract("__mediatype = '", "'"),
-        code=(code := extract("__codename = '", "'")),
-        href=f"/{code}",
+        code=extract("__codename = '", "'"),
+        href="",
         src=parse_url(extract("__fileurl = '", "'")),
     )
