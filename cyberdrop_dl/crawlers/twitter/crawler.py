@@ -55,7 +55,6 @@ class TwitterCrawler(Crawler):
 
     @error_handling_wrapper
     async def thread(self, scrape_item: ScrapeItem, status_id: str) -> None:
-        scrape_item.setup_as_album("")
         tweet, *replies = await self.api.thread(status_id)
         self.__init_thread(scrape_item, tweet)
         self.__tweet(scrape_item, tweet)

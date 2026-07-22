@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class FXTwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.fxtwitter.com/2")
-    cursor: ClassVar[ContextVar[str | None]] = ContextVar("cursor", default=None)
+    cursor: ClassVar[ContextVar[str | None]] = ContextVar("cursor")
 
     def __post_init__(self) -> None:
         self.user: UserEndpoint = UserEndpoint(self)
