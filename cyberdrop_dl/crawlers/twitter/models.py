@@ -1,10 +1,13 @@
 # Simplified version of https://github.com/FxEmbed/FxEmbed/blob/07612ab44d1a489489e97f0b219d09dcfdb10081/docs/specs/fxtwitter-openapi.json
 from __future__ import annotations
 
+import dataclasses
 import operator
-from typing import Any, ClassVar, Literal, final
+from typing import Annotated, Any, ClassVar, Literal, final
 
-from pydantic import Field, dataclasses
+from pydantic import Field
+
+from cyberdrop_dl.models import DeferredModel
 
 
 @dataclasses.dataclass(slots=True)
@@ -31,12 +34,12 @@ class Author:
 @dataclasses.dataclass(slots=True)
 class Photo:
     id: str
-    format: str
     type: Literal["photo", "gif"]
     url: str
     height: int
     width: int
-    altText: str  # noqa: N815
+    format: str | None = None
+    altText: str | None = None  # noqa: N815
     transcode_url: str | None = None
 
 
@@ -71,7 +74,7 @@ class Video:
     thumbnail_url: str | None = None
     transcode_url: str | None = None
     filesize: float | None = None
-    formats: list[VideoFormat] = Field(default_factory=list)
+    formats: list[VideoFormat] = dataclasses.field(default_factory=list)
 
     @property
     def best_format(self) -> VideoFormat:
@@ -90,15 +93,15 @@ class ExternalMedia:
 @dataclasses.dataclass(slots=True)
 class Media:
     external: ExternalMedia | None = None
-    photos: list[Photo] = Field(default_factory=list)
-    videos: list[Video] = Field(default_factory=list)
-    mosaic: list[dict[str, Any]] = Field(default_factory=list)
-    broadcast: list[dict[str, Any]] = Field(default_factory=list)
+    photos: list[Photo] = dataclasses.field(default_factory=list)
+    videos: list[Video] = dataclasses.field(default_factory=list)
+    mosaic: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+    broadcast: list[dict[str, Any]] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(slots=True)
 class Post:
-    type: str
+    type: Literal["status"]
     id: str
     url: str
     text: str
@@ -109,18 +112,26 @@ class Post:
     reposts: int
     quotes: int
     replies: int
-    lang: str
-    possibly_sensitive: bool
     author: Author
     media: Media
+    lang: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
-class Tweet:
+class UnavailablePost:
+    type: Literal["tombstone"]
+    reason: str = "unavailable"
+    message: str = "This post is unavailable"
+
+
+type ThreadPost = Annotated[Post | UnavailablePost, Field(discriminator="type")]
+
+
+class Tweet(DeferredModel):
     status: Post
     author: Author
-    thread: list[Post] = Field(default_factory=list)
+    thread: list[ThreadPost] = Field(default_factory=list)
 
-    def __post_init__(self) -> None:
+    def model_post_init(self, *_) -> None:
         if not self.thread:
             self.thread.append(self.status)

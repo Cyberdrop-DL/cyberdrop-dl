@@ -47,7 +47,8 @@ class TwitterCrawler(Crawler):
         self.create_eager_task(self.write_metadata(scrape_item, status_id, tweet))
 
         for post in tweet.thread:
-            self._post(scrape_item, post)
+            if post.type == "status":
+                self._post(scrape_item, post)
 
     def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
         videos = (video.best_format for video in post.media.videos)
