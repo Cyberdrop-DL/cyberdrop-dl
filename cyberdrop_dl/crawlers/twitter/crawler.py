@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class TwitterCrawler(Crawler, is_debug=True):
+class TwitterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Tweet": "/<handle>/status/<tweet_id>",
     }

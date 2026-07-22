@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import datetime
 import operator
-from typing import Annotated, Any, ClassVar, Literal, final
+from typing import Any, ClassVar, Literal, final
 
-from pydantic import Field, PlainValidator, dataclasses
+from pydantic import Field, dataclasses
 
 
 @dataclasses.dataclass(slots=True)
@@ -33,7 +32,6 @@ class Author:
     media_count: int
     likes: int
     joined: str
-    birthday: Annotated[datetime.date | None, PlainValidator(lambda x: x and datetime.date(**x))]
     verification: Verification
 
 
@@ -62,7 +60,7 @@ class VideoFormat:
     @property
     def score(self) -> tuple[int, int, float]:
         return (
-            (None, "mp4", "webm", "m3u8").index(self.container),
+            self.container != "m3u8",
             (None, "vp9", "h264", "hevc", "av1").index(self.codec),
             self.bitrate or 0,
         )
