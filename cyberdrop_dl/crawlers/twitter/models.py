@@ -4,7 +4,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import operator
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, final
 
 from typing_extensions import TypedDict
 
@@ -116,6 +116,30 @@ class Card:
     image: CardImage | None = None
 
 
+class Indices(NamedTuple):
+    "Start and end UTF-16 indices"
+
+    start: int
+    end: int
+
+
+@dataclasses.dataclass(slots=True)
+class Facet:
+    type: str  # "url", "mention", "hashtag", "bold", "media", "custom_emoji"
+    indices: Indices
+    id: str | None = None
+    original: str | None = None
+    replacement: str | None = None
+    display: str | None = None
+
+
+@dataclasses.dataclass(slots=True)
+class RawText:
+    text: str
+    display_text_range: Indices
+    facets: list[Facet]
+
+
 class Tweet(DeferredModel):
     type: Literal["status"]
     id: str
@@ -129,5 +153,6 @@ class Tweet(DeferredModel):
     replies: int
     author: Author
     media: PostMedia
+    raw_text: RawText
     card: Card | None = None
     lang: str | None = None

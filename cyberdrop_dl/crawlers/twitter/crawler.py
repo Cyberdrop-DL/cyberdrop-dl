@@ -138,3 +138,7 @@ def _extract_files(tweet: Tweet, config: TwitterConfig) -> Generator[File]:
         yield File(card.url, "card", config.cards)
         if card.image and card.image.url:
             yield File(card.image.url, "card.image", config.cards)
+
+    for facet in tweet.raw_text.facets:
+        if facet.replacement and facet.type == "url":
+            yield File(facet.replacement, "content_url", config.content_urls)
