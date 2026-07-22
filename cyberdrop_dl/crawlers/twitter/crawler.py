@@ -50,7 +50,7 @@ class TwitterCrawler(Crawler):
     def _tweet(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
         scrape_item.uploaded_at = tweet.status.created_timestamp
         post_title = self.create_separate_post_title(None, tweet.status.id, scrape_item.uploaded_at)
-        scrape_item.setup_as_profile(self.create_title(f"@{tweet.author['screen_name']}"))
+        scrape_item.setup_as_profile(self.create_title(f"@{tweet.status.author['screen_name']}"))
         scrape_item.append_folders(post_title)
         self.create_eager_task(self.write_metadata(scrape_item, tweet.status.id, tweet))
 

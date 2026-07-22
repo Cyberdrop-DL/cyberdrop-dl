@@ -138,7 +138,6 @@ type ThreadPost = Annotated[Post | UnavailablePost, Field(discriminator="type")]
 
 class Tweet(DeferredModel):
     status: Post
-    author: Author
     thread: list[ThreadPost] = Field(default_factory=list)
 
     def model_post_init(self, *_) -> None:

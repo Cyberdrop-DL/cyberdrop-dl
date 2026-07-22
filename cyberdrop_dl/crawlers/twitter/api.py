@@ -8,7 +8,7 @@ from cyberdrop_dl.crawlers.twitter.models import Tweet
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator
 
 _CURSOR: ContextVar[str | None] = ContextVar("_CURSOR")
 
@@ -34,23 +34,23 @@ class FXTwitterAPI(API):
         resp = await self.request_json(url)
         return Tweet.model_validate(resp)
 
-    async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[Generator[Tweet]]:
+    async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[map[Tweet]]:
         url = url.update_query(count=100)
+        if cursor := self.cursor:
+            url = url.update_query(cursor=cursor)
         while True:
-            if cursor := self.cursor:
-                url = url.update_query(cursor=cursor)
             resp = await self.request_json(url)
-            posts = resp["results"]
-            if not posts:
+            yield map(Tweet.model_validate, resp["results"])
+            _CURSOR.set(cursor := resp["cursor"].get("bottom"))
+            if not cursor:
                 break
-            yield (Tweet(status=p, author=p["author"]) for p in posts)
-            _CURSOR.set(resp["cursor"].get("bottom"))
+            url = url.update_query(cursor=cursor)
 
 
 class UserEndpoint:
     def __init__(self, api: FXTwitterAPI) -> None:
         self.api: FXTwitterAPI = api
 
-    def media(self, user: str) -> AsyncGenerator[Generator[Tweet]]:
+    def media(self, user: str) -> AsyncGenerator[map[Tweet]]:
         url = self.api.ENTRYPOINT / "profile" / user / "media"
         return self.api.pager(url)
