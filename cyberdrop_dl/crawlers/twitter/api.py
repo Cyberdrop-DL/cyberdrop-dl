@@ -1,3 +1,5 @@
+# https://docs.fxembed.com/api/twitter/
+# https://github.com/FxEmbed/FxEmbed
 from __future__ import annotations
 
 from contextvars import ContextVar
@@ -10,38 +12,34 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-_CURSOR: ContextVar[str | None] = ContextVar("_CURSOR")
-
 
 class FXTwitterAPI(API):
-    # https://docs.fxembed.com/api/twitter/
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.fxtwitter.com/2")
+    cursor: ClassVar[ContextVar[str | None]] = ContextVar("cursor", default=None)
 
     def __post_init__(self) -> None:
         self.user: UserEndpoint = UserEndpoint(self)
 
-    @property
-    def cursor(self) -> str | None:
-        return _CURSOR.get(None)
-
-    @cursor.setter
-    def cursor(self, value: str | None) -> None:
-        _CURSOR.set(value)
-
-    async def tweet(self, status_id: str, *, entire_thread: bool = False) -> Tweet:
-        endpoint = "thread" if entire_thread else "status"
-        url = (self.ENTRYPOINT / endpoint / status_id).with_query(about_account=1)
+    async def tweet(self, status_id: str) -> Tweet:
+        url = (self.ENTRYPOINT / "status" / status_id).with_query(about_account=1)
         resp = await self.request_json(url)
         return Tweet.model_validate(resp)
 
+    async def thread(self, status_id: str) -> map[Tweet]:
+        url = self.ENTRYPOINT / "thread" / status_id
+        resp = await self.request_json(url)
+        # filter out deleted tweets ( "type" == "tombstone")
+        tweets = (t for t in resp["thread"] if t["type"] == "status")
+        return map(Tweet.model_validate, tweets)
+
     async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[map[Tweet]]:
         url = url.update_query(count=100)
-        if cursor := self.cursor:
+        if cursor := self.cursor.get():
             url = url.update_query(cursor=cursor)
         while True:
             resp = await self.request_json(url)
             yield map(Tweet.model_validate, resp["results"])
-            _CURSOR.set(cursor := resp["cursor"].get("bottom"))
+            self.cursor.set(cursor := resp["cursor"].get("bottom"))
             if not cursor:
                 break
             url = url.update_query(cursor=cursor)

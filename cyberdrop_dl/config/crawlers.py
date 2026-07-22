@@ -27,6 +27,19 @@ class TikTokConfig(ConfigModel):
     "Download videos in original quality (slower)"
 
 
+class TwitterConfig(ConfigModel):
+    cards: bool = True
+    "Parse and download cards in a post (embeds from thirdparty sites)"
+
+    thread: bool = True
+    "Downloads all posts in a thread (AKA all direct replies from the author to their own post)"
+
+    content_urls: bool = True
+    "Download any URL found inside the text of a tweet"
+
+    image_size: Literal["4096x4096", "large", "medium", "small", "orig"] = "orig"
+
+
 class BandcampConfig(ConfigModel):
     formats: Annotated[
         tuple[Literal["mp3-320", "mp3", "aac-hi", "wav", "flac", "vorbis", "aiff", "alas"], ...],
@@ -71,4 +84,5 @@ class Crawlers(ConfigGroup, name=None):
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     one_pace: OnePaceConfig = Field(default_factory=OnePaceConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
+    twitter: TwitterConfig = Field(default_factory=TwitterConfig)
     pawchive: KemonoConfig = Field(default_factory=KemonoConfig)

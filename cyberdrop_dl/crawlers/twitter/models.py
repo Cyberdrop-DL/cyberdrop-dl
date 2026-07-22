@@ -4,9 +4,8 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import operator
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Protocol, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, final
 
-from pydantic import Field
 from typing_extensions import TypedDict
 
 from cyberdrop_dl.models import DeferredModel
@@ -109,8 +108,7 @@ class PostMedia:
             yield self.external, True
 
 
-@dataclasses.dataclass(slots=True)
-class Post:
+class Tweet(DeferredModel):
     type: Literal["status"]
     id: str
     url: str
@@ -124,22 +122,3 @@ class Post:
     author: Author
     media: PostMedia
     lang: str | None = None
-
-
-@dataclasses.dataclass(slots=True)
-class UnavailablePost:
-    type: Literal["tombstone"]
-    reason: str = "unavailable"
-    message: str = "This post is unavailable"
-
-
-type ThreadPost = Annotated[Post | UnavailablePost, Field(discriminator="type")]
-
-
-class Tweet(DeferredModel):
-    status: Post
-    thread: list[ThreadPost] = Field(default_factory=list)
-
-    def model_post_init(self, *_) -> None:
-        if not self.thread:
-            self.thread.append(self.status)
