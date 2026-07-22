@@ -4,7 +4,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import operator
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
 
 from typing_extensions import TypedDict
 
@@ -21,16 +21,8 @@ class Author(TypedDict):
     screen_name: str
 
 
-class Media(Protocol):
-    url: str
-
-    @property
-    def best_src(self) -> str:
-        return self.url
-
-
 @dataclasses.dataclass(slots=True)
-class Photo(Media):
+class Photo:
     id: str
     type: Literal["photo", "gif"]
     url: str
@@ -61,7 +53,7 @@ class VideoFormat:
 
 
 @dataclasses.dataclass(slots=True)
-class Video(Media):
+class Video:
     type: Literal["video", "gif"]
     url: str
     width: float
@@ -78,13 +70,9 @@ class Video(Media):
     def best_format(self) -> VideoFormat:
         return max(self.formats, key=VideoFormat.SORT_KEY)
 
-    @property
-    def best_src(self) -> str:
-        return self.best_format.url
-
 
 @dataclasses.dataclass(slots=True)
-class ExternalMedia(Media):
+class ExternalMedia:
     type: str
     url: str
     thumbnail_url: str | None = None
@@ -108,6 +96,26 @@ class PostMedia:
             yield self.external, True
 
 
+@dataclasses.dataclass(slots=True)
+class CardImage:
+    width: float | None = None
+    height: float | None = None
+    url: str | None = None
+    alt: str | None = None
+
+
+@dataclasses.dataclass(slots=True)
+class Card:
+    """Preview card for external links. (AKA embed)"""
+
+    url: str
+    title: str | None = None
+    description: str | None = None
+    domain: str | None = None
+    card_name: str | None = None
+    image: CardImage | None = None
+
+
 class Tweet(DeferredModel):
     type: Literal["status"]
     id: str
@@ -121,4 +129,5 @@ class Tweet(DeferredModel):
     replies: int
     author: Author
     media: PostMedia
+    card: Card | None = None
     lang: str | None = None

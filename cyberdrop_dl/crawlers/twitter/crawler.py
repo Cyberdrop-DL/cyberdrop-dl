@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -76,11 +77,17 @@ class TwitterCrawler(Crawler):
         post_title = self.create_separate_post_title(None, tweet.id, scrape_item.uploaded_at)
         scrape_item.append_folders(post_title)
         self.create_eager_task(self.write_metadata(scrape_item, tweet.id, tweet))
+        self.__extract_files(scrape_item, tweet)
 
-        for media, is_embed in tweet.media:
-            source = self.parse_url(media.best_src)
-            new_item = scrape_item.create_child(source)
-            self.handle_external_links(new_item, reset=is_embed)
+    def __extract_files(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
+        for file in _extract_files(tweet, self.__config__):
+            if not file.download:
+                self.log.info("Skipping %s in tweet %s by config options [%s]", file.url, tweet.id, file.type)
+                self.tui.files.stats.skipped += 1
+                continue
+
+            new_item = scrape_item.create_child(self.parse_url(file.url))
+            self.handle_external_links(new_item, reset=file.type not in {"photo", "video"})
             scrape_item.add_children()
 
     @error_handling_wrapper
@@ -107,3 +114,27 @@ class TwitterCrawler(Crawler):
                     cursor,
                     url.update_query(cursor=cursor),
                 )
+
+
+@dataclasses.dataclass(slots=True)
+class File:
+    url: str
+    type: str
+    download: bool = True
+
+
+def _extract_files(tweet: Tweet, config: TwitterConfig) -> Generator[File]:
+    media = tweet.media
+    for photo in media.photos:
+        yield File(photo.url, "photo")
+
+    for video in media.videos:
+        yield File(video.best_format.url, "video")
+
+    if media.external:
+        yield File(media.external.url, "external")
+
+    if card := tweet.card:
+        yield File(card.url, "card", config.cards)
+        if card.image and card.image.url:
+            yield File(card.image.url, "card.image", config.cards)
