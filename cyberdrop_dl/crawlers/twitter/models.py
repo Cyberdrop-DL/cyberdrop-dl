@@ -1,18 +1,10 @@
+# Simplified version of https://github.com/FxEmbed/FxEmbed/blob/07612ab44d1a489489e97f0b219d09dcfdb10081/docs/specs/fxtwitter-openapi.json
 from __future__ import annotations
 
 import operator
 from typing import Any, ClassVar, Literal, final
 
 from pydantic import Field, dataclasses
-
-
-@dataclasses.dataclass(slots=True)
-class Verification:
-    verified: bool
-    type: Literal["organization", "government", "individual"] | None
-    verified_at: str | None = None
-    identity_verified: bool | None = None
-    verified_by: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
@@ -32,7 +24,8 @@ class Author:
     media_count: int
     likes: int
     joined: str
-    verification: Verification
+    verification: dict[str, Any] | None = None
+    about_account: dict[str, Any] | None = None
 
 
 @dataclasses.dataclass(slots=True)
@@ -104,7 +97,7 @@ class Media:
 
 
 @dataclasses.dataclass(slots=True)
-class Status:
+class Post:
     type: str
     id: str
     url: str
@@ -120,3 +113,14 @@ class Status:
     possibly_sensitive: bool
     author: Author
     media: Media
+
+
+@dataclasses.dataclass(slots=True)
+class Tweet:
+    status: Post
+    author: Author
+    thread: list[Post] = Field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.thread:
+            self.thread.append(self.status)

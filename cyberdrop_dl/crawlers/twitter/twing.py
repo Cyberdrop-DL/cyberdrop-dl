@@ -24,7 +24,7 @@ class TwimgCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "TwitterImages"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "video" in scrape_item.url.host:
+        if "video" in scrape_item.url.host and scrape_item.url.suffix != ".m3u8":
             return await self.direct_file(scrape_item)
         await self.photo(scrape_item)
 
