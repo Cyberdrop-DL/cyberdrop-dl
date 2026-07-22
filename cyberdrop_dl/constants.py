@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, final
 from cyclopts import Parameter
 from typing_extensions import Sentinel
 
-from cyberdrop_dl import __version__, env
+from cyberdrop_dl import __version__
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,6 +46,7 @@ class TempExt(StrEnum):
     PART = ".part"
 
 
+@final
 class BlockedDomains:
     partial_match = (
         "facebook",
@@ -65,10 +66,6 @@ class BlockedDomains:
     )
 
     exact_match = ()
-
-    if not env.ENABLE_TWITTER:
-        partial_match = *partial_match, "twitter.com", ".x.com"
-        exact_match = *exact_match, "x.com"
 
 
 class HashMode(CIStrEnum):
