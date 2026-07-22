@@ -2,37 +2,36 @@
 from __future__ import annotations
 
 import dataclasses
+import itertools
 import operator
-from typing import Annotated, Any, ClassVar, Literal, final
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Protocol, final
 
 from pydantic import Field
+from typing_extensions import TypedDict
 
 from cyberdrop_dl.models import DeferredModel
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
-@dataclasses.dataclass(slots=True)
-class Author:
+
+class Author(TypedDict):
     type: Literal["profile"]
     id: str
     name: str
     screen_name: str
-    avatar_url: str
-    banner_url: str
-    description: str
-    location: str
+
+
+class Media(Protocol):
     url: str
-    protected: bool
-    followers: int
-    following: int
-    media_count: int
-    likes: int
-    joined: str
-    verification: dict[str, Any] | None = None
-    about_account: dict[str, Any] | None = None
+
+    @property
+    def best_src(self) -> str:
+        return self.url
 
 
 @dataclasses.dataclass(slots=True)
-class Photo:
+class Photo(Media):
     id: str
     type: Literal["photo", "gif"]
     url: str
@@ -46,12 +45,12 @@ class Photo:
 @final
 @dataclasses.dataclass(slots=True)
 class VideoFormat:
+    SORT_KEY: ClassVar = operator.attrgetter("score")
+
     url: str
     container: Literal["mp4", "webm", "m3u8"] | None = None
     codec: Literal["h264", "hevc", "vp9", "av1"] | None = None
     bitrate: float | None = None
-
-    SORT_KEY: ClassVar = operator.attrgetter("score")
 
     @property
     def score(self) -> tuple[int, int, float]:
@@ -63,7 +62,7 @@ class VideoFormat:
 
 
 @dataclasses.dataclass(slots=True)
-class Video:
+class Video(Media):
     type: Literal["video", "gif"]
     url: str
     width: float
@@ -80,9 +79,13 @@ class Video:
     def best_format(self) -> VideoFormat:
         return max(self.formats, key=VideoFormat.SORT_KEY)
 
+    @property
+    def best_src(self) -> str:
+        return self.best_format.url
+
 
 @dataclasses.dataclass(slots=True)
-class ExternalMedia:
+class ExternalMedia(Media):
     type: str
     url: str
     thumbnail_url: str | None = None
@@ -91,12 +94,19 @@ class ExternalMedia:
 
 
 @dataclasses.dataclass(slots=True)
-class Media:
+class PostMedia:
     external: ExternalMedia | None = None
     photos: list[Photo] = dataclasses.field(default_factory=list)
     videos: list[Video] = dataclasses.field(default_factory=list)
     mosaic: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     broadcast: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+
+    def __iter__(self) -> Generator[tuple[Photo | Video | ExternalMedia, bool]]:
+        for media in itertools.chain(self.photos, self.videos):
+            yield media, False
+
+        if self.external:
+            yield self.external, True
 
 
 @dataclasses.dataclass(slots=True)
@@ -107,13 +117,12 @@ class Post:
     text: str
     created_at: str
     created_timestamp: int
-    provider: Literal["twitter"]
     likes: int
     reposts: int
     quotes: int
     replies: int
     author: Author
-    media: Media
+    media: PostMedia
     lang: str | None = None
 
 
