@@ -84,12 +84,8 @@ class PostMedia:
     broadcast: list[dict[str, Any]] = dataclasses.field(default_factory=list)
 
 
-@dataclasses.dataclass(slots=True)
-class CardImage:
-    width: int | None = None
-    height: int | None = None
-    url: AbsoluteHttpURL | None = None
-    alt: str | None = None
+class CardImage(TypedDict):
+    url: NotRequired[AbsoluteHttpURL]
 
 
 @dataclasses.dataclass(slots=True)

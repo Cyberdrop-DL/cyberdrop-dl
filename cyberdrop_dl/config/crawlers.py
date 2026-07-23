@@ -40,13 +40,13 @@ class TwitterConfig(ConfigModel):
     "Parse and download cards in a post (embeds from thirdparty sites)"
 
     threads: bool = True
-    "Downloads all posts in a thread (AKA all direct replies from the author to their own tweet)"
+    "Downloads all posts in a thread (All direct replies from OP to their own tweet)"
 
     content_urls: bool = True
     "Parse and try to download any URL found inside the text of a tweet"
 
     articles: TwitterArticlesConfig = Field(default_factory=TwitterArticlesConfig)
-    "Articles are longer tweets for premium users"
+    # Articles are longer tweets for premium users
 
     retweets: bool = False
     "Download media from retweets in the user's timeline"

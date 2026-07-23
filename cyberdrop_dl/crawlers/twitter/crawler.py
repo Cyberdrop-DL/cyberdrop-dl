@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 class TwitterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Tweet/Thread": (
+        "Tweet/Thread/Article": (
             "/<user_handle>/status/<status_id>",
             "/i/web/status/<status_id>",
         ),
@@ -123,7 +123,7 @@ class TwitterCrawler(Crawler):
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str, feed: str | None = None) -> None:
         scrape_item.setup_as_forum("")
-        feed = feed if feed in {"latest", "top", "media "} else "latest"
+        feed = feed if feed in {"latest", "top", "media"} else "latest"
         await self._iter_tweets(scrape_item, self.api.search(query, feed))
 
     async def _iter_tweets(self, scrape_item: ScrapeItem, tweets_pages: AsyncIterable[Iterable[Tweet]]) -> None:
@@ -132,7 +132,7 @@ class TwitterCrawler(Crawler):
                 for tweet in tweets:
                     if tweet.reposted_by and not self.__config__.retweets:
                         self.log.warning(
-                            "skipping tweet %s by config options [retweet]. Original author: @%s, retweeted by: @%s]",
+                            "skipping tweet %s by config options [retweet]. Original author: @%s, retweeted by: @%s",
                             tweet.id,
                             tweet.author["screen_name"],
                             tweet.reposted_by["screen_name"],
@@ -192,8 +192,8 @@ def _extract_files(tweet: Tweet, config: TwitterConfig) -> Generator[File]:
 
     if card := tweet.card:
         yield File(card.url, "card", config.cards)
-        if card.image and card.image.url:
-            yield File(card.image.url, "card.image", config.cards)
+        if card.image and (url := card.image.get("url")):
+            yield File(url, "card.image", config.cards)
 
     for facet in tweet.raw_text.facets:
         if facet["type"] == "url" and (url := facet.get("replacement") or facet.get("original")):
