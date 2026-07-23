@@ -41,7 +41,7 @@ class TwimgCrawler(Crawler):
         await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
-        if media_item.referer == media_item.url and media_item.parents:
+        if media_item.referer.path == media_item.url.path and media_item.parents:
             media_item.referer = media_item.parents[0]
             media_item.headers["Referer"] = str(media_item.referer)
         await super().handle_media_item(media_item, m3u8)
