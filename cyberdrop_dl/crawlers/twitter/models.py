@@ -14,8 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class Author(TypedDict):
-    type: Literal["profile"]
+class User(TypedDict):
     id: str
     name: str
     screen_name: str
@@ -41,10 +40,10 @@ class VideoFormat:
     url: str
     container: Literal["mp4", "webm", "m3u8"] | None = None
     codec: Literal["h264", "hevc", "vp9", "av1"] | None = None
-    bitrate: float | None = None
+    bitrate: int | None = None
 
     @property
-    def score(self) -> tuple[int, int, float]:
+    def score(self) -> tuple[int, int, int]:
         return (
             self.container != "m3u8",
             (None, "vp9", "h264", "hevc", "av1").index(self.codec),
@@ -56,14 +55,14 @@ class VideoFormat:
 class Video:
     type: Literal["video", "gif"]
     url: str
-    width: float
-    height: float
+    width: int
+    height: int
     duration: float
     id: str | None = None
     format: str | None = None
     thumbnail_url: str | None = None
     transcode_url: str | None = None
-    filesize: float | None = None
+    filesize: int | None = None
     formats: list[VideoFormat] = dataclasses.field(default_factory=list)
 
     @property
@@ -98,8 +97,8 @@ class PostMedia:
 
 @dataclasses.dataclass(slots=True)
 class CardImage:
-    width: float | None = None
-    height: float | None = None
+    width: int | None = None
+    height: int | None = None
     url: str | None = None
     alt: str | None = None
 
@@ -151,8 +150,9 @@ class Tweet(DeferredModel):
     reposts: int
     quotes: int
     replies: int
-    author: Author
+    author: User
     media: PostMedia
     raw_text: RawText
+    reposted_by: User | None = None
     card: Card | None = None
     lang: str | None = None

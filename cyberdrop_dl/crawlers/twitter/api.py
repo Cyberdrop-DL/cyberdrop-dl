@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 class FXTwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.fxtwitter.com/2")
     cursor: ClassVar[ContextVar[str | None]] = ContextVar("cursor")
+    since: ClassVar[ContextVar[int | None]] = ContextVar("since")
 
     def __post_init__(self) -> None:
         self.user: UserEndpoint = UserEndpoint(self)
@@ -36,11 +37,15 @@ class FXTwitterAPI(API):
         url = url.update_query(count=100)
         if cursor := self.cursor.get():
             url = url.update_query(cursor=cursor)
+        if since := self.since.get():
+            url = url.update_query(since=since)
+
         while True:
             resp = await self.request_json(url)
             yield map(Tweet.model_validate, resp["results"])
-            self.cursor.set(cursor := resp["cursor"].get("bottom"))
-            if not cursor:
+            cursor = resp["cursor"].get("bottom")
+            self.cursor.set(cursor)
+            if not cursor or url.query.get("cursor") == cursor:
                 break
             url = url.update_query(cursor=cursor)
 
@@ -51,4 +56,8 @@ class UserEndpoint:
 
     def media(self, user: str) -> AsyncGenerator[map[Tweet]]:
         url = self.api.ENTRYPOINT / "profile" / user / "media"
+        return self.api.pager(url)
+
+    def tweets(self, user: str) -> AsyncGenerator[map[Tweet]]:
+        url = self.api.ENTRYPOINT / "profile" / user / "statuses"
         return self.api.pager(url)

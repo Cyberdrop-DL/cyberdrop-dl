@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
@@ -10,7 +11,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import AsyncIterable, Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import TwitterConfig
     from cyberdrop_dl.crawlers.twitter.models import Tweet
@@ -19,17 +20,24 @@ if TYPE_CHECKING:
 
 class TwitterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Tweet/Thread": "/<user_handle>/status/<status_id>",
+        "Tweet/Thread": (
+            "/<user_handle>/status/<status_id>",
+            "/i/web/status/<status_id>",
+        ),
         "User media": "/<user_handle>/media",
+        "User tweets": "/<user_handle>",
     }
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("twitter.com",)
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://x.com")
     DOMAIN: ClassVar[str] = "twitter"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
     _RATE_LIMIT: ClassVar[RateLimit] = 3, 1  # Actual limit is 1000 req/min (~ 16.7 req/s) per IP
+    _default_since: int | None = None
 
     def __post_init__(self) -> None:
         self.api: FXTwitterAPI = FXTwitterAPI.from_crawler(self)
+        if after := self.config.filters.after:
+            self._default_since = int(datetime.datetime.combine(after, datetime.time.min).timestamp())
 
     @property
     def separate_posts(self) -> bool:
@@ -41,11 +49,13 @@ class TwitterCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_user, "status", status_id]:
+            case [_, "status", status_id] | ["i", "web", "status", status_id]:
                 fn = self.thread if self.__config__.thread else self.tweet
                 await fn(scrape_item, status_id)
             case [user, "media"]:
                 await self.user_media(scrape_item, user)
+            case [user]:
+                await self.user_tweets(scrape_item, user)
             case _:
                 raise ValueError
 
@@ -93,17 +103,47 @@ class TwitterCrawler(Crawler):
     @error_handling_wrapper
     async def user_media(self, scrape_item: ScrapeItem, user: str) -> None:
         scrape_item.setup_as_profile("")
+        await self._iter_tweets(scrape_item, self.api.user.media(user))
+
+    @error_handling_wrapper
+    async def user_tweets(self, scrape_item: ScrapeItem, user: str) -> None:
+        scrape_item.setup_as_profile("")
+        await self._iter_tweets(scrape_item, self.api.user.tweets(user))
+
+    async def _iter_tweets(self, scrape_item: ScrapeItem, tweets_pages: AsyncIterable[Iterable[Tweet]]) -> None:
         with self._cursor_ctx(scrape_item.url):
-            async for tweets in self.api.user.media(user):
+            async for tweets in tweets_pages:
                 for tweet in tweets:
+                    if tweet.reposted_by and not self.__config__.retweets:
+                        self.log.warning(
+                            "skipping tweet %s by config options [retweet]. Original author: @%s, retweeted by: @%s]",
+                            tweet.id,
+                            tweet.author["screen_name"],
+                            tweet.reposted_by["screen_name"],
+                        )
+                        continue
                     new_item = scrape_item.create_child(self.parse_url(tweet.url))
                     self._tweet(new_item, tweet)
                     scrape_item.add_children()
 
+    def _since(self, url: AbsoluteHttpURL) -> int | None:
+        for query_name in ("since", "after"):
+            if value := url.query.get(query_name):
+                try:
+                    return int(value)
+                except ValueError:
+                    try:
+                        return int(datetime.datetime.fromisoformat(value).timestamp())
+                    except ValueError:
+                        self.log.error("Unable to parse '%s' query param from %s, ignoring...", query_name, url)
+
+        return self._default_since
+
     @contextlib.contextmanager
-    def _cursor_ctx(self, url: AbsoluteHttpURL, cursor: str | None = None) -> Generator[None]:
-        init_cursor = cursor or url.query.get("cursor")
+    def _cursor_ctx(self, url: AbsoluteHttpURL) -> Generator[None]:
+        init_cursor = url.query.get("cursor")
         self.api.cursor.set(init_cursor)
+        self.api.since.set(self._since(url))
         try:
             yield
         finally:

@@ -32,10 +32,16 @@ class TwitterConfig(ConfigModel):
     "Parse and download cards in a post (embeds from thirdparty sites)"
 
     thread: bool = True
-    "Downloads all posts in a thread (AKA all direct replies from the author to their own post)"
+    "Downloads all posts in a thread (AKA all direct replies from the author to their own tweet)"
 
     content_urls: bool = True
-    "Download any URL found inside the text of a tweet"
+    "Parse and try to download any URL found inside the text of a tweet"
+
+    quotes: bool = False
+    "Parse and download tweets quoted by another tweet"
+
+    retweets: bool = True
+    "Download media from retweets in the user's timeline"
 
     image_size: Literal["4096x4096", "large", "medium", "small", "orig"] = "orig"
 
