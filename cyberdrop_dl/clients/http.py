@@ -353,6 +353,16 @@ class HTTPMixin:
         async with self.request(*args, **kwargs) as resp:
             return await resp.text()
 
+    @signature.copy(request)
+    async def request_location(self, *args: Any, **kwargs: Any) -> AbsoluteHttpURL | None:
+        async with self.request(*args, **kwargs) as resp:
+            return resp.location
+
+    @signature.copy(request)
+    async def request_redirect(self, *args: Any, **kwargs: Any) -> AbsoluteHttpURL:
+        async with self.request(*args, **kwargs) as resp:
+            return resp.url
+
 
 def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
     loop = asyncio.get_running_loop()

@@ -5,8 +5,9 @@ import dataclasses
 import datetime
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
 from cyberdrop_dl.crawlers.twitter.api import FXTwitterAPI
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -16,6 +17,29 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config.crawlers import TwitterConfig
     from cyberdrop_dl.crawlers.twitter.models import Tweet
     from cyberdrop_dl.url_objects import ScrapeItem
+
+
+class TwitterShortURLCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("t.co",)
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Redirect": "t.co/<short_code>"}
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://t.co")
+    DOMAIN: ClassVar[str] = "t.co"
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        if scrape_item.url.host != self.PRIMARY_URL.host:
+            raise ValueError
+        await self._follow_redirect(scrape_item)
+
+    @error_handling_wrapper
+    async def _follow_redirect(self, scrape_item: ScrapeItem) -> None:
+        url = await self.request_redirect(scrape_item.url, headers={"User-Agent": "curl"})
+        if url.host in ("x.com", "twitter.com") and (unsafe_url := url.query.get("unsafe_link")):
+            url = self.parse_url(unsafe_url)
+        if url.host == self.PRIMARY_URL.host or url == scrape_item.url:
+            raise ScrapeError("Infinite Redirect")
+        with scrape_item.track_changes:
+            scrape_item.url = url
+        self.handle_external_links(scrape_item)
 
 
 class TwitterCrawler(Crawler):
