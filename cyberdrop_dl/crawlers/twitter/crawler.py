@@ -26,6 +26,12 @@ class TwitterCrawler(Crawler):
         ),
         "User media": "/<user_handle>/media",
         "User tweets": "/<user_handle>",
+        "Search": (
+            "/search?q=<query>",
+            "/search?q=<query>&f=top",
+            "/search?q=<query>&f=latest",
+            "/search?q=<query>&f=media",
+        ),
     }
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("twitter.com",)
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://x.com")
@@ -48,12 +54,16 @@ class TwitterCrawler(Crawler):
         return self.config.crawlers.twitter
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
+        query_get = scrape_item.url.query.get
         match scrape_item.url.parts[1:]:
             case [_, "status", status_id] | ["i", "web", "status", status_id]:
                 fn = self.thread if self.__config__.threads else self.tweet
                 await fn(scrape_item, status_id)
             case [user, "media"]:
                 await self.user_media(scrape_item, user)
+            case ["search"] if query := query_get("q"):
+                feed = query_get("f") or query_get("feed")
+                await self.search(scrape_item, query, feed)
             case [user]:
                 await self.user_tweets(scrape_item, user)
             case _:
@@ -109,6 +119,12 @@ class TwitterCrawler(Crawler):
     async def user_tweets(self, scrape_item: ScrapeItem, user: str) -> None:
         scrape_item.setup_as_profile("")
         await self._iter_tweets(scrape_item, self.api.user.tweets(user))
+
+    @error_handling_wrapper
+    async def search(self, scrape_item: ScrapeItem, query: str, feed: str | None = None) -> None:
+        scrape_item.setup_as_forum("")
+        feed = feed if feed in {"latest", "top", "media "} else "latest"
+        await self._iter_tweets(scrape_item, self.api.search(query, feed))
 
     async def _iter_tweets(self, scrape_item: ScrapeItem, tweets_pages: AsyncIterable[Iterable[Tweet]]) -> None:
         with self._cursor_ctx(scrape_item.url):

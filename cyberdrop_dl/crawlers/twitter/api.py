@@ -33,6 +33,10 @@ class FXTwitterAPI(API):
         tweets = (t for t in resp["thread"] if t["type"] == "status")
         return map(Tweet.model_validate, tweets)
 
+    def search(self, query: str, feed: str = "latest") -> AsyncGenerator[map[Tweet]]:
+        url = (self.ENTRYPOINT / "search").with_query(q=query, feed=feed)
+        return self.pager(url)
+
     async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[map[Tweet]]:
         url = url.update_query(count=100)
         if cursor := self.cursor.get():
