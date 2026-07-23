@@ -57,14 +57,11 @@ TEST_CASES = [
                 "download_folder": "re:@borjafat (Twitter)/2026-07-16 - 2077762204070220240/Loose Files (TwitterImages)",
             },
             {
-                "url": "https://video.twimg.com/amplify_video/2077758781753098240/vid/avc1/320x568/7WUuVCi8HDGlvV4Q.mp4?tag=29",
-                "original_filename": "7WUuVCi8HDGlvV4Q.mp4",
+                "url": "https://video.twimg.com/amplify_video/2077758781753098240/vid/avc1/720x1280/qIHaCGqOAMWBmnGG.mp4?tag=29",
                 "referer": "https://x.com/borjafat/status/2077762204070220240",
             },
             {
-                "url": "https://video.twimg.com/amplify_video/2077760618283589633/vid/avc1/480x270/E8UZmyxUM1K2b--s.mp4?tag=29",
-                "filename": "E8UZmyxUM1K2b--s.mp4",
-                "original_filename": "E8UZmyxUM1K2b--s.mp4",
+                "url": "https://video.twimg.com/amplify_video/2077760618283589633/vid/avc1/2560x1440/YlwCSw5ysPvS-ISu.mp4?tag=29",
                 "referer": "https://x.com/borjafat/status/2077762204070220240",
             },
             {
@@ -80,13 +77,13 @@ TEST_CASES = [
                 "referer": "https://x.com/borjafat/status/2077762204070220240",
             },
             {
-                "url": "https://video.twimg.com/amplify_video/2077761909294567424/vid/avc1/1280x720/cYYL12NlPj6s6ig1.mp4?tag=29",
+                "url": "https://video.twimg.com/amplify_video/2077761909294567424/vid/avc1/1920x1080/IW-hqAyorIkOjmO9.mp4?tag=29",
             },
             {
                 "url": "https://pbs.twimg.com/media/HNWr73TX0AAVtLh.jpg?format=jpg&name=orig",
             },
             {
-                "url": "https://video.twimg.com/amplify_video/2077755307585937408/vid/avc1/320x568/SMlYt4FKShlN5mo3.mp4?tag=29",
+                "url": "https://video.twimg.com/amplify_video/2077755307585937408/vid/avc1/720x1280/bBTSlRdU3bOhUZaZ.mp4?tag=29",
             },
         ],
         "count": 8,

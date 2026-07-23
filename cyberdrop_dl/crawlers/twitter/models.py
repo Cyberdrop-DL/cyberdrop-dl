@@ -124,11 +124,11 @@ class _ArticleImageInfo(TypedDict):
 class _ArticleVideoVariant:
     url: AbsoluteHttpURL
     content_type: str
-    bitrate: int | None = None  # missing for m3u8 urls
+    bit_rate: int | None = None  # missing for m3u8 urls
 
     @property
     def score(self) -> tuple[bool, int]:
-        return (self.url.suffix != ".m3u8", self.bitrate or 0)
+        return (self.url.suffix != ".m3u8", self.bit_rate or 0)
 
 
 @final
