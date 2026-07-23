@@ -86,7 +86,10 @@ class TwitterCrawler(Crawler):
             "/<user_handle>/status/<status_id>",
             "/i/web/status/<status_id>",
         ),
-        "Broadcast": "/i/broadcasts/<broadcast_id>",
+        "Broadcast": (
+            "/i/broadcasts/<broadcast_id>",
+            "/i/events/<event_id>",
+        ),
         "User media": "/<user_handle>/media",
         "User tweets": "/<user_handle>",
         "Search": (
@@ -127,6 +130,8 @@ class TwitterCrawler(Crawler):
                 await self.user_media(scrape_item, user)
             case ["i", "broadcasts", bd_id]:
                 await self.broadcast(scrape_item, bd_id)
+            case ["i", "events", event_id]:
+                await self.event(scrape_item, event_id)
             case ["search"] if query := query_get("q"):
                 feed = query_get("f") or query_get("feed")
                 await self.search(scrape_item, query, feed)
@@ -234,19 +239,30 @@ class TwitterCrawler(Crawler):
                 )
 
     @error_handling_wrapper
-    async def broadcast(self, scrape_item: ScrapeItem, broadcast_id: str):
+    async def broadcast(self, scrape_item: ScrapeItem, broadcast_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
         bd = await self.x_api.broadcast(broadcast_id)
+        await self._broadcast(scrape_item, bd)
+
+    @error_handling_wrapper
+    async def event(self, scrape_item: ScrapeItem, event_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+
+        bd = await self.x_api.broadcast.event(event_id)
+        await self._broadcast(scrape_item, bd)
+
+    async def _broadcast(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
         scrape_item.setup_as_album(self.create_title(f"@{bd.twitter_username}"))
         scrape_item.uploaded_at = bd.created_at_ms // 1000
         post_title = self.create_separate_post_title(None, bd.tweet_id, scrape_item.uploaded_at)
         scrape_item.append_folders(post_title)
         self.create_eager_task(self.write_metadata(scrape_item, bd.id, bd))
-        await self._broadcast(scrape_item, bd)
+        await self._broadcast_stream(scrape_item, bd)
 
-    async def _broadcast(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
+    async def _broadcast_stream(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
         m3u8_url = await self.x_api.broadcast.stream(bd.media_key)
         m3u8, _ = await self.request_m3u8(m3u8_url)
         title = bd.status or "Broadcast"
