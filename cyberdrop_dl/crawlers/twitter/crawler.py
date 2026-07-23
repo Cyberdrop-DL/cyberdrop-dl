@@ -86,7 +86,7 @@ class TwitterCrawler(Crawler):
             "/<user_handle>/status/<status_id>",
             "/i/web/status/<status_id>",
         ),
-        "Broadcast": "/i/broadcasts/<broadcasts_id>",
+        "Broadcast": "/i/broadcasts/<broadcast_id>",
         "User media": "/<user_handle>/media",
         "User tweets": "/<user_handle>",
         "Search": (
@@ -100,7 +100,7 @@ class TwitterCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://x.com")
     DOMAIN: ClassVar[str] = "twitter"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1  # Actual limit is 1000 req/min (~ 16.7 req/s) per IP
+    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1  # For FxTwitter. Actual limit is 1000 req/min (~ 16.7 req/s) per IP
     _default_since: int | None = None
 
     def __post_init__(self) -> None:

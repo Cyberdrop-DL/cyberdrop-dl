@@ -43,6 +43,21 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://x.com/i/broadcasts/1MKgNNXAZdmxL",
+        "results": [
+            {
+                "url": "https://x.com/i/broadcasts/1MKgNNXAZdmxL",
+                "filename": "Starships Thirteenth Flight Test [1MKgNNXAZdmxL][4K].mp4",
+                "debrid_url": None,
+                "original_filename": "Starship's Thirteenth Flight Test",
+                "referer": "https://x.com/i/broadcasts/1MKgNNXAZdmxL",
+                "album_id": None,
+                "uploaded_at": 1784057992,
+                "download_folder": "re:@SpaceX (Twitter)/2026-07-14 - 2077785459875586505",
+            },
+        ],
+    },
+    {
         "url": "https://x.com/borjafat/status/2077762204070220240",
         "description": "article with videos and images",
         "results": [
