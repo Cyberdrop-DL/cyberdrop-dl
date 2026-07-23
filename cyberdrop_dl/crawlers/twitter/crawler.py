@@ -6,8 +6,9 @@ import datetime
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
-from cyberdrop_dl.crawlers.twitter.api import FXTwitterAPI
+from cyberdrop_dl.crawlers.twitter.api import FXTwitterAPI, TwitterAPI
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterable, Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import TwitterConfig
-    from cyberdrop_dl.crawlers.twitter.models import Tweet
+    from cyberdrop_dl.crawlers.twitter.models import Broadcast, Tweet
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -48,6 +49,7 @@ class TwitterCrawler(Crawler):
             "/<user_handle>/status/<status_id>",
             "/i/web/status/<status_id>",
         ),
+        "Broadcast": "/i/broadcasts/<broadcasts_id>",
         "User media": "/<user_handle>/media",
         "User tweets": "/<user_handle>",
         "Search": (
@@ -66,6 +68,7 @@ class TwitterCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: FXTwitterAPI = FXTwitterAPI.from_crawler(self)
+        self.x_api: TwitterAPI = TwitterAPI.from_crawler(self)
         if after := self.config.filters.after:
             self._default_since = int(datetime.datetime.combine(after, datetime.time.min).timestamp())
 
@@ -85,6 +88,8 @@ class TwitterCrawler(Crawler):
                 await fn(scrape_item, status_id)
             case [user, "media"]:
                 await self.user_media(scrape_item, user)
+            case ["i", "broadcasts", bd_id]:
+                await self.broadcast(scrape_item, bd_id)
             case ["search"] if query := query_get("q"):
                 feed = query_get("f") or query_get("feed")
                 await self.search(scrape_item, query, feed)
@@ -101,7 +106,7 @@ class TwitterCrawler(Crawler):
     @error_handling_wrapper
     async def thread(self, scrape_item: ScrapeItem, status_id: str) -> None:
         tweet, *replies = await self.api.thread(status_id)
-        self.__init_thread(scrape_item, tweet)
+        scrape_item.setup_as_album(self.create_title(f"@{tweet.author['screen_name']}"))
         self.__tweet(scrape_item, tweet)
         for tweet in replies:
             new_item = scrape_item.create_child(self.parse_url(tweet.url))
@@ -109,11 +114,8 @@ class TwitterCrawler(Crawler):
             scrape_item.add_children()
 
     def _tweet(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
-        self.__init_thread(scrape_item, tweet)
-        self.__tweet(scrape_item, tweet)
-
-    def __init_thread(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
         scrape_item.setup_as_album(self.create_title(f"@{tweet.author['screen_name']}"))
+        self.__tweet(scrape_item, tweet)
 
     @error_handling_wrapper
     def __tweet(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
@@ -194,6 +196,27 @@ class TwitterCrawler(Crawler):
                     cursor,
                     url.update_query(cursor=cursor),
                 )
+
+    async def broadcast(self, scrape_item: ScrapeItem, broadcast_id: str):
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+
+        bd = await self.x_api.broadcast(broadcast_id)
+        scrape_item.setup_as_album(self.create_title(f"@{bd.twitter_username}"))
+        scrape_item.uploaded_at = bd.created_at_ms // 1000
+        post_title = self.create_separate_post_title(None, bd.tweet_id, scrape_item.uploaded_at)
+        scrape_item.append_folders(post_title)
+        self.create_eager_task(self.write_metadata(scrape_item, bd.id, bd))
+        await self._broadcast(scrape_item, bd)
+
+    async def _broadcast(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
+        m3u8_url = await self.x_api.broadcast.stream(bd.media_key)
+        m3u8, _ = await self.request_m3u8(m3u8_url)
+        title = bd.status or "Broadcast"
+        filename = self.create_custom_filename(
+            title, ext := ".mp4", file_id=bd.id, resolution=Resolution(bd.width, bd.height)
+        )
+        await self.handle_file(scrape_item.url, scrape_item, title, ext, m3u8=m3u8, custom_filename=filename)
 
 
 @dataclasses.dataclass(slots=True)

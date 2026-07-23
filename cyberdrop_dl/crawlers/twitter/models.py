@@ -177,3 +177,20 @@ class Tweet(DeferredModel):
     card: Card | None = None
     lang: str | None = None
     article: Article | None = None
+
+
+class Broadcast(DeferredModel):
+    id: str
+    media_key: str
+    created_at_ms: int
+    user_id: str
+    twitter_user_id: str
+    user_display_name: str
+    username: str
+    tweet_id: str
+    twitter_username: str
+    state: str
+    is_locked: bool
+    height: int
+    width: int
+    status: str | None = None

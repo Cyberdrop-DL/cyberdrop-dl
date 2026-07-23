@@ -6,7 +6,8 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API
-from cyberdrop_dl.crawlers.twitter.models import Tweet
+from cyberdrop_dl.crawlers.twitter.models import Broadcast, Tweet
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
@@ -65,3 +66,37 @@ class UserEndpoint:
     def tweets(self, user: str) -> AsyncGenerator[map[Tweet]]:
         url = self.api.ENTRYPOINT / "profile" / user / "statuses"
         return self.api.pager(url)
+
+
+class TwitterAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.x.com/1.1")
+
+    def __post_init__(self) -> None:
+        self.broadcast: BroadcastEndpoint = BroadcastEndpoint(self)
+
+    async def activate(self) -> str:
+        url = self.ENTRYPOINT / "guest/activate.json"
+        return await self.request_json(url, data=b"")
+
+
+class BroadcastEndpoint:
+    def __init__(self, api: TwitterAPI) -> None:
+        self.api: TwitterAPI = api
+
+    async def __call__(self, broadcast_id: str) -> Broadcast:
+        url = (self.api.ENTRYPOINT / "broadcasts/show.json").with_query(ids=broadcast_id)
+        resp = await self.api.request_json(url)
+        bd = Broadcast.model_validate(resp["broadcasts"][broadcast_id])
+        if bd.state != "ENDED":
+            raise ScrapeError(422, f"{bd.state} broadcasts are not supported")
+        return bd
+
+    async def stream(self, media_key: str) -> AbsoluteHttpURL:
+        url = self.api.ENTRYPOINT / "live_video_stream/status" / media_key
+        async with self.api.request(url) as resp:
+            source = (await resp.json(content_type=False))["source"]
+
+        url = self.api.parse_url(source.get("noRedirectPlaybackUrl") or source["location"])
+        if "geoblocked" in url.parts:
+            raise ScrapeError(403)
+        return url
