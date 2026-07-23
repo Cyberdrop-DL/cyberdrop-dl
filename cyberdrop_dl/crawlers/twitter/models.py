@@ -2,16 +2,15 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import operator
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, final
+from typing import Any, Literal, NotRequired, final
 
 from typing_extensions import TypedDict
 
 from cyberdrop_dl.models import DeferredModel
+from cyberdrop_dl.url_objects import AbsoluteHttpURL  # noqa: TC001
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
+_score = operator.attrgetter("score")
 
 
 class User(TypedDict):
@@ -24,20 +23,17 @@ class User(TypedDict):
 class Photo:
     id: str
     type: Literal["photo", "gif"]
-    url: str
+    url: AbsoluteHttpURL
     height: int
     width: int
     format: str | None = None
     altText: str | None = None  # noqa: N815
-    transcode_url: str | None = None
+    transcode_url: AbsoluteHttpURL | None = None
 
 
-@final
 @dataclasses.dataclass(slots=True)
 class VideoFormat:
-    SORT_KEY: ClassVar = operator.attrgetter("score")
-
-    url: str
+    url: AbsoluteHttpURL
     container: Literal["mp4", "webm", "m3u8"] | None = None
     codec: Literal["h264", "hevc", "vp9", "av1"] | None = None
     bitrate: int | None = None
@@ -54,27 +50,27 @@ class VideoFormat:
 @dataclasses.dataclass(slots=True)
 class Video:
     type: Literal["video", "gif"]
-    url: str
+    url: AbsoluteHttpURL
     width: int
     height: int
     duration: float
     id: str | None = None
     format: str | None = None
-    thumbnail_url: str | None = None
-    transcode_url: str | None = None
+    thumbnail_url: AbsoluteHttpURL | None = None
+    transcode_url: AbsoluteHttpURL | None = None
     filesize: int | None = None
     formats: list[VideoFormat] = dataclasses.field(default_factory=list)
 
     @property
     def best_format(self) -> VideoFormat:
-        return max(self.formats, key=VideoFormat.SORT_KEY)
+        return max(self.formats, key=_score)
 
 
 @dataclasses.dataclass(slots=True)
 class ExternalMedia:
     type: str
-    url: str
-    thumbnail_url: str | None = None
+    url: AbsoluteHttpURL
+    thumbnail_url: AbsoluteHttpURL | None = None
     height: int | None = None
     width: int | None = None
 
@@ -87,27 +83,20 @@ class PostMedia:
     mosaic: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     broadcast: list[dict[str, Any]] = dataclasses.field(default_factory=list)
 
-    def __iter__(self) -> Generator[tuple[Photo | Video | ExternalMedia, bool]]:
-        for media in itertools.chain(self.photos, self.videos):
-            yield media, False
-
-        if self.external:
-            yield self.external, True
-
 
 @dataclasses.dataclass(slots=True)
 class CardImage:
     width: int | None = None
     height: int | None = None
-    url: str | None = None
+    url: AbsoluteHttpURL | None = None
     alt: str | None = None
 
 
 @dataclasses.dataclass(slots=True)
 class Card:
-    """Preview card for external links. (AKA embed)"""
+    """Preview card for external links (AKA embed)."""
 
-    url: str
+    url: AbsoluteHttpURL
     title: str | None = None
     description: str | None = None
     domain: str | None = None
@@ -115,34 +104,69 @@ class Card:
     image: CardImage | None = None
 
 
-class Indices(NamedTuple):
-    "Start and end UTF-16 indices"
-
-    start: int
-    end: int
-
-
-@dataclasses.dataclass(slots=True)
-class Facet:
+class Facet(TypedDict):
     type: str  # "url", "mention", "hashtag", "bold", "media", "custom_emoji"
-    indices: Indices
-    id: str | None = None
-    original: str | None = None
-    replacement: str | None = None
-    display: str | None = None
+    original: NotRequired[AbsoluteHttpURL]
+    replacement: NotRequired[AbsoluteHttpURL]
 
 
 @dataclasses.dataclass(slots=True)
 class RawText:
     text: str
-    display_text_range: Indices
     facets: list[Facet]
+
+
+class _ArticleImageInfo(TypedDict):
+    original_img_url: AbsoluteHttpURL
+
+
+@dataclasses.dataclass(slots=True)
+class _ArticleVideoVariant:
+    url: AbsoluteHttpURL
+    content_type: str
+    bitrate: int | None = None  # missing for m3u8 urls
+
+    @property
+    def score(self) -> tuple[bool, int]:
+        return (self.url.suffix != ".m3u8", self.bitrate or 0)
+
+
+@final
+@dataclasses.dataclass(slots=True)
+class _ArticleVideoInfo:
+    variants: list[_ArticleVideoVariant]
+
+
+@dataclasses.dataclass(slots=True)
+class MediaEntity:
+    id: str
+    media_key: str
+    media_id: str
+    media_info: _ArticleImageInfo | _ArticleVideoInfo
+
+    @property
+    def src(self) -> AbsoluteHttpURL:
+        if type(self.media_info) is _ArticleVideoInfo:
+            return max(self.media_info.variants, key=_score).url
+        return self.media_info["original_img_url"]
+
+
+@dataclasses.dataclass(slots=True)
+class Article:
+    created_at: str
+    id: str
+    title: str
+    preview_text: str
+    cover_media: MediaEntity
+    content: dict[str, Any]
+    media_entities: list[MediaEntity]
+    modified_at: str | None = None
 
 
 class Tweet(DeferredModel):
     type: Literal["status"]
     id: str
-    url: str
+    url: AbsoluteHttpURL
     text: str
     created_at: str
     created_timestamp: int
@@ -156,3 +180,4 @@ class Tweet(DeferredModel):
     reposted_by: User | None = None
     card: Card | None = None
     lang: str | None = None
+    article: Article | None = None

@@ -50,7 +50,7 @@ class TwitterCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_, "status", status_id] | ["i", "web", "status", status_id]:
-                fn = self.thread if self.__config__.thread else self.tweet
+                fn = self.thread if self.__config__.threads else self.tweet
                 await fn(scrape_item, status_id)
             case [user, "media"]:
                 await self.user_media(scrape_item, user)
@@ -158,7 +158,7 @@ class TwitterCrawler(Crawler):
 
 @dataclasses.dataclass(slots=True)
 class File:
-    url: str
+    url: AbsoluteHttpURL
     type: str
     download: bool = True
 
@@ -180,5 +180,10 @@ def _extract_files(tweet: Tweet, config: TwitterConfig) -> Generator[File]:
             yield File(card.image.url, "card.image", config.cards)
 
     for facet in tweet.raw_text.facets:
-        if facet.replacement and facet.type == "url":
-            yield File(facet.replacement, "content_url", config.content_urls)
+        if facet["type"] == "url" and (url := facet.get("replacement") or facet.get("original")):
+            yield File(url, "content_url", config.content_urls)
+
+    if tweet.article:
+        yield File(tweet.article.cover_media.src, "article.cover", config.articles.cover)
+        for media in tweet.article.media_entities:
+            yield File(media.src, "article.media", config.articles.media)

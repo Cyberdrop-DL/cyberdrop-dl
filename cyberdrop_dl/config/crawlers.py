@@ -27,23 +27,33 @@ class TikTokConfig(ConfigModel):
     "Download videos in original quality (slower)"
 
 
+class TwitterArticlesConfig(ConfigModel):
+    cover: bool = True
+    "Download the cover image of articles"
+
+    media: bool = True
+    "Download media files in the body of articles"
+
+
 class TwitterConfig(ConfigModel):
     cards: bool = True
     "Parse and download cards in a post (embeds from thirdparty sites)"
 
-    thread: bool = True
+    threads: bool = True
     "Downloads all posts in a thread (AKA all direct replies from the author to their own tweet)"
 
     content_urls: bool = True
     "Parse and try to download any URL found inside the text of a tweet"
 
-    quotes: bool = False
-    "Parse and download tweets quoted by another tweet"
+    articles: TwitterArticlesConfig = Field(default_factory=TwitterArticlesConfig)
+    "Articles are longer tweets for premium users"
 
-    retweets: bool = True
+    retweets: bool = False
     "Download media from retweets in the user's timeline"
 
-    image_size: Literal["4096x4096", "large", "medium", "small", "orig"] = "orig"
+    image_size: Literal["orig", "4096x4096", "large", "medium", "small", "thumb"] = "orig"
+    # `orig`` is original quality but it's not always available, same as "4096x4096"
+    # "large", "medium", or "small" are always available
 
 
 class BandcampConfig(ConfigModel):
