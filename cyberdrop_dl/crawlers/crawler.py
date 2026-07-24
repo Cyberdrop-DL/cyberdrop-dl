@@ -182,19 +182,23 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
-        assert self.__http_config__.rate_limit is not None
-        self.__http_ctx__: HTTPContext = HTTPContext(
-            rate_limit=self.__http_config__.rate_limit,
-            headers=self.__http_config__.headers or {},
-            impersonate=self.__http_config__.impersonate,
-        )
-        self._task_mngr: Final = task_mng
-        self.tui: Final = tui
         self.downloader: Downloader = Downloader(
             manager,
             use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
             _slots=self._DOWNLOAD_SLOTS,
         )
+
+        assert self.__http_config__.rate_limit is not None
+        self.__http_ctx__: HTTPContext = HTTPContext(
+            domain=self.DOMAIN,
+            rate_limit=self.__http_config__.rate_limit,
+            headers=self.__http_config__.headers or {},
+            impersonate=self.__http_config__.impersonate,
+            json_check=self.__json_resp_check__,
+        )
+
+        self._task_mngr: Final = task_mng
+        self.tui: Final = tui
 
         self.__post_init__()
 
@@ -297,11 +301,12 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if _CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
 
-        kwargs.setdefault("impersonate", self.__http_ctx__.impersonate)
-        kwargs["headers"] = self.__http_ctx__.headers | kwargs.setdefault("headers", {})
+        ctx = self.__http_ctx__
+        kwargs.setdefault("impersonate", ctx.impersonate)
+        kwargs["headers"] = ctx.headers | kwargs.setdefault("headers", {})
 
         async with (
-            self.client.rate_limit_ctx(self.DOMAIN, self.__json_resp_check__),
+            self.client.rate_limit_ctx(ctx.domain, ctx.json_check),
             self.client.request(url, method, **kwargs) as resp,
         ):
             yield resp

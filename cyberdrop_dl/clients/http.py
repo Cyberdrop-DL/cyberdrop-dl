@@ -456,7 +456,9 @@ class HTTPConfig:
 @final
 @dataclasses.dataclass(slots=True, frozen=True)
 class HTTPContext:
+    domain: str
     rate_limit: RateLimit
+    json_check: JSONCheck | None = None
     impersonate: str | bool | None = None
     headers: dict[str, str] = dataclasses.field(default_factory=dict)
 
