@@ -904,6 +904,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
 @HTTPConfig(rate_limit=(25, 1))
 class API(HTTPMixin, ABC):
+    PRIMARY_URL: AbsoluteHttpURL = AbsoluteHttpURL()
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
 
     class Endpoint[T: API]:
@@ -917,31 +918,31 @@ class API(HTTPMixin, ABC):
     def __init__(
         self,
         domain: str,
-        PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
         cache: TTLCacheAdapter[Any],
         client: HTTPClient,
+        ctx: HTTPContext | None = None,
     ) -> None:
-        self.PRIMARY_URL: Final = PRIMARY_URL
         self.parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url
         self.config: Final = config
         self.cache: Final = cache
         self.client: HTTPClient = client
-        self.__http_ctx__: HTTPContext = HTTPContext.build(domain, self.__http_config__)
+        self.__http_ctx__: HTTPContext = ctx or HTTPContext.build(domain, self.__http_config__)
         self.__post_init__()
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:
+        config = crawler.__http_config__ | cls.__http_config__
         self = cls(
             domain=crawler.DOMAIN,
-            PRIMARY_URL=crawler.PRIMARY_URL,
             cache=crawler.cache,
             client=crawler.client,
             config=crawler.manager.config,
+            ctx=HTTPContext.build(crawler.DOMAIN, config, crawler.__http_ctx__.throttle),
         )
+        self.PRIMARY_URL = crawler.PRIMARY_URL  # pyright: ignore[reportConstantRedefinition]
         self.parse_url = crawler.parse_url
-        self.__http_config__ = crawler.__http_config__ | self.__http_config__
-        self.__http_ctx__ = HTTPContext.build(crawler.DOMAIN, self.__http_config__, crawler.__http_ctx__.throttle)
+        self.__http_config__ = config
         return self
 
     def __post_init__(self) -> None: ...
