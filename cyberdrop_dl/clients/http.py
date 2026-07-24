@@ -391,7 +391,7 @@ class HTTPMixin(HTTPObject, Protocol):
         self,
         url: AbsoluteHttpURL,
         /,
-        method: HttpMethod = "HEAD",
+        method: HttpMethod = "GET",
         **kwargs: Unpack[RequestParams],
     ) -> AbsoluteHttpURL:
         "Like request_location, but it uses a GET request instead of HEAD to follow all redirects upto the final destination"
