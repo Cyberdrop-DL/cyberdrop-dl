@@ -895,7 +895,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 class API(HTTPMixin, ABC):
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
 
-    class EntryPoint[T: API]:
+    class Endpoint[T: API]:
         def __init__(self, api: T) -> None:
             self.api: T = api
 
@@ -903,17 +903,16 @@ class API(HTTPMixin, ABC):
             return f"<{type(self).__name__}>"
 
     @final
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         domain: str,
         PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
         cache: TTLCacheAdapter[Any],
         client: HTTPClient,
-        parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
     ) -> None:
         self.PRIMARY_URL: Final = PRIMARY_URL
-        self.parse_url: Final = parse_url
+        self.parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url
         self.config: Final = config
         self.cache: Final = cache
         self.client: HTTPClient = client
@@ -925,11 +924,11 @@ class API(HTTPMixin, ABC):
         self = cls(
             domain=crawler.DOMAIN,
             PRIMARY_URL=crawler.PRIMARY_URL,
-            parse_url=crawler.parse_url,
             cache=crawler.cache,
             client=crawler.client,
             config=crawler.manager.config,
         )
+        self.parse_url = crawler.parse_url
         self.__http_config__ = crawler.__http_config__ | self.__http_config__
         self.__http_ctx__ = HTTPContext.build(crawler.DOMAIN, self.__http_config__, crawler.__http_ctx__.throttle)
         return self
