@@ -84,14 +84,15 @@ class MegaNzCrawler(Crawler):
             return None
 
         info = self.core.parse_url(scrape_item.url, check_key=False)
-        if not info.public_key:
+        public_key = info.public_key or scrape_item.password
+        if not public_key:
             self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
             return None
 
         if not info.is_folder:
-            return await self.file(scrape_item, info.public_handle, info.public_key)
+            return await self.file(scrape_item, info.public_handle, public_key)
 
-        await self.folder(scrape_item, info.public_handle, info.public_key, info.selected_folder, info.selected_file)
+        await self.folder(scrape_item, info.public_handle, public_key, info.selected_folder, info.selected_file)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, handle: str, public_key: str) -> None:
