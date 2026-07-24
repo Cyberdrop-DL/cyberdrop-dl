@@ -103,4 +103,20 @@ TEST_CASES = [
         ],
         "count": 8,
     },
+    {
+        "url": "https://x.com/i/events/1910629646300762112",
+        "description": "This event requires an authenticated request to get a guest token",
+        "results": [
+            {
+                "url": "https://x.com/i/events/1910629646300762112",
+                "filename": "#ガンニバル ウォッチパーティー [1LyxBWDRNqyKN][1080p].mp4",
+                "debrid_url": None,
+                "original_filename": "#ガンニバル ウォッチパーティー",
+                "referer": "https://x.com/i/events/1910629646300762112",
+                "album_id": None,
+                "uploaded_at": 1745403328,
+                "download_folder": "re:@DisneyPlusJP (Twitter)/2025-04-23 - 1LyxBWDRNqyKN",
+            },
+        ],
+    },
 ]
