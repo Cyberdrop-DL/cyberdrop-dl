@@ -158,7 +158,7 @@ class GoogleDriveCrawler(Crawler):
     async def _docs_file(self, scrape_item: ScrapeItem, file_id: str, doc: str | None) -> None:
         if not doc:
             open_url = (_DOCS_URL / "open").with_query(id=file_id)
-            url = await self._get_redirect_url(open_url)
+            url = await self.request_redirect(open_url)
             if (first := url.parts[1]) in _DOC_FORMATS:
                 doc = first
 

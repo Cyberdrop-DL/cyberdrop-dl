@@ -813,16 +813,14 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def parse_iso_date(cls, date_or_datetime: str, /) -> float:
         return dates.parse_iso(date_or_datetime).timestamp()
 
-    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        async with self.request(url) as resp:
-            return resp.url
-
     @final
     async def follow_redirect(self, scrape_item: ScrapeItem) -> None:
         with self.catch_errors(scrape_item):
-            redirect = await self._get_redirect_url(scrape_item.url)
+            redirect = await self.request_redirect(scrape_item.url)
             if scrape_item.url == redirect:
                 raise ScrapeError(422, "Infinite redirect")
+            if (password := scrape_item.url.query.get("password")) and "password" not in redirect.query:
+                redirect = redirect.update_query(password=password)
             scrape_item.url = redirect
             self.create_task(self.run(scrape_item))
 

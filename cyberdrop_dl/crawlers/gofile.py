@@ -129,7 +129,7 @@ class GoFileCrawler(Crawler):
 
     @error_handling_wrapper
     async def single_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        url = await self._get_redirect_url(scrape_item.url)
+        url = await self.request_redirect(scrape_item.url)
         scrape_item.url = url.with_fragment(file_id)
         assert "d" in url.parts
         return await self.folder(scrape_item, url.name, file_id)

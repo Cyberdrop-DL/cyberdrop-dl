@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -24,17 +25,20 @@ class BuzzHeavierCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        url = scrape_item.url / "download"
+        soup = await self.request_soup(scrape_item.url, impersonate=True)
+        name = css.select_text(soup, ".file-name")
+        date = css.select_text(soup, "p:-soup-contains-own(Uploaded)").rpartition("Uploaded")[-1].strip()
+        scrape_item.uploaded_at = self.parse_date(date, "%B %d, %Y")
+        hx_url = self.parse_url(css.select(soup, ".download-btn", "hx-get"))
         async with self.request(
-            url,
+            hx_url,
             method="HEAD",
             headers={
                 "HX-Current-URL": str(scrape_item.url),
                 "HX-Request": "true",
             },
         ) as resp:
-            filename = resp.content_disposition.filename
+            src = self.parse_url(resp.headers["hx-redirect"])
 
-        link = self.parse_url(resp.headers["hx-redirect"])
-        filename, ext = self.get_filename_and_ext(filename, assume_ext=".zip")
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=link)
+        filename, ext = self.get_filename_and_ext(name, assume_ext=".zip")
+        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=src)

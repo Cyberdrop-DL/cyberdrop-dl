@@ -84,15 +84,19 @@ class MegaNzCrawler(Crawler):
             return None
 
         info = self.core.parse_url(scrape_item.url, check_key=False)
-        public_key = info.public_key or scrape_item.password
-        if not public_key:
+        if not info.public_key and scrape_item.password:
+            with scrape_item.track_changes:
+                scrape_item.url = _add_password(scrape_item.url, scrape_item.password)
+                info = self.core.parse_url(scrape_item.url, check_key=False)
+
+        if info.public_key:
             self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
             return None
 
         if not info.is_folder:
-            return await self.file(scrape_item, info.public_handle, public_key)
+            return await self.file(scrape_item, info.public_handle, info.public_key)
 
-        await self.folder(scrape_item, info.public_handle, public_key, info.selected_folder, info.selected_file)
+        await self.folder(scrape_item, info.public_handle, info.public_key, info.selected_folder, info.selected_file)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, handle: str, public_key: str) -> None:
@@ -181,3 +185,10 @@ class MegaNzCrawler(Crawler):
                 raise LoginError(f"[MegaNZ] {e}") from e
             else:
                 self._logged_in = True
+
+
+def _add_password(url: AbsoluteHttpURL, password: str) -> AbsoluteHttpURL:
+    frag = url.fragment.lstrip("/")
+    if not frag:
+        return url.with_fragment(password)
+    return url.with_fragment(f"{password}/{frag}")

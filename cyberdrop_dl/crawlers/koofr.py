@@ -49,12 +49,6 @@ class KooFrCrawler(Crawler):
             case _:
                 raise ValueError
 
-    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        redirect = await super()._get_redirect_url(url)
-        if password := url.query.get("password"):
-            return redirect.update_query(password=password)
-        return redirect
-
     @error_handling_wrapper
     async def share(self, scrape_item: ScrapeItem, content_id: str) -> None:
         path = scrape_item.url.query.get("path") or "/"

@@ -397,6 +397,18 @@ class HTTPMixin(HTTPController, Protocol):
             return resp.url
 
 
+@final
+class HTTPControllerProxy[T: HTTPMixin]:
+    def __init__(self, http: T) -> None:
+        self.controller = http
+        self.__call__ = http.request
+        self.json = http.request_json
+        self.soup = http.request_soup
+        self.text = http.request_text
+        self.redirect = http.request_redirect
+        self.location = http.request_location
+
+
 def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
     loop = asyncio.get_running_loop()
 
