@@ -154,6 +154,9 @@
         "tiktok": {
           "$ref": "#/$defs/TikTokConfig"
         },
+        "twitter": {
+          "$ref": "#/$defs/TwitterConfig"
+        },
         "pawchive": {
           "$ref": "#/$defs/KemonoConfig"
         }
@@ -907,6 +910,66 @@
       "format": "duration",
       "ge": "PT0S",
       "type": "string"
+    },
+    "TwitterArticlesConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "cover": {
+          "default": true,
+          "title": "Cover",
+          "type": "boolean"
+        },
+        "media": {
+          "default": true,
+          "title": "Media",
+          "type": "boolean"
+        }
+      },
+      "title": "TwitterArticlesConfig",
+      "type": "object"
+    },
+    "TwitterConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "cards": {
+          "default": true,
+          "title": "Cards",
+          "type": "boolean"
+        },
+        "threads": {
+          "default": true,
+          "title": "Threads",
+          "type": "boolean"
+        },
+        "content_urls": {
+          "default": true,
+          "title": "Content Urls",
+          "type": "boolean"
+        },
+        "articles": {
+          "$ref": "#/$defs/TwitterArticlesConfig"
+        },
+        "retweets": {
+          "default": false,
+          "title": "Retweets",
+          "type": "boolean"
+        },
+        "image_size": {
+          "default": "orig",
+          "enum": [
+            "orig",
+            "4096x4096",
+            "large",
+            "medium",
+            "small",
+            "thumb"
+          ],
+          "title": "Image Size",
+          "type": "string"
+        }
+      },
+      "title": "TwitterConfig",
+      "type": "object"
     },
     "UIMode": {
       "enum": [

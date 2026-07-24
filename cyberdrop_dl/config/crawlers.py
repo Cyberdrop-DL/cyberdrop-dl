@@ -27,6 +27,35 @@ class TikTokConfig(ConfigModel):
     "Download videos in original quality (slower)"
 
 
+class TwitterArticlesConfig(ConfigModel):
+    cover: bool = True
+    "Download the cover image of articles"
+
+    media: bool = True
+    "Download media files in the body of articles"
+
+
+class TwitterConfig(ConfigModel):
+    cards: bool = True
+    "Parse and download cards in a post (embeds from thirdparty sites)"
+
+    threads: bool = True
+    "Downloads all posts in a thread (All direct replies from OP to their own tweet)"
+
+    content_urls: bool = True
+    "Parse and try to download any URL found inside the text of a tweet"
+
+    articles: TwitterArticlesConfig = Field(default_factory=TwitterArticlesConfig)
+    # Articles are longer tweets for premium users
+
+    retweets: bool = False
+    "Download media from retweets in the user's timeline"
+
+    image_size: Literal["orig", "4096x4096", "large", "medium", "small", "thumb"] = "orig"
+    # `orig`` is original quality but it's not always available, same as "4096x4096"
+    # "large", "medium", or "small" are always available
+
+
 class BandcampConfig(ConfigModel):
     formats: Annotated[
         tuple[Literal["mp3-320", "mp3", "aac-hi", "wav", "flac", "vorbis", "aiff", "alas"], ...],
@@ -71,4 +100,5 @@ class Crawlers(ConfigGroup, name=None):
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     one_pace: OnePaceConfig = Field(default_factory=OnePaceConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
+    twitter: TwitterConfig = Field(default_factory=TwitterConfig)
     pawchive: KemonoConfig = Field(default_factory=KemonoConfig)

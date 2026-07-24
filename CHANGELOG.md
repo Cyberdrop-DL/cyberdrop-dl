@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [10.3.0] - UNRELEASED
 
+### Added
+
+- Twitter/x.com support
+
+### Changed
+
+- Removed twitter.com and x.com from blocked domains
+
 ### Fixed
 
 - Some URLs being wrongly skipped as duplicates when using any of the `retry` options if they came from the same collection/folder/album.
