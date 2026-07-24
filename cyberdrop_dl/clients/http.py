@@ -8,7 +8,7 @@ import time
 import warnings
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, Unpack, cast, final
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, Unpack, final
 
 import aiohttp
 from aiohttp import hdrs
@@ -188,14 +188,13 @@ class HTTPClient:
 
     @contextlib.asynccontextmanager
     async def request(
-        self: object,
+        self,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
         **kwargs: Unpack[RequestParams],
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
-        self = cast("HTTPClient", self)  # noqa: PLW0642
         async with self.raw_request(url, method, **kwargs) as resp:
             try:
                 await check_http_status(resp)
@@ -317,14 +316,13 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-class HTTPObject(Protocol):
+class HTTPController(Protocol):
     __http_config__: HTTPConfig
     __http_ctx__: HTTPContext
-
-
-class HTTPMixin(HTTPObject, Protocol):
     client: HTTPClient
 
+
+class HTTPMixin(HTTPController, Protocol):
     @contextlib.asynccontextmanager
     async def request(
         self,

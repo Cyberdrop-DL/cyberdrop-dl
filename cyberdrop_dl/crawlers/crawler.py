@@ -11,7 +11,7 @@ from collections import Counter
 from contextvars import ContextVar
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, Unpack, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, final
 
 from aiohttp import hdrs
 
@@ -46,9 +46,7 @@ if TYPE_CHECKING:
     import yarl
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
-    from curl_cffi.requests.session import HttpMethod
 
-    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.database import Database
@@ -283,28 +281,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     async def __throttle(self) -> None:
         if _CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
-
-    @contextlib.asynccontextmanager
-    async def request(
-        self,
-        url: AbsoluteHttpURL,
-        /,
-        method: HttpMethod = "GET",
-        **kwargs: Unpack[RequestParams],
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-
-        if _CHECK_DL_CAPACITY.get():
-            await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
-
-        ctx = self.__http_ctx__
-        kwargs.setdefault("impersonate", ctx.impersonate)
-        kwargs["headers"] = ctx.headers | kwargs.setdefault("headers", {})
-
-        async with (
-            self.client.rate_limit_ctx(ctx.domain, ctx.json_check),
-            self.client.request(url, method, **kwargs) as resp,
-        ):
-            yield resp
 
     def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
         """Custom check for JSON responses.
@@ -915,8 +891,16 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             )
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class API(HTTPMixin, ABC):
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
+
+    class EntryPoint[T: API]:
+        def __init__(self, api: T) -> None:
+            self.api: T = api
+
+        def __repr__(self) -> str:
+            return f"<{type(self).__name__}>"
 
     @final
     def __init__(
