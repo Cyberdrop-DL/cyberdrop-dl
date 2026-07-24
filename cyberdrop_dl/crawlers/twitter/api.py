@@ -72,6 +72,18 @@ class UserEndpoint(API.Endpoint[FXTwitterAPI]):
         return self.api.pager(url)
 
 
+@HTTPConfig(
+    headers={
+        "Accept": "*/*",
+        "Referer": "https://x.com/",
+        "content-type": "application/json",
+        "x-twitter-client-language": "en",
+        "x-twitter-active-user": "yes",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+    }
+)
 class TwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.x.com/1.1")
     AUTH_TOKEN: str = ""
