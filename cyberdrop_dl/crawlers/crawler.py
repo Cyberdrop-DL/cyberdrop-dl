@@ -61,7 +61,6 @@ logger = logging.getLogger(__name__)
 type OneOrTuple[T] = T | tuple[T, ...]
 type SupportedPaths = dict[str, OneOrTuple[str]]
 type SupportedDomains = OneOrTuple[str]
-type RateLimit = tuple[float, float]
 type DebridURL = Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None
 
 _ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
