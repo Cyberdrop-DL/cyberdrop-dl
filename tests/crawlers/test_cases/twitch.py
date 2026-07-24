@@ -4,7 +4,7 @@ TEST_CASES = [
         "url": "https://www.twitch.tv/fanfan/clip/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
         "results": [
             {
-                "url": "re:/h0073-YuUM9o4kAK7QUTjA/AT-cm%7Ch0073-YuUM9o4kAK7QUTjA.mp4",
+                "url": "re:expires=",
                 "filename": "not scared btw [GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM][60fps][1080p].mp4",
                 "debrid_url": None,
                 "original_filename": "not scared btw",
@@ -19,7 +19,7 @@ TEST_CASES = [
         "url": "https://clips.twitch.tv/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
         "results": [
             {
-                "url": "re:/h0073-YuUM9o4kAK7QUTjA/AT-cm%7Ch0073-YuUM9o4kAK7QUTjA.mp4",
+                "url": "re:expires=",
                 "filename": "not scared btw [GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM][60fps][1080p].mp4",
                 "referer": "https://clips.twitch.tv/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
             }
@@ -39,7 +39,7 @@ TEST_CASES = [
         "url": "https://m.twitch.tv/clip/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
         "results": [
             {
-                "url": "re:/h0073-YuUM9o4kAK7QUTjA/AT-cm%7Ch0073-YuUM9o4kAK7QUTjA.mp4",
+                "url": "ANY",
                 "filename": "not scared btw [GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM][60fps][1080p].mp4",
                 "referer": "https://clips.twitch.tv/GeniusDifficultSproutPhilosoraptor-5i5Qz2jiQArtBROM",
             }
@@ -47,6 +47,7 @@ TEST_CASES = [
     },
     {
         "url": "https://www.twitch.tv/videos/1744169736",
+        "description": "hidden m3u8 data",
         "results": [
             {
                 "url": "re:https://usher.ttvnw.net/vod/1744169736.m3u8",
