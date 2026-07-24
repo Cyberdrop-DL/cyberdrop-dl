@@ -251,7 +251,7 @@ class TwitterCrawler(Crawler):
     async def _broadcast(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
         scrape_item.setup_as_album(self.create_title(f"@{bd.twitter_username}"))
         scrape_item.uploaded_at = bd.created_at_ms // 1000
-        post_title = self.create_separate_post_title(None, bd.tweet_id, scrape_item.uploaded_at)
+        post_title = self.create_separate_post_title(None, bd.tweet_id or bd.id, scrape_item.uploaded_at)
         scrape_item.append_folders(post_title)
         self.create_eager_task(self.write_metadata(scrape_item, bd.id, bd))
         await self._broadcast_stream(scrape_item, bd)

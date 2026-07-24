@@ -187,10 +187,10 @@ class Broadcast(DeferredModel):
     twitter_user_id: str
     user_display_name: str
     username: str
-    tweet_id: str
     twitter_username: str
     state: str
     is_locked: bool
     height: int
     width: int
     status: str | None = None
+    tweet_id: str | None = None
