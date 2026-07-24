@@ -30,7 +30,7 @@ class FXTwitterAPI(API):
         self.user: UserEndpoint = UserEndpoint(self)
 
     async def tweet(self, status_id: str) -> Tweet:
-        url = (self.ENTRYPOINT / "status" / status_id).with_query(about_account=1)
+        url = self.ENTRYPOINT / "status" / status_id
         resp = await self.request_json(url)
         return Tweet.model_validate(resp)
 

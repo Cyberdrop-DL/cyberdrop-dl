@@ -106,6 +106,7 @@ class TwitterCrawler(Crawler):
     _default_since: int | None = None
 
     def __post_init__(self) -> None:
+        self.__config__: TwitterConfig = self.config.crawlers.twitter
         self.api: FXTwitterAPI = FXTwitterAPI.from_crawler(self)
         self.x_api: TwitterAPI = TwitterAPI.from_crawler(self)
         if after := self.config.filters.after:
@@ -114,10 +115,6 @@ class TwitterCrawler(Crawler):
     @property
     def separate_posts(self) -> bool:
         return True
-
-    @property
-    def __config__(self) -> TwitterConfig:
-        return self.config.crawlers.twitter
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         query_get = scrape_item.url.query.get
@@ -142,10 +139,10 @@ class TwitterCrawler(Crawler):
     @error_handling_wrapper
     async def thread(self, scrape_item: ScrapeItem, status_id: str) -> None:
         tweet, *replies = await self.api.thread(status_id)
-        self._tweet(scrape_item, tweet)
+        self._tweet(scrape_item.copy(), tweet)
         for tweet in replies:
             new_item = scrape_item.create_child(self.parse_url(tweet.url))
-            self.__tweet(new_item, tweet)
+            self._tweet(new_item, tweet)
             scrape_item.add_children()
 
     @error_handling_wrapper
@@ -153,12 +150,9 @@ class TwitterCrawler(Crawler):
         tweet = await self.api.tweet(status_id)
         self._tweet(scrape_item, tweet)
 
+    @error_handling_wrapper
     def _tweet(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
         scrape_item.setup_as_album(self.create_title(f"@{tweet.author['screen_name']}"))
-        self.__tweet(scrape_item, tweet)
-
-    @error_handling_wrapper
-    def __tweet(self, scrape_item: ScrapeItem, tweet: Tweet) -> None:
         scrape_item.uploaded_at = tweet.created_timestamp
         post_title = self.create_separate_post_title(None, tweet.id, scrape_item.uploaded_at)
         scrape_item.append_folders(post_title)
