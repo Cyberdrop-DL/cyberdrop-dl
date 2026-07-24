@@ -824,21 +824,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             scrape_item.url = redirect
             self.create_task(self.run(scrape_item))
 
-    async def request_m3u8_playlist(
-        self,
-        m3u8_playlist_url: AbsoluteHttpURL,
-        /,
-        headers: Mapping[str, str] | None = None,
-        *,
-        only: Iterable[str] = (),
-        exclude: Iterable[str] = ("vp09",),
-    ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
-        """Get m3u8 rendition group from a playlist m3u8 (variant m3u8), selecting the best format"""
-        playlist, info = await self.request_m3u8(m3u8_playlist_url, headers, only=only, exclude=exclude)
-        if info is None:
-            raise ScrapeError(422, "Not a variant m3u8", origin=m3u8_playlist_url)
-        return playlist, info
-
     @final
     def create_custom_filename(  # noqa: PLR0913
         self,

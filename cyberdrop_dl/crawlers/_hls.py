@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal, Unpack
 
 from cyberdrop_dl import aio, ffmpeg
-from cyberdrop_dl.exceptions import DownloadError
+from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.utils import m3u8
 
 if TYPE_CHECKING:
@@ -101,3 +101,18 @@ class HLSMixin(ABC):
         check_ffmpeg_is_installed()
         content = await self.request_text(url, method, **kwargs)
         return m3u8.M3U8(content, url.parent, media_type, source=url)
+
+    async def request_m3u8_playlist(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        only: Iterable[str] = (),
+        exclude: Iterable[str] = ("vp09",),
+        **kwargs: Unpack[RequestParams],
+    ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
+        """Get m3u8 rendition group from a playlist m3u8 (variant m3u8), selecting the best format"""
+        playlist, info = await self.request_m3u8(url, method, only=only, exclude=exclude, **kwargs)
+        if info is None:
+            raise ScrapeError(422, "Not a variant m3u8", origin=url)
+        return playlist, info

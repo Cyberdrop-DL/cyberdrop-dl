@@ -37,6 +37,8 @@ class Request:
     id: str = dataclasses.field(init=False, default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
+        assert self.method
+        assert isinstance(self.method, str)
         self.headers = prepare_headers(self.headers)
         self.impersonate = _normalize_impersonation(self.impersonate)
         if self.method == "GET" and (self.data or self.json):

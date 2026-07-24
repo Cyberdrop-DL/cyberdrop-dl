@@ -254,13 +254,10 @@ class TwitchAPI(API):
             "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
         )
         token = resp["data"]["videoPlaybackAccessToken"]
-        try:
-            data = json.loads(token)
-        except ValueError:
-            pass
-        else:
-            if type(data) is dict and data.get("forbidden"):
-                raise ScrapeError(403, data.get("reason"))
+        if not token or type(token) is not dict:
+            raise ScrapeError(422, "Unable to get access token")
+        if token.get("forbidden"):
+            raise ScrapeError(403, token.get("reason"))
         return token
 
 
