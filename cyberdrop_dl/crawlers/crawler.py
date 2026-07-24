@@ -17,7 +17,7 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin, RequestContext
+from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
@@ -188,15 +188,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             _slots=self._DOWNLOAD_SLOTS,
         )
 
-        assert self.__http_config__.rate_limit is not None
-        self.__http_ctx__: HTTPContext = HTTPContext(
-            domain=self.DOMAIN,
-            rate_limit=self.__http_config__.rate_limit,
-            headers=self.__http_config__.headers or {},
-            impersonate=self.__http_config__.impersonate,
-            json_check=self.__json_resp_check__,
-        )
-
+        self.__http_ctx__: HTTPContext = HTTPContext.build(self.DOMAIN, self.__http_config__, self.__throttle)
         self._task_mngr: Final = task_mng
         self.tui: Final = tui
 
@@ -288,6 +280,10 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         )
         if add_to_registry:
             Registry.concrete.add(cls)
+
+    async def __throttle(self) -> None:
+        if _CHECK_DL_CAPACITY.get():
+            await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
 
     @contextlib.asynccontextmanager
     async def request(
@@ -922,31 +918,35 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
 class API(HTTPMixin, ABC):
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
+
     @final
     def __init__(
         self,
+        domain: str,
         PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
-        request: Callable[..., RequestContext],
         cache: TTLCacheAdapter[Any],
         parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
     ) -> None:
         self.PRIMARY_URL: Final = PRIMARY_URL
         self.parse_url: Final = parse_url
-        self.request: Final = request
         self.config: Final = config
         self.cache: Final = cache
+        self.__http_ctx__: HTTPContext = HTTPContext.build(domain, self.__http_config__)
         self.__post_init__()
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:
-        return cls(
+        self = cls(
+            domain=crawler.DOMAIN,
             PRIMARY_URL=crawler.PRIMARY_URL,
             parse_url=crawler.parse_url,
-            request=crawler.request,
             cache=crawler.cache,
             config=crawler.manager.config,
         )
+        self.__http_config__ = crawler.__http_config__ | self.__http_config__
+        self.__http_ctx__ = HTTPContext.build(crawler.DOMAIN, self.__http_config__, crawler.__http_ctx__.throttle)
+        return self
 
     def __post_init__(self) -> None: ...
 

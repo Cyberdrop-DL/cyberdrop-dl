@@ -27,7 +27,7 @@ from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import AsyncGenerator, Callable
+    from collections.abc import AsyncGenerator, Awaitable, Callable
     from pathlib import Path
 
     from bs4 import BeautifulSoup
@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 type JSONCheck = Callable[[Any, AbstractResponse[Any]], None]
 
 JSON_CHECK: ContextVar[JSONCheck | None] = ContextVar("JSON_CHECK", default=None)
+
+
 RequestContext = contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]  # pyright: ignore[reportPrivateUsage]
 
 logger = logging.getLogger(__name__)
@@ -317,17 +319,33 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
 
 class HTTPObject(Protocol):
     __http_config__: HTTPConfig
+    __http_ctx__: HTTPContext
 
 
-class HTTPMixin(HTTPObject):
-    def request(
+class HTTPMixin(HTTPObject, Protocol):
+    client: HTTPClient
+
+    @contextlib.asynccontextmanager
+    async def request(
         self,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
         **kwargs: Unpack[RequestParams],
-    ) -> RequestContext:
-        raise NotImplementedError
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+
+        ctx = self.__http_ctx__
+        if ctx.throttle is not None:
+            await ctx.throttle()
+
+        kwargs.setdefault("impersonate", ctx.impersonate)
+        kwargs["headers"] = ctx.headers | kwargs.setdefault("headers", {})
+
+        async with (
+            self.client.rate_limit_ctx(ctx.domain, ctx.json_check),
+            self.client.request(url, method, **kwargs) as resp,
+        ):
+            yield resp
 
     async def request_json(
         self,
@@ -408,6 +426,7 @@ class HTTPConfig:
     headers: dict[str, str] | None = None
     impersonate: str | bool | None = None
     rate_limit: RateLimit | None = None
+    json_check: JSONCheck | None = None
 
     __iter__ = DictDataclass.__iter__
 
@@ -460,7 +479,26 @@ class HTTPContext:
     rate_limit: RateLimit
     json_check: JSONCheck | None = None
     impersonate: str | bool | None = None
+    throttle: Callable[[], Awaitable[Any]] | None = None
     headers: dict[str, str] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def build(
+        cls,
+        domain: str,
+        config: HTTPConfig,
+        throttle: Callable[[], Awaitable[Any]] | None = None,
+    ) -> HTTPContext:
+        assert config.rate_limit is not None
+
+        return cls(
+            domain=domain,
+            rate_limit=config.rate_limit,
+            headers=config.headers or {},
+            impersonate=config.impersonate,
+            json_check=config.json_check,
+            throttle=throttle,
+        )
 
 
 async def check_http_status(response: AbstractResponse[Any]) -> None:
