@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Unpack
 
-from cyberdrop_dl import signature
+from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
 from cyberdrop_dl.crawlers.twitter.models import Broadcast, Tweet
@@ -14,6 +14,10 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+    from curl_cffi.requests.session import HttpMethod
+
+    from cyberdrop_dl.clients.request import RequestParams
 
 
 @HTTPConfig(rate_limit=(3, 1))  # Actual limit is 1000 req/min (~ 16.7 req/s) per IP
@@ -70,20 +74,32 @@ class UserEndpoint(API.Endpoint[FXTwitterAPI]):
 
 class TwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.x.com/1.1")
-    auth_token: str = ""
-    guess_token: str = ""
+    AUTH_TOKEN: str = ""
 
     def __post_init__(self) -> None:
         self.broadcast: BroadcastEndpoint = BroadcastEndpoint(self)
+        self.__http_ctx__.headers["Authorization"] = f"Bearer {self.AUTH_TOKEN}"
 
-    async def activate(self) -> str:
+    @disk_cached_method("guest_token", ttl=3600)
+    async def auth_guest(self) -> str:
         url = self.ENTRYPOINT / "guest/activate.json"
-        resp = await self.request_json(url, data=b"")
-        return resp["guess_token"]
+        resp = await self.request_json(url, "POST", data=b"")
+        return resp["guest_token"]
 
-    @signature.copy(API.request_json)
-    async def request_json(self, *args, **kwargs) -> Any:
-        async with self.request(*args, **kwargs) as resp:
+    async def request_json(
+        self,
+        url: AbsoluteHttpURL,
+        method: HttpMethod = "GET",
+        auth: bool = False,  # noqa: FBT001, FBT002
+        **kwargs: Unpack[RequestParams],
+    ) -> Any:
+        if morsel := self.client.cookies.filter_cookies(self.PRIMARY_URL).get("ct0"):
+            self.__http_ctx__.headers["x-csrf-token"] = morsel.value
+
+        if auth:
+            kwargs.setdefault("headers", {})["x-guest-token"] = await self.auth_guest()
+
+        async with self.request(url, method, **kwargs) as resp:
             return await resp.json(content_type=False)
 
 
@@ -97,7 +113,7 @@ class BroadcastEndpoint(API.Endpoint[TwitterAPI]):
 
     async def event(self, event_id: str) -> Broadcast:
         url = self.api.ENTRYPOINT / "live_event/1" / event_id / "timeline.json"
-        resp = await self.api.request_json(url)
+        resp = await self.api.request_json(url, auth=True)
         bds_entries: dict[str, dict[str, Any]] = resp["twitter_objects"]["broadcasts"]
         return self._parse(next(iter(bds_entries.values())))
 

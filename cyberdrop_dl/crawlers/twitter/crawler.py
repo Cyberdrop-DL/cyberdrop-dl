@@ -130,7 +130,7 @@ class TwitterCrawler(Crawler):
             case ["i", "broadcasts", bd_id]:
                 await self.broadcast(scrape_item, bd_id)
             case ["i", "events", event_id]:
-                await self.event(scrape_item, event_id)
+                await self.broadcast(scrape_item, event_id, event=True)
             case ["search"] if query := query_get("q"):
                 feed = query_get("f") or query_get("feed")
                 await self.search(scrape_item, query, feed)
@@ -238,19 +238,14 @@ class TwitterCrawler(Crawler):
                 )
 
     @error_handling_wrapper
-    async def broadcast(self, scrape_item: ScrapeItem, broadcast_id: str) -> None:
+    async def broadcast(self, scrape_item: ScrapeItem, broadcast_id: str, *, event: bool = False) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        bd = await self.x_api.broadcast(broadcast_id)
-        await self._broadcast(scrape_item, bd)
-
-    @error_handling_wrapper
-    async def event(self, scrape_item: ScrapeItem, event_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
-            return
-
-        bd = await self.x_api.broadcast.event(event_id)
+        fetch = self.x_api.broadcast
+        if event:
+            fetch = fetch.event
+        bd = await fetch(broadcast_id)
         await self._broadcast(scrape_item, bd)
 
     async def _broadcast(self, scrape_item: ScrapeItem, bd: Broadcast) -> None:
