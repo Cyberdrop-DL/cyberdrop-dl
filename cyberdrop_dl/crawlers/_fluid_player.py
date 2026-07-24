@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -28,9 +29,9 @@ class Format(NamedTuple):
     link_str: str
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class FluidPlayerCrawler(Crawler, is_abc=True):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:

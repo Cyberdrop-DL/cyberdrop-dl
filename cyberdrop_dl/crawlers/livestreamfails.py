@@ -3,7 +3,8 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -19,6 +20,7 @@ class _CDN:
     VIDEO = AbsoluteHttpURL("https://livestreamfails-video-prod.b-cdn.net/video")
 
 
+@HTTPConfig(rate_limit=(8, 1))
 class LivestreamFailsCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Clip": "/clip/<video_id>",
@@ -26,7 +28,6 @@ class LivestreamFailsCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "livestreamfails.com"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://livestreamfails.com")
-    _RATE_LIMIT: ClassVar[RateLimit] = 8, 1
 
     def __post_init__(self) -> None:
         self.api: LivestreamFailsAPI = LivestreamFailsAPI.from_crawler(self)

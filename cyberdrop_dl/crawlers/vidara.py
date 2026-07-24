@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class VidaraCrawler(Crawler, db_path="path_qs_frag"):
+@Crawler.db_path_builder("path_qs_frag")
+class VidaraCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
         "xca.cymru",
         "vidara.to",

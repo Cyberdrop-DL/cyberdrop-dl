@@ -3,10 +3,11 @@ from __future__ import annotations
 import base64
 import dataclasses
 import time
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, open_graph
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     FILES = ".file-item[onclick]"
     SUBFOLDER = ".subfolder-item[href]"
@@ -27,6 +29,7 @@ class Selector:
     FILE_DETAILS = "#detailsContent"
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class FilesterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": "/d/<slug>",
@@ -34,7 +37,6 @@ class FilesterCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://filester.me")
     DOMAIN: ClassVar[str] = "filester"
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 4
 
     def __post_init__(self) -> None:

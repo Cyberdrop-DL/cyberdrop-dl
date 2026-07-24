@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -29,6 +30,7 @@ class Format(NamedTuple):
     link_str: str
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class TNAFlixCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/<category>/<title>/video<video_id>",
@@ -40,7 +42,6 @@ class TNAFlixCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "TNAFlix"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tnaflix.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

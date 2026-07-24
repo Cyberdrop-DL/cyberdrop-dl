@@ -12,6 +12,7 @@ from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
@@ -27,7 +28,9 @@ if TYPE_CHECKING:
     from cyberdrop_dl.utils import m3u8
 
 
-class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+@Crawler.db_path_builder("path_qs_frag")
+class MegaNzCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
@@ -47,7 +50,6 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("mega.co.nz",)
-    _DEFAULT_UA: ClassVar[str | None] = CDL_USER_AGENT
 
     core: MegaCore
     downloader: MegaDownloader
@@ -82,14 +84,15 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
             return None
 
         info = self.core.parse_url(scrape_item.url, check_key=False)
-        if not info.public_key:
+        public_key = info.public_key or scrape_item.password
+        if not public_key:
             self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
             return None
 
         if not info.is_folder:
-            return await self.file(scrape_item, info.public_handle, info.public_key)
+            return await self.file(scrape_item, info.public_handle, public_key)
 
-        await self.folder(scrape_item, info.public_handle, info.public_key, info.selected_folder, info.selected_file)
+        await self.folder(scrape_item, info.public_handle, public_key, info.selected_folder, info.selected_file)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, handle: str, public_key: str) -> None:

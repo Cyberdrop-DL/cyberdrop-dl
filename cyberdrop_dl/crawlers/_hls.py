@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal, override
+from typing import TYPE_CHECKING, Literal, Unpack, override
 
 from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
@@ -14,7 +14,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     import aiohttp
+    from curl_cffi.requests.session import HttpMethod
 
+    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,13 @@ class HLSMixin(ABC):
     For multi variant m3u8, the best resolution will be automatically selected"""
 
     @abstractmethod
-    async def request_text(self, url: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> str: ...
+    async def request_text(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> str: ...
 
     async def request_m3u8(
         self,

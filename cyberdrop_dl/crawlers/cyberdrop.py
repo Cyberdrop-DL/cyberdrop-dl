@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.filepath import remove_file_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -21,6 +22,7 @@ class Selector:
 
 
 @Registry.database.fix_referer
+@HTTPConfig(rate_limit=(5, 1))
 class CyberdropCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "k1-cd.cdn.gigachad-cdn.ru", "cyberdrop"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -34,7 +36,6 @@ class CyberdropCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cyberdrop.cr/")
     DOMAIN: ClassVar[str] = "cyberdrop"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("cyberdrop.me", "cyberdrop.to")
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     def __post_init__(self) -> None:
         self.api: CyberdropAPI = CyberdropAPI.from_crawler(self)

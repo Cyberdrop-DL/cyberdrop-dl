@@ -72,14 +72,7 @@ class KemonoAPI(API):
                 break
 
 
-class KemonoAPIEndpoint:
-    api: KemonoAPI
-
-    def __init__(self, api: KemonoAPI) -> None:
-        self.api = api
-
-    def __repr__(self) -> str:
-        return f"<{type(self).__name__}>"
+KemonoAPIEndpoint = API.Endpoint[KemonoAPI]
 
 
 class AccountEndpoint(KemonoAPIEndpoint):

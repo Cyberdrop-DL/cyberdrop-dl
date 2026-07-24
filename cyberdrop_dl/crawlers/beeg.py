@@ -4,7 +4,8 @@ import dataclasses
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -37,6 +38,7 @@ class Format(DictDataclass):
     url: AbsoluteHttpURL
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class BeegComCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
@@ -46,7 +48,6 @@ class BeegComCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "beeg.com"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://beeg.com/")
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

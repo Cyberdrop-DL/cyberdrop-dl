@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, open_graph
@@ -13,12 +14,14 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     VIDEO = "input[name=fid]"
     USER_NAME = "div.info a[href*='archivebate.store/profile/']"
     SITE_NAME = f"{USER_NAME} + p"
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class ArchiveBateCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/watch/<video_id>",
@@ -26,7 +29,6 @@ class ArchiveBateCrawler(Crawler):
     DOMAIN: ClassVar[str] = "archivebate"
     FOLDER_DOMAIN: ClassVar[str] = "ArchiveBate"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.archivebate.store")
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

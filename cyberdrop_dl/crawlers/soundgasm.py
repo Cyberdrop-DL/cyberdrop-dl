@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 _CDN = AbsoluteHttpURL("https://media.soundgasm.net")
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class SoundGasmCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Audio": "/u/<user>/<slug>",
@@ -20,7 +22,6 @@ class SoundGasmCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "soundgasm"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://soundgasm.net")
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

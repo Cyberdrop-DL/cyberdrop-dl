@@ -24,7 +24,8 @@ class Node:
     hash: str = ""  # md5
 
 
-class KooFrCrawler(Crawler, db_path="path_qs_frag"):
+@Crawler.db_path_builder("path_qs_frag")
+class KooFrCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "koofr.net", "koofr.eu", _SHORT_LINK_CDN.host
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Public Share": (

@@ -68,7 +68,13 @@ def _update_file(file: Path, new_content: str, *, marker: str) -> None:
 def _get_custom_ua_crawlers() -> list[str]:
     from cyberdrop_dl.crawlers import Registry
 
-    return sorted(c.FOLDER_DOMAIN for c in Registry.get_crawlers() if c._DEFAULT_UA and CDL_USER_AGENT in c._DEFAULT_UA)
+    return sorted(
+        c.FOLDER_DOMAIN
+        for c in Registry.get_crawlers()
+        if c.__http_config__
+        and c.__http_config__.headers
+        and CDL_USER_AGENT in c.__http_config__.headers.get("User-Agent", "")
+    )
 
 
 def update_supported_sites() -> None:

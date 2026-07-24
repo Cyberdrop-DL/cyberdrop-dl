@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -25,6 +26,7 @@ class Selector:
     ITEM = ".grid .thumbnail.group a"
 
 
+@HTTPConfig(impersonate=True)
 class MissAVCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/...",
@@ -35,7 +37,6 @@ class MissAVCrawler(Crawler):
     DOMAIN: ClassVar[str] = "missav"
     FOLDER_DOMAIN: ClassVar[str] = "MissAV"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _IMPERSONATE: ClassVar[str | bool | None] = True
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
