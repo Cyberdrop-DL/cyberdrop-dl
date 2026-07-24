@@ -4,7 +4,8 @@ import json
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, m3u8
@@ -60,6 +61,7 @@ TITLE_TRASH = "Shemale Porn Videos - Trending"
 PRIMARY_URL = AbsoluteHttpURL("https://www.ashemaletube.com")
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class AShemaleTubeCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Playlist": "/playlists/...",
@@ -71,7 +73,6 @@ class AShemaleTubeCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "aShemaleTube"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         if any(p in scrape_item.url.parts for p in ("creators", "profiles", "pornstars", "model")):

@@ -17,8 +17,7 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin, RequestContext
-from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.clients.http import HTTPClient, HTTPContext, HTTPMixin, RequestContext
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
@@ -137,7 +136,6 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
 
 class Crawler(HTTPMixin, HLSMixin, ABC):
     DOMAIN: ClassVar[str]
-    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -152,11 +150,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
-    _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
-    _DEFAULT_UA: ClassVar[str | None] = None
 
     disabled: bool = False
 
@@ -185,6 +181,11 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
+        self.__http_ctx__: HTTPContext = HTTPContext(
+            rate_limit=self.__http_config__.rate_limit or (25, 1),
+            headers=self.__http_config__.headers or {},
+            impersonate=self.__http_ctx__.impersonate,
+        )
         self._task_mngr: Final = task_mng
         self.tui: Final = tui
         self.downloader: Downloader = Downloader(
@@ -208,7 +209,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             if self._ready:
                 return
 
-            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
+            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self.__http_ctx__.rate_limit)
             try:
                 await self.__async_post_init__()
             except Exception:
@@ -232,7 +233,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         is_generic: bool = False,
         is_debug: bool = False,
         db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
-        cdl_user_agent: bool = False,
         **kwargs: Any,
     ) -> None:
         assert cls.__name__.endswith("Crawler"), f"{cls.__name__} does not end with 'Crawler'"
@@ -253,8 +253,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
-        if cdl_user_agent:
-            cls._DEFAULT_UA = CDL_USER_AGENT  # pyright: ignore[reportConstantRedefinition]
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
@@ -293,12 +291,12 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         method: HttpMethod = "GET",
         **kwargs: Unpack[RequestParams],
     ) -> AsyncGenerator[AbstractResponse[Any]]:
-        kwargs.setdefault("impersonate", self._IMPERSONATE)
-        if self._DEFAULT_UA:
-            kwargs.setdefault("headers", {}).setdefault(hdrs.USER_AGENT, self._DEFAULT_UA)
 
         if _CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
+
+        kwargs.setdefault("impersonate", self.__http_ctx__.impersonate)
+        kwargs["headers"] = self.__http_ctx__.headers | kwargs.setdefault("headers", {})
 
         async with (
             self.client.rate_limit_ctx(self.DOMAIN, self.__json_resp_check__),
@@ -532,7 +530,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
-            "User-Agent": self._DEFAULT_UA or self.config.network.user_agent,
+            "User-Agent": self.__http_ctx__.headers.get(hdrs.USER_AGENT) or self.config.network.user_agent,
             "Referer": str(scrape_item.url),
         }
 

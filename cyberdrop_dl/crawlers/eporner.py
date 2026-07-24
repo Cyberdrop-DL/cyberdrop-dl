@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -54,6 +55,7 @@ class VideoSource:
     format: str
 
 
+@HTTPConfig(rate_limit=(2, 1))
 class EpornerCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Categories": "/cat/...",
@@ -74,7 +76,6 @@ class EpornerCrawler(Crawler):
     DOMAIN: ClassVar[str] = "eporner"
     FOLDER_DOMAIN: ClassVar[str] = "ePorner"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
         match scrape_item.url.parts[1:]:

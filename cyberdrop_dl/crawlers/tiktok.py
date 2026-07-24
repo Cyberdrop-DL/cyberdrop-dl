@@ -4,7 +4,8 @@ import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils.dataclass import DictDataclass
@@ -78,6 +79,7 @@ class MusicInfo(DictDataclass):
         return _PRIMARY_URL / "music" / f"{safe_title}-{self.id}"
 
 
+@HTTPConfig(rate_limit=(1, 2))
 class TikTokCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "User": "/@<user>",
@@ -88,7 +90,6 @@ class TikTokCrawler(Crawler):
     DOMAIN: ClassVar[str] = "tiktok"
     FOLDER_DOMAIN: ClassVar[str] = "TikTok"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
-    _RATE_LIMIT: ClassVar[RateLimit] = 1, 2
 
     @property
     def download_src_quality_videos(self) -> bool:

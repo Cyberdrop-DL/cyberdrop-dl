@@ -4,12 +4,13 @@ import asyncio
 import dataclasses
 import json
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, final, override
 
 from aiohttp import ClientConnectorError
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -28,6 +29,7 @@ _find_js_vars = re.compile(r'var\s+(\w+)\s*=\s*(".*?"|\'.*?\'|[^;]+);', re.DOTAL
 known_bad_hosts: set[str] = set()
 
 
+@final
 class Selector:
     ALBUM_FILES = "script:-soup-contains('window.albumFiles = ')"
     DOWNLOAD_BTN = "a.btn.ic-download-01"
@@ -35,6 +37,7 @@ class Selector:
     JS_VARS = "script:-soup-contains-own('var jsCDN')"
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class BunkrCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("bunkr",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -58,7 +61,7 @@ class BunkrCrawler(Crawler):
         "bunkr.se",
         "bunkrr.su",
     )
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
+
     _known_good_host: ClassVar[str | None] = None
 
     @staticmethod

@@ -4,7 +4,8 @@ import dataclasses
 from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -47,6 +48,7 @@ class Video:
     url: str
 
 
+@HTTPConfig(impersonate=True, rate_limit=(2, 5))
 class SpankBangCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Playlist": "/<playlist_id>/playlist/...",
@@ -65,8 +67,6 @@ class SpankBangCrawler(Crawler):
     DOMAIN: ClassVar[str] = "spankbang"
     FOLDER_DOMAIN: ClassVar[str] = "SpankBang"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _IMPERSONATE: ClassVar[str | bool | None] = True
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 5
 
     async def __async_post_init__(self) -> None:
         self.update_cookies({"country": "US", "age_pass": 1})

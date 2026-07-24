@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -15,12 +16,14 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     VIDEOS = ".videolist a[data-anim]"
     VIDEO_IFRAME = "div.player-frame iframe"
     NEXT_PAGE = "div.page-list a:-soup-contains('Next')"
 
 
+@HTTPConfig(rate_limit=(1, 6))
 class XXXBunkerCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/<video_id>",
@@ -33,7 +36,6 @@ class XXXBunkerCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "XXXBunker"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
-    _RATE_LIMIT: ClassVar[RateLimit] = 1, 6
 
     async def __async_post_init__(self) -> None:
         self.update_cookies({"ageconfirm": "True"})

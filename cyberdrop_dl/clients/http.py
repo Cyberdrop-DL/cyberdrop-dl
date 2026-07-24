@@ -316,7 +316,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
 
 
 class HTTPObject(Protocol):
-    __http_config__: HTTPConfig | None = None
+    __http_config__: HTTPConfig
 
 
 class HTTPMixin(HTTPObject):
@@ -412,6 +412,25 @@ class HTTPConfig:
 
     __iter__ = DictDataclass.__iter__
 
+    @classmethod
+    def default_headers(
+        cls,
+        user_agent: str | None = None,
+        referer: str | None = None,
+        host: str | None = None,
+        content_type: str | None = None,
+        accept: str | None = None,
+        **kwargs: str,
+    ) -> HTTPConfig:
+        headers = {
+            hdrs.USER_AGENT: user_agent,
+            hdrs.REFERER: referer,
+            hdrs.HOST: host,
+            hdrs.CONTENT_TYPE: content_type,
+            hdrs.ACCEPT: accept,
+        } | kwargs
+        return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
+
     def __post_init__(self) -> None:
         if self.user_agent:
             if not self.headers:
@@ -441,6 +460,14 @@ class HTTPConfig:
         else:
             obj.__http_config__ = self
         return obj
+
+
+@final
+@dataclasses.dataclass(slots=True, frozen=True)
+class HTTPContext:
+    rate_limit: RateLimit
+    impersonate: str | bool | None = None
+    headers: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 async def check_http_status(response: AbstractResponse[Any]) -> None:

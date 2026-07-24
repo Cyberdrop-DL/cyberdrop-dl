@@ -4,7 +4,8 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class WhypItCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Audio": "/tracks/<id>/...",
@@ -25,7 +27,6 @@ class WhypItCrawler(Crawler):
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://whyp.it")
     DOMAIN: ClassVar[str] = PRIMARY_URL.host
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

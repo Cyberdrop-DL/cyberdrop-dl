@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.vbulletin import vBulletinCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.crawlers.crawler import RateLimit, SupportedDomains
+    from cyberdrop_dl.crawlers.crawler import SupportedDomains
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class ViperGirlsCrawler(vBulletinCrawler):
     login_required: ClassVar[bool] = False
     VBULLETIN_LOGIN_COOKIE_NAME: ClassVar[str] = "vg_password"
@@ -17,4 +19,3 @@ class ViperGirlsCrawler(vBulletinCrawler):
     FOLDER_DOMAIN: ClassVar[str] = "ViperGirls"
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "viper.click", "vipergirls.to"
     VBULLETIN_API_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://viper.click/vr.php")
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1

@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import TextExtractor, css, dates, parse_url
@@ -30,6 +31,7 @@ class Selector:
 
 
 @Registry.database.fix_referer
+@HTTPConfig(rate_limit=(2, 1))
 class MotherlessCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Group": (
@@ -60,8 +62,6 @@ class MotherlessCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("motherless.com",)
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
-    _IMPERSONATE = True
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
