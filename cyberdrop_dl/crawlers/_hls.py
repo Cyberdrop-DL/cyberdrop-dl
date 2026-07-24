@@ -36,7 +36,7 @@ class HLSMixin(ABC):
     For multi variant m3u8, the best resolution will be automatically selected"""
 
     @abstractmethod
-    async def request_text(self, url: AbsoluteHttpURL, /, *, headers: Mapping[str, str] | None = None) -> str: ...
+    async def request_text(self, url: AbsoluteHttpURL, /, *, headers: dict[str, str] | None = None) -> str: ...
 
     async def request_m3u8(
         self,

@@ -11,11 +11,13 @@ from collections import Counter
 from contextvars import ContextVar
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, final
+from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, Unpack, final
 
-from cyberdrop_dl import aio, env, signature
+from aiohttp import hdrs
+
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import JSON_CHECK, HTTPClient, HTTPMixin, RequestContext
+from cyberdrop_dl.clients.http import HTTPClient, HTTPMixin, RequestContext
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
@@ -45,7 +47,9 @@ if TYPE_CHECKING:
     import yarl
     from bs4 import BeautifulSoup, Tag
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
+    from curl_cffi.requests.session import HttpMethod
 
+    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.database import Database
@@ -281,33 +285,26 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if add_to_registry:
             Registry.concrete.add(cls)
 
-    @signature.copy(HTTPClient.request)
     @contextlib.asynccontextmanager
     async def request(
         self,
-        *args: Any,
-        impersonate: str | bool | None = None,
-        default_ua: str | None = None,
-        **kwargs: Any,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
     ) -> AsyncGenerator[AbstractResponse[Any]]:
-        if impersonate is None:
-            impersonate = self._IMPERSONATE
+        kwargs.setdefault("impersonate", self._IMPERSONATE)
+        if self._DEFAULT_UA:
+            kwargs.setdefault("headers", {}).setdefault(hdrs.USER_AGENT, self._DEFAULT_UA)
 
         if _CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
 
-        with enter_context(JSON_CHECK, self.__json_resp_check__):
-            async with (
-                self.client.rate_limits[self.DOMAIN],
-                self.client.global_rate_limiter,
-                self.client.request(
-                    *args,
-                    impersonate=impersonate,
-                    default_ua=default_ua or self._DEFAULT_UA,
-                    **kwargs,
-                ) as resp,
-            ):
-                yield resp
+        async with (
+            self.client.rate_limit_ctx(self.DOMAIN, self.__json_resp_check__),
+            self.client.request(url, method, **kwargs) as resp,
+        ):
+            yield resp
 
     def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
         """Custom check for JSON responses.
