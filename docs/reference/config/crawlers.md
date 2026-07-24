@@ -240,10 +240,9 @@ Parse and try to download any URL found inside the text of a tweet
 Resolution used for image downloads
 
 {% hint style="info" %}
-`orig` is original quality but it's not always available. You may get `404 - Not Found` or `403 - Forbidden` errors.
-The same applies to `4096x4096`
+`orig` is original quality but it's not always available. You may get `404 - Not Found` or `403 - Forbidden` errors. The same applies to `4096x4096`.
 
-`large`, `medium`, or `small"` are always available
+`large`, `medium`, or `small` are always available.
 {% endhint %}
 
 ## `threads`
@@ -267,7 +266,7 @@ Download media from retweets in the user's timeline
 Controls which content to download when CDL finds an article (longer tweets from premium users)
 
 {% hint style="info" %}
-Scanning the content (text) of articles for URLs is not supported.
+Scanning the content (text) of articles for URLs is not supported
 {% endhint %}
 
 ### `cover`
