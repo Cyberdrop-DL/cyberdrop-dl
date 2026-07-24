@@ -55,12 +55,10 @@ class Request:
     __iter__ = DictDataclass.__iter__
 
     def __json__(self) -> dict[str, Any]:
-        me = {k: v for k, v in self if v is not None}
+        me = {k: v for k, v in self if (v and k != "method") or (k in {"json", "data"} and v is not None)}
         me["url"] = str(self.url)
         if self.headers:
             me["headers"] = dict(self.headers)
-        else:
-            me.pop("headers", None)
         return me
 
     def __str__(self) -> str:

@@ -42,3 +42,12 @@ def test_json_method_returns_expected_dict() -> None:
         "json": {"foo": "bar"},
     }
     assert req.__json__() == expected
+    req_2 = Request(
+        url=AbsoluteHttpURL("https://example.com"),
+        method="GET",
+        headers=CIMultiDict({}),
+        data=None,
+        json=b"",
+        params={},
+    )
+    assert req_2.__json__() == {"url": "https://example.com", "json": b""}
