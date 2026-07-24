@@ -17,7 +17,7 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import HTTPClient, HTTPContext, HTTPMixin, RequestContext
+from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin, RequestContext
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
@@ -134,6 +134,7 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class Crawler(HTTPMixin, HLSMixin, ABC):
     DOMAIN: ClassVar[str]
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
@@ -181,10 +182,11 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
+        assert self.__http_config__.rate_limit is not None
         self.__http_ctx__: HTTPContext = HTTPContext(
-            rate_limit=self.__http_config__.rate_limit or (25, 1),
+            rate_limit=self.__http_config__.rate_limit,
             headers=self.__http_config__.headers or {},
-            impersonate=self.__http_ctx__.impersonate,
+            impersonate=self.__http_config__.impersonate,
         )
         self._task_mngr: Final = task_mng
         self.tui: Final = tui
