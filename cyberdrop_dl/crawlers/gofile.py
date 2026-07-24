@@ -9,7 +9,8 @@ from typing_extensions import ReadOnly
 
 from cyberdrop_dl import env
 from cyberdrop_dl.cache import disk_cached_method
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -56,6 +57,7 @@ class Folder(UnlockedNode):
     passwordStatus: NotRequired[str]
 
 
+@HTTPConfig(rate_limit=(4, 10))
 class GoFileCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Folder / File": "/d/<content_id>",
@@ -71,7 +73,6 @@ class GoFileCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
     DOMAIN: ClassVar[str] = "gofile"
     FOLDER_DOMAIN: ClassVar[str] = "GoFile"
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 10
 
     _SALT: ClassVar[str] = env.GOFILE_SALT or "9844d94d963d30"
     _BROWSER_LANG: ClassVar[str] = "en-US"
@@ -128,7 +129,7 @@ class GoFileCrawler(Crawler):
 
     @error_handling_wrapper
     async def single_file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        url = await self._get_redirect_url(scrape_item.url)
+        url = await self.request_redirect(scrape_item.url)
         scrape_item.url = url.with_fragment(file_id)
         assert "d" in url.parts
         return await self.folder(scrape_item, url.name, file_id)

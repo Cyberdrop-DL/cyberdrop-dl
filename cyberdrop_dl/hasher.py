@@ -128,8 +128,13 @@ class Hasher:
         except IsADirectoryError:
             return None
 
+        hashes: dict[str, asyncio.Task[str | None]] = {}
+
         def compute_hash(algo: Literal["xxh128", "md5", "sha256"]) -> asyncio.Task[str | None]:
-            return tg.create_task(self._update_db_and_retrive_hash(file, original_filename, referer, algo))
+            hashes[algo] = task = tg.create_task(
+                self._update_db_and_retrive_hash(file, original_filename, referer, algo)
+            )
+            return task
 
         async with self._sem:
             with self.tui.new_file(file):
@@ -138,6 +143,12 @@ class Hasher:
                     xxxhash = compute_hash("xxh128")
                     for algo in self.extra_hashes:
                         _ = compute_hash(algo)
+
+            logger.debug(
+                "hashes of '%s'\n%s",
+                file,
+                {algo: result for algo, task in hashes.items() if (result := task.result()) is not None},
+            )
 
         return xxxhash.result()
 

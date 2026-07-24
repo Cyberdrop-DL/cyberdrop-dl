@@ -6,7 +6,7 @@ TEST_CASES = [
             {
                 "url": "re:/b71/FrmLzfLKUHBWDTQfqaTZ.mp4?md5=",
                 "filename": "FrmLzfLKUHBWDTQfqaTZ.mp4",
-                "referer": "https://fileditchfiles.me/file.php?f=/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
+                "referer": "https://fileditchfiles.me/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "download_folder": "re:Loose Files (Fileditch)",
                 "uploaded_at": None,
             }
@@ -18,7 +18,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:/b70/jRuBeGZlRoBWPurUARg.mp4?md5=",
-                "referer": "https://fileditchfiles.me/file.php?f=/b70/jRuBeGZlRoBWPurUARg.mp4",
+                "referer": "https://fileditchfiles.me/b70/jRuBeGZlRoBWPurUARg.mp4",
                 "download_folder": "re:Loose Files (Fileditch)",
                 "uploaded_at": None,
             }

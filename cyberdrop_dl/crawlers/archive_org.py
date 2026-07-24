@@ -9,7 +9,9 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import API, Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import DictDataclass
@@ -21,7 +23,9 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class ArchiveOrgCrawler(Crawler, cdl_user_agent=True):
+@HTTPConfig(rate_limit=(3, 1))
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": (
             "/details/<identifier>",
@@ -35,7 +39,6 @@ class ArchiveOrgCrawler(Crawler, cdl_user_agent=True):
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://archive.org")
     DOMAIN: ClassVar[str] = "archive.org"
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.host == "web.archive.org":

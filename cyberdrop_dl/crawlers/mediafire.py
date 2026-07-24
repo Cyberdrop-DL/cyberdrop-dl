@@ -50,7 +50,8 @@ _API_ERRORS_OVERRIDES: dict[int, int] = {
 }
 
 
-class MediaFireCrawler(Crawler, db_path="name"):
+@Crawler.db_path_builder("name")
+class MediaFireCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
             "/file/<quick_key>",

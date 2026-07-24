@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import cached_fn
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.filepath import get_filename_and_ext
@@ -31,6 +32,7 @@ _LTN_SERVER = AbsoluteHttpURL(f"https://ltn.{_CONTENT_HOST}/")
 _VIDEOS_SERVER = AbsoluteHttpURL(f"https://streaming.{_CONTENT_HOST}/")
 
 
+@HTTPConfig(rate_limit=(3, 1))
 class HitomiLaCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Gallery": tuple(
@@ -62,7 +64,6 @@ class HitomiLaCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hitomi.la")
     DOMAIN: ClassVar[str] = "hitomi.la"
-    _RATE_LIMIT: ClassVar[tuple[float, float]] = 3, 1
     _SCRAPE_SLOTS: ClassVar[int] = 3
 
     def __post_init__(self) -> None:

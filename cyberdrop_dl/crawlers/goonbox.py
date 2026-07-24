@@ -4,6 +4,7 @@ import dataclasses
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 _CDN = "cuckcapital.cr"
 
 
+@Registry.database.fix_referer
 class GoonBoxCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "selti-delivery.ru", "goonbox", _CDN
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {

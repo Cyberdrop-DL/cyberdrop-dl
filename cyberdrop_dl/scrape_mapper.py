@@ -22,7 +22,6 @@ from cyberdrop_dl.scrape_source import (
     load_items_from_file,
     load_items_from_iterable,
 )
-from cyberdrop_dl.signature import repr_fields
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
 from cyberdrop_dl.utils import remove_trailing_slash
 
@@ -112,13 +111,13 @@ class ScrapeMapper:
     _ready: bool = dataclasses.field(init=False, default=False)
 
     def __repr__(self) -> str:
-        fields = repr_fields(
-            ("seen_url", len(self._seen_urls)),
-            ("crawlers", len(self.crawlers)),
-            ("tasks_mngr", self.task_mngr),
-            ("factory", self._factory),
+        fields = (
+            f"seen_url={len(self._seen_urls):,}",
+            f"crawlers={len(self.crawlers):,}",
+            f"tasks_mngr={self.task_mngr!r}",
+            f"factory={self._factory!r}",
         )
-        return f"<{type(self).__name__}>{', '.join(fields)}"
+        return f"<{type(self).__name__}>({', '.join(fields)})"
 
     def _scrape_queue(self) -> int:
         return sum(crawler.waiting_items for crawler in self._factory)
@@ -445,7 +444,7 @@ def _skip_by_config(url: AbsoluteHttpURL, config: Config) -> bool:
         return True
 
     hosts = config.filters.only_hosts
-    if hosts and _filter_by_domain(url, hosts):
+    if hosts and not _filter_by_domain(url, hosts):
         logger.info("Skipping %s by only_hosts config", url)
         return True
 

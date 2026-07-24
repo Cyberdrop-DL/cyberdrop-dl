@@ -70,7 +70,7 @@ def _(stats: FileStats) -> None:
     logger.info("Download Stats:", extra=Color.CYAN)
     logger.info(f"  Downloaded: {stats.completed:,} files")
     logger.info(f"  Skipped (by config): {stats.skipped:,} files")
-    logger.info(f"  Skipped (previously downloaded): {stats.previously_completed:,} files")
+    logger.info(f"  Skipped (previously downloaded): {stats.prev_completed:,} files")
     logger.info(f"  Failed: {stats.failed:,} files", extra=Color.RED if stats.failed else None)
 
 

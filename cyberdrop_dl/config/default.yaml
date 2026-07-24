@@ -42,6 +42,15 @@ crawlers:
     file: true
   tiktok:
     original: false
+  twitter:
+    articles:
+      cover: true
+      media: true
+    cards: true
+    content_urls: true
+    image_size: orig
+    retweets: false
+    threads: true
 deep_scrape: false
 delete_empty_folders: true
 delete_partial_files: false

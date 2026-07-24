@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -14,12 +15,14 @@ if TYPE_CHECKING:
 _UNIX_TIMESTAMP_LENGTH: int = 10
 
 
+@final
 class Selector:
     VIDEO = "video#player > source"
     SEARCH_RESULTS = "div.list-videos div.item > a"
     NEXT_PAGE = "li.next > a"
 
 
+@HTTPConfig(rate_limit=(3, 2))
 class TransflixCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/<name>-<video_id>",
@@ -29,7 +32,6 @@ class TransflixCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "TransFlix"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transflix.net")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 2
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

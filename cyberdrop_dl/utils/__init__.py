@@ -29,11 +29,41 @@ def enter_context[T](context_var: ContextVar[T], value: T, /) -> Generator[None]
         context_var.reset(token)
 
 
-def extr_text(text: str, /, start: str, end: str) -> str:
-    """Extracts the text between two strings in a larger text. Result will be stripped"""
-    start_index = text.index(start) + len(start)
+def extract_text(text: str, /, start: str, end: str, pos: int | None = None) -> tuple[int, str]:
+    """Extracts the text between two strings in a larger text.
+
+    Result will be stripped"""
+    start_index = text.index(start, pos) + len(start)
     end_index = text.index(end, start_index)
-    return text[start_index:end_index].strip()
+    return end_index + len(end), text[start_index:end_index].strip()
+
+
+def extr_text(text: str, /, start: str, end: str) -> str:
+    """Extracts the text between two strings in a larger text.
+
+    Result will be stripped"""
+    _, txt = extract_text(text, start, end)
+    return txt
+
+
+class TextExtractor:
+    def __init__(self, text: str, /, pos: int | None = None) -> None:
+        self.text: str = text
+        self.cursor: int | None = pos
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(text={self.text!r}, cursor={self.cursor!r})"
+
+    def __call__(self, start: str, end: str) -> str:
+        self.cursor, txt = extract_text(self.text, start, end, self.cursor)
+        return txt
+
+    def repeat(self, start: str, end: str) -> Generator[str]:
+        while True:
+            try:
+                yield self(start, end)
+            except ValueError:
+                return
 
 
 def get_system_information() -> dict[str, Any]:
@@ -101,12 +131,13 @@ def basic_auth(username: str, password: str) -> str:
     return f"Basic {token}"
 
 
-def unique[T](itr: Iterable[T], /) -> Generator[T]:
-    seen: set[T] = set()
-    for ele in itr:
-        if ele not in seen:
-            seen.add(ele)
-            yield ele
+def unique[T](itr: Iterable[T], /, key: Callable[[T], Any] | None = None) -> Generator[T]:
+    seen: set[Any] = set()
+    for elem in itr:
+        lookup = elem if key is None else key(elem)
+        if lookup not in seen:
+            seen.add(lookup)
+            yield elem
 
 
 def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:

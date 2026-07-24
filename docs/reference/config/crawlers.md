@@ -173,6 +173,12 @@ crawlers:
 
 # Tiktok
 
+```yaml
+crawlers:
+  tiktok:
+    original: false
+```
+
 ## `original`
 
 | Type   | Default |
@@ -193,3 +199,80 @@ There's also a daily limit of the API CDL uses: 5000 requests per day per IP
 
 Setting this option to `true` will consume the daily limit faster
 {% endhint %}
+
+# Twitter
+
+```yaml
+crawlers:
+  twitter:
+    articles:
+      cover: true
+      media: true
+    cards: true
+    content_urls: true
+    image_size: orig
+    retweets: false
+    threads: true
+```
+
+## `cards`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and download cards in a post (embeds from third-party sites)
+
+## `content_urls`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and try to download any URL found inside the text of a tweet
+
+## `image_size`
+
+| Type                                                     | Default |
+| -------------------------------------------------------- | ------- |
+| `orig`, `4096x4096`, `large`, `medium`, `small`, `thumb` | `orig`  |
+
+Resolution used for image downloads
+
+{% hint style="info" %}
+`orig` is original quality but it's not always available. You may get `404 - Not Found` or `403 - Forbidden` errors. The same applies to `4096x4096`.
+
+`large`, `medium`, or `small` are always available.
+{% endhint %}
+
+## `threads`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Downloads media from all direct replies of the tweet's author to their own tweet
+
+## `retweets`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Download media from retweets in the user's timeline
+
+## `articles`
+
+Controls which content to download when CDL finds an article (longer tweets from premium users)
+
+{% hint style="info" %}
+Scanning the content (text) of articles for URLs is not supported
+{% endhint %}
+
+### `cover`
+
+Download the cover image of articles
+
+### `media`
+
+Download media files (attachments) in the article

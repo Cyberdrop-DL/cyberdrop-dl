@@ -6,7 +6,8 @@ import itertools
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -50,6 +51,7 @@ class Post:
         )
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class LeakedZoneCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/<model_id>/video/<video_id>",
@@ -59,7 +61,6 @@ class LeakedZoneCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "LeakedZone"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://leakedzone.com")
     IMAGES_CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://image-cdn.leakedzone.com/storage/")
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

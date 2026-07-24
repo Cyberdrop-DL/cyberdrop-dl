@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
@@ -13,8 +13,11 @@ from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping
+    from collections.abc import Generator
 
+    from curl_cffi.requests.session import HttpMethod
+
+    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
     from cyberdrop_dl.utils.m3u8 import M3U8
@@ -72,10 +75,11 @@ class TwitchCrawler(Crawler):
         self,
         url: AbsoluteHttpURL,
         /,
-        headers: Mapping[str, str] | None = None,
+        method: HttpMethod = "GET",
         media_type: Literal["video", "audio", "subtitle"] | None = None,
+        **kwargs: Unpack[RequestParams],
     ) -> m3u8.M3U8:
-        m3u8_obj = await super()._request_m3u8(url, headers=headers, media_type=media_type)
+        m3u8_obj = await super()._request_m3u8(url, method, media_type, **kwargs)
 
         # Some formats are "hidden" unless the user is logged in (1080p+ resolutions)
         # We can extract and parse them manually, bypassing the logging requirement
@@ -249,7 +253,12 @@ class TwitchAPI(API):
             },
             "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
         )
-        return resp["data"]["videoPlaybackAccessToken"]
+        token = resp["data"]["videoPlaybackAccessToken"]
+        if not token or type(token) is not dict:
+            raise ScrapeError(422, "Unable to get access token")
+        if token.get("forbidden"):
+            raise ScrapeError(403, token.get("reason"))
+        return token
 
 
 @dataclasses.dataclass(slots=True, order=True, frozen=True)

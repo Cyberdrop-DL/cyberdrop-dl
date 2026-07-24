@@ -21,7 +21,7 @@ from rich.text import Text, TextType
 from cyberdrop_dl import env
 from cyberdrop_dl.constants import MAIN_LOG_FILE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.utils import dates, enter_context
+from cyberdrop_dl.utils import dates, enter_context, truncated_preview
 
 if TYPE_CHECKING:
     import datetime
@@ -111,9 +111,12 @@ class CDLFormater(logging.Formatter):
 
     def formatMessage(self, record: logging.LogRecord) -> str:  # noqa: N802
         if record.name.startswith("cyberdrop_dl"):
-            return self._CDL_FORMAT.format(record)
+            content = self._CDL_FORMAT.format(record)
 
-        return self._style.format(record)
+        else:
+            content = self._style.format(record)
+
+        return truncated_preview(content, env.MAX_LOG_MSG_LENGTH)
 
 
 class LogHandler(RichHandler):

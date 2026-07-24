@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from cyberdrop_dl import scrape_mapper
+from cyberdrop_dl.config import Config
 from cyberdrop_dl.crawlers import create_crawlers
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 @pytest.mark.parametrize(
@@ -43,3 +45,14 @@ def test_generic_crawlers_that_do_no_match_supported_crawlers_should_be_created(
     assert len(new_crawlers) == 1
     created_crawler = next(iter(new_crawlers))
     assert issubclass(created_crawler, CheveretoCrawler)
+
+
+def test_skip_by_config() -> None:
+    url = AbsoluteHttpURL("https://example.com")
+    config = Config()
+    assert scrape_mapper._skip_by_config(url, config) is False
+    config.filters.skip_hosts = {url.host}
+    assert scrape_mapper._skip_by_config(url, config) is True
+    config.filters.skip_hosts.clear()
+    config.filters.only_hosts = {"google.com"}
+    assert scrape_mapper._skip_by_config(url, config) is True

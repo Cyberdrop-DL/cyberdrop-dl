@@ -53,7 +53,7 @@ def test_scraping_json_dump() -> None:
         dump = ui.__json__()
         assert dump["files"] == {
             "completed": 0,
-            "previously_completed": 0,
+            "prev_completed": 0,
             "skipped": 0,
             "failed": 0,
             "queued": 0,

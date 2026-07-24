@@ -99,7 +99,7 @@ class DownloadClient:
             if media_item.is_segment:
                 return True
             logger.info(f"Skipping {media_item.url} as it has already been downloaded")
-            self.manager.scrape_mapper.tui.files.stats.previously_completed += 1
+            self.manager.scrape_mapper.tui.files.stats.prev_completed += 1
             await self.process_completed(media_item, domain)
             await self.handle_media_item_completion(media_item, downloaded=False)
             return False

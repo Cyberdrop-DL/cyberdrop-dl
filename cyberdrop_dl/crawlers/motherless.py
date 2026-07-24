@@ -1,214 +1,229 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple
+import dataclasses
+from pathlib import Path
+from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers import Registry
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import TextExtractor, css, dates, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    import datetime
+    from collections.abc import AsyncIterable, Generator
+
     from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-PRIMARY_URL = AbsoluteHttpURL("https://motherless.xxx")
-MEDIA_INFO_JS_SELECTOR = "script:-soup-contains('__fileurl')"
-ITEM_SELECTOR = "div.thumb-container a.img-container"
-ITEM_TITLE_SELECTOR = "div.media-meta-title"
-GALLERY_TITLE_SELECTOR = "div.gallery-title > h2"
-GROUP_TITLE_SELECTOR = "div.group-bio > h1"
-ITEM_GALLERY_TITLE_SELECTOR = "div.gallery-captions > a.gallery-data"
-NOT_FOUND_TEXTS = "The page you're looking for cannot be found", "File not Found. Nothing to see here"
-USER_NAME_SELECTOR = "div.member-bio-username"
+@final
+class Selector:
+    MEDIA_INFO_JS = "script:-soup-contains('__fileurl')"
+    THUMB = ".thumb-container [data-codename]"
+    COLLECTION_TITLE = ".gallery-title > h2, .group-bio > h1"
+    USER_NAME = "div.member-bio-username"
 
 
-class MediaInfo(NamedTuple):
-    type: str
-    url: str
-
-
+@Registry.database.fix_referer
+@HTTPConfig(rate_limit=(2, 1))
 class MotherlessCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Group": ("/g/<group_name>", "/gi/<image>", "/gv/<video>"),
-        "User": ("/u/...", "/f/..."),
-        "Image": "/...",
-        "Video": "pending",
-        "**NOTE**": "Galleries are NOT supported",
+        "Group": (
+            "/g/<group_name>",
+            "/gi/<group_name>",
+            "/gv/<group_name>",
+        ),
+        "Gallery": (
+            "/G<gallery_id>",
+            "/GI<gallery_id>",
+            "/GV<gallery_id>",
+        ),
+        "User": (
+            "/m/<user_name>",
+            "/member/<user_name>",
+            "/u/<user_name>",
+            "/u/<user_name>?t=v",
+            "/u/<user_name>?t=i",
+        ),
+        "User galleries": "/galleries/member/<user_name>/...",
+        "Image or Video": (
+            "/<media_id>",
+            "/g/<group_name>/<media_id>",
+            "/G<gallery_id>/<media_id>",
+        ),
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
-    NEXT_PAGE_SELECTOR: ClassVar[str] = "div.pagination_link > a[rel=next]"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://motherless.xxx")
+    NEXT_PAGE_SELECTOR: ClassVar[str] = ".pagination_link > a[rel=next]"
     DOMAIN: ClassVar[str] = "motherless"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("motherless.com",)
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
 
-    async def fetch(self, scrape_item: ScrapeItem, collection_id: str = "") -> None:
-        parts = scrape_item.url.parts
-        n_parts = len(parts)
-        item_id = collection_id or scrape_item.url.name
-        is_gallery_homepage = scrape_item.url.name.startswith("G") and n_parts == 2
-        is_group_homepage = "g" in parts and n_parts == 3
-        is_user = any(p in parts for p in ("u", "f"))  # /member/ is for user galleries, not supported yet
-        is_videos_or_images = any(p in parts for p in ("videos", "images"))
-        is_supported_user_url = is_user and (n_parts == 3 or (n_parts > 3 and is_videos_or_images))
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["g", slug]:
+                await self.group(scrape_item, slug)
+            case ["gv" | "gi" as prefix, slug]:
+                name = "images" if prefix == "gi" else "videos"
+                await self.collection(scrape_item, slug, name)
 
-        if "gi" in parts:  # group images
-            return await self.collection_items(scrape_item, "images", item_id)
-        if "gv" in parts:  # group videos
-            return await self.collection_items(scrape_item, "videos", item_id)
-        if is_group_homepage or is_gallery_homepage:  # gallery or group
-            return await self.collection(scrape_item)
-        if is_supported_user_url:
-            return await self.user(scrape_item)
-        if is_user:
-            raise ValueError
-        return await self.media(scrape_item)
+            case [slug] if slug.startswith("G") and (gallery_id := slug[2:]):
+                if (prefix := slug[:2]) in ("GV", "GI"):
+                    name = "images" if prefix == "GI" else "videos"
+                    return await self.collection(scrape_item, gallery_id, name)
 
-    @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem) -> None:
-        n_parts = len(scrape_item.url.parts)
-        assert n_parts >= 3
-        username = scrape_item.url.parts[2]
-        canonical_url = PRIMARY_URL / "f" / username
-        videos_url = canonical_url / "videos"
-        images_url = canonical_url / "images"
-        is_homepage = n_parts == 3
+                gallery_id = slug[1:]
+                await self.gallery(scrape_item, gallery_id)
 
-        title: str = f"{username} [user]"
-        title = self.create_title(title)
-        scrape_item.setup_as_album(title)
+            case [media_id]:
+                await self.media(scrape_item, media_id)
 
-        if is_homepage or "images" in scrape_item.url.parts:
-            async for soup in self.web_pager(images_url):
-                check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
-                    new_scrape_item.append_folders("Images")
-                    self.create_task(self.run(new_scrape_item))
+            case ["u", username]:
+                type_ = scrape_item.url.query.get("t")
+                if type_ not in ("v", "i"):
+                    return await self.user(scrape_item, username)
+                name = "images" if type_ == "i" else "videos"
+                await self.user_collection(scrape_item, username, name)
 
-        if is_homepage or "videos" in scrape_item.url.parts:
-            async for soup in self.web_pager(videos_url):
-                check_soup(soup)
-                for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
-                    new_scrape_item.append_folders("Videos")
-                    self.create_task(self.run(new_scrape_item))
+            case ["galleries", "member", username, *_]:
+                await self.user_collection(scrape_item, username, "galleries")
+
+            case _:
+                raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case [slug, media_id] if slug.startswith("G") and slug[1:]:
+                return url.origin() / media_id
+            case ["g", _, media_id]:
+                return url.origin() / media_id
+            case ["member" | "m", username]:
+                return url.origin() / "u" / username
+            case _:
+                return url
 
     @error_handling_wrapper
-    async def collection(self, scrape_item: ScrapeItem) -> None:
-        group_id = scrape_item.url.name
-        gallery_id = group_id.removeprefix("G")
-        media_types = "images", "videos"
-        is_group = "g" in scrape_item.url.parts
-        if not is_group and gallery_id.startswith("G"):  # No support for subgalleries
-            raise ScrapeError(422)
-
-        for prefix in ("I", "V"):
-            gallery_id = gallery_id.removeprefix(prefix)
-
-        if is_group:
-            new_urls = [PRIMARY_URL / part / group_id for part in ("gi", "gv")]
-
-        else:
-            new_urls = [PRIMARY_URL / f"{part}{gallery_id}" for part in ("GI", "GV")]
-
-        collection_id = group_id if is_group else gallery_id
-        for media_type, url in zip(media_types, new_urls, strict=True):
-            new_scrape_item = scrape_item.create_child(url)
-            await self.collection_items(new_scrape_item, media_type, collection_id)
+    async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
+        for part in ("GI", "GV"):
+            new_item = scrape_item.copy()
+            new_item.url = self.PRIMARY_URL / f"{part}{gallery_id}"
+            self.create_task(self.run(new_item))
 
     @error_handling_wrapper
-    async def collection_items(
-        self, scrape_item: ScrapeItem, media_type: Literal["videos", "images"], collection_id: str | None = None
-    ) -> None:
+    async def group(self, scrape_item: ScrapeItem, slug: str) -> None:
+        for part in ("gi", "gv"):
+            new_item = scrape_item.copy()
+            new_item.url = self.PRIMARY_URL / part / slug
+            self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem, username: str) -> None:
+        for part in ("i", "v"):
+            new_item = scrape_item.copy()
+            new_item.url = (self.PRIMARY_URL / "u" / username).with_query(t=part)
+            self.create_task(self.run(new_item))
+
+    @error_handling_wrapper
+    async def user_collection(self, scrape_item: ScrapeItem, username: str, name: str) -> None:
+        scrape_item.setup_as_album(self.create_title(f"{username} [user]"))
+        scrape_item.append_folders(name)
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
-        check_soup(soup)
-
-        try:
-            title = css.select_text(soup, GALLERY_TITLE_SELECTOR)
-        except css.SelectorError:
-            title = css.select_text(soup, GROUP_TITLE_SELECTOR)
-
-        title = self.create_title(title, collection_id)
-        scrape_item.setup_as_album(title, album_id=collection_id)
-
-        async for soup in pages:
-            for new_scrape_item in self.iter_children(scrape_item, soup, ITEM_SELECTOR):
-                new_scrape_item.append_folders(media_type.capitalize())
-                self.create_task(self.run(new_scrape_item))
+        _check_soup(soup)
+        await self._iter_media(scrape_item, pages)
 
     @error_handling_wrapper
-    async def media(self, scrape_item: ScrapeItem) -> None:
-        media_id = scrape_item.url.parts[-1]
-        canonical_url = PRIMARY_URL / media_id
+    async def collection(self, scrape_item: ScrapeItem, collection_id: str, name: str) -> None:
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        _check_soup(soup)
+        title = self.create_title(css.select_text(soup, Selector.COLLECTION_TITLE), collection_id)
+        scrape_item.setup_as_album(title, album_id=collection_id)
+        scrape_item.append_folders(name)
+        await self._iter_media(scrape_item, pages)
 
-        if await self.check_complete_from_referer(canonical_url):
+    async def _iter_media(self, scrape_item: ScrapeItem, pages: AsyncIterable[BeautifulSoup]) -> None:
+        async for soup in pages:
+            for media in _extract_media_from_thumbs(soup):
+                url = self.parse_url(media.href)
+                new_item = scrape_item.create_child(url)
+                if media.type == "image" and Path(url.name).stem == media.code:
+                    self.create_eager_task(self._media(new_item, media))
+                else:
+                    self.create_eager_task(self.run(new_item))
+
+                scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def media(self, scrape_item: ScrapeItem, _media_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
+        _check_soup(soup)
+        await self._media(scrape_item, _extract_media(soup))
 
-        check_soup(soup)
-        media_info = self.process_media_soup(scrape_item, soup)
-        link = self.parse_url(media_info.url)
-        scrape_item.url = canonical_url
-        title = css.select_text(soup, ITEM_TITLE_SELECTOR)
-        filename, ext = self.get_filename_and_ext(link.name)
-        custom_filename = self.create_custom_filename(title, ext, file_id=media_id)
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    def process_media_soup(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> MediaInfo:
-        media_info = get_media_info(soup)
-        if media_info.type == "gallery":
-            raise ScrapeError(422)
-
-        n_parts = len(scrape_item.url.parts)
-        from_gallery = n_parts > 2 and scrape_item.url.parts[1].startswith("G")
-        from_group = n_parts > 3 and "g" in scrape_item.url.parts
-        if not (from_gallery or from_group):
-            return media_info
-
-        parent_id = scrape_item.url.parts[2] if from_group else scrape_item.url.parts[1]
-        parent_title = ""
-        title_tag = soup.select_one(ITEM_GALLERY_TITLE_SELECTOR)
-        if from_gallery:
-            parent_id = parent_id.removeprefix("G")
-            title_tag = soup.select_one(GROUP_TITLE_SELECTOR)
-
-        if title_tag:
-            parent_title: str = css.attr(title_tag, "title") if from_gallery else title_tag.get_text(strip=True)
-
-        parent_path = parent_id if from_gallery else f"g/{parent_id}"
-        parent_url = PRIMARY_URL / parent_path
-        if parent_url not in scrape_item.parents and parent_title:
-            scrape_item.parents.append(parent_url)
-            title = self.create_title(parent_title, parent_id)
-            scrape_item.setup_as_album(title, album_id=parent_id)
-            scrape_item.append_folders(f"{media_info.type.capitalize()}s")
-
-        return media_info
+    @error_handling_wrapper
+    async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
+        scrape_item.upload_date = media.upload_date
+        scrape_item.url = self.PRIMARY_URL / media.code
+        _, ext = self.get_filename_and_ext(media.src.name)
+        filename = self.create_custom_filename(media.name, ext, file_id=media.code)
+        await self.handle_file(media.src, scrape_item, media.name, ext, custom_filename=filename)
 
 
-def check_soup(soup: BeautifulSoup) -> None:
-    soup_str = soup.get_text()
-    if any(p in soup_str for p in NOT_FOUND_TEXTS):
-        raise ScrapeError(404)
-    if "The content you are trying to view is for friends only" in soup_str:
+def _check_soup(soup: BeautifulSoup) -> None:
+    html = soup.get_text()
+    for txt in ("The page you're looking for cannot be found", "File not Found. Nothing to see here"):
+        if txt in html:
+            raise ScrapeError(404)
+    if "The content you are trying to view is for friends only" in html:
         raise ScrapeError(401)
 
 
-def get_media_info(soup: BeautifulSoup) -> MediaInfo:
-    media_js = soup.select_one(MEDIA_INFO_JS_SELECTOR)
-    js_text = css.text(media_js) if media_js else None
-    if not js_text:
-        return MediaInfo("gallery", "")
-    media_type = js_text.split("__mediatype", 1)[-1].split("=", 1)[-1].split(",", 1)[0].strip()
-    url = js_text.split("__fileurl", 1)[-1].split("=", 1)[-1].split(";", 1)[0].strip()
-    parts = remove_quotes(media_type.lower()), remove_quotes(url)
-    return MediaInfo(*parts)
+@dataclasses.dataclass(slots=True)
+class Media:
+    type: str
+    code: str
+    name: str
+    href: str
+    src: AbsoluteHttpURL
+    upload_date: datetime.datetime | None
 
 
-def remove_quotes(text: str) -> str:
-    return text.removeprefix("'").removesuffix("'").removeprefix('"').removesuffix('"')
+def _extract_media_from_thumbs(soup: BeautifulSoup) -> Generator[Media]:
+    for thumb in css.iselect(soup, Selector.THUMB):
+        static = css.select(thumb, "img.static")
+        media_type = css.attr(thumb, "data-mediatype")
+        name = css.attr(static, "alt")
+        if name.startswith("Shared by"):
+            assert "-" in name
+            name = name.partition("-")[0]
+
+        yield Media(
+            type=media_type,
+            code=css.attr(thumb, "data-codename"),
+            name=css.unescape(name),
+            href=css.select(thumb, "a.img-container", "href"),
+            src=parse_url(css.attr(static, "src").replace("thumb", media_type)),
+            upload_date=None,
+        )
+
+
+def _extract_media(soup: BeautifulSoup) -> Media:
+    js_text = css.select_text(soup, Selector.MEDIA_INFO_JS)
+    extract = TextExtractor(js_text)
+    props = css.json_ld(soup, "uploadDate")
+    return Media(
+        name=props["name"],
+        upload_date=dates.parse_iso(props["uploadDate"]),
+        type=extract("__mediatype = '", "'"),
+        code=extract("__codename = '", "'"),
+        href="",
+        src=parse_url(extract("__fileurl = '", "'")),
+    )

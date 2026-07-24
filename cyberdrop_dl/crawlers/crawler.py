@@ -13,10 +13,11 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, final
 
-from cyberdrop_dl import aio, env, signature
+from aiohttp import hdrs
+
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import JSON_CHECK, HTTPClient, HTTPMixin, RequestContext
-from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
@@ -58,10 +59,10 @@ logger = logging.getLogger(__name__)
 type OneOrTuple[T] = T | tuple[T, ...]
 type SupportedPaths = dict[str, OneOrTuple[str]]
 type SupportedDomains = OneOrTuple[str]
-type RateLimit = tuple[float, float]
-
+type DebridURL = Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None
 
 _ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
+_CHECK_DL_CAPACITY: ContextVar[bool] = ContextVar("_CHECK_DL_CAPACITY", default=True)
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
 
 
@@ -78,13 +79,20 @@ class _PlaceHolderConfigInclude:
 _include = _PlaceHolderConfigInclude()
 
 
-_DB_PATH_BUILDERS: MappingProxyType[str, Callable[[AbsoluteHttpURL], str]] = MappingProxyType(
+type URLHasher = Callable[[AbsoluteHttpURL], str]
+
+
+def _path_qs_frag(url: AbsoluteHttpURL) -> str:
+    return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
+
+
+_DB_PATH_BUILDERS: MappingProxyType[str, URLHasher] = MappingProxyType(
     {
         "url": str,
         "name": lambda url: url.name,
         "path": lambda url: url.path,
         "path_qs": lambda url: url.path_qs,
-        "path_qs_frag": lambda url: f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs,
+        "path_qs_frag": _path_qs_frag,
         "path_frag": lambda url: f"{url.path}#{frag}" if (frag := url.fragment) else url.path,
     }
 )
@@ -130,9 +138,9 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class Crawler(HTTPMixin, HLSMixin, ABC):
     DOMAIN: ClassVar[str]
-    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -147,11 +155,10 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
-    _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
-    _DEFAULT_UA: ClassVar[str | None] = None
+    _IGNORE_FRAGMENT: ClassVar[bool] = True
 
     disabled: bool = False
 
@@ -163,6 +170,17 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             f"_ready={self._ready!r}",
         )
         return f"<{type(self).__name__}({', '.join(fields)})>"
+
+    @final
+    @staticmethod
+    def db_path_builder(key: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"]):
+
+        def apply[T: Crawler](c: type[T]) -> type[T]:
+            c.__db_path__ = staticmethod(_DB_PATH_BUILDERS[key])
+            c._IGNORE_FRAGMENT = "frag" not in key  # pyright: ignore[reportConstantRedefinition]
+            return c
+
+        return apply
 
     @staticmethod
     def __db_path__(url: AbsoluteHttpURL, /) -> str:
@@ -180,13 +198,15 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
-        self._task_mngr: Final = task_mng
-        self.tui: Final = tui
         self.downloader: Downloader = Downloader(
             manager,
             use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
             _slots=self._DOWNLOAD_SLOTS,
         )
+
+        self.__http_ctx__: HTTPContext = HTTPContext.build(self.DOMAIN, self.__http_config__, self.__throttle)
+        self._task_mngr: Final = task_mng
+        self.tui: Final = tui
 
         self.__post_init__()
 
@@ -203,7 +223,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             if self._ready:
                 return
 
-            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
+            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self.__http_ctx__.rate_limit)
             try:
                 await self.__async_post_init__()
             except Exception:
@@ -221,14 +241,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         This method its called once and only if the crawler is actually going to be scrape something"""
 
     def __init_subclass__(
-        cls,
-        *,
-        is_abc: bool = False,
-        is_generic: bool = False,
-        is_debug: bool = False,
-        db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
-        cdl_user_agent: bool = False,
-        **kwargs: Any,
+        cls, *, is_abc: bool = False, is_generic: bool = False, is_debug: bool = False, **kwargs: Any
     ) -> None:
         assert cls.__name__.endswith("Crawler"), f"{cls.__name__} does not end with 'Crawler'"
         assert cls.__name__ not in Registry.names
@@ -245,11 +258,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         cls.IS_ABC: bool = is_abc
 
         add_to_registry = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
-
-        if db_path:
-            cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
-        if cdl_user_agent:
-            cls._DEFAULT_UA = CDL_USER_AGENT  # pyright: ignore[reportConstantRedefinition]
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
@@ -280,32 +288,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if add_to_registry:
             Registry.concrete.add(cls)
 
-    @signature.copy(HTTPClient.request)
-    @contextlib.asynccontextmanager
-    async def request(
-        self,
-        *args: Any,
-        impersonate: str | bool | None = None,
-        default_ua: str | None = None,
-        **kwargs: Any,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-        if impersonate is None:
-            impersonate = self._IMPERSONATE
-
-        await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
-
-        with enter_context(JSON_CHECK, self.__json_resp_check__):
-            async with (
-                self.client.rate_limits[self.DOMAIN],
-                self.client.global_rate_limiter,
-                self.client.request(
-                    *args,
-                    impersonate=impersonate,
-                    default_ua=default_ua or self._DEFAULT_UA,
-                    **kwargs,
-                ) as resp,
-            ):
-                yield resp
+    async def __throttle(self) -> None:
+        if _CHECK_DL_CAPACITY.get():
+            await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
 
     def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
         """Custom check for JSON responses.
@@ -410,11 +395,12 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             with scrape_item.track_changes:
                 scrape_item.url = url = self.transform_url(scrape_item.url)
 
-            if url.path_qs in self._scraped_items:
+            lookup = url.path_qs if self._IGNORE_FRAGMENT else _path_qs_frag(url)
+            if lookup in self._scraped_items:
                 logger.info(f"Skipping {url} as it has already been scraped")
                 return
 
-            self._scraped_items.add(url.path_qs)
+            self._scraped_items.add(lookup)
 
             if not self.ALLOW_EMPTY_PATH and url.path == "/":
                 self.raise_exc(scrape_item, ScrapeError.unsupported())
@@ -492,7 +478,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         ext: str | None = None,
         *,
         custom_filename: str | None = None,
-        debrid_link: Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None = None,
+        debrid_link: DebridURL = None,
         m3u8: m3u8.Rendition | None = None,
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
@@ -518,7 +504,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             original_filename=filename,
             parents=tuple(scrape_item.parents),
             uploaded_at=scrape_item.uploaded_at,
-            debrid_url=debrid_link,
+            debrid_url=_prepare_debrid_url(debrid_link),
             json_check=self.__json_resp_check__,
         )
 
@@ -533,7 +519,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
-            "User-Agent": self._DEFAULT_UA or self.config.network.user_agent,
+            "User-Agent": self.__http_ctx__.headers.get(hdrs.USER_AGENT) or self.config.network.user_agent,
             "Referer": str(scrape_item.url),
         }
 
@@ -567,7 +553,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         current_referer, downloaded = await self.database.history.check_complete(self.DOMAIN, db_path)
         if downloaded:
             logger.info("Skipping %s as it has already been downloaded", url)
-            self.tui.files.stats.previously_completed += 1
+            self.tui.files.stats.prev_completed += 1
 
             if referer and url != referer and str(referer) != current_referer:
                 # Update the referer if it has changed so that check_complete_by_referer can work
@@ -605,18 +591,30 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         downloaded = await self.database.history.check_complete_by_referer(domain, referer)
         if downloaded:
             logger.info(f"Skipping {referer} as it has already been downloaded")
-            self.tui.files.stats.previously_completed += 1
+            self.tui.files.stats.prev_completed += 1
         return downloaded
 
     @final
     async def check_complete_by_hash(
-        self: Crawler, url: AbsoluteHttpURL, hash_type: Literal["md5", "sha256"], hash_value: str
+        self: Crawler, url: AbsoluteHttpURL, hash_algo: Literal["md5", "sha256"], checksum: str
     ) -> bool:
         """Returns `True` if at least 1 file with this hash is recorded on the database"""
-        downloaded = await self.database.hash.check_hash_exists(hash_type, hash_value)
+
+        expected_len = 32 if hash_algo == "md5" else 64
+        if len(checksum) != expected_len:
+            self.log.warning(
+                "Hash %s with %s characters does not match the expected size for a %s hex digest (%s characters), ignoring...",
+                checksum,
+                len(checksum),
+                hash_algo,
+                expected_len,
+            )
+            return False
+
+        downloaded = await self.database.hash.check_hash_exists(hash_algo, checksum)
         if downloaded:
-            logger.info(f"Skipping {url} as its hash ({hash_type}:{hash_value}) has already been downloaded")
-            self.tui.files.stats.previously_completed += 1
+            logger.info(f"Skipping {url} as its hash ({hash_algo}:{checksum}) has already been downloaded")
+            self.tui.files.stats.prev_completed += 1
         return downloaded
 
     @final
@@ -664,7 +662,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         url_path = self.__db_path__(url)
         if album_results.get(url_path) is True:
             logger.info(f"Skipping {url} as it has already been downloaded")
-            self.tui.files.stats.previously_completed += 1
+            self.tui.files.stats.prev_completed += 1
             return True
         return False
 
@@ -815,33 +813,16 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def parse_iso_date(cls, date_or_datetime: str, /) -> float:
         return dates.parse_iso(date_or_datetime).timestamp()
 
-    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        async with self.request(url) as resp:
-            return resp.url
-
     @final
     async def follow_redirect(self, scrape_item: ScrapeItem) -> None:
         with self.catch_errors(scrape_item):
-            redirect = await self._get_redirect_url(scrape_item.url)
+            redirect = await self.request_redirect(scrape_item.url)
             if scrape_item.url == redirect:
                 raise ScrapeError(422, "Infinite redirect")
+            if (password := scrape_item.url.query.get("password")) and "password" not in redirect.query:
+                redirect = redirect.update_query(password=password)
             scrape_item.url = redirect
             self.create_task(self.run(scrape_item))
-
-    async def request_m3u8_playlist(
-        self,
-        m3u8_playlist_url: AbsoluteHttpURL,
-        /,
-        headers: Mapping[str, str] | None = None,
-        *,
-        only: Iterable[str] = (),
-        exclude: Iterable[str] = ("vp09",),
-    ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
-        """Get m3u8 rendition group from a playlist m3u8 (variant m3u8), selecting the best format"""
-        playlist, info = await self.request_m3u8(m3u8_playlist_url, headers, only=only, exclude=exclude)
-        if info is None:
-            raise ScrapeError(422, "Not a variant m3u8", origin=m3u8_playlist_url)
-        return playlist, info
 
     @final
     def create_custom_filename(  # noqa: PLR0913
@@ -904,33 +885,48 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             )
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class API(HTTPMixin, ABC):
+    PRIMARY_URL: AbsoluteHttpURL = AbsoluteHttpURL()
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
+
+    class Endpoint[T: API]:
+        def __init__(self, api: T) -> None:
+            self.api: T = api
+
+        def __repr__(self) -> str:
+            return f"<{type(self).__name__}>"
+
     @final
     def __init__(
         self,
-        PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
+        domain: str,
         config: Config,
-        request: Callable[..., RequestContext],
         cache: TTLCacheAdapter[Any],
-        parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
+        client: HTTPClient,
+        ctx: HTTPContext | None = None,
     ) -> None:
-        self.PRIMARY_URL: Final = PRIMARY_URL
-        self.parse_url: Final = parse_url
-        self.request: Final = request
+        self.parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url
         self.config: Final = config
         self.cache: Final = cache
+        self.client: HTTPClient = client
+        self.__http_ctx__: HTTPContext = ctx or HTTPContext.build(domain, self.__http_config__)
         self.__post_init__()
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:
-        return cls(
-            PRIMARY_URL=crawler.PRIMARY_URL,
-            parse_url=crawler.parse_url,
-            request=crawler.request,
+        config = crawler.__http_config__ | cls.__http_config__
+        self = cls(
+            domain=crawler.DOMAIN,
             cache=crawler.cache,
+            client=crawler.client,
             config=crawler.manager.config,
+            ctx=HTTPContext.build(crawler.DOMAIN, config, crawler.__http_ctx__.throttle),
         )
+        self.PRIMARY_URL = crawler.PRIMARY_URL  # pyright: ignore[reportConstantRedefinition]
+        self.parse_url = crawler.parse_url
+        self.__http_config__ = config
+        return self
 
     def __post_init__(self) -> None: ...
 
@@ -1083,3 +1079,14 @@ def compose_ep_name(season: int | None, ep: int | None, name: str | None) -> str
     if not name:
         raise ValueError("Empty episode title")
     return name
+
+
+def _prepare_debrid_url(debrid_url: DebridURL) -> DebridURL:
+    if callable(debrid_url):
+        request_dl_url = debrid_url
+
+        async def debrid_url() -> AbsoluteHttpURL:
+            with enter_context(_CHECK_DL_CAPACITY, False):
+                return await request_dl_url()
+
+    return debrid_url

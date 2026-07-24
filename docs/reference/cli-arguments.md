@@ -73,8 +73,9 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
+
 ```shell
-cyberdrop-dl v10.0.0
+cyberdrop-dl v10.2.1
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +107,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.0.0
+cyberdrop-dl v10.2.1
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -148,13 +149,14 @@ Download URLs
 │ --max-thread-folder-depth         Max number of nested folders CDL will create when              │
 │                                   maximum_thread_depth is greater that 0                         │
 │ --min-free-space                  Minimum free space require to start new downloads              │
-│                                   [default: 5000000000]                                          │
+│                                   [default: 5368709120]                                          │
 │ --mtime --no-mtime                Use original upload date as modification date for downloaded   │
 │                                   file                                                           │
 │                                   [default: True]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
 │ --crawlers.disabled                  Name of crawlers to disable for the current run             │
+│                                      [default: {}]                                               │
 │ --crawlers.bandcamp.formats          Format to choose for downloads (if available), ordered by   │
 │                                      preference                                                  │
 │                                      [choices: mp3-320, mp3, aac-hi, wav, flac, vorbis, aiff,    │
@@ -174,6 +176,17 @@ Download URLs
 │                                      [default: False]                                            │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
+│ --crawlers.pawchive.file             Download the main file in a post (if any)                   │
+│   --crawlers.pawchive.no-file        [default: True]                                             │
+│ --crawlers.pawchive.attachments      Download all attachments in a post (may or may not include  │
+│   --crawlers.pawchive.no-attachment  `file`)                                                     │
+│   s                                  [default: True]                                             │
+│ --crawlers.pawchive.content-urls     Download any URL found inside the description (text) of a   │
+│   --crawlers.pawchive.no-content-ur  post (slower)                                               │
+│   ls                                 [default: True]                                             │
+│ --crawlers.pawchive.embed            Download the embedded file from third party sites (if       │
+│   --crawlers.pawchive.no-embed       any)(mega.nz, pcloud, dropbox, etc..)                       │
+│                                      [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --downloads                     Max number of files to download simultaneously                   │
@@ -222,7 +235,9 @@ Download URLs
 │ --after                              Only download files uploaded after this date                │
 │ --filename-regex                     Only download files that match this regex                   │
 │ --only-hosts                         Only scrape/download from these domains                     │
+│                                      [default: {}]                                               │
 │ --skip-hosts                         Skip scrape/download from these domains                     │
+│                                      [default: {}]                                               │
 │ --allow-files-with-no-extension      Download potentially dangerous files that have no extension │
 │   --no-allow-files-with-no-extensio  [default: False]                                            │
 │   n                                                                                              │
@@ -233,20 +248,25 @@ Download URLs
 │ --hashing.algorithms --hashes        List of hashes to compute for each download                 │
 │                                      [choices: xxh128, md5, sha256]                              │
 │                                      [default: ('xxh128', 'md5', 'sha256')]                      │
-│ --hashing.dedupe --auto-dedupe       Auto delete duplicate downloads by hash                     │
-│   --hashing.no-dedupe                [default: True]                                             │
+│ --hashing.dedupe.enabled --dedupe    Auto delete duplicate downloads by hash                     │
+│   --dedupe.enabled --auto-dedupe     [default: True]                                             │
+│   --hashing.dedupe.no-enabled                                                                    │
+│   --no-dedupe --dedupe.no-enabled                                                                │
 │   --no-auto-dedupe                                                                               │
 │ --hashing.dedupe.use-trash-bin       Send deleted files to the trash bin                         │
 │   --hashing.dedupe.no-use-trash-bin  [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Jdownloader ────────────────────────────────────────────────────────────────────────────────────╮
-│ --jdownloader --no-jdownloader  Send unsupported URLs to Jdownloader                             │
-│                                 [default: False]                                                 │
-│ --jdownloader.autostart         Immediately start downloads as soon as they are sent             │
-│   --jdownloader.no-autostart    [default: False]                                                 │
-│ --jdownloader.download-folder   Output path for Jdownloader. Defaults to `--download-folder`     │
-│ --jdownloader.whitelist         Only send unsupported URLs from these domains to Jdownloader. An │
-│                                 empty list means 'send all URLs'                                 │
+│ --jdownloader.enabled --jdownloader  Send unsupported URLs to Jdownloader                        │
+│   --jdownloader.no-enabled           [default: False]                                            │
+│   --no-jdownloader                                                                               │
+│ --jdownloader.autostart              Immediately start downloads as soon as they are sent        │
+│   --jdownloader.no-autostart         [default: False]                                            │
+│ --jdownloader.download-folder        Output path for Jdownloader. Defaults to                    │
+│                                      `--download-folder`                                         │
+│ --jdownloader.whitelist              Only send unsupported URLs from these domains to            │
+│                                      Jdownloader. An empty list means 'send all URLs'            │
+│                                      [default: {}]                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --logs.level                    Only log messages of this level or higher to the main log file   │
@@ -299,26 +319,27 @@ Download URLs
 │ --impersonate          Use this target as impersonation for all scrape requests                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --sort --no-sort            Enable/Disable file sorting at the end of a run                      │
-│                             [default: False]                                                     │
-│ --sort.input-folder         Base folder to scan for files. Default to the same value as          │
-│                             `--download-folder`                                                  │
-│ --sort.output-folder        Output path to place sorted files in                                 │
-│                             [default: downloads/cyberdrop-dl sorted]                             │
-│ --sort.formats.audio        Format to generate sorted audio file                                 │
-│                             [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]               │
-│ --sort.formats.image        Format to generate sorted image file                                 │
-│                             [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]              │
-│ --sort.formats.non-media    Format to generate sorted files of unknown type                      │
-│                             [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]               │
-│ --sort.formats.video        Format to generate sorted video file                                 │
-│                             [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]              │
-│ --sort.formats.incrementer  Format for separator on name collisions                              │
-│                             [default:  ({i})]                                                    │
+│ --sort.enabled --sort          Enable/Disable file sorting at the end of a run                   │
+│   --sort.no-enabled --no-sort  [default: False]                                                  │
+│ --sort.input-folder            Base folder to scan for files. Default to the same value as       │
+│                                `--download-folder`                                               │
+│ --sort.output-folder           Output path to place sorted files in                              │
+│                                [default: downloads/cyberdrop-dl sorted]                          │
+│ --sort.formats.audio           Format to generate sorted audio file                              │
+│                                [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]            │
+│ --sort.formats.image           Format to generate sorted image file                              │
+│                                [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]           │
+│ --sort.formats.non-media       Format to generate sorted files of unknown type                   │
+│                                [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]            │
+│ --sort.formats.video           Format to generate sorted video file                              │
+│                                [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]           │
+│ --sort.formats.incrementer     Format for separator on name collisions                           │
+│                                [default:  ({i})]                                                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ SubFolders ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --subfolders --no-subfolders         Enable/disable the createtion of nested sub-folders         │
-│                                      [default: True]                                             │
+│ --subfolders.create --subfolders     Enable/disable the createtion of nested sub-folders         │
+│   --subfolders.no-create             [default: True]                                             │
+│   --no-subfolders                                                                                │
 │ --subfolders.include.album-id        [default: False]                                            │
 │   --subfolders.include.no-album-id                                                               │
 │ --subfolders.include.thread-id       [default: False]                                            │
@@ -326,8 +347,12 @@ Download URLs
 │ --subfolders.include.domain          [default: True]                                             │
 │   --subfolders.include.no-domain                                                                 │
 │ --subfolders.separate-posts.format   [default: {default}]                                        │
-│ --subfolders.separate-posts          Create new subfolders for every post on a site              │
-│   --subfolders.no-separate-posts     [default: False]                                            │
+│ --subfolders.enabled                 Create new subfolders for every post on a site              │
+│   --separate-posts                   [default: False]                                            │
+│   --separate-posts.enabled                                                                       │
+│   --subfolders.no-enabled                                                                        │
+│   --no-separate-posts                                                                            │
+│   --separate-posts.no-enabled                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ UIOptions ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --ui                      [choices: disabled, activity, simple, fullscreen]                      │
@@ -342,4 +367,5 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
+
 <!-- END_CLI_OVERVIEW -->

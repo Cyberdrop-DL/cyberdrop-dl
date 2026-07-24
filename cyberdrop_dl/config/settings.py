@@ -24,6 +24,15 @@ from cyberdrop_dl.models.types import (
 )
 from cyberdrop_dl.models.validators import strings
 
+ALIASES: dict[str, str] = {}
+
+
+def _alias(name: str, *extras: str, flag: str = "enabled") -> Parameter:
+    aliases = (f"--{name}", f"--{name}.{flag}")
+    negative_aliases = (f"--{name}.no-{flag}", f"--no-{name}")
+    ALIASES.update([aliases, negative_aliases])
+    return Parameter(alias=aliases + extras, negative_alias=negative_aliases)
+
 
 class _SubFoldersInclude(ConfigModel):
     album_id: bool = False
@@ -39,12 +48,12 @@ class _SeparatePosts(ConfigModel):
         Parameter(name="separate-posts.format"),
     ] = "{default}"
 
-    enabled: Annotated[bool, Parameter(name="separate-posts")] = False
+    enabled: Annotated[bool, _alias("separate-posts")] = False
     "Create new subfolders for every post on a site"
 
 
 class SubFolders(ConfigGroup, name=None):
-    create: Annotated[bool, Parameter(name="--subfolders")] = True
+    create: Annotated[bool, _alias("subfolders", flag="create")] = True
     "Enable/disable the createtion of nested sub-folders"
 
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
@@ -149,7 +158,7 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
 
 class Jdownloader(ConfigGroup, name=None):
-    enabled: Annotated[bool, Parameter(name="--jdownloader")] = False
+    enabled: Annotated[bool, _alias("jdownloader")] = False
     "Send unsupported URLs to Jdownloader"
 
     autostart: bool = False
@@ -212,7 +221,7 @@ class SortFormats(ConfigModel):
 
 
 class Sort(ConfigGroup, name=None):
-    enabled: Annotated[bool, Parameter(name="--sort")] = False
+    enabled: Annotated[bool, _alias("sort")] = False
     "Enable/Disable file sorting at the end of a run"
 
     input_folder: FalsyAsNone[Path] = None
@@ -229,7 +238,7 @@ class Sort(ConfigGroup, name=None):
 
 
 class Dedupe(ConfigModel):
-    enabled: Annotated[bool, Parameter(name="--hashing.dedupe", alias="--auto-dedupe")] = True
+    enabled: Annotated[bool, _alias("dedupe", "--auto-dedupe")] = True
     "Auto delete duplicate downloads by hash"
 
     use_trash_bin: bool = True

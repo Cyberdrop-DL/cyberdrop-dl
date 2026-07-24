@@ -8,24 +8,26 @@ import time
 import warnings
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast, final
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, Unpack, final
 
 import aiohttp
+from aiohttp import hdrs
 from curl_cffi.aio import AsyncCurl
 from curl_cffi.requests import AsyncSession
 from curl_cffi.utils import CurlCffiWarning
 
-from cyberdrop_dl import aio, cookies, ddos_guard, signature
+from cyberdrop_dl import aio, cookies, ddos_guard
 from cyberdrop_dl.clients import flaresolverr, tcp
-from cyberdrop_dl.clients.request import Request, normalize_impersonation, prepare_headers
+from cyberdrop_dl.clients.request import Request, RequestParams
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
-from cyberdrop_dl.utils import truncated_preview
+from cyberdrop_dl.utils import enter_context, truncated_preview
+from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import AsyncGenerator, Callable, Mapping
+    from collections.abc import AsyncGenerator, Awaitable, Callable
     from pathlib import Path
 
     from bs4 import BeautifulSoup
@@ -35,7 +37,11 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-JSON_CHECK: ContextVar[Callable[[Any, AbstractResponse[Any]], None] | None] = ContextVar("JSON_CHECK", default=None)
+type JSONCheck = Callable[[Any, AbstractResponse[Any]], None]
+
+JSON_CHECK: ContextVar[JSONCheck | None] = ContextVar("JSON_CHECK", default=None)
+
+
 RequestContext = contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]  # pyright: ignore[reportPrivateUsage]
 
 logger = logging.getLogger(__name__)
@@ -181,71 +187,42 @@ class HTTPClient:
             self.cookies.update_cookies(cookie)
 
     @contextlib.asynccontextmanager
-    async def request(  # noqa: PLR0913
-        self: object,
+    async def request(
+        self,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
-        headers: Mapping[str, str] | None = None,
-        *,
-        impersonate: str | bool | None = None,
-        data: Any = None,
-        json: Any = None,
-        default_ua: str | None = None,
-        **request_params: Any,
+        **kwargs: Unpack[RequestParams],
     ) -> AsyncGenerator[AbstractResponse[Any]]:
         """Make an HTTP request and retry w flaresolverr if required"""
-        self = cast("HTTPClient", self)  # noqa: PLW0642
-        async with self.raw_request(
-            url,
-            method,
-            headers,
-            impersonate=impersonate,
-            data=data,
-            json=json,
-            default_ua=default_ua,
-            request_params=request_params,
-        ) as resp:
+        async with self.raw_request(url, method, **kwargs) as resp:
             try:
                 await check_http_status(resp)
             except DDOSGuardError:
                 await resp.aclose()
                 if not self.flaresolverr:
                     raise
-                yield await self._flaresolverr_request(url, data)
+                yield await self._flaresolverr_request(url, kwargs.get("data"))
             else:
                 yield resp
 
-    @contextlib.asynccontextmanager
-    async def raw_request(  # noqa: PLR0913
+    def raw_request(
         self,
         url: AbsoluteHttpURL,
         /,
         method: HttpMethod = "GET",
-        headers: Mapping[str, str] | None = None,
-        *,
-        impersonate: str | bool | None = None,
-        data: Any = None,
-        json: Any = None,
-        default_ua: str | None = None,
-        request_params: dict[str, Any] | None = None,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
+        **kwargs: Unpack[RequestParams],
+    ) -> RequestContext:
+        request = Request.from_params(url, method, kwargs)
+        if self.impersonate:
+            request.impersonate = self.impersonate
 
-        request = Request(
-            url=url,
-            method=method,
-            data=data,
-            json=json,
-            params=request_params or {},
-            headers=prepare_headers(headers),
-            impersonate=normalize_impersonation(self.impersonate or impersonate),
-        )
+        if request.impersonate:
+            request.headers.pop(hdrs.USER_AGENT, None)
+        else:
+            request.headers.setdefault(hdrs.USER_AGENT, self.config.network.user_agent)
 
-        if not request.impersonate:
-            _ = request.headers.setdefault("User-Agent", default_ua or self.config.network.user_agent)
-
-        async with self._request(request) as resp:
-            yield resp
+        return self._request(request)
 
     @contextlib.asynccontextmanager
     async def _request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
@@ -317,6 +294,12 @@ class HTTPClient:
         flaresolverr.verify_solution(self.config.network.user_agent, solution)
         return AbstractResponse.create(solution)
 
+    @contextlib.asynccontextmanager
+    async def rate_limit_ctx(self, domain: str, json_check: JSONCheck | None = None) -> AsyncGenerator[None]:
+        with enter_context(JSON_CHECK, json_check):
+            async with self.rate_limits[domain], self.global_rate_limiter:
+                yield
+
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
@@ -333,25 +316,97 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         return
 
 
-class HTTPMixin:
-    @signature.copy(HTTPClient.request)
-    def request(self, *args: Any, **kwargs: Any) -> RequestContext:
-        raise NotImplementedError
+class HTTPController(Protocol):
+    __http_config__: HTTPConfig
+    __http_ctx__: HTTPContext
+    client: HTTPClient
 
-    @signature.copy(request)
-    async def request_json(self, *args: Any, **kwargs: Any) -> Any:
-        async with self.request(*args, **kwargs) as resp:
+
+class HTTPMixin(HTTPController, Protocol):
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> AsyncGenerator[AbstractResponse[Any]]:
+
+        ctx = self.__http_ctx__
+        if ctx.throttle is not None:
+            await ctx.throttle()
+
+        kwargs.setdefault("impersonate", ctx.impersonate)
+        kwargs["headers"] = ctx.headers | kwargs.setdefault("headers", {})
+
+        async with (
+            self.client.rate_limit_ctx(ctx.domain, ctx.json_check),
+            self.client.request(url, method, **kwargs) as resp,
+        ):
+            yield resp
+
+    async def request_json(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> Any:
+        async with self.request(url, method, **kwargs) as resp:
             return await resp.json()
 
-    @signature.copy(request)
-    async def request_soup(self, *args: Any, **kwargs: Any) -> BeautifulSoup:
-        async with self.request(*args, **kwargs) as resp:
+    async def request_soup(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> BeautifulSoup:
+        async with self.request(url, method, **kwargs) as resp:
             return await resp.soup()
 
-    @signature.copy(request)
-    async def request_text(self, *args: Any, **kwargs: Any) -> str:
-        async with self.request(*args, **kwargs) as resp:
+    async def request_text(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> str:
+        async with self.request(url, method, **kwargs) as resp:
             return await resp.text()
+
+    async def request_location(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "HEAD",
+        **kwargs: Unpack[RequestParams],
+    ) -> AbsoluteHttpURL | None:
+        async with self.request(url, method, **kwargs) as resp:
+            return resp.location
+
+    async def request_redirect(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> AbsoluteHttpURL:
+        "Like request_location, but it uses a GET request instead of HEAD to follow all redirects upto the final destination"
+        async with self.request(url, method, **kwargs) as resp:
+            return resp.url
+
+
+@final
+class HTTPControllerProxy[T: HTTPMixin]:
+    def __init__(self, http: T) -> None:
+        self.controller = http
+        self.__call__ = http.request
+        self.json = http.request_json
+        self.soup = http.request_soup
+        self.text = http.request_text
+        self.redirect = http.request_redirect
+        self.location = http.request_location
 
 
 def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
@@ -370,6 +425,90 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         timeout=config.network.curl_timeout,
         max_redirects=8,
     )
+
+
+type RateLimit = tuple[float, float]
+
+
+@final
+@dataclasses.dataclass(slots=True, frozen=True)
+class HTTPConfig:
+    headers: dict[str, str] | None = None
+    impersonate: str | bool | None = None
+    rate_limit: RateLimit | None = None
+    json_check: JSONCheck | None = None
+
+    __iter__ = DictDataclass.__iter__
+
+    @classmethod
+    def default_headers(
+        cls,
+        user_agent: str | None = None,
+        referer: str | None = None,
+        host: str | None = None,
+        content_type: str | None = None,
+        accept: str | None = None,
+        **kwargs: str,
+    ) -> HTTPConfig:
+        headers = {
+            hdrs.USER_AGENT: user_agent,
+            hdrs.REFERER: referer,
+            hdrs.HOST: host,
+            hdrs.CONTENT_TYPE: content_type,
+            hdrs.ACCEPT: accept,
+        } | kwargs
+        return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
+
+    @classmethod
+    def get(cls, obj: object) -> HTTPConfig | None:
+        return getattr(obj, "__http_config__", None)
+
+    def __or__(self, other: HTTPConfig) -> HTTPConfig:
+        changes = {k: v for k, v in other if v is not None}
+
+        if self.headers and other.headers:
+            changes["headers"] = self.headers | other.headers
+
+        elif (headers := (self.headers or other.headers)) is not None:
+            changes["headers"] = headers.copy()
+
+        return dataclasses.replace(self, **changes)
+
+    def __call__[T](self, obj: type[T]) -> type[T]:
+        if config := self.get(obj):
+            obj.__http_config__ = config | self  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            obj.__http_config__ = self  # pyright: ignore[reportAttributeAccessIssue]
+        return obj
+
+
+@final
+@dataclasses.dataclass(slots=True, frozen=True)
+class HTTPContext:
+    domain: str
+    rate_limit: RateLimit
+    json_check: JSONCheck | None = None
+    impersonate: str | bool | None = None
+    throttle: Callable[[], Awaitable[Any]] | None = None
+    headers: dict[str, str] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def build(
+        cls,
+        domain: str,
+        config: HTTPConfig,
+        throttle: Callable[[], Awaitable[Any]] | None = None,
+    ) -> HTTPContext:
+        assert config.rate_limit is not None
+
+        return cls(
+            domain=domain,
+            rate_limit=config.rate_limit,
+            headers=config.headers or {},
+            impersonate=config.impersonate,
+            json_check=config.json_check,
+            throttle=throttle,
+        )
 
 
 async def check_http_status(response: AbstractResponse[Any]) -> None:

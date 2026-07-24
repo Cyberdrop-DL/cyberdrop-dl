@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import re
 from abc import abstractmethod
 from collections.abc import Generator
@@ -12,11 +13,12 @@ from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
-    from cyberdrop_dl.crawlers.kemono.models import File, PostModel, UserPostModel
+    from cyberdrop_dl.crawlers.kemono.models import Embed, File, PostModel, UserPostModel
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
@@ -141,16 +143,20 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         scrape_item.uploaded_at = post.timestamp
         self.create_eager_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
-        self._extract_post_files(scrape_item, post)
+        files = FileFilterer(post, self.__kemono_config__, self.log)
+        try:
+            self._extract_post_files(scrape_item, files)
+        finally:
+            self.tui.files.stats.skipped += files.skipped
         self._extract_urls_from_post_content(scrape_item, post)
 
-    def _extract_post_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
-        for url in unique(self.__prepare_files(post)):
+    def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:
+        for url in unique(map(self.__compose_file_url, post_files)):
             self.create_eager_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
-        if self.__kemono_config__.embed and post.embed:
-            embed_url = self.parse_url(post.embed.url)
+        if embed := post_files.embed():
+            embed_url = self.parse_url(embed.url)
             self.handle_external_links(scrape_item.create_child(embed_url))
             scrape_item.add_children()
 
@@ -175,24 +181,11 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         if _has_ads(post):
             self.log.warning(f"Post #{post.id} contains advertisements")
 
-    def __prepare_files(self, post: PostModel) -> Generator[AbsoluteHttpURL]:
-        if not post.has_full:
-            self.log.warning("Post #%s has not been fully imported. Some (or all) files may be missing", post.id)
-
-        def files() -> Generator[File]:
-            if self.__kemono_config__.file and post.file:
-                yield post.file
-            if self.__kemono_config__.attachments:
-                yield from post.attachments
-
-        for file in files():
-            if file.deferred or not file.path:
-                self.log.warning("Skipping file '%s' in post #%s [incomplete import]", file.name, post.id)
-                continue
-
-            server = self.parse_url(file.server) if file.server else self.__kemono_cdn__
-            url = server / f"data{file.path}"
-            yield url.with_query(f=file.name or url.name)
+    def __compose_file_url(self, file: File) -> AbsoluteHttpURL:
+        server = self.parse_url(file.server) if file.server else self.__kemono_cdn__
+        # path can have query params
+        url = self.parse_url(f"/data{file.path}", server)
+        return url.update_query(f=file.name or url.name)
 
     async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPostModel]) -> None:
         for post in posts:
@@ -222,3 +215,44 @@ def _has_ads(post: PostModel) -> bool:
 
 def _extract_urls(content: str) -> Generator[str]:
     return unique(match.group() for match in _find_http_urls(content))
+
+
+@dataclasses.dataclass(slots=True)
+class FileFilterer:
+    post: PostModel
+    config: KemonoConfig
+    log: logging.LoggerAdapter[logging.Logger] | logging.Logger
+    skipped: int = dataclasses.field(init=False, default=0)
+
+    def _files(self) -> Generator[tuple[File, str, bool]]:
+        if not self.post.has_full:
+            self.log.warning("Post #%s has not been fully imported. Some (or all) files may be missing", self.post.id)
+
+        if self.post.file:
+            yield self.post.file, "file", self.config.file
+
+        for file in self.post.attachments:
+            yield file, "attachment", self.config.attachments
+
+    def __iter__(self) -> Generator[File]:
+        for file, kind, should_download in self._files():
+            file_name = file.name or file.path
+            if not should_download:
+                self._report_skip_by_config(file_name, kind)
+            elif file.deferred or not file.path:
+                self.log.warning("Skipping file '%s' in post #%s [incomplete %s import]", file_name, self.post.id, kind)
+                self.skipped += 1
+            else:
+                yield file
+
+    def _report_skip_by_config(self, name: str, kind: str) -> None:
+        self.log.info("Skipping file '%s' in post #%s by config options [%s]", name, self.post.id, kind)
+        self.skipped += 1
+
+    def embed(self) -> Embed | None:
+        if not self.post.embed:
+            return None
+        if not self.config.embed:
+            self._report_skip_by_config(self.post.embed.url, "embed")
+            return None
+        return self.post.embed

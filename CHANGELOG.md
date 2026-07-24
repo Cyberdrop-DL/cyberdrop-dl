@@ -22,7 +22,70 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [10.3.0] - UNRELEASED
+
+### Added
+
+- Twitter/x.com support
+
+### Changed
+
+- Removed twitter.com and x.com from blocked domains
+
+### Fixed
+
+- Some URLs being wrongly skipped as duplicates when using any of the `retry` options if they came from the same collection/folder/album.
+  This affected sites where multiple files may share identical URL path and query, with the fragment being what uniquely identifies each file (Mega.nz, Koofr, Transfer.it)
+- Download URL extraction (BuzzHeavier)
+
+## [10.2.1] - 2026-07-21
+
+### Changed
+
+- Hardcoded a new limit of 1 scrape URL at a time (Fileditch)
+
+### Fixed
+
+- Dead lock if more that 50 downloads are queued (Filester)
+- Solve proof of work challenge (Fileditch)
+- User downloads (Motherless)
+- Accept embeded URLs with no metadata (Pawchive)
+- Handle videos with no resolution information (PMVHaven)
+
+## [10.2.0] - 2026-07-13
+
+### Changed
+
+- Report unsupported URLs as "Unsupported" scrape errors on the UI
+- Limit log messages to 5k characters max
+
+### Fixed
+
+- Handle malformed file URLs (Pawchive)
+- `--only-hosts` having the same behavior as `--skip-hosts`
+
+## [10.1.0] - 2026-07-10
+
+### Added
+
+- ABStream support
+- Adobe Lightroom support
+- APKMirror support
+- Cara.app support
+- Crazyshit support
+- Daftporn support
+- Dailymotion support
+- GoonBox support
+- Monstercat support
+- Multporn support
+- NaughtyMachinima support
+- Nudedeleted support
+- Pawchive support
+- Pillowcase support
+- Pinterest support
+- Trannygem support
+- Wikifeet support
+- Yourlesbian support
 
 ### Changed
 

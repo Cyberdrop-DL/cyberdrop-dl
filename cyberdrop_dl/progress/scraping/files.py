@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(slots=True)
 class FileStats:
     completed: int = 0
-    previously_completed: int = 0
+    prev_completed: int = 0
     skipped: int = 0
     failed: int = 0
     queued: int = 0
@@ -56,7 +56,7 @@ class FileStatsPanel:
     def _init_tasks(self) -> Generator[tuple[str, TaskID]]:
         for name, color, desc in (
             ("completed", "green", "Completed"),
-            ("previously_completed", "yellow", "Previously downloaded"),
+            ("prev_completed", "yellow", "Previously downloaded"),
             ("skipped", "yellow", "Skipped by config"),
             ("queued", "cyan", "Queued"),
             ("failed", "red", "Failed"),
@@ -102,7 +102,7 @@ class FileStatsPanel:
         await asyncio.sleep(1)
         self.stats.failed += 15
         await asyncio.sleep(1)
-        self.stats.previously_completed += 1
+        self.stats.prev_completed += 1
         await asyncio.sleep(1)
         self.stats.skipped += 10
         await asyncio.sleep(3)

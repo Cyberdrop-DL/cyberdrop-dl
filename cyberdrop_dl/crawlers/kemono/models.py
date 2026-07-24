@@ -4,7 +4,6 @@ from typing import Annotated, override
 
 from pydantic import AfterValidator, BeforeValidator, Field
 
-from cyberdrop_dl import env
 from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 
@@ -41,8 +40,8 @@ class File:
 @dataclasses.dataclass(slots=True, frozen=True)
 class Embed:
     url: str
-    subject: str
-    description: str
+    subject: str | None = None
+    description: str | None = None
 
 
 def _parse_tags(tags: object) -> object:
@@ -63,7 +62,7 @@ def _assume_utc[T: datetime.datetime](date: T) -> T:
 type AwareDatetime = Annotated[datetime.datetime, AfterValidator(_assume_utc)]
 
 
-class PostModel(DeferredModel, extra="allow" if env.DEBUG_MODE else "ignore"):
+class PostModel(DeferredModel, extra="ignore"):
     id: str
     content: str | None = None  # search results has no "content" key, only "substring"
 

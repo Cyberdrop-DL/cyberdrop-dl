@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -12,12 +13,14 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     POSTS = "a[href]:has(img)"
     IMAGE_OR_VIDEO = ".main_content .uk-align-center [src]"
     NEXT_PAGE = 'div[id="next_page"] a'
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class FapelloComCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Individual Post": "/<model_nam>/<post_id>",
@@ -26,7 +29,6 @@ class FapelloComCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fapello.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "fapello.com"
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

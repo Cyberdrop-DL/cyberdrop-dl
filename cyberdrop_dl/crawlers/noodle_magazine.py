@@ -5,7 +5,8 @@ import itertools
 import json
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -39,6 +40,7 @@ class Video:
 _VIDEO_PER_PAGE = 24
 
 
+@HTTPConfig(impersonate=True, rate_limit=(1, 3))
 class NoodleMagazineCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Search": "/video/<search_query>",
@@ -47,10 +49,7 @@ class NoodleMagazineCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://noodlemagazine.com")
     DOMAIN: ClassVar[str] = "noodlemagazine"
     FOLDER_DOMAIN: ClassVar[str] = "NoodleMagazine"
-
     _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
-    _RATE_LIMIT: ClassVar[RateLimit] = 1, 3
-    _IMPERSONATE: ClassVar[str | bool | None] = True
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

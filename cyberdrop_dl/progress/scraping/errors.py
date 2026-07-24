@@ -144,15 +144,14 @@ class ScrapeErrorsPanel(_ErrorsPanel):
 
     def __init__(self) -> None:
         super().__init__()
-        self._unsupported: int = 0
         self.sent_to_jdownloader: int = 0
         self.skipped: int = 0
 
     def add_unsupported(self, *, sent_to_jdownloader: bool = False) -> None:
-        self._unsupported += 1
         if sent_to_jdownloader:
             self.sent_to_jdownloader += 1
         else:
+            self.add("Unsupported")
             self.skipped += 1
 
     def __json__(self) -> dict[str, Any]:

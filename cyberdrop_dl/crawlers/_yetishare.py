@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from bs4 import BeautifulSoup
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths, auto_task_id
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     DOWNLOAD_BUTTON = ".btn-group.responsiveMobileMargin button:-soup-contains('Download')[onclick*='download_token']"
     DROPDOWN_MENU = ".dropdown-menu.dropdown-info a[onclick*='download_token']"
@@ -33,6 +35,7 @@ class Selector:
     RECAPTCHA = "form[method=POST] script[src*='/recaptcha/api.js']"
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class YetiShareCrawler(Crawler, is_abc=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Files": (
@@ -45,7 +48,6 @@ class YetiShareCrawler(Crawler, is_abc=True):
         ),
         "Shared folders": "/shared/<share_key>",
     }
-    _RATE_LIMIT: ClassVar[RateLimit] = 5, 1
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

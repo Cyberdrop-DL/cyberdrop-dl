@@ -107,7 +107,7 @@ class XVideosCrawler(Crawler):
     async def video(self, scrape_item: ScrapeItem) -> None:
         video_id = scrape_item.url.parts[1].removeprefix("video").removeprefix(".")
         if video_id.isdecimal() or scrape_item.url.name == "_":
-            scrape_item.url = await self._get_redirect_url(scrape_item.url)
+            scrape_item.url = await self.request_redirect(scrape_item.url)
             encoded_id = scrape_item.url.parts[1].removeprefix("video.")
         else:
             encoded_id = video_id
@@ -133,7 +133,7 @@ class XVideosCrawler(Crawler):
     async def account(self, scrape_item: ScrapeItem) -> None:
         name = scrape_item.url.name
         if len(scrape_item.url.parts) > 2 and scrape_item.url.parts[1] not in _ACCOUNTS:
-            scrape_item.url = await self._get_redirect_url(scrape_item.url)
+            scrape_item.url = await self.request_redirect(scrape_item.url)
 
         soup = await self._get_soup(scrape_item.url)
         script = css.select_text(soup, Selectors.ACCOUNT_INFO_JS)

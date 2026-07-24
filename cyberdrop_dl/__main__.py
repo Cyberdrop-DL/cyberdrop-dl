@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cyberdrop_dl.config import parse_tokens
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -37,7 +39,7 @@ def run_cdl(args: Sequence[str] | None = None) -> int:
         from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, DatabaseError
 
         try:
-            app(args)
+            app(parse_tokens(args))
         except (ValidationError, DatabaseError) as exc:
             tb = tracebacks.from_exception(exc.with_traceback(None))
             app.console.print(_error_panel(tb))

@@ -22,7 +22,7 @@ for link in [
 
 ui.files._stats = FileStats(
     completed=7_125,
-    previously_completed=1_222,
+    prev_completed=1_222,
     skipped=23,
     failed=178,
     queued=458,

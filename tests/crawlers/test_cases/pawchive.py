@@ -35,6 +35,23 @@ TEST_CASES = [
         "count": 3,
     },
     {
+        "url": "https://pawchive.pw/patreon/user/48610247/post/144898011",
+        "description": "malformed file.path with query params",
+        "results": [
+            {
+                "url": "https://file.pawchive.pw/data/d5/ef/d5efd1b3d8c8f993203a14d018972c058bad47177d91a4fbe8777eb322a572ff.png?f=adverse-conditions-mockup-front.png?v%3D1749219392",
+                "filename": "d5efd1b3d8c8f993203a14d018972c058bad47177d91a4fbe8777eb322a572ff.png",
+                "debrid_url": None,
+                "original_filename": "adverse-conditions-mockup-front.png?v=1749219392",
+                "referer": "https://pawchive.pw/patreon/user/48610247/post/144898011",
+                "album_id": "48610247",
+                "uploaded_at": 1764686622,
+                "download_folder": "re:Kill James Bond! (Pawchive)",
+            },
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://pawchive.pw/patreon/user/177727722",
         "results": [
             {

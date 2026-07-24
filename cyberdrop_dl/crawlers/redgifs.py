@@ -3,7 +3,9 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers import Registry
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -39,6 +41,7 @@ class Gif:
         )
 
 
+@HTTPConfig(rate_limit=(2, 3))
 class RedGifsCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "User": "/users/<user>",
@@ -49,7 +52,6 @@ class RedGifsCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.redgifs.com/")
     DOMAIN: ClassVar[str] = "redgifs"
     FOLDER_DOMAIN: ClassVar[str] = "RedGifs"
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 3
 
     @classmethod
     def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
@@ -159,6 +161,7 @@ def _canonical_url(name_or_id: str) -> AbsoluteHttpURL:
     return RedGifsCrawler.PRIMARY_URL / "watch" / _id(name_or_id)
 
 
+@Registry.database.referer_fix_for(RedGifsCrawler)
 def fix_redgifs_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer)
     name = url.name or url.parent.name

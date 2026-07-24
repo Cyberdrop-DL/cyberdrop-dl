@@ -122,7 +122,7 @@ class OneDriveCrawler(Crawler):
     @error_handling_wrapper
     async def share_link(self, scrape_item: ScrapeItem) -> None:
         og_share_link = scrape_item.url
-        scrape_item.url = await self._get_redirect_url(scrape_item.url)
+        scrape_item.url = await self.request_redirect(scrape_item.url)
         await self.link_with_credentials(scrape_item, og_share_link)
 
     @error_handling_wrapper

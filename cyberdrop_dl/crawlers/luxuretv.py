@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     VIDEO_PLAYER = "video.video-js > source"
     TITLE = "h1.title-right"
@@ -18,6 +20,7 @@ class Selector:
     VIDEOS_THUMBS = "div.contents div.content a"
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class LuxureTVCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/<name>-<id>.html",
@@ -28,7 +31,6 @@ class LuxureTVCrawler(Crawler):
     DEFAULT_TRIM_URLS: ClassVar[bool] = False
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://luxuretv.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
