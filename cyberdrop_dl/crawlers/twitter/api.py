@@ -72,6 +72,11 @@ class UserEndpoint(API.Endpoint[FXTwitterAPI]):
         return self.api.pager(url)
 
 
+_DEFAULT_CRED = (
+    "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+)
+
+
 @HTTPConfig(
     headers={
         "Accept": "*/*",
@@ -82,15 +87,14 @@ class UserEndpoint(API.Endpoint[FXTwitterAPI]):
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
+        "Authorization": f"Bearer {_DEFAULT_CRED}",
     }
 )
 class TwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.x.com/1.1")
-    AUTH_TOKEN: str = ""
 
     def __post_init__(self) -> None:
         self.broadcast: BroadcastEndpoint = BroadcastEndpoint(self)
-        self.__http_ctx__.headers["Authorization"] = f"Bearer {self.AUTH_TOKEN}"
 
     @disk_cached_method("guest_token", ttl=3600)
     async def auth_guest(self) -> str:
