@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import json
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, Unpack, final, override
 
 from aiohttp import ClientConnectorError
 
@@ -20,7 +20,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
 
     from bs4 import BeautifulSoup
+    from curl_cffi.requests.session import HttpMethod
 
+    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -99,10 +101,11 @@ class BunkrCrawler(Crawler):
             case _:
                 raise ValueError
 
-    @override
-    async def _get_redirect_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    async def request_redirect(
+        self, url: AbsoluteHttpURL, method: HttpMethod = "GET", **kwargs: Unpack[RequestParams]
+    ) -> AbsoluteHttpURL:
         try:
-            return await super()._get_redirect_url(url)
+            return await super().request_redirect(url, method, **kwargs)
         except (ClientConnectorError, DDOSGuardError):
             if self.is_subdomain(url):
                 raise
@@ -113,7 +116,7 @@ class BunkrCrawler(Crawler):
                         _ = await self._request_soup_lenient(url)
 
             assert self._known_good_host
-            return await super()._get_redirect_url(url.with_host(self._known_good_host))
+            return await super().request_redirect(url.with_host(self._known_good_host), method, **kwargs)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
