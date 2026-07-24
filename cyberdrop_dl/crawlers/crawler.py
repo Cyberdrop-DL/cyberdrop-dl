@@ -903,18 +903,20 @@ class API(HTTPMixin, ABC):
             return f"<{type(self).__name__}>"
 
     @final
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         domain: str,
         PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
         cache: TTLCacheAdapter[Any],
+        client: HTTPClient,
         parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
     ) -> None:
         self.PRIMARY_URL: Final = PRIMARY_URL
         self.parse_url: Final = parse_url
         self.config: Final = config
         self.cache: Final = cache
+        self.client: HTTPClient = client
         self.__http_ctx__: HTTPContext = HTTPContext.build(domain, self.__http_config__)
         self.__post_init__()
 
@@ -925,6 +927,7 @@ class API(HTTPMixin, ABC):
             PRIMARY_URL=crawler.PRIMARY_URL,
             parse_url=crawler.parse_url,
             cache=crawler.cache,
+            client=crawler.client,
             config=crawler.manager.config,
         )
         self.__http_config__ = crawler.__http_config__ | self.__http_config__
