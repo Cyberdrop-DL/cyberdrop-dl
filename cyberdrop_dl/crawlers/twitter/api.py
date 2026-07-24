@@ -6,15 +6,17 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from cyberdrop_dl import signature
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
 from cyberdrop_dl.crawlers.twitter.models import Broadcast, Tweet
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Mapping
+    from collections.abc import AsyncGenerator
 
 
+@HTTPConfig(rate_limit=(3, 1))  # Actual limit is 1000 req/min (~ 16.7 req/s) per IP
 class FXTwitterAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.fxtwitter.com/2")
     cursor: ClassVar[ContextVar[str | None]] = ContextVar("cursor")
@@ -56,10 +58,7 @@ class FXTwitterAPI(API):
             url = url.update_query(cursor=cursor)
 
 
-class UserEndpoint:
-    def __init__(self, api: FXTwitterAPI) -> None:
-        self.api: FXTwitterAPI = api
-
+class UserEndpoint(API.Endpoint[FXTwitterAPI]):
     def media(self, user: str) -> AsyncGenerator[map[Tweet]]:
         url = self.api.ENTRYPOINT / "profile" / user / "media"
         return self.api.pager(url)
@@ -79,19 +78,17 @@ class TwitterAPI(API):
 
     async def activate(self) -> str:
         url = self.ENTRYPOINT / "guest/activate.json"
-        return await self.request_json(url, data=b"")
+        resp = await self.request_json(url, data=b"")
+        return resp["guess_token"]
 
     @signature.copy(API.request_json)
-    async def request_json(self, *args, headers: Mapping[str, str] | None = None, **kwargs) -> Any:
-        async with self.request(*args, headers=headers, **kwargs) as resp:
+    async def request_json(self, *args, **kwargs) -> Any:
+        async with self.request(*args, **kwargs) as resp:
             return await resp.json(content_type=False)
 
 
-class BroadcastEndpoint:
+class BroadcastEndpoint(API.Endpoint[TwitterAPI]):
     ENDED: Final = "ENDED"
-
-    def __init__(self, api: TwitterAPI) -> None:
-        self.api: TwitterAPI = api
 
     async def __call__(self, broadcast_id: str) -> Broadcast:
         url = (self.api.ENTRYPOINT / "broadcasts/show.json").with_query(ids=broadcast_id)

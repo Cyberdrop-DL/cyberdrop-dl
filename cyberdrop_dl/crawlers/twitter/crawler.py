@@ -6,7 +6,7 @@ import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.crawlers.twitter.api import FXTwitterAPI, TwitterAPI
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -103,7 +103,6 @@ class TwitterCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://x.com")
     DOMAIN: ClassVar[str] = "twitter"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1  # For FxTwitter. Actual limit is 1000 req/min (~ 16.7 req/s) per IP
     _default_since: int | None = None
 
     def __post_init__(self) -> None:
