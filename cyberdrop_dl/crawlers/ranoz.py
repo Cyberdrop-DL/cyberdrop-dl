@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -16,6 +17,7 @@ class File(NamedTuple):
     size: int
 
 
+@HTTPConfig(rate_limit=(100, 60))
 class RootzCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
@@ -25,7 +27,6 @@ class RootzCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.rootz.so")
     DOMAIN: ClassVar[str] = "rootz.so"
-    _RATE_LIMIT: ClassVar[RateLimit] = 100, 60
     _API_ENTRYPOINT: ClassVar[AbsoluteHttpURL] = PRIMARY_URL / "api/files"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

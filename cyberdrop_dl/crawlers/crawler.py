@@ -13,10 +13,11 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, final
 
-from cyberdrop_dl import aio, env, signature
+from aiohttp import hdrs
+
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.http import JSON_CHECK, HTTPClient, HTTPMixin, RequestContext
-from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
@@ -58,7 +59,6 @@ logger = logging.getLogger(__name__)
 type OneOrTuple[T] = T | tuple[T, ...]
 type SupportedPaths = dict[str, OneOrTuple[str]]
 type SupportedDomains = OneOrTuple[str]
-type RateLimit = tuple[float, float]
 type DebridURL = Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None
 
 _ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
@@ -131,9 +131,9 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class Crawler(HTTPMixin, HLSMixin, ABC):
     DOMAIN: ClassVar[str]
-    _IMPERSONATE: ClassVar[str | bool | None] = None
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
@@ -148,11 +148,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
-    _RATE_LIMIT: ClassVar[RateLimit] = 25, 1
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
-    _DEFAULT_UA: ClassVar[str | None] = None
 
     disabled: bool = False
 
@@ -181,13 +179,15 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
-        self._task_mngr: Final = task_mng
-        self.tui: Final = tui
         self.downloader: Downloader = Downloader(
             manager,
             use_server_lock=self._USE_DOWNLOAD_SERVERS_LOCKS,
             _slots=self._DOWNLOAD_SLOTS,
         )
+
+        self.__http_ctx__: HTTPContext = HTTPContext.build(self.DOMAIN, self.__http_config__, self.__throttle)
+        self._task_mngr: Final = task_mng
+        self.tui: Final = tui
 
         self.__post_init__()
 
@@ -204,7 +204,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             if self._ready:
                 return
 
-            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self._RATE_LIMIT)
+            self.client.rate_limits[self.DOMAIN] = aio.RateLimiter.w_no_burst(*self.__http_ctx__.rate_limit)
             try:
                 await self.__async_post_init__()
             except Exception:
@@ -228,7 +228,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         is_generic: bool = False,
         is_debug: bool = False,
         db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
-        cdl_user_agent: bool = False,
         **kwargs: Any,
     ) -> None:
         assert cls.__name__.endswith("Crawler"), f"{cls.__name__} does not end with 'Crawler'"
@@ -249,8 +248,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         if db_path:
             cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
-        if cdl_user_agent:
-            cls._DEFAULT_UA = CDL_USER_AGENT  # pyright: ignore[reportConstantRedefinition]
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
@@ -281,33 +278,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if add_to_registry:
             Registry.concrete.add(cls)
 
-    @signature.copy(HTTPClient.request)
-    @contextlib.asynccontextmanager
-    async def request(
-        self,
-        *args: Any,
-        impersonate: str | bool | None = None,
-        default_ua: str | None = None,
-        **kwargs: Any,
-    ) -> AsyncGenerator[AbstractResponse[Any]]:
-        if impersonate is None:
-            impersonate = self._IMPERSONATE
-
+    async def __throttle(self) -> None:
         if _CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait(self.FOLDER_DOMAIN)
-
-        with enter_context(JSON_CHECK, self.__json_resp_check__):
-            async with (
-                self.client.rate_limits[self.DOMAIN],
-                self.client.global_rate_limiter,
-                self.client.request(
-                    *args,
-                    impersonate=impersonate,
-                    default_ua=default_ua or self._DEFAULT_UA,
-                    **kwargs,
-                ) as resp,
-            ):
-                yield resp
 
     def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
         """Custom check for JSON responses.
@@ -535,7 +508,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
-            "User-Agent": self._DEFAULT_UA or self.config.network.user_agent,
+            "User-Agent": self.__http_ctx__.headers.get(hdrs.USER_AGENT) or self.config.network.user_agent,
             "Referer": str(scrape_item.url),
         }
 
@@ -918,33 +891,45 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             )
 
 
+@HTTPConfig(rate_limit=(25, 1))
 class API(HTTPMixin, ABC):
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
+
+    class EntryPoint[T: API]:
+        def __init__(self, api: T) -> None:
+            self.api: T = api
+
+        def __repr__(self) -> str:
+            return f"<{type(self).__name__}>"
+
     @final
     def __init__(
         self,
+        domain: str,
         PRIMARY_URL: AbsoluteHttpURL,  # noqa: N803
         config: Config,
-        request: Callable[..., RequestContext],
         cache: TTLCacheAdapter[Any],
         parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url,
     ) -> None:
         self.PRIMARY_URL: Final = PRIMARY_URL
         self.parse_url: Final = parse_url
-        self.request: Final = request
         self.config: Final = config
         self.cache: Final = cache
+        self.__http_ctx__: HTTPContext = HTTPContext.build(domain, self.__http_config__)
         self.__post_init__()
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:
-        return cls(
+        self = cls(
+            domain=crawler.DOMAIN,
             PRIMARY_URL=crawler.PRIMARY_URL,
             parse_url=crawler.parse_url,
-            request=crawler.request,
             cache=crawler.cache,
             config=crawler.manager.config,
         )
+        self.__http_config__ = crawler.__http_config__ | self.__http_config__
+        self.__http_ctx__ = HTTPContext.build(crawler.DOMAIN, self.__http_config__, crawler.__http_ctx__.throttle)
+        return self
 
     def __post_init__(self) -> None: ...
 

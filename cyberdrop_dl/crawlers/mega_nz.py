@@ -12,6 +12,7 @@ from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.utils import m3u8
 
 
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -47,7 +49,6 @@ class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("mega.co.nz",)
-    _DEFAULT_UA: ClassVar[str | None] = CDL_USER_AGENT
 
     core: MegaCore
     downloader: MegaDownloader

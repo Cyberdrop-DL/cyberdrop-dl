@@ -3,7 +3,8 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -25,6 +26,7 @@ class Selector:
 MAX_VIDEO_COUNT_PER_PAGE = 52
 
 
+@HTTPConfig(rate_limit=(3, 10))
 class TrannyOneCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/view/<video_id>",
@@ -35,7 +37,6 @@ class TrannyOneCrawler(Crawler):
     DOMAIN: ClassVar[str] = "tranny.one"
     FOLDER_DOMAIN: ClassVar[str] = "Tranny.One"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tranny.one")
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 10
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

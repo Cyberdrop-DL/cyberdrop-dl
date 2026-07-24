@@ -18,12 +18,12 @@ _FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
 
 
 @fast_cache
-def _fields_names(cls: type[_DataClass]) -> tuple[str, ...]:
+def fields_names(cls: type[_DataClass]) -> tuple[str, ...]:
     return tuple(f.name for f in dataclasses.fields(cls) if f.init)
 
 
 def filter_data[DataClassT: _DataClass](cls: type[DataClassT], data: Mapping[str, Any], /) -> dict[str, Any]:
-    return {name: value for name in _fields_names(cls) if (value := data.get(name, MISSING)) is not MISSING}
+    return {name: value for name in fields_names(cls) if (value := data.get(name, MISSING)) is not MISSING}
 
 
 @dataclasses.dataclass(slots=True, frozen=True, eq=False)
@@ -67,7 +67,7 @@ deserialize = Deserializer()
 
 class DictDataclass(_DataClass, Protocol):
     def __iter__(self) -> Iterator[tuple[str, Any]]:
-        for field_name in _fields_names(type(self)):
+        for field_name in fields_names(type(self)):
             yield field_name, getattr(self, field_name)
 
     filter_dict = classmethod(filter_data)  # pyright: ignore[reportUnannotatedClassAttribute]

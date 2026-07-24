@@ -7,7 +7,8 @@ import itertools
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.utils import css, extr_text, open_graph, parse_url
@@ -48,6 +49,7 @@ class Selector:
         TITLE = "div#list_videos_common_videos_list h1"
 
 
+@HTTPConfig(rate_limit=(6, 5))
 class KernelVideoSharingCrawler(Crawler, is_abc=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Albums": "/albums/<album_name>",
@@ -60,7 +62,6 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     }
     NEXT_PAGE_SELECTOR: ClassVar[str] = "li.pagination-next > a"
     THUMBNAIL_SELECTOR: ClassVar[str] = Selector.THUMBNAILS
-    _RATE_LIMIT: ClassVar[RateLimit] = 6, 5
 
     def __init_subclass__(cls, *, ensure_trailing_slash: bool = False, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)

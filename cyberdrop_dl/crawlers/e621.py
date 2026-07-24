@@ -3,8 +3,9 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@HTTPConfig(rate_limit=(2, 1))
+@HTTPConfig.default_headers(user_agent=f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)")
 class E621Crawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": "/posts/<post_id>",
@@ -23,8 +26,6 @@ class E621Crawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e621.net")
     DOMAIN: ClassVar[str] = "e621.net"
     FOLDER_DOMAIN: ClassVar[str] = "E621"
-    _RATE_LIMIT: ClassVar[RateLimit] = 2, 1
-    _DEFAULT_UA: ClassVar[str | None] = f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
 

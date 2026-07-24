@@ -8,7 +8,8 @@ import json
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -59,6 +60,7 @@ def _parse_url(b64_url: str) -> AbsoluteHttpURL:
     return parse_url(url, relative_to=_PRIMARY_URL)
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class XhamsterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/<title>",
@@ -77,7 +79,6 @@ class XhamsterCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "xhamster"
     FOLDER_DOMAIN: ClassVar[str] = "xHamster"
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
 
     def __post_init__(self) -> None:
         self._seen_hosts: set[str] = set()

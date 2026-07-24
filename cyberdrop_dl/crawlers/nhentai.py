@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     ITEM = "div.gallery > a"
     COLLECTION_TITLE = "span.name"
@@ -25,6 +27,7 @@ class Selector:
     LOGIN_PAGE = "input.id_username_or_email"
 
 
+@HTTPConfig(rate_limit=(4, 1))
 class NHentaiCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Collections": (
@@ -42,7 +45,6 @@ class NHentaiCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = "a.next"
     DOMAIN: ClassVar[str] = "nhentai.net"
     FOLDER_DOMAIN: ClassVar[str] = "nHentai"
-    _RATE_LIMIT: ClassVar[RateLimit] = 4, 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

@@ -85,12 +85,12 @@ class Registry:
         cls._loaded = True
 
     @classmethod
-    def _import_from(cls, module: ModuleType) -> Generator[ImportError]:
+    def _import_from(cls, module: ModuleType) -> Generator[Exception]:
         """Import every module (and sub-package) inside *pkg_name*."""
         for sub_module_info in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
             try:
                 sub_module = cls._import_module(sub_module_info.name)
-            except ImportError as e:
+            except Exception as e:  # noqa: BLE001
                 yield e
             else:
                 if sub_module_info.ispkg:

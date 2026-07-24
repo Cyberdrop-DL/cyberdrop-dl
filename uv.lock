@@ -635,7 +635,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "10.2.1"
+version = "10.3.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
@@ -736,7 +736,7 @@ dev = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "ruff", specifier = ">=0.15.18" },
+    { name = "ruff", specifier = ">=0.15.18,<16.0" },
 ]
 
 [[package]]

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from mega.transfer_it import TransferItClient
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -17,7 +18,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class TransferItCrawler(Crawler, db_path="path_qs_frag", cdl_user_agent=True):
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+class TransferItCrawler(Crawler, db_path="path_qs_frag"):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")
     DOMAIN: ClassVar[str] = "transfer.it"

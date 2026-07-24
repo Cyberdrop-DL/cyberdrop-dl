@@ -2,17 +2,26 @@ from __future__ import annotations
 
 import dataclasses
 import uuid
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict, cast
 
 from multidict import CIMultiDict
 
+from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, fields_names
+
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping
+    from collections.abc import Mapping
 
     from curl_cffi.requests.impersonate import BrowserTypeLiteral
     from curl_cffi.requests.session import HttpMethod
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
+
+
+class RequestParams(TypedDict, total=False):
+    headers: dict[str, str]
+    impersonate: str | bool | None
+    data: Any
+    json: Any
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -28,28 +37,38 @@ class Request:
     id: str = dataclasses.field(init=False, default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
+        self.headers = prepare_headers(self.headers)
+        self.impersonate = _normalize_impersonation(self.impersonate)
         if self.method == "GET" and (self.data or self.json):
             self.method = "POST"
 
-    def __json__(self) -> dict[str, Any]:
-        return dict(self._serialize())
+    @classmethod
+    def from_params(cls, url: AbsoluteHttpURL, method: HttpMethod, params: RequestParams) -> Self:
+        return deserialize(
+            cls,
+            params,
+            url=url,
+            method=method,
+            params={k: v for k, v in params.items() if k not in _REQUEST_FIELDS},
+        )
 
-    def _serialize(self) -> Generator[tuple[str, Any]]:
-        yield "url", str(self.url)
+    __iter__ = DictDataclass.__iter__
+
+    def __json__(self) -> dict[str, Any]:
+        me = {k: v for k, v in self if (v and k != "method") or (k in {"json", "data"} and v is not None)}
+        me["url"] = str(self.url)
         if self.headers:
-            yield "headers", dict(self.headers)
-        if self.impersonate is not None:
-            yield "impersonate", self.impersonate
-        if self.data is not None:
-            yield "data", self.data
-        if self.json is not None:
-            yield "json", self.json
+            me["headers"] = dict(self.headers)
+        return me
 
     def __str__(self) -> str:
         return str(self.__json__())
 
 
-def normalize_impersonation(value: str | bool | None, /) -> BrowserTypeLiteral | Literal[False] | None:  # noqa: FBT001
+_REQUEST_FIELDS = set(fields_names(Request))
+
+
+def _normalize_impersonation(value: str | bool | None, /) -> BrowserTypeLiteral | Literal[False] | None:  # noqa: FBT001
     if value is True:
         return "chrome"
     if value is None:

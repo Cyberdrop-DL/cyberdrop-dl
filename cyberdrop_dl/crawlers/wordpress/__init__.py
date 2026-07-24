@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from bs4 import BeautifulSoup
 
-from cyberdrop_dl.crawlers.crawler import Crawler, RateLimit
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -51,6 +52,7 @@ class Selector:
 _POST_ID_REGEX = re.compile(r"(?:postid-|post-)(\d+)")
 
 
+@HTTPConfig(rate_limit=(3, 1))
 class WordPressBaseCrawler(Crawler, is_abc=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Category": "/category/<category_slug>",
@@ -73,7 +75,6 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
     WP_USE_REGEX: ClassVar[bool] = True
     SUPPORTS_THREAD_RECURSION: ClassVar[bool] = False
-    _RATE_LIMIT: ClassVar[RateLimit] = 3, 1
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
