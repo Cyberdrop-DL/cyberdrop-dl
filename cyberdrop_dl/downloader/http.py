@@ -252,7 +252,7 @@ class Downloader:
             yield
 
     async def run(self, media_item: MediaItem) -> bool:
-        if media_item.url.path in self._processed_items and not self.config.ignore_history:
+        if media_item.db_path in self._processed_items and not self.config.ignore_history:
             return False
 
         async with self.__download_context(media_item):
@@ -260,7 +260,7 @@ class Downloader:
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if media_item.url.path in self._processed_items and not self.config.ignore_history:
+        if media_item.db_path in self._processed_items and not self.config.ignore_history:
             return
 
         assert ffmpeg.is_installed()

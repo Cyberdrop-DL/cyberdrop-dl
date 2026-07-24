@@ -26,7 +26,8 @@ class Format:
     name: str
 
 
-class BandcampCrawler(Crawler, db_path="path_qs_frag"):
+@Crawler.db_path_builder("path_qs_frag")
+class BandcampCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/album/<slug>",
         "Song": "/track/<slug>",

@@ -29,7 +29,8 @@ if TYPE_CHECKING:
 
 
 @HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
-class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
+@Crawler.db_path_builder("path_qs_frag")
+class MegaNzCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (

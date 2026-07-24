@@ -79,13 +79,20 @@ class _PlaceHolderConfigInclude:
 _include = _PlaceHolderConfigInclude()
 
 
-_DB_PATH_BUILDERS: MappingProxyType[str, Callable[[AbsoluteHttpURL], str]] = MappingProxyType(
+type URLHasher = Callable[[AbsoluteHttpURL], str]
+
+
+def _path_qs_frag(url: AbsoluteHttpURL) -> str:
+    return f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs
+
+
+_DB_PATH_BUILDERS: MappingProxyType[str, URLHasher] = MappingProxyType(
     {
         "url": str,
         "name": lambda url: url.name,
         "path": lambda url: url.path,
         "path_qs": lambda url: url.path_qs,
-        "path_qs_frag": lambda url: f"{url.path_qs}#{frag}" if (frag := url.fragment) else url.path_qs,
+        "path_qs_frag": _path_qs_frag,
         "path_frag": lambda url: f"{url.path}#{frag}" if (frag := url.fragment) else url.path,
     }
 )
@@ -151,6 +158,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
+    _IGNORE_FRAGMENT: ClassVar[bool] = True
 
     disabled: bool = False
 
@@ -162,6 +170,17 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             f"_ready={self._ready!r}",
         )
         return f"<{type(self).__name__}({', '.join(fields)})>"
+
+    @final
+    @staticmethod
+    def db_path_builder(key: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"]):
+
+        def apply[T: Crawler](c: type[T]) -> type[T]:
+            c.__db_path__ = staticmethod(_DB_PATH_BUILDERS[key])
+            c._IGNORE_FRAGMENT = "frag" not in key  # pyright: ignore[reportConstantRedefinition]
+            return c
+
+        return apply
 
     @staticmethod
     def __db_path__(url: AbsoluteHttpURL, /) -> str:
@@ -222,13 +241,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         This method its called once and only if the crawler is actually going to be scrape something"""
 
     def __init_subclass__(
-        cls,
-        *,
-        is_abc: bool = False,
-        is_generic: bool = False,
-        is_debug: bool = False,
-        db_path: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"] | None = None,
-        **kwargs: Any,
+        cls, *, is_abc: bool = False, is_generic: bool = False, is_debug: bool = False, **kwargs: Any
     ) -> None:
         assert cls.__name__.endswith("Crawler"), f"{cls.__name__} does not end with 'Crawler'"
         assert cls.__name__ not in Registry.names
@@ -245,9 +258,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         cls.IS_ABC: bool = is_abc
 
         add_to_registry = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
-
-        if db_path:
-            cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[db_path])
 
         if cls.IS_GENERIC:
             cls.SCRAPE_MAPPER_KEYS = ()
@@ -385,11 +395,12 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             with scrape_item.track_changes:
                 scrape_item.url = url = self.transform_url(scrape_item.url)
 
-            if url.path_qs in self._scraped_items:
+            lookup = url.path_qs if self._IGNORE_FRAGMENT else _path_qs_frag(url)
+            if lookup in self._scraped_items:
                 logger.info(f"Skipping {url} as it has already been scraped")
                 return
 
-            self._scraped_items.add(url.path_qs)
+            self._scraped_items.add(lookup)
 
             if not self.ALLOW_EMPTY_PATH and url.path == "/":
                 self.raise_exc(scrape_item, ScrapeError.unsupported())

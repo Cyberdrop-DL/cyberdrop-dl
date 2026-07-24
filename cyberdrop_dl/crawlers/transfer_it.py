@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 
 
 @HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
-class TransferItCrawler(Crawler, db_path="path_qs_frag"):
+@Crawler.db_path_builder("path_qs_frag")
+class TransferItCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")
     DOMAIN: ClassVar[str] = "transfer.it"
