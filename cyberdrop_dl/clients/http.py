@@ -408,7 +408,6 @@ class HTTPConfig:
     headers: dict[str, str] | None = None
     impersonate: str | bool | None = None
     rate_limit: RateLimit | None = None
-    user_agent: str | None = None
 
     __iter__ = DictDataclass.__iter__
 
@@ -430,14 +429,6 @@ class HTTPConfig:
             hdrs.ACCEPT: accept,
         } | kwargs
         return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
-
-    def __post_init__(self) -> None:
-        if self.user_agent:
-            if not self.headers:
-                object.__setattr__(self, "headers", {})
-            assert self.headers is not None
-            self.headers[hdrs.USER_AGENT] = self.user_agent
-            object.__setattr__(self, "user_agent", None)
 
     @classmethod
     def _get(cls, obj: object) -> HTTPConfig | None:

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.utils import m3u8
 
 
-@HTTPConfig(user_agent=CDL_USER_AGENT)
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 class MegaNzCrawler(Crawler, db_path="path_qs_frag"):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {

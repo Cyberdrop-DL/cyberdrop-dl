@@ -58,7 +58,8 @@ _ERROR_CODES = {
 }
 
 
-@HTTPConfig(user_agent=CDL_USER_AGENT, rate_limit=(250, 60))
+@HTTPConfig(rate_limit=(250, 60))
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 class RealDebridCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
     DOMAIN: ClassVar[str] = "real-debrid"

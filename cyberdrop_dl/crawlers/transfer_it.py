@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig(user_agent=CDL_USER_AGENT)
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 class TransferItCrawler(Crawler, db_path="path_qs_frag"):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")

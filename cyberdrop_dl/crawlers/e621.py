@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig(user_agent=f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)", rate_limit=(2, 1))
+@HTTPConfig(rate_limit=(2, 1))
+@HTTPConfig.default_headers(user_agent=f"{CDL_USER_AGENT} (by B05FDD249DF29ED3)")
 class E621Crawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": "/posts/<post_id>",

@@ -23,7 +23,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig(user_agent=CDL_USER_AGENT, rate_limit=(3, 1))
+@HTTPConfig(rate_limit=(3, 1))
+@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": (
