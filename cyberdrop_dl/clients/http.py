@@ -431,7 +431,7 @@ class HTTPConfig:
         return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
 
     @classmethod
-    def _get(cls, obj: object) -> HTTPConfig | None:
+    def get(cls, obj: object) -> HTTPConfig | None:
         return getattr(obj, "__http_config__", None)
 
     def __or__(self, other: HTTPConfig) -> HTTPConfig:
@@ -445,11 +445,11 @@ class HTTPConfig:
 
         return dataclasses.replace(self, **changes)
 
-    def __call__[T: HTTPObject](self, obj: type[T]) -> type[T]:
-        if config := self._get(obj):
-            obj.__http_config__ = config | self
+    def __call__[T](self, obj: type[T]) -> type[T]:
+        if config := self.get(obj):
+            obj.__http_config__ = config | self  # pyright: ignore[reportAttributeAccessIssue]
         else:
-            obj.__http_config__ = self
+            obj.__http_config__ = self  # pyright: ignore[reportAttributeAccessIssue]
         return obj
 
 
