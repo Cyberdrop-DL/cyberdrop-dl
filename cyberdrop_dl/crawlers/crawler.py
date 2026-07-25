@@ -105,7 +105,7 @@ class CrawlerInfo:
     primary_url: AbsoluteHttpURL
     scrape_mapper_keys: tuple[str, ...]
     supported_domains: tuple[str, ...]
-    supported_paths: Mapping[str, tuple[str, ...]]
+    supported_paths: dict[str, tuple[str, ...]]
 
     __iter__ = DictDataclass.__iter__
 

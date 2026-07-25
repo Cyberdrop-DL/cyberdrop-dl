@@ -63,12 +63,15 @@ def main_menu(
 
 
 @app.command
-def show() -> None:
+def show(
+    *,
+    json: Annotated[bool, Parameter(help="Output full site information as a JSON map")] = False,
+) -> None:
     """Show a list of all supported sites"""
     from cyberdrop_dl.commands import supported_sites
 
-    table = supported_sites.as_rich_table()
-    app.console.print(table)
+    content = supported_sites.as_json() if json else supported_sites.as_rich_table()
+    app.console.print(content)
 
 
 @app.command
