@@ -304,7 +304,7 @@ def register_crawler(
     from_user: bool | Literal["raise"] = False,
 ) -> None:
 
-    for domain in crawler.SCRAPE_MAPPER_KEYS:
+    for domain in crawler.INFO.scrape_mapper_keys:
         other = crawlers_map.get(domain)
         if from_user:
             if not other and (match := _best_match(crawlers_map, crawler.PRIMARY_URL.host)):

@@ -26,7 +26,8 @@ from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, enter_context, is_blob_or_svg, m3u8, parse_url, unique
-from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
+from cyberdrop_dl.utils._url import remove_trailing_slash
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, frozen
 from cyberdrop_dl.utils.errors import error_handling_context
 
 if TYPE_CHECKING:
@@ -102,12 +103,20 @@ _DB_PATH_BUILDERS: MappingProxyType[str, URLHasher] = MappingProxyType(
 class CrawlerInfo:
     site: str
     primary_url: AbsoluteHttpURL
+    scrape_mapper_keys: tuple[str, ...]
     supported_domains: tuple[str, ...]
-    supported_paths: SupportedPaths
+    supported_paths: Mapping[str, tuple[str, ...]]
+
+    __iter__ = DictDataclass.__iter__
 
     @classmethod
-    def generic(cls, name: str, paths: SupportedPaths) -> Self:
-        return cls(name, "::GENERIC CRAWLER::", (), paths)  # pyright: ignore[reportArgumentType]
+    def abstract(cls, name: str, site: str, paths: Mapping[str, tuple[str, ...]]) -> Self:
+        return cls(site, f"::{name} CRAWLER::", (), (), paths)  # pyright: ignore[reportArgumentType]
+
+    def __json__(self) -> dict[str, Any]:
+        me = dict(self)
+        me["primary_url"] = str(self.primary_url)
+        return me
 
 
 @frozen(kw_only=False)
@@ -267,36 +276,41 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         _check_init_overrides(cls)
         cls.NAME: str = cls.__name__.removesuffix("Crawler")
         cls.IS_GENERIC: bool = is_generic
-        cls.SUPPORTED_PATHS = _sort_supported_paths(cls.SUPPORTED_PATHS)  # pyright: ignore[reportConstantRedefinition]
+        paths = _sort_supported_paths(cls.SUPPORTED_PATHS)
+        cls.SUPPORTED_PATHS = paths  # pyright: ignore[reportConstantRedefinition, reportAttributeAccessIssue]
         cls.IS_ABC: bool = is_abc
 
         add_to_registry = bool(not is_debug or (is_debug and env.ENABLE_DEBUG_CRAWLERS))
 
         if cls.IS_GENERIC:
-            cls.SCRAPE_MAPPER_KEYS = ()
-            cls.INFO: CrawlerInfo = CrawlerInfo.generic(cls.NAME, cls.SUPPORTED_PATHS)
+            cls.INFO: CrawlerInfo = CrawlerInfo.abstract("GENERIC", cls.NAME, paths)
             if add_to_registry:
                 Registry.generic.add(cls)
             return
 
         if is_abc:
+            cls.INFO = CrawlerInfo.abstract("ABC", cls.NAME, paths)  # pyright: ignore[reportConstantRedefinition]
             if add_to_registry:
                 Registry.abc.add(cls)
             return
 
         if cls.NAME != "RealDebrid":
             Crawler._assert_fields_overrides(cls, "PRIMARY_URL", "DOMAIN", "SUPPORTED_PATHS")
+            cls.PRIMARY_URL = remove_trailing_slash(cls.PRIMARY_URL)  # pyright: ignore[reportConstantRedefinition]
 
         cls.REPLACE_OLD_DOMAINS_REGEX: str | None = "|".join(cls.OLD_DOMAINS) if cls.OLD_DOMAINS else None
         _prepare_supported_domains(cls)
         _validate_supported_paths(cls)
-        cls.SCRAPE_MAPPER_KEYS: tuple[str, ...] = _make_scrape_mapper_keys(cls)  # pyright: ignore[reportConstantRedefinition]
+
         cls.FOLDER_DOMAIN = cls.FOLDER_DOMAIN or cls.DOMAIN.capitalize()  # pyright: ignore[reportConstantRedefinition]
+
+        scrape_keys = _make_scrape_mapper_keys(cls)
         cls.INFO = CrawlerInfo(  # pyright: ignore[reportConstantRedefinition]
             site=cls.FOLDER_DOMAIN,
             primary_url=cls.PRIMARY_URL,
-            supported_domains=_make_wiki_supported_domains(cls.SCRAPE_MAPPER_KEYS),
-            supported_paths=cls.SUPPORTED_PATHS,
+            supported_domains=_make_wiki_supported_domains(scrape_keys),
+            scrape_mapper_keys=scrape_keys,
+            supported_paths=paths,
         )
         if add_to_registry:
             Registry.concrete.add(cls)
@@ -991,11 +1005,11 @@ def _make_wiki_supported_domains(scrape_mapper_keys: tuple[str, ...]) -> tuple[s
     return tuple(sorted(generalize(domain) for domain in scrape_mapper_keys))
 
 
-def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, OneOrTuple[str]]:
-    def try_sort(value: OneOrTuple[str]) -> OneOrTuple[str]:
+def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, tuple[str, ...]]:
+    def try_sort(value: OneOrTuple[str]) -> tuple[str, ...]:
         if isinstance(value, tuple):
             return tuple(sorted(value))
-        return value
+        return (value,)
 
     path_pairs = ((key, try_sort(value)) for key, value in supported_paths.items())
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
