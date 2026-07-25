@@ -106,6 +106,8 @@ class ConfigDataclass:
     __iter__: ClassVar[Final] = DictDataclass.__iter__
 
     def __init_subclass__(cls) -> None:
+        if not fields_names(cls):  # Not a dataclass yet, wait until the @dataclass decorator recreates the class
+            return
         assert cls.__attr_name__
         assert cls.__attr_name__.startswith("__"), f"{cls.__attr_name__ = } must be a dunder name"
         assert cls.__attr_name__ not in CONFIG_REGISTRY, (
