@@ -64,9 +64,9 @@ class HitomiLaCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hitomi.la")
     DOMAIN: ClassVar[str] = "hitomi.la"
-    _SCRAPE_SLOTS: ClassVar[int] = 3
 
     def __post_init__(self) -> None:
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self.api: HitomiAPI = HitomiAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

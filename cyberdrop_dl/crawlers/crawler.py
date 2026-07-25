@@ -173,8 +173,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
 
-    _SCRAPE_SLOTS: ClassVar[int] = 20
-
     disabled: bool = False
 
     def __repr__(self) -> str:
@@ -209,7 +207,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
         self._logger: _CrawlerLogger = _CrawlerLogger(self.FOLDER_DOMAIN)
-        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(self._SCRAPE_SLOTS)
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
         assert self.__dl_config__.server_lock is not None
