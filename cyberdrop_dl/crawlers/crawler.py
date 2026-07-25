@@ -711,7 +711,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     @property
     def cookies(self) -> SiteCookies:
-        return SiteCookies(raw=self.client.cookies.filter_cookies(self.PRIMARY_URL))
+        return SiteCookies(self.client.cookies.filter_cookies(self.PRIMARY_URL))
 
     @final
     def update_cookies(self, cookies: dict[str, Any], url: yarl.URL | None = None) -> None:
