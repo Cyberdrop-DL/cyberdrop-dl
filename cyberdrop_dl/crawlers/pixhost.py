@@ -24,7 +24,6 @@ class PixHostCrawler(Crawler):
         "Thumbnail": "/thumbs/..",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixhost.to")
-    UPDATE_UNSUPPORTED: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "pixhost"
     FOLDER_DOMAIN: ClassVar[str] = "PixHost"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("pixhost.org",)

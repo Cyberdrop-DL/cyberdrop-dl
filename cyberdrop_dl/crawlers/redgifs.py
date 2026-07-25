@@ -77,7 +77,7 @@ class RedGifsCrawler(Crawler):
                 return await self.user(scrape_item, user_name.lower())
             case ["i" | "watch" | "ifr", gif_id]:
                 return await self.gif(scrape_item, _id(gif_id))
-            case [_, _] if self.is_self_subdomain(scrape_item.url):
+            case [_, _] if self.is_subdomain(scrape_item.url):
                 scrape_item.url = _canonical_url(scrape_item.url.name)
                 return await self.gif(scrape_item, scrape_item.url.name)
             case _:

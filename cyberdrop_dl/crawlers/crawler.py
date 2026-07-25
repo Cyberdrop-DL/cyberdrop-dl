@@ -146,7 +146,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
 
-    UPDATE_UNSUPPORTED: ClassVar[bool] = False
     ALLOW_EMPTY_PATH: ClassVar[bool] = False
     NEXT_PAGE_SELECTOR: ClassVar[str] = ""
 
@@ -362,11 +361,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     @property
-    def deep_scrape(self) -> bool:
-        return self.config.deep_scrape
-
-    @final
-    @property
     def origin(self) -> AbsoluteHttpURL:
         return _ORIGIN.get()
 
@@ -441,14 +435,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @staticmethod
     def is_subdomain(url: AbsoluteHttpURL) -> bool:
         return url.host.removeprefix("www.").count(".") > 1
-
-    @classmethod
-    def is_self_subdomain(cls, url: AbsoluteHttpURL) -> bool:
-        primary_domain = cls.PRIMARY_URL.host.removeprefix("www.")
-        other_domain = url.host.removeprefix("www.")
-        if primary_domain == other_domain:
-            return False
-        return primary_domain in other_domain and other_domain.count(".") > primary_domain.count(".")
 
     @final
     async def write_metadata(self, scrape_item: ScrapeItem, name: str, metadata: object) -> None:
@@ -709,11 +695,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     @property
     def cookies(self) -> SiteCookies:
-        return self.filter_cookies(self.PRIMARY_URL)
-
-    @final
-    def filter_cookies(self, url: AbsoluteHttpURL) -> SiteCookies:
-        return SiteCookies(self.client.cookies.filter_cookies(url))
+        return SiteCookies(self.client.cookies.filter_cookies(self.PRIMARY_URL))
 
     @final
     def update_cookies(self, cookies: dict[str, Any], url: yarl.URL | None = None) -> None:
