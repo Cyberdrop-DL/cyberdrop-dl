@@ -82,23 +82,36 @@ class DictDataclass(_DataClass, Protocol):
 
 
 @overload
-def frozen[T](cls: None = None, *, order: bool = False) -> Callable[[type[T]], type[T]]: ...
+def frozen[T](cls: None = None, *, order: bool = False, kw_only: bool = True) -> Callable[[type[T]], type[T]]: ...
 
 
 @overload
-def frozen[T](cls: type[T], *, order: bool = False) -> type[T]: ...
+def frozen[T](cls: type[T], *, order: bool = False, kw_only: bool = True) -> type[T]: ...
 
 
 @dataclass_transform(frozen_default=True, kw_only_default=True)
-def frozen[T](cls: type[T] | None = None, *, order: bool = False) -> Callable[[type[T]], type[T]] | type[T]:
-    fn = dataclasses.dataclass(frozen=True, kw_only=True, order=order, slots=True)
+def frozen[T](
+    cls: type[T] | None = None, *, order: bool = False, kw_only: bool = True
+) -> Callable[[type[T]], type[T]] | type[T]:
+    fn = dataclasses.dataclass(frozen=True, kw_only=kw_only, order=order, slots=True)
     return fn if cls is None else fn(cls)
+
+
+CONFIG_REGISTRY: dict[str, type[ConfigDataclass]] = {}
 
 
 @frozen
 class ConfigDataclass:
     __attr_name__: ClassVar[str]
     __iter__: ClassVar[Final] = DictDataclass.__iter__
+
+    def __init_subclass__(cls) -> None:
+        assert cls.__attr_name__
+        assert cls.__attr_name__.startswith("__"), f"{cls.__attr_name__ = } must be a dunder name"
+        assert cls.__attr_name__ not in CONFIG_REGISTRY, (
+            f"A config with {cls.__attr_name__ = } already exists: {CONFIG_REGISTRY[cls.__attr_name__]!r}"
+        )
+        CONFIG_REGISTRY[cls.__attr_name__] = cls
 
     def _changes(self) -> dict[str, Any]:
         return {k: v for k, v in self if v is not None}

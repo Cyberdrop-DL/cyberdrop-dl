@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, open_graph
@@ -30,6 +30,7 @@ class Selector:
 
 
 @HTTPConfig(rate_limit=(4, 1))
+@DownloadConfig(slots=4)
 class FilesterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": "/d/<slug>",
@@ -37,7 +38,6 @@ class FilesterCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://filester.me")
     DOMAIN: ClassVar[str] = "filester"
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 4
 
     def __post_init__(self) -> None:
         self.api: FilesterAPI = FilesterAPI.from_crawler(self)

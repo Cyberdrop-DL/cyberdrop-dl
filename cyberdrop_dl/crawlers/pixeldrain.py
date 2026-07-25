@@ -7,7 +7,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, final, override
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.models import type_adapter
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -97,6 +97,7 @@ class PixelDrainProxyCrawler(Crawler):
 
 
 @HTTPConfig(rate_limit=(10, 1))
+@DownloadConfig(slots=2)
 class PixelDrainCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
         "pixeldrain.com",
@@ -126,7 +127,6 @@ class PixelDrainCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
     DOMAIN: ClassVar[str] = "pixeldrain"
     FOLDER_DOMAIN: ClassVar[str] = "PixelDrain"
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
 
     def __post_init__(self) -> None:
         self.api: PixelDrainAPI = PixelDrainAPI.from_crawler(self)

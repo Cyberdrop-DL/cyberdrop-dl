@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -24,6 +24,7 @@ class Selector:
 
 
 @HTTPConfig(rate_limit=(1, 6))
+@DownloadConfig(slots=2)
 class XXXBunkerCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/<video_id>",
@@ -35,7 +36,6 @@ class XXXBunkerCrawler(Crawler):
     DOMAIN: ClassVar[str] = "xxxbunker"
     FOLDER_DOMAIN: ClassVar[str] = "XXXBunker"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 2
 
     async def __async_post_init__(self) -> None:
         self.update_cookies({"ageconfirm": "True"})
