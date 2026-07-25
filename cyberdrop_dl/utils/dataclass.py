@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self
 
 from cyberdrop_dl.constants import MISSING
@@ -80,9 +81,10 @@ class DictDataclass(_DataClass, Protocol):
         return cls(**data)
 
 
-class ConfigDataclass(_DataClass, Protocol):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ConfigDataclass:
     __attr_name__: ClassVar[str]
-    __iter__: Final = DictDataclass.__iter__
+    __iter__: ClassVar[Final] = DictDataclass.__iter__
 
     def _changes(self) -> dict[str, Any]:
         return {k: v for k, v in self if v is not None}
@@ -92,7 +94,8 @@ class ConfigDataclass(_DataClass, Protocol):
         return getattr(obj, cls.__attr_name__, None)
 
     # for python <3.13
-    __replace__ = dataclasses.replace
+    if sys.version_info < (3, 13, 0):
+        __replace__ = dataclasses.replace
 
     def __or__(self, other: Self) -> Self:
         return self.__replace__(**other._changes())
