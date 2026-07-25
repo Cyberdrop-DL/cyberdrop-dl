@@ -676,7 +676,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self,
         title: str | None = None,
         id: str | None = None,  # noqa: A002
-        date: datetime.datetime | datetime.date | int | None = None,
+        date: datetime.datetime | datetime.date | float | None = None,
         /,
     ) -> str:
         if not self.separate_posts:
@@ -684,7 +684,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         title_format = self.config.subfolders.separate_posts.format
         if title_format.strip().casefold() == "{default}":
             title_format = self.DEFAULT_POST_TITLE_FORMAT
-        if isinstance(date, int):
+        if isinstance(date, (int, float)):
             date = dates.from_timestamp(date)
 
         post_title, _ = strings.safe_format(title_format, id=id, number=id, date=date, title=title)
