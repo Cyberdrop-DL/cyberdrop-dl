@@ -101,7 +101,6 @@ class ConfigDataclass:
     def get(cls, obj: object) -> Self | None:
         return getattr(obj, cls.__attr_name__, None)
 
-    # for python <3.13
     if sys.version_info < (3, 13, 0):
         __replace__ = dataclasses.replace
 
