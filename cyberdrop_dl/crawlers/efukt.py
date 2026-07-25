@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, dates, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     DATE = "div.videobox span.stat:-soup-contains('Uploaded')"
     TITLE = "div.videobox > div.heading > h1"
@@ -28,6 +29,7 @@ class Selector:
     MEDIA = f"{_IMAGE}, {_VIDEO}"
 
 
+@URLConfig(allow_empty_path=True)
 class EfuktCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/...",
@@ -40,7 +42,6 @@ class EfuktCrawler(Crawler):
     DOMAIN: ClassVar[str] = "efukt.com"
     FOLDER_DOMAIN: ClassVar[str] = "eFukt"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    ALLOW_EMPTY_PATH: ClassVar[bool] = True
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} {title}"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils import fast_cache
@@ -78,3 +78,26 @@ class DictDataclass(_DataClass, Protocol):
         if overrides:
             data.update(overrides)
         return cls(**data)
+
+
+class ConfigDataclass(_DataClass, Protocol):
+    __attr_name__: ClassVar[str]
+    __iter__: Final = DictDataclass.__iter__
+
+    def _changes(self) -> dict[str, Any]:
+        return {k: v for k, v in self if v is not None}
+
+    @classmethod
+    def get(cls, obj: object) -> Self | None:
+        return getattr(obj, cls.__attr_name__, None)
+
+    # for python <3.13
+    __replace__ = dataclasses.replace
+
+    def __or__(self, other: Self) -> Self:
+        return self.__replace__(**other._changes())
+
+    def __call__[T](self, obj: type[T]) -> type[T]:
+        cfg = current_cfg | self if (current_cfg := self.get(obj)) is not None else self
+        setattr(obj, self.__attr_name__, cfg)
+        return obj

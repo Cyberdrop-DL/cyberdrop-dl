@@ -8,7 +8,7 @@ import time
 import warnings
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, Unpack, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, Self, Unpack, final
 
 import aiohttp
 from aiohttp import hdrs
@@ -23,7 +23,7 @@ from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
 from cyberdrop_dl.utils import enter_context, truncated_preview
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.dataclass import ConfigDataclass
 
 if TYPE_CHECKING:
     import ssl
@@ -432,13 +432,12 @@ type RateLimit = tuple[float, float]
 
 @final
 @dataclasses.dataclass(slots=True, frozen=True)
-class HTTPConfig:
+class HTTPConfig(ConfigDataclass):
+    __attr_name__: ClassVar[str] = "__http_config__"
     headers: dict[str, str] | None = None
     impersonate: str | bool | None = None
     rate_limit: RateLimit | None = None
     json_check: JSONCheck | None = None
-
-    __iter__ = DictDataclass.__iter__
 
     @classmethod
     def default_headers(
@@ -459,12 +458,8 @@ class HTTPConfig:
         } | kwargs
         return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
 
-    @classmethod
-    def get(cls, obj: object) -> HTTPConfig | None:
-        return getattr(obj, "__http_config__", None)
-
-    def __or__(self, other: HTTPConfig) -> HTTPConfig:
-        changes = {k: v for k, v in other if v is not None}
+    def __or__(self, other: Self) -> Self:
+        changes = other._changes()
 
         if self.headers and other.headers:
             changes["headers"] = self.headers | other.headers
@@ -473,13 +468,6 @@ class HTTPConfig:
             changes["headers"] = headers.copy()
 
         return dataclasses.replace(self, **changes)
-
-    def __call__[T](self, obj: type[T]) -> type[T]:
-        if config := self.get(obj):
-            obj.__http_config__ = config | self  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            obj.__http_config__ = self  # pyright: ignore[reportAttributeAccessIssue]
-        return obj
 
 
 @final

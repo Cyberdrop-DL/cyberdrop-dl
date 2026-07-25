@@ -107,3 +107,9 @@ def test_http_config_as_decorator() -> None:
     B = config_2(A)
 
     assert HTTPConfig.get(B) == config_1 | config_2
+
+
+def test_http_config_is_frozen() -> None:
+    config_1 = HTTPConfig(headers={"a": "b", "h": "l"}, rate_limit=(3, 1))
+    with pytest.raises(AttributeError):
+        config_1.rate_limit = None  # pyright: ignore[reportAttributeAccessIssue]

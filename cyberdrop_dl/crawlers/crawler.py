@@ -27,6 +27,7 @@ from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, enter_context, is_blob_or_svg, m3u8, parse_url, unique
+from cyberdrop_dl.utils.dataclass import ConfigDataclass
 from cyberdrop_dl.utils.errors import error_handling_context
 
 if TYPE_CHECKING:
@@ -138,15 +139,25 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
         return f"[{self._crawler_name}] {msg}", kwargs
 
 
+@final
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class URLConfig(ConfigDataclass):
+    __attr_name__: ClassVar[str] = "__url_config__"
+    trim: bool | None = None
+    allow_empty_path: bool | None = None
+    ignore_fragment: bool | None = None
+
+
 @HTTPConfig(rate_limit=(25, 1))
+@URLConfig(trim=True, allow_empty_path=False, ignore_fragment=True)
 class Crawler(HTTPMixin, HLSMixin, ABC):
+    __url_config__: ClassVar[URLConfig]
+
     DOMAIN: ClassVar[str]
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
-
-    ALLOW_EMPTY_PATH: ClassVar[bool] = False
     NEXT_PAGE_SELECTOR: ClassVar[str] = ""
 
     DEFAULT_TRIM_URLS: ClassVar[bool] = True
@@ -396,7 +407,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
             self._scraped_items.add(lookup)
 
-            if not self.ALLOW_EMPTY_PATH and url.path == "/":
+            if not self.__url_config__.allow_empty_path and url.path == "/":
                 self.raise_exc(scrape_item, ScrapeError.unsupported())
                 return
 

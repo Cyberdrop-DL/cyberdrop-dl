@@ -14,7 +14,7 @@ from mega.data_structures import Crypto
 
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.progress.scraping import show_msg
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 
 @HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+@URLConfig(allow_empty_path=True)
 @Crawler.db_path_builder("path_qs_frag")
 class MegaNzCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"
@@ -46,7 +47,6 @@ class MegaNzCrawler(Crawler):
         "**NOTE**": "Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://mega.nz")
-    ALLOW_EMPTY_PATH: ClassVar[bool] = True
     DOMAIN: ClassVar[str] = "mega.nz"
     FOLDER_DOMAIN: ClassVar[str] = "MegaNz"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("mega.co.nz",)

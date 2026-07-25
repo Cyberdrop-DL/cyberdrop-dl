@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@URLConfig(allow_empty_path=True)
 class BunkrAlbumsCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Search": "/?search=<query>",
@@ -19,7 +20,6 @@ class BunkrAlbumsCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "Bunkr-Albums"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("bunkr-albums.io",)
     NEXT_PAGE_SELECTOR: ClassVar[str] = "a.btn-ghost:-soup-contains(Next)[href*='search=']"
-    ALLOW_EMPTY_PATH: ClassVar[bool] = True
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
