@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers._kvs import KernelVideoSharingCrawler
+from cyberdrop_dl.crawlers.crawler import URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -12,11 +13,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     TITLE = ".main-container .headline h1"
     VIDEOS = ".list-videos .item a"
 
 
+@URLConfig(trim=False)
 class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/albums/<id>/<name>",
@@ -24,7 +27,6 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
         "Video": "/videos/<id>/<slug>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://thothub.to")
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     DOMAIN: ClassVar[str] = "thothub"
     FOLDER_DOMAIN: ClassVar[str] = "ThotHub"
 

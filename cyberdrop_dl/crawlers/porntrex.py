@@ -4,7 +4,7 @@ import itertools
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers._kvs import extract_kvs_video
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -33,6 +33,7 @@ class Selector:
 TITLE_TRASH = "Free HD ", "Most Relevant ", "New ", "Videos", "Porn", "for:", "New Videos", "Tagged with"
 
 
+@URLConfig(trim=False)
 class PorntrexCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/...",
@@ -47,7 +48,6 @@ class PorntrexCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.porntrex.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "porntrex"
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.name:  # The ending slash is necessary or we get a 404 error

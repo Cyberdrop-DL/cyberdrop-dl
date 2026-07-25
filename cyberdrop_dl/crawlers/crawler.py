@@ -160,7 +160,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
     NEXT_PAGE_SELECTOR: ClassVar[str] = ""
 
-    DEFAULT_TRIM_URLS: ClassVar[bool] = True
     FOLDER_DOMAIN: ClassVar[str] = ""
     PRIMARY_URL: ClassVar[AbsoluteHttpURL]
     _FORUM: ClassVar[bool] = False
@@ -168,7 +167,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     _DOWNLOAD_SLOTS: ClassVar[int | None] = None
     _SCRAPE_SLOTS: ClassVar[int] = 20
     _USE_DOWNLOAD_SERVERS_LOCKS: ClassVar[bool] = False
-    _IGNORE_FRAGMENT: ClassVar[bool] = True
 
     disabled: bool = False
 
@@ -185,10 +183,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @staticmethod
     def db_path_builder(key: Literal["url", "name", "path", "path_qs", "path_qs_frag", "path_frag"]):
 
-        def apply[T: Crawler](c: type[T]) -> type[T]:
-            c.__db_path__ = staticmethod(_DB_PATH_BUILDERS[key])
-            c._IGNORE_FRAGMENT = "frag" not in key  # pyright: ignore[reportConstantRedefinition]
-            return c
+        def apply[T: Crawler](cls: type[T]) -> type[T]:
+            cls.__db_path__ = staticmethod(_DB_PATH_BUILDERS[key])
+            return URLConfig(ignore_fragment="frag" not in key)(cls)
 
         return apply
 
@@ -400,7 +397,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             with scrape_item.track_changes:
                 scrape_item.url = url = self.transform_url(scrape_item.url)
 
-            lookup = url.path_qs if self._IGNORE_FRAGMENT else _path_qs_frag(url)
+            lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
             if lookup in self._scraped_items:
                 logger.info(f"Skipping {url} as it has already been scraped")
                 return
@@ -700,7 +697,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         base = relative_to or cls.PRIMARY_URL
         assert is_absolute_http_url(base)
         if trim is None:
-            trim = cls.DEFAULT_TRIM_URLS
+            trim = cls.__url_config__.trim
+        if trim is None:
+            trim = True
         return parse_url(url, base, trim=trim)
 
     @final

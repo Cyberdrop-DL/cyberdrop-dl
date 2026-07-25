@@ -4,7 +4,7 @@ import urllib.parse
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, URLConfig
 from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json, open_graph
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
+@final
 class Selector:
     ITEM_DESCRIPTION = "p[class*=description-meta]"
     ITEM = "a.image-container"
@@ -29,6 +30,7 @@ class Selector:
     MAIN_IMAGE = css.CssAttributeSelector("div#image-viewer img", "src")
 
 
+@URLConfig(trim=False)
 class CheveretoCrawler(Crawler, is_generic=True):
     SUPPORTED_PATHS: ClassVar[dict[str, str | tuple[str, ...]]] = {
         "Album": (
@@ -54,7 +56,6 @@ class CheveretoCrawler(Crawler, is_generic=True):
         "Direct links": "",
     }
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     CHEVERETO_SUPPORTS_VIDEO: ClassVar[bool] = True
 
     def __init_subclass__(cls, **kwargs: Any) -> None:

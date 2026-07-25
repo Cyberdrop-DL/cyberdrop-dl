@@ -4,7 +4,7 @@ import dataclasses
 from typing import TYPE_CHECKING, ClassVar, Self
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler
+from cyberdrop_dl.crawlers.crawler import Crawler, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -56,6 +56,7 @@ class File:
         )
 
 
+@URLConfig(trim=False)
 class ImagePondCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[dict[str, str | tuple[str, ...]]] = {
         "Image / Video / Archive": (
@@ -75,7 +76,6 @@ class ImagePondCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.imagepond.net")
     DOMAIN: ClassVar[str] = "imagepond.net"
     FOLDER_DOMAIN: ClassVar[str] = "ImagePond"
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

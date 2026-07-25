@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.utils import webdav
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
+@URLConfig(trim=False)
 class OwnCloudCrawler(Crawler, is_generic=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Public Share": ("/s/<share_token>")}
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

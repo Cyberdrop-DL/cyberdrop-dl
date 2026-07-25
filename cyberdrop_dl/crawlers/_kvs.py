@@ -8,7 +8,7 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.utils import css, extr_text, open_graph, parse_url
@@ -67,7 +67,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
         super().__init_subclass__(**kwargs)
         if ensure_trailing_slash:
             cls.transform_url = cls.transform_kvs_url
-            cls.DEFAULT_TRIM_URLS = False
+            _ = URLConfig(trim=False)(cls)
 
     @final
     @classmethod

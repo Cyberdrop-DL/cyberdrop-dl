@@ -5,7 +5,7 @@ import random
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -23,12 +23,12 @@ class Selector:
 
 
 @HTTPConfig(rate_limit=(4, 1))
+@URLConfig(trim=False)
 class APKMirrorCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"APK": "/apk/<developer>/<application>/<release>/<variant>-download"}
     DOMAIN: ClassVar[str] = "apkmirror.com"
     FOLDER_DOMAIN: ClassVar[str] = "APK Mirror"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.apkmirror.com")
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
