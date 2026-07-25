@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self, dataclass_transform
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils import fast_cache
@@ -81,7 +81,15 @@ class DictDataclass(_DataClass, Protocol):
         return cls(**data)
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass_transform(frozen_default=True, kw_only_default=True)
+def frozen[T](cls: type[T] | None = None, *, order: bool = False) -> Callable[[type[T]], type[T]]:
+    fn = dataclasses.dataclass(frozen=True, kw_only=True, order=order, slots=True)
+    if cls is None:
+        return fn
+    return fn(cls)
+
+
+@frozen
 class ConfigDataclass:
     __attr_name__: ClassVar[str]
     __iter__: ClassVar[Final] = DictDataclass.__iter__

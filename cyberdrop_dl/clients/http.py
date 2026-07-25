@@ -23,7 +23,7 @@ from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
 from cyberdrop_dl.utils import enter_context, truncated_preview
-from cyberdrop_dl.utils.dataclass import ConfigDataclass
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
 
 if TYPE_CHECKING:
     import ssl
@@ -431,7 +431,7 @@ type RateLimit = tuple[float, float]
 
 
 @final
-@dataclasses.dataclass(slots=True, frozen=True)
+@frozen
 class HTTPConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__http_config__"
     headers: dict[str, str] | None = None

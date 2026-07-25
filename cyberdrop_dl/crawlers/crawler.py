@@ -27,7 +27,7 @@ from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, enter_context, is_blob_or_svg, m3u8, parse_url, unique
-from cyberdrop_dl.utils.dataclass import ConfigDataclass
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
 from cyberdrop_dl.utils.errors import error_handling_context
 
 if TYPE_CHECKING:
@@ -140,7 +140,7 @@ class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
 
 
 @final
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+@frozen
 class URLConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__url_config__"
     trim: bool | None = None
