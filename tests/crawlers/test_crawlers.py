@@ -217,10 +217,11 @@ def test_load_test_data() -> None:
     test_data = test_cases.load_cases()
     assert len(test_data) > 20
     assert "dropbox" in test_data
-    assert type(test_data["dropbox"]) is list
-    assert len(test_data["dropbox"]) == 4
+    dropbox = test_data["dropbox"]
+    assert type(dropbox) is test_cases.TestCaseModule
+    assert len(dropbox.cases) == 4
 
-    for case in test_data["dropbox"]:
+    for case in dropbox.cases:
         assert type(case) is dict
         assert "url" in case
 

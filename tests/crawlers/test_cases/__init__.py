@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 from pydantic import TypeAdapter
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
 
 class Result(TypedDict):
@@ -41,28 +41,43 @@ class CrawlerTestCase:
         return f"{self.domain} - {self.url}"
 
 
-type TestData = dict[str, list[dict[str, Any]]]
+type TestData = dict[str, TestCaseModule]
 
 _TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
 
 
-def load_cases() -> TestData:
-    test_data: TestData = {}
+@dataclasses.dataclass(slots=True, frozen=True, order=True)
+class TestCaseModule:
+    domain: str
+    file: Path
+    cases: list[dict[str, Any]] = dataclasses.field(hash=False)
+
+
+def load_modules() -> Generator[TestCaseModule]:
     for file in (Path(__file__).parent).iterdir():
         if not file.name.startswith("_") and file.suffix == ".py":
             module_globals = runpy.run_path(str(file), run_name=file.stem)
-            if (domain := module_globals["DOMAIN"]) in test_data:
-                raise RuntimeError(f"Multiple tests files for {domain}")
 
-            test_data[domain] = module_globals["TEST_CASES"]
+            yield TestCaseModule(module_globals["DOMAIN"], file, module_globals["TEST_CASES"])
+
+
+def load_cases() -> TestData:
+    test_data: TestData = {}
+    for module in load_modules():
+        if module.domain in test_data:
+            raise RuntimeError(
+                f"Multiple tests files for {module.domain}: {(module.file, test_data[module.domain].file)}"
+            )
+
+        test_data[module.domain] = module
 
     return test_data
 
 
 def parse_cases(data: TestData) -> list[CrawlerTestCase]:
     test_cases: list[CrawlerTestCase] = []
-    for domain, cases in sorted(data.items()):
-        test_cases.extend(_TEST_CASE_ADAPTER.validate_python({"domain": domain} | case) for case in cases)
+    for domain, module in sorted(data.items()):
+        test_cases.extend(_TEST_CASE_ADAPTER.validate_python({"domain": domain} | case) for case in module.cases)
     return test_cases
 
 
