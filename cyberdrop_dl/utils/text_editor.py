@@ -22,13 +22,19 @@ _UNIX_TEXT_EDITORS: tuple[CMD, ...] = (
 )
 
 
+class OSDefaultCMD(str):
+    __slots__ = ()
+
+
 logger = logging.getLogger(__name__)
 
 
 def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
     cmd = *editor_cmd(), file_path
-    logger.info(f"Opening '{file_path}' with '{cmd[0]}'...")
+    bin_path = cmd[0]
+    msg = "the system's default editor" if type(bin_path) is OSDefaultCMD else f"'{bin_path}'"
+    logger.info(f"Opening '{file_path}' with '{msg}'...")
     _ = subprocess.call(cmd, stderr=subprocess.DEVNULL)
 
 
@@ -43,50 +49,54 @@ def editor_cmd() -> CMD:
 
 def _editor_cmd() -> CMD | None:
     if editor := os.environ.get("EDITOR"):
-        if shutil.which(editor):
-            return (editor,)
+        if cmd := shutil.which(editor):
+            return cmd
 
         import shlex
 
-        cmd = shlex.split(editor)
-        if cmd and shutil.which(cmd[0]):
-            return cmd
+        cmd, *args = shlex.split(editor)
+        if cmd and (bin_path := shutil.which(cmd[0])):
+            return bin_path, *args
 
         msg = f"Editor '{editor}' from env var $EDITOR is not available. Ignoring"
         logger.warning(msg)
 
     if sys.platform == "darwin":
-        return "open", "-t", "-n", "-W"
+        return OSDefaultCMD("open"), "-t", "-n", "-W"
 
     if sys.platform == "win32":
+        return (OSDefaultCMD("start"),)
         return _find_win_editor()
 
     return _find_unix_editor()
 
 
 def _find_win_editor() -> CMD | None:
-    for notepad_pp in map(
+    for path in map(
         os.path.expandvars,
         [
             "%PROGRAMFILES%/Notepad++/notepad++.exe",
             "%PROGRAMFILES(X86)%/Notepad++/notepad++.exe",
+            "notepad++.exe",
         ],
     ):
-        if shutil.which(notepad_pp):
+        if notepad_pp := shutil.which(path):
             return notepad_pp, "-multiInst", "-noPlugin", "-notabbar", "-nosession"
 
-    if shutil.which(notepad := "notepad.exe"):
+    if notepad := shutil.which("notepad.exe"):
         return (notepad,)
+
+    return (OSDefaultCMD("start"),)
 
 
 def _find_unix_editor() -> CMD | None:
     has_desktop_enviroment = any(var in os.environ for var in ("DISPLAY", "WAYLAND_DISPLAY"))
     if has_desktop_enviroment and "SSH_CONNECTION" not in os.environ and _set_xdg_yaml_default_if_none():
-        return ("xdg-open",)
+        return (OSDefaultCMD("xdg-open"),)
 
     for cmd in _UNIX_TEXT_EDITORS:
-        if shutil.which(cmd[0]):
-            return cmd
+        if full_cmd := shutil.which(cmd[0]):
+            return full_cmd
 
 
 def _set_xdg_yaml_default_if_none() -> bool:
