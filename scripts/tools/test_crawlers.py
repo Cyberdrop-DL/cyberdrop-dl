@@ -20,16 +20,16 @@ app = App(
 
 
 def _cases():
+    logger.info("Loading test cases ...")
     from tests.crawlers.test_crawlers import test_cases
 
-    logger.info("Loading test cases ...")
     return test_cases
 
 
 def _crawlers():
+    logger.info("Importing crawlers ...")
     from cyberdrop_dl.crawlers import Registry
 
-    logger.info("Importing crawlers ...")
     return Registry.get_crawlers()
 
 

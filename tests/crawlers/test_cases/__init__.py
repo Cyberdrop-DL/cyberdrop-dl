@@ -1,14 +1,10 @@
-from __future__ import annotations
-
 import dataclasses
 import runpy
+from collections.abc import Generator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 from pydantic import TypeAdapter
-
-if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
 
 
 class Result(TypedDict):
