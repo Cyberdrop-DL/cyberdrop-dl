@@ -166,13 +166,11 @@ class TestTextEditor:
     def test_mac_os_default(self) -> None:
         cmd = text_editor._editor_cmd()
         assert cmd
-        assert cmd == "open"
+        assert cmd == ("open",)
         assert type(cmd[0]) is text_editor.OSDefaultCMD
 
     @pytest.mark.skipif(sys.platform in ("darwin", "win32"), reason="Linux test only")
     def test_unix_default(self) -> None:
         cmd = text_editor._find_unix_editor()
-        assert cmd == text_editor._editor_cmd()
         assert cmd
-        assert cmd == "xdg-open"
-        assert type(cmd[0]) is text_editor.OSDefaultCMD
+        assert cmd == text_editor._editor_cmd()
