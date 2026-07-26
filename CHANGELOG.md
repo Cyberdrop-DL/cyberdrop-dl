@@ -33,7 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed twitter.com and x.com from blocked domains
 - Updated primary URL to pixhost.cc (Pixhost)
-- Always include album id in folder name when a gallery's title is "Untitled Gallery" (Pixhost)
+- Always include album id in folder name when a gallery's title is `Untitled Gallery` (Pixhost)
+- On Windows, use Notepad++ as default text editor if available and `$EDITOR` is not set
 
 ### Removed
 
@@ -45,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This affected sites where multiple files may share identical URL path and query, with the fragment being what uniquely identifies each file (Mega.nz, Koofr, Transfer.it)
 - Download URL extraction (BuzzHeavier)
 - Download of files with no hash information (Filester)
-- Parsing of $EDITOR for paths with spaces
+- Parsing of `$EDITOR` for paths with spaces
 
 ## [10.2.1] - 2026-07-21
 
