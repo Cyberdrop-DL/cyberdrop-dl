@@ -38,6 +38,11 @@ def open(file_path: Path) -> None:  # noqa: A001
 @functools.cache
 def _editor_cmd() -> tuple[str, ...] | None:
     if _CUSTOM_EDITOR:
+        # $EDITOR may be a bare path that itself contains spaces, ex:
+        # 'C:\Program Files\Notepad++\notepad++.exe'. Try the whole value first,
+        # only then treat the trailing words as arguments.
+        if path := shutil.which(_CUSTOM_EDITOR):
+            return (path,)
         name, *rest = _CUSTOM_EDITOR.split(" ")
         path = shutil.which(name)
         if path:

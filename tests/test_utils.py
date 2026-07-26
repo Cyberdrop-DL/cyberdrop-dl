@@ -9,6 +9,7 @@ import pytest
 from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import text_editor
 from cyberdrop_dl.utils._url import fix_multi_slashes, parse_http_url
 
 
@@ -148,3 +149,23 @@ def test_fix_multi_slashes(url: str, expected: str) -> None:
 def test_parse_http(url: str, origin: str | None, expected: str, *, trim: bool) -> None:
     result = parse_http_url(url, AbsoluteHttpURL(origin) if origin else None, trim=trim)
     assert result.human_repr() == expected
+
+
+class TestEditorCmd:
+    _editor = r"C:\Program Files\Notepad++\notepad++.exe"
+
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self) -> Any:
+        text_editor._editor_cmd.cache_clear()
+        yield
+        text_editor._editor_cmd.cache_clear()
+
+    def test_editor_path_with_spaces(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(text_editor, "_CUSTOM_EDITOR", self._editor)
+        monkeypatch.setattr(text_editor.shutil, "which", lambda name: name if name == self._editor else None)
+        assert text_editor._editor_cmd() == (self._editor,)
+
+    def test_editor_with_arguments(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(text_editor, "_CUSTOM_EDITOR", "code --wait")
+        monkeypatch.setattr(text_editor.shutil, "which", lambda name: "/usr/bin/code" if name == "code" else None)
+        assert text_editor._editor_cmd() == ("/usr/bin/code", "--wait")
