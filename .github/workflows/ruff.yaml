@@ -20,5 +20,5 @@ jobs:
           persist-credentials: false
 
       - uses: astral-sh/ruff-action@v4.0.0
-      - run: ruff format --check --diff
+      - run: ruff format --check --diff --output-format github
         if: ${{ !cancelled() }}

@@ -143,6 +143,7 @@ extend-safe-fixes = [
 ignore = [
     "ANN",  # flake8-annotations
     "COM812",  # missing-trailing-comma
+    "CPY001",  # Missing copyright notice at top of file
     "D",  # Documentation
     "E501",  # suppress line-too-long, let formatter decide
     "EM",  # flake8-errmsg
