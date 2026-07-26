@@ -46,19 +46,15 @@ type TestData = dict[str, list[dict[str, Any]]]
 _TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
 
 
-def _load_test_cases(path: Path, test_data: TestData) -> None:
-    module_globals = runpy.run_path(str(path), run_name=path.stem)
-    if (domain := module_globals["DOMAIN"]) in test_data:
-        raise RuntimeError(f"Multiple tests files for {domain}")
-
-    test_data[domain] = module_globals["TEST_CASES"]
-
-
 def load_cases() -> TestData:
     test_data: TestData = {}
-    for file in (Path(__file__).parent / "test_cases").iterdir():
+    for file in (Path(__file__).parent).iterdir():
         if not file.name.startswith("_") and file.suffix == ".py":
-            _load_test_cases(file, test_data)
+            module_globals = runpy.run_path(str(file), run_name=file.stem)
+            if (domain := module_globals["DOMAIN"]) in test_data:
+                raise RuntimeError(f"Multiple tests files for {domain}")
+
+            test_data[domain] = module_globals["TEST_CASES"]
 
     return test_data
 
