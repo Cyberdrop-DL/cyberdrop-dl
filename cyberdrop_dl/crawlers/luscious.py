@@ -148,7 +148,11 @@ class LusciousAPI(API):
             yield map(Picture.parse, pictures)
 
     async def album_list(self, query: Mapping[str, str]) -> AsyncGenerator[map[Album]]:
-        filters = [{"name": i, "value": v} for i, v in query.items() if i not in {"page", "display", "q"}]
+        filters = [
+            {"name": name, "value": value}
+            for name, value in query.items()
+            if name and name not in {"page", "display", "q"}
+        ]
         async for albums in self.gql_pager(
             "AlbumList",
             display=query.get("display", "date_newest"),
