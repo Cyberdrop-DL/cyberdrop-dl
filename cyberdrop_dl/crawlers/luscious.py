@@ -5,7 +5,6 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -25,16 +24,21 @@ GRAPHQL_QUERIES = {
 
 
 class LusciousCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Album": "/albums/..."}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Album": "/albums/<name>_<album_id>",
+        "Search": "/albums/list?tagged=<query>",
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://members.luscious.net")
     DOMAIN: ClassVar[str] = "luscious"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "albums" not in scrape_item.url.parts or "read" in scrape_item.url.parts:
-            raise ValueError
-        if scrape_item.url.name == "list":
-            return await self.search(scrape_item)
-        await self.album(scrape_item)
+        match scrape_item.url.parts[1:]:
+            case ["albums", slug] if album_id := slug.partition("_")[-1]:
+                await self.album(scrape_item, album_id)
+            case ["albums", "list"] if query := scrape_item.url.query.get("tagged"):
+                await self.search(scrape_item, query)
+            case _:
+                raise ValueError
 
     def create_graphql_query(self, operation: str, scrape_item: ScrapeItem, page: int = 1) -> str:
         """Creates a graphql query."""
@@ -63,8 +67,7 @@ class LusciousCrawler(Crawler):
         return json.dumps(data)
 
     @error_handling_wrapper
-    async def album(self, scrape_item: ScrapeItem) -> None:
-        album_id = scrape_item.url.parts[-1].split("_")[-1]
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         results = await self.get_album_results(album_id)
         title: str = ""
         query_name = "AlbumGet"
@@ -81,19 +84,14 @@ class LusciousCrawler(Crawler):
                     await self.handle_file(link, scrape_item, filename, ext)
                 scrape_item.add_children()
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem) -> None:
-        query = scrape_item.url.query.get("tagged", "")
-        if not query:
-            raise ScrapeError(400, "No search query provided")
-
+    async def search(self, scrape_item: ScrapeItem, query: str) -> None:
+        scrape_item.setup_as_forum(f"{query} [search]")
         async for results in self._pager(scrape_item):
             for album in results:
                 album_url = self.parse_url(album["url"])
-                new_scrape_item = scrape_item.create_child(url=album_url)
-                await self.album(new_scrape_item)
+                self.create_task(self.run(scrape_item.create_child(album_url)))
+                scrape_item.add_children()
 
     async def _pager(self, scrape_item: ScrapeItem, *, is_album: bool = False) -> AsyncGenerator[list[dict[str, Any]]]:
         """Generator for album pages."""
