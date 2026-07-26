@@ -107,16 +107,17 @@ def _set_xdg_yaml_default_if_none() -> bool:
     yaml_mime = "application/yaml"
     text_mime = "text/plain"
 
-    def xdg_query_default(mimetype: str) -> str:
-        cmd = "xdg-mime", "query", "default", mimetype
-        process = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        return process.stdout.strip()
-
-    if xdg_query_default(yaml_mime):
+    if _xdg_query_default(yaml_mime):
         return True
 
-    default_text_app = xdg_query_default(text_mime)
+    default_text_app = _xdg_query_default(text_mime)
     if not default_text_app:
         return False
 
     return subprocess.call(["xdg-mime", "default", default_text_app, yaml_mime]) == 0
+
+
+def _xdg_query_default(mimetype: str) -> str:
+    cmd = "xdg-mime", "query", "default", mimetype
+    process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    return process.stdout.strip()
