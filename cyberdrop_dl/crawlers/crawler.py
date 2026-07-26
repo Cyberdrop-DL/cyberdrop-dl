@@ -243,7 +243,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def __post_init__(self) -> None:
         """Override in subclasses to add custom init logic
 
-        This method gets called immediately on class creation"""
+        This method gets called immediately on class creation. This method MUST NOT raise any exception"""
 
     @final
     async def __async_init__(self) -> None:

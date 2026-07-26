@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.exceptions import LoginError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import Deserializer
@@ -18,7 +19,10 @@ if TYPE_CHECKING:
 
 class LusciousCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Album": "/albums/<name>_<album_id>",
+        "Album": (
+            "/albums/<name>_<album_id>",
+            "/albums/<name>_<album_id>?only_animated=true",
+        ),
         "Search": "/albums/list?tagged=<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://members.luscious.net")
@@ -26,6 +30,16 @@ class LusciousCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: LusciousAPI = LusciousAPI.from_crawler(self)
+
+    @override
+    async def __async_post_init__(self) -> None:
+        with self.catch_errors(self.api.GRAPHQL_ENDPOINT), self.disable_on_error("cookies required"):
+            try:
+                cookie_name = next(c for c in self.cookies.raw if c.startswith("sessionid"))
+            except StopIteration:
+                raise LoginError("No session ID found in cookies. Use --cookies to provide logged in cookies") from None
+
+        self.log.debug("Session id cookies name: %s", cookie_name)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -121,8 +135,8 @@ class LusciousAPI(API):
 
     async def album_pictures(self, album_id: str, query: Mapping[str, str]) -> AsyncGenerator[map[Picture]]:
         filters: list[dict[str, Any]] = [{"name": "album_id", "value": album_id}]
-        if query.get("only_animated"):
-            filters.append({"name": "is_animated", "value": 1})
+        if query.get("only_animated") in ("true", "1"):
+            filters.append({"name": "is_animated", "value": "1"})
 
         async for pictures in self.gql_pager(
             "AlbumListOwnPictures",
