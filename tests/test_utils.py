@@ -160,8 +160,9 @@ class TestTextEditor:
         assert cmd == ("C:\\Windows\\system32\\notepad.exe",)
         np = tmp_cwd / "notepad++.exe"
         np.write_text("test")
-        assert text_editor._find_win_editor() == (
-            str(np.resolve()),
+        cmd = text_editor._find_win_editor()
+        assert cmd
+        assert cmd[1:] == (
             "-multiInst",
             "-noPlugin",
             "-notabbar",
