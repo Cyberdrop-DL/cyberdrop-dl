@@ -16,14 +16,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-GRAPHQL_QUERIES = {
-    "AlbumGet": "query AlbumGet($id: ID!) {\n  album {\n    get(id: $id) {\n      ... on Album {\n        ...AlbumStandard\n      }\n      ... on MutationError {\n        errors {\n          code\n          message\n        }\n      }\n    }\n  }\n}\n    \n    fragment AlbumStandard on Album {\n  __typename\n  id\n  title\n  labels\n  description\n  created\n  modified\n  like_status\n  number_of_favorites\n  number_of_dislikes\n  moderation_status\n  marked_for_deletion\n  marked_for_processing\n  number_of_pictures\n  number_of_animated_pictures\n  number_of_duplicates\n  slug\n  is_manga\n  url\n  download_url\n  permissions\n  created_by {\n    id\n    url\n    name\n    display_name\n    user_title\n    avatar_url\n  }\n  content {\n    id\n    title\n    url\n  }\n  language {\n    id\n    title\n    url\n  }\n  tags {\n    category\n    text\n    url\n    count\n  }\n  genres {\n    id\n    title\n    slug\n    url\n  }\n  audiences {\n    id\n    title\n    url\n  }\n  is_featured\n  featured_date\n  featured_by {\n    id\n    url\n    name\n    display_name\n    user_title\n    avatar_url\n  }\n}",
-    "AlbumListOwnPictures": "query AlbumListOwnPictures($input: PictureListInput!) {\n    picture {\n        list(input: $input) {\n            info {\n                ...FacetCollectionInfo\n            }\n            items {\n                ...PictureStandardWithoutAlbum\n            }\n        }\n    }\n}\n\nfragment FacetCollectionInfo on FacetCollectionInfo {\n    page\n    has_next_page\n    has_previous_page\n    total_items\n    total_pages\n    items_per_page\n    url_complete\n    url_filters_only\n}\n\nfragment PictureStandardWithoutAlbum on Picture {\n    __typename\n    id\n    title\n    created\n    like_status\n    number_of_comments\n    number_of_favorites\n    status\n    width\n    height\n    resolution\n    aspect_ratio\n    url_to_original\n    url_to_video\n    is_animated\n    position\n    tags {\n        id\n        category\n        text\n        url\n    }\n    permissions\n    url\n    thumbnails {\n        width\n        height\n        size\n        url\n    }\n}",
-    "PictureListInsideAlbum": "query PictureListInsideAlbum($input: PictureListInput!) {\n  picture {\n    list(input: $input) {\n      info {\n        ...FacetCollectionInfo\n      }\n      items {\n        __typename\n        id\n        title\n        description\n        created\n        like_status\n        number_of_comments\n        number_of_favorites\n        moderation_status\n        width\n        height\n        resolution\n        aspect_ratio\n        url_to_original\n        url_to_video\n        is_animated\n        position\n        permissions\n        url\n        tags {\n          category\n          text\n          url\n        }\n        thumbnails {\n          width\n          height\n          size\n          url\n        }\n      }\n    }\n  }\n}\n    \n    fragment FacetCollectionInfo on FacetCollectionInfo {\n  page\n  has_next_page\n  has_previous_page\n  total_items\n  total_pages\n  items_per_page\n  url_complete\n}",
-    "AlbumListWithPeek": "query AlbumListWithPeek($input: AlbumListInput!) {\n    album {\n        list(input: $input) {\n            info {\n                ...FacetCollectionInfo\n            }\n            items {\n                ...AlbumMinimal\n                peek_thumbnails {\n                    width\n                    height\n                    size\n                    url\n                }\n            }\n        }\n    }\n}\n\nfragment FacetCollectionInfo on FacetCollectionInfo {\n    page\n    has_next_page\n    has_previous_page\n    total_items\n    total_pages\n    items_per_page\n    url_complete\n    url_filters_only\n}\n\nfragment AlbumMinimal on Album {\n    __typename\n    id\n    title\n    labels\n    description\n    created\n    modified\n    number_of_favorites\n    number_of_pictures\n    slug\n    is_manga\n    url\n    download_url\n    cover {\n        width\n        height\n        size\n        url\n    }\n    content {\n        id\n        title\n        url\n    }\n    language {\n        id\n        title\n        url\n    }\n    tags {\n        id\n        category\n        text\n        url\n        count\n    }\n    genres {\n        id\n        title\n        slug\n        url\n    }\n    audiences {\n        id\n        title\n        url\n    }\n}",
-}
-
-
 class LusciousCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/albums/<name>_<album_id>",
@@ -46,11 +38,15 @@ class LusciousCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        img = await self.api.album(album_id)
-        scrape_item.setup_as_album(self.create_title(img.title, img.id), album_id=img.id)
-        results = await self.get_album_results(album_id)
+        album = await self.api.album(album_id)
+        await self._album(scrape_item, album)
 
-        async for images in self.api.album_pictures(img.id, scrape_item.url.query):
+    @error_handling_wrapper
+    async def _album(self, scrape_item: ScrapeItem, album: Album) -> None:
+        scrape_item.setup_as_album(self.create_title(album.title, album.id), album_id=album.id)
+        results = await self.get_album_results(album.id)
+
+        async for images in self.api.album_pictures(album.id, scrape_item.url.query):
             for img in images:
                 src = img.url_to_original
                 if self.check_album_results(src, results):
@@ -64,7 +60,7 @@ class LusciousCrawler(Crawler):
         scrape_item.setup_as_forum(f"{query} [search]")
         async for albums in self.api.album_list(scrape_item.url.query):
             for album in albums:
-                self.create_task(self.run(scrape_item.create_child(album.url)))
+                self.create_task(self._album(scrape_item.create_child(album.url), album))
                 scrape_item.add_children()
 
 
