@@ -160,7 +160,13 @@ class TestTextEditor:
         assert cmd == ("C:\\Windows\\system32\\notepad.exe",)
         np = tmp_cwd / "notepad++.exe"
         np.write_text("test")
-        assert text_editor._find_win_editor() == (str(np), "-multiInst", "-noPlugin", "-notabbar", "-nosession")
+        assert text_editor._find_win_editor() == (
+            str(np.resolve()),
+            "-multiInst",
+            "-noPlugin",
+            "-notabbar",
+            "-nosession",
+        )
 
     @pytest.mark.skipif(sys.platform != "darwin", reason="MAC OS test only")
     def test_mac_os_default(self) -> None:
