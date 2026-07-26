@@ -157,7 +157,7 @@ class TestTextEditor:
     def test_win_default(self, tmp_cwd: Path) -> None:
         cmd = text_editor._find_win_editor()
         assert cmd == text_editor._editor_cmd()
-        assert cmd == ("notepad.exe",)
+        assert cmd == ("C:\\Windows\\system32\\notepad.exe",)
         np = tmp_cwd / "notepad++.exe"
         np.write_text("test")
         assert text_editor._find_win_editor() == (str(np), "-multiInst", "-noPlugin", "-notabbar", "-nosession")
