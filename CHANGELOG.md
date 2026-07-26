@@ -27,11 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Twitter/x.com support
+- `show` command now accepts a `--json` flag to output site information as json
 
 ### Changed
 
 - Removed twitter.com and x.com from blocked domains
-- Update primary URL to pixhost.cc (Pixhost)
+- Updated primary URL to pixhost.cc (Pixhost)
 - Always include album id in folder name when a gallery's title is "Untitled Gallery" (Pixhost)
 
 ### Removed
