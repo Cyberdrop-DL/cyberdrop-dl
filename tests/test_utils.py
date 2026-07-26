@@ -157,7 +157,7 @@ class TestTextEditor:
     def test_win_default(self, tmp_cwd: Path) -> None:
         cmd = text_editor._find_win_editor()
         assert cmd == text_editor._editor_cmd()
-        assert cmd == "notepad.exe"
+        assert cmd == ("notepad.exe",)
         np = tmp_cwd / "notepad++.exe"
         np.write_text("test")
         assert text_editor._find_win_editor() == (str(np), "-multiInst", "-noPlugin", "-notabbar", "-nosession")
@@ -166,7 +166,7 @@ class TestTextEditor:
     def test_mac_os_default(self) -> None:
         cmd = text_editor._editor_cmd()
         assert cmd
-        assert cmd == ("open",)
+        assert cmd == ("open", "-t", "-n", "-W")
         assert type(cmd[0]) is text_editor.OSDefaultCMD
 
     @pytest.mark.skipif(sys.platform in ("darwin", "win32"), reason="Linux test only")
