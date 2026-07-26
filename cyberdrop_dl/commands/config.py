@@ -35,4 +35,4 @@ def edit(*, cli: CLIarguments | None = None) -> None:
 @app.command()
 def new() -> None:
     "Create a new config with default options and print it"
-    app.console.print(Config().dump_yaml())
+    app.console.print(Config().dump_yaml(), soft_wrap=True)
