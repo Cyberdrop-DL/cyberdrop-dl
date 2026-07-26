@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -22,6 +22,7 @@ _UNIX_TEXT_EDITORS: tuple[CMD, ...] = (
 )
 
 
+@final
 class OSDefaultCMD(str):
     __slots__ = ()
 
@@ -33,8 +34,8 @@ def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
     cmd = *editor_cmd(), file_path
     bin_path = cmd[0]
-    msg = "the system's default editor" if type(bin_path) is OSDefaultCMD else f"'{bin_path}'"
-    logger.info(f"Opening '{file_path}' with '{msg}'...")
+    msg = f"the OS's default editor ('{bin_path}')" if type(bin_path) is OSDefaultCMD else f"'{bin_path}'"
+    logger.info(f"Opening '{file_path}' with {msg}...")
     _ = subprocess.call(cmd, stderr=subprocess.DEVNULL)
 
 
@@ -65,7 +66,6 @@ def _editor_cmd() -> CMD | None:
         return OSDefaultCMD("open"), "-t", "-n", "-W"
 
     if sys.platform == "win32":
-        return (OSDefaultCMD("start"),)
         return _find_win_editor()
 
     return _find_unix_editor()
@@ -85,8 +85,6 @@ def _find_win_editor() -> CMD | None:
 
     if notepad := shutil.which("notepad.exe"):
         return (notepad,)
-
-    return (OSDefaultCMD("start"),)
 
 
 def _find_unix_editor() -> CMD | None:
