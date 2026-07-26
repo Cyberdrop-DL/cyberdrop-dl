@@ -4,6 +4,7 @@ import dataclasses
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -60,14 +61,18 @@ class LusciousCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(album.title, album.id), album_id=album.id)
         results = await self.get_album_results(album.id)
 
-        async for images in self.api.album_pictures(album.id, scrape_item.url.query):
-            for img in images:
-                src = img.url_to_original
-                if self.check_album_results(src, results):
+        async for pictures in self.api.album_pictures(album.id, scrape_item.url.query):
+            for pic in pictures:
+                if self.check_album_results(pic.url_to_original, results):
                     continue
 
-                self.create_eager_task(self.direct_file(scrape_item, src))
+                self.create_eager_task(self._picture(scrape_item.copy(), pic))
                 scrape_item.add_children()
+
+    async def _picture(self, scrape_item: ScrapeItem, pic: Picture) -> None:
+        scrape_item.url = pic.url
+        scrape_item.uploaded_at = pic.created
+        await self.direct_file(scrape_item, pic.url_to_original)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
@@ -102,13 +107,15 @@ class Album:
 class Picture:
     id: str
     created: float
-    url_to_original: AbsoluteHttpURL
     is_animated: bool
+    url: AbsoluteHttpURL
+    url_to_original: AbsoluteHttpURL
     url_to_video: AbsoluteHttpURL | None = None
 
     parse = classmethod(_deserialize)
 
 
+@HTTPConfig(rate_limit=(5, 1))
 class LusciousAPI(API):
     GRAPHQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://members.luscious.net/graphql/nobatch/")
 
