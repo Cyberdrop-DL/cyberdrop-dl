@@ -8,6 +8,7 @@ from unittest import mock
 
 import pytest
 
+import tests
 from cyberdrop_dl.crawlers.crawler import compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
@@ -18,6 +19,9 @@ from . import test_cases
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.manager import Manager
+
+
+REPO_ROOT = Path(tests.__file__).parent.parent
 
 
 def _crawler_mock(func: str = "handle_media_item") -> mock._patch[mock.AsyncMock]:
@@ -49,6 +53,7 @@ async def test_crawler(running_manager: Manager, test_case: test_cases.CrawlerTe
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
+            await running_manager.http_client.load_cookie_files([REPO_ROOT / "cookies.txt"])
             await scrape_mapper.run()
             cls = next(
                 (crawler for crawler in scrape_mapper.crawlers.values() if test_case.domain == crawler.DOMAIN),
@@ -119,7 +124,7 @@ def _validate_results(crawler: Crawler, test_case: test_cases.CrawlerTestCase, r
 
                             elif expected_value.startswith("re:"):
                                 expected_value = expected_value.removeprefix("re:")
-                                assert _re_search(expected_value, str(result_value)), (
+                                assert re_search(expected_value, result_value), (
                                     f"{attr_name} for result#{index} is different, "
                                     f"{result_value = } does not match {expected_value!r}"
                                 )
@@ -128,8 +133,15 @@ def _validate_results(crawler: Crawler, test_case: test_cases.CrawlerTestCase, r
             assert expected_value == result_value, f"{attr_name} for result#{index} is different"
 
 
-def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
-    return re.search(expected_value, str(result_value)) or re.search(re.escape(expected_value), str(result_value))
+def _re_search(expected: str, result: str) -> re.Match[str] | None:
+    try:
+        return re.search(expected, str(result))
+    except re.error:
+        pass
+
+
+def re_search(expected: str, result: str) -> re.Match[str] | None:
+    return _re_search(expected, str(result)) or _re_search(re.escape(expected), str(result))
 
 
 @pytest.mark.parametrize(

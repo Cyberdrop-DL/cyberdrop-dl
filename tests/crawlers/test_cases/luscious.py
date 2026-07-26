@@ -4,13 +4,11 @@ TEST_CASES = [
         "url": "https://members.luscious.net/albums/irl-ass_459630",
         "results": [
             {
-                "url": "https://cdnio.luscious.net/Crucifery/459630/2ndozr-01fjfq1pr10wx_01G4AY2ERA1J2MS8H6RC7KXB19.jpg?md5=opP2PFVNd-y44er2GJP3uQ&expires=1785180053",
-                "filename": "2ndozr-01fjfq1pr10wx_01G4AY2ERA1J2MS8H6RC7KXB19.jpg",
+                "url": "re:https://cdnio.luscious.net/Crucifery/459630/",
                 "debrid_url": None,
-                "original_filename": "2ndozr-01fjfq1pr10wx_01G4AY2ERA1J2MS8H6RC7KXB19.jpg",
-                "referer": "https://members.luscious.net/albums/irl-ass_459630",
+                "referer": "re:https://members.luscious.net/pictures/album/irl-ass_459630/id/",
                 "album_id": "459630",
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:IRL Ass (Luscious)",
             },
         ],
