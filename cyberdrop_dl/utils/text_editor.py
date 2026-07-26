@@ -32,7 +32,12 @@ logger = logging.getLogger(__name__)
 
 def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
-    cmd = *editor_cmd(), file_path
+    cmd = _editor_cmd()
+    if not cmd:
+        msg = "No default text editor found"
+        raise ValueError(msg)
+
+    cmd = *cmd, file_path
     bin_path = cmd[0]
     msg = f"the OS's default editor ('{bin_path}')" if type(bin_path) is OSDefaultCMD else f"'{bin_path}'"
     logger.info(f"Opening '{file_path}' with {msg}...")
@@ -40,12 +45,8 @@ def open(file_path: Path) -> None:  # noqa: A001
 
 
 @functools.cache
-def editor_cmd() -> CMD:
-    cmd = _editor_cmd()
-    if not cmd:
-        msg = "No default text editor found"
-        raise ValueError(msg)
-    return cmd
+def editor_cmd() -> CMD | None:
+    return _editor_cmd()
 
 
 def _editor_cmd() -> CMD | None:
