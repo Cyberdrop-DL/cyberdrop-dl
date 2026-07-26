@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Mapping
+    from collections.abc import AsyncGenerator, Callable, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -36,97 +37,120 @@ class LusciousCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["albums", slug] if album_id := slug.partition("_")[-1]:
-                await self.album(scrape_item, album_id)
             case ["albums", "list"] if query := scrape_item.url.query.get("tagged"):
                 await self.search(scrape_item, query)
+            case ["albums", slug] if album_id := slug.partition("_")[-1]:
+                await self.album(scrape_item, album_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        img = await self.api.album(album_id)
+        scrape_item.setup_as_album(self.create_title(img.title, img.id), album_id=img.id)
         results = await self.get_album_results(album_id)
-        album = await self.api.album(album_id)
-        scrape_item.setup_as_album(self.create_title(album.title, album.id), album_id=album.id)
 
-        async for images in self.api.album_images(album.id, scrape_item.url.query):
-            for album in images:
-                src = self.parse_url(album["url_to_original"])
-                if not self.check_album_results(src, results):
-                    filename, ext = self.get_filename_and_ext(src.name)
-                    await self.handle_file(src, scrape_item, filename, ext)
+        async for images in self.api.album_pictures(img.id, scrape_item.url.query):
+            for img in images:
+                src = img.url_to_original
+                if self.check_album_results(src, results):
+                    continue
+
+                self.create_eager_task(self.direct_file(scrape_item, src))
                 scrape_item.add_children()
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         scrape_item.setup_as_forum(f"{query} [search]")
-        async for results in self.api.album_list(scrape_item.url.query):
-            for album in results:
-                album_url = self.parse_url(album["url"])
-                self.create_task(self.run(scrape_item.create_child(album_url)))
+        async for albums in self.api.album_list(scrape_item.url.query):
+            for album in albums:
+                self.create_task(self.run(scrape_item.create_child(album.url)))
                 scrape_item.add_children()
+
+
+_deserialize = Deserializer(
+    converters={
+        "url": lambda url: parse_url(url, LusciousCrawler.PRIMARY_URL),
+        "url_to_original": parse_url,
+        "url_to_video": lambda url: url and parse_url(url),
+    },
+)
+
+
+@dataclasses.dataclass(slots=True)
+class Album:
+    id: str
+    title: str
+    description: str
+    created: float
+    url: AbsoluteHttpURL
+
+    parse = classmethod(_deserialize)
+
+
+@dataclasses.dataclass(slots=True)
+class Picture:
+    id: str
+    created: float
+    url_to_original: AbsoluteHttpURL
+    is_animated: bool
+    url_to_video: AbsoluteHttpURL | None = None
+
+    parse = classmethod(_deserialize)
 
 
 class LusciousAPI(API):
     GRAPHQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://members.luscious.net/graphql/nobatch/")
 
     def __post_init__(self) -> None:
-        self._request_id = itertools.count(1).__next__
+        self._request_id: Callable[[], int] = itertools.count(1).__next__
 
-    def _query(
-        self,
-        name: str,
-        query: str,
-        variables: dict[str, Any],
-    ) -> dict[str, Any]:
-        return {
-            "id": self._request_id(),
-            "operationName": name,
-            "query": query,
-            "variables": variables,
-        }
-
-    async def request_gql(self, operation: str, query: dict[str, Any]) -> dict[str, Any]:
-        api_url = self.GRAPHQL_ENDPOINT.with_query(operationName=operation)
-        resp = await self.request_json(api_url, method="POST", json=query)
+    async def request_gql(self, operation: str, variables: dict[str, Any]) -> dict[str, Any]:
+        gql_url = self.GRAPHQL_ENDPOINT.with_query(operationName=operation)
+        resp = await self.request_json(
+            gql_url,
+            method="POST",
+            json={
+                "id": self._request_id(),
+                "operationName": operation,
+                "query": globals()[operation],
+                "variables": variables,
+            },
+        )
         return resp["data"]
 
     async def album(self, album_id: str) -> Album:
-        resp = await self.request_gql(
-            operation := "AlbumGet",
-            self._query(operation, ALBUM_QUERY, {"id": album_id}),
-        )
-        return deserialize(Album, resp["album"]["get"])
+        resp = await self.request_gql("AlbumGet", {"id": album_id})
+        return Album.parse(resp["album"]["get"])
 
-    def album_images(self, album_id: str, query: Mapping[str, str]):
+    async def album_pictures(self, album_id: str, query: Mapping[str, str]) -> AsyncGenerator[map[Picture]]:
         filters: list[dict[str, Any]] = [{"name": "album_id", "value": album_id}]
         if query.get("only_animated"):
             filters.append({"name": "is_animated", "value": 1})
 
-        return self._pager(
-            "PictureListInsideAlbum",
-            ALBUM_IMAGES_QUERY,
+        async for pictures in self.gql_pager(
+            "AlbumListOwnPictures",
             display=query.get("sorting", "position"),
             filters=filters,
             key="picture",
             init_page=int(query.get("page", 1)),
-        )
+        ):
+            yield map(Picture.parse, pictures)
 
-    def album_list(self, query: Mapping[str, str]):
+    async def album_list(self, query: Mapping[str, str]) -> AsyncGenerator[map[Album]]:
         filters = [{"name": i, "value": v} for i, v in query.items() if i not in {"page", "display", "q"}]
-        return self._pager(
-            "PictureListInsideAlbum",
-            ALBUM_IMAGES_QUERY,
+        async for albums in self.gql_pager(
+            "AlbumList",
             display=query.get("display", "date_newest"),
             filters=filters,
             key="album",
             init_page=int(query.get("page", 1)),
-        )
+        ):
+            yield map(Album.parse, albums)
 
-    async def _pager(  # noqa: PLR0913
+    async def gql_pager(
         self,
         operation: str,
-        query: str,
         *,
         display: str,
         filters: list[dict[str, Any]],
@@ -138,26 +162,19 @@ class LusciousAPI(API):
                 "input": {
                     "display": display,
                     "filters": filters,
-                    "items_per_page": 50,
                     "page": page,
                 },
             }
-            resp = await self.request_gql(operation, self._query(operation, query, variables))
+            resp = await self.request_gql(operation, variables)
             results = resp[key]["list"]
             yield results["items"]
             if not results["info"]["has_next_page"]:
                 break
 
 
-@dataclasses.dataclass(slots=True)
-class Album:
-    id: str
-    title: str
-    description: str
-    created: float
+# ---Queries---
 
-
-ALBUM_QUERY = """
+AlbumGet = """
 query AlbumGet($id: ID!) {
   album {
     get(id: $id) {
@@ -250,44 +267,75 @@ fragment AlbumStandard on Album {
 }
 """
 
-ALBUM_IMAGES_QUERY = """
-query PictureListInsideAlbum($input: PictureListInput!) {
-  picture {
+AlbumListOwnPictures = """
+query AlbumListOwnPictures($input: PictureListInput!) {
+    picture {
+        list(input: $input) {
+            info {
+                ...FacetCollectionInfo
+            }
+            items {
+                ...PictureStandardWithoutAlbum
+            }
+        }
+    }
+}
+
+fragment FacetCollectionInfo on FacetCollectionInfo {
+    page
+    has_next_page
+    has_previous_page
+    total_items
+    total_pages
+    items_per_page
+    url_complete
+    url_filters_only
+}
+
+fragment PictureStandardWithoutAlbum on Picture {
+    __typename
+    id
+    title
+    created
+    like_status
+    number_of_comments
+    number_of_favorites
+    status
+    width
+    height
+    resolution
+    aspect_ratio
+    url_to_original
+    url_to_video
+    is_animated
+    position
+    tags {
+        id
+        category
+        text
+        url
+    }
+    permissions
+    url
+    thumbnails {
+        width
+        height
+        size
+        url
+    }
+}
+"""
+
+
+AlbumList = """
+query AlbumList($input: AlbumListInput!) {
+  album {
     list(input: $input) {
       info {
         ...FacetCollectionInfo
       }
       items {
-        __typename
-        id
-        title
-        description
-        created
-        like_status
-        number_of_comments
-        number_of_favorites
-        moderation_status
-        width
-        height
-        resolution
-        aspect_ratio
-        url_to_original
-        url_to_video
-        is_animated
-        position
-        permissions
-        url
-        tags {
-          category
-          text
-          url
-        }
-        thumbnails {
-          width
-          height
-          size
-          url
-        }
+        ...AlbumInSearchList
       }
     }
   }
@@ -301,5 +349,58 @@ fragment FacetCollectionInfo on FacetCollectionInfo {
   total_pages
   items_per_page
   url_complete
+}
+
+fragment AlbumInSearchList on Album {
+  __typename
+  id
+  title
+  description
+  created
+  modified
+  like_status
+  moderation_status
+  number_of_favorites
+  number_of_dislikes
+  number_of_pictures
+  number_of_animated_pictures
+  number_of_duplicates
+  slug
+  is_manga
+  url
+  download_url
+  labels
+  permissions
+  cover {
+    width
+    height
+    size
+    url
+  }
+  created_by {
+    id
+    url
+    name
+    display_name
+    user_title
+    avatar_url
+  }
+  language {
+    id
+    title
+    url
+  }
+  tags {
+    category
+    text
+    url
+    count
+  }
+  genres {
+    id
+    title
+    url
+    acts_as_warning
+  }
 }
 """

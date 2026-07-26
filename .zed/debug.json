@@ -9,6 +9,8 @@
     "args": [
       "download",
       "--ignore-history",
+      "--cookies",
+      "cookies.txt",
       "--dump-json",
       "--min-free-space",
       "512MB",
