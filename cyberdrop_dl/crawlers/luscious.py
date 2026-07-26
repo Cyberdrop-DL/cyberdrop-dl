@@ -33,13 +33,13 @@ class LusciousCrawler(Crawler):
 
     @override
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.api.GRAPHQL_ENDPOINT), self.disable_on_error("cookies required"):
+        with self.catch_errors(self.api.GRAPHQL_ENDPOINT), self.disable_on_error("Unable to get account credentials"):
             try:
                 cookie_name = next(c for c in self.cookies.raw if c.startswith("sessionid"))
             except StopIteration:
                 raise LoginError("No session ID found in cookies. Use --cookies to provide logged in cookies") from None
-
-        self.log.debug("Session id cookies name: %s", cookie_name)
+            else:
+                self.log.debug("Session id cookie name: %s", cookie_name)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
