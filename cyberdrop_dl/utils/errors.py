@@ -174,7 +174,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     _log_error(self, real_url or url, item, app_error, exc, origin)
 
 
-def _log_error(  # noqa: PLR0913
+def _log_error(  # noqa: PLR0913, PLR0917
     self: _HasManager,
     url: yarl.URL | str,
     item: ScrapeItem | MediaItem | yarl.URL,
