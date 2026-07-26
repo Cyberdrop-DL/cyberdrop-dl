@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
-    cmd = _editor_cmd()
+    cmd = editor_cmd()
     if not cmd:
         msg = "No default text editor found"
         raise ValueError(msg)
