@@ -93,9 +93,9 @@ def _find_unix_editor() -> CMD | None:
     if has_desktop_enviroment and "SSH_CONNECTION" not in os.environ and _set_xdg_yaml_default_if_none():
         return (OSDefaultCMD("xdg-open"),)
 
-    for cmd in _UNIX_TEXT_EDITORS:
-        if full_cmd := shutil.which(cmd[0]):
-            return full_cmd
+    for bin_path, *args in _UNIX_TEXT_EDITORS:
+        if full_path := shutil.which(bin_path):
+            return full_path, *args
 
 
 def _set_xdg_yaml_default_if_none() -> bool:
