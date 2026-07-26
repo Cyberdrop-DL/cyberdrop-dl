@@ -23,7 +23,7 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
 
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -53,17 +53,13 @@ DEFAULT_XF_SELECTORS = MessageBoardSelectors(
 )
 
 
-def _escape(strings: Iterable[str]) -> str:
-    return r"\|".join(strings)
-
-
 class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
-    ATTACHMENT_URL_PARTS = "attachments", "data", "uploads"
+    ATTACHMENT_URL_PARTS: ClassVar[tuple[str, ...]] = "attachments", "data", "uploads"
     THREAD_PART_NAMES: ClassVar[Sequence[str]] = "thread", "topic", "tema", "threads", "topics", "temas"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Attachments": f"/({_escape(ATTACHMENT_URL_PARTS)})/...",
+        "Attachments": f"/{'|'.join(ATTACHMENT_URL_PARTS)}/...",
         "Threads": (
-            f"/({_escape(THREAD_PART_NAMES)})/<thread_name_and_id>",
+            f"/{'|'.join(THREAD_PART_NAMES)}/<thread_name_and_id>",
             "/posts/<post_id>",
             "/goto/<post_id>",
         ),

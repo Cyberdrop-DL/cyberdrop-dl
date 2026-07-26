@@ -59,18 +59,6 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         "Tag": "/tag/<tag_slug>",
         "Post": "/<post_slug>/",
         "All Posts": "/posts/",
-        "Date Range": (
-            "...?before=<date>",
-            "...?after=<date>",
-            "...?before=<date&after=<date>",
-        ),
-        "**NOTE**": """
-
-        For `Date Range`, <date>  must be a valid iso 8601 date, ex: `2022-12-06`.
-
-        `Date Range` can be combined with `Category`, `Tag` and `All Posts`.
-        ex: To only download categories from a date range: ,
-        `/category/<category_slug>?before=<date>`""",
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
     WP_USE_REGEX: ClassVar[bool] = True

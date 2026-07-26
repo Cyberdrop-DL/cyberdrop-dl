@@ -23,6 +23,7 @@ def _as_json() -> dict[str, dict[str, Any]]:
 
 
 def as_json() -> JSON:
+
     from rich.json import JSON
 
     return JSON.from_data(_as_json())
