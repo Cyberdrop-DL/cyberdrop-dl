@@ -73,9 +73,8 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
-
 ```shell
-cyberdrop-dl v10.2.1
+cyberdrop-dl v10.3.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -96,10 +95,10 @@ Run 'cyberdrop-dl' without arguments to start the interactive TUI
 │ --version  Display application version.                                                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-file -i  Text/HTML file with URL(s) to download                                          │
-│ --config-file    YAML file to use as config                                                      │
-│ --cache-file     JSON file to use as cache                                                       │
-│ --database-file  SQLite file to use as database                                                  │
+│ --input-file -i            Text/HTML file with URL(s) to download                                │
+│ --config-file --config -c  YAML file to use as config                                            │
+│ --cache-file               JSON file to use as cache                                             │
+│ --database-file --db       SQLite file to use as database                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
@@ -107,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.2.1
+cyberdrop-dl v10.3.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -119,9 +118,9 @@ Download URLs
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
 │ --input-file -i                   Text/HTML file with URL(s) to download                         │
-│ --config-file                     YAML file to use as config                                     │
+│ --config-file --config -c         YAML file to use as config                                     │
 │ --cache-file                      JSON file to use as cache                                      │
-│ --database-file                   SQLite file to use as database                                 │
+│ --database-file --db              SQLite file to use as database                                 │
 │ --cookies                         File/folder to import cookies from (.txt Netscape files)       │
 │ --deep-scrape --no-deep-scrape    Make additional requests while scraping (slower)               │
 │                                   [default: False]                                               │
@@ -176,6 +175,25 @@ Download URLs
 │                                      [default: False]                                            │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
+│ --crawlers.twitter.cards             Parse and download cards in a post (embeds from thirdparty  │
+│   --crawlers.twitter.no-cards        sites)                                                      │
+│                                      [default: True]                                             │
+│ --crawlers.twitter.threads           Downloads all posts in a thread (All direct replies from OP │
+│   --crawlers.twitter.no-threads      to their own tweet)                                         │
+│                                      [default: True]                                             │
+│ --crawlers.twitter.content-urls      Parse and try to download any URL found inside the text of  │
+│   --crawlers.twitter.no-content-url  a tweet                                                     │
+│   s                                  [default: True]                                             │
+│ --crawlers.twitter.articles.cover -  Download the cover image of articles                        │
+│   -crawlers.twitter.articles.no-cov  [default: True]                                             │
+│   er                                                                                             │
+│ --crawlers.twitter.articles.media -  Download media files in the body of articles                │
+│   -crawlers.twitter.articles.no-med  [default: True]                                             │
+│   ia                                                                                             │
+│ --crawlers.twitter.retweets          Download media from retweets in the user's timeline         │
+│   --crawlers.twitter.no-retweets     [default: False]                                            │
+│ --crawlers.twitter.image-size        [choices: orig, 4096x4096, large, medium, small, thumb]     │
+│                                      [default: orig]                                             │
 │ --crawlers.pawchive.file             Download the main file in a post (if any)                   │
 │   --crawlers.pawchive.no-file        [default: True]                                             │
 │ --crawlers.pawchive.attachments      Download all attachments in a post (may or may not include  │
@@ -308,7 +326,7 @@ Download URLs
 │   --no-dump-responses  excluded)                                                                 │
 │                        [default: False]                                                          │
 │ --flaresolverr         HTTP URL of an existing flaresolverr instance                             │
-│ --proxy                HTTP/HTTPS proxy                                                          │
+│ --proxy --http-proxy   HTTP/HTTPS proxy                                                          │
 │ --rate-limit           Max number of requests per second (only used while scraping)              │
 │                        [default: 25]                                                             │
 │ --connection-timeout   [default: 15]                                                             │
@@ -367,5 +385,4 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
-
 <!-- END_CLI_OVERVIEW -->
