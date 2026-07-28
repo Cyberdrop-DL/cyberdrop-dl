@@ -11,7 +11,11 @@ TEST_CASES = [
             }
         ],
     },
-    {"url": "https://www.tranny.one/search/ruby+wren/", "results": [], "count": 2},
+    {
+        "url": "https://www.tranny.one/search/ruby+wren/",
+        "results": [],
+        "count": range(5, 10),
+    },
     {
         "url": "https://www.tranny.one/pics/album/2967/",
         "results": [

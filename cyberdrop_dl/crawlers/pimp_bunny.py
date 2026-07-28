@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers._kvs import extract_kvs_video
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -43,6 +43,7 @@ def _pagination_query(url: AbsoluteHttpURL) -> dict[str, Any]:
     }
 
 
+@URLConfig(trim=False)
 class PimpBunnyCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Videos": "/videos/...",
@@ -56,7 +57,6 @@ class PimpBunnyCrawler(Crawler):
     DOMAIN: ClassVar[str] = "pimpbunny.com"
     FOLDER_DOMAIN: ClassVar[str] = "PimpBunny"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pimpbunny.com")
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     NEXT_PAGE_SELECTOR: ClassVar[str] = ".pb-pagination-list .next a[href]"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

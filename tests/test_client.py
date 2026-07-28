@@ -18,7 +18,7 @@ def test_initial_state(client: HTTPClient) -> None:
     assert client._cookies is None
     assert client._flaresolverr is None
     assert isinstance(client._ssl_context, ssl.SSLContext)
-    assert client.rate_limits == {}
+    assert client.limiter.per_domain == {}
 
 
 async def test_context_manager(client: HTTPClient) -> None:
@@ -107,3 +107,9 @@ def test_http_config_as_decorator() -> None:
     B = config_2(A)
 
     assert HTTPConfig.get(B) == config_1 | config_2
+
+
+def test_http_config_is_frozen() -> None:
+    config_1 = HTTPConfig(headers={"a": "b", "h": "l"}, rate_limit=(3, 1))
+    with pytest.raises(AttributeError):
+        config_1.rate_limit = None  # pyright: ignore[reportAttributeAccessIssue]

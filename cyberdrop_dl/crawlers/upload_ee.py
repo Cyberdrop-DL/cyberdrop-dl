@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -29,7 +30,13 @@ class UploadEECrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        name = css.select_text(soup, "h1.pageTitle b")
+        try:
+            name = css.select_text(soup, "h1.pageTitle b")
+        except css.SelectorError:
+            if soup.select_one("td:-soup-contains-own('There is no such file')"):
+                raise ScrapeError(404) from None
+            raise
+
         dl_link = self.parse_url(css.select(soup, "a#d_l", "href"))
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(dl_link, scrape_item, name, ext, custom_filename=filename)

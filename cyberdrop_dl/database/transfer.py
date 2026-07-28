@@ -52,7 +52,7 @@ def detect_version(conn: sqlite3.Connection) -> Version | None:
     if "schema_version" in tables:
         versions = _get_applied_versions(conn)
         if versions:
-            return Version.parse(sorted(versions)[-1])
+            return Version.parse(max(versions))
 
     if tables == {"media", "downloads_temp", "coomeno"}:
         return Version(4, 2, 231)

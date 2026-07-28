@@ -6,62 +6,96 @@ import os
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+from typing import TYPE_CHECKING, final
 
-_TEXT_EDITORS = "micro", "nano", "vim"  # Ordered by preference
-_SSH = "SSH_CONNECTION" in os.environ
-_HAS_DESKTOP_ENVIROMENT = any(var in os.environ for var in ("DISPLAY", "WAYLAND_DISPLAY"))
-_CUSTOM_EDITOR = os.environ.get("EDITOR")
-_YAML_MIMETYPE = "application/yaml"
-_TEXT_MIMETYPE = "text/plain"
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
+
+type CMD = Sequence[str]
+
+# Ordered by preference
+_UNIX_TEXT_EDITORS: tuple[CMD, ...] = (
+    ("micro", "-keymenu", "true"),
+    ("nano",),
+    ("vim",),
+)
+
+
+@final
+class OSDefaultCMD(str):
+    __slots__ = ()
+
 
 logger = logging.getLogger(__name__)
 
 
 def open(file_path: Path) -> None:  # noqa: A001
     """Opens file in the OS's text editor."""
-
-    cmd = _editor_cmd()
+    cmd = editor_cmd()
     if not cmd:
         msg = "No default text editor found"
         raise ValueError(msg)
 
     cmd = *cmd, file_path
-    bin_path, *rest = cmd
-    if Path(bin_path).stem == "micro":
-        cmd = bin_path, "-keymenu", "true", *rest
-
-    logger.info(f"Opening '{file_path}' with '{bin_path}'...")
+    bin_path = cmd[0]
+    msg = f"the OS's default editor ('{bin_path}')" if type(bin_path) is OSDefaultCMD else f"'{bin_path}'"
+    logger.info(f"Opening '{file_path}' with {msg}...")
     _ = subprocess.call(cmd, stderr=subprocess.DEVNULL)
 
 
 @functools.cache
-def _editor_cmd() -> tuple[str, ...] | None:
-    if _CUSTOM_EDITOR:
-        name, *rest = _CUSTOM_EDITOR.split(" ")
-        path = shutil.which(name)
-        if path:
-            return path, *rest
-        msg = f"Editor '{_CUSTOM_EDITOR}' from env bar $EDITOR is not available. Ignoring"
+def editor_cmd() -> CMD | None:
+    return _editor_cmd()
+
+
+def _editor_cmd() -> CMD | None:
+    if editor := os.environ.get("EDITOR"):
+        if cmd := shutil.which(editor):
+            return cmd
+
+        import shlex
+
+        cmd, *args = shlex.split(editor)
+        if cmd and (bin_path := shutil.which(cmd)):
+            return bin_path, *args
+
+        msg = f"Editor '{editor}' from env var $EDITOR is not available. Ignoring"
         logger.warning(msg)
 
     if sys.platform == "darwin":
-        return "open", "-a", "TextEdit"
+        return OSDefaultCMD("open"), "-t", "-n", "-W"
 
     if sys.platform == "win32":
-        return ("notepad.exe",)
+        return _find_win_editor()
 
-    if _HAS_DESKTOP_ENVIROMENT and not _SSH and _set_xdg_yaml_default_if_none():
-        return ("xdg-open",)
-
-    if fallback_editor := _find_text_editor():
-        return (fallback_editor,)
+    return _find_unix_editor()
 
 
-def _find_text_editor() -> str | None:
-    for editor in _TEXT_EDITORS:
-        if bin_path := shutil.which(editor):
-            return bin_path
+def _find_win_editor() -> CMD | None:
+    for path in map(
+        os.path.expandvars,
+        [
+            "%PROGRAMFILES%/Notepad++/notepad++.exe",
+            "%PROGRAMFILES(X86)%/Notepad++/notepad++.exe",
+            "notepad++.exe",
+        ],
+    ):
+        if notepad_pp := shutil.which(path):
+            return notepad_pp, "-multiInst", "-noPlugin", "-notabbar", "-nosession"
+
+    if notepad := shutil.which("notepad.exe"):
+        return (notepad,)
+
+
+def _find_unix_editor() -> CMD | None:
+    has_desktop_enviroment = any(var in os.environ for var in ("DISPLAY", "WAYLAND_DISPLAY"))
+    if has_desktop_enviroment and "SSH_CONNECTION" not in os.environ and _set_xdg_yaml_default_if_none():
+        return (OSDefaultCMD("xdg-open"),)
+
+    for bin_path, *args in _UNIX_TEXT_EDITORS:
+        if full_path := shutil.which(bin_path):
+            return full_path, *args
 
 
 def _set_xdg_yaml_default_if_none() -> bool:
@@ -70,17 +104,20 @@ def _set_xdg_yaml_default_if_none() -> bool:
 
     Returns `True` if a default app is now associated, `False` if setting the default failed
     """
+    yaml_mime = "application/yaml"
+    text_mime = "text/plain"
 
-    def xdg_query_default(mimetype: str) -> str:
-        cmd = "xdg-mime", "query", "default", mimetype
-        process = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        return process.stdout.strip()
-
-    if xdg_query_default(_YAML_MIMETYPE):
+    if _xdg_query_default(yaml_mime):
         return True
 
-    default_text_app = xdg_query_default(_TEXT_MIMETYPE)
+    default_text_app = _xdg_query_default(text_mime)
     if not default_text_app:
         return False
 
-    return subprocess.call(["xdg-mime", "default", default_text_app, _YAML_MIMETYPE]) == 0
+    return subprocess.call(["xdg-mime", "default", default_text_app, yaml_mime]) == 0
+
+
+def _xdg_query_default(mimetype: str) -> str:
+    cmd = "xdg-mime", "query", "default", mimetype
+    process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    return process.stdout.strip()

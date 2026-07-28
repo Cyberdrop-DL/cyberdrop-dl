@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -21,6 +21,7 @@ class Selector:
 
 
 @HTTPConfig(rate_limit=(3, 10))
+@URLConfig(trim=False)
 class LuxureTVCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/videos/<name>-<id>.html",
@@ -28,7 +29,6 @@ class LuxureTVCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "luxuretv"
     FOLDER_DOMAIN: ClassVar[str] = "LuxureTV"
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://luxuretv.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 

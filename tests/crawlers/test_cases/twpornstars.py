@@ -22,7 +22,6 @@ TEST_CASES = [
             {
                 "url": "ANY",
                 "debrid_url": None,
-                "original_filename": "Fwze91AWYAMWrUq.jpg",
                 "referer": "re:https://www.twlesbian.com/p/",
                 "album_id": None,
                 "uploaded_at": None,

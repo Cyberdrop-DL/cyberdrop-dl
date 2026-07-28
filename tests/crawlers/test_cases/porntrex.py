@@ -7,17 +7,12 @@ TEST_CASES = [
                 "url": "https://www.porntrex.com/video/3001819",
                 "debrid_url": "re:/get_file/",
                 "filename": "A pandemic will not stop the two lovers [3001819][1080p].mp4",
-                "original_filename": "3001819_1080p.mp4",
+                "original_filename": "A pandemic will not stop the two lovers",
                 "download_folder": "re:Loose Files (Porntrex)",
                 "referer": "https://www.porntrex.com/video/3001819",
                 "uploaded_at": None,
             }
         ],
-    },
-    {
-        "url": "https://www.porntrex.com/search/song/",
-        "results": [{"url": "ANY", "download_folder": "re:song [search] (Porntrex)", "album_id": None}],
-        "count": range(255, 300),
     },
     {
         "url": "https://www.porntrex.com/albums/57737/brandi-love-set-35/",
@@ -31,5 +26,16 @@ TEST_CASES = [
             }
         ],
         "count": 376,
+    },
+    {
+        "url": "https://www.porntrex.com/search/song/",
+        "results": [
+            {
+                "url": "ANY",
+                "download_folder": "re:song [search] (Porntrex)",
+                "album_id": None,
+            }
+        ],
+        "count": range(240, 300),
     },
 ]

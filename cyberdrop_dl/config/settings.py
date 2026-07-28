@@ -321,7 +321,7 @@ class Network(ConfigGroup):
     flaresolverr: FalsyAsNone[HttpURL] = None
     "HTTP URL of an existing flaresolverr instance"
 
-    proxy: FalsyAsNone[HttpURL] = None
+    proxy: Annotated[FalsyAsNone[HttpURL], Parameter(alias=("http-proxy"))] = None
     "HTTP/HTTPS proxy"
 
     rate_limit: PositiveFloat = 25

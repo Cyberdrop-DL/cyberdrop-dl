@@ -40,8 +40,7 @@ class WeTransferCrawler(Crawler):
             case _:
                 raise ValueError
 
-    @classmethod
-    def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
+    def __json_resp_check__(self, json_resp: dict[str, Any], resp: AbstractResponse[Any]) -> None:
         if json_resp.get("direct_link"):
             return
 

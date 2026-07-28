@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, DownloadConfig, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -26,7 +26,9 @@ class Selector:
     )
 
 
+@URLConfig(allow_empty_path=True)
 @HTTPConfig(rate_limit=(1, 2))
+@DownloadConfig(slots=1)
 class OneFichierCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
         "1fichier.com",
@@ -44,10 +46,9 @@ class OneFichierCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": "?<file_id>",
     }
-    ALLOW_EMPTY_PATH: ClassVar[bool] = True
+
     DOMAIN: ClassVar[str] = "1fichier"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://1fichier.com")
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
 
     @override
     async def __async_post_init__(self) -> None:

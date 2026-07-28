@@ -21,7 +21,7 @@ from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
+    from collections.abc import AsyncGenerator, Generator, Iterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -64,9 +64,9 @@ class HitomiLaCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://hitomi.la")
     DOMAIN: ClassVar[str] = "hitomi.la"
-    _SCRAPE_SLOTS: ClassVar[int] = 3
 
     def __post_init__(self) -> None:
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self.api: HitomiAPI = HitomiAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -214,12 +214,13 @@ class Gallery(DictDataclass):
     videofilename: str | None = None
 
 
-class HitomiAPI(API):
-    headers: ClassVar[Mapping[str, str]] = {
+@HTTPConfig(
+    headers={
         "Referer": "https://hitomi.la",
         "Origin": "https://hitomi.la",
     }
-
+)
+class HitomiAPI(API):
     def __post_init__(self) -> None:
         self.servers = cached_fn(self.servers, ttl=40 * 60)
 
@@ -231,7 +232,7 @@ class HitomiAPI(API):
 
     async def gallery(self, gallery_id: str) -> Gallery:
         url = _LTN_SERVER / f"galleries/{gallery_id}.js"
-        js_text = await self.request_text(url, headers=self.headers)
+        js_text = await self.request_text(url)
         gallery = _parse_gallery(js_text)
         if gallery.blocked:
             raise ScrapeError(403)
@@ -251,7 +252,7 @@ class HitomiAPI(API):
         return sorted(results, reverse=True)
 
     async def _iter_nozomi(self, url: AbsoluteHttpURL) -> AsyncGenerator[tuple[int, ...]]:
-        async with self.request(url, headers=self.headers) as response:
+        async with self.request(url) as response:
             async for chunk in response.iter_chunked(1024):
                 yield _decode_nozomi_resp(chunk)
 

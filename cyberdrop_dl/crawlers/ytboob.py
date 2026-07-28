@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(slots=True)
 class Video:
     title: str
-    uploaded_at: int
+    uploaded_at: float
     src: AbsoluteHttpURL
     thumbnail: AbsoluteHttpURL
 

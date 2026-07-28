@@ -35,6 +35,6 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
             case _:
                 raise ValueError
 
-    def _extract_upload_date(self, soup: BeautifulSoup) -> int | None:
+    def _extract_upload_date(self, soup: BeautifulSoup) -> float | None:
         date_str: str = css.select(soup, 'meta[itemprop="uploadDate"]', "content")
         return self.parse_iso_date(date_str)

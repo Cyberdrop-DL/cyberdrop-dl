@@ -17,7 +17,7 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Mapping
+    from collections.abc import Callable, Generator
 
     from bs4 import BeautifulSoup
     from curl_cffi.requests.session import HttpMethod
@@ -221,22 +221,24 @@ class BunkrCrawler(Crawler):
         return await self.request_soup(url)
 
 
+@HTTPConfig(
+    headers={
+        "Referer": "https://dl.bunkr.cr/",
+        "Origin": "https://dl.bunkr.cr",
+    }
+)
 class BunkrAPI(API):
     DL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://dl.bunkr.cr/api/_001_v2")
     SIGN_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://glb-apisign.cdn.cr/sign")
-    headers: Mapping[str, str] = {
-        "Referer": str(DL_ENDPOINT.origin()) + "/",
-        "Origin": str(DL_ENDPOINT.origin()),
-    }
 
     async def download(self, file_id: str) -> tuple[AbsoluteHttpURL, str | None]:
-        resp = await self.request_json(self.DL_ENDPOINT, headers=self.headers, json={"id": file_id})
+        resp = await self.request_json(self.DL_ENDPOINT, json={"id": file_id})
         url = self.parse_url(resp["mediafiles"]).with_path(resp["path"])
         return url, resp.get("original")
 
     async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
         api_url = self.SIGN_ENDPOINT.with_query(path=src.path)
-        resp = await self.request_json(api_url, headers=self.headers)
+        resp = await self.request_json(api_url)
         return src.with_query(token=resp["token"], ex=resp["ex"])
 
 

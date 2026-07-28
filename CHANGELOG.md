@@ -22,21 +22,41 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.3.0] - UNRELEASED
+## [10.3.0] - 2026-07-28
 
 ### Added
 
 - Twitter/x.com support
+- `show` command now accepts a `--json` flag to output sites as a JSON array
+- New CLI aliases for `--config-file`: `--config`, `-c`
+- New CLI alias for `--database-file`: `--db`
+- New CLI alias for `--proxy`: `--http-proxy`
 
 ### Changed
 
 - Removed twitter.com and x.com from blocked domains
+- Updated primary URL to pixhost.cc (Pixhost)
+- Always include album id in folder name when a gallery's title is `Untitled Gallery` (Pixhost)
+- On Windows, use Notepad++ as default text editor (if available) when `$EDITOR` is not set
+- Use impersonation by default (Rumble)
+
+### Removed
+
+- Ranoz.gg support (no longer exists)
+- HiAnime support (no longer exists)
 
 ### Fixed
 
 - Some URLs being wrongly skipped as duplicates when using any of the `retry` options if they came from the same collection/folder/album.
   This affected sites where multiple files may share identical URL path and query, with the fragment being what uniquely identifies each file (Mega.nz, Koofr, Transfer.it)
 - Download URL extraction (BuzzHeavier)
+- Download URL extraction (FuckingFast)
+- Download URL extraction (Odnoklassniki / Ok.ru)
+- Download of files with no hash information (Filester)
+- Videos downloaded with no extension (Porntrex)
+- Date parsing (nsfw.xxx)
+- Parsing of `$EDITOR` for paths with spaces
+- Handle delete files (Upload.ee)
 
 ## [10.2.1] - 2026-07-21
 

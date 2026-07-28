@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict
 from bs4 import BeautifulSoup
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -27,6 +27,7 @@ class ImagePost(TypedDict):
 
 
 @HTTPConfig(rate_limit=(3, 10))
+@DownloadConfig(slots=1)
 class FourChanCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Board": "/<board>",
@@ -34,7 +35,6 @@ class FourChanCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://boards.4chan.org")
     DOMAIN: ClassVar[str] = "4chan"
-    _DOWNLOAD_SLOTS: ClassVar[int | None] = 1
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

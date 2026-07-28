@@ -46,8 +46,8 @@ class RaceResult[T]:
 
 @contextlib.contextmanager
 def ctx(
-    max_workers: int | None | MISSING = MISSING,  # pyright: ignore[reportInvalidTypeForm]
-    timeout: float | None | MISSING = MISSING,  # pyright: ignore[reportInvalidTypeForm]
+    max_workers: int | MISSING | None = MISSING,  # pyright: ignore[reportInvalidTypeForm]
+    timeout: float | MISSING | None = MISSING,  # pyright: ignore[reportInvalidTypeForm]
 ) -> Generator[None]:
     with contextlib.ExitStack() as stack:
         if max_workers is not MISSING:

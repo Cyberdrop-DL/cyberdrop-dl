@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -33,9 +33,18 @@ class FuckingFastCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
+        soup = await self.request_soup(scrape_item.url, impersonate=True)
         name = css.page_title(soup)
-        dl_link = extr_text(str(soup), 'window.open("https:', ")").strip('"')
-        link = self.parse_url(f"https:{dl_link}")
-        filename, ext = self.get_filename_and_ext(name)
-        await self.handle_file(scrape_item.url, scrape_item, name, ext, debrid_link=link, custom_filename=filename)
+        hx_url = self.parse_url(css.select(soup, ".link-button", "hx-post"))
+        async with self.request(
+            hx_url,
+            method="POST",
+            headers={
+                "HX-Current-URL": str(scrape_item.url),
+                "HX-Request": "true",
+            },
+        ) as resp:
+            src = self.parse_url(resp.headers["hx-redirect"])
+
+        filename, ext = self.get_filename_and_ext(name, assume_ext=".zip")
+        await self.handle_file(scrape_item.url, scrape_item, name, ext, debrid_link=src, custom_filename=filename)

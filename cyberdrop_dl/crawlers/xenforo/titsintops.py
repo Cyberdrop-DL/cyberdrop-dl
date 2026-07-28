@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -28,7 +28,9 @@ class TitsInTopsCrawler(XenforoCrawler):
     ) -> AbsoluteHttpURL:
         return super().parse_url(_query_to_path(str(url)), relative_to, trim=trim)
 
-    def is_username_or_attachment(self, link_obj: Tag) -> bool:
+    @classmethod
+    @override
+    def is_username_or_attachment(cls, link_obj: Tag) -> bool:
         text = css.text(link_obj)
         if "view attachment" in text.lower():
             return True

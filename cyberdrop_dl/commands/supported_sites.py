@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import TYPE_CHECKING
-
-from rich.table import Table
-from rich.text import Text
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+
+    from rich.json import JSON
+    from rich.table import Table
 
     from cyberdrop_dl.crawlers.crawler import CrawlerInfo
 
@@ -15,11 +15,23 @@ if TYPE_CHECKING:
 def _gen_crawlers_info() -> list[CrawlerInfo]:
     from cyberdrop_dl.crawlers import Registry
 
-    infos = (crawler.INFO for crawler in Registry.get_crawlers(generic=True))
-    return sorted(infos, key=lambda x: x.site.casefold())
+    return sorted((crawler.INFO for crawler in Registry.get_crawlers(generic=True)), key=lambda x: x.site.casefold())
+
+
+def as_json() -> dict[str, dict[str, Any]]:
+    return {info.site: info.__json__() for info in _gen_crawlers_info()}
+
+
+def as_rich_json() -> JSON:
+    from rich.json import JSON
+
+    return JSON.from_data(as_json())
 
 
 def as_rich_table() -> Table:
+    from rich.table import Table
+    from rich.text import Text
+
     table = Table(
         title=Text("cyberdrop-dl supported sites", style="green"),
         show_lines=True,
@@ -31,7 +43,7 @@ def as_rich_table() -> Table:
     for crawler_info in _gen_crawlers_info():
         table.add_row(
             crawler_info.site,
-            str(crawler_info.primary_url).rstrip("/"),
+            str(crawler_info.primary_url),
             "\n".join(crawler_info.supported_domains),
         )
 

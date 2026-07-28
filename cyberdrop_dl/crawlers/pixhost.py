@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -11,23 +12,24 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     GALLERY_TITLE = "a.link h2"
     GALLERY_IMAGES = "div.images a img"
     IMAGE = "img.image-img"
 
 
+@Registry.database.fix_referer
 class PixHostCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Gallery": "/gallery/<gallery_id>",
         "Image": "/show/<image_id>",
         "Thumbnail": "/thumbs/..",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixhost.to")
-    UPDATE_UNSUPPORTED: ClassVar[bool] = True
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixhost.cc")
     DOMAIN: ClassVar[str] = "pixhost"
     FOLDER_DOMAIN: ClassVar[str] = "PixHost"
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("pixhost.org",)
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("pixhost.org", "pixhost.to")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -48,6 +50,8 @@ class PixHostCrawler(Crawler):
     async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.GALLERY_TITLE)
+        if title.casefold() == "untitled gallery" and not self.config.subfolders.include.album_id:
+            title = f"{title} {album_id}"
         title = self.create_title(title, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
         should_download = await self.make_album_checker(album_id)

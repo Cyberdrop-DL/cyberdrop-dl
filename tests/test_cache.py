@@ -113,6 +113,10 @@ def test_invalid_cache(logs: pytest.LogCaptureFixture) -> None:
     assert logs.messages == ["Invalid cache entry a.b, ignoring"]
 
 
+def local_cache() -> dict[str, Any]:
+    return _IN_MEMORY_CACHE["tests"]["test_cache"]
+
+
 async def test_cache_fn() -> None:
 
     call = 0
@@ -135,7 +139,7 @@ async def test_cache_fn() -> None:
     assert await fn2() == 2
     await asyncio.sleep(0.2 + 0.1)
     assert await fn2() == 3
-    assert _IN_MEMORY_CACHE["test_cache"]["test_cache_fn"]["<locals>"] == {
+    assert local_cache()["test_cache_fn"]["<locals>"] == {
         "update": {
             "value": 1,
             "ttl": None,
@@ -148,7 +152,7 @@ async def test_cache_fn() -> None:
         },
     }
     fn.clear()
-    assert "update" not in _IN_MEMORY_CACHE["test_cache"]["test_cache_fn"]["<locals>"]
+    assert "update" not in local_cache()["test_cache_fn"]["<locals>"]
     assert await fn() == 4
 
 

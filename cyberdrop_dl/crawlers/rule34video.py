@@ -46,14 +46,14 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
             case ["video" | "videos", _, *_]:
                 return await self.video(scrape_item)
             case ["search" as type_, query]:
-                return await self.search(scrape_item, type_, query)
+                return await self.search(scrape_item, query, type_)
             case ["tags" | "categories" | "members" | "models" as type_, _]:
-                return await self.search(scrape_item, type_)
+                return await self.search(scrape_item, None, type_)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
+    async def search(self, scrape_item: ScrapeItem, query: str | None = None, type_: str = "") -> None:
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.TITLE, decompose="span")
         for trash in ("Videos for: ", "Tagged with "):

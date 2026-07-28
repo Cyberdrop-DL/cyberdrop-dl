@@ -1,4 +1,4 @@
-DOMAIN = "efukt_com"
+DOMAIN = "efukt.com"
 TEST_CASES = [
     {
         "url": "https://efukt.com/24528_That_One_Friend.html",

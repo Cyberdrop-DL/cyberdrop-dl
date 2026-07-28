@@ -8,7 +8,7 @@ import time
 import warnings
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, Unpack, final
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, Unpack, final, override
 
 import aiohttp
 from aiohttp import hdrs
@@ -22,11 +22,11 @@ from cyberdrop_dl.clients.request import Request, RequestParams
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.utils import enter_context, truncated_preview
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
 
 if TYPE_CHECKING:
-    import ssl
     from collections.abc import AsyncGenerator, Awaitable, Callable
     from pathlib import Path
 
@@ -37,12 +37,12 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
+
+type RequestContext = contextlib.AbstractAsyncContextManager[AbstractResponse[Any]]
+type RateLimit = tuple[float, float]
 type JSONCheck = Callable[[Any, AbstractResponse[Any]], None]
 
 JSON_CHECK: ContextVar[JSONCheck | None] = ContextVar("JSON_CHECK", default=None)
-
-
-RequestContext = contextlib._AsyncGeneratorContextManager[AbstractResponse[Any]]  # pyright: ignore[reportPrivateUsage]
 
 logger = logging.getLogger(__name__)
 
@@ -74,39 +74,35 @@ class RequestDoneCallback(Protocol):
     ) -> None: ...
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class HTTPLimiter:
+    global_: aio.RateLimiter
+    downloads: asyncio.Semaphore
+    per_domain: dict[str, aio.RateLimiter] = dataclasses.field(default_factory=dict)
+
+    def __setitem__(self, domain: str, rate: RateLimit) -> None:
+        self.per_domain[domain] = aio.RateLimiter.w_no_burst(*rate)
+
+
 @final
-@dataclasses.dataclass(slots=True)
 class HTTPClient:
-    config: Config
     request_done_callback: RequestDoneCallback | None = None
-    impersonate: (
-        Literal[
-            "chrome",
-            "edge",
-            "safari",
-            "safari_ios",
-            "chrome_android",
-            "firefox",
-        ]
-        | None
-    ) = dataclasses.field(init=False)
 
-    rate_limits: dict[str, aio.RateLimiter] = dataclasses.field(init=False, default_factory=dict)
-    global_rate_limiter: aio.RateLimiter = dataclasses.field(init=False)
-    global_download_limiter: asyncio.Semaphore = dataclasses.field(init=False)
+    def __init__(self, config: Config) -> None:
+        self.config = config
+        self.limiter = HTTPLimiter(
+            aio.RateLimiter.w_no_burst(config.network.rate_limit),
+            asyncio.Semaphore(config.downloads.concurrency),
+        )
 
-    _ssl_context: ssl.SSLContext | Literal[False] = dataclasses.field(init=False)
-    _cookies: aiohttp.CookieJar | None = dataclasses.field(init=False, default=None)
-    _flaresolverr: flaresolverr.Client | None = dataclasses.field(init=False, default=None)
-    _curl_session: AsyncSession[CurlResponse] | None = dataclasses.field(init=False, default=None)
-    _session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
-    _download_session: aiohttp.ClientSession = dataclasses.field(init=False, repr=False)
+        self._ssl_context = tcp.create_ssl_context(config.network.ssl_context)
+        self._cookies: aiohttp.CookieJar | None = None
+        self._flaresolverr: flaresolverr.Client | None = None
+        self._curl_session: AsyncSession[CurlResponse] | None = None
+        self._session: aiohttp.ClientSession
+        self._download_session: aiohttp.ClientSession
 
-    def __post_init__(self) -> None:
-        self.impersonate = self.config.network.impersonate
-        self._ssl_context = tcp.create_ssl_context(self.config.network.ssl_context)
-        self.global_rate_limiter = aio.RateLimiter.w_no_burst(self.config.network.rate_limit)
-        self.global_download_limiter = asyncio.Semaphore(self.config.downloads.concurrency)
+    __repr__ = simple_repr("config", "_ssl_context", "_cookies", "_flaresolverr", "limiter", "request_done_callback")
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -214,8 +210,8 @@ class HTTPClient:
         **kwargs: Unpack[RequestParams],
     ) -> RequestContext:
         request = Request.from_params(url, method, kwargs)
-        if self.impersonate:
-            request.impersonate = self.impersonate
+        if self.config.network.impersonate:
+            request.impersonate = self.config.network.impersonate
 
         if request.impersonate:
             request.headers.pop(hdrs.USER_AGENT, None)
@@ -297,7 +293,7 @@ class HTTPClient:
     @contextlib.asynccontextmanager
     async def rate_limit_ctx(self, domain: str, json_check: JSONCheck | None = None) -> AsyncGenerator[None]:
         with enter_context(JSON_CHECK, json_check):
-            async with self.rate_limits[domain], self.global_rate_limiter:
+            async with self.limiter.per_domain[domain], self.limiter.global_:
                 yield
 
 
@@ -317,7 +313,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
 
 
 class HTTPController(Protocol):
-    __http_config__: HTTPConfig
+    __http_config__: ClassVar[HTTPConfig]
     __http_ctx__: HTTPContext
     client: HTTPClient
 
@@ -427,18 +423,14 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
     )
 
 
-type RateLimit = tuple[float, float]
-
-
 @final
-@dataclasses.dataclass(slots=True, frozen=True)
-class HTTPConfig:
+@frozen
+class HTTPConfig(ConfigDataclass):
+    __attr_name__: ClassVar[str] = "__http_config__"
     headers: dict[str, str] | None = None
     impersonate: str | bool | None = None
     rate_limit: RateLimit | None = None
     json_check: JSONCheck | None = None
-
-    __iter__ = DictDataclass.__iter__
 
     @classmethod
     def default_headers(
@@ -459,12 +451,9 @@ class HTTPConfig:
         } | kwargs
         return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
 
-    @classmethod
-    def get(cls, obj: object) -> HTTPConfig | None:
-        return getattr(obj, "__http_config__", None)
-
-    def __or__(self, other: HTTPConfig) -> HTTPConfig:
-        changes = {k: v for k, v in other if v is not None}
+    @override
+    def __or__(self, other: Self) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        changes = other._changes()
 
         if self.headers and other.headers:
             changes["headers"] = self.headers | other.headers
@@ -473,13 +462,6 @@ class HTTPConfig:
             changes["headers"] = headers.copy()
 
         return dataclasses.replace(self, **changes)
-
-    def __call__[T](self, obj: type[T]) -> type[T]:
-        if config := self.get(obj):
-            obj.__http_config__ = config | self  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            obj.__http_config__ = self  # pyright: ignore[reportAttributeAccessIssue]
-        return obj
 
 
 @final

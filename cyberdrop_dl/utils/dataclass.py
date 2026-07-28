@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
+import sys
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self, dataclass_transform, overload
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils import fast_cache
@@ -78,3 +79,56 @@ class DictDataclass(_DataClass, Protocol):
         if overrides:
             data.update(overrides)
         return cls(**data)
+
+
+@overload
+def frozen[T](cls: None = None, *, order: bool = False, kw_only: bool = True) -> Callable[[type[T]], type[T]]: ...
+
+
+@overload
+def frozen[T](cls: type[T], *, order: bool = False, kw_only: bool = True) -> type[T]: ...
+
+
+@dataclass_transform(frozen_default=True, kw_only_default=True)
+def frozen[T](
+    cls: type[T] | None = None, *, order: bool = False, kw_only: bool = True
+) -> Callable[[type[T]], type[T]] | type[T]:
+    fn = dataclasses.dataclass(frozen=True, kw_only=kw_only, order=order, slots=True)
+    return fn if cls is None else fn(cls)
+
+
+CONFIG_REGISTRY: dict[str, type[ConfigDataclass]] = {}
+
+
+@frozen
+class ConfigDataclass:
+    __attr_name__: ClassVar[str]
+    __iter__: ClassVar[Final] = DictDataclass.__iter__
+
+    def __init_subclass__(cls) -> None:
+        if not fields_names(cls):  # Not a dataclass yet, wait until the @dataclass decorator recreates the class
+            return
+        assert cls.__attr_name__
+        assert cls.__attr_name__.startswith("__"), f"{cls.__attr_name__ = } must be a dunder name"
+        assert cls.__attr_name__ not in CONFIG_REGISTRY, (
+            f"A config with {cls.__attr_name__ = } already exists: {CONFIG_REGISTRY[cls.__attr_name__]!r}"
+        )
+        CONFIG_REGISTRY[cls.__attr_name__] = cls
+
+    def _changes(self) -> dict[str, Any]:
+        return {k: v for k, v in self if v is not None}
+
+    @classmethod
+    def get(cls, obj: object) -> Self | None:
+        return getattr(obj, cls.__attr_name__, None)
+
+    if sys.version_info < (3, 13, 0):
+        __replace__ = dataclasses.replace
+
+    def __or__(self, other: Self) -> Self:
+        return self.__replace__(**other._changes())
+
+    def __call__[T](self, obj: type[T]) -> type[T]:
+        cfg = current_cfg | self if (current_cfg := self.get(obj)) is not None else self
+        setattr(obj, self.__attr_name__, cfg)
+        return obj

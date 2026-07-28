@@ -24,6 +24,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _check_json(json_resp: dict[str, Any], resp: AbstractResponse[Any] | None, /) -> None:
+    # https://developers.dailymotion.com/reference/api-errors
+    if error := json_resp.get("error"):
+        message = error.get("raw_message") or error.get("message")
+        code = _VIDEO_ERRORS.get(error.get("code", "")) or error.get("status_code") or resp.status if resp else 422
+        raise ScrapeError(code, message)
+
+
 class DailyMotionCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/<video_uid>",
@@ -33,14 +41,9 @@ class DailyMotionCrawler(Crawler):
     DOMAIN: ClassVar[str] = "dailymotion"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.dailymotion.com")
 
-    @classmethod
     @override
-    def __json_resp_check__(cls, json_resp: dict[str, Any], resp: AbstractResponse[Any] | None, /) -> None:
-        # https://developers.dailymotion.com/reference/api-errors
-        if error := json_resp.get("error"):
-            message = error.get("raw_message") or error.get("message")
-            code = _VIDEO_ERRORS.get(error.get("code", "")) or error.get("status_code") or resp.status if resp else 422
-            raise ScrapeError(code, message)
+    def __json_resp_check__(self, json_resp: dict[str, Any], resp: AbstractResponse[Any] | None, /) -> None:
+        return _check_json(json_resp, resp)
 
     def __post_init__(self) -> None:
         self.api: DailyMotionAPI = DailyMotionAPI.from_crawler(self)
@@ -125,7 +128,7 @@ class DailyMotionAPI(API):
     async def request_json(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         data = await super().request_json(*args, **kwargs)
         # Check for errors even on 200 responses
-        DailyMotionCrawler.__json_resp_check__(data, None)
+        _check_json(data, None)
         return data
 
     async def metadata(self, video_id: str) -> dict[str, Any]:

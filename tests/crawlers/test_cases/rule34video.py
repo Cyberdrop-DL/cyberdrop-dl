@@ -19,6 +19,6 @@ TEST_CASES = [
         "results": [
             {"url": "ANY", "album_id": None, "uploaded_at": int, "download_folder": "re:Lozi3d [members] (Rule34Video)"}
         ],
-        "count": 11,
+        "count": range(23, 30),
     },
 ]

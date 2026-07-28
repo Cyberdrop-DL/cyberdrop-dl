@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import os
 import sys
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
@@ -100,8 +99,12 @@ class AppDirs:
 
 def _default_app_dir() -> AppDirs:
     if "pytest" in sys.modules:
-        temp_dir = Path(tempfile.TemporaryDirectory(prefix="cdl_", delete=False).name)
-        return AppDirs.from_path(temp_dir)
+        import atexit
+        import tempfile
+
+        temp = tempfile.TemporaryDirectory(prefix="cdl_", delete=True, ignore_cleanup_errors=True)
+        atexit.register(temp.cleanup)
+        return AppDirs.from_path(Path(temp.name))
 
     if env.APPDATA_FOLDER:
         return AppDirs.from_path(_resolve(Path(env.APPDATA_FOLDER)))

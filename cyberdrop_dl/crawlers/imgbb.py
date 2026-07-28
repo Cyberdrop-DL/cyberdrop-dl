@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Final, override
 
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
+from cyberdrop_dl.crawlers.crawler import URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 IMAGES_CDN: Final = "i.ibb.co"
 
 
+@URLConfig(allow_empty_path=True)
 class ImgBBCrawler(CheveretoCrawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/album/<album_id>",
@@ -23,7 +25,6 @@ class ImgBBCrawler(CheveretoCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://ibb.co")
     DOMAIN: ClassVar[str] = "imgbb"
     FOLDER_DOMAIN: ClassVar[str] = "ImgBB"
-    ALLOW_EMPTY_PATH: ClassVar[bool] = True
 
     @override
     async def _get_final_album_url(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:

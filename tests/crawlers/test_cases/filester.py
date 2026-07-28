@@ -13,6 +13,23 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://filester.me/d/QBuVgJv",
+        "description": "file without hash information on the page",
+        "results": [
+            {
+                "url": "https://filester.me/d/QBuVgJv",
+                "filename": "A Good Show.mp4",
+                "debrid_url": None,
+                "original_filename": "A Good Show.mp4",
+                "referer": "https://filester.me/d/QBuVgJv",
+                "album_id": None,
+                "uploaded_at": 1782345600,
+                "download_folder": "re:Loose Files (Filester)",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://filester.si/d/4h9lQtR",
         "results": [
             {

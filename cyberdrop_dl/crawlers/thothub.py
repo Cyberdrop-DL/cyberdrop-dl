@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers._kvs import KernelVideoSharingCrawler
+from cyberdrop_dl.crawlers.crawler import URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -12,11 +13,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     TITLE = ".main-container .headline h1"
     VIDEOS = ".list-videos .item a"
 
 
+@URLConfig(trim=False)
 class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/albums/<id>/<name>",
@@ -24,7 +27,6 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
         "Video": "/videos/<id>/<slug>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://thothub.to")
-    DEFAULT_TRIM_URLS: ClassVar[bool] = False
     DOMAIN: ClassVar[str] = "thothub"
     FOLDER_DOMAIN: ClassVar[str] = "ThotHub"
 
@@ -35,16 +37,16 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
             case ["videos", _, _]:
                 return await self.video(scrape_item)
             case ["categories" | "tags" as type_, _]:
-                return await self.search(scrape_item, type_)
+                return await self.search(scrape_item, None, type_)
             case ["search" as type_, query]:
-                return await self.search(scrape_item, type_, query)
+                return await self.search(scrape_item, query, type_)
             case ["get_image", _, *_]:
                 return await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def search(self, scrape_item: ScrapeItem, type_: str, query: str | None = None) -> None:
+    async def search(self, scrape_item: ScrapeItem, query: str | None, type_: str = "") -> None:
         soup = await self.request_soup(scrape_item.url)
         title = self._clean_title(css.select_text(soup, Selector.TITLE))
         title = self.create_title(f"{title} [{type_}]")

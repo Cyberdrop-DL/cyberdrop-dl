@@ -1,4 +1,4 @@
-DOMAIN = "e621_net"
+DOMAIN = "e621.net"
 TEST_CASES = [
     {
         "url": "https://e621.net/posts/6409634",

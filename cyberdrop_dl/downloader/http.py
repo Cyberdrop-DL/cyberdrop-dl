@@ -247,7 +247,7 @@ class Downloader:
         async with (
             server_lock,
             self._semaphore,
-            self.manager.http_client.global_download_limiter,
+            self.manager.http_client.limiter.downloads,
         ):
             yield
 

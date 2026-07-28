@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -65,8 +65,8 @@ class RealDebridCrawler(Crawler):
     DOMAIN: ClassVar[str] = "real-debrid"
     FOLDER_DOMAIN: ClassVar[str] = "RealDebrid"
 
-    @classmethod
-    def __json_resp_check__(cls, json_resp: dict[str, Any], _) -> None:
+    @override
+    def __json_resp_check__(self, json_resp: dict[str, Any], _) -> None:
         if code := json_resp.get("error_code"):
             code = 7 if code == 16 else code
             msg = _ERROR_CODES.get(code, "Unknown error").capitalize()
@@ -135,7 +135,7 @@ class RealDebridAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.real-debrid.com/rest/1.0")
     _folder_regex: re.Pattern[str]
     _file_regex: re.Pattern[str]
-    token: str
+    token: str | None
 
     def is_supported(self, url: AbsoluteHttpURL) -> bool:
         match = self._file_regex.search(str(url))

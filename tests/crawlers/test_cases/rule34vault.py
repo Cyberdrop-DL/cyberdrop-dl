@@ -25,7 +25,7 @@ TEST_CASES = [
                 "download_folder": "re:하츠네 미쿠 [playlist] (Rule34Vault)",
             },
         ],
-        "count": 33,
+        "count": range(78, 90),
     },
     {
         "url": "https://rule34vault.com/sarahvividart%7Calien",

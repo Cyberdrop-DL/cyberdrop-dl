@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from cyclopts import App
-from cyclopts.exceptions import ValidationError
+from cyclopts.exceptions import RepeatArgumentError, ValidationError
 
 from cyberdrop_dl import __version__
 from cyberdrop_dl.__main__ import run_cdl
@@ -10,7 +10,7 @@ from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands.report import generate_report
 from cyberdrop_dl.config import Config
 
-app = App(result_action="return_value", exit_on_error=False, suppress_keyboard_interrupt=False)
+app = App(result_action="return_value", print_error=False, exit_on_error=False, suppress_keyboard_interrupt=False)
 
 
 @app.default()
@@ -61,6 +61,8 @@ def test_cli_args_parsing(tmp_cwd: Path) -> None:
     assert cli.config_file == tmp_cwd / config_yaml
     assert cli.database_file is None
     assert cli.cache_file is None
+    cli = app(["-c", config_yaml.name])
+    assert cli.config_file == tmp_cwd / config_yaml
 
 
 def test_custom_bool_parsing() -> None:
@@ -74,3 +76,11 @@ def test_custom_bool_parsing() -> None:
     assert config.sort.enabled
     config = Config.parse_args("--no-sort")
     assert not config.sort.enabled
+
+
+def test_cli_multi_args() -> None:
+    config = Config.parse_args(["--skip-hosts", "a", "b", "c"])
+    assert config.filters.skip_hosts == {"a", "b", "c"}
+
+    with pytest.raises(RepeatArgumentError):
+        Config.parse_args(["--skip-hosts", "a", "--skip-hosts", "b", "c"])

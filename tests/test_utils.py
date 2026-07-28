@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import platform
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ import pytest
 from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import text_editor
 from cyberdrop_dl.utils._url import fix_multi_slashes, parse_http_url
 
 
@@ -148,3 +150,34 @@ def test_fix_multi_slashes(url: str, expected: str) -> None:
 def test_parse_http(url: str, origin: str | None, expected: str, *, trim: bool) -> None:
     result = parse_http_url(url, AbsoluteHttpURL(origin) if origin else None, trim=trim)
     assert result.human_repr() == expected
+
+
+class TestTextEditor:
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows only test")
+    def test_win_default(self, tmp_cwd: Path) -> None:
+        cmd = text_editor._find_win_editor()
+        assert cmd == text_editor._editor_cmd()
+        assert cmd == ("C:\\Windows\\system32\\notepad.exe",)
+        np = tmp_cwd / "notepad++.exe"
+        np.write_text("test")
+        cmd = text_editor._find_win_editor()
+        assert cmd
+        assert cmd[1:] == (
+            "-multiInst",
+            "-noPlugin",
+            "-notabbar",
+            "-nosession",
+        )
+
+    @pytest.mark.skipif(sys.platform != "darwin", reason="MAC OS test only")
+    def test_mac_os_default(self) -> None:
+        cmd = text_editor._editor_cmd()
+        assert cmd
+        assert cmd == ("open", "-t", "-n", "-W")
+        assert type(cmd[0]) is text_editor.OSDefaultCMD
+
+    @pytest.mark.skipif(sys.platform in ("darwin", "win32"), reason="Linux test only")
+    def test_unix_default(self) -> None:
+        cmd = text_editor._find_unix_editor()
+        assert cmd
+        assert cmd == text_editor._editor_cmd()

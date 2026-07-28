@@ -54,22 +54,3 @@ class RootzCrawler(Crawler):
             url=self.parse_url(data["url"]),
             size=data["size"],
         )
-
-
-class RanozCrawler(RootzCrawler):
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://ranoz.gg")
-    DOMAIN: ClassVar[str] = "ranoz.gg"
-    FOLDER_DOMAIN: ClassVar[str] = "Ranoz.gg"
-    OLD_DOMAINS = ("qiwi.gg",)
-    _FILE_SERVER = AbsoluteHttpURL("https://st7.ranoz.gg")
-    _API_ENTRYPOINT = PRIMARY_URL / "api/v1/files"
-
-    @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
-            return
-
-        name, *_ = await self._request_file(self._API_ENTRYPOINT / file_id)
-        url = self._FILE_SERVER / f"{file_id}-{name}"
-        filename, ext = self.get_filename_and_ext(name)
-        await self.handle_file(scrape_item.url, scrape_item, name, ext, debrid_link=url, custom_filename=filename)

@@ -137,7 +137,7 @@ def _parse_raw_chunks(flight_data: FlightData) -> Generator[_FlightChunk]:
             yield _FlightChunk(chunk_id, marker, data)
 
 
-def _revive_str(value: str) -> str | int | None | LazyChunk:  # noqa: PLR0911
+def _revive_str(value: str) -> str | int | LazyChunk | None:  # noqa: PLR0911
     if value[0] != "$":
         return value
 

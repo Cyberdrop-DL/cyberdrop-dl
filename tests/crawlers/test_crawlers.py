@@ -1,108 +1,59 @@
 from __future__ import annotations
 
-import dataclasses
 import re
-import runpy
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any
 from unittest import mock
 
 import pytest
-from pydantic import TypeAdapter
 
+import tests
 from cyberdrop_dl.crawlers.crawler import compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import parse_url
+
+from . import test_cases
 
 if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.manager import Manager
 
 
+REPO_ROOT = Path(tests.__file__).parent.parent
+
+
 def _crawler_mock(func: str = "handle_media_item") -> mock._patch[mock.AsyncMock]:
     return mock.patch(f"cyberdrop_dl.crawlers.crawler.Crawler.{func}", new_callable=mock.AsyncMock)
 
 
-class Result(TypedDict):
-    # Simplified version of media_item
-    url: str
-    filename: NotRequired[str | type]
-    debrid_link: NotRequired[str | type | None]
-    original_filename: NotRequired[str | type]
-    referer: NotRequired[str | type]
-    album_id: NotRequired[str | type | None]
-    uploaded_at: NotRequired[int | type | None]
-    download_folder: NotRequired[str | type]
-
-
-@dataclasses.dataclass(slots=True)
-class CrawlerTestCase:
-    domain: str
-    url: str
-    results: list[Result]
-    description: str | None = None
-    fail: bool | str | int = False
-    xfail: str | None = None
-    skip: str | bool = False
-    count: Sequence[int] | int | None = None
-    options: list[str] | None = None
-    log: str | None = None
-
-    @property
-    def test_id(self) -> str:
-        return f"{self.domain} - {self.url}"
-
-
-type TestData = dict[str, list[dict[str, Any]]]
-
-_TEST_CASE_ADAPTER = TypeAdapter(CrawlerTestCase)
-_TEST_DATA: TestData = {}
-
-
-def _load_test_cases(path: Path, test_data: TestData) -> None:
-    module_globals = runpy.run_path(str(path), run_name=path.stem)
-    if (domain := module_globals["DOMAIN"]) in test_data:
-        raise RuntimeError(f"Multiple tests files for {domain}")
-
-    test_data[domain] = module_globals["TEST_CASES"]
-
-
-def _load_test_data() -> TestData:
-    test_data: TestData = {}
-    for file in (Path(__file__).parent / "test_cases").iterdir():
-        if not file.name.startswith("_") and file.suffix == ".py":
-            _load_test_cases(file, test_data)
-
-    return test_data
+_TEST_DATA: test_cases.TestData = {}
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if not _TEST_DATA:
-        _TEST_DATA.update(_load_test_data())
+        _TEST_DATA.update(test_cases.load_cases())
+
     if "test_case" in metafunc.fixturenames:
         valid_domains = set(_TEST_DATA)
         domains_to_tests: list[str] = getattr(metafunc.config, "test_crawlers_domains", [])
         for domain in domains_to_tests:
             assert domain in valid_domains, f"{domain = } is not a valid or has not tests defined"
 
-        all_test_cases: list[CrawlerTestCase] = []
-        for domain, test_cases in sorted(_TEST_DATA.items()):
-            if domain in domains_to_tests:
-                all_test_cases.extend(
-                    _TEST_CASE_ADAPTER.validate_python({"domain": domain} | case) for case in test_cases
-                )
+        cases = {domain: cases for domain, cases in _TEST_DATA.items() if domain in domains_to_tests}
+        all_test_cases = test_cases.parse_cases(cases)
         metafunc.parametrize("test_case", all_test_cases, ids=lambda case: case.test_id)
 
 
 @pytest.mark.crawler_test_case
-async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> None:
+async def test_crawler(running_manager: Manager, test_case: test_cases.CrawlerTestCase) -> None:
     if test_case.skip:
         pytest.skip(reason=test_case.skip if isinstance(test_case.skip, str) else "")
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
+            await running_manager.http_client.load_cookie_files([REPO_ROOT / "cookies.txt"])
             await scrape_mapper.run()
             cls = next(
                 (crawler for crawler in scrape_mapper.crawlers.values() if test_case.domain == crawler.DOMAIN),
@@ -123,7 +74,7 @@ async def test_crawler(running_manager: Manager, test_case: CrawlerTestCase) -> 
         _validate_results(crawler, test_case, results)
 
 
-def _assert_n_results(test_case: CrawlerTestCase, n_results: int) -> None:
+def _assert_n_results(test_case: test_cases.CrawlerTestCase, n_results: int) -> None:
     count = test_case.count or len(test_case.results)
     if isinstance(count, Sequence):
         assert n_results in count
@@ -145,10 +96,10 @@ class _NOT_NONE:  # noqa: N801, PLW1641
 NOT_NONE = _NOT_NONE()
 
 
-def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: list[MediaItem]) -> None:
-    expected_results = sorted(test_case.results, key=lambda x: x["url"])
+def _validate_results(crawler: Crawler, test_case: test_cases.CrawlerTestCase, results: list[MediaItem]) -> None:
+    expected_results = dict(sorted(((x["url"], idx), x) for idx, x in enumerate(test_case.results, 1)))
     origin = getattr(crawler, "PRIMARY_URL", AbsoluteHttpURL("https://google.com"))
-    for index, (expected, media_item) in enumerate(zip(expected_results, results, strict=False), 1):
+    for (index, expected), media_item in zip(expected_results.items(), results, strict=False):
         for attr_name, expected_value in expected.items():
             result_value = getattr(media_item, attr_name)
             if isinstance(result_value, Path):
@@ -173,7 +124,7 @@ def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: lis
 
                             elif expected_value.startswith("re:"):
                                 expected_value = expected_value.removeprefix("re:")
-                                assert _re_search(expected_value, str(result_value)), (
+                                assert re_search(expected_value, result_value), (
                                     f"{attr_name} for result#{index} is different, "
                                     f"{result_value = } does not match {expected_value!r}"
                                 )
@@ -182,8 +133,15 @@ def _validate_results(crawler: Crawler, test_case: CrawlerTestCase, results: lis
             assert expected_value == result_value, f"{attr_name} for result#{index} is different"
 
 
-def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
-    return re.search(expected_value, str(result_value)) or re.search(re.escape(expected_value), str(result_value))
+def _re_search(expected: str, result: object) -> re.Match[str] | None:
+    try:
+        return re.search(expected, str(result))
+    except re.error:
+        pass
+
+
+def re_search(expected: str, result: str) -> re.Match[str] | None:
+    return _re_search(expected, result) or _re_search(re.escape(expected), result)
 
 
 @pytest.mark.parametrize(
@@ -204,7 +162,7 @@ def _re_search(expected_value: str, result_value: str) -> re.Match[str] | None:
     ],
 )
 async def test_direct_http_crawler(running_manager: Manager, url: str, filename: str) -> None:
-    test_case = CrawlerTestCase(domain="no_crawler", url=url, results=[{"url": url, "filename": filename}])
+    test_case = test_cases.CrawlerTestCase(domain="no_crawler", url=url, results=[{"url": url, "filename": filename}])
 
     with _crawler_mock() as func:
         async with ScrapeMapper(running_manager)() as scrape_mapper:
@@ -268,13 +226,14 @@ def test_public_methods_have_error_handling_wrapper() -> None:
 
 
 def test_load_test_data() -> None:
-    test_data = _load_test_data()
+    test_data = test_cases.load_cases()
     assert len(test_data) > 20
     assert "dropbox" in test_data
-    assert type(test_data["dropbox"]) is list
-    assert len(test_data["dropbox"]) == 4
+    dropbox = test_data["dropbox"]
+    assert type(dropbox) is test_cases.TestCaseModule
+    assert len(dropbox.cases) == 4
 
-    for case in test_data["dropbox"]:
+    for case in dropbox.cases:
         assert type(case) is dict
         assert "url" in case
 

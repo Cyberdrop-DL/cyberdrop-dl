@@ -6,6 +6,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
@@ -61,6 +62,7 @@ class Video:
     subtitles: tuple[Subtitle, ...]
 
 
+@HTTPConfig(impersonate="firefox", rate_limit=(8, 1))
 class RumbleCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Channel": "/c/<name>",

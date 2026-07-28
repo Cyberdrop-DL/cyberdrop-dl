@@ -4,13 +4,14 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
 
 from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
+    from collections.abc import AsyncGenerator, Generator, Iterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -39,7 +40,7 @@ class PinterestCrawler(Crawler):
 
     @disk_cached_method("csrftoken", ttl=86400 * 30 * 3)
     async def _get_token(self) -> str:
-        _ = await self.request_text(self.PRIMARY_URL, impersonate="firefox", headers=self.api.HEADERS)
+        _ = await self.request_text(self.PRIMARY_URL, impersonate="firefox")
         return self.cookies["csrftoken"]
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -123,10 +124,8 @@ class MediaDict(TypedDict):
     url: str
 
 
-class PinterestAPI(API):
-    "Access to Pinterest REST API for read-only operations (no OAuth required)"
-
-    HEADERS: ClassVar[Mapping[str, str]] = {
+@HTTPConfig(
+    headers={
         "Accept": "application/json, q=0.01",
         "Accept-Language": "en-US,en;q=0.9",
         "X-Requested-With": "XMLHttpRequest",
@@ -137,6 +136,9 @@ class PinterestAPI(API):
         "Alt-Used": "www.pinterest.com",
         "Referer": "https://www.pinterest.com",
     }
+)
+class PinterestAPI(API):
+    "Access to Pinterest REST API for read-only operations (no OAuth required)"
 
     csrf_token: str
 
@@ -155,7 +157,7 @@ class PinterestAPI(API):
                 "data": {"options": options},
                 "source_url": "",
             },
-            headers={**self.HEADERS, "X-CSRFToken": self.csrf_token},
+            headers={"X-CSRFToken": self.csrf_token},
             cookies={"csrftoken": self.csrf_token},
         )
 

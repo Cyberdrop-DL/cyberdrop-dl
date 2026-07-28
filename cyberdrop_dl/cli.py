@@ -63,12 +63,15 @@ def main_menu(
 
 
 @app.command
-def show() -> None:
+def show(
+    *,
+    json: Annotated[bool, Parameter(help="Output full site information as a JSON array")] = False,
+) -> None:
     """Show a list of all supported sites"""
     from cyberdrop_dl.commands import supported_sites
 
-    table = supported_sites.as_rich_table()
-    app.console.print(table)
+    content = supported_sites.as_rich_json() if json else supported_sites.as_rich_table()
+    app.console.print(content, soft_wrap=json)
 
 
 @app.command
@@ -76,7 +79,7 @@ def report() -> None:
     """Generate and display information about the system"""
     from cyberdrop_dl.commands.report import generate_report
 
-    app.console.print(generate_report())
+    app.console.print(generate_report(), soft_wrap=True)
 
 
 for cmd in download, database_app, cleanup_app, config_app, cache_app, retry_app:

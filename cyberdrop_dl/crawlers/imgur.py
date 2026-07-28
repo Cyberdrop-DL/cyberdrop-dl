@@ -32,8 +32,7 @@ class ImgurCrawler(Crawler):
     def __post_init__(self) -> None:
         self.client_id: str = ""
 
-    @classmethod
-    def __json_resp_check__(cls, json_resp: dict[str, Any], _) -> None:
+    def __json_resp_check__(self, json_resp: dict[str, Any], _) -> None:
         if data := json_resp.get("data"):
             raise ScrapeError(json_resp["status"], data["error"])
 

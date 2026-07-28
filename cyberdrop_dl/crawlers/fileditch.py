@@ -119,7 +119,7 @@ class ProofOfWork(DictDataclass):
         return cls.from_dict(dict(inputs()))
 
 
-def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int | None:
+def _pow_worker(worker_idx: int, _: int, challenge: str, difficulty: int) -> int:
     nonce = worker_idx * 15_000
     while True:
         checksum = hashlib.sha256(f"{challenge}:{nonce}".encode()).digest()

@@ -45,6 +45,8 @@ def run(url_txt: Path, main_log: Path) -> None:
                 str(appdata.db_file),
                 "--config-file",
                 str(appdata.config_file),
+                "--cookies",
+                "cookies.txt",
                 "--input-file",
                 str(url_txt),
                 "--log-file",

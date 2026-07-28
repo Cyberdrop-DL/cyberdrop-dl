@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Video:
     title: str
     id: str
-    created_at: int
+    created_at: float
     src: AbsoluteHttpURL
 
 

@@ -13,6 +13,7 @@ import xxhash
 from cyberdrop_dl import aio
 from cyberdrop_dl.constants import TempExt
 from cyberdrop_dl.progress.hashing import HashingStats, HashingUI
+from cyberdrop_dl.progress.scraping import show_msg
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -223,10 +224,11 @@ async def _exists(item: MediaItem) -> MediaItem | None:
 
 async def compute_in_place_hash(hasher: Hasher, media_item: MediaItem) -> None:
     try:
-        assert media_item.original_filename
-        hash_value = await hasher.update_db_and_retrive_hash(
-            media_item.path, media_item.original_filename, media_item.referer
-        )
-        await hasher.save_hash_data(media_item, hash_value)
+        with show_msg(f"Hashing {media_item.path.name}"):
+            assert media_item.original_filename
+            hash_value = await hasher.update_db_and_retrive_hash(
+                media_item.path, media_item.original_filename, media_item.referer
+            )
+            await hasher.save_hash_data(media_item, hash_value)
     except Exception:
         logger.exception("After hash processing failed: '%s'", media_item.path)

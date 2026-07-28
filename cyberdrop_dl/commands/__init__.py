@@ -23,13 +23,13 @@ type SQLiteFile = Annotated[Path, file_validator(".db")]
 @Parameter(name="*")
 @dataclasses.dataclass(slots=True)
 class CLIarguments:
-    config_file: YAMLFile | None = None
+    config_file: Annotated[YAMLFile | None, Parameter(alias=("-c", "config"))] = None
     "YAML file to use as config"
 
     cache_file: JSONFile | None = None
     "JSON file to use as cache"
 
-    database_file: SQLiteFile | None = None
+    database_file: Annotated[SQLiteFile | None, Parameter(alias=("db"))] = None
     "SQLite file to use as database"
 
     def __iter__(self) -> Generator[tuple[str, Path | None]]:
