@@ -112,18 +112,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/file/<file_id>`
 
 
-### APK Mirror
-
-**Primary URL**: [https://www.apkmirror.com](https://www.apkmirror.com)
-
-**Supported Domains**: `apkmirror.com`
-
-**Supported Paths**:
-
-- APK:
-  - `/apk/<developer>/<application>/<release>/<variant>-download`
-
-
 ### Acast.com
 
 **Primary URL**: [https://www.acast.com](https://www.acast.com)
@@ -206,6 +194,18 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/video/<video_id>/...`
 
 
+### APK Mirror
+
+**Primary URL**: [https://www.apkmirror.com](https://www.apkmirror.com)
+
+**Supported Domains**: `apkmirror.com`
+
+**Supported Paths**:
+
+- APK:
+  - `/apk/<developer>/<application>/<release>/<variant>-download`
+
+
 ### Archive.org
 
 **Primary URL**: [https://archive.org](https://archive.org)
@@ -232,6 +232,26 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Video:
   - `/watch/<video_id>`
+
+
+### aShemaleTube
+
+**Primary URL**: [https://www.ashemaletube.com](https://www.ashemaletube.com)
+
+**Supported Domains**: `ashemaletube.*`
+
+**Supported Paths**:
+
+- Model:
+  - `/creators/...`
+  - `/model/...`
+  - `/pornstars/...`
+- Playlist:
+  - `/playlists/...`
+- User:
+  - `/profiles/...`
+- Video:
+  - `/videos/...`
 
 
 ### Bandcamp
@@ -450,6 +470,18 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/video/<name>.<id>`
   - `/videos/<id>`
   - `/videos/<name>.<id>`
+
+
+### cloud.mail.ru
+
+**Primary URL**: [https://cloud.mail.ru](https://cloud.mail.ru)
+
+**Supported Domains**: `cloud.mail.ru`
+
+**Supported Paths**:
+
+- Public files / folders:
+  - `/public/<web_path>`
 
 
 ### CloudflareStream
@@ -680,6 +712,56 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts?tags=<tags>`
 
 
+### eFukt
+
+**Primary URL**: [https://efukt.com](https://efukt.com)
+
+**Supported Domains**: `efukt.com`
+
+**Supported Paths**:
+
+- Gif:
+  - `/view.gif.php?id=<id>`
+- Homepage:
+  - `/`
+- Photo:
+  - `/pics/....`
+- Series:
+  - `/series/<series_name>`
+- Video:
+  - `/...`
+
+
+### ePorner
+
+**Primary URL**: [https://www.eporner.com](https://www.eporner.com)
+
+**Supported Domains**: `eporner.*`
+
+**Supported Paths**:
+
+- Categories:
+  - `/cat/...`
+- Channels:
+  - `/channel/...`
+- Gallery:
+  - `/gallery/...`
+- Photo:
+  - `/photo/...`
+- Pornstar:
+  - `/pornstar/...`
+- Profile:
+  - `/profile/...`
+- Search:
+  - `/search/...`
+- Search Photos:
+  - `/search-photos/...`
+- Video:
+  - `/<video_name>-<video-id>`
+  - `/embed/<video_id>`
+  - `/hd-porn/<video_id>`
+
+
 ### Erome
 
 **Primary URL**: [https://www.erome.com](https://www.erome.com)
@@ -749,20 +831,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 **Notes**
 
 - base crawler: Xenforo
-
-
-### FSIBlog
-
-**Primary URL**: [https://fsiblog5.com](https://fsiblog5.com)
-
-**Supported Domains**: `fsiblog.club`, `fsiblog.com`, `fsiblog1.club`, `fsiblog1.com`, `fsiblog2.club`, `fsiblog2.com`, `fsiblog3.club`, `fsiblog3.com`, `fsiblog4.club`, `fsiblog4.com`, `fsiblog5.club`, `fsiblog5.com`
-
-**Supported Paths**:
-
-- Posts:
-  - `/<category>/<title>`
-- Search:
-  - `?s=<query>`
 
 
 ### Fapello.com
@@ -842,17 +910,18 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - If the URL includes <post_number>, posts with a number lower that it won't be scraped
 
 
-### FuXXX
+### FSIBlog
 
-**Primary URL**: [https://fuxxx.com](https://fuxxx.com)
+**Primary URL**: [https://fsiblog5.com](https://fsiblog5.com)
 
-**Supported Domains**: `fuxxx.com`, `fuxxx.tube`
+**Supported Domains**: `fsiblog.club`, `fsiblog.com`, `fsiblog1.club`, `fsiblog1.com`, `fsiblog2.club`, `fsiblog2.com`, `fsiblog3.club`, `fsiblog3.com`, `fsiblog4.club`, `fsiblog4.com`, `fsiblog5.club`, `fsiblog5.com`
 
 **Supported Paths**:
 
-- Video:
-  - `/embed/<video_id>/...`
-  - `/videos/<video_id>/...`
+- Posts:
+  - `/<category>/<title>`
+- Search:
+  - `?s=<query>`
 
 
 ### FuckingFast
@@ -867,16 +936,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/<file_id>`
 
 
-### GUpload
+### FuXXX
 
-**Primary URL**: [https://gupload.xyz](https://gupload.xyz)
+**Primary URL**: [https://fuxxx.com](https://fuxxx.com)
 
-**Supported Domains**: `gupload.*`
+**Supported Domains**: `fuxxx.com`, `fuxxx.tube`
 
 **Supported Paths**:
 
 - Video:
-  - `/data/e/<video_id>`
+  - `/embed/<video_id>/...`
+  - `/videos/<video_id>/...`
 
 
 ### GenericKVS
@@ -1027,6 +1097,18 @@ spreadsheets:
   - `/img/<image_id>`
 
 
+### GUpload
+
+**Primary URL**: [https://gupload.xyz](https://gupload.xyz)
+
+**Supported Domains**: `gupload.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/data/e/<video_id>`
+
+
 ### HClips
 
 **Primary URL**: [https://hclips.com](https://hclips.com)
@@ -1083,11 +1165,11 @@ spreadsheets:
   - `/search.html?<query>`
 
 
-### HotLeakVip
+### HotLeaksTV
 
-**Primary URL**: [https://hotleak.vip](https://hotleak.vip)
+**Primary URL**: [https://hotleaks.tv](https://hotleaks.tv)
 
-**Supported Domains**: `hotleak.vip`
+**Supported Domains**: `hotleaks.tv`
 
 **Supported Paths**:
 
@@ -1097,11 +1179,11 @@ spreadsheets:
   - `/<model_id>/video/<video_id>`
 
 
-### HotLeaksTV
+### HotLeakVip
 
-**Primary URL**: [https://hotleaks.tv](https://hotleaks.tv)
+**Primary URL**: [https://hotleak.vip](https://hotleak.vip)
 
-**Supported Domains**: `hotleaks.tv`
+**Supported Domains**: `hotleak.vip`
 
 **Supported Paths**:
 
@@ -1445,6 +1527,18 @@ spreadsheets:
   - `/folder/<folder_key>`
 
 
+### Megacloud
+
+**Primary URL**: [https://megacloud.blog](https://megacloud.blog)
+
+**Supported Domains**: `megacloud.*`
+
+**Supported Paths**:
+
+- Embed v3:
+  - `/embed-2/v3`
+
+
 ### MegaNz
 
 **Primary URL**: [https://mega.nz](https://mega.nz)
@@ -1467,18 +1561,6 @@ spreadsheets:
 **Notes**
 
 - Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over
-
-
-### Megacloud
-
-**Primary URL**: [https://megacloud.blog](https://megacloud.blog)
-
-**Supported Domains**: `megacloud.*`
-
-**Supported Paths**:
-
-- Embed v3:
-  - `/embed-2/v3`
 
 
 ### MissAV
@@ -1603,6 +1685,26 @@ spreadsheets:
   - `/video/<video_id>`
 
 
+### nHentai
+
+**Primary URL**: [https://nhentai.net](https://nhentai.net)
+
+**Supported Domains**: `nhentai.net`
+
+**Supported Paths**:
+
+- Collections:
+  - `artist`
+  - `character`
+  - `favorites`
+  - `group`
+  - `parody`
+  - `search`
+  - `tag`
+- Gallery:
+  - `/g/<gallery_id>`
+
+
 ### NoodleMagazine
 
 **Primary URL**: [https://noodlemagazine.com](https://noodlemagazine.com)
@@ -1615,6 +1717,26 @@ spreadsheets:
   - `/video/<search_query>`
 - Video:
   - `/watch/<video_id>`
+
+
+### nsfw.xxx
+
+**Primary URL**: [https://nsfw.xxx](https://nsfw.xxx)
+
+**Supported Domains**: `nsfw.xxx`
+
+**Supported Paths**:
+
+- Category:
+  - `/category/<name>`
+- Post:
+  - `/post/<id>`
+- Search:
+  - `/search?q=<query>`
+- Subreddit:
+  - `/r/<subreddit>`
+- User:
+  - `/user/<username>`
 
 
 ### Nudeleted
@@ -1664,6 +1786,21 @@ spreadsheets:
 
 - Model:
   - `/models/...`
+
+
+### ok.ru
+
+**Primary URL**: [https://ok.ru](https://ok.ru)
+
+**Supported Domains**: `odnoklassniki.ru`, `ok.ru`
+
+**Supported Paths**:
+
+- Channel:
+  - `/profile/<username>/c<channel_id>`
+  - `/video/c<channel_id>`
+- Video:
+  - `/video/<video_id>`
 
 
 ### OmegaScans
@@ -1723,25 +1860,6 @@ spreadsheets:
   - `/s/<share_token>`
 
 
-### PMVHaven
-
-**Primary URL**: [https://pmvhaven.com](https://pmvhaven.com)
-
-**Supported Domains**: `pmvhaven.*`
-
-**Supported Paths**:
-
-- Playlist:
-  - `/playlists/<playlist_id>`
-- Search results:
-  - `/search?q=<query>`
-- Users:
-  - `/profile/<user_id>`
-  - `/users/<user_id>`
-- Video:
-  - `/video/<video_name>_<video_id>`
-
-
 ### Patreon
 
 **Primary URL**: [https://www.patreon.com](https://www.patreon.com)
@@ -1777,6 +1895,20 @@ spreadsheets:
   - `/<service>/user/<user_id>/post/<post_id>`
 - Search:
   - `/search?q=...`
+
+
+### pCloud
+
+**Primary URL**: [https://www.pcloud.com](https://www.pcloud.com)
+
+**Supported Domains**: `e.pc.cd`, `pc.cd`, `pcloud.*`
+
+**Supported Paths**:
+
+- Public File or folder:
+  - `?code=<share_code>`
+  - `e.pc.cd/<short_code>`
+  - `u.pc.cd/<short_code>`
 
 
 ### PillowCase
@@ -1846,22 +1978,6 @@ spreadsheets:
   - `/<user>`
 
 
-### PixHost
-
-**Primary URL**: [https://pixhost.cc](https://pixhost.cc)
-
-**Supported Domains**: `pixhost.cc`, `pixhost.org`, `pixhost.to`
-
-**Supported Paths**:
-
-- Gallery:
-  - `/gallery/<gallery_id>`
-- Image:
-  - `/show/<image_id>`
-- Thumbnail:
-  - `/thumbs/..`
-
-
 ### PixelDrain
 
 **Primary URL**: [https://pixeldrain.com](https://pixeldrain.com)
@@ -1899,6 +2015,22 @@ spreadsheets:
   - `/<file_id>`
 
 
+### PixHost
+
+**Primary URL**: [https://pixhost.cc](https://pixhost.cc)
+
+**Supported Domains**: `pixhost.cc`, `pixhost.org`, `pixhost.to`
+
+**Supported Paths**:
+
+- Gallery:
+  - `/gallery/<gallery_id>`
+- Image:
+  - `/show/<image_id>`
+- Thumbnail:
+  - `/thumbs/..`
+
+
 ### Pkmncards
 
 **Primary URL**: [https://pkmncards.com](https://pkmncards.com)
@@ -1913,6 +2045,25 @@ spreadsheets:
   - `/series/...`
 - Set:
   - `/set/...`
+
+
+### PMVHaven
+
+**Primary URL**: [https://pmvhaven.com](https://pmvhaven.com)
+
+**Supported Domains**: `pmvhaven.*`
+
+**Supported Paths**:
+
+- Playlist:
+  - `/playlists/<playlist_id>`
+- Search results:
+  - `/search?q=<query>`
+- Users:
+  - `/profile/<user_id>`
+  - `/users/<user_id>`
+- Video:
+  - `/video/<video_name>_<video_id>`
 
 
 ### PornHub
@@ -1965,18 +2116,6 @@ spreadsheets:
   - `/tags/...`
 
 
-### PornZog
-
-**Primary URL**: [https://pornzog.com](https://pornzog.com)
-
-**Supported Domains**: `pornzog.*`
-
-**Supported Paths**:
-
-- Video:
-  - `/video/...`
-
-
 ### Porntrex
 
 **Primary URL**: [https://www.porntrex.com](https://www.porntrex.com)
@@ -1999,6 +2138,18 @@ spreadsheets:
   - `/tags/...`
 - User:
   - `/members/...`
+- Video:
+  - `/video/...`
+
+
+### PornZog
+
+**Primary URL**: [https://pornzog.com](https://pornzog.com)
+
+**Supported Domains**: `pornzog.*`
+
+**Supported Paths**:
+
 - Video:
   - `/video/...`
 
@@ -2316,51 +2467,6 @@ spreadsheets:
   - `t.co/<short_code>`
 
 
-### TNAFlix
-
-**Primary URL**: [https://www.tnaflix.com](https://www.tnaflix.com)
-
-**Supported Domains**: `tnaflix.*`
-
-**Supported Paths**:
-
-- Channel:
-  - `/channel/...`
-- Profile:
-  - `/profile/...`
-- Search:
-  - `/search?what=<query>`
-- Video:
-  - `/<category>/<title>/video<video_id>`
-
-
-### TWPornStars
-
-**Primary URL**: [https://www.twpornstars.com](https://www.twpornstars.com)
-
-**Supported Domains**: `indiantw.com`, `twanal.com`, `twgaymuscle.com`, `twgays.com`, `twlesbian.com`, `twmilf.com`, `twonfans.com`, `twpornstars.com`, `twteens.com`, `twtiktoks.com`
-
-**Supported Paths**:
-
-- Photo:
-  - `/media/<media_id>...`
-- Video:
-  - `/amplify_video/<media_id>...`
-
-
-### TXXX
-
-**Primary URL**: [https://txxx.com](https://txxx.com)
-
-**Supported Domains**: `txxx.com`, `txxx.tube`, `videotxxx.com`, `videotxxx.tube`
-
-**Supported Paths**:
-
-- Video:
-  - `/embed/<video_id>/...`
-  - `/videos/<video_id>/...`
-
-
 ### TabooTube
 
 **Primary URL**: [https://www.tabootube.xxx](https://www.tabootube.xxx)
@@ -2450,6 +2556,24 @@ spreadsheets:
 - base crawler: Xenforo
 
 
+### TNAFlix
+
+**Primary URL**: [https://www.tnaflix.com](https://www.tnaflix.com)
+
+**Supported Domains**: `tnaflix.*`
+
+**Supported Paths**:
+
+- Channel:
+  - `/channel/...`
+- Profile:
+  - `/profile/...`
+- Search:
+  - `/search?what=<query>`
+- Video:
+  - `/<category>/<title>/video<video_id>`
+
+
 ### Tokyomotion
 
 **Primary URL**: [https://www.tokyomotion.net](https://www.tokyomotion.net)
@@ -2530,6 +2654,18 @@ spreadsheets:
   - `/videos/<slug>`
 
 
+### Transfer.it
+
+**Primary URL**: [https://transfer.it](https://transfer.it)
+
+**Supported Domains**: `transfer.it`
+
+**Supported Paths**:
+
+- Transfer:
+  - `/t/<transfer_id>`
+
+
 ### TransFlix
 
 **Primary URL**: [https://transflix.net](https://transflix.net)
@@ -2542,18 +2678,6 @@ spreadsheets:
   - `/search/?q=<query>`
 - Video:
   - `/video/<name>-<video_id>`
-
-
-### Transfer.it
-
-**Primary URL**: [https://transfer.it](https://transfer.it)
-
-**Supported Domains**: `transfer.it`
-
-**Supported Paths**:
-
-- Transfer:
-  - `/t/<transfer_id>`
 
 
 ### TubePornClassic
@@ -2649,11 +2773,25 @@ spreadsheets:
   - `/amplify_video/<media_id>...`
 
 
-### UPornia
+### TWPornStars
 
-**Primary URL**: [https://upornia.com](https://upornia.com)
+**Primary URL**: [https://www.twpornstars.com](https://www.twpornstars.com)
 
-**Supported Domains**: `upornia.com`, `upornia.tube`
+**Supported Domains**: `indiantw.com`, `twanal.com`, `twgaymuscle.com`, `twgays.com`, `twlesbian.com`, `twmilf.com`, `twonfans.com`, `twpornstars.com`, `twteens.com`, `twtiktoks.com`
+
+**Supported Paths**:
+
+- Photo:
+  - `/media/<media_id>...`
+- Video:
+  - `/amplify_video/<media_id>...`
+
+
+### TXXX
+
+**Primary URL**: [https://txxx.com](https://txxx.com)
+
+**Supported Domains**: `txxx.com`, `txxx.tube`, `videotxxx.com`, `videotxxx.tube`
 
 **Supported Paths**:
 
@@ -2674,44 +2812,17 @@ spreadsheets:
   - `/files/<file_id>`
 
 
-### VJav
+### UPornia
 
-**Primary URL**: [https://vjav.com](https://vjav.com)
+**Primary URL**: [https://upornia.com](https://upornia.com)
 
-**Supported Domains**: `vjav.com`, `vjav.tube`
+**Supported Domains**: `upornia.com`, `upornia.tube`
 
 **Supported Paths**:
 
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
-
-
-### VSCO
-
-**Primary URL**: [https://vsco.co](https://vsco.co)
-
-**Supported Domains**: `vsco.*`
-
-**Supported Paths**:
-
-- Gallery:
-  - `/<user>/gallery`
-- Media:
-  - `/<user>/media/<media_id>`
-  - `/<user>/video/<media_id>`
-
-
-### VXXX
-
-**Primary URL**: [https://vxxx.com](https://vxxx.com)
-
-**Supported Domains**: `vxxx.com`, `vxxx.tube`
-
-**Supported Paths**:
-
-- Video:
-  - `/video-<video-id>`
 
 
 ### Vidara
@@ -2756,6 +2867,19 @@ spreadsheets:
   - `/th/.../<slug>`
 
 
+### VJav
+
+**Primary URL**: [https://vjav.com](https://vjav.com)
+
+**Supported Domains**: `vjav.com`, `vjav.tube`
+
+**Supported Paths**:
+
+- Video:
+  - `/embed/<video_id>/...`
+  - `/videos/<video_id>/...`
+
+
 ### Voe.sx
 
 **Primary URL**: [https://voe.sx](https://voe.sx)
@@ -2779,6 +2903,33 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
+
+### VSCO
+
+**Primary URL**: [https://vsco.co](https://vsco.co)
+
+**Supported Domains**: `vsco.*`
+
+**Supported Paths**:
+
+- Gallery:
+  - `/<user>/gallery`
+- Media:
+  - `/<user>/media/<media_id>`
+  - `/<user>/video/<media_id>`
+
+
+### VXXX
+
+**Primary URL**: [https://vxxx.com](https://vxxx.com)
+
+**Supported Domains**: `vxxx.com`, `vxxx.tube`
+
+**Supported Paths**:
+
+- Video:
+  - `/video-<video-id>`
 
 
 ### WeTransfer
@@ -2887,6 +3038,22 @@ spreadsheets:
   - `/tag/<tag_slug>`
 
 
+### Xasiat
+
+**Primary URL**: [https://www.xasiat.com](https://www.xasiat.com)
+
+**Supported Domains**: `xasiat.*`
+
+**Supported Paths**:
+
+- Album:
+  - `/albums/<id>/<name>`
+- Images:
+  - `/get_image/...`
+- Videos:
+  - `/videos/<id>/<name>`
+
+
 ### XBunker
 
 **Primary URL**: [https://xbunker.cc](https://xbunker.cc)
@@ -2939,6 +3106,33 @@ spreadsheets:
   - `/videos/<video_id>/...`
 
 
+### xHamster
+
+**Primary URL**: [https://xhamster.com](https://xhamster.com)
+
+**Supported Domains**: `xhamster.*`
+
+**Supported Paths**:
+
+- Creator:
+  - `/creators/<creator_name>`
+- Creator Galleries:
+  - `/creators/<creator_name>/photos`
+- Creator Videos:
+  - `/creators/<creator_name>/exclusive`
+- Gallery:
+  - `/photos/gallery/<gallery_name_or_id>`
+- User:
+  - `/users/<user_name>`
+  - `/users/profiles/<user_name>`
+- User Galleries:
+  - `/users/<user_name>/photos`
+- User Videos:
+  - `/users/<user_name>/videos`
+- Video:
+  - `/videos/<title>`
+
+
 ### XMegaDrive
 
 **Primary URL**: [https://www.xmegadrive.com](https://www.xmegadrive.com)
@@ -2976,6 +3170,34 @@ spreadsheets:
   - `/videos/<video_id>/...`
 
 
+### xVideos
+
+**Primary URL**: [https://www.xvideos.com](https://www.xvideos.com)
+
+**Supported Domains**: `xv-ru.com`, `xvideos-ar.com`, `xvideos-india.com`, `xvideos.com`, `xvideos.es`
+
+**Supported Paths**:
+
+- Account:
+  - `/<channel_name>`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>`
+- Account Photos:
+  - `/<channel_name>#_tabPhotos`
+  - `/<channel_name>/photos/...`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabPhotos`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>/photos/...`
+- Account Quickies:
+  - `/<channel_name>#quickies`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#quickies`
+- Account Videos:
+  - `/<channel_name>#_tabVideos`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabVideos`
+- Video:
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles#quickies/(a|h|v)/<video_id>`
+  - `/video.<encoded_id>/<title>`
+  - `/video<id>/<title>`
+
+
 ### XXXBunker
 
 **Primary URL**: [https://xxxbunker.com](https://xxxbunker.com)
@@ -2992,34 +3214,6 @@ spreadsheets:
   - `/<username>/favoritevideos`
 - Video:
   - `/<video_id>`
-
-
-### Xasiat
-
-**Primary URL**: [https://www.xasiat.com](https://www.xasiat.com)
-
-**Supported Domains**: `xasiat.*`
-
-**Supported Paths**:
-
-- Album:
-  - `/albums/<id>/<name>`
-- Images:
-  - `/get_image/...`
-- Videos:
-  - `/videos/<id>/<name>`
-
-
-### YTboob
-
-**Primary URL**: [https://ytboob.com](https://ytboob.com)
-
-**Supported Domains**: `ytboob.com`
-
-**Supported Paths**:
-
-- Video:
-  - `/video/<slug>`
 
 
 ### YandexDisk
@@ -3079,6 +3273,18 @@ spreadsheets:
   - `/videos/<slug>`
 
 
+### YTboob
+
+**Primary URL**: [https://ytboob.com](https://ytboob.com)
+
+**Supported Domains**: `ytboob.com`
+
+**Supported Paths**:
+
+- Video:
+  - `/video/<slug>`
+
+
 ### Yurivan
 
 **Primary URL**: [https://www.yurivan.com](https://www.yurivan.com)
@@ -3093,212 +3299,6 @@ spreadsheets:
   - `/story/<story_id>`
 - Video:
   - `/story/<story_id>/chapter/1`
-
-
-### aShemaleTube
-
-**Primary URL**: [https://www.ashemaletube.com](https://www.ashemaletube.com)
-
-**Supported Domains**: `ashemaletube.*`
-
-**Supported Paths**:
-
-- Model:
-  - `/creators/...`
-  - `/model/...`
-  - `/pornstars/...`
-- Playlist:
-  - `/playlists/...`
-- User:
-  - `/profiles/...`
-- Video:
-  - `/videos/...`
-
-
-### cloud.mail.ru
-
-**Primary URL**: [https://cloud.mail.ru](https://cloud.mail.ru)
-
-**Supported Domains**: `cloud.mail.ru`
-
-**Supported Paths**:
-
-- Public files / folders:
-  - `/public/<web_path>`
-
-
-### eFukt
-
-**Primary URL**: [https://efukt.com](https://efukt.com)
-
-**Supported Domains**: `efukt.com`
-
-**Supported Paths**:
-
-- Gif:
-  - `/view.gif.php?id=<id>`
-- Homepage:
-  - `/`
-- Photo:
-  - `/pics/....`
-- Series:
-  - `/series/<series_name>`
-- Video:
-  - `/...`
-
-
-### ePorner
-
-**Primary URL**: [https://www.eporner.com](https://www.eporner.com)
-
-**Supported Domains**: `eporner.*`
-
-**Supported Paths**:
-
-- Categories:
-  - `/cat/...`
-- Channels:
-  - `/channel/...`
-- Gallery:
-  - `/gallery/...`
-- Photo:
-  - `/photo/...`
-- Pornstar:
-  - `/pornstar/...`
-- Profile:
-  - `/profile/...`
-- Search:
-  - `/search/...`
-- Search Photos:
-  - `/search-photos/...`
-- Video:
-  - `/<video_name>-<video-id>`
-  - `/embed/<video_id>`
-  - `/hd-porn/<video_id>`
-
-
-### nHentai
-
-**Primary URL**: [https://nhentai.net](https://nhentai.net)
-
-**Supported Domains**: `nhentai.net`
-
-**Supported Paths**:
-
-- Collections:
-  - `artist`
-  - `character`
-  - `favorites`
-  - `group`
-  - `parody`
-  - `search`
-  - `tag`
-- Gallery:
-  - `/g/<gallery_id>`
-
-
-### nsfw.xxx
-
-**Primary URL**: [https://nsfw.xxx](https://nsfw.xxx)
-
-**Supported Domains**: `nsfw.xxx`
-
-**Supported Paths**:
-
-- Category:
-  - `/category/<name>`
-- Post:
-  - `/post/<id>`
-- Search:
-  - `/search?q=<query>`
-- Subreddit:
-  - `/r/<subreddit>`
-- User:
-  - `/user/<username>`
-
-
-### ok.ru
-
-**Primary URL**: [https://ok.ru](https://ok.ru)
-
-**Supported Domains**: `odnoklassniki.ru`, `ok.ru`
-
-**Supported Paths**:
-
-- Channel:
-  - `/profile/<username>/c<channel_id>`
-  - `/video/c<channel_id>`
-- Video:
-  - `/video/<video_id>`
-
-
-### pCloud
-
-**Primary URL**: [https://www.pcloud.com](https://www.pcloud.com)
-
-**Supported Domains**: `e.pc.cd`, `pc.cd`, `pcloud.*`
-
-**Supported Paths**:
-
-- Public File or folder:
-  - `?code=<share_code>`
-  - `e.pc.cd/<short_code>`
-  - `u.pc.cd/<short_code>`
-
-
-### xHamster
-
-**Primary URL**: [https://xhamster.com](https://xhamster.com)
-
-**Supported Domains**: `xhamster.*`
-
-**Supported Paths**:
-
-- Creator:
-  - `/creators/<creator_name>`
-- Creator Galleries:
-  - `/creators/<creator_name>/photos`
-- Creator Videos:
-  - `/creators/<creator_name>/exclusive`
-- Gallery:
-  - `/photos/gallery/<gallery_name_or_id>`
-- User:
-  - `/users/<user_name>`
-  - `/users/profiles/<user_name>`
-- User Galleries:
-  - `/users/<user_name>/photos`
-- User Videos:
-  - `/users/<user_name>/videos`
-- Video:
-  - `/videos/<title>`
-
-
-### xVideos
-
-**Primary URL**: [https://www.xvideos.com](https://www.xvideos.com)
-
-**Supported Domains**: `xv-ru.com`, `xvideos-ar.com`, `xvideos-india.com`, `xvideos.com`, `xvideos.es`
-
-**Supported Paths**:
-
-- Account:
-  - `/<channel_name>`
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>`
-- Account Photos:
-  - `/<channel_name>#_tabPhotos`
-  - `/<channel_name>/photos/...`
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabPhotos`
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>/photos/...`
-- Account Quickies:
-  - `/<channel_name>#quickies`
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#quickies`
-- Account Videos:
-  - `/<channel_name>#_tabVideos`
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabVideos`
-- Video:
-  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles#quickies/(a|h|v)/<video_id>`
-  - `/video.<encoded_id>/<title>`
-  - `/video<id>/<title>`
 
 
 
