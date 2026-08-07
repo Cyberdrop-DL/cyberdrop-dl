@@ -103,7 +103,9 @@ class VidStackAPI(API):
     ) -> str:
         if referer:
             url = url.update_query(r=str(referer))
-            kwargs.setdefault("headers", {})["Referer"] = str(referer)
+            headers = kwargs.setdefault("headers", {})
+            headers["Referer"] = str(referer)
+            headers["Origin"] = str(referer.origin())
 
         text = await self.request_text(url, method, **kwargs)
         content = bytes.fromhex(text.strip())

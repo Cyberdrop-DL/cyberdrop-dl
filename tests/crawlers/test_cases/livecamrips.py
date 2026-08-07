@@ -1,4 +1,4 @@
-DOMAIN = "abstream"
+DOMAIN = "livecamrips"
 TEST_CASES = [
     {
         "url": "https://livecamrips.to/model/484708/flora_picks/1",

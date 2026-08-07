@@ -515,7 +515,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         referer = referer or scrape_item.url
         if frag:
-            referer = referer.with_fragment(frag)
+            referer = referer.with_fragment(f"{referer.fragment} - {frag}" if referer.fragment else frag)
 
         media_item = MediaItem(
             url=url,
