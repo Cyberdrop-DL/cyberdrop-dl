@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 @Crawler.db_path_builder("path_qs_frag")
 @URLConfig(allow_empty_path=True, ignore_fragment=False, trim=False)
 @HTTPConfig(headers={"Origin": "https://videosh.upns.live", "Referer": "https://videosh.upns.live/"})
-@DownloadConfig(slots=2)
+@DownloadConfig(slots=2, ignore_content_type=True)
 class VidStackCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("videosh.upns.live",)
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("videosh.upns.live", "vidstack.io")
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "/#<video_id>"}
     DOMAIN: ClassVar[str] = "vidstack"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vidstack.io")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://videosh.upns.live")
 
     def __post_init__(self) -> None:
         self.api: VidStackAPI = VidStackAPI.from_crawler(self)
@@ -90,8 +90,8 @@ class VidStackAPI(API):
         return Video(
             video_id,
             info["title"],
-            thumb=self.parse_url(info["poster"]),
-            src=self.parse_url(info["source"]),
+            thumb=self.parse_url(info["poster"], self.origin),
+            src=self.parse_url(info["source"], self.origin),
         )
 
     async def request_aes(
