@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
 
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedDomains, SupportedPaths, URLConfig
@@ -35,11 +35,17 @@ class VidStackCrawler(Crawler):
         self.api: VidStackAPI = VidStackAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        video_id = scrape_item.url.fragment.partition("/")[0].partition("&")[0]
-        if not video_id:
-            raise ValueError
+        if video_id := scrape_item.url.fragment:
+            return await self.video(scrape_item, video_id)
+        raise ValueError
 
-        await self.video(scrape_item, video_id)
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        if url.fragment:
+            return url.with_fragment(url.fragment.partition("/")[0].partition("&")[0])
+        return url
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
