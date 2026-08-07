@@ -601,7 +601,11 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return downloaded
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
-        with enter_context(IGNORE_CONTENT_TYPE, True) if self.__dl_config__ else contextlib.nullcontext():
+        with (
+            enter_context(IGNORE_CONTENT_TYPE, True)
+            if self.__dl_config__.ignore_content_type
+            else contextlib.nullcontext()
+        ):
             self._task_mngr.downloads.create_task(
                 self._download(media_item, m3u8, skip=await self.__should_skip(media_item))
             )
