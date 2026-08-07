@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self, final
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, URLConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     UPLOAD_DATE = "span.hidden.sm\\:inline"
     ALBUM_FILES = "a[\\:href*='javascript:void(0)']", ":href"
@@ -56,6 +58,7 @@ class File:
         )
 
 
+@HTTPConfig(rate_limit=(1, 3))
 @URLConfig(trim=False)
 class ImagePondCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[dict[str, str | tuple[str, ...]]] = {

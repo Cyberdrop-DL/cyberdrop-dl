@@ -21,7 +21,7 @@ def request_json(url: str) -> Any:
 
 @pytest.fixture(scope="session")
 def post_resp() -> dict[str, Any]:
-    return request_json("https://pawchive.st/api/v1/patreon/user/3295915/post/129540190")
+    return request_json("https://pawchive.pw/api/v1/patreon/user/3295915/post/129540190")
 
 
 @pytest.fixture(scope="session")
