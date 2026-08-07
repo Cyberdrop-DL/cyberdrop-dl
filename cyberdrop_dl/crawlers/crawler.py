@@ -505,6 +505,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
         frag: str | None = None,
+        thumbnail: AbsoluteHttpURL | None = None,
     ) -> None:
         """Creates a MediaItem and hands it off to the downloader.
 
@@ -535,9 +536,22 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
 
         check_path_traversal(self.config.download_folder, media_item.download_folder)
-
         check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
+
+        if thumbnail:
+            _, ext = self.get_filename_and_ext(thumbnail.name)
+            thumb_name = f"{Path(media_item.filename).stem}_thumb{ext}"
+            filename, _ = self.get_filename_and_ext(thumb_name)
+            await self.handle_file(
+                media_item.url,
+                scrape_item,
+                thumb_name,
+                ext,
+                custom_filename=filename,
+                debrid_link=thumbnail,
+                frag="thumbnail",
+            )
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {

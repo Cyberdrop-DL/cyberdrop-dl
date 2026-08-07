@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Unpack
 
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -63,19 +62,7 @@ class VidStackCrawler(Crawler):
             ext,
             m3u8=m3u8,
             custom_filename=custom_filename,
-        )
-
-        _, ext = self.get_filename_and_ext(video.thumb.name)
-        thumb_name = f"{Path(custom_filename).stem}_thumb{ext}"
-        filename, _ = self.get_filename_and_ext(thumb_name)
-        await self.handle_file(
-            scrape_item.url,
-            scrape_item,
-            thumb_name,
-            ext,
-            custom_filename=filename,
-            debrid_link=video.thumb,
-            frag="thumbnail",
+            thumbnail=video.thumb,
         )
 
 
