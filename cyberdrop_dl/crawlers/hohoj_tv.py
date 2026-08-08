@@ -10,6 +10,8 @@ from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -45,7 +47,8 @@ class HohojTVCrawler(Crawler):
 
         video = await self._request_video(video_id)
         scrape_item.uploaded_at = self.parse_iso_date(video.uploaded)
-        scrape_item.setup_as_album(self.create_title(video.title[:30].strip()), album_id=str(video_id))
+        title = self.create_title(_dvd_code(video.title))
+        scrape_item.setup_as_album(title, album_id=str(video_id))
 
         for img in video.previews:
             if img.name != "no_image.jpg":
@@ -89,3 +92,23 @@ class Video:
     previews: tuple[AbsoluteHttpURL, ...]
     src: AbsoluteHttpURL
     thumb: AbsoluteHttpURL
+
+
+def _dvd_code(title: str) -> str:
+    if title.startswith("["):
+        title = title[title.index("]") + 1 :].strip()
+    code, _, rest = title.partition(" ")
+    if code.casefold() == "fc2-ppv":
+        code = f"{code.upper()} {rest.partition(' ')[0]}"
+    if "-" in code or "_" in code:
+        return code
+    return " ".join(_compose_title(title)).rstrip(":,")
+
+
+def _compose_title(title: str) -> Generator[str]:
+    total = 0
+    for word in title.split():
+        total += len(word) + 1
+        if total > 50:
+            break
+        yield word
