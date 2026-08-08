@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, Self, override
 from cyberdrop_dl import multi_process
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, parse_url
@@ -28,13 +28,15 @@ _HOMEPAGE_CATCH_ALL = "/s21/FHVZKQyAZlIsrneDAsp.jpeg"
 @Registry.database.fix_referer
 @HTTPConfig(rate_limit=(3, 1))
 class FileditchCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "theditch.st", "fileditch"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "File": (
             "/file.php?f=<file_id>",
             "/beta123/<file_id>/<name>",
             "/temp/<file_id>/<name>",
             "/alpha7/<file_id>/<name>",
-        )
+        ),
+        "Short URL": "https://theditch.st/<short_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://fileditchfiles.me/")
     DOMAIN: ClassVar[str] = "fileditch"
@@ -42,9 +44,19 @@ class FileditchCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_, _, *_]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
+            case [_] if scrape_item.url.host == "theditch.st":
+                await self.short_url(scrape_item)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    async def short_url(self, scrape_item: ScrapeItem) -> None:
+        soup = await self.request_soup(scrape_item.url)
+        with scrape_item.track_changes:
+            scrape_item.url = self.parse_url(css.select(soup, "a#fd-go", "href"))
+
+        self.create_eager_task(self.run(scrape_item))
 
     @classmethod
     @override

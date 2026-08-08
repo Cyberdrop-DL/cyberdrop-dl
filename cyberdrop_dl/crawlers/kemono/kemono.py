@@ -237,11 +237,11 @@ class FileFilterer:
     def __iter__(self) -> Generator[File]:
         for file, kind, should_download in self._files():
             file_name = file.name or file.path
-            if not should_download:
-                self._report_skip_by_config(file_name, kind)
-            elif file.deferred or not file.path:
+            if self.post.preview_state == "pending" or file.deferred or not file.path:
                 self.log.warning("Skipping file '%s' in post #%s [incomplete %s import]", file_name, self.post.id, kind)
                 self.skipped += 1
+            elif not should_download:
+                self._report_skip_by_config(file_name, kind)
             else:
                 yield file
 

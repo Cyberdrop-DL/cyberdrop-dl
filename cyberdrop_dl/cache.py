@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import CoroutineType
 
+    from typing_extensions import Sentinel
+
 logger = logging.getLogger(__name__)
 _IN_MEMORY_CACHE: dict[str, Any] = {}
 
@@ -102,25 +104,29 @@ class TTLCacheAdapter[T]:
             return self.__root
 
     def __getitem__(self, key: str, /) -> T:
-        cache_hit = self._get(key)
+        return self._get_value(key)
+
+    def _get_value(self, key: str, ttl: float | Sentinel | None = MISSING) -> T:
+        """Same as `self[key]`, but `ttl` (when given) overrides the one stored in the entry."""
+        cache_hit = self._get(key, ttl)
         if cache_hit is MISSING:
             raise KeyError(key)
         return cache_hit["value"]
 
-    def _has_expired(self, key: str, cache_hit: _CachedValue[T]) -> bool:
+    def _has_expired(self, key: str, cache_hit: _CachedValue[T], ttl: float | Sentinel | None = MISSING) -> bool:
         try:
-            return _has_expired(cache_hit)
+            return _has_expired(cache_hit, ttl)
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.exception(f"Invalid cache entry {self._lookup_path(key)}, ignoring")
             return True
 
-    def _get(self, key: str) -> _CachedValue[T] | MISSING:  # pyright: ignore[reportInvalidTypeForm]
+    def _get(self, key: str, ttl: float | Sentinel | None = MISSING) -> _CachedValue[T] | MISSING:  # pyright: ignore[reportInvalidTypeForm]
         try:
             cache_hit = self._root[key]
         except KeyError:
             return MISSING
 
-        if self._has_expired(key, cache_hit):
+        if self._has_expired(key, cache_hit, ttl):
             del self[key]
             return MISSING
         return cache_hit
@@ -128,8 +134,8 @@ class TTLCacheAdapter[T]:
     def __delitem__(self, key: str) -> None:
         del self._root[key]
 
-    def get(self, key: str) -> T | None:
-        cache_hit = self._get(key)
+    def get(self, key: str, ttl: float | Sentinel | None = MISSING) -> T | None:
+        cache_hit = self._get(key, ttl)
         return None if cache_hit is MISSING else cache_hit["value"]
 
     def save(self, key: str, value: T, *, ttl: float | None = None) -> None:
@@ -151,10 +157,17 @@ class TTLCacheAdapter[T]:
             return
 
 
-def _has_expired(self: _CachedValue[Any]) -> bool:
-    if self["ttl"] is None:
+def _has_expired(self: _CachedValue[Any], ttl: float | Sentinel | None = MISSING) -> bool:
+    """Check expiry against `ttl`, falling back to the TTL stored in the entry.
+
+    Callers that know the current TTL should pass it. The stored value is only a snapshot of
+    what the TTL was when the entry was written, so trusting it means a shorter TTL never
+    applies to entries that already exist.
+    """
+    effective_ttl: float | None = self["ttl"] if ttl is MISSING else cast("float | None", ttl)
+    if effective_ttl is None:
         return False
-    return time.time() - self["created_at"] >= self["ttl"]
+    return time.time() - self["created_at"] >= effective_ttl
 
 
 def _ttl_from_callable[T](fn: Callable[..., Awaitable[T]]) -> TTLCacheAdapter[T]:
@@ -238,18 +251,18 @@ def cached_fn[T](
     @functools.wraps(fn)
     async def wrapper() -> T:
         with contextlib.suppress(KeyError):
-            return cache[key]
+            return cache._get_value(key, ttl)
 
         async with lock:
             with contextlib.suppress(KeyError):
-                return cache[key]
+                return cache._get_value(key, ttl)
 
             value = await fn()
             cache.save(key, value, ttl=ttl)
             return value
 
     wrapper.clear = lambda: cache.discard(key)  # pyright: ignore[reportAttributeAccessIssue]
-    wrapper.get = lambda: cache.get(key)  # pyright: ignore[reportAttributeAccessIssue]
+    wrapper.get = lambda: cache.get(key, ttl)  # pyright: ignore[reportAttributeAccessIssue]
     return cast("CachedAsyncFunc[T]", cast("object", wrapper))
 
 

@@ -194,7 +194,7 @@ class RestrictedFiletypeError(SkipDownloadError):
     def __init__(self, origin: MediaItemLike) -> None:
         """This error will be thrown when has a filetype not allowed by config."""
         ui_failure = "Restricted File Ext"
-        message = f"File extension ({origin.ext}) ignored config options"
+        message = f"File extension ({origin.ext}) ignored by config options"
         super().__init__(ui_failure, message=message, origin=origin)
 
 

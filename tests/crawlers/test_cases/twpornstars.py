@@ -30,4 +30,18 @@ TEST_CASES = [
         ],
         "count": range(49, 60),
     },
+    {
+        "url": "https://www.twpornstars.com/hashtag/exhib-asswednesday",
+        "results": [
+            {
+                "url": "ANY",
+                "debrid_url": None,
+                "referer": "re:https://www.twpornstars.com/p/",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:#exhib, #asswednesday (TWPornStars)",
+            },
+        ],
+        "count": range(5, 60),
+    },
 ]

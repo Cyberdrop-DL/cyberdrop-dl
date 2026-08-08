@@ -74,6 +74,7 @@ class PostModel(DeferredModel, extra="ignore"):
     timestamp: int | None = None
     tags: Annotated[tuple[str, ...], BeforeValidator(_parse_tags)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
+    preview_state: str | None = None
     has_full: bool = True
 
     @override

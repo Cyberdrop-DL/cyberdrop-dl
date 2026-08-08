@@ -4,6 +4,7 @@ import asyncio
 import itertools
 import logging
 import time
+from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, final
 
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
+IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
 _CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
 _USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
@@ -354,6 +355,8 @@ def _check_filesize_limits(media: MediaItem, config: Config) -> bool:
 
 
 def _check_content_type(content_type: str, ext: str) -> str | None:
+    if IGNORE_CONTENT_TYPE.get():
+        return
     if _is_html_or_text(content_type) and ext.lower() not in FileExt.TEXT:
         msg = f"Received '{content_type}', was expecting binary payload"
         raise InvalidContentTypeError(message=msg)

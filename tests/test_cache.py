@@ -221,6 +221,52 @@ async def test_ttl_cache_method() -> None:
     assert await inst.compute() == 3
 
 
+def test_stored_ttl_is_used_when_caller_does_not_pass_one() -> None:
+    cache = {}
+    ttl_cache = TTLCacheAdapter(cache, ("a", "b"))
+    ttl_cache.save("account", 123, ttl=60)
+
+    # No TTL passed -> the entry's own TTL applies, so this is still valid.
+    assert ttl_cache["account"] == 123
+    assert ttl_cache.get("account") == 123
+
+
+def test_shorter_ttl_expires_an_entry_saved_with_a_longer_one() -> None:
+    cache = {}
+    ttl_cache = TTLCacheAdapter(cache, ("a", "b"))
+    # Written 10s ago under a 60s TTL, i.e. still valid by its own TTL.
+    ttl_cache.save("account", 123, ttl=60)
+    cache["a"]["b"]["account"]["created_at"] = time.time() - 10
+
+    assert ttl_cache.get("account", 5) is None
+    assert cache == {"a": {"b": {}}}
+
+
+def test_longer_ttl_keeps_an_entry_saved_with_a_shorter_one() -> None:
+    cache = {}
+    ttl_cache = TTLCacheAdapter(cache, ("a", "b"))
+    ttl_cache.save("account", 123, ttl=5)
+    cache["a"]["b"]["account"]["created_at"] = time.time() - 10
+
+    assert ttl_cache.get("account", 60) == 123
+    assert ttl_cache.get("account") is None
+
+
+async def test_cached_fn_uses_its_own_ttl_over_the_stored_one() -> None:
+    cache: dict[str, Any] = {}
+    adapter: TTLCacheAdapter[Any] = TTLCacheAdapter(cache)
+    spy = Spy("new")
+
+    # Simulates an entry written by an older version that used a much longer TTL.
+    adapter.save("token", "stale", ttl=3600)
+    cache["token"]["created_at"] = time.time() - 600
+
+    fn = cached_fn(spy, adapter, key="token", ttl=60)
+    assert await fn() == "new"
+    assert spy.calls == 1
+    assert cache["token"]["ttl"] == 60
+
+
 @pytest.mark.parametrize(
     ("key", "expected_parent_keys", "expected_key"),
     [

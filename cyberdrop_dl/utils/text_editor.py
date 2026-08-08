@@ -9,10 +9,9 @@ import sys
 from typing import TYPE_CHECKING, final
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from pathlib import Path
 
-type CMD = Sequence[str]
+type CMD = list[str] | tuple[str, ...]
 
 # Ordered by preference
 _UNIX_TEXT_EDITORS: tuple[CMD, ...] = (
@@ -52,7 +51,7 @@ def editor_cmd() -> CMD | None:
 def _editor_cmd() -> CMD | None:
     if editor := os.environ.get("EDITOR"):
         if cmd := shutil.which(editor):
-            return cmd
+            return (cmd,)
 
         import shlex
 
