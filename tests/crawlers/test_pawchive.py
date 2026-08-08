@@ -56,7 +56,7 @@ def test_post_validation(post_resp: dict[str, Any]) -> None:
         ),
     )
     assert post.published == datetime.datetime(2025, 5, 21, 18, 11, 4, tzinfo=datetime.UTC)
-    assert post.added == datetime.datetime(2026, 6, 11, 21, 15, 32, 24479, tzinfo=datetime.UTC)
+    assert post.added == datetime.datetime(2026, 6, 11, 0, 0, tzinfo=datetime.UTC)
     assert post.edited
     assert post.edited > datetime.datetime(2026, 7, 8, 3, 11, 18, tzinfo=datetime.UTC)
     assert post.timestamp == 1747851064
@@ -104,7 +104,7 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
     )
     assert post.attachments == ()
     assert post.published == datetime.datetime(2025, 5, 3, 17, 12, 47, tzinfo=datetime.UTC)
-    assert post.added == datetime.datetime(2026, 6, 10, 21, 30, 49, 920931, tzinfo=datetime.UTC)
+    assert post.added == datetime.datetime(2026, 6, 10, 0, 0, tzinfo=datetime.UTC)
     assert post.edited is None
     assert post.timestamp == 1746292367
     assert post.tags == ("Naughty ASMR",)
