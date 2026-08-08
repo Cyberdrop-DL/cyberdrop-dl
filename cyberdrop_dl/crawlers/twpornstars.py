@@ -34,7 +34,11 @@ class TwPornstarsCrawler(TwimgCrawler):
         "www.indiantw.com",
         "www.twpornstars.com",
     )
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Hashtag": "/hashtag/..."}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Post": "/p/<post_id>",
+        "Hashtag": "/hashtag/<hashtags>",
+        "Collection/User": "/<name>",
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.twpornstars.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "twpornstars"
