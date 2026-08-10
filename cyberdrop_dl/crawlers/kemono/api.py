@@ -47,6 +47,8 @@ class KemonoAPI(API, Generic[UserPostT]):
     async def creators(self) -> dict[User, str]:
         url = self.ENTRYPOINT / "creators"
         resp: list[dict[str, Any]] = await self.request_json(url)
+        if type(resp) is dict:
+            resp = resp.get("creators", resp)
         return {User(u["service"], u["id"]): u["name"] for u in resp}
 
     async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPostT]]:

@@ -102,3 +102,4 @@ class Crawlers(ConfigGroup, name=None):
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
     twitter: TwitterConfig = Field(default_factory=TwitterConfig)
     pawchive: KemonoConfig = Field(default_factory=KemonoConfig)
+    only_haven: KemonoConfig = Field(default_factory=KemonoConfig)

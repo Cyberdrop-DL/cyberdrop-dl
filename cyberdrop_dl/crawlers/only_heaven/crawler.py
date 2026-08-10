@@ -17,22 +17,41 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
+    from cyberdrop_dl.crawlers.crawler import SupportedDomains, SupportedPaths
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
 class OnlyHavenAPI(KemonoAPI[UserPostModel]):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cum.st/api/v1")
+    __post__: type[UserPostModel] = UserPostModel
 
 
 class OnlyHavenCrawler(KemonoBaseCrawler):
     __kemono_api__: ClassVar[type[KemonoAPI]] = OnlyHavenAPI  # pyright: ignore[reportAssignmentType]
-    __kemono_cdn__: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e1.cum.st/media")
+    __kemono_cdn__: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e1.cum.st")
+
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("cum.st",)
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cum.st")
+    DOMAIN: ClassVar[str] = "onlyhaven"
+    FOLDER_DOMAIN: ClassVar[str] = "OnlyHaven"
+
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Creator": "/creators/<service>/<user_id>",
+        "Search": "/search?q=...",
+        "Post": "/creators/<service>/<user_id>/post/<post_id>",
+    }
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id}"
+
+    @property
+    @override
+    def __kemono_config__(self) -> KemonoConfig:
+        return self.config.crawlers.only_haven
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [service, "user", creator_id, "post", post_id]:
+            case ["creators", service, creator_id, "post", post_id]:
                 return await self.post(scrape_item, service, creator_id, post_id)
-            case [service, "user", creator_id]:
+            case ["creators", service, creator_id]:
                 return await self.creator(scrape_item, service, creator_id)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)
@@ -73,11 +92,6 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
             self.create_eager_task(self._direct_file(scrape_item, url))
             scrape_item.add_children()
 
-        if embed := post_files.embed():
-            embed_url = self.parse_url(embed.url)
-            self.handle_external_links(scrape_item.create_child(embed_url))
-            scrape_item.add_children()
-
     @override
     def _compose_file_url(self, file: File) -> AbsoluteHttpURL:  # pyright: ignore[reportIncompatibleMethodOverride]
         url = self.__kemono_cdn__ / "media" / file.storageKey / max(file.variants).name
@@ -106,6 +120,3 @@ class FileFilterer:
     def _report_skip_by_config(self, name: str, kind: str) -> None:
         self.log.info("Skipping file '%s' in post #%s by config options [%s]", name, self.post.id, kind)
         self.skipped += 1
-
-    def embed(self) -> None:
-        return None

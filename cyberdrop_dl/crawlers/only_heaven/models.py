@@ -3,7 +3,7 @@ from typing import Any, override
 
 from pydantic import Field
 
-from cyberdrop_dl.crawlers.kemono.models import PostProtocol, User
+from cyberdrop_dl.crawlers.kemono.models import User
 from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.models.types import AwareDatetime
 
@@ -27,7 +27,7 @@ class File:
     originalFilename: str  # noqa: N815
 
 
-class PostModel(PostProtocol[File], DeferredModel, extra="ignore"):
+class PostModel(DeferredModel, extra="ignore"):
     id: str
     content: str | None = Field(validation_alias="caption", default=None)
     attachments: tuple[File, ...] = ()
@@ -38,6 +38,7 @@ class PostModel(PostProtocol[File], DeferredModel, extra="ignore"):
     tags: tuple[str, ...] = ()
     preview_state: str | None = None
     has_full: bool = True
+    file: File | None = None
 
     @override
     def model_post_init(self, *_: object) -> None:

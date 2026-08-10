@@ -56,7 +56,7 @@ def _parse_tags(tags: object) -> object:
 class PostProtocol[T](Protocol):
     id: str
     content: str | None
-    file: File | None
+    file: T | None
     attachments: tuple[T, ...]
     published: AwareDatetime | None
     added: AwareDatetime | None
@@ -66,7 +66,7 @@ class PostProtocol[T](Protocol):
     has_full: bool
 
 
-class PostModel(PostProtocol[File], DeferredModel, extra="ignore"):
+class PostModel(DeferredModel, extra="ignore"):
     id: str
     content: str | None = None  # search results has no "content" key, only "substring"
 
