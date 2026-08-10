@@ -67,4 +67,4 @@ class UserPostModel(PostModel):
 
     @property
     def web_path_qs(self) -> str:
-        return f"{self.service}/user/{self.user_id}/post/{self.id}"
+        return f"creators/{self.service}/{self.user_id}/post/{self.id}"
