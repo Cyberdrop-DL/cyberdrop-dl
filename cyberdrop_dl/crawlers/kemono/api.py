@@ -127,6 +127,9 @@ class PostEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
     async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPostT:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id
         resp = await self.api.request_json(url)
+        post = resp.get("post", resp)
+        post.setdefault("user_id", creator_id)
+        post.setdefault("service", service)
         return self.api.__post__.model_validate(resp.get("post", resp))
 
     async def comments(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:

@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Annotated, override
+from typing import Annotated, Protocol, override
 
 from pydantic import BeforeValidator, Field
 
@@ -53,7 +53,20 @@ def _parse_tags(tags: object) -> object:
     return tags
 
 
-class PostModel(DeferredModel, extra="ignore"):
+class PostProtocol[T](Protocol):
+    id: str
+    content: str | None
+    file: File | None
+    attachments: tuple[T, ...]
+    published: AwareDatetime | None
+    added: AwareDatetime | None
+    timestamp: int | None = None
+    tags: tuple[str, ...]
+    preview_state: str | None
+    has_full: bool
+
+
+class PostModel(PostProtocol[File], DeferredModel, extra="ignore"):
     id: str
     content: str | None = None  # search results has no "content" key, only "substring"
 
