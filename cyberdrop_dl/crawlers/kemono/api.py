@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload, override
 
 from pydantic import BaseModel
 from typing_extensions import TypeVar
 
-from cyberdrop_dl import signature
-from cyberdrop_dl.cache import cached_method
+from cyberdrop_dl import aio, signature
 from cyberdrop_dl.crawlers.crawler import API
 from cyberdrop_dl.crawlers.kemono.models import Creator, Post, User, UserPostModel
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -42,7 +40,6 @@ class KemonoAPI(API, Generic[UserPostT]):
         async with self.request(*args, **kwargs) as resp:
             return await resp.json(encoding="utf-8", content_type=False)
 
-    @cached_method(ttl=1800)
     async def creators(self) -> dict[User, str]:
         url = self.ENTRYPOINT / "creators"
         resp: list[dict[str, Any]] = await self.request_json(url)
@@ -111,13 +108,13 @@ class AccountEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
 class CreatorEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
     @override
     def __post_init__(self) -> None:
-        self._lock: asyncio.Lock = asyncio.Lock()
+        self._locks: aio.WeakAsyncLocks[User] = aio.WeakAsyncLocks()
 
     async def __getitem__(self, user: User) -> str:
         try:
             return self.api.user_names[user]
         except KeyError:
-            async with self._lock:
+            async with self._locks[user]:
                 creator = await self.profile(user.service, user.id)
                 self.api.user_names[user] = creator.name
                 return creator.name
