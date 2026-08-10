@@ -159,6 +159,9 @@
         },
         "pawchive": {
           "$ref": "#/$defs/KemonoConfig"
+        },
+        "only_haven": {
+          "$ref": "#/$defs/KemonoConfig"
         }
       },
       "title": "Crawlers",

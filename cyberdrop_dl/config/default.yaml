@@ -35,6 +35,11 @@ crawlers:
     wordpress_media: []
   one_pace:
     prefer_dub: false
+  only_haven:
+    attachments: true
+    content_urls: true
+    embed: true
+    file: true
   pawchive:
     attachments: true
     content_urls: true
