@@ -114,3 +114,9 @@ def remove_duplicates[T](values: tuple[T, ...]) -> tuple[T, ...]: ...
 
 def remove_duplicates[T](values: list[T] | tuple[T, ...]) -> list[T] | tuple[T, ...]:
     return type(values)(dict.fromkeys(values))
+
+
+def assume_utc[T: datetime.datetime](date: T) -> T:
+    if date.tzinfo is None:
+        return date.replace(tzinfo=datetime.UTC)
+    return date

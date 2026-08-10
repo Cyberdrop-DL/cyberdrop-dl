@@ -1,10 +1,10 @@
 import dataclasses
-import datetime
 from typing import Annotated, override
 
-from pydantic import AfterValidator, BeforeValidator, Field
+from pydantic import BeforeValidator, Field
 
 from cyberdrop_dl.models import DeferredModel
+from cyberdrop_dl.models.types import AwareDatetime
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 
 
@@ -51,15 +51,6 @@ def _parse_tags(tags: object) -> object:
             tags = tags[1:-1]
         return [t.strip('"') for t in tags.split(",")]
     return tags
-
-
-def _assume_utc[T: datetime.datetime](date: T) -> T:
-    if date.tzinfo is None:
-        return date.replace(tzinfo=datetime.UTC)
-    return date
-
-
-type AwareDatetime = Annotated[datetime.datetime, AfterValidator(_assume_utc)]
 
 
 class PostModel(DeferredModel, extra="ignore"):

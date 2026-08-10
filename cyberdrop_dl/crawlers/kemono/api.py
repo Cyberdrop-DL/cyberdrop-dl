@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload, override
+
+from pydantic import BaseModel
+from typing_extensions import TypeVar
 
 from cyberdrop_dl import signature
 from cyberdrop_dl.cache import cached_method
@@ -18,17 +21,21 @@ if TYPE_CHECKING:
 VALID_QUERY_PARAMS = {"o", "q", "tags", "order", "sort"}
 
 
-class KemonoAPI(API):
+UserPostT = TypeVar("UserPostT", bound=BaseModel, default=UserPostModel)
+
+
+class KemonoAPI(API, Generic[UserPostT]):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL]
+    __post__: type[UserPostT] = UserPostModel  # pyright: ignore[reportAssignmentType]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         assert cls.ENTRYPOINT
         super().__init_subclass__(**kwargs)
 
     def __post_init__(self) -> None:
-        self.post: PostEndpoint = PostEndpoint(self)
-        self.creator: CreatorEndpoint = CreatorEndpoint(self)
-        self.account: AccountEndpoint = AccountEndpoint(self)
+        self.post: PostEndpoint[UserPostT] = PostEndpoint(self)
+        self.creator: CreatorEndpoint[UserPostT] = CreatorEndpoint(self)
+        self.account: AccountEndpoint[UserPostT] = AccountEndpoint(self)
 
     @override
     @signature.copy(API.request_json)
@@ -42,13 +49,13 @@ class KemonoAPI(API):
         resp: list[dict[str, Any]] = await self.request_json(url)
         return {User(u["service"], u["id"]): u["name"] for u in resp}
 
-    async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPostModel]]:
+    async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPostT]]:
         url = self.ENTRYPOINT / "posts"
         query = dict(_filter_query(query))
         assert query
         url = url.update_query(query)
         async for posts in self.pager(url):
-            yield map(UserPostModel.model_validate, posts)
+            yield map(self.__post__.model_validate, posts)
 
     async def search_hash(self, file_hash: str) -> dict[str, Any]:
         url = self.ENTRYPOINT / "search_hash" / file_hash
@@ -72,10 +79,7 @@ class KemonoAPI(API):
                 break
 
 
-KemonoAPIEndpoint = API.Endpoint[KemonoAPI]
-
-
-class AccountEndpoint(KemonoAPIEndpoint):
+class AccountEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
     @overload
     async def favorites(self, type_: Literal["post"]) -> AsyncGenerator[map[Post]]: ...
 
@@ -95,7 +99,7 @@ class AccountEndpoint(KemonoAPIEndpoint):
             yield map(parse, page)  # pyright: ignore[reportReturnType]
 
 
-class CreatorEndpoint(KemonoAPIEndpoint):
+class CreatorEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
     async def profile(self, service: str, creator_id: str) -> dict[str, Any]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "profile"
         return await self.api.request_json(url)
@@ -110,20 +114,20 @@ class CreatorEndpoint(KemonoAPIEndpoint):
 
     async def posts(
         self, service: str, creator_id: str, query: Mapping[str, str] | None = None
-    ) -> AsyncGenerator[map[UserPostModel]]:
+    ) -> AsyncGenerator[map[UserPostT]]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
         if query:
             url = url.update_query(dict(_filter_query(query)))
 
         async for posts in self.api.pager(url):
-            yield map(UserPostModel.model_validate, posts)
+            yield map(self.api.__post__.model_validate, posts)
 
 
-class PostEndpoint(KemonoAPIEndpoint):
-    async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPostModel:
+class PostEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
+    async def __call__(self, service: str, creator_id: str, post_id: str) -> UserPostT:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id
         resp = await self.api.request_json(url)
-        return UserPostModel.model_validate(resp.get("post", resp))
+        return self.api.__post__.model_validate(resp.get("post", resp))
 
     async def comments(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "comments"
