@@ -133,7 +133,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def _user_post(self, scrape_item: ScrapeItem, post: UserPostModel) -> None:
         self.__check_for_ads(post)
-        user_name = (await self.api.creators())[post.user]
+        user_name = post.user_name or (await self.api.creators())[post.user]
         title = self.create_title(user_name, post.user_id)
         scrape_item.setup_as_album(title, album_id=post.user_id)
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)

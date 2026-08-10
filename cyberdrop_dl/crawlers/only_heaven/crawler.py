@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 class OnlyHavenAPI(KemonoAPI[UserPostModel]):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cum.st/api/v1")
+    VALID_QUERY_PARAMS: ClassVar[set[str]] = KemonoAPI.VALID_QUERY_PARAMS | {"type"}
     __post__: type[UserPostModel] = UserPostModel
 
 
@@ -95,7 +96,7 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
     @override
     def _compose_file_url(self, file: File) -> AbsoluteHttpURL:  # pyright: ignore[reportIncompatibleMethodOverride]
         url = self.__kemono_cdn__ / "media" / file.storageKey / max(file.variants).name
-        return url.update_query(f=file.originalFilename or url.name)
+        return url.update_query(f=file.originalFilename or file.storageKey)
 
 
 @dataclasses.dataclass(slots=True)
@@ -111,7 +112,7 @@ class FileFilterer:
 
     def __iter__(self) -> Generator[File]:
         for file, kind, should_download in self._files():
-            file_name = file.originalFilename
+            file_name = file.originalFilename or file.storageKey
             if not should_download:
                 self._report_skip_by_config(file_name, kind)
             else:

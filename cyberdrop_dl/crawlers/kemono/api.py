@@ -18,14 +18,12 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
-VALID_QUERY_PARAMS = {"o", "q", "tags", "order", "sort"}
-
-
 UserPostT = TypeVar("UserPostT", bound=BaseModel, default=UserPostModel)
 
 
 class KemonoAPI(API, Generic[UserPostT]):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL]
+    VALID_QUERY_PARAMS: ClassVar[set[str]] = {"o", "q", "tags", "order", "sort"}
     __post__: type[UserPostT] = UserPostModel  # pyright: ignore[reportAssignmentType]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -53,10 +51,10 @@ class KemonoAPI(API, Generic[UserPostT]):
 
     async def search(self, query: Mapping[str, str]) -> AsyncGenerator[map[UserPostT]]:
         url = self.ENTRYPOINT / "posts"
-        query = dict(_filter_query(query))
+        query = dict(_filter_query(query, self.VALID_QUERY_PARAMS))
         assert query
         url = url.update_query(query)
-        async for posts in self.pager(url):
+        async for posts in self.pager(url, key="posts"):
             yield map(self.__post__.model_validate, posts)
 
     async def search_hash(self, file_hash: str) -> dict[str, Any]:
@@ -72,7 +70,7 @@ class KemonoAPI(API, Generic[UserPostT]):
         for offset in itertools.count(int(url.query.get("o") or 0), step_size):
             data = await self.request_json(url.update_query(o=offset))
             if key:
-                data = data[key]
+                data = data.get(key, data)
             if not data:
                 break
             count = len(data)
@@ -119,7 +117,7 @@ class CreatorEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
     ) -> AsyncGenerator[map[UserPostT]]:
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "posts"
         if query:
-            url = url.update_query(dict(_filter_query(query)))
+            url = url.update_query(dict(_filter_query(query, self.api.VALID_QUERY_PARAMS)))
 
         async for posts in self.api.pager(url):
             yield map(self.api.__post__.model_validate, posts)
@@ -143,7 +141,7 @@ class PostEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
         return await self.api.request_json(url)
 
 
-def _filter_query(query: Mapping[str, str]) -> Generator[tuple[str, str]]:
+def _filter_query(query: Mapping[str, str], params: set[str]) -> Generator[tuple[str, str]]:
     for name, value in query.items():
-        if value and name in VALID_QUERY_PARAMS:
+        if value and name in params:
             yield name, value

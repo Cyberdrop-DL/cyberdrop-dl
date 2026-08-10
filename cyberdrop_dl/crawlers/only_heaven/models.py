@@ -2,6 +2,7 @@ import dataclasses
 from typing import Any, override
 
 from pydantic import Field
+from pydantic.aliases import AliasChoices
 
 from cyberdrop_dl.crawlers.kemono.models import User
 from cyberdrop_dl.models import DeferredModel
@@ -24,12 +25,12 @@ class File:
     height: int
     storageKey: str  # noqa: N815
     variants: tuple[Variant, ...]
-    originalFilename: str  # noqa: N815
+    originalFilename: str | None = None  # noqa: N815, missing on search results
 
 
 class PostModel(DeferredModel, extra="ignore"):
     id: str
-    content: str | None = Field(validation_alias="caption", default=None)
+    content: str | None = Field(validation_alias=AliasChoices("caption", "captionHtml"), default=None)
     attachments: tuple[File, ...] = ()
     published: AwareDatetime | None = None
     added: AwareDatetime | None = None
@@ -39,6 +40,7 @@ class PostModel(DeferredModel, extra="ignore"):
     preview_state: str | None = None
     has_full: bool = True
     file: File | None = None
+    user_name: str | None = Field(validation_alias="creatorName")
 
     @override
     def model_post_init(self, *_: object) -> None:
@@ -48,7 +50,7 @@ class PostModel(DeferredModel, extra="ignore"):
 
 class UserPostModel(PostModel):
     service: str
-    user_id: str
+    user_id: str = Field(validation_alias="creatorId")
     title: str | None = None
 
     @property

@@ -91,6 +91,7 @@ class UserPostModel(PostModel):
     service: str
     user_id: str = Field(validation_alias="user")
     title: str
+    user_name: str | None = None
 
     @property
     def user(self) -> User:
