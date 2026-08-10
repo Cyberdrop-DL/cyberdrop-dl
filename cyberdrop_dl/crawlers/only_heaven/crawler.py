@@ -37,9 +37,9 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
     FOLDER_DOMAIN: ClassVar[str] = "OnlyHaven"
 
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Creator": "/creators/<service>/<user_id>",
-        "Search": "/search?q=...",
         "Post": "/creators/<service>/<user_id>/post/<post_id>",
+        "Creator": "/creators/<service>/<user_id>",
+        "Post Search": "/search?q=...",
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id}"
 

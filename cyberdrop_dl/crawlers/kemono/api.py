@@ -54,7 +54,7 @@ class KemonoAPI(API, Generic[UserPostT]):
         query = dict(_filter_query(query, self.VALID_QUERY_PARAMS))
         assert query
         url = url.update_query(query)
-        async for posts in self.pager(url, key="posts"):
+        async for posts in self.pager(url):
             yield map(self.__post__.model_validate, posts)
 
     async def search_hash(self, file_hash: str) -> dict[str, Any]:
@@ -65,7 +65,7 @@ class KemonoAPI(API, Generic[UserPostT]):
         self,
         url: AbsoluteHttpURL,
         step_size: int = 50,
-        key: str | None = None,
+        key: str = "posts",
     ) -> AsyncGenerator[list[dict[str, Any]]]:
         for offset in itertools.count(int(url.query.get("o") or 0), step_size):
             data = await self.request_json(url.update_query(o=offset))
@@ -104,14 +104,6 @@ class CreatorEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
         url = self.api.ENTRYPOINT / service / "user" / creator_id / "profile"
         return await self.api.request_json(url)
 
-    async def links(self, service: str, creator_id: str) -> dict[str, Any]:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "links"
-        return await self.api.request_json(url)
-
-    async def tags(self, service: str, creator_id: str) -> dict[str, Any]:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "tags"
-        return await self.api.request_json(url)
-
     async def posts(
         self, service: str, creator_id: str, query: Mapping[str, str] | None = None
     ) -> AsyncGenerator[map[UserPostT]]:
@@ -119,8 +111,13 @@ class CreatorEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
         if query:
             url = url.update_query(dict(_filter_query(query, self.api.VALID_QUERY_PARAMS)))
 
+        def parse(post: dict[str, Any]):
+            post.setdefault("user_id", creator_id)
+            post.setdefault("service", service)
+            return self.api.__post__.model_validate(post)
+
         async for posts in self.api.pager(url):
-            yield map(self.api.__post__.model_validate, posts)
+            yield map(parse, posts)
 
 
 class PostEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
@@ -131,14 +128,6 @@ class PostEndpoint(API.Endpoint[KemonoAPI[UserPostT]]):
         post.setdefault("user_id", creator_id)
         post.setdefault("service", service)
         return self.api.__post__.model_validate(post)
-
-    async def comments(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "comments"
-        return await self.api.request_json(url)
-
-    async def revisions(self, service: str, creator_id: str, post_id: str) -> dict[str, Any]:
-        url = self.api.ENTRYPOINT / service / "user" / creator_id / "post" / post_id / "revisions"
-        return await self.api.request_json(url)
 
 
 def _filter_query(query: Mapping[str, str], params: set[str]) -> Generator[tuple[str, str]]:
