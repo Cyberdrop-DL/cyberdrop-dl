@@ -36,7 +36,7 @@ class File:
         return self.storageKey + ext
 
 
-class PostModel(DeferredModel, extra="ignore"):
+class PostModel(DeferredModel, val_temporal_unit="seconds", extra="ignore"):
     id: str
     content: str | None = Field(validation_alias=AliasChoices("caption", "captionHtml"), default=None)
     attachments: tuple[File, ...] = ()
@@ -48,7 +48,7 @@ class PostModel(DeferredModel, extra="ignore"):
     preview_state: str | None = None
     has_full: bool = True
     file: File | None = None
-    user_name: str | None = Field(validation_alias="creatorName")
+    user_name: str | None = Field(validation_alias="creatorName", default=None)
 
     @override
     def model_post_init(self, *_: object) -> None:
