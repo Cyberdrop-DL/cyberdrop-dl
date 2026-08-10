@@ -18,7 +18,14 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
-    from cyberdrop_dl.crawlers.kemono.models import Embed, File, PostModel, PostProtocol, UserPostModel
+    from cyberdrop_dl.crawlers.kemono.models import (
+        Embed,
+        File,
+        PostModel,
+        PostProtocol,
+        UserPostModel,
+        UserPostProtocol,
+    )
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
@@ -58,7 +65,7 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
 
     async def __async_post_init__(self) -> None:
         with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get list of creators from API"):
-            _ = await self.api.creators()
+            self.api.user_names = await self.api.creators()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -131,14 +138,14 @@ class KemonoBaseCrawler(Crawler, is_abc=True):
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     @error_handling_wrapper
-    async def _user_post(self, scrape_item: ScrapeItem, post: UserPostModel) -> None:
+    async def _user_post(self, scrape_item: ScrapeItem, post: UserPostProtocol[Any]) -> None:
         self.__check_for_ads(post)
-        user_name = post.user_name or (await self.api.creators())[post.user]
+        user_name = post.user_name or await self.api.creator[post.user]
         title = self.create_title(user_name, post.user_id)
         scrape_item.setup_as_album(title, album_id=post.user_id)
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
-        self._post(scrape_item, post)
+        self._post(scrape_item, post)  # pyright: ignore[reportArgumentType]
 
     def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         scrape_item.uploaded_at = post.timestamp

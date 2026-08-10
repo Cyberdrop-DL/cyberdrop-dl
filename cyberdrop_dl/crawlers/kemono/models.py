@@ -66,6 +66,19 @@ class PostProtocol[T](Protocol):
     has_full: bool
 
 
+class UserPostProtocol[T](PostProtocol[T]):
+    service: str
+    user_id: str
+    title: str
+    user_name: str | None
+
+    @property
+    def user(self) -> User: ...
+
+    @property
+    def web_path_qs(self) -> str: ...
+
+
 class PostModel(DeferredModel, extra="ignore"):
     id: str
     content: str | None = None  # search results has no "content" key, only "substring"
@@ -100,3 +113,9 @@ class UserPostModel(PostModel):
     @property
     def web_path_qs(self) -> str:
         return f"{self.service}/user/{self.user_id}/post/{self.id}"
+
+
+class Creator(DeferredModel):
+    id: str
+    name: str
+    displayName: str | None = None  # noqa: N815

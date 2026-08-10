@@ -930,9 +930,12 @@ class API(HTTPMixin, ABC):
     PRIMARY_URL: AbsoluteHttpURL = AbsoluteHttpURL()
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
 
-    class Endpoint[T: API]:
+    class Endpoint[T: API](ABC):  # noqa: B024
         def __init__(self, api: T) -> None:
             self.api: T = api
+            self.__post_init__()
+
+        def __post_init__(self) -> None: ...  # noqa: B027
 
         def __repr__(self) -> str:
             return f"<{type(self).__name__}>"

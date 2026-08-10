@@ -26,9 +26,17 @@ class OnlyHavenAPI(KemonoAPI[UserPostModel]):
     VALID_QUERY_PARAMS: ClassVar[set[str]] = KemonoAPI.VALID_QUERY_PARAMS | {"type"}
     __post__: type[UserPostModel] = UserPostModel
 
+    async def dm(self, service: str, creator_id: str, dm_id: str) -> UserPostModel:
+        url = self.ENTRYPOINT / service / "user" / creator_id / "dm" / dm_id
+        resp = await self.request_json(url)
+        post = resp.get("post", resp)
+        post.setdefault("user_id", creator_id)
+        post.setdefault("service", service)
+        return self.__post__.model_validate(post)
+
 
 class OnlyHavenCrawler(KemonoBaseCrawler):
-    __kemono_api__: ClassVar[type[KemonoAPI]] = OnlyHavenAPI  # pyright: ignore[reportAssignmentType]
+    __kemono_api__: ClassVar[type[OnlyHavenAPI]] = OnlyHavenAPI  # pyright: ignore[reportIncompatibleVariableOverride]
     __kemono_cdn__: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e1.cum.st")
 
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("cum.st",)
@@ -38,10 +46,14 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
 
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": "/creators/<service>/<user_id>/post/<post_id>",
+        "DM": "/creators/<service>/<user_id>/dm/<dm_id>",
         "Creator": "/creators/<service>/<user_id>",
         "Post Search": "/search?q=...",
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id}"
+
+    def __post_init__(self) -> None:
+        self.api: OnlyHavenAPI = self.__kemono_api__.from_crawler(self)  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @property
     @override
@@ -52,12 +64,19 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
         match scrape_item.url.parts[1:]:
             case ["creators", service, creator_id, "post", post_id]:
                 return await self.post(scrape_item, service, creator_id, post_id)
+            case ["creators", service, creator_id, "dm", dm_id]:
+                return await self.dm(scrape_item, service, creator_id, dm_id)
             case ["creators", service, creator_id]:
                 return await self.creator(scrape_item, service, creator_id)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
                 return await self.search(scrape_item, search_query)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    async def dm(self, scrape_item: ScrapeItem, service: str, creator_id: str, dm_id: str) -> None:
+        post = await self.api.dm(service, creator_id, dm_id)
+        await self._user_post(scrape_item, post)  # pyright: ignore[reportArgumentType]
 
     @error_handling_wrapper
     async def _direct_file(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
