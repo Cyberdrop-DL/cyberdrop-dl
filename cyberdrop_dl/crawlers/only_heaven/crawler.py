@@ -96,7 +96,7 @@ class OnlyHavenCrawler(KemonoBaseCrawler):
     @override
     def _compose_file_url(self, file: File) -> AbsoluteHttpURL:  # pyright: ignore[reportIncompatibleMethodOverride]
         url = self.__kemono_cdn__ / "media" / file.storageKey / max(file.variants).name
-        return url.update_query(f=file.originalFilename or file.storageKey)
+        return url.update_query(f=file.name)
 
 
 @dataclasses.dataclass(slots=True)
@@ -112,7 +112,7 @@ class FileFilterer:
 
     def __iter__(self) -> Generator[File]:
         for file, kind, should_download in self._files():
-            file_name = file.originalFilename or file.storageKey
+            file_name = file.name
             if not should_download:
                 self._report_skip_by_config(file_name, kind)
             else:

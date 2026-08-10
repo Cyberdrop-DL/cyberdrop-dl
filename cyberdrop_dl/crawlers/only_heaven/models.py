@@ -1,4 +1,5 @@
 import dataclasses
+from pathlib import Path
 from typing import Any, override
 
 from pydantic import Field
@@ -26,6 +27,13 @@ class File:
     storageKey: str  # noqa: N815
     variants: tuple[Variant, ...]
     originalFilename: str | None = None  # noqa: N815, missing on search results
+
+    @property
+    def name(self) -> str:
+        if self.originalFilename:
+            return self.originalFilename
+        ext = Path(max(self.variants).name).suffix
+        return self.storageKey + ext
 
 
 class PostModel(DeferredModel, extra="ignore"):
