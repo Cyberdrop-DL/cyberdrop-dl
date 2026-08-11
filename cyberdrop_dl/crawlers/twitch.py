@@ -15,8 +15,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from curl_cffi.requests.session import HttpMethod
-
+    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8

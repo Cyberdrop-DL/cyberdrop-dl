@@ -13,8 +13,7 @@ from cyberdrop_dl.utils.crypto import aes_cbc_decrypt
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from curl_cffi.requests.session import HttpMethod
-
+    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 

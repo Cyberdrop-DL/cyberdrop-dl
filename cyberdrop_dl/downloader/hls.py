@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Protocol
+
+from Crypto.Cipher import AES
 
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.m3u8 import HLSKey
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
@@ -17,12 +21,14 @@ if TYPE_CHECKING:
 
     from m3u8.model import InitializationSection, Segment
 
+    from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
 
 
 CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
+_DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +47,35 @@ class HLSSegment(NamedTuple):
     idx: int
     name: str
     url: AbsoluteHttpURL
+    decrypt_info: HLSKey | None = None
+
+
+class HLSDecrypter(Protocol):
+    async def __call__(self, content: bytes, key: HLSKey) -> bytes: ...
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class AESHLSDecrypter(HLSDecrypter):
+    client: HTTPClient
+    _lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+    _cache: dict[AbsoluteHttpURL, bytes] = dataclasses.field(default_factory=dict)
+
+    async def get_key(self, uri: AbsoluteHttpURL, headers: dict[str, str] | None = None) -> bytes:
+        if aes_key := self._cache.get(uri):
+            return aes_key
+
+        async with self._lock:
+            if aes_key := self._cache.get(uri):
+                return aes_key
+
+            async with self.client.raw_request(uri, headers=headers or {}) as resp:
+                aes_key = self._cache[uri] = await resp.read()
+
+            return aes_key
+
+    async def __call__(self, content: bytes, key: HLSKey, headers: dict[str, str] | None = None) -> bytes:
+        aes_key = await self.get_key(key.uri, headers=headers)
+        return AES.new(aes_key, AES.MODE_CBC, key.iv).encrypt(content)
 
 
 def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Generator[HLSSegment]:
@@ -50,7 +85,8 @@ def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Gene
         yield HLSSegment(
             idx=index - 1,
             name=f"{index:0{padding}d}{constants.TempExt.HLS}",
-            url=parse_url(segment.absolute_uri),
+            url=parse_url(segment.absolute_uri, trim=False),
+            decrypt_info=HLSKey.parse(segment),
         )
 
 
@@ -77,6 +113,9 @@ def _create_media_segments(
             is_segment=True,
         )
         seg_media_item.headers = media_item.headers.copy()
+        if segment.decrypt_info:
+            segment.decrypt_info(seg_media_item.extra_info)
+
         yield seg_media_item
 
 
@@ -118,8 +157,21 @@ async def _download_m3u8(
         m3u8.source,
     )
     results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
+    await _decrypt_segments((r.item for r in results), sem)
     await _merge_segments(tuple(result.item.path for result in results), output)
     return output
+
+
+async def _decrypt_segments(items: Iterable[MediaItem], sem: asyncio.BoundedSemaphore) -> None:
+    decrypter = _DECRYPTER.get()
+
+    async def decrypt(item: MediaItem) -> None:
+        if key := HLSKey.get(item.extra_info):
+            logger.debug(f"Decrypting '{item.path}' with {key}")
+            content = await decrypter(await aio.read_bytes(item.path), key, item.headers)
+            await aio.write_bytes(item.path, content)
+
+    await aio.map(decrypt, items, task_limit=sem)
 
 
 async def _download_segments(
@@ -160,13 +212,14 @@ def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
     return output.with_suffix(suffix)
 
 
-async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
+async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn, client: HTTPClient) -> Streams:
     """Download a rendition group"""
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
     sem = asyncio.BoundedSemaphore(CONCURRENT_SEGMENTS.get())
 
     async def download(m3u8: M3U8) -> Path:
+        _DECRYPTER.set(AESHLSDecrypter(client))
         return await _download_m3u8(m3u8, temp_dir, media_item, download_fn, sem)
 
     async def download_subs() -> Path | None:

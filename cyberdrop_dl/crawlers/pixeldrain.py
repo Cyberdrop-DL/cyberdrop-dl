@@ -19,9 +19,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-_PRIMARY_URL = AbsoluteHttpURL("https://pixeldrain.com")
-
-
 @final
 @dataclasses.dataclass(slots=True)
 class File:
@@ -124,7 +121,7 @@ class PixelDrainCrawler(Crawler):
         ),
         "**NOTE**": "text files will not be downloaded but their content will be parsed for URLs",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixeldrain.com")
     DOMAIN: ClassVar[str] = "pixeldrain"
     FOLDER_DOMAIN: ClassVar[str] = "PixelDrain"
 
@@ -190,7 +187,7 @@ class PixelDrainCrawler(Crawler):
         assert scrape_item.album_id
         results = await self.get_album_results(scrape_item.album_id)
         for file in files:
-            if self.check_album_results(_build_download_url(file), results):
+            if self.check_album_results(self.api.download(file), results):
                 continue
 
             url = self.origin / "u" / file.id
@@ -232,7 +229,7 @@ class PixelDrainCrawler(Crawler):
                 new_scrape_item = scrape_item.create_child(url)
 
                 if node.type == "file":
-                    if self.check_album_results(_build_download_url(node), results):
+                    if self.check_album_results(self.api.download(node), results):
                         continue
 
                     subfolders = node.path.split("/")[2:-1]
@@ -259,7 +256,7 @@ class PixelDrainCrawler(Crawler):
         await self._file(scrape_item, file)
 
     async def _file(self, scrape_item: ScrapeItem, file: File | Node) -> None:
-        src = _build_download_url(file).with_host(self.origin.host)
+        src = self.api.download(file).with_host(self.origin.host)
         if "text/plain" in file.mime_type:
             scrape_item.setup_as_album(self.create_title(file.name, file.id))
             text = await self.api.text(src)
@@ -313,15 +310,14 @@ class PixelDrainAPI(API):
     async def text(self, api_url: AbsoluteHttpURL) -> str:
         return await self.request_text(api_url, headers=self.headers)
 
+    def download(self, file: File | Node) -> AbsoluteHttpURL:
+        if type(file) is File:
+            return (self.origin / "api/file" / file.id).with_query("download")
+        return (self.origin / "api/filesystem" / file.path.removeprefix("/")).with_query("attach")
+
 
 def _filter_files(files: list[File], fragment: str) -> list[File]:
     if fragment.startswith(prefix := "item="):
         item_idx = int(fragment.removeprefix(prefix))
         return [files[item_idx]]
     return files
-
-
-def _build_download_url(file: File | Node) -> AbsoluteHttpURL:
-    if type(file) is File:
-        return (_PRIMARY_URL / "api/file" / file.id).with_query("download")
-    return (_PRIMARY_URL / "api/filesystem" / file.path.removeprefix("/")).with_query("attach")

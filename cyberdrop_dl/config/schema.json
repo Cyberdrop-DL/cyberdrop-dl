@@ -59,6 +59,9 @@
         "pixeldrain": {
           "$ref": "#/$defs/ApiKeyAuth"
         },
+        "nova": {
+          "$ref": "#/$defs/ApiKeyAuth"
+        },
         "real_debrid": {
           "$ref": "#/$defs/ApiKeyAuth"
         }
@@ -158,6 +161,9 @@
           "$ref": "#/$defs/TwitterConfig"
         },
         "pawchive": {
+          "$ref": "#/$defs/KemonoConfig"
+        },
+        "only_haven": {
           "$ref": "#/$defs/KemonoConfig"
         }
       },
