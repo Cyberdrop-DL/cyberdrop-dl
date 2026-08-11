@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 from abc import ABC, abstractmethod
@@ -50,12 +51,16 @@ class HLSMixin(ABC):
         method: HttpMethod = "GET",
         only: Iterable[str] = (),
         exclude: Iterable[str] = ("vp09",),
+        keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails | None]:
         m3u8_obj = await self._request_m3u8(url, method, **kwargs)
         if m3u8_obj.is_variant:
             logger.info("Selecting best rendition from %s", url)
             rendition = m3u8.select_best_rendition(m3u8_obj, only=only, exclude=exclude)
+            if keep_query:
+                rendition = dataclasses.replace(rendition, urls=rendition.urls.with_query(url.query))
+
             logger.info("Selected best rendition for %s:\n%s", url, rendition)
             return await self._resolve_rendition(rendition, method, **kwargs)
         m3u8_obj.media_type = "video"
@@ -108,10 +113,13 @@ class HLSMixin(ABC):
         method: HttpMethod = "GET",
         only: Iterable[str] = (),
         exclude: Iterable[str] = ("vp09",),
+        keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
         """Get m3u8 rendition group from a playlist m3u8 (variant m3u8), selecting the best format"""
-        playlist, info = await self.request_m3u8(url, method, only=only, exclude=exclude, **kwargs)
+        playlist, info = await self.request_m3u8(
+            url, method, only=only, exclude=exclude, keep_query=keep_query, **kwargs
+        )
         if info is None:
             raise ScrapeError(422, "Not a variant m3u8", origin=url)
         return playlist, info

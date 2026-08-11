@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import uuid
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 import yarl
 
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, compose_ep_name
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css
-from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
+session_token: ContextVar[str] = ContextVar("session_token")
 
+if TYPE_CHECKING:
     from cyberdrop_dl.utils.m3u8 import Rendition
 
 
@@ -39,7 +39,8 @@ class PlutoCrawler(Crawler):
     @staticmethod
     @override
     def __db_path__(url: AbsoluteHttpURL, /) -> str:
-        _region, sep, rest = url.path.partition("/on-demand/")
+        _region, sep, rest = url.path.partition("/shows/")
+        assert sep
         return sep + rest
 
     def __post_init__(self) -> None:
@@ -47,64 +48,35 @@ class PlutoCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_, "on-demand", *vod] | ["on-demand", *vod]:
-                match vod:
-                    case ["series", series_id, *rest]:
-                        match rest:
-                            case ["season", _, "episode", episode_id] | ["episode", episode_id]:
-                                return await self.episode(scrape_item, series_id, episode_id)
-                            case ["season", season]:
-                                return await self.series(scrape_item, series_id, int(season))
-                            case _:
-                                return await self.series(scrape_item, series_id)
-                    case _:
-                        raise ValueError
-            case _:
+            case [*_, "shows", series_id, "episode", episode_id]:
+                await self.episode(scrape_item, series_id, episode_id)
+            case [*_, "shows", series_id, "season", _season]:
                 raise ValueError
 
-    @error_handling_wrapper
-    async def series(self, scrape_item: ScrapeItem, series_id: str, season: int | None = None) -> None:
-        series = await self._series(scrape_item, series_id)
-        downloaded = await self.get_album_results(series.id)
-        base_url = self.PRIMARY_URL / "on-demand/series" / series.id
-        for ep in series.episodes():
-            if season is not None and ep.season != season:
-                continue
-
-            url = base_url / "season" / str(ep.season) / "episode" / ep.id
-            if self.check_album_results(url, downloaded):
-                continue
-
-            new_item = scrape_item.create_child(url)
-            self.create_task(self._episode(new_item, ep))
-            scrape_item.add_children()
-
-    async def _series(self, scrape_item: ScrapeItem, series_id: str) -> Series:
-        series = await self.api.series(series_id)
-        scrape_item.setup_as_album(self.create_title(series.name, series.id), album_id=series.id)
-        self.create_eager_task(self.write_metadata(scrape_item, series.id, series))
-        return series
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def episode(self, scrape_item: ScrapeItem, series_id: str, episode_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
-        series = await self._series(scrape_item, series_id)
-        try:
-            episode = next(e for e in series.episodes() if e.id == episode_id)
-        except StopIteration:
-            raise ScrapeError(404) from None
-
+        soup = await self.request_soup(scrape_item.url)
+        data = json.loads(css.select_text(soup, "#__NEXT_DATA__"))
+        ep = data["props"]["pageProps"]["episodeMetadata"]
+        episode = _deserialize(Episode, ep, id=episode_id)
+        scrape_item.setup_as_album(self.create_title(ep["seriesTitle"], series_id), album_id=series_id)
         await self._episode(scrape_item, episode)
 
     @error_handling_wrapper
     async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
-        m3u8_url = _compose_stream_url(self.api.stitcher, ep.stitched)
-        m3u8, info = await self.request_m3u8_playlist(m3u8_url)
+        m3u8_url = await self.api.stream(ep.id)
+        m3u8, info = await self.request_m3u8_playlist(
+            m3u8_url, headers={"User-Agent": self.api.FIREFOX}, keep_query=True
+        )
         _remove_ads_segments(m3u8)
         filename = self.create_custom_filename(
-            compose_ep_name(ep.season, ep.number, ep.name),
+            compose_ep_name(ep.season, ep.number, ep.title),
             ext := ".mp4",
             file_id=ep.id,
             resolution=info.resolution,
@@ -115,7 +87,7 @@ class PlutoCrawler(Crawler):
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            ep.name,
+            ep.title,
             ext,
             m3u8=m3u8,
             custom_filename=filename,
@@ -123,12 +95,13 @@ class PlutoCrawler(Crawler):
         )
 
 
-_STITCHER: ContextVar[Stitcher] = ContextVar("_STITCHER")
-
-
 class PlutoAPI(API):
     BOOT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://boot.pluto.tv/v4/start")
     FIREFOX: ClassVar[str] = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
+    GRAPHQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv/api/tn/app-shell/graphql/")
+    M3U8: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL(
+        "https://cfd-v4-service-channel-stitcher-use1-1.prd.pluto.tv/v2/stitch/hls/episode"
+    )
 
     def __post_init__(self) -> None:
         self._device_version: str = "151.0.0"  # from firefox's UA
@@ -137,108 +110,87 @@ class PlutoAPI(API):
     def __repr__(self) -> str:
         return f"<{type(self).__name__}(app_version={self.app_version.get()}, client_id={self._client_id}, device_version={self._device_version})>"
 
-    @property
-    def stitcher(self) -> Stitcher:
-        return _STITCHER.get()
-
     @cached_method()
     async def app_version(self) -> str:
         soup = await self.request_soup(self.PRIMARY_URL)
-        return css.select(soup, "meta[name=appVersion]", "content")
+        return css.select(soup, "meta[name=appVersion], meta[name=app_version]", "content")
 
-    async def boot(self, **params: Any) -> dict[str, Any]:
-        url = self.BOOT.with_query(
-            appName="web",
-            appVersion=await self.app_version(),
-            deviceVersion=self._device_version,
-            deviceModel="web",
-            deviceMake="firefox",
-            deviceType="web",
-            clientID=self._client_id,
-            clientModelNumber="1.0.0",
-            serverSideAds="false",
-            **params,
+    async def start(self) -> Session:
+        resp = await self.request_gql(
+            "PtvStart",
+            {
+                "params": {
+                    "deviceModel": "web",
+                    "drmCapabilities": "widevine:L3",
+                    "isClientDNT": True,
+                    "deviceId": self._client_id,
+                    "ptvAppName": "web",
+                    "cmAudienceID": "",
+                    "updateType": "v1v2",
+                }
+            },
         )
-        return await self.request_json(url, headers={"User-Agent": self.FIREFOX})
 
-    async def media(self, media_id: str) -> dict[str, Any]:
-        boot = await self.boot(seriesIDs=media_id)
-        try:
-            media = next(v for v in boot.get("VOD", ()) if v["id"] == media_id)
-        except StopIteration:
-            boot = await self.boot(seriesIDs=media_id, drmCapabilities="widevine:L1")
-            has_drm = next((v for v in boot.get("VOD", ()) if v["id"] == media_id), None) is not None
-            raise ScrapeError("DRM protected" if has_drm else 404) from None
+        return _deserialize(Session, resp["ptvStart"]["session"])
 
-        _STITCHER.set(
-            Stitcher(
-                server=self.parse_url(boot["servers"]["stitcher"]),
-                params=boot["stitcherParams"],
-                token=boot["sessionToken"],
-            )
+    async def request_gql(self, operation: str, variables: dict[str, Any]) -> dict[str, Any]:
+        resp = await self.request_json(
+            self.GRAPHQL_ENDPOINT,
+            method="POST",
+            headers={"User-Agent": self.FIREFOX},
+            json={
+                "query": globals()[operation],
+                "variables": variables,
+                "operationName": operation,
+            },
         )
-        return media
+        return resp["data"]
 
-    async def series(self, series_id: str) -> Series:
-        media = await self.media(series_id)
-        return deserialize(Series, media)
-
-
-def _compose_stream_url(stitcher: Stitcher, path: str) -> AbsoluteHttpURL:
-    return (
-        (stitcher.server / f"v2{path}")
-        .update_query(stitcher.params)
-        .update_query(
-            jwt=stitcher.token,
-            includeExtendedEvents="true",
-            masterJWTPassthrough="true",
+    async def stream(self, episode_id: str) -> AbsoluteHttpURL:
+        session = await self.start()
+        url = self.M3U8 / episode_id / "master.m3u8"
+        sid = str(uuid.uuid1())
+        return url.with_query(
+            {
+                "advertisingId": "",
+                "appName": "web",
+                "appVersion": await self.app_version(),
+                "app_name": "web",
+                "clientID": self._client_id,
+                "deviceId": self._client_id,
+                "deviceMake": "firefox",
+                "deviceModel": "web",
+                "deviceType": "ios",
+                "deviceVersion": "151.0",
+                "serverSideAds": "false",
+                "sessionID": sid,
+                "sid": sid,
+                "userId": "",
+                "jwt": session.jwt,
+                "includeExtendedEvents": "true",
+            }
         )
-    )
 
 
-@dataclasses.dataclass(slots=True)
-class Stitcher:
-    server: AbsoluteHttpURL
-    params: str
-    token: str
-
-
-class Season(TypedDict):
-    number: int
-    episodes: list[dict[str, Any]]
-
-
-@dataclasses.dataclass(slots=True, order=True)
-class Media:
+@dataclasses.dataclass(slots=True, frozen=True)
+class Session:
     id: str
-    name: str
+    jwt: str
+
+
+_deserialize = Deserializer(
+    {"season": "seasonNum", "number": "episodeNum"},
+    {"season": int, "number": int},
+)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Episode:
+    id: str
     description: str
-    slug: str
-    rating: str | None
-    genre: str
-
-
-@dataclasses.dataclass(slots=True)
-class Episode(Media):
     season: int
     number: int
-    duration: int
-    stitched: str
-
-
-@dataclasses.dataclass(slots=True)
-class Series(Media):
-    seasons: list[Season] = dataclasses.field(default_factory=list)
-
-    def episodes(self) -> Generator[Episode]:
-        for season in self.seasons:
-            for ep in season["episodes"]:
-                yield deserialize(
-                    Episode,
-                    ep,
-                    id=ep.get("id") or ep["_id"],
-                    stitched=ep["stitched"]["path"],
-                )
+    title: str
 
 
 def _remove_ads_segments(rendition: Rendition) -> None:
@@ -253,3 +205,17 @@ def _remove_ads_segments(rendition: Rendition) -> None:
 def _is_ad(uri: str) -> bool:
     path = yarl.URL(uri).path.casefold()
     return any(ad_name in path for ad_name in ("_ad%2f", "_ad/", "_ad_bumper", "plutotv_filler"))
+
+
+PtvStart = """
+query PtvStart($params: StartParameters!) {
+  ptvStart(params: $params) {
+    deviceId
+    session {
+      id
+      jwt
+    }
+    refreshInSec
+  }
+}
+"""
