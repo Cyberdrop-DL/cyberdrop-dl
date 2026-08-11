@@ -70,6 +70,13 @@ class MediaURLs(NamedTuple):
     audio: AbsoluteHttpURL | None
     subtitle: AbsoluteHttpURL | None
 
+    def with_query(self, query: Mapping[str, Any]) -> MediaURLs:
+        return MediaURLs(
+            video=self.video.with_query(query),
+            audio=self.audio and self.audio.with_query(query),
+            subtitle=self.subtitle and self.subtitle.with_query(query),
+        )
+
 
 @dataclasses.dataclass(slots=True)
 class Rendition:
@@ -178,7 +185,7 @@ class HLSKey:
 
     @classmethod
     def parse(cls, seg: m3u8.model.Segment | m3u8.model.InitializationSection) -> Self | None:
-        if isinstance(seg, m3u8.model.Segment) and seg.key:
+        if isinstance(seg, m3u8.model.Segment) and seg.key and seg.key.method and seg.key.method != "NONE":
             assert seg.key.iv
             assert seg.key.uri
             return cls(
@@ -192,7 +199,9 @@ def _validate_keys(stream: M3U8) -> None:
     if not stream.keys:
         return
     for key in stream.keys:
-        if key is None:  # First one could be None # pyright: ignore[reportUnnecessaryComparison]
+        if (
+            key is None or key.method == "NONE"
+        ):  # First one could be None # pyright: ignore[reportUnnecessaryComparison]
             continue
         if key.method != Encryption.AES_128:
             raise DownloadError(
