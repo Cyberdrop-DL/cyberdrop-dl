@@ -254,6 +254,10 @@ def remove_unused_tags(file: Path) -> None:
     file.write_text(soup.prettify())
 
 
+def data(tag: BeautifulSoup) -> Any:
+    return json.loads(css.select_text(tag, "#__NEXT_DATA__"))
+
+
 if __name__ == "__main__":
     import sys
     from pathlib import Path

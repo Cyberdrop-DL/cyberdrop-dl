@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import uuid
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, ClassVar, override
@@ -11,7 +10,7 @@ import yarl
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, compose_ep_name
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, next_js
 from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -54,7 +53,7 @@ class PlutoCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        data = json.loads(css.select_text(soup, "#__NEXT_DATA__"))
+        data = next_js.data(soup)
         ep = data["props"]["pageProps"]["episodeMetadata"]
         episode = _deserialize(Episode, ep, id=episode_id)
         scrape_item.setup_as_album(self.create_title(ep["seriesTitle"], series_id), album_id=series_id)
