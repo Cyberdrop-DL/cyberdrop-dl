@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Concatenate, Protocol, cast, overload
 import aiohttp.client_exceptions
 import mega.errors
 import yarl
-from curl_cffi.requests import exceptions as curl_exceptions
 from pydantic import ValidationError
 
 from cyberdrop_dl.exceptions import CDLAppError, CDLBaseError, create_error_msg, get_origin
@@ -47,6 +46,11 @@ def _clean_curl_error(e: object) -> str:
 
 @contextlib.contextmanager
 def _curl_context() -> Generator[None]:
+    try:
+        from curl_cffi.requests import exceptions as curl_exceptions
+    except ImportError:
+        yield
+        return
     try:
         yield
     except curl_exceptions.Timeout as e:
@@ -171,33 +175,40 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
     if app_error is None:
         return
 
-    _log_error(self, real_url or url, item, app_error, exc, origin)
+    origin = origin or get_origin(item)
+    if bool(getattr(self, "log_prefix", False)):
+        self, item = cast("Downloader", self), cast("MediaItem", item)
+        _log_dl_error(self, item, app_error, exc, origin)
+    else:
+        _log_scrape_error(self, real_url or url, app_error, exc, origin)
 
 
-def _log_error(  # noqa: PLR0913, PLR0917
+def _log_scrape_error(
     self: _HasManager,
     url: yarl.URL | str,
-    item: ScrapeItem | MediaItem | yarl.URL,
     app_error: CDLAppError,
     exc: BaseException | None,
     origin: yarl.URL | Path | None,
 ) -> None:
-    origin = origin or get_origin(item)
-    is_downloader = bool(getattr(self, "log_prefix", False))
-    if is_downloader:
-        self, item = cast("Downloader", self), cast("MediaItem", item)
-        logger.error(
-            f"{self.log_prefix} Failed: {item.url} ({app_error.msg}) \n -> Referer: {item.referer}",
-            exc_info=exc,
-        )
-        self.manager.logs.write_download_error(item.url, item.referer, app_error.csv_msg, origin)
-        self.manager.scrape_mapper.tui.files.stats.failed += 1
-        self.manager.scrape_mapper.tui.download_errors.add(app_error.ui_error)
-        return
-
     logger.error(f"Scrape Failed: {url} ({app_error.msg})", exc_info=exc)
     self.manager.logs.write_scrape_error(url, app_error.csv_msg, origin)
     self.manager.scrape_mapper.tui.scrape_errors.add(app_error.ui_error)
+
+
+def _log_dl_error(
+    self: Downloader,
+    item: MediaItem,
+    app_error: CDLAppError,
+    exc: BaseException | None,
+    origin: yarl.URL | Path | None,
+) -> None:
+    logger.error(
+        f"{self.log_prefix} Failed: {item.url} ({app_error.msg}) \n -> Referer: {item.referer}",
+        exc_info=exc,
+    )
+    self.manager.logs.write_download_error(item.url, item.referer, app_error.csv_msg, origin)
+    self.manager.scrape_mapper.tui.files.stats.failed += 1
+    self.manager.scrape_mapper.tui.download_errors.add(app_error.ui_error)
 
 
 @overload

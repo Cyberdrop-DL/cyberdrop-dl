@@ -1,10 +1,10 @@
 import dataclasses
-import datetime
-from typing import Annotated, override
+from typing import Annotated, Protocol, override
 
-from pydantic import AfterValidator, BeforeValidator, Field
+from pydantic import BeforeValidator, Field
 
 from cyberdrop_dl.models import DeferredModel
+from cyberdrop_dl.models.types import AwareDatetime
 from cyberdrop_dl.models.validators import falsy_as, falsy_as_none
 
 
@@ -53,13 +53,26 @@ def _parse_tags(tags: object) -> object:
     return tags
 
 
-def _assume_utc[T: datetime.datetime](date: T) -> T:
-    if date.tzinfo is None:
-        return date.replace(tzinfo=datetime.UTC)
-    return date
+class PostProtocol[T](Protocol):
+    id: str
+    content: str | None
+    file: T | None
+    attachments: tuple[T, ...]
+    published: AwareDatetime | None
+    added: AwareDatetime | None
+    timestamp: int | None = None
+    tags: tuple[str, ...]
+    preview_state: str | None
+    has_full: bool
 
 
-type AwareDatetime = Annotated[datetime.datetime, AfterValidator(_assume_utc)]
+class UserPostProtocol[T](PostProtocol[T]):
+    service: str
+    user_id: str
+    title: str
+    user_name: str | None
+    user: User
+    web_path_qs: str
 
 
 class PostModel(DeferredModel, extra="ignore"):
@@ -74,6 +87,7 @@ class PostModel(DeferredModel, extra="ignore"):
     timestamp: int | None = None
     tags: Annotated[tuple[str, ...], BeforeValidator(_parse_tags)] = ()
     embed: Annotated[Embed | None, BeforeValidator(falsy_as_none)] = None
+    preview_state: str | None = None
     has_full: bool = True
 
     @override
@@ -86,6 +100,7 @@ class UserPostModel(PostModel):
     service: str
     user_id: str = Field(validation_alias="user")
     title: str
+    user_name: str | None = None
 
     @property
     def user(self) -> User:
@@ -94,3 +109,9 @@ class UserPostModel(PostModel):
     @property
     def web_path_qs(self) -> str:
         return f"{self.service}/user/{self.user_id}/post/{self.id}"
+
+
+class Creator(DeferredModel):
+    id: str
+    name: str
+    displayName: str | None = None  # noqa: N815

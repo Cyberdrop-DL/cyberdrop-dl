@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.2.1
+List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 ### 1fichier
 
@@ -68,6 +68,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 
 - File:
   - `?<file_id>`
+
 
 ### 4chan
 
@@ -82,6 +83,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Thread:
   - `/<board>/thread/<thread_id>`
 
+
 ### 8Muses
 
 **Primary URL**: [https://comics.8muses.com](https://comics.8muses.com)
@@ -92,6 +94,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 
 - Album:
   - `/comics/album/...`
+
 
 ### ABStream
 
@@ -108,6 +111,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
   - `/embed/<file_id>`
   - `/file/<file_id>`
 
+
 ### Acast.com
 
 **Primary URL**: [https://www.acast.com](https://www.acast.com)
@@ -121,6 +125,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Show:
   - `/<show_id>`
 
+
 ### Adobe Lightroom
 
 **Primary URL**: [https://lightroom.adobe.com](https://lightroom.adobe.com)
@@ -132,6 +137,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Shared Album:
   - `/shares/<space_id>`
 
+
 ### AllPornComix
 
 **Primary URL**: [https://forum.allporncomix.com](https://forum.allporncomix.com)
@@ -141,15 +147,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### Anontransfer.com
 
@@ -166,6 +174,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
   - `/d/<file_id>`
 - Folder:
   - `/f/<folder_uuid>`
+
 
 ### AnySex
 
@@ -184,6 +193,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Video:
   - `/video/<video_id>/...`
 
+
 ### APK Mirror
 
 **Primary URL**: [https://www.apkmirror.com](https://www.apkmirror.com)
@@ -194,6 +204,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 
 - APK:
   - `/apk/<developer>/<application>/<release>/<variant>-download`
+
 
 ### Archive.org
 
@@ -210,6 +221,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
   - `/details/<identifier>`
   - `/download/<identifier>`
 
+
 ### ArchiveBate
 
 **Primary URL**: [https://www.archivebate.store](https://www.archivebate.store)
@@ -220,6 +232,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 
 - Video:
   - `/watch/<video_id>`
+
 
 ### aShemaleTube
 
@@ -240,6 +253,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Video:
   - `/videos/...`
 
+
 ### Bandcamp
 
 **Primary URL**: [https://bandcamp.com](https://bandcamp.com)
@@ -253,6 +267,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 - Song:
   - `/track/<slug>`
 
+
 ### Beeg.com
 
 **Primary URL**: [https://beeg.com](https://beeg.com)
@@ -265,6 +280,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
   - `/<video_id>`
   - `/video/<video_id>`
 
+
 ### Bellazon
 
 **Primary URL**: [https://www.bellazon.com/main](https://www.bellazon.com/main)
@@ -274,15 +290,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Invision
+
 
 ### BestPrettyGirl
 
@@ -296,22 +314,11 @@ List of sites supported by cyberdrop-dl-patched as of version 10.2.1
   - `/posts/`
 - Category:
   - `/category/<category_slug>`
-- Date Range:
-  - `...?after=<date>`
-  - `...?before=<date&after=<date>`
-  - `...?before=<date>`
 - Post:
   - `/<post_slug>/`
 - Tag:
   - `/tag/<tag_slug>`
 
-**Notes**
-
-- For `Date Range`, <date> must be a valid iso 8601 date, ex: `2022-12-06`.
-
-`Date Range` can be combined with `Category`, `Tag` and `All Posts`.
-ex: To only download categories from a date range: ,
-`/category/<category_slug>?before=<date>`
 
 ### Box
 
@@ -326,6 +333,7 @@ ex: To only download categories from a date range: ,
   - `app.box.com/embed_widget/s?sh=<share_code>`
 - File or Folder:
   - `app.box.com/s?sh=<share_code>`
+
 
 ### Bunkr
 
@@ -346,6 +354,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/v/<slug>`
 
+
 ### Bunkr-Albums
 
 **Primary URL**: [https://balbums.st](https://balbums.st)
@@ -357,6 +366,7 @@ ex: To only download categories from a date range: ,
 - Search:
   - `/?search=<query>`
 
+
 ### BuzzHeavier
 
 **Primary URL**: [https://buzzheavier.com](https://buzzheavier.com)
@@ -366,6 +376,7 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - Direct Links:
+
 
 ### Camwhores.tv
 
@@ -384,6 +395,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/videos/<id>/<slug>`
 
+
 ### Cara.app
 
 **Primary URL**: [https://cara.app](https://cara.app)
@@ -397,6 +409,7 @@ ex: To only download categories from a date range: ,
 - User:
   - `/<username>`
 
+
 ### Catbox
 
 **Primary URL**: [https://catbox.moe](https://catbox.moe)
@@ -407,6 +420,7 @@ ex: To only download categories from a date range: ,
 
 - Direct Links:
 
+
 ### CelebForum
 
 **Primary URL**: [https://celebforum.cc](https://celebforum.cc)
@@ -416,15 +430,17 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### Chevereto
 
@@ -455,6 +471,7 @@ ex: To only download categories from a date range: ,
   - `/videos/<id>`
   - `/videos/<name>.<id>`
 
+
 ### cloud.mail.ru
 
 **Primary URL**: [https://cloud.mail.ru](https://cloud.mail.ru)
@@ -465,6 +482,7 @@ ex: To only download categories from a date range: ,
 
 - Public files / folders:
   - `/public/<web_path>`
+
 
 ### CloudflareStream
 
@@ -485,6 +503,7 @@ ex: To only download categories from a date range: ,
   - `/<jwt_access_token>/watch`
   - `/embed/___.js?video=<jwt_access_token>`
 
+
 ### Clyp.it
 
 **Primary URL**: [https://clyp.it](https://clyp.it)
@@ -498,6 +517,7 @@ ex: To only download categories from a date range: ,
 - User:
   - `/user/<user_id>`
 
+
 ### CrazyShit
 
 **Primary URL**: [https://crazyshit.com](https://crazyshit.com)
@@ -510,6 +530,7 @@ ex: To only download categories from a date range: ,
   - `/series/<name>`
 - Video:
   - `/cnt/medias/<slug>`
+
 
 ### Cyberdrop
 
@@ -526,6 +547,7 @@ ex: To only download categories from a date range: ,
 - File:
   - `/e/<file_id>`
   - `/f/<file_id>`
+
 
 ### Cyberfile
 
@@ -544,6 +566,7 @@ ex: To only download categories from a date range: ,
 - Shared folders:
   - `/shared/<share_key>`
 
+
 ### Daftporn
 
 **Primary URL**: [https://www.daftporn.com](https://www.daftporn.com)
@@ -554,6 +577,7 @@ ex: To only download categories from a date range: ,
 
 - Video:
   - `/extreme-videos/<slug>`
+
 
 ### Dailymotion
 
@@ -568,6 +592,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/video/<video_uid>`
 
+
 ### DesiVideo
 
 **Primary URL**: [https://desivideo.net](https://desivideo.net)
@@ -581,6 +606,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/videos/<video_id>/...`
 
+
 ### DirectHttpFile
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -588,6 +614,8 @@ ex: To only download categories from a date range: ,
 **Supported Domains**:
 
 **Supported Paths**:
+
+
 
 ### DirtyShip
 
@@ -604,6 +632,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/<slug>`
 
+
 ### Discourse
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -618,9 +647,11 @@ ex: To only download categories from a date range: ,
   - `/t/<topic_name>/<topic_id>`
   - `/t/<topic_name>/<topic_id>/<post_number>`
 
+
 **Notes**
 
 - If the URL includes <post_number>, posts with a number lower that it won't be scraped
+
 
 ### DoodStream
 
@@ -632,6 +663,7 @@ ex: To only download categories from a date range: ,
 
 - Video:
   - `/e/<video_id>`
+
 
 ### Dropbox
 
@@ -649,6 +681,7 @@ ex: To only download categories from a date range: ,
   - `/scl/fo/<link_key>/<secure_hash>?rlkey=...`
   - `/sh/...`
 
+
 ### E-Hentai
 
 **Primary URL**: [https://e-hentai.org](https://e-hentai.org)
@@ -661,6 +694,7 @@ ex: To only download categories from a date range: ,
   - `/g/...`
 - File:
   - `/s/...`
+
 
 ### E621
 
@@ -676,6 +710,7 @@ ex: To only download categories from a date range: ,
   - `/posts/<post_id>`
 - Tags:
   - `/posts?tags=<tags>`
+
 
 ### eFukt
 
@@ -695,6 +730,7 @@ ex: To only download categories from a date range: ,
   - `/series/<series_name>`
 - Video:
   - `/...`
+
 
 ### ePorner
 
@@ -725,6 +761,7 @@ ex: To only download categories from a date range: ,
   - `/embed/<video_id>`
   - `/hd-porn/<video_id>`
 
+
 ### Erome
 
 **Primary URL**: [https://www.erome.com](https://www.erome.com)
@@ -739,6 +776,7 @@ ex: To only download categories from a date range: ,
   - `/<name>`
 - Search:
   - `/search?q=<query>`
+
 
 ### Erome.fan
 
@@ -755,6 +793,7 @@ ex: To only download categories from a date range: ,
 - Search:
   - `/search/<query>`
 
+
 ### EveriaClub
 
 **Primary URL**: [https://everia.club](https://everia.club)
@@ -767,22 +806,11 @@ ex: To only download categories from a date range: ,
   - `/posts/`
 - Category:
   - `/category/<category_slug>`
-- Date Range:
-  - `...?after=<date>`
-  - `...?before=<date&after=<date>`
-  - `...?before=<date>`
 - Post:
   - `/<post_slug>/`
 - Tag:
   - `/tag/<tag_slug>`
 
-**Notes**
-
-- For `Date Range`, <date> must be a valid iso 8601 date, ex: `2022-12-06`.
-
-`Date Range` can be combined with `Category`, `Tag` and `All Posts`.
-ex: To only download categories from a date range: ,
-`/category/<category_slug>?before=<date>`
 
 ### F95Zone
 
@@ -793,15 +821,17 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### Fapello.com
 
@@ -815,6 +845,7 @@ ex: To only download categories from a date range: ,
   - `/<model_nam>/<post_id>`
 - Model:
   - `/<name>`
+
 
 ### Fileditch
 
@@ -830,6 +861,7 @@ ex: To only download categories from a date range: ,
   - `/file.php?f=<file_id>`
   - `/temp/<file_id>/<name>`
 
+
 ### Filester
 
 **Primary URL**: [https://filester.me](https://filester.me)
@@ -843,6 +875,7 @@ ex: To only download categories from a date range: ,
 - Folder:
   - `/f/<slug>`
 
+
 ### Flickr
 
 **Primary URL**: [https://www.flickr.com](https://www.flickr.com)
@@ -855,6 +888,7 @@ ex: To only download categories from a date range: ,
   - `/photos/<user_nsid>/albums/<photoset_id>/...`
 - Photo:
   - `/photos/<user_nsid>/<photo_id>/...`
+
 
 ### Forums.plex.tv
 
@@ -870,9 +904,11 @@ ex: To only download categories from a date range: ,
   - `/t/<topic_name>/<topic_id>`
   - `/t/<topic_name>/<topic_id>/<post_number>`
 
+
 **Notes**
 
 - If the URL includes <post_number>, posts with a number lower that it won't be scraped
+
 
 ### FSIBlog
 
@@ -887,6 +923,7 @@ ex: To only download categories from a date range: ,
 - Search:
   - `?s=<query>`
 
+
 ### FuckingFast
 
 **Primary URL**: [https://fuckingfast.co](https://fuckingfast.co)
@@ -897,6 +934,7 @@ ex: To only download categories from a date range: ,
 
 - Direct links:
   - `/<file_id>`
+
 
 ### FuXXX
 
@@ -910,6 +948,7 @@ ex: To only download categories from a date range: ,
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### GenericKVS
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -921,6 +960,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/video/<slug>`
   - `/videos/<slug>`
+
 
 ### Giphy
 
@@ -934,6 +974,7 @@ ex: To only download categories from a date range: ,
   - `https://media*.giphy.com/media/<gif_id>`
 - Gif:
   - `/gifs/<slug>-<gif-id>`
+
 
 ### GirlsReleased
 
@@ -950,6 +991,7 @@ ex: To only download categories from a date range: ,
 - Site:
   - `/site/<site>`
 
+
 ### GoFile
 
 **Primary URL**: [https://gofile.io](https://gofile.io)
@@ -964,10 +1006,12 @@ ex: To only download categories from a date range: ,
 - Folder / File:
   - `/d/<content_id>`
 
+
 **Notes**
 
 - Use `password` as a query param to download password protected folders
 - ex: https://gofile.io/d/ABC654?password=1234
+
 
 ### GoogleDrive
 
@@ -989,35 +1033,34 @@ ex: To only download categories from a date range: ,
 - Slides:
   - `/presentation/d/<file_id>`
 
+
 **Notes**
 
 - You can download sheets, slides and docs in a custom format by using it as a query param.
-  ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
-  Valid Formats:
+ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
+Valid Formats:
 
 document:
-
-- docx (default)
-- epub
-- md
-- odt
-- pdf
-- rtf
-- txt
-- zip
+  - docx (default)
+  - epub
+  - md
+  - odt
+  - pdf
+  - rtf
+  - txt
+  - zip
 
 presentation:
-
-- odp
-- pptx (default)
+  - odp
+  - pptx (default)
 
 spreadsheets:
+  - csv
+  - html
+  - ods
+  - tsv
+  - xslx (default)
 
-- csv
-- html
-- ods
-- tsv
-- xslx (default)
 
 ### GooglePhotos
 
@@ -1032,10 +1075,12 @@ spreadsheets:
 - Photo:
   - `/album/<album_id>/photo/<photo_id>`
 
+
 **Notes**
 
 - Only downloads 'optimized' images, NOT original quality
 - Can NOT download videos
+
 
 ### GoonBox
 
@@ -1051,6 +1096,7 @@ spreadsheets:
 - Image:
   - `/img/<image_id>`
 
+
 ### GUpload
 
 **Primary URL**: [https://gupload.xyz](https://gupload.xyz)
@@ -1061,6 +1107,7 @@ spreadsheets:
 
 - Video:
   - `/data/e/<video_id>`
+
 
 ### HClips
 
@@ -1074,6 +1121,7 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### HDZog
 
 **Primary URL**: [https://hdzog.com](https://hdzog.com)
@@ -1086,23 +1134,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-### Hianime
-
-**Primary URL**: [https://hianime.to](https://hianime.to)
-
-**Supported Domains**: `aniwatch.to`, `aniwatchtv.to`, `hianime.to`, `zoro.to`
-
-**Supported Paths**:
-
-- Anime:
-  - `/<name>-<anime_id>`
-- Episode:
-  - `/<name>-<anime_id>?ep=<episode_id>`
-  - `/watch/<name>-<anime_id>?ep=<episode_id>`
-
-**Notes**
-
-- You can select the language to be downloaded by using a 'lang' query param. Valid options: 'sub' or 'dub'. Default: 'sub'If the chosen language is not available, CDL will use the first one available
 
 ### Hitomi.la
 
@@ -1133,6 +1164,7 @@ spreadsheets:
 - Search:
   - `/search.html?<query>`
 
+
 ### HotLeaksTV
 
 **Primary URL**: [https://hotleaks.tv](https://hotleaks.tv)
@@ -1145,6 +1177,7 @@ spreadsheets:
   - `/<model_id>`
 - Video:
   - `/<model_id>/video/<video_id>`
+
 
 ### HotLeakVip
 
@@ -1159,6 +1192,7 @@ spreadsheets:
 - Video:
   - `/<model_id>/video/<video_id>`
 
+
 ### HotMovs
 
 **Primary URL**: [https://hotmovs.com](https://hotmovs.com)
@@ -1170,6 +1204,7 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
 
 ### HotPic
 
@@ -1183,6 +1218,7 @@ spreadsheets:
   - `/album/...`
 - Image:
   - `/i/...`
+
 
 ### Iceyfile
 
@@ -1201,6 +1237,7 @@ spreadsheets:
 - Shared folders:
   - `/shared/<share_key>`
 
+
 ### ImageBam
 
 **Primary URL**: [https://www.imagebam.com](https://www.imagebam.com)
@@ -1218,6 +1255,7 @@ spreadsheets:
   - `images<x>.imagebam.com/<id>`
 - Thumbnails:
   - `thumbs<x>.imagebam.com/<id>`
+
 
 ### ImagePond
 
@@ -1241,6 +1279,7 @@ spreadsheets:
   - `/<user_name>`
   - `/user/<user_name>`
 
+
 ### ImageVenue
 
 **Primary URL**: [https://www.imagevenue.com](https://www.imagevenue.com)
@@ -1255,6 +1294,7 @@ spreadsheets:
   - `/view/o?i=<image_id>`
 - Thumbnail:
   - `cdn-thumbs.imagevenue.com/.../<image_id>_t.jpg`
+
 
 ### ImgBB
 
@@ -1271,6 +1311,7 @@ spreadsheets:
 - Profile:
   - `<user_name>.imgbb.co/`
 
+
 ### ImgBox
 
 **Primary URL**: [https://imgbox.com](https://imgbox.com)
@@ -1284,6 +1325,7 @@ spreadsheets:
 - Direct Links:
 - Image:
   - `/...`
+
 
 ### ImgLike
 
@@ -1314,6 +1356,7 @@ spreadsheets:
   - `/videos/<id>`
   - `/videos/<name>.<id>`
 
+
 ### Imgur
 
 **Primary URL**: [https://imgur.com](https://imgur.com)
@@ -1332,6 +1375,7 @@ spreadsheets:
   - `/<image_id>`
   - `/download/<image_id>`
 
+
 ### Imx.to
 
 **Primary URL**: [https://imx.to](https://imx.to)
@@ -1349,6 +1393,7 @@ spreadsheets:
   - `/t/...`
   - `/u/t/`
 
+
 ### InPorn
 
 **Primary URL**: [https://inporn.com](https://inporn.com)
@@ -1360,6 +1405,7 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
 
 ### Koofr
 
@@ -1373,6 +1419,7 @@ spreadsheets:
   - `/links/<content_id>`
   - `https://k00.fr/<short_id>`
 
+
 ### LeakedModels
 
 **Primary URL**: [https://leakedmodels.com/forum](https://leakedmodels.com/forum)
@@ -1382,15 +1429,17 @@ spreadsheets:
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### LeakedZone
 
@@ -1405,6 +1454,7 @@ spreadsheets:
 - Video:
   - `/<model_id>/video/<video_id>`
 
+
 ### Livestreamfails.com
 
 **Primary URL**: [https://livestreamfails.com](https://livestreamfails.com)
@@ -1418,6 +1468,7 @@ spreadsheets:
 - Streamer:
   - `/streamer/<streamer_id>`
 
+
 ### Luscious
 
 **Primary URL**: [https://members.luscious.net](https://members.luscious.net)
@@ -1427,7 +1478,11 @@ spreadsheets:
 **Supported Paths**:
 
 - Album:
-  - `/albums/...`
+  - `/albums/<name>_<album_id>`
+  - `/albums/<name>_<album_id>?only_animated=true`
+- Search:
+  - `/albums/list?tagged=<query>`
+
 
 ### LuxureTV
 
@@ -1442,6 +1497,7 @@ spreadsheets:
 - Video:
   - `/videos/<name>-<id>.html`
 
+
 ### Masahub
 
 **Primary URL**: [https://masahub.com](https://masahub.com)
@@ -1454,6 +1510,7 @@ spreadsheets:
   - `?s=<query>`
 - Videos:
   - `/title`
+
 
 ### Mediafire
 
@@ -1469,6 +1526,7 @@ spreadsheets:
 - Folder:
   - `/folder/<folder_key>`
 
+
 ### Megacloud
 
 **Primary URL**: [https://megacloud.blog](https://megacloud.blog)
@@ -1479,6 +1537,7 @@ spreadsheets:
 
 - Embed v3:
   - `/embed-2/v3`
+
 
 ### MegaNz
 
@@ -1498,9 +1557,11 @@ spreadsheets:
 - Subfolder:
   - `/folder/<folder_id>#<share_key>/folder/<subfolder_id>`
 
+
 **Notes**
 
 - Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over
+
 
 ### MissAV
 
@@ -1523,6 +1584,7 @@ spreadsheets:
 - Video:
   - `/...`
 
+
 ### MixDrop
 
 **Primary URL**: [https://mixdrop.sb](https://mixdrop.sb)
@@ -1535,6 +1597,7 @@ spreadsheets:
   - `/e/<file_id>`
   - `/f/<file_id>`
 
+
 ### Monstercat
 
 **Primary URL**: [https://www.monstercat.com](https://www.monstercat.com)
@@ -1545,6 +1608,7 @@ spreadsheets:
 
 - Release:
   - `/release/<slug>`
+
 
 ### Motherless
 
@@ -1575,6 +1639,7 @@ spreadsheets:
 - User galleries:
   - `/galleries/member/<user_name>/...`
 
+
 ### Multporn.net
 
 **Primary URL**: [https://multporn.net](https://multporn.net)
@@ -1591,6 +1656,7 @@ spreadsheets:
 - video:
   - `/video/<slug>`
 
+
 ### MyDesi
 
 **Primary URL**: [https://lolpol.com](https://lolpol.com)
@@ -1604,6 +1670,7 @@ spreadsheets:
 - Videos:
   - `/title`
 
+
 ### Naughtymachinima
 
 **Primary URL**: [https://www.naughtymachinima.com](https://www.naughtymachinima.com)
@@ -1616,6 +1683,7 @@ spreadsheets:
   - `/album/<album_id>`
 - Video:
   - `/video/<video_id>`
+
 
 ### nHentai
 
@@ -1636,6 +1704,7 @@ spreadsheets:
 - Gallery:
   - `/g/<gallery_id>`
 
+
 ### NoodleMagazine
 
 **Primary URL**: [https://noodlemagazine.com](https://noodlemagazine.com)
@@ -1648,6 +1717,7 @@ spreadsheets:
   - `/video/<search_query>`
 - Video:
   - `/watch/<video_id>`
+
 
 ### nsfw.xxx
 
@@ -1668,6 +1738,7 @@ spreadsheets:
 - User:
   - `/user/<username>`
 
+
 ### Nudeleted
 
 **Primary URL**: [https://nudeleted.com](https://nudeleted.com)
@@ -1683,6 +1754,7 @@ spreadsheets:
 - Video:
   - `/videos/...`
 
+
 ### NudoStar
 
 **Primary URL**: [https://nudostar.com/forum](https://nudostar.com/forum)
@@ -1692,15 +1764,17 @@ spreadsheets:
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### NudoStarTV
 
@@ -1712,6 +1786,7 @@ spreadsheets:
 
 - Model:
   - `/models/...`
+
 
 ### ok.ru
 
@@ -1727,6 +1802,7 @@ spreadsheets:
 - Video:
   - `/video/<video_id>`
 
+
 ### OmegaScans
 
 **Primary URL**: [https://omegascans.org](https://omegascans.org)
@@ -1741,6 +1817,7 @@ spreadsheets:
   - `/file/....`
 - Series:
   - `/series/<series_name>`
+
 
 ### OneDrive
 
@@ -1758,6 +1835,7 @@ spreadsheets:
   - `https://1drv.ms/t/<KEY>`
   - `https://1drv.ms/u/<KEY>`
 
+
 ### OnePace
 
 **Primary URL**: [https://onepace.net](https://onepace.net)
@@ -1769,6 +1847,7 @@ spreadsheets:
 - All episodes:
   - `/watch`
 
+
 ### OwnCloud
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -1779,6 +1858,7 @@ spreadsheets:
 
 - Public Share:
   - `/s/<share_token>`
+
 
 ### Patreon
 
@@ -1793,6 +1873,7 @@ spreadsheets:
   - `/cw/<creator>`
 - Post:
   - `/posts/<slug>`
+
 
 ### Pawchive
 
@@ -1815,6 +1896,7 @@ spreadsheets:
 - Search:
   - `/search?q=...`
 
+
 ### pCloud
 
 **Primary URL**: [https://www.pcloud.com](https://www.pcloud.com)
@@ -1827,6 +1909,7 @@ spreadsheets:
   - `?code=<share_code>`
   - `e.pc.cd/<short_code>`
   - `u.pc.cd/<short_code>`
+
 
 ### PillowCase
 
@@ -1842,6 +1925,7 @@ spreadsheets:
   - `/api/metadata/<file_uid>.txt`
   - `/f/<file_uid>`
 
+
 ### PimpAndHost
 
 **Primary URL**: [https://pimpandhost.com](https://pimpandhost.com)
@@ -1854,6 +1938,7 @@ spreadsheets:
   - `/album/...`
 - Image:
   - `/image/...`
+
 
 ### PimpBunny
 
@@ -1876,6 +1961,7 @@ spreadsheets:
 - Videos:
   - `/videos/...`
 
+
 ### Pinterest
 
 **Primary URL**: [https://www.pinterest.com](https://www.pinterest.com)
@@ -1890,6 +1976,7 @@ spreadsheets:
   - `/pin/<pin_id>`
 - User Boards:
   - `/<user>`
+
 
 ### PixelDrain
 
@@ -1910,9 +1997,11 @@ spreadsheets:
   - `/api/list/<list_id>`
   - `/l/<list_id>`
 
+
 **Notes**
 
 - text files will not be downloaded but their content will be parsed for URLs
+
 
 ### Pixeldrain-proxy
 
@@ -1925,11 +2014,12 @@ spreadsheets:
 - File:
   - `/<file_id>`
 
+
 ### PixHost
 
-**Primary URL**: [https://pixhost.to](https://pixhost.to)
+**Primary URL**: [https://pixhost.cc](https://pixhost.cc)
 
-**Supported Domains**: `pixhost.org`, `pixhost.to`
+**Supported Domains**: `pixhost.cc`, `pixhost.org`, `pixhost.to`
 
 **Supported Paths**:
 
@@ -1939,6 +2029,7 @@ spreadsheets:
   - `/show/<image_id>`
 - Thumbnail:
   - `/thumbs/..`
+
 
 ### Pkmncards
 
@@ -1955,6 +2046,7 @@ spreadsheets:
 - Set:
   - `/set/...`
 
+
 ### PMVHaven
 
 **Primary URL**: [https://pmvhaven.com](https://pmvhaven.com)
@@ -1964,14 +2056,15 @@ spreadsheets:
 **Supported Paths**:
 
 - Playlist:
-  - `/playlists/...`
+  - `/playlists/<playlist_id>`
 - Search results:
-  - `/search/...`
+  - `/search?q=<query>`
 - Users:
-  - `/profile/...`
-  - `/users/...`
+  - `/profile/<user_id>`
+  - `/users/<user_id>`
 - Video:
-  - `/video/...`
+  - `/video/<video_name>_<video_id>`
+
 
 ### PornHub
 
@@ -1999,6 +2092,7 @@ spreadsheets:
   - `/embed/<video_id>`
   - `/view_video.php?viewkey=<video_id>`
 
+
 ### PornPics
 
 **Primary URL**: [https://pornpics.com](https://pornpics.com)
@@ -2020,6 +2114,7 @@ spreadsheets:
   - `/?q=<query>`
 - Tags:
   - `/tags/...`
+
 
 ### Porntrex
 
@@ -2046,6 +2141,7 @@ spreadsheets:
 - Video:
   - `/video/...`
 
+
 ### PornZog
 
 **Primary URL**: [https://pornzog.com](https://pornzog.com)
@@ -2056,6 +2152,7 @@ spreadsheets:
 
 - Video:
   - `/video/...`
+
 
 ### PostImg
 
@@ -2072,17 +2169,6 @@ spreadsheets:
 - Image:
   - `/<image_id>/...`
 
-### Ranoz.gg
-
-**Primary URL**: [https://ranoz.gg](https://ranoz.gg)
-
-**Supported Domains**: `qiwi.gg`, `ranoz.gg`
-
-**Supported Paths**:
-
-- File:
-  - `/d/<file_id>`
-  - `/file/<file_id>`
 
 ### RealBooru
 
@@ -2097,6 +2183,7 @@ spreadsheets:
 - Tags:
   - `?tags=<name>`
 
+
 ### RealDebrid
 
 **Primary URL**: [https://real-debrid.com](https://real-debrid.com)
@@ -2104,6 +2191,8 @@ spreadsheets:
 **Supported Domains**: `real-debrid.*`
 
 **Supported Paths**:
+
+
 
 ### RedGifs
 
@@ -2122,6 +2211,7 @@ spreadsheets:
 - User:
   - `/users/<user>`
 
+
 ### Rootz.so
 
 **Primary URL**: [https://www.rootz.so](https://www.rootz.so)
@@ -2133,6 +2223,7 @@ spreadsheets:
 - File:
   - `/d/<file_id>`
   - `/file/<file_id>`
+
 
 ### Rule34Vault
 
@@ -2148,6 +2239,7 @@ spreadsheets:
   - `/post/<post_id>`
 - Tags:
   - `/<tag1>|<tags2>...`
+
 
 ### Rule34Video
 
@@ -2170,6 +2262,7 @@ spreadsheets:
 - Video:
   - `/video/<id>/<slug>`
 
+
 ### Rule34XXX
 
 **Primary URL**: [https://rule34.xxx](https://rule34.xxx)
@@ -2182,6 +2275,7 @@ spreadsheets:
   - `?id=...`
 - Tag:
   - `?tags=...`
+
 
 ### Rule34XYZ
 
@@ -2197,6 +2291,7 @@ spreadsheets:
   - `/post/<post_id>`
 - Tags:
   - `/<tag1>|<tags2>...`
+
 
 ### Rumble
 
@@ -2215,6 +2310,7 @@ spreadsheets:
 - Video:
   - `<video_id>-<video-title>.html`
 
+
 ### Rutube
 
 **Primary URL**: [https://rutube.ru](https://rutube.ru)
@@ -2227,6 +2323,7 @@ spreadsheets:
   - `/play/embed/<id>`
   - `/video/<id>`
 
+
 ### Scrolller
 
 **Primary URL**: [https://scrolller.com](https://scrolller.com)
@@ -2238,6 +2335,7 @@ spreadsheets:
 - Subreddit:
   - `/r/<subreddit>`
 
+
 ### SendNow
 
 **Primary URL**: [https://send.now](https://send.now)
@@ -2247,6 +2345,7 @@ spreadsheets:
 **Supported Paths**:
 
 - Direct Links:
+
 
 ### SendVid
 
@@ -2262,6 +2361,7 @@ spreadsheets:
 - Videos:
   - `/...`
 
+
 ### Sex.com
 
 **Primary URL**: [https://sex.com](https://sex.com)
@@ -2273,6 +2373,7 @@ spreadsheets:
 - Shorts Profiles:
   - `/shorts/<profile>`
 
+
 ### SocialMediaGirls
 
 **Primary URL**: [https://forums.socialmediagirls.com](https://forums.socialmediagirls.com)
@@ -2282,15 +2383,17 @@ spreadsheets:
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### Soundgasm
 
@@ -2304,6 +2407,7 @@ spreadsheets:
   - `/u/<user>/<slug>`
 - User:
   - `/u/<user>`
+
 
 ### SpankBang
 
@@ -2324,6 +2428,7 @@ spreadsheets:
   - `/play/<video_id>`
   - `<playlist_id>-<video_id>/playlist/...`
 
+
 ### Streamable
 
 **Primary URL**: [https://streamable.com](https://streamable.com)
@@ -2334,6 +2439,7 @@ spreadsheets:
 
 - Video:
   - `/...`
+
 
 ### Streamtape
 
@@ -2348,6 +2454,19 @@ spreadsheets:
 - Videos:
   - `/v/<video_id>`
 
+
+### T.co
+
+**Primary URL**: [https://t.co](https://t.co)
+
+**Supported Domains**: `t.co`
+
+**Supported Paths**:
+
+- Redirect:
+  - `t.co/<short_code>`
+
+
 ### TabooTube
 
 **Primary URL**: [https://www.tabootube.xxx](https://www.tabootube.xxx)
@@ -2358,6 +2477,7 @@ spreadsheets:
 
 - Video:
   - `/video/...`
+
 
 ### ThisVid
 
@@ -2382,6 +2502,7 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
+
 ### ThotHub
 
 **Primary URL**: [https://thothub.to](https://thothub.to)
@@ -2396,6 +2517,7 @@ spreadsheets:
   - `/get_image/...`
 - Video:
   - `/videos/<id>/<slug>`
+
 
 ### TikTok
 
@@ -2412,6 +2534,7 @@ spreadsheets:
 - Video:
   - `/@<user>/video/<video_id>`
 
+
 ### TitsInTops
 
 **Primary URL**: [https://titsintops.com/phpBB2](https://titsintops.com/phpBB2)
@@ -2421,15 +2544,17 @@ spreadsheets:
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### TNAFlix
 
@@ -2447,6 +2572,7 @@ spreadsheets:
   - `/search?what=<query>`
 - Video:
   - `/<category>/<title>/video<video_id>`
+
 
 ### Tokyomotion
 
@@ -2471,6 +2597,7 @@ spreadsheets:
 - Video:
   - `/video/<video_id>`
 
+
 ### Toonily
 
 **Primary URL**: [https://toonily.com](https://toonily.com)
@@ -2483,6 +2610,7 @@ spreadsheets:
   - `/serie/<name>/chapter-<chapter-id>`
 - Series:
   - `/serie/<name>`
+
 
 ### Tranny.One
 
@@ -2500,6 +2628,7 @@ spreadsheets:
   - `/search/<search_query>`
 - Video:
   - `/view/<video_id>`
+
 
 ### TrannyGem
 
@@ -2524,6 +2653,7 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
+
 ### Transfer.it
 
 **Primary URL**: [https://transfer.it](https://transfer.it)
@@ -2534,6 +2664,7 @@ spreadsheets:
 
 - Transfer:
   - `/t/<transfer_id>`
+
 
 ### TransFlix
 
@@ -2548,6 +2679,7 @@ spreadsheets:
 - Video:
   - `/video/<name>-<video_id>`
 
+
 ### TubePornClassic
 
 **Primary URL**: [https://tubepornclassic.com](https://tubepornclassic.com)
@@ -2559,6 +2691,7 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
 
 ### TurboVid
 
@@ -2578,6 +2711,7 @@ spreadsheets:
   - `/d/<file_id>`
   - `/embed/<file_id>`
   - `/v/<file_id>`
+
 
 ### Twitch
 
@@ -2599,6 +2733,32 @@ spreadsheets:
   - `/videos/<vod_id>`
   - `?video=<vod_id>`
 
+
+### Twitter
+
+**Primary URL**: [https://x.com](https://x.com)
+
+**Supported Domains**: `twitter.com`, `x.com`
+
+**Supported Paths**:
+
+- Broadcast:
+  - `/i/broadcasts/<broadcast_id>`
+  - `/i/events/<event_id>`
+- Search:
+  - `/search?q=<query>`
+  - `/search?q=<query>&f=latest`
+  - `/search?q=<query>&f=media`
+  - `/search?q=<query>&f=top`
+- Tweet/Thread/Article:
+  - `/<user_handle>/status/<status_id>`
+  - `/i/web/status/<status_id>`
+- User media:
+  - `/<user_handle>/media`
+- User tweets:
+  - `/<user_handle>`
+
+
 ### TwitterImages
 
 **Primary URL**: [https://twimg.com](https://twimg.com)
@@ -2608,7 +2768,10 @@ spreadsheets:
 **Supported Paths**:
 
 - Photo:
-  - `/...`
+  - `/media/<media_id>...`
+- Video:
+  - `/amplify_video/<media_id>...`
+
 
 ### TWPornStars
 
@@ -2619,7 +2782,10 @@ spreadsheets:
 **Supported Paths**:
 
 - Photo:
-  - `/...`
+  - `/media/<media_id>...`
+- Video:
+  - `/amplify_video/<media_id>...`
+
 
 ### TXXX
 
@@ -2633,6 +2799,7 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### Upload.ee
 
 **Primary URL**: [https://www.upload.ee](https://www.upload.ee)
@@ -2643,6 +2810,7 @@ spreadsheets:
 
 - File:
   - `/files/<file_id>`
+
 
 ### UPornia
 
@@ -2656,6 +2824,7 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### Vidara
 
 **Primary URL**: [https://vidara.to](https://vidara.to)
@@ -2666,6 +2835,7 @@ spreadsheets:
 
 - Video:
   - `/e/<video_id>`
+
 
 ### ViperGirls
 
@@ -2679,6 +2849,7 @@ spreadsheets:
   - `/goto/<post_id>`
   - `/posts/<post_id>`
   - `/threads/<thread_name>`
+
 
 ### Vipr.im
 
@@ -2695,6 +2866,7 @@ spreadsheets:
 - Thumbnail:
   - `/th/.../<slug>`
 
+
 ### VJav
 
 **Primary URL**: [https://vjav.com](https://vjav.com)
@@ -2707,6 +2879,7 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### Voe.sx
 
 **Primary URL**: [https://voe.sx](https://voe.sx)
@@ -2717,6 +2890,7 @@ spreadsheets:
 
 - Embed:
   - `/e/video_id`
+
 
 ### VoyeurHit
 
@@ -2729,6 +2903,7 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
 
 ### VSCO
 
@@ -2744,6 +2919,7 @@ spreadsheets:
   - `/<user>/media/<media_id>`
   - `/<user>/video/<media_id>`
 
+
 ### VXXX
 
 **Primary URL**: [https://vxxx.com](https://vxxx.com)
@@ -2754,6 +2930,7 @@ spreadsheets:
 
 - Video:
   - `/video-<video-id>`
+
 
 ### WeTransfer
 
@@ -2772,6 +2949,7 @@ spreadsheets:
 - Short Link:
   - `we.tl/<short_file_id>`
 
+
 ### Whyp.it
 
 **Primary URL**: [https://whyp.it](https://whyp.it)
@@ -2787,6 +2965,7 @@ spreadsheets:
 - User:
   - `/users/<id>/<name>`
 
+
 ### Wikifeet
 
 **Primary URL**: [https://wikifeet.com](https://wikifeet.com)
@@ -2797,6 +2976,7 @@ spreadsheets:
 
 - Celeb:
   - `/<name>`
+
 
 ### Wikifeet Men
 
@@ -2809,6 +2989,7 @@ spreadsheets:
 - Celeb:
   - `/<name>`
 
+
 ### Wikifeet X
 
 **Primary URL**: [https://wikifeetx.com](https://wikifeetx.com)
@@ -2819,6 +3000,7 @@ spreadsheets:
 
 - Celeb:
   - `/<name>`
+
 
 ### WordPressHTML
 
@@ -2832,22 +3014,11 @@ spreadsheets:
   - `/posts/`
 - Category:
   - `/category/<category_slug>`
-- Date Range:
-  - `...?after=<date>`
-  - `...?before=<date&after=<date>`
-  - `...?before=<date>`
 - Post:
   - `/<post_slug>/`
 - Tag:
   - `/tag/<tag_slug>`
 
-**Notes**
-
-- For `Date Range`, <date> must be a valid iso 8601 date, ex: `2022-12-06`.
-
-`Date Range` can be combined with `Category`, `Tag` and `All Posts`.
-ex: To only download categories from a date range: ,
-`/category/<category_slug>?before=<date>`
 
 ### WordPressMedia
 
@@ -2861,22 +3032,11 @@ ex: To only download categories from a date range: ,
   - `/posts/`
 - Category:
   - `/category/<category_slug>`
-- Date Range:
-  - `...?after=<date>`
-  - `...?before=<date&after=<date>`
-  - `...?before=<date>`
 - Post:
   - `/<post_slug>/`
 - Tag:
   - `/tag/<tag_slug>`
 
-**Notes**
-
-- For `Date Range`, <date> must be a valid iso 8601 date, ex: `2022-12-06`.
-
-`Date Range` can be combined with `Category`, `Tag` and `All Posts`.
-ex: To only download categories from a date range: ,
-`/category/<category_slug>?before=<date>`
 
 ### Xasiat
 
@@ -2893,6 +3053,7 @@ ex: To only download categories from a date range: ,
 - Videos:
   - `/videos/<id>/<name>`
 
+
 ### XBunker
 
 **Primary URL**: [https://xbunker.cc](https://xbunker.cc)
@@ -2902,15 +3063,17 @@ ex: To only download categories from a date range: ,
 **Supported Paths**:
 
 - Attachments:
-  - `/(attachments\|data\|uploads)/...`
+  - `/attachments|data|uploads/...`
 - Threads:
-  - `/(thread\|topic\|tema\|threads\|topics\|temas)/<thread_name_and_id>`
   - `/goto/<post_id>`
   - `/posts/<post_id>`
+  - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
+
 
 **Notes**
 
 - base crawler: Xenforo
+
 
 ### XGroovy
 
@@ -2942,6 +3105,7 @@ ex: To only download categories from a date range: ,
   - `/<category>/videos/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### xHamster
 
 **Primary URL**: [https://xhamster.com](https://xhamster.com)
@@ -2968,6 +3132,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/videos/<title>`
 
+
 ### XMegaDrive
 
 **Primary URL**: [https://www.xmegadrive.com](https://www.xmegadrive.com)
@@ -2991,6 +3156,7 @@ ex: To only download categories from a date range: ,
 - Videos:
   - `/videos/<slug>`
 
+
 ### XMilf
 
 **Primary URL**: [https://xmilf.com](https://xmilf.com)
@@ -3003,6 +3169,7 @@ ex: To only download categories from a date range: ,
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+
 ### xVideos
 
 **Primary URL**: [https://www.xvideos.com](https://www.xvideos.com)
@@ -3013,22 +3180,23 @@ ex: To only download categories from a date range: ,
 
 - Account:
   - `/<channel_name>`
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>`
 - Account Photos:
   - `/<channel_name>#_tabPhotos`
   - `/<channel_name>/photos/...`
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabPhotos`
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>/photos/...`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabPhotos`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>/photos/...`
 - Account Quickies:
   - `/<channel_name>#quickies`
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#quickies`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#quickies`
 - Account Videos:
   - `/<channel_name>#_tabVideos`
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles/<name>#_tabVideos`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles/<name>#_tabVideos`
 - Video:
-  - `/amateur\|amateur-channels\|amateurs\|channel\|channel-channels\|channels\|pornstar\|pornstar-channels\|pornstars\|profile\|profile-channels\|profiles#quickies/(a\|h\|v)/<video_id>`
+  - `/amateur|amateur-channels|amateurs|channel|channel-channels|channels|pornstar|pornstar-channels|pornstars|profile|profile-channels|profiles#quickies/(a|h|v)/<video_id>`
   - `/video.<encoded_id>/<title>`
   - `/video<id>/<title>`
+
 
 ### XXXBunker
 
@@ -3047,6 +3215,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/<video_id>`
 
+
 ### YandexDisk
 
 **Primary URL**: [https://disk.yandex.com.tr](https://disk.yandex.com.tr)
@@ -3061,9 +3230,11 @@ ex: To only download categories from a date range: ,
 - Folder:
   - `/d/<folder_id>`
 
+
 **Notes**
 
 - Does NOT support nested folders
+
 
 ### YouJizz
 
@@ -3076,6 +3247,7 @@ ex: To only download categories from a date range: ,
 - Video:
   - `/videos/<video_name>`
   - `/videos/embed/<video_id>`
+
 
 ### YourLesbians
 
@@ -3100,6 +3272,7 @@ ex: To only download categories from a date range: ,
 - Videos:
   - `/videos/<slug>`
 
+
 ### YTboob
 
 **Primary URL**: [https://ytboob.com](https://ytboob.com)
@@ -3110,6 +3283,7 @@ ex: To only download categories from a date range: ,
 
 - Video:
   - `/video/<slug>`
+
 
 ### Yurivan
 
@@ -3125,5 +3299,7 @@ ex: To only download categories from a date range: ,
   - `/story/<story_id>`
 - Video:
   - `/story/<story_id>/chapter/1`
+
+
 
 <!-- END_SUPPORTED_SITES -->

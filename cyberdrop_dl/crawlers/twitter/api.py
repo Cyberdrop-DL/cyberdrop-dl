@@ -15,8 +15,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from curl_cffi.requests.session import HttpMethod
-
+    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.clients.request import RequestParams
 
 

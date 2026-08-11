@@ -25,6 +25,7 @@ class GoonBoxCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/img/<image_id>",
         "Album": "/a/<album_id>",
+        "User": "/u/<username>",
         "Direct links": "",
     }
 
@@ -69,9 +70,11 @@ class GoonBoxCrawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["img", file_id]:
-                return await self.image(scrape_item, file_id)
+                await self.image(scrape_item, file_id)
             case ["a", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
+            case ["u", user]:
+                await self.user(scrape_item, user)
             case _:
                 raise ValueError
 
@@ -93,8 +96,24 @@ class GoonBoxCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         album = await self.api.album(album_id)
-        title = self.create_title(album.title, album_id)
-        scrape_item.setup_as_album(title, album_id=album_id)
+        await self._album(scrape_item, album)
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem, user: str) -> None:
+        scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
+
+        async for albums in self.api.user_albums(user, sort=scrape_item.url.query.get("sort")):
+            async with self.new_task_group(scrape_item) as tg:
+                for album in albums:
+                    url = self.PRIMARY_URL / "a" / album.encoded_id
+                    new_item = scrape_item.create_child(url)
+                    tg.create_lazy_task(self._album(new_item, album))
+                    scrape_item.add_children()
+
+    @error_handling_wrapper
+    async def _album(self, scrape_item: ScrapeItem, album: Album) -> None:
+        title = self.create_title(album.title, album.encoded_id)
+        scrape_item.setup_as_album(title, album_id=album.encoded_id)
 
         async for images in self._album_images(album):
             for img in images:
@@ -115,7 +134,7 @@ class GoonBoxCrawler(Crawler):
         if not album.has_more:
             return
 
-        async for images in self.api.album_images(album.encoded_id, init_page=2):
+        async for images in self.api.album_images(album.encoded_id, init_page=1 if album.images == () else 2):
             yield filter_images(images)
 
 
@@ -137,8 +156,10 @@ class Album:
     title: str
     description: str | None
     encoded_id: str
-    images: map[Image]
-    has_more: bool
+    images: Iterable[Image] = ()
+    has_more: bool = True
+
+    parse = classmethod(deserialize)
 
 
 class GoonBoxAPI(API):
@@ -150,8 +171,7 @@ class GoonBoxAPI(API):
     async def album(self, album_id: str) -> Album:
         api_url = self.PRIMARY_URL / "api/albums" / album_id
         resp = await self.request_json(api_url.with_query(per_page=100))
-        return deserialize(
-            Album,
+        return Album.parse(
             resp["album"],
             images=map(Image.parse, resp["images"]),
             has_more=resp["pagination"]["total"] > 1,
@@ -159,9 +179,21 @@ class GoonBoxAPI(API):
 
     async def album_images(self, album_id: str, init_page: int = 1) -> AsyncGenerator[map[Image]]:
         api_url = self.PRIMARY_URL / "api/albums" / album_id / "images"
+        async for page in self.pager(api_url, "images", init_page):
+            yield map(Image.parse, page)
+
+    async def user_albums(
+        self, user: str, init_page: int = 1, *, sort: str | None = "newest"
+    ) -> AsyncGenerator[map[Album]]:
+        api_url = self.PRIMARY_URL / "api/users" / user / "albums"
+        sort = sort if sort in {"newest", "oldest", "most_images", "least_images"} else "newest"
+        async for page in self.pager(api_url.update_query(sort=sort), "albums", init_page):
+            yield map(Album.parse, page)
+
+    async def pager(self, url: AbsoluteHttpURL, key: str, init_page: int = 1) -> AsyncGenerator[list[dict[str, Any]]]:
         for page in itertools.count(init_page):
-            resp = await self.request_json(api_url.update_query(page=page, per_page=100))
-            yield map(Image.parse, resp["images"])
+            resp = await self.request_json(url.update_query(page=page, per_page=100))
+            yield resp[key]
             if page >= resp["pagination"]["last_page"]:
                 break
 

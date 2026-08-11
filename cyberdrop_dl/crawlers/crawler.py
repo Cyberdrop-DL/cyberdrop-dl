@@ -16,6 +16,7 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, env
 from cyberdrop_dl.cache import TTLCacheAdapter
+from cyberdrop_dl.clients.downloads import IGNORE_CONTENT_TYPE
 from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
@@ -46,7 +47,6 @@ if TYPE_CHECKING:
 
     import yarl
     from bs4 import BeautifulSoup, Tag
-    from curl_cffi.requests.impersonate import BrowserTypeLiteral
 
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
@@ -170,6 +170,7 @@ class DownloadConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__dl_config__"
     slots: int | None = None
     server_lock: bool | None = None
+    ignore_content_type: bool | None = None
 
 
 @URLConfig(trim=True, allow_empty_path=False, ignore_fragment=True)
@@ -505,6 +506,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         metadata: object = None,
         referer: AbsoluteHttpURL | None = None,
         frag: str | None = None,
+        thumbnail: AbsoluteHttpURL | None = None,
     ) -> None:
         """Creates a MediaItem and hands it off to the downloader.
 
@@ -512,7 +514,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         referer = referer or scrape_item.url
         if frag:
-            referer = referer.with_fragment(frag)
+            referer = referer.with_fragment(f"{referer.fragment} - {frag}" if referer.fragment else frag)
 
         media_item = MediaItem(
             url=url,
@@ -535,9 +537,21 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
 
         check_path_traversal(self.config.download_folder, media_item.download_folder)
-
         check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
+
+        if thumbnail:
+            _, ext = self.get_filename_and_ext(thumbnail.name)
+            thumb_name = f"{Path(media_item.filename).stem}_thumb{ext}"
+            filename, _ = self.get_filename_and_ext(thumb_name)
+            await self.handle_file(
+                thumbnail,
+                scrape_item,
+                thumb_name,
+                ext,
+                custom_filename=filename,
+                frag="thumbnail",
+            )
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {
@@ -585,9 +599,14 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return downloaded
 
     async def handle_media_item(self, media_item: MediaItem, m3u8: m3u8.Rendition | None = None) -> None:
-        self._task_mngr.downloads.create_task(
-            self._download(media_item, m3u8, skip=await self.__should_skip(media_item))
-        )
+        with (
+            enter_context(IGNORE_CONTENT_TYPE, True)
+            if self.__dl_config__.ignore_content_type
+            else contextlib.nullcontext()
+        ):
+            self._task_mngr.downloads.create_task(
+                self._download(media_item, m3u8, skip=await self.__should_skip(media_item))
+            )
 
     async def __should_skip(self, media_item: MediaItem) -> bool:
         if await self.check_complete(media_item.url, media_item.referer):
@@ -778,7 +797,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         url: AbsoluteHttpURL,
         selector: Callable[[BeautifulSoup], yarl.URL | str | None] | str | None = None,
         *,
-        impersonate: BrowserTypeLiteral | bool | None = False,
+        impersonate: str | bool | None = False,
         relative_to: AbsoluteHttpURL | None = None,
         trim: bool | None = None,
     ) -> AsyncIterator[BeautifulSoup]:
@@ -818,8 +837,8 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     @contextlib.asynccontextmanager
-    async def new_task_group(self, scrape_item: ScrapeItem) -> AsyncGenerator[asyncio.TaskGroup]:
-        async with asyncio.TaskGroup() as tg:
+    async def new_task_group(self, scrape_item: ScrapeItem) -> AsyncGenerator[aio.EagerTaskGroup]:
+        async with aio.EagerTaskGroup() as tg:
             with self.catch_errors(scrape_item):
                 yield tg
 
@@ -910,9 +929,12 @@ class API(HTTPMixin, ABC):
     PRIMARY_URL: AbsoluteHttpURL = AbsoluteHttpURL()
     # We inherit from ABC to force type checkers to recognize attributes defined in __post_init__ as if they were defined in __init__
 
-    class Endpoint[T: API]:
+    class Endpoint[T: API](ABC):  # noqa: B024
         def __init__(self, api: T) -> None:
             self.api: T = api
+            self.__post_init__()
+
+        def __post_init__(self) -> None: ...  # noqa: B027
 
         def __repr__(self) -> str:
             return f"<{type(self).__name__}>"
@@ -926,7 +948,7 @@ class API(HTTPMixin, ABC):
         client: HTTPClient,
         ctx: HTTPContext | None = None,
     ) -> None:
-        self.parse_url: Callable[[str | yarl.URL], AbsoluteHttpURL] = parse_url
+        self.parse_url: Callable[[str | yarl.URL, AbsoluteHttpURL], AbsoluteHttpURL] = parse_url
         self.config: Final = config
         self.cache: Final = cache
         self.client: HTTPClient = client

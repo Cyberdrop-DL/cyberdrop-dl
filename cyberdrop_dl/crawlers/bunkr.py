@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     from bs4 import BeautifulSoup
-    from curl_cffi.requests.session import HttpMethod
 
+    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 

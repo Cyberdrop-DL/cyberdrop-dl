@@ -9,7 +9,7 @@ from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.crawlers.crawler import SupportedDomains
+    from cyberdrop_dl.crawlers.crawler import SupportedDomains, SupportedPaths
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -34,6 +34,11 @@ class TwPornstarsCrawler(TwimgCrawler):
         "www.indiantw.com",
         "www.twpornstars.com",
     )
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Post": "/p/<post_id>",
+        "Hashtag": "/hashtag/<hashtags>",
+        "Collection/User": "/<name>",
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.twpornstars.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "twpornstars"
@@ -43,6 +48,8 @@ class TwPornstarsCrawler(TwimgCrawler):
         match scrape_item.url.parts[1:]:
             case ["p", _post_id]:
                 return await self.media(scrape_item)
+            case ["hashtag", _slug]:
+                return await self.collection(scrape_item)
             case [_]:
                 return await self.collection(scrape_item)
             case _:

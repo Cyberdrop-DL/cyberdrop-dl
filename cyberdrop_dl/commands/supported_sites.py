@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 def _gen_crawlers_info() -> list[CrawlerInfo]:
     from cyberdrop_dl.crawlers import Registry
 
-    return sorted(crawler.INFO for crawler in Registry.get_crawlers(generic=True))
+    return sorted((crawler.INFO for crawler in Registry.get_crawlers(generic=True)), key=lambda x: x.site.casefold())
 
 
 def as_json() -> dict[str, dict[str, Any]]:

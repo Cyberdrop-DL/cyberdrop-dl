@@ -7,7 +7,15 @@ from pydantic.functional_validators import AfterValidator, BeforeValidator, Plai
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-from .validators import bytesize_to_str, change_path_suffix, falsy_as_none, strings, to_timedelta, to_yarl_url
+from .validators import (
+    assume_utc,
+    bytesize_to_str,
+    change_path_suffix,
+    falsy_as_none,
+    strings,
+    to_timedelta,
+    to_yarl_url,
+)
 
 type LogLevel = Annotated[
     Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], strings.pre_validator(to_upper=True, strip=True)
@@ -34,3 +42,6 @@ type HttpURL = Annotated[
     PlainValidator(to_yarl_url, json_schema_input_type=str),
     WithJsonSchema({"type": "string", "format": "uri"}),
 ]
+
+
+type AwareDatetime = Annotated[datetime.datetime, AfterValidator(assume_utc)]
