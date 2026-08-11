@@ -85,7 +85,7 @@ class Rendition:
     subtitle: M3U8 | None
 
     def __iter__(self) -> Iterator[M3U8 | None]:
-        return iter(dataclasses.astuple(self))
+        yield from (self.video, self.audio, self.subtitle)
 
 
 @dataclasses.dataclass(frozen=True, slots=True, order=True)

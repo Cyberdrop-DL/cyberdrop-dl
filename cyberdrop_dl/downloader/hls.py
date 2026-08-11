@@ -7,12 +7,11 @@ from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
-from Crypto.Cipher import AES
-
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
 
 if TYPE_CHECKING:
@@ -75,7 +74,7 @@ class AESHLSDecrypter(HLSDecrypter):
 
     async def __call__(self, content: bytes, key: HLSKey, headers: dict[str, str] | None = None) -> bytes:
         aes_key = await self.get_key(key.uri, headers=headers)
-        return AES.new(aes_key, AES.MODE_CBC, key.iv).encrypt(content)
+        return aes_unpad(aes_cbc_decrypt(content, aes_key, key.iv))
 
 
 def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Generator[HLSSegment]:
