@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 
 CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
+_DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 logger = logging.getLogger(__name__)
 
 
@@ -156,8 +157,21 @@ async def _download_m3u8(
         m3u8.source,
     )
     results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
+    await _decrypt_segments((r.item for r in results), sem)
     await _merge_segments(tuple(result.item.path for result in results), output)
     return output
+
+
+async def _decrypt_segments(items: Iterable[MediaItem], sem: asyncio.BoundedSemaphore) -> None:
+    decrypter = _DECRYPTER.get()
+
+    async def decrypt(item: MediaItem) -> None:
+        if key := HLSKey.get(item.extra_info):
+            logger.debug(f"Decrypting '{item.path}' with {key}")
+            content = await decrypter(await aio.read_bytes(item.path), key, item.headers)
+            await aio.write_bytes(item.path, content)
+
+    await aio.map(decrypt, items, task_limit=sem)
 
 
 async def _download_segments(
@@ -198,13 +212,14 @@ def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
     return output.with_suffix(suffix)
 
 
-async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn) -> Streams:
+async def download(media_item: MediaItem, rendition: Rendition, download_fn: DownloadFn, client: HTTPClient) -> Streams:
     """Download a rendition group"""
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
     sem = asyncio.BoundedSemaphore(CONCURRENT_SEGMENTS.get())
 
     async def download(m3u8: M3U8) -> Path:
+        _DECRYPTER.set(AESHLSDecrypter(client))
         return await _download_m3u8(m3u8, temp_dir, media_item, download_fn, sem)
 
     async def download_subs() -> Path | None:

@@ -281,7 +281,7 @@ class Downloader:
             await self._hls_download(media_item, rendition)
 
     async def _hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
-        streams = await hls.download(media_item, rendition, self._download)
+        streams = await hls.download(media_item, rendition, self._download, self.client.http_client)
         if not streams.audio:
             await aio.move(streams.video, media_item.path)
 
