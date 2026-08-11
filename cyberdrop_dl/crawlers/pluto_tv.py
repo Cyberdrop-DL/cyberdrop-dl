@@ -151,7 +151,7 @@ class PlutoAPI(API):
                 "deviceId": self._client_id,
                 "deviceMake": "firefox",
                 "deviceModel": "web",
-                "deviceType": "ios",
+                "deviceType": "web",
                 "deviceVersion": "151.0",
                 "serverSideAds": "false",
                 "sessionID": sid,
