@@ -190,7 +190,7 @@ class HLSKey:
             assert seg.key.uri
             return cls(
                 method=Encryption(seg.key.method),
-                iv=bytes.fromhex(seg.key.iv),
+                iv=bytes.fromhex(seg.key.iv.removeprefix("0x")),
                 uri=parse_url(seg.key.uri, trim=False),
             )
 
