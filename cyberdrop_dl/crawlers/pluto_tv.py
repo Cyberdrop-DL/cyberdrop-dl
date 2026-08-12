@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 import yarl
 
 from cyberdrop_dl.cache import cached_method
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id, compose_ep_name
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, extr_text, next_js
@@ -21,7 +22,10 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.utils.m3u8 import Rendition
 
+FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
 
+
+@HTTPConfig.default_headers(user_agent=FIREFOX)
 class PlutoCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Episode": "<region>/shows/<show_id>/episode/<episode_id>",
@@ -50,7 +54,11 @@ class PlutoCrawler(Crawler):
     @error_handling_wrapper
     async def show(self, scrape_item: ScrapeItem, show_slug: str, season: int | None = None) -> None:
         scrape_item.setup_as_album("")
-        text = await self.request_text(scrape_item.url)
+
+        async with self.request(scrape_item.url) as resp:
+            text = await resp.text()
+            scrape_item.url = resp.url
+
         series_id = extr_text(text, "/ptvm/series/", "/")
         series = await self.api.series(series_id)
         downloaded = await self.get_album_results(series.id)
@@ -74,18 +82,20 @@ class PlutoCrawler(Crawler):
         if await self.check_complete(scrape_item.url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-        data = next_js.data(soup)
-        ep = data["props"]["pageProps"]["episodeMetadata"]
+        async with self.request(scrape_item.url) as resp:
+            soup = await resp.soup()
+            scrape_item.url = resp.url
+
+        props = next_js.data(soup)["props"]["pageProps"]
+        ep = props["episodeMetadata"]
         episode = _deserialize(Episode, ep, id=episode_id)
         scrape_item.setup_as_album(self.create_title(ep["seriesTitle"], series_id), album_id=series_id)
         await self._episode(scrape_item, episode)
 
     async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
+        scrape_item.uploaded_at = self.parse_iso_date(ep.airDateISO)
         m3u8_url = await self.api.stream(ep.id)
-        m3u8, info = await self.request_m3u8_playlist(
-            m3u8_url, headers={"User-Agent": self.api.FIREFOX}, keep_query=True
-        )
+        m3u8, info = await self.request_m3u8_playlist(m3u8_url, keep_query=True)
         _remove_ads_segments(m3u8)
         filename = self.create_custom_filename(
             compose_ep_name(ep.season, ep.number, ep.title),
@@ -109,8 +119,8 @@ class PlutoCrawler(Crawler):
     _episode_task = auto_task_id(error_handling_wrapper(_episode))
 
 
+@HTTPConfig.default_headers(user_agent=FIREFOX)
 class PlutoAPI(API):
-    FIREFOX: ClassVar[str] = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
     GRAPHQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv/api/tn/app-shell/graphql/")
     SERIES: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://service-vod.clusters.pluto.tv/v4/vod/series/")
     M3U8: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL(
@@ -152,7 +162,6 @@ class PlutoAPI(API):
         resp = await self.request_json(
             self.GRAPHQL_ENDPOINT,
             method="POST",
-            headers={"User-Agent": self.FIREFOX},
             json={
                 "query": globals()[operation],
                 "variables": variables,
@@ -188,9 +197,7 @@ class PlutoAPI(API):
     async def series(self, series_id: str) -> Series:
         session = await self.start()
         url = (self.SERIES / series_id / "seasons").with_query(offset=0)
-        resp = await self.request_json(
-            url, headers={"Authorization": f"Bearer {session.jwt}", "User-Agent": self.FIREFOX}
-        )
+        resp = await self.request_json(url, headers={"Authorization": f"Bearer {session.jwt}"})
         return _deserialize(Series, resp)
 
 
@@ -213,6 +220,7 @@ class Episode:
     season: int
     number: int
     title: str
+    airDateISO: str  # noqa: N815
 
 
 class Season(TypedDict):
