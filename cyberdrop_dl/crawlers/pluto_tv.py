@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import uuid
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 
 import yarl
-from typing_extensions import AsyncGenerator
 
 from cyberdrop_dl.cache import cached_method
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, compose_ep_name
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id, compose_ep_name
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, next_js
+from cyberdrop_dl.utils import css, extr_text, next_js
 from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -26,18 +24,14 @@ if TYPE_CHECKING:
 
 class PlutoCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Episode": (".../shows/<show_id>/episode/<episode_id>",),
-        "Show": (".../shows/<show_slug>",),
+        "Episode": "<region>/shows/<show_id>/episode/<episode_id>",
+        "Show": (
+            "<region>/shows/<show_slug>",
+            "<region>/shows/<show_slug>/season/<season>",
+        ),
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv")
     DOMAIN: ClassVar[str] = "pluto.tv"
-
-    @staticmethod
-    @override
-    def __db_path__(url: AbsoluteHttpURL, /) -> str:
-        _region, sep, rest = url.path.partition("/shows/")
-        assert sep
-        return sep + rest
 
     def __post_init__(self) -> None:
         self.api: PlutoAPI = PlutoAPI.from_crawler(self)
@@ -48,20 +42,32 @@ class PlutoCrawler(Crawler):
                 await self.episode(scrape_item, show_id, episode_id)
             case [*_, "shows", show_id]:
                 await self.show(scrape_item, show_id)
-            case [*_, "shows", show_id, "season", _season]:
-                await self.show(scrape_item, show_id)
-
+            case [*_, "shows", show_id, "season", season]:
+                await self.show(scrape_item, show_id, int(season))
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def show(self, scrape_item: ScrapeItem, show_slug: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        data = next_js.data(soup)
-        ep = data["props"]["pageProps"]["dehydratedState"]["queries"]
-        episode = _deserialize(Episode, ep, id=show_slug)
-        scrape_item.setup_as_album(self.create_title(ep["seriesTitle"], show_slug), album_id=show_slug)
-        await self._episode(scrape_item, episode)
+    async def show(self, scrape_item: ScrapeItem, show_slug: str, season: int | None = None) -> None:
+        scrape_item.setup_as_album("")
+        text = await self.request_text(scrape_item.url)
+        series_id = extr_text(text, "/ptvm/series/", "/")
+        series = await self.api.series(series_id)
+        downloaded = await self.get_album_results(series.id)
+        scrape_item.setup_as_album(self.create_title(series.title, series.id), album_id=series.id)
+
+        base_url = self.PRIMARY_URL.with_path(scrape_item.url.path.partition(show_slug)[0]) / show_slug
+        for ep in series.episodes():
+            if season is not None and ep.season != season:
+                continue
+
+            url = base_url / "episode" / ep.id
+            if self.check_album_results(url, downloaded):
+                continue
+
+            new_item = scrape_item.create_child(url)
+            self.create_task(self._episode_task(new_item, ep))
+            scrape_item.add_children()
 
     @error_handling_wrapper
     async def episode(self, scrape_item: ScrapeItem, series_id: str, episode_id: str) -> None:
@@ -75,7 +81,6 @@ class PlutoCrawler(Crawler):
         scrape_item.setup_as_album(self.create_title(ep["seriesTitle"], series_id), album_id=series_id)
         await self._episode(scrape_item, episode)
 
-    @error_handling_wrapper
     async def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
         m3u8_url = await self.api.stream(ep.id)
         m3u8, info = await self.request_m3u8_playlist(
@@ -100,6 +105,8 @@ class PlutoCrawler(Crawler):
             custom_filename=filename,
             metadata=ep,
         )
+
+    _episode_task = auto_task_id(error_handling_wrapper(_episode))
 
 
 class PlutoAPI(API):
@@ -178,12 +185,13 @@ class PlutoAPI(API):
             }
         )
 
-    async def series_seasons(self, series_id: str) -> AsyncGenerator[Generator[Episode]]:
+    async def series(self, series_id: str) -> Series:
         session = await self.start()
-        rul = (self.SERIES / series_id / "seasons").with_query(offset=0)
-        for page in itertools.count(0):
-            resp = await self.request_json(rul.update_query(page=page), headers={"Autorization": session.jwt})
-            yield (_deserialize(Episode, ep) for ep in resp["seasons"]["episodes"])
+        url = (self.SERIES / series_id / "seasons").with_query(offset=0)
+        resp = await self.request_json(
+            url, headers={"Authorization": f"Bearer {session.jwt}", "User-Agent": self.FIREFOX}
+        )
+        return _deserialize(Series, resp)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -193,7 +201,7 @@ class Session:
 
 
 _deserialize = Deserializer(
-    {"season": "seasonNum", "number": "episodeNum"},
+    {"season": "seasonNum", "number": "episodeNum", "title": "name", "id": "_id"},
     {"season": int, "number": int},
 )
 
@@ -205,6 +213,24 @@ class Episode:
     season: int
     number: int
     title: str
+
+
+class Season(TypedDict):
+    number: int
+    episodes: list[dict[str, Any]]
+
+
+@dataclasses.dataclass(slots=True)
+class Series:
+    id: str
+    title: str
+    slug: str
+    seasons: list[Season] = dataclasses.field(default_factory=list)
+
+    def episodes(self) -> Generator[Episode]:
+        for season in self.seasons:
+            for ep in season["episodes"]:
+                yield _deserialize(Episode, ep)
 
 
 def _remove_ads_segments(rendition: Rendition) -> None:
