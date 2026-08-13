@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - name: checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
-      - uses: astral-sh/ruff-action@v4.0.0
+      - uses: astral-sh/ruff-action@v4.1.0
       - run: ruff format --check --diff --output-format github
         if: ${{ !cancelled() }}
