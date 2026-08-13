@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt install ffmpeg -y
-          uv sync --all-extras
+          uv sync --locked --all-extras
 
       - name: Run pytest
         timeout-minutes: 10

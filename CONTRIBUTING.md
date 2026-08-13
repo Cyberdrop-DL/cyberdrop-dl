@@ -38,7 +38,7 @@ Once you have `uv` installed, follow these steps:
 1. Install the project and its dependencies
 
    ```powershell
-   uv sync --all-extras
+   uv sync --locked --all-extras
    ```
 
 1. Install the pre-commit hooks:
