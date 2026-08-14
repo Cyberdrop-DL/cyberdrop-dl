@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.3.0
+List of sites supported by cyberdrop-dl-patched as of version 10.4.0
 
 ### 1fichier
 
@@ -68,7 +68,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - File:
   - `?<file_id>`
-
 
 ### 4chan
 
@@ -83,7 +82,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Thread:
   - `/<board>/thread/<thread_id>`
 
-
 ### 8Muses
 
 **Primary URL**: [https://comics.8muses.com](https://comics.8muses.com)
@@ -94,7 +92,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Album:
   - `/comics/album/...`
-
 
 ### ABStream
 
@@ -111,7 +108,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/embed/<file_id>`
   - `/file/<file_id>`
 
-
 ### Acast.com
 
 **Primary URL**: [https://www.acast.com](https://www.acast.com)
@@ -125,7 +121,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Show:
   - `/<show_id>`
 
-
 ### Adobe Lightroom
 
 **Primary URL**: [https://lightroom.adobe.com](https://lightroom.adobe.com)
@@ -136,7 +131,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Shared Album:
   - `/shares/<space_id>`
-
 
 ### AllPornComix
 
@@ -153,11 +147,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### Anontransfer.com
 
@@ -174,7 +166,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/d/<file_id>`
 - Folder:
   - `/f/<folder_uuid>`
-
 
 ### AnySex
 
@@ -193,7 +184,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/video/<video_id>/...`
 
-
 ### APK Mirror
 
 **Primary URL**: [https://www.apkmirror.com](https://www.apkmirror.com)
@@ -204,7 +194,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - APK:
   - `/apk/<developer>/<application>/<release>/<variant>-download`
-
 
 ### Archive.org
 
@@ -221,7 +210,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/details/<identifier>`
   - `/download/<identifier>`
 
-
 ### ArchiveBate
 
 **Primary URL**: [https://www.archivebate.store](https://www.archivebate.store)
@@ -232,7 +220,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Video:
   - `/watch/<video_id>`
-
 
 ### aShemaleTube
 
@@ -253,7 +240,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/videos/...`
 
-
 ### Bandcamp
 
 **Primary URL**: [https://bandcamp.com](https://bandcamp.com)
@@ -267,7 +253,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Song:
   - `/track/<slug>`
 
-
 ### Beeg.com
 
 **Primary URL**: [https://beeg.com](https://beeg.com)
@@ -279,7 +264,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/<video_id>`
   - `/video/<video_id>`
-
 
 ### Bellazon
 
@@ -296,11 +280,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Invision
-
 
 ### BestPrettyGirl
 
@@ -319,7 +301,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Tag:
   - `/tag/<tag_slug>`
 
-
 ### Box
 
 **Primary URL**: [https://www.box.com](https://www.box.com)
@@ -333,7 +314,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `app.box.com/embed_widget/s?sh=<share_code>`
 - File or Folder:
   - `app.box.com/s?sh=<share_code>`
-
 
 ### Bunkr
 
@@ -354,7 +334,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/v/<slug>`
 
-
 ### Bunkr-Albums
 
 **Primary URL**: [https://balbums.st](https://balbums.st)
@@ -366,7 +345,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Search:
   - `/?search=<query>`
 
-
 ### BuzzHeavier
 
 **Primary URL**: [https://buzzheavier.com](https://buzzheavier.com)
@@ -376,7 +354,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 **Supported Paths**:
 
 - Direct Links:
-
 
 ### Camwhores.tv
 
@@ -395,7 +372,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/videos/<id>/<slug>`
 
-
 ### Cara.app
 
 **Primary URL**: [https://cara.app](https://cara.app)
@@ -409,7 +385,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - User:
   - `/<username>`
 
-
 ### Catbox
 
 **Primary URL**: [https://catbox.moe](https://catbox.moe)
@@ -419,7 +394,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 **Supported Paths**:
 
 - Direct Links:
-
 
 ### CelebForum
 
@@ -436,11 +410,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### Chevereto
 
@@ -471,7 +443,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/videos/<id>`
   - `/videos/<name>.<id>`
 
-
 ### cloud.mail.ru
 
 **Primary URL**: [https://cloud.mail.ru](https://cloud.mail.ru)
@@ -482,7 +453,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Public files / folders:
   - `/public/<web_path>`
-
 
 ### CloudflareStream
 
@@ -503,7 +473,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/<jwt_access_token>/watch`
   - `/embed/___.js?video=<jwt_access_token>`
 
-
 ### Clyp.it
 
 **Primary URL**: [https://clyp.it](https://clyp.it)
@@ -517,7 +486,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - User:
   - `/user/<user_id>`
 
-
 ### CrazyShit
 
 **Primary URL**: [https://crazyshit.com](https://crazyshit.com)
@@ -530,7 +498,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/series/<name>`
 - Video:
   - `/cnt/medias/<slug>`
-
 
 ### Cyberdrop
 
@@ -547,7 +514,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - File:
   - `/e/<file_id>`
   - `/f/<file_id>`
-
 
 ### Cyberfile
 
@@ -566,7 +532,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Shared folders:
   - `/shared/<share_key>`
 
-
 ### Daftporn
 
 **Primary URL**: [https://www.daftporn.com](https://www.daftporn.com)
@@ -577,7 +542,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Video:
   - `/extreme-videos/<slug>`
-
 
 ### Dailymotion
 
@@ -592,7 +556,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/video/<video_uid>`
 
-
 ### DesiVideo
 
 **Primary URL**: [https://desivideo.net](https://desivideo.net)
@@ -606,7 +569,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/videos/<video_id>/...`
 
-
 ### DirectHttpFile
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -614,8 +576,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 **Supported Domains**:
 
 **Supported Paths**:
-
-
 
 ### DirtyShip
 
@@ -632,7 +592,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Video:
   - `/<slug>`
 
-
 ### Discourse
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -647,11 +606,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/t/<topic_name>/<topic_id>`
   - `/t/<topic_name>/<topic_id>/<post_number>`
 
-
 **Notes**
 
 - If the URL includes <post_number>, posts with a number lower that it won't be scraped
-
 
 ### DoodStream
 
@@ -663,7 +620,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Video:
   - `/e/<video_id>`
-
 
 ### Dropbox
 
@@ -681,7 +637,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/scl/fo/<link_key>/<secure_hash>?rlkey=...`
   - `/sh/...`
 
-
 ### E-Hentai
 
 **Primary URL**: [https://e-hentai.org](https://e-hentai.org)
@@ -694,7 +649,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/g/...`
 - File:
   - `/s/...`
-
 
 ### E621
 
@@ -710,7 +664,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts/<post_id>`
 - Tags:
   - `/posts?tags=<tags>`
-
 
 ### eFukt
 
@@ -730,7 +683,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/series/<series_name>`
 - Video:
   - `/...`
-
 
 ### ePorner
 
@@ -761,7 +713,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/embed/<video_id>`
   - `/hd-porn/<video_id>`
 
-
 ### Erome
 
 **Primary URL**: [https://www.erome.com](https://www.erome.com)
@@ -777,7 +728,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Search:
   - `/search?q=<query>`
 
-
 ### Erome.fan
 
 **Primary URL**: [https://erome.fan](https://erome.fan)
@@ -792,7 +742,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/a/category/<name>`
 - Search:
   - `/search/<query>`
-
 
 ### EveriaClub
 
@@ -811,7 +760,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Tag:
   - `/tag/<tag_slug>`
 
-
 ### F95Zone
 
 **Primary URL**: [https://f95zone.to](https://f95zone.to)
@@ -827,11 +775,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### Fapello.com
 
@@ -846,12 +792,11 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Model:
   - `/<name>`
 
-
 ### Fileditch
 
 **Primary URL**: [https://fileditchfiles.me](https://fileditchfiles.me)
 
-**Supported Domains**: `fileditch.*`
+**Supported Domains**: `fileditch.*`, `theditch.st`
 
 **Supported Paths**:
 
@@ -860,7 +805,8 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/beta123/<file_id>/<name>`
   - `/file.php?f=<file_id>`
   - `/temp/<file_id>/<name>`
-
+- Short URL:
+  - `https://theditch.st/<short_id>`
 
 ### Filester
 
@@ -875,7 +821,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Folder:
   - `/f/<slug>`
 
-
 ### Flickr
 
 **Primary URL**: [https://www.flickr.com](https://www.flickr.com)
@@ -888,7 +833,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/photos/<user_nsid>/albums/<photoset_id>/...`
 - Photo:
   - `/photos/<user_nsid>/<photo_id>/...`
-
 
 ### Forums.plex.tv
 
@@ -904,11 +848,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/t/<topic_name>/<topic_id>`
   - `/t/<topic_name>/<topic_id>/<post_number>`
 
-
 **Notes**
 
 - If the URL includes <post_number>, posts with a number lower that it won't be scraped
-
 
 ### FSIBlog
 
@@ -923,7 +865,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Search:
   - `?s=<query>`
 
-
 ### FuckingFast
 
 **Primary URL**: [https://fuckingfast.co](https://fuckingfast.co)
@@ -934,7 +875,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 
 - Direct links:
   - `/<file_id>`
-
 
 ### FuXXX
 
@@ -948,6 +888,16 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+### Fyptt
+
+**Primary URL**: [https://fyptt.to](https://fyptt.to)
+
+**Supported Domains**: `fyptt.*`
+
+**Supported Paths**:
+
+- Post:
+  - `/<post_id>/...`
 
 ### GenericKVS
 
@@ -961,6 +911,32 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `/video/<slug>`
   - `/videos/<slug>`
 
+### GenericVideo
+
+**Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
+
+**Supported Domains**:
+
+**Supported Paths**:
+
+- Video:
+  - `/...`
+
+### GifHQ
+
+**Primary URL**: [https://gifhq.com](https://gifhq.com)
+
+**Supported Domains**: `gifhq.*`
+
+**Supported Paths**:
+
+- Post:
+  - `/post/<post_id>`
+- Subreddit:
+  - `/r/<subreddit>`
+  - `/r/<subreddit>/best/<period>`
+  - `/r/<subreddit>/best/<period>?content=images`
+  - `/r/<subreddit>/best/<period>?content=videos`
 
 ### Giphy
 
@@ -974,7 +950,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
   - `https://media*.giphy.com/media/<gif_id>`
 - Gif:
   - `/gifs/<slug>-<gif-id>`
-
 
 ### GirlsReleased
 
@@ -991,7 +966,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Site:
   - `/site/<site>`
 
-
 ### GoFile
 
 **Primary URL**: [https://gofile.io](https://gofile.io)
@@ -1006,12 +980,10 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Folder / File:
   - `/d/<content_id>`
 
-
 **Notes**
 
 - Use `password` as a query param to download password protected folders
 - ex: https://gofile.io/d/ABC654?password=1234
-
 
 ### GoogleDrive
 
@@ -1033,34 +1005,35 @@ List of sites supported by cyberdrop-dl-patched as of version 10.3.0
 - Slides:
   - `/presentation/d/<file_id>`
 
-
 **Notes**
 
 - You can download sheets, slides and docs in a custom format by using it as a query param.
-ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
-Valid Formats:
+  ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
+  Valid Formats:
 
 document:
-  - docx (default)
-  - epub
-  - md
-  - odt
-  - pdf
-  - rtf
-  - txt
-  - zip
+
+- docx (default)
+- epub
+- md
+- odt
+- pdf
+- rtf
+- txt
+- zip
 
 presentation:
-  - odp
-  - pptx (default)
+
+- odp
+- pptx (default)
 
 spreadsheets:
-  - csv
-  - html
-  - ods
-  - tsv
-  - xslx (default)
 
+- csv
+- html
+- ods
+- tsv
+- xslx (default)
 
 ### GooglePhotos
 
@@ -1075,12 +1048,10 @@ spreadsheets:
 - Photo:
   - `/album/<album_id>/photo/<photo_id>`
 
-
 **Notes**
 
 - Only downloads 'optimized' images, NOT original quality
 - Can NOT download videos
-
 
 ### GoonBox
 
@@ -1095,7 +1066,8 @@ spreadsheets:
 - Direct Links:
 - Image:
   - `/img/<image_id>`
-
+- User:
+  - `/u/<username>`
 
 ### GUpload
 
@@ -1107,7 +1079,6 @@ spreadsheets:
 
 - Video:
   - `/data/e/<video_id>`
-
 
 ### HClips
 
@@ -1121,7 +1092,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### HDZog
 
 **Primary URL**: [https://hdzog.com](https://hdzog.com)
@@ -1133,7 +1103,6 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
-
 
 ### Hitomi.la
 
@@ -1164,6 +1133,16 @@ spreadsheets:
 - Search:
   - `/search.html?<query>`
 
+### Hohoj
+
+**Primary URL**: [https://hohoj.tv](https://hohoj.tv)
+
+**Supported Domains**: `hohoj.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/video?id=<video_id>`
 
 ### HotLeaksTV
 
@@ -1178,7 +1157,6 @@ spreadsheets:
 - Video:
   - `/<model_id>/video/<video_id>`
 
-
 ### HotLeakVip
 
 **Primary URL**: [https://hotleak.vip](https://hotleak.vip)
@@ -1192,7 +1170,6 @@ spreadsheets:
 - Video:
   - `/<model_id>/video/<video_id>`
 
-
 ### HotMovs
 
 **Primary URL**: [https://hotmovs.com](https://hotmovs.com)
@@ -1204,7 +1181,6 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
-
 
 ### HotPic
 
@@ -1218,7 +1194,6 @@ spreadsheets:
   - `/album/...`
 - Image:
   - `/i/...`
-
 
 ### Iceyfile
 
@@ -1237,7 +1212,6 @@ spreadsheets:
 - Shared folders:
   - `/shared/<share_key>`
 
-
 ### ImageBam
 
 **Primary URL**: [https://www.imagebam.com](https://www.imagebam.com)
@@ -1255,7 +1229,6 @@ spreadsheets:
   - `images<x>.imagebam.com/<id>`
 - Thumbnails:
   - `thumbs<x>.imagebam.com/<id>`
-
 
 ### ImagePond
 
@@ -1279,7 +1252,6 @@ spreadsheets:
   - `/<user_name>`
   - `/user/<user_name>`
 
-
 ### ImageVenue
 
 **Primary URL**: [https://www.imagevenue.com](https://www.imagevenue.com)
@@ -1294,7 +1266,6 @@ spreadsheets:
   - `/view/o?i=<image_id>`
 - Thumbnail:
   - `cdn-thumbs.imagevenue.com/.../<image_id>_t.jpg`
-
 
 ### ImgBB
 
@@ -1311,7 +1282,6 @@ spreadsheets:
 - Profile:
   - `<user_name>.imgbb.co/`
 
-
 ### ImgBox
 
 **Primary URL**: [https://imgbox.com](https://imgbox.com)
@@ -1325,7 +1295,6 @@ spreadsheets:
 - Direct Links:
 - Image:
   - `/...`
-
 
 ### ImgLike
 
@@ -1356,7 +1325,6 @@ spreadsheets:
   - `/videos/<id>`
   - `/videos/<name>.<id>`
 
-
 ### Imgur
 
 **Primary URL**: [https://imgur.com](https://imgur.com)
@@ -1375,7 +1343,6 @@ spreadsheets:
   - `/<image_id>`
   - `/download/<image_id>`
 
-
 ### Imx.to
 
 **Primary URL**: [https://imx.to](https://imx.to)
@@ -1393,7 +1360,6 @@ spreadsheets:
   - `/t/...`
   - `/u/t/`
 
-
 ### InPorn
 
 **Primary URL**: [https://inporn.com](https://inporn.com)
@@ -1406,7 +1372,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### Koofr
 
 **Primary URL**: [https://koofr.eu](https://koofr.eu)
@@ -1418,7 +1383,6 @@ spreadsheets:
 - Public Share:
   - `/links/<content_id>`
   - `https://k00.fr/<short_id>`
-
 
 ### LeakedModels
 
@@ -1435,11 +1399,9 @@ spreadsheets:
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### LeakedZone
 
@@ -1454,6 +1416,18 @@ spreadsheets:
 - Video:
   - `/<model_id>/video/<video_id>`
 
+### LiveCamRips
+
+**Primary URL**: [https://livecamrips.to](https://livecamrips.to)
+
+**Supported Domains**: `livecamrips.*`
+
+**Supported Paths**:
+
+- Model:
+  - `/model/<model_id>`
+- Video:
+  - `/video/<video_id>`
 
 ### Livestreamfails.com
 
@@ -1467,7 +1441,6 @@ spreadsheets:
   - `/clip/<video_id>`
 - Streamer:
   - `/streamer/<streamer_id>`
-
 
 ### Luscious
 
@@ -1483,7 +1456,6 @@ spreadsheets:
 - Search:
   - `/albums/list?tagged=<query>`
 
-
 ### LuxureTV
 
 **Primary URL**: [https://luxuretv.com](https://luxuretv.com)
@@ -1497,7 +1469,6 @@ spreadsheets:
 - Video:
   - `/videos/<name>-<id>.html`
 
-
 ### Masahub
 
 **Primary URL**: [https://masahub.com](https://masahub.com)
@@ -1510,7 +1481,6 @@ spreadsheets:
   - `?s=<query>`
 - Videos:
   - `/title`
-
 
 ### Mediafire
 
@@ -1526,7 +1496,6 @@ spreadsheets:
 - Folder:
   - `/folder/<folder_key>`
 
-
 ### Megacloud
 
 **Primary URL**: [https://megacloud.blog](https://megacloud.blog)
@@ -1537,7 +1506,6 @@ spreadsheets:
 
 - Embed v3:
   - `/embed-2/v3`
-
 
 ### MegaNz
 
@@ -1557,11 +1525,9 @@ spreadsheets:
 - Subfolder:
   - `/folder/<folder_id>#<share_key>/folder/<subfolder_id>`
 
-
 **Notes**
 
 - Downloads can not be resumed. Partial downloads will always be deleted and new downloads will start over
-
 
 ### MissAV
 
@@ -1584,6 +1550,22 @@ spreadsheets:
 - Video:
   - `/...`
 
+### Mitaku.net
+
+**Primary URL**: [https://mitaku.net](https://mitaku.net)
+
+**Supported Domains**: `mitaku.net`
+
+**Supported Paths**:
+
+- All Posts:
+  - `/posts/`
+- Category:
+  - `/category/<category_slug>`
+- Post:
+  - `/<post_slug>/`
+- Tag:
+  - `/tag/<tag_slug>`
 
 ### MixDrop
 
@@ -1597,7 +1579,6 @@ spreadsheets:
   - `/e/<file_id>`
   - `/f/<file_id>`
 
-
 ### Monstercat
 
 **Primary URL**: [https://www.monstercat.com](https://www.monstercat.com)
@@ -1608,7 +1589,6 @@ spreadsheets:
 
 - Release:
   - `/release/<slug>`
-
 
 ### Motherless
 
@@ -1639,7 +1619,6 @@ spreadsheets:
 - User galleries:
   - `/galleries/member/<user_name>/...`
 
-
 ### Multporn.net
 
 **Primary URL**: [https://multporn.net](https://multporn.net)
@@ -1656,7 +1635,6 @@ spreadsheets:
 - video:
   - `/video/<slug>`
 
-
 ### MyDesi
 
 **Primary URL**: [https://lolpol.com](https://lolpol.com)
@@ -1670,7 +1648,6 @@ spreadsheets:
 - Videos:
   - `/title`
 
-
 ### Naughtymachinima
 
 **Primary URL**: [https://www.naughtymachinima.com](https://www.naughtymachinima.com)
@@ -1683,7 +1660,6 @@ spreadsheets:
   - `/album/<album_id>`
 - Video:
   - `/video/<video_id>`
-
 
 ### nHentai
 
@@ -1704,7 +1680,6 @@ spreadsheets:
 - Gallery:
   - `/g/<gallery_id>`
 
-
 ### NoodleMagazine
 
 **Primary URL**: [https://noodlemagazine.com](https://noodlemagazine.com)
@@ -1718,6 +1693,21 @@ spreadsheets:
 - Video:
   - `/watch/<video_id>`
 
+### Nova
+
+**Primary URL**: [https://nova.storage](https://nova.storage)
+
+**Supported Domains**: `nova.storage`
+
+**Supported Paths**:
+
+- Filesystem:
+  - `/api/filesystem/<path>...`
+  - `/d/<id>`
+
+**Notes**
+
+- text files will not be downloaded but their content will be parsed for URLs
 
 ### nsfw.xxx
 
@@ -1738,7 +1728,6 @@ spreadsheets:
 - User:
   - `/user/<username>`
 
-
 ### Nudeleted
 
 **Primary URL**: [https://nudeleted.com](https://nudeleted.com)
@@ -1753,7 +1742,6 @@ spreadsheets:
   - `/tags/...`
 - Video:
   - `/videos/...`
-
 
 ### NudoStar
 
@@ -1770,11 +1758,9 @@ spreadsheets:
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### NudoStarTV
 
@@ -1787,6 +1773,35 @@ spreadsheets:
 - Model:
   - `/models/...`
 
+### OctaveMusic
+
+**Primary URL**: [https://music.octavestreaming.com](https://music.octavestreaming.com)
+
+**Supported Domains**: `music.octavestreaming`
+
+**Supported Paths**:
+
+- Album:
+  - `/album/<album_id`
+- Artist Albums:
+  - `/artist/<artist_id>`
+- Artist Top 50 songs:
+  - `/artist/<artist_id>/top-songs`
+- Track:
+  - `/album/<album_id>?t=<track_id>`
+
+### Odysee
+
+**Primary URL**: [https://odysee.com](https://odysee.com)
+
+**Supported Domains**: `odysee.*`
+
+**Supported Paths**:
+
+- Embed:
+  - `/$/embed/@channel:uri`
+- Video:
+  - `/@channel:uri`
 
 ### ok.ru
 
@@ -1802,7 +1817,6 @@ spreadsheets:
 - Video:
   - `/video/<video_id>`
 
-
 ### OmegaScans
 
 **Primary URL**: [https://omegascans.org](https://omegascans.org)
@@ -1817,7 +1831,6 @@ spreadsheets:
   - `/file/....`
 - Series:
   - `/series/<series_name>`
-
 
 ### OneDrive
 
@@ -1835,7 +1848,6 @@ spreadsheets:
   - `https://1drv.ms/t/<KEY>`
   - `https://1drv.ms/u/<KEY>`
 
-
 ### OnePace
 
 **Primary URL**: [https://onepace.net](https://onepace.net)
@@ -1847,6 +1859,22 @@ spreadsheets:
 - All episodes:
   - `/watch`
 
+### OnlyHaven
+
+**Primary URL**: [https://cum.st](https://cum.st)
+
+**Supported Domains**: `cum.st`
+
+**Supported Paths**:
+
+- Creator:
+  - `/creators/<service>/<user_id>`
+- DM:
+  - `/creators/<service>/<user_id>/dm/<dm_id>`
+- Post:
+  - `/creators/<service>/<user_id>/post/<post_id>`
+- Post Search:
+  - `/search?q=...`
 
 ### OwnCloud
 
@@ -1858,7 +1886,6 @@ spreadsheets:
 
 - Public Share:
   - `/s/<share_token>`
-
 
 ### Patreon
 
@@ -1873,7 +1900,6 @@ spreadsheets:
   - `/cw/<creator>`
 - Post:
   - `/posts/<slug>`
-
 
 ### Pawchive
 
@@ -1896,7 +1922,6 @@ spreadsheets:
 - Search:
   - `/search?q=...`
 
-
 ### pCloud
 
 **Primary URL**: [https://www.pcloud.com](https://www.pcloud.com)
@@ -1909,7 +1934,6 @@ spreadsheets:
   - `?code=<share_code>`
   - `e.pc.cd/<short_code>`
   - `u.pc.cd/<short_code>`
-
 
 ### PillowCase
 
@@ -1925,7 +1949,6 @@ spreadsheets:
   - `/api/metadata/<file_uid>.txt`
   - `/f/<file_uid>`
 
-
 ### PimpAndHost
 
 **Primary URL**: [https://pimpandhost.com](https://pimpandhost.com)
@@ -1938,7 +1961,6 @@ spreadsheets:
   - `/album/...`
 - Image:
   - `/image/...`
-
 
 ### PimpBunny
 
@@ -1961,7 +1983,6 @@ spreadsheets:
 - Videos:
   - `/videos/...`
 
-
 ### Pinterest
 
 **Primary URL**: [https://www.pinterest.com](https://www.pinterest.com)
@@ -1976,7 +1997,6 @@ spreadsheets:
   - `/pin/<pin_id>`
 - User Boards:
   - `/<user>`
-
 
 ### PixelDrain
 
@@ -1997,11 +2017,9 @@ spreadsheets:
   - `/api/list/<list_id>`
   - `/l/<list_id>`
 
-
 **Notes**
 
 - text files will not be downloaded but their content will be parsed for URLs
-
 
 ### Pixeldrain-proxy
 
@@ -2013,7 +2031,6 @@ spreadsheets:
 
 - File:
   - `/<file_id>`
-
 
 ### PixHost
 
@@ -2030,7 +2047,6 @@ spreadsheets:
 - Thumbnail:
   - `/thumbs/..`
 
-
 ### Pkmncards
 
 **Primary URL**: [https://pkmncards.com](https://pkmncards.com)
@@ -2046,6 +2062,21 @@ spreadsheets:
 - Set:
   - `/set/...`
 
+### Pluto.tv
+
+**Primary URL**: [https://pluto.tv](https://pluto.tv)
+
+**Supported Domains**: `pluto.tv`
+
+**Supported Paths**:
+
+- Episode:
+  - `<region>/shows/<show_id>/episode/<episode_id>`
+- Movie:
+  - `/<region>/movies/<movie_id>`
+- Show:
+  - `<region>/shows/<show_slug>`
+  - `<region>/shows/<show_slug>/season/<season>`
 
 ### PMVHaven
 
@@ -2064,7 +2095,6 @@ spreadsheets:
   - `/users/<user_id>`
 - Video:
   - `/video/<video_name>_<video_id>`
-
 
 ### PornHub
 
@@ -2092,7 +2122,6 @@ spreadsheets:
   - `/embed/<video_id>`
   - `/view_video.php?viewkey=<video_id>`
 
-
 ### PornPics
 
 **Primary URL**: [https://pornpics.com](https://pornpics.com)
@@ -2114,7 +2143,6 @@ spreadsheets:
   - `/?q=<query>`
 - Tags:
   - `/tags/...`
-
 
 ### Porntrex
 
@@ -2141,7 +2169,6 @@ spreadsheets:
 - Video:
   - `/video/...`
 
-
 ### PornZog
 
 **Primary URL**: [https://pornzog.com](https://pornzog.com)
@@ -2152,7 +2179,6 @@ spreadsheets:
 
 - Video:
   - `/video/...`
-
 
 ### PostImg
 
@@ -2169,7 +2195,6 @@ spreadsheets:
 - Image:
   - `/<image_id>/...`
 
-
 ### RealBooru
 
 **Primary URL**: [https://realbooru.com](https://realbooru.com)
@@ -2183,7 +2208,6 @@ spreadsheets:
 - Tags:
   - `?tags=<name>`
 
-
 ### RealDebrid
 
 **Primary URL**: [https://real-debrid.com](https://real-debrid.com)
@@ -2191,8 +2215,6 @@ spreadsheets:
 **Supported Domains**: `real-debrid.*`
 
 **Supported Paths**:
-
-
 
 ### RedGifs
 
@@ -2211,6 +2233,17 @@ spreadsheets:
 - User:
   - `/users/<user>`
 
+### Redtube
+
+**Primary URL**: [https://www.redtube.com](https://www.redtube.com)
+
+**Supported Domains**: `redtube.*`
+
+**Supported Paths**:
+
+- Video:
+- `/<video_id>`
+- `?id=<video_id>`
 
 ### Rootz.so
 
@@ -2223,7 +2256,6 @@ spreadsheets:
 - File:
   - `/d/<file_id>`
   - `/file/<file_id>`
-
 
 ### Rule34Vault
 
@@ -2239,7 +2271,6 @@ spreadsheets:
   - `/post/<post_id>`
 - Tags:
   - `/<tag1>|<tags2>...`
-
 
 ### Rule34Video
 
@@ -2262,7 +2293,6 @@ spreadsheets:
 - Video:
   - `/video/<id>/<slug>`
 
-
 ### Rule34XXX
 
 **Primary URL**: [https://rule34.xxx](https://rule34.xxx)
@@ -2275,7 +2305,6 @@ spreadsheets:
   - `?id=...`
 - Tag:
   - `?tags=...`
-
 
 ### Rule34XYZ
 
@@ -2291,7 +2320,6 @@ spreadsheets:
   - `/post/<post_id>`
 - Tags:
   - `/<tag1>|<tags2>...`
-
 
 ### Rumble
 
@@ -2310,7 +2338,6 @@ spreadsheets:
 - Video:
   - `<video_id>-<video-title>.html`
 
-
 ### Rutube
 
 **Primary URL**: [https://rutube.ru](https://rutube.ru)
@@ -2323,7 +2350,6 @@ spreadsheets:
   - `/play/embed/<id>`
   - `/video/<id>`
 
-
 ### Scrolller
 
 **Primary URL**: [https://scrolller.com](https://scrolller.com)
@@ -2335,7 +2361,6 @@ spreadsheets:
 - Subreddit:
   - `/r/<subreddit>`
 
-
 ### SendNow
 
 **Primary URL**: [https://send.now](https://send.now)
@@ -2345,7 +2370,6 @@ spreadsheets:
 **Supported Paths**:
 
 - Direct Links:
-
 
 ### SendVid
 
@@ -2361,7 +2385,6 @@ spreadsheets:
 - Videos:
   - `/...`
 
-
 ### Sex.com
 
 **Primary URL**: [https://sex.com](https://sex.com)
@@ -2372,7 +2395,6 @@ spreadsheets:
 
 - Shorts Profiles:
   - `/shorts/<profile>`
-
 
 ### SocialMediaGirls
 
@@ -2389,11 +2411,9 @@ spreadsheets:
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### Soundgasm
 
@@ -2407,7 +2427,6 @@ spreadsheets:
   - `/u/<user>/<slug>`
 - User:
   - `/u/<user>`
-
 
 ### SpankBang
 
@@ -2428,7 +2447,6 @@ spreadsheets:
   - `/play/<video_id>`
   - `<playlist_id>-<video_id>/playlist/...`
 
-
 ### Streamable
 
 **Primary URL**: [https://streamable.com](https://streamable.com)
@@ -2439,7 +2457,6 @@ spreadsheets:
 
 - Video:
   - `/...`
-
 
 ### Streamtape
 
@@ -2454,7 +2471,6 @@ spreadsheets:
 - Videos:
   - `/v/<video_id>`
 
-
 ### T.co
 
 **Primary URL**: [https://t.co](https://t.co)
@@ -2466,7 +2482,6 @@ spreadsheets:
 - Redirect:
   - `t.co/<short_code>`
 
-
 ### TabooTube
 
 **Primary URL**: [https://www.tabootube.xxx](https://www.tabootube.xxx)
@@ -2477,7 +2492,6 @@ spreadsheets:
 
 - Video:
   - `/video/...`
-
 
 ### ThisVid
 
@@ -2502,7 +2516,6 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
-
 ### ThotHub
 
 **Primary URL**: [https://thothub.to](https://thothub.to)
@@ -2517,7 +2530,6 @@ spreadsheets:
   - `/get_image/...`
 - Video:
   - `/videos/<id>/<slug>`
-
 
 ### TikTok
 
@@ -2534,7 +2546,6 @@ spreadsheets:
 - Video:
   - `/@<user>/video/<video_id>`
 
-
 ### TitsInTops
 
 **Primary URL**: [https://titsintops.com/phpBB2](https://titsintops.com/phpBB2)
@@ -2550,11 +2561,9 @@ spreadsheets:
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### TNAFlix
 
@@ -2572,7 +2581,6 @@ spreadsheets:
   - `/search?what=<query>`
 - Video:
   - `/<category>/<title>/video<video_id>`
-
 
 ### Tokyomotion
 
@@ -2597,7 +2605,6 @@ spreadsheets:
 - Video:
   - `/video/<video_id>`
 
-
 ### Toonily
 
 **Primary URL**: [https://toonily.com](https://toonily.com)
@@ -2610,7 +2617,6 @@ spreadsheets:
   - `/serie/<name>/chapter-<chapter-id>`
 - Series:
   - `/serie/<name>`
-
 
 ### Tranny.One
 
@@ -2628,7 +2634,6 @@ spreadsheets:
   - `/search/<search_query>`
 - Video:
   - `/view/<video_id>`
-
 
 ### TrannyGem
 
@@ -2653,7 +2658,6 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
-
 ### Transfer.it
 
 **Primary URL**: [https://transfer.it](https://transfer.it)
@@ -2664,7 +2668,6 @@ spreadsheets:
 
 - Transfer:
   - `/t/<transfer_id>`
-
 
 ### TransFlix
 
@@ -2679,7 +2682,6 @@ spreadsheets:
 - Video:
   - `/video/<name>-<video_id>`
 
-
 ### TubePornClassic
 
 **Primary URL**: [https://tubepornclassic.com](https://tubepornclassic.com)
@@ -2691,7 +2693,6 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
-
 
 ### TurboVid
 
@@ -2712,7 +2713,6 @@ spreadsheets:
   - `/embed/<file_id>`
   - `/v/<file_id>`
 
-
 ### Twitch
 
 **Primary URL**: [https://www.twitch.tv](https://www.twitch.tv)
@@ -2732,7 +2732,6 @@ spreadsheets:
   - `/video/<vod_id>`
   - `/videos/<vod_id>`
   - `?video=<vod_id>`
-
 
 ### Twitter
 
@@ -2758,7 +2757,6 @@ spreadsheets:
 - User tweets:
   - `/<user_handle>`
 
-
 ### TwitterImages
 
 **Primary URL**: [https://twimg.com](https://twimg.com)
@@ -2772,7 +2770,6 @@ spreadsheets:
 - Video:
   - `/amplify_video/<media_id>...`
 
-
 ### TWPornStars
 
 **Primary URL**: [https://www.twpornstars.com](https://www.twpornstars.com)
@@ -2781,11 +2778,12 @@ spreadsheets:
 
 **Supported Paths**:
 
-- Photo:
-  - `/media/<media_id>...`
-- Video:
-  - `/amplify_video/<media_id>...`
-
+- Collection/User:
+  - `/<name>`
+- Hashtag:
+  - `/hashtag/<hashtags>`
+- Post:
+  - `/p/<post_id>`
 
 ### TXXX
 
@@ -2799,7 +2797,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### Upload.ee
 
 **Primary URL**: [https://www.upload.ee](https://www.upload.ee)
@@ -2810,7 +2807,6 @@ spreadsheets:
 
 - File:
   - `/files/<file_id>`
-
 
 ### UPornia
 
@@ -2824,7 +2820,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### Vidara
 
 **Primary URL**: [https://vidara.to](https://vidara.to)
@@ -2836,6 +2831,16 @@ spreadsheets:
 - Video:
   - `/e/<video_id>`
 
+### Vidstack
+
+**Primary URL**: [https://videosh.upns.live](https://videosh.upns.live)
+
+**Supported Domains**: `videosh.upns.live`, `vidstack.io`
+
+**Supported Paths**:
+
+- Video:
+  - `/#<video_id>`
 
 ### ViperGirls
 
@@ -2849,7 +2854,6 @@ spreadsheets:
   - `/goto/<post_id>`
   - `/posts/<post_id>`
   - `/threads/<thread_name>`
-
 
 ### Vipr.im
 
@@ -2866,7 +2870,6 @@ spreadsheets:
 - Thumbnail:
   - `/th/.../<slug>`
 
-
 ### VJav
 
 **Primary URL**: [https://vjav.com](https://vjav.com)
@@ -2879,7 +2882,6 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### Voe.sx
 
 **Primary URL**: [https://voe.sx](https://voe.sx)
@@ -2890,7 +2892,6 @@ spreadsheets:
 
 - Embed:
   - `/e/video_id`
-
 
 ### VoyeurHit
 
@@ -2903,7 +2904,6 @@ spreadsheets:
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
-
 
 ### VSCO
 
@@ -2919,7 +2919,6 @@ spreadsheets:
   - `/<user>/media/<media_id>`
   - `/<user>/video/<media_id>`
 
-
 ### VXXX
 
 **Primary URL**: [https://vxxx.com](https://vxxx.com)
@@ -2930,7 +2929,6 @@ spreadsheets:
 
 - Video:
   - `/video-<video-id>`
-
 
 ### WeTransfer
 
@@ -2949,7 +2947,6 @@ spreadsheets:
 - Short Link:
   - `we.tl/<short_file_id>`
 
-
 ### Whyp.it
 
 **Primary URL**: [https://whyp.it](https://whyp.it)
@@ -2965,7 +2962,6 @@ spreadsheets:
 - User:
   - `/users/<id>/<name>`
 
-
 ### Wikifeet
 
 **Primary URL**: [https://wikifeet.com](https://wikifeet.com)
@@ -2976,7 +2972,6 @@ spreadsheets:
 
 - Celeb:
   - `/<name>`
-
 
 ### Wikifeet Men
 
@@ -2989,7 +2984,6 @@ spreadsheets:
 - Celeb:
   - `/<name>`
 
-
 ### Wikifeet X
 
 **Primary URL**: [https://wikifeetx.com](https://wikifeetx.com)
@@ -3000,7 +2994,6 @@ spreadsheets:
 
 - Celeb:
   - `/<name>`
-
 
 ### WordPressHTML
 
@@ -3019,7 +3012,6 @@ spreadsheets:
 - Tag:
   - `/tag/<tag_slug>`
 
-
 ### WordPressMedia
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -3037,7 +3029,6 @@ spreadsheets:
 - Tag:
   - `/tag/<tag_slug>`
 
-
 ### Xasiat
 
 **Primary URL**: [https://www.xasiat.com](https://www.xasiat.com)
@@ -3052,7 +3043,6 @@ spreadsheets:
   - `/get_image/...`
 - Videos:
   - `/videos/<id>/<name>`
-
 
 ### XBunker
 
@@ -3069,11 +3059,9 @@ spreadsheets:
   - `/posts/<post_id>`
   - `/thread|topic|tema|threads|topics|temas/<thread_name_and_id>`
 
-
 **Notes**
 
 - base crawler: Xenforo
-
 
 ### XGroovy
 
@@ -3105,7 +3093,6 @@ spreadsheets:
   - `/<category>/videos/<video_id>/...`
   - `/videos/<video_id>/...`
 
-
 ### xHamster
 
 **Primary URL**: [https://xhamster.com](https://xhamster.com)
@@ -3132,7 +3119,6 @@ spreadsheets:
 - Video:
   - `/videos/<title>`
 
-
 ### XMegaDrive
 
 **Primary URL**: [https://www.xmegadrive.com](https://www.xmegadrive.com)
@@ -3156,7 +3142,6 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
-
 ### XMilf
 
 **Primary URL**: [https://xmilf.com](https://xmilf.com)
@@ -3169,6 +3154,16 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+### Xpornium
+
+**Primary URL**: [https://xpornium.net](https://xpornium.net)
+
+**Supported Domains**: `xpornium.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/embed/<video_id>`
 
 ### xVideos
 
@@ -3197,7 +3192,6 @@ spreadsheets:
   - `/video.<encoded_id>/<title>`
   - `/video<id>/<title>`
 
-
 ### XXXBunker
 
 **Primary URL**: [https://xxxbunker.com](https://xxxbunker.com)
@@ -3215,7 +3209,6 @@ spreadsheets:
 - Video:
   - `/<video_id>`
 
-
 ### YandexDisk
 
 **Primary URL**: [https://disk.yandex.com.tr](https://disk.yandex.com.tr)
@@ -3230,11 +3223,9 @@ spreadsheets:
 - Folder:
   - `/d/<folder_id>`
 
-
 **Notes**
 
 - Does NOT support nested folders
-
 
 ### YouJizz
 
@@ -3247,7 +3238,6 @@ spreadsheets:
 - Video:
   - `/videos/<video_name>`
   - `/videos/embed/<video_id>`
-
 
 ### YourLesbians
 
@@ -3272,7 +3262,6 @@ spreadsheets:
 - Videos:
   - `/videos/<slug>`
 
-
 ### YTboob
 
 **Primary URL**: [https://ytboob.com](https://ytboob.com)
@@ -3283,7 +3272,6 @@ spreadsheets:
 
 - Video:
   - `/video/<slug>`
-
 
 ### Yurivan
 
@@ -3299,7 +3287,5 @@ spreadsheets:
   - `/story/<story_id>`
 - Video:
   - `/story/<story_id>/chapter/1`
-
-
 
 <!-- END_SUPPORTED_SITES -->
