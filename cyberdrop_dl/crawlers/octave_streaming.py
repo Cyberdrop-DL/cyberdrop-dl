@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import Field, dataclasses
+from pydantic import dataclasses
 
 from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
@@ -10,7 +10,11 @@ from cyberdrop_dl.models import type_adapter
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import dates
+from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
 
@@ -21,7 +25,8 @@ class TrackSettings:
     ext: str
 
 
-@DownloadConfig(slots=2, impersonate=True)
+@Crawler.db_path_builder("path_qs")
+@DownloadConfig(impersonate=True)
 class OctaveMusicCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Artist Albums": "/artist/<artist_id>",
@@ -48,13 +53,13 @@ class OctaveMusicCrawler(Crawler):
                 if track_id := scrape_item.url.query.get("t"):
                     return await self.track(scrape_item, track_id)
                 await self.album(scrape_item, album_id)
-            case ["artist", album_id, "top_songs"]:
-                await self.artist(scrape_item, album_id, _top=True)
+            case ["artist", artist_id, "top-songs"]:
+                await self.top(scrape_item, artist_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def artist(self, scrape_item: ScrapeItem, artist_id: str, *, _top: bool = False) -> None:
+    async def artist(self, scrape_item: ScrapeItem, artist_id: str) -> None:
         resp = await self.api.artist(artist_id)
         scrape_item.setup_as_profile(self.create_title(resp.artist.name, artist_id))
 
@@ -102,17 +107,12 @@ class OctaveMusicCrawler(Crawler):
         name, _ = strings.safe_format(
             self.config.crawlers.octave_music.filename_format,
             id=info.id,
-            artist=info.contributors.artist[0],
-            artists=", ".join(info.contributors.artist),
-            composer=info.contributors.composer[0],
-            composers=", ".join(info.contributors.composer),
-            writer=info.contributors.writer[0],
-            writers=", ".join(info.contributors.writer),
             track_number=info.trackNumber,
             disk_number=info.diskNumber,
             title=info.title,
             release_date=date,
             ext=self._audio.ext,
+            **dict(info.contributors.decompose()),
         )
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(
@@ -139,8 +139,8 @@ class OctaveMusicAPI(API):
 
     async def artist(self, artist_id: str) -> ArtistResp:
         url = self.ENTRYPOINT / "artist" / artist_id
-        resp = await self.request_json(url)
-        return type_adapter(ArtistResp).validate_json(resp)
+        text = await self.request_text(url)
+        return type_adapter(ArtistResp).validate_json(text)
 
     async def album(self, album_id: str) -> FullAlbum:
         url = self.ENTRYPOINT / "album" / album_id
@@ -155,7 +155,7 @@ class OctaveMusicAPI(API):
             contributors.setdefault(con["role"].casefold(), []).extend(con.get("names", ()))
 
         resp["contributors"] = contributors
-        return type_adapter(Credits).validate_python(resp)
+        return type_adapter(Credits).validate_python(resp, by_alias=True)
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
@@ -167,15 +167,13 @@ class Artist:
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
 class Track:
     id: str
-    title: str
-    artist: Artist
     album: Album
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
 class Album:
     id: str
-    title: str = Field(validation_alias="name")
+    title: str
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
@@ -199,6 +197,15 @@ class Contributors:
     artist: tuple[str, ...]
     writer: tuple[str, ...] = ()
     composer: tuple[str, ...] = ()
+
+    __iter__ = DictDataclass.__iter__
+
+    def decompose(self) -> Generator[tuple[str, str | None]]:
+        names: tuple[str, ...]
+        for role, names in self:
+            if names:
+                yield role, names[0]
+                yield role + "s", ", ".join(names)
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
