@@ -176,6 +176,7 @@ class DownloadConfig(ConfigDataclass):
     slots: int | None = None
     server_lock: bool | None = None
     ignore_content_type: bool | None = None
+    impersonate: str | bool | None = None
 
 
 @URLConfig(trim=True, allow_empty_path=False, ignore_fragment=True)

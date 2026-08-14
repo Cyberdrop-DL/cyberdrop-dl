@@ -4,8 +4,8 @@ from pydantic import Field
 from pydantic.functional_validators import AfterValidator
 
 from cyberdrop_dl.models import ConfigGroup, ConfigModel
-from cyberdrop_dl.models.types import HttpURL, NonEmptyStr
-from cyberdrop_dl.models.validators import remove_duplicates
+from cyberdrop_dl.models.types import FormatStr, HttpURL, NonEmptyStr
+from cyberdrop_dl.models.validators import remove_duplicates, strings
 
 
 class KemonoConfig(ConfigModel):
@@ -56,6 +56,31 @@ class TwitterConfig(ConfigModel):
     # "large", "medium", or "small" are always available
 
 
+class OctaveMusicConfig(ConfigModel):
+    quality: Literal["lossless", "mp3-320"] = "mp3-320"
+    "Quality of audio file to download (lossless are .flac files)"
+
+    filename_format: Annotated[
+        FormatStr,
+        strings.format_validator(
+            {
+                "artist",
+                "artists",
+                "writer",
+                "writers",
+                "composer",
+                "composers",
+                "release_date",
+                "title",
+                "ext",
+                "track_number",
+                "disk_number",
+            }
+        ),
+    ] = "{artist} - {title}{ext}"
+    "Format to generate audio file"
+
+
 class BandcampConfig(ConfigModel):
     formats: Annotated[
         tuple[Literal["mp3-320", "mp3", "aac-hi", "wav", "flac", "vorbis", "aiff", "alas"], ...],
@@ -104,3 +129,4 @@ class Crawlers(ConfigGroup, name=None):
     twitter: TwitterConfig = Field(default_factory=TwitterConfig)
     pawchive: KemonoConfig = Field(default_factory=KemonoConfig)
     only_haven: KemonoConfig = Field(default_factory=KemonoConfig)
+    octave_music: OctaveMusicConfig = Field(default_factory=OctaveMusicConfig)

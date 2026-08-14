@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
 _CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
-_USE_IMPERSONATION: set[str] = {"vsco", "celebforum"}
+_USE_IMPERSONATION: set[str] = {"vsco", "celebforum", "music.octavestreaming"}
 
 
 @final
