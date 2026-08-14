@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING, ClassVar
-
-from pydantic import dataclasses
 
 from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
@@ -15,8 +14,6 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -40,9 +37,12 @@ class OctaveMusicCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: OctaveMusicAPI = OctaveMusicAPI.from_crawler(self)
-        quality, ext = {"mp3-320": ("320", ".mp3"), "lossless": ("lossless", ".flac")}[
-            self.config.crawlers.octave_music.quality
-        ]
+        match self.config.crawlers.octave_music.quality:
+            case "lossless":
+                quality, ext = "lossless", ".flac"
+            case _:
+                quality, ext = "320", ".mp3"
+
         self._audio: TrackSettings = TrackSettings(quality, ext)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -200,7 +200,7 @@ class Contributors:
 
     __iter__ = DictDataclass.__iter__
 
-    def decompose(self) -> Generator[tuple[str, str | None]]:
+    def decompose(self) -> Generator[tuple[str, str]]:
         names: tuple[str, ...]
         for role, names in self:
             if names:
