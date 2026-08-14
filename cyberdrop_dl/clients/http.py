@@ -429,7 +429,7 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         loop=loop,
         async_curl=acurl,
         impersonate="chrome",
-        verify=bool(config.network.ssl_context),
+        verify=config.network.tls.verify,
         proxy=str(proxy) if (proxy := config.network.proxy) else None,
         timeout=config.network.curl_timeout,
         max_redirects=8,
