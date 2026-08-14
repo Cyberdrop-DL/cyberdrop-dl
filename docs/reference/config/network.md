@@ -131,16 +131,17 @@ The current default target is `chrome`. The default target can change on any new
 Enable/disable verification of SSL/TLS certificates for HTTP requests
 
 {% hint style="danger" %}
-Sensitive data may be exposed using an insecure connection. This option should alwasy be set to `True` unless troubleshooting connection errors
-If you have TLS connection problems with an specific site but you trust it, is recommended to load its certificate chain (`.pem`) file
+Sensitive data may be exposed using an insecure connection. This option should only be disabled for troubleshooting connection errors.
+
+If you have TLS connection problems with an site but you trust it, it's recommended to load its certificate chain (`.pem`) file
 with the `ca-certs` option
 {% endhint %}
 
 ## `ca_certs`
 
-| Type       | Default |
-| ---------- | ------- |
-| list[Path] | `[]`    |
+| Type         | Default |
+| ------------ | ------- |
+| `list[Path]` | `[]`    |
 
 A list path to CA bundles to use in PEM format. All paths must exists.
 
