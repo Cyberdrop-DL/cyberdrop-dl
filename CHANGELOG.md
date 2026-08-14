@@ -22,21 +22,56 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.4.0] - UNRELEASED
+## [10.4.0] - 2026-08-14
 
 ### Added
 
-- `--tls.min-version` option
-- `--ca-certs` option
-- `--verify` option
+- New `--ignore-hashes` option
+- New `--thumbnails` option
+- New `--tls.min-version` option
+- New `--ca-certs` option
+- New `--verify` option
+- New `database dir` command
+- New `config dir` command
+- New `cache dir` command
+- New generic `video` crawler to map any unsupported site as a video site
+- Support for HLS streams with encrypted segments (AES-128)
+- Support setting a custom referer for some sites by setting the `referer` query param to the referer URL
+- Vidstack support
+- Pluto.tv support
+- Nova.storage support
+- OnlyHaven support
+- Odysee support
+- Hohoj support
+- Mitaku support
+- Octave Music support
+- Redtube support
+- Livecamrips support
+- xpornium support
+- Gifhq support
+- Fyptt support
+- Short URLs support (Filedicth)
+- Users support (Goonbox)
+- Hashtags support (TWPornstars)
 
 ### Changed
 
+- Try to download M3U8 URLs from unsupported sites
 - Always use the CA certificates from the system trust store + CA bundle from Mozilla
+- Skip all files with pending imports (Pawchive)
+- The full URL of successful downloads from unsupported sites (`no_crawler`) will be saved as is to the database. Existing database entries are invalid
+- Always include content id in folder name if its name is `root` (GoFile)
+- Do not start a download if there no enough free space to finish it up to 100%
 
 ### Deprecated
 
--- `--ssl-context` is deprecated and will be removed in a future version.
+-- `--ssl-context` is deprecated and will be removed in a future version
+
+### Fixed
+
+- Parsing of unquoted `$EDITOR` var
+- Campaign id extraction (Patreon)
+- Update to new API for single files (GoFile)
 
 ## [10.3.0] - 2026-07-28
 
