@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import ByteSize, Field, PlainSerializer, StringConstraints, WithJsonSchema
 from pydantic.functional_validators import AfterValidator, BeforeValidator, PlainValidator
 
+from cyberdrop_dl.models.validators import path
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 from .validators import (
@@ -45,3 +46,4 @@ type HttpURL = Annotated[
 
 
 type AwareDatetime = Annotated[datetime.datetime, AfterValidator(assume_utc)]
+type ExistingPath = Annotated[Path, AfterValidator(path.exists)]

@@ -88,9 +88,11 @@ def _load_ca_certs(paths: Iterable[Path]) -> None:
         if path.suffix != ".pem":
             logger.warning("'%s' is not a valid PEM file, ignoring..", path)
             continue
+
         try:
             content = path.read_text()
         except FileNotFoundError:
             continue
         else:
             wassima.register_ca(content)
+            logger.debug("Loaded CA certificates from '%s'", path)

@@ -5,9 +5,9 @@ from enum import auto
 from pathlib import Path
 from typing import Annotated, Any, ClassVar, Literal, override
 
-from cyclopts import Parameter, validators
+from cyclopts import Parameter
 from pydantic import BaseModel, Field, NonNegativeInt, PrivateAttr
-from pydantic.functional_validators import AfterValidator, BeforeValidator
+from pydantic.functional_validators import BeforeValidator
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import LOGS_DATE_FORMAT, LOGS_DATETIME_FORMAT, CIStrEnum, HashMode
@@ -15,6 +15,7 @@ from cyberdrop_dl.models import ConfigGroup, ConfigModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
+    ExistingPath,
     FalsyAsNone,
     FormatStr,
     HttpURL,
@@ -316,15 +317,11 @@ class Downloads(ConfigGroup):
         return self.delay + random.uniform(0, self.jitter)
 
 
-PemFile = Annotated[Path, AfterValidator(validators.Path(exists=True, dir_okay=False, ext=".pem"))]
-Folder = Annotated[Path, AfterValidator(validators.Path(exists=True, file_okay=False))]
-
-
 @Parameter(name="*")
 class TLS(ConfigModel):
     verify: Annotated[bool, Parameter(alias="ssl")] = True
     min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str), Parameter(name="tls.min-version")] = "1.2"
-    ca_certs: tuple[PemFile | Folder, ...] = ()
+    ca_certs: tuple[ExistingPath, ...] = ()
 
 
 class Network(ConfigGroup):
