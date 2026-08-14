@@ -3,7 +3,7 @@ import logging
 import random
 from enum import auto
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal, override
+from typing import Annotated, Any, ClassVar, Literal, override
 
 from cyclopts import Parameter, validators
 from pydantic import BaseModel, Field, NonNegativeInt, PrivateAttr
@@ -268,7 +268,8 @@ class Hashing(ConfigGroup, name=None):
     _extra_hashes: tuple[Literal["md5", "sha256"], ...] = ()
 
     @override
-    def model_post_init(self, *_) -> None:
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
         self.re_compute()
 
     def re_compute(self) -> None:
@@ -322,7 +323,7 @@ Folder = Annotated[Path, AfterValidator(validators.Path(exists=True, file_okay=F
 @Parameter(name="*")
 class TLS(ConfigModel):
     verify: bool = True
-    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str)] = "1.2"
+    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str), Parameter(name="tls-min-version")] = "1.2"
     ca_certs: tuple[PemFile | Folder, ...] = ()
 
 

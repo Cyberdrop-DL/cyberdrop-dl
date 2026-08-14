@@ -58,7 +58,9 @@ class Notifications(CensoredModel):
     apprise: tuple[AppriseURL, ...] = ()
     webhook: FalsyAsNone[AppriseURL] = None
 
-    def model_post_init(self, *_) -> None:
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
         if self.apprise and not _HAS_APPRISE:
             logger.warning("Found apprise URLs for notifications but apprise is not installed. Ignoring")
             self.apprise = ()
