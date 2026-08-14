@@ -274,6 +274,10 @@
       "title": "EmailAuth",
       "type": "object"
     },
+    "ExistingPath": {
+      "format": "path",
+      "type": "string"
+    },
     "FalsyAsNone_Annotated_Literal__truststore____certifi____truststore_certifi____BeforeValidator__": {
       "anyOf": [
         {
@@ -932,8 +936,7 @@
         "ca_certs": {
           "default": [],
           "items": {
-            "format": "path",
-            "type": "string"
+            "$ref": "#/$defs/ExistingPath"
           },
           "title": "Ca Certs",
           "type": "array"
