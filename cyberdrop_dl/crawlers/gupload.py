@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -48,16 +47,14 @@ class GUploadCrawler(Crawler):
 
         filename, ext = self.get_filename_and_ext(video_id + ".mp4")
         custom_filename = self.create_custom_filename(video_id, ext, resolution=Resolution.parse(m3u8_url))
-        await self.handle_file(m3u8_url, scrape_item, filename, ext, m3u8=m3u8, custom_filename=custom_filename)
-        thumbnail = self.parse_url(config["posterUrl"])
-        thumb_name, ext = self.get_filename_and_ext(f"{Path(custom_filename).stem}_thumb{thumbnail.suffix}")
         await self.handle_file(
-            thumbnail,
+            m3u8_url,
             scrape_item,
-            f"{video_id}_thumb{thumbnail.suffix}",
+            filename,
             ext,
-            custom_filename=thumb_name,
-            referer=scrape_item.url.with_fragment("thumbnail"),
+            m3u8=m3u8,
+            custom_filename=custom_filename,
+            thumbnail=self.parse_url(config["posterUrl"]),
         )
 
     async def _request_video_config(self, url: AbsoluteHttpURL) -> dict[str, Any]:

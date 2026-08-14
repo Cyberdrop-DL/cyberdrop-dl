@@ -3,10 +3,11 @@ import logging
 import random
 from enum import auto
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal, override
+from typing import Annotated, Any, ClassVar, Literal, override
 
 from cyclopts import Parameter
 from pydantic import BaseModel, Field, NonNegativeInt, PrivateAttr
+from pydantic.functional_validators import BeforeValidator
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import LOGS_DATE_FORMAT, LOGS_DATETIME_FORMAT, CIStrEnum, HashMode
@@ -14,6 +15,7 @@ from cyberdrop_dl.models import ConfigGroup, ConfigModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
     CSVPath,
+    ExistingPath,
     FalsyAsNone,
     FormatStr,
     HttpURL,
@@ -267,7 +269,8 @@ class Hashing(ConfigGroup, name=None):
     _extra_hashes: tuple[Literal["md5", "sha256"], ...] = ()
 
     @override
-    def model_post_init(self, *_) -> None:
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
         self.re_compute()
 
     def re_compute(self) -> None:
@@ -314,6 +317,13 @@ class Downloads(ConfigGroup):
         return self.delay + random.uniform(0, self.jitter)
 
 
+@Parameter(name="*")
+class TLS(ConfigModel):
+    verify: Annotated[bool, Parameter(alias="ssl")] = True
+    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str), Parameter(name="tls.min-version")] = "1.2"
+    ca_certs: tuple[ExistingPath, ...] = ()
+
+
 class Network(ConfigGroup):
     dump_responses: bool = False
     "Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"
@@ -334,7 +344,9 @@ class Network(ConfigGroup):
             Literal["truststore", "certifi", "truststore+certifi"],
             strings.pre_validator(to_lower=True, strip=True),
         ]
-    ] = "truststore+certifi"
+    ] = Field(default="truststore+certifi", deprecated=True)
+    tls: TLS = Field(default_factory=TLS)
+
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
     impersonate: FalsyAsNone[Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"]] = None
     "Use this target as impersonation for all scrape requests"

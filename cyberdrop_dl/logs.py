@@ -5,12 +5,13 @@ import json
 import logging
 import queue
 import sys
+from collections.abc import MutableMapping
 from contextvars import ContextVar
 from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, final, override
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
@@ -106,6 +107,12 @@ class JsonLogRecord(logging.LogRecord):
 logging.setLogRecordFactory(JsonLogRecord)
 
 
+class LoggerAdapter[T: logging.Logger](logging.LoggerAdapter[T]):
+    def process[T2: MutableMapping[str, Any]](self, msg: str, kwargs: T2) -> tuple[str, T2]:
+        kwargs.setdefault("extra", {}).update(self.extra)
+        return msg, kwargs
+
+
 class CDLFormater(logging.Formatter):
     _CDL_FORMAT: ClassVar[logging.PercentStyle] = logging.PercentStyle("%(message)s")
 
@@ -116,6 +123,8 @@ class CDLFormater(logging.Formatter):
         else:
             content = self._style.format(record)
 
+        if getattr(record, "cdl_no_truncate", False):
+            return content
         return truncated_preview(content, env.MAX_LOG_MSG_LENGTH)
 
 

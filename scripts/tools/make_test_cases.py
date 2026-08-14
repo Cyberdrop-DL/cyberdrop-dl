@@ -15,7 +15,17 @@ from cyberdrop_dl.crawlers import SKIP_DOWNLOAD
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-KEYS = ("url", "filename", "debrid_url", "original_filename", "referer", "album_id", "uploaded_at", "download_folder")
+KEYS = (
+    "url",
+    "filename",
+    "debrid_url",
+    "original_filename",
+    "referer",
+    "album_id",
+    "uploaded_at",
+    "download_folder",
+    "thumbnail",
+)
 ROOT = Path(__file__).resolve().parents[2]
 TEST_FOLDER = ROOT / "tests/crawlers/test_cases"
 

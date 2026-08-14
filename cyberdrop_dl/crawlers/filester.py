@@ -73,6 +73,7 @@ class FilesterCrawler(Crawler):
             custom_filename=filename,
             # Downloads expire after 30 minutes so we delay the request for it
             debrid_link=lambda: self.api.download(slug),
+            thumbnail=file.thumb,
         )
 
     @error_handling_wrapper
@@ -150,6 +151,7 @@ class File:
     name: str
     uploaded_at: str
     mime_type: str
+    thumb: str | None
     hash: Hash | None = None
 
 
@@ -205,4 +207,5 @@ def _parse_file(soup: BeautifulSoup) -> File:
         hash=hash_,
         uploaded_at=file_attr("Uploaded"),
         mime_type=file_attr("Type"),
+        thumb=open_graph.get_image(soup),
     )

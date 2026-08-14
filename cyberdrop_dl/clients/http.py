@@ -94,7 +94,7 @@ class HTTPClient:
             asyncio.Semaphore(config.downloads.concurrency),
         )
 
-        self._ssl_context = tcp.create_ssl_context(config.network.ssl_context)
+        self._ssl_context = None
         self._cookies: aiohttp.CookieJar | None = None
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
@@ -102,6 +102,15 @@ class HTTPClient:
         self._download_session: aiohttp.ClientSession
 
     __repr__ = simple_repr("config", "_ssl_context", "_cookies", "_flaresolverr", "limiter", "request_done_callback")
+
+    @property
+    def ssl_context(self):
+        if self._ssl_context is None:
+            self._ssl_context = self.config.network.tls.verify and tcp.create_ssl_context(
+                tcp.resolve_tls_version(self.config.network.tls.min_version),
+                self.config.network.tls.ca_certs,
+            )
+        return self._ssl_context
 
     @property
     def curl_session(self) -> AsyncSession[CurlResponse]:
@@ -170,7 +179,7 @@ class HTTPClient:
                 sock_read=self.config.network.read_timeout,
             ),
             proxy=self.config.network.proxy,
-            connector=tcp.create_connector(self._ssl_context),
+            connector=tcp.create_connector(self.ssl_context),
             requote_redirect_url=False,
         )
 
@@ -420,7 +429,7 @@ def _create_curl_session(config: Config) -> AsyncSession[CurlResponse]:
         loop=loop,
         async_curl=acurl,
         impersonate="chrome",
-        verify=bool(config.network.ssl_context),
+        verify=config.network.tls.verify,
         proxy=str(proxy) if (proxy := config.network.proxy) else None,
         timeout=config.network.curl_timeout,
         max_redirects=8,

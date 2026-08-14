@@ -136,6 +136,7 @@ class PMVHavenCrawler(Crawler):
             ext,
             custom_filename=custom_filename,
             metadata=video,
+            thumbnail=video.thumbnailUrl,
         )
 
 
@@ -143,6 +144,7 @@ _deserialize = Deserializer(
     aliases={"id": "_id"},
     converters={
         "thumbnail": parse_url,
+        "thumbnailUrl": parse_url,
         "videoUrl": parse_url,
         "hlsMasterPlaylistUrl": lambda url: url and parse_url(url),
     },
@@ -159,6 +161,7 @@ class Video:
     width: int | None = None
     height: int | None = None
     hlsMasterPlaylistUrl: AbsoluteHttpURL | None = None
+    thumbnailUrl: AbsoluteHttpURL | None = None
 
     @property
     def href(self) -> str:

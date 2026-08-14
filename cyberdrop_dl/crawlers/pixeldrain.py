@@ -257,6 +257,7 @@ class PixelDrainCrawler(Crawler):
 
     async def _file(self, scrape_item: ScrapeItem, file: File | Node) -> None:
         src = self.api.download(file).with_host(self.origin.host)
+
         if "text/plain" in file.mime_type:
             scrape_item.setup_as_album(self.create_title(file.name, file.id))
             text = await self.api.text(src)
@@ -267,7 +268,14 @@ class PixelDrainCrawler(Crawler):
 
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
-        await self.handle_file(src, scrape_item, file.name, ext, custom_filename=filename)
+        await self.handle_file(
+            src,
+            scrape_item,
+            file.name,
+            ext,
+            custom_filename=filename,
+            thumbnail=src.with_query("thumbnail") if type(file) is Node else src / "thumbnail",
+        )
 
     def _text(self, scrape_item: ScrapeItem, text: str) -> None:
         for line in text.splitlines():

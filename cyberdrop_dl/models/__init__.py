@@ -1,6 +1,8 @@
 """Pydantic models"""
 
-from typing import Any, ClassVar, TypedDict
+import logging
+import time
+from typing import Any, ClassVar, TypedDict, override
 
 from cyclopts import Parameter
 from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, TypeAdapter, model_serializer, model_validator
@@ -8,6 +10,8 @@ from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, TypeAdapter, 
 from cyberdrop_dl import env
 from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.utils import fast_cache
+
+logger = logging.getLogger(__name__)
 
 
 class DeferredModel(
@@ -23,8 +27,29 @@ class DeferredModel(
 ): ...
 
 
+_warned: set[tuple[type, str]] = set()
+
+
 @DEFAULT_PARAMETER
-class ConfigModel(DeferredModel, extra="forbid"): ...
+class ConfigModel(DeferredModel, extra="forbid"):
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
+        deprecated = self.model_fields_set.intersection(_deprecated_fields(self))
+        if not deprecated:
+            return
+
+        for field in deprecated:
+            warn_id = type(self), field
+            if warn_id not in _warned:
+                _warned.add(warn_id)
+                logger.warning("'%s' config option is deprecated and will be removed in a future version", field)
+
+        time.sleep(2)
+
+
+def _deprecated_fields(model: BaseModel) -> list[str]:
+    return [name for name, field in type(model).model_fields.items() if field.deprecated]
 
 
 class ConfigGroup(ConfigModel):
@@ -46,7 +71,9 @@ class AppriseURL(ConfigModel):
     _OS_SCHEMES: ClassVar[tuple[str, ...]] = "windows", "macosx", "dbus", "qt", "glib", "kde"
     _VALID_TAGS: ClassVar[set[str]] = {"no_logs", "attach_logs", "simplified"}
 
-    def model_post_init(self, *_: Any) -> None:
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
         if not self.tags.intersection(self._VALID_TAGS):
             self.tags |= {"no_logs"}
 

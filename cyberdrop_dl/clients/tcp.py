@@ -3,14 +3,15 @@ from __future__ import annotations
 import logging
 import platform
 import ssl
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import aiohttp
-import certifi
-import truststore
+import wassima
 
 if TYPE_CHECKING:
     import asyncio
+    from collections.abc import Generator, Iterable
+    from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -61,15 +62,37 @@ def create_connector(ssl_context: ssl.SSLContext | bool, /) -> aiohttp.TCPConnec
     return tcp_conn
 
 
-def create_ssl_context(name: str | None) -> ssl.SSLContext | Literal[False]:
-    if not name:
-        return False
-    if name == "certifi":
-        return ssl.create_default_context(cafile=certifi.where())
-    if name == "truststore":
-        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    if name == "truststore+certifi":
-        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.load_verify_locations(cafile=certifi.where())
-        return ctx
-    raise ValueError(name)
+def create_ssl_context(min_ver: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2, certs: Iterable[Path] = ()) -> ssl.SSLContext:
+    certs = tuple(_load_certs(certs))
+    ctx = wassima.create_default_ssl_context(hybrid_store=True)
+    for path in certs:
+        ctx.load_verify_locations(path)
+
+    ctx.minimum_version = min_ver
+    return ctx
+
+
+def resolve_tls_version(name: str) -> ssl.TLSVersion:
+    match name:
+        case "1.2":
+            return ssl.TLSVersion.TLSv1_2
+        case "1.3":
+            return ssl.TLSVersion.TLSv1_3
+        case _:
+            raise ValueError(name)
+
+
+def _load_certs(paths: Iterable[Path]) -> Generator[Path]:
+    def load(path: Path) -> Path:
+        wassima.register_ca(path.read_text())
+        logger.debug("Loaded CA certificates from '%s'", path)
+        return path
+
+    for path in paths:
+        if path.is_dir():
+            yield from map(load, path.glob("*.pem"))
+        elif path.suffix != ".pem":
+            logger.warning("'%s' is not a valid PEM file, ignoring..", path)
+            continue
+        else:
+            yield load(path)

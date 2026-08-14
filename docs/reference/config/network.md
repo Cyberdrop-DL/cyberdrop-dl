@@ -120,32 +120,56 @@ network:
 The current default target is `chrome`. The default target can change on any new release without notice, even minor versions
 {% endhint %}
 
-# `ssl_context`
+# `tls`
 
-| Type                    | Default              |
-| ----------------------- | -------------------- |
-| `NonEmptyStr` or `null` | `truststore+certifi` |
+## `verify`
 
-Context that will used to verify SSL connections. Valid values are:
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `True`  |
 
-- `truststore`: Will use certificates already included with the OS
-
-- `certifi`: Will use certificates bundled with the `certifi` version available at the release of the current CDL version
-
-- `truststore+certifi`: Will use certificates already included with the OS, with a fallback to `certifi` for missing certificates
-
-- `null`: Will completely disable SSL verification, allowing insecure connections via `HTTP`.
-
-Setting this to `null` will allow the program to connect to websites without SSL encryption (insecurely).
-
-```yaml
-network:
-  ssl_context: truststore+certifi
-```
+Enable/disable verification of SSL/TLS certificates for HTTP requests
 
 {% hint style="danger" %}
-Sensitive data may be exposed using an insecure connection. For your safety, is recommended to always use a secure HTTPS connection.
+Sensitive data may be exposed using an insecure connection. This option should only be disabled for troubleshooting connection errors.
+
+If you have TLS connection problems with an site but you trust it, it's recommended to load its certificate chain (`.pem`) file
+with the `ca-certs` option
 {% endhint %}
+
+## `ca_certs`
+
+| Type         | Default |
+| ------------ | ------- |
+| `list[Path]` | `[]`    |
+
+A list path to CA bundles to use in PEM format. All paths must exists.
+
+If a path points to a file, it MUST have a `.pem` extension. If a path points to a folder, all `.pem` in it will be loaded (non recursive).
+
+{% hint style="info" %}
+These are **additional** certificates, they will be bundled with the certificates already present in your OS's default CA truststore
+{% endhint %}
+
+{% hint style="info" %}
+`cyberdrop-dl` always include an additional bundle with the root certificates used by Mozilla, from the Common CA Database (<https://www.ccadb.org>).
+This bundle is updated periodically on new versions. For details, see: <https://github.com/jawah/wassima>
+{% endhint %}
+
+## `min_version`
+
+| Type           | Default |
+| -------------- | ------- |
+| `1.2` or `1.3` | `1.2`   |
+
+Mininum TLS version to use. Using `1.3` may help with Cloudflare/DDoS-Guard errors and some fingerprint blocks
+
+```yaml
+tls:
+  ca_certs: []
+  min_version: "1.2"
+  verify: true
+```
 
 # `user_agent`
 
@@ -169,11 +193,13 @@ If you use flaresolverr, this value **MUST** match with flaresolverr's user agen
 These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/<version>`
 
 <!-- START_CUSTOM_UA_CRAWLERS -->
+
 - Archive.org
 - E621
 - MegaNz
 - RealDebrid
 - Transfer.it
+
 <!-- END_CUSTOM_UA_CRAWLERS -->
 
 {% endhint %}

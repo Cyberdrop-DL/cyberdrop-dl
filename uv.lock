@@ -634,7 +634,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "10.4.0.dev1"
+version = "10.4.0.dev2"
 source = { editable = "." }
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
@@ -646,7 +646,6 @@ dependencies = [
     { name = "backports-zstd", marker = "python_full_version < '3.14' and implementation_name == 'cpython'" },
     { name = "beautifulsoup4" },
     { name = "brotli", marker = "implementation_name == 'cpython' and sys_platform != 'ios'" },
-    { name = "certifi" },
     { name = "cffi" },
     { name = "curl-cffi", marker = "implementation_name == 'cpython'" },
     { name = "cyclopts" },
@@ -665,9 +664,9 @@ dependencies = [
     { name = "rich-rst" },
     { name = "send2trash" },
     { name = "soupsieve" },
-    { name = "truststore" },
     { name = "typing-extensions" },
     { name = "urllib3" },
+    { name = "wassima" },
     { name = "xxhash" },
     { name = "yarl" },
 ]
@@ -701,7 +700,6 @@ requires-dist = [
     { name = "backports-zstd", marker = "python_full_version < '3.14' and implementation_name == 'cpython'", specifier = ">=1.6.0" },
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "brotli", marker = "implementation_name == 'cpython' and sys_platform != 'ios'", specifier = ">=1.2.0" },
-    { name = "certifi", specifier = ">=2026.7.22" },
     { name = "cffi", specifier = "==2.1.1" },
     { name = "click", marker = "extra == 'apprise'", specifier = ">=8.4.1" },
     { name = "curl-cffi", marker = "implementation_name == 'cpython'", specifier = ">=0.16,<0.17" },
@@ -722,10 +720,10 @@ requires-dist = [
     { name = "rich-rst", specifier = "==2.0.2" },
     { name = "send2trash", specifier = ">=2.0.0" },
     { name = "soupsieve", specifier = ">=2.9.2" },
-    { name = "truststore", specifier = ">=0.10.4" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
     { name = "tzdata", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=2026.2" },
     { name = "urllib3", specifier = ">=2.7.0" },
+    { name = "wassima", specifier = ">=2.1.3" },
     { name = "xxhash", specifier = ">=3.8.1" },
     { name = "yarl", specifier = ">=1.24.5" },
 ]
@@ -1659,15 +1657,6 @@ wheels = [
 ]
 
 [[package]]
-name = "truststore"
-version = "0.10.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/53/a3/1585216310e344e8102c22482f6060c7a6ea0322b63e026372e6dcefcfd6/truststore-0.10.4.tar.gz", hash = "sha256:9d91bd436463ad5e4ee4aba766628dd6cd7010cf3e2461756b3303710eebc301", size = 26169, upload-time = "2025-08-12T18:49:02.73Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/97/56608b2249fe206a67cd573bc93cd9896e1efb9e98bce9c163bcdc704b88/truststore-0.10.4-py3-none-any.whl", hash = "sha256:adaeaecf1cbb5f4de3b1959b42d41f6fab57b2b1666adb59e89cb0b53361d981", size = 18660, upload-time = "2025-08-12T18:49:01.46Z" },
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1704,6 +1693,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/53/0c/06f8b233b8fd13b9e5ee11424ef85419ba0d8ba0b3138bf360be2ff56953/urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c", size = 433602, upload-time = "2026-05-07T16:13:18.596Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897", size = 131087, upload-time = "2026-05-07T16:13:17.151Z" },
+]
+
+[[package]]
+name = "wassima"
+version = "2.1.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/a1/714674b53d3a57013730187e027e291c652a25db053e02236798bec49d61/wassima-2.1.3.tar.gz", hash = "sha256:fcd6c38be0f909c393da35cb2a993101fcdcff673b8fa8d5da228f73b630d0d0", size = 140075, upload-time = "2026-07-24T18:36:21.235Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/a2/4c8cd0dddfe40a779739afab2f09e84286bea37cdb73c7b1c12b4990ff12/wassima-2.1.3-py3-none-any.whl", hash = "sha256:f8251c23720dd092117a554b3012756caee3feed6d0122c2458a2aca5d7d92c5", size = 131416, upload-time = "2026-07-24T18:36:19.36Z" },
 ]
 
 [[package]]

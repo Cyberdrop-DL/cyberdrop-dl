@@ -68,7 +68,7 @@ class YuriVanCrawler(Crawler):
             video_codec=info.codecs.video,
             audio_codec=info.codecs.audio,
         )
-        await self.handle_file(m3u8_url, scrape_item, name, ext, m3u8=m3u8, custom_filename=filename)
+        await self.handle_file(m3u8_url, scrape_item, name, ext, m3u8=m3u8, custom_filename=filename, thumbnail=thumb)
 
     @error_handling_wrapper
     async def chapter(self, scrape_item: ScrapeItem, story_id: str, chapter_id: int) -> None:

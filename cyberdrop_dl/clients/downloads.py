@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
 _CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
-_USE_IMPERSONATION: set[str] = {"vsco", "celebforum", "music.octavestreaming"}
 
 
 @final
@@ -87,7 +86,7 @@ class DownloadClient:
             async with self.http_client.raw_request(
                 download_url,
                 headers=media_item.headers,
-                impersonate=media_item.domain in _USE_IMPERSONATION or None,
+                impersonate=media_item.extra_info.get("impersonate"),
             ) as resp:
                 return await self._process_response(media_item, domain, resume_point, resp)
 
@@ -425,7 +424,7 @@ async def _probe_item(media_item: MediaItem, config: Config) -> ffmpeg.FFprobeRe
         media_item.url,
         headers=media_item.headers,
         proxy=config.network.proxy,
-        verify=bool(config.network.ssl_context),
+        verify=config.network.tls.verify,
     )
 
 
