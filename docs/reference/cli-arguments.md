@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.3.0
+cyberdrop-dl v10.4.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.3.0
+cyberdrop-dl v10.4.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -117,41 +117,44 @@ Download URLs
 │ URLS  URL(s) to download                                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-file -i                   Text/HTML file with URL(s) to download                         │
-│ --config-file --config -c         YAML file to use as config                                     │
-│ --cache-file                      JSON file to use as cache                                      │
-│ --database-file --db              SQLite file to use as database                                 │
-│ --cookies                         File/folder to import cookies from (.txt Netscape files)       │
-│ --deep-scrape --no-deep-scrape    Make additional requests while scraping (slower)               │
-│                                   [default: False]                                               │
-│ --delete-empty-folders            Delete empty files and folders after a run                     │
-│   --no-delete-empty-folders       [default: True]                                                │
-│ --delete-partial-files            Delete partial files after a run                               │
-│   --no-delete-partial-files       [default: False]                                               │
-│ --download-folder --output -o -d  Base output path for all downloads                             │
-│                                   [default: downloads/cyberdrop-dl]                              │
-│ --dump-json -j --no-dump-json     Save details about each file (both skipped and downloaded) to  │
-│                                   a .jsonl file                                                  │
-│                                   [default: False]                                               │
-│ --ignore-history                  Download files even if the already are marked as downloaded on │
-│   --no-ignore-history             the database                                                   │
-│                                   [default: False]                                               │
-│ --max-file-name-length            Max number of characters a filename should have. Filenames     │
-│                                   longer that this will be truncated                             │
-│                                   [default: 95]                                                  │
-│ --max-folder-name-length          Max number of characters a folder should have. Filenames       │
-│                                   longer that this will be truncated                             │
-│                                   [default: 60]                                                  │
-│ --max-thread-depth                Restricts how many levels of nested threads are scraped on a   │
-│                                   forum                                                          │
-│                                   [default: 0]                                                   │
-│ --max-thread-folder-depth         Max number of nested folders CDL will create when              │
-│                                   maximum_thread_depth is greater that 0                         │
-│ --min-free-space                  Minimum free space require to start new downloads              │
-│                                   [default: 5368709120]                                          │
-│ --mtime --no-mtime                Use original upload date as modification date for downloaded   │
-│                                   file                                                           │
-│                                   [default: True]                                                │
+│ --input-file -i                     Text/HTML file with URL(s) to download                       │
+│ --config-file --config -c           YAML file to use as config                                   │
+│ --cache-file                        JSON file to use as cache                                    │
+│ --database-file --db                SQLite file to use as database                               │
+│ --cookies                           File/folder to import cookies from (.txt Netscape files)     │
+│ --deep-scrape --no-deep-scrape      Make additional requests while scraping (slower)             │
+│                                     [default: False]                                             │
+│ --delete-empty-folders              Delete empty files and folders after a run                   │
+│   --no-delete-empty-folders         [default: True]                                              │
+│ --delete-partial-files              Delete partial files after a run                             │
+│   --no-delete-partial-files         [default: False]                                             │
+│ --download-folder --output -o -d    Base output path for all downloads                           │
+│                                     [default: downloads/cyberdrop-dl]                            │
+│ --dump-json -j --no-dump-json       Save details about each file (both skipped and downloaded)   │
+│                                     to a .jsonl file                                             │
+│                                     [default: False]                                             │
+│ --ignore-history                    Download files even if the already are marked as downloaded  │
+│   --no-ignore-history               on the database                                              │
+│                                     [default: False]                                             │
+│ --ignore-hashes --no-ignore-hashes  Download files even if their hash matches a file downloaded  │
+│                                     on the database                                              │
+│                                     [default: False]                                             │
+│ --max-file-name-length              Max number of characters a filename should have. Filenames   │
+│                                     longer that this will be truncated                           │
+│                                     [default: 95]                                                │
+│ --max-folder-name-length            Max number of characters a folder should have. Filenames     │
+│                                     longer that this will be truncated                           │
+│                                     [default: 60]                                                │
+│ --max-thread-depth                  Restricts how many levels of nested threads are scraped on a │
+│                                     forum                                                        │
+│                                     [default: 0]                                                 │
+│ --max-thread-folder-depth           Max number of nested folders CDL will create when            │
+│                                     maximum_thread_depth is greater that 0                       │
+│ --min-free-space                    Minimum free space require to start new downloads            │
+│                                     [default: 5368709120]                                        │
+│ --mtime --no-mtime                  Use original upload date as modification date for downloaded │
+│                                     file                                                         │
+│                                     [default: True]                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
 │ --crawlers.disabled                  Name of crawlers to disable for the current run             │
@@ -170,6 +173,7 @@ Download URLs
 │ --crawlers.generic.discourse         [default: ()]                                               │
 │ --crawlers.generic.chevereto         [default: ()]                                               │
 │ --crawlers.generic.kvs               [default: ()]                                               │
+│ --crawlers.generic.video             [default: ()]                                               │
 │ --crawlers.one-pace.prefer-dub       Download episodes with english audio tracks instead of      │
 │   --crawlers.one-pace.no-prefer-dub  japanese (if available)                                     │
 │                                      [default: False]                                            │
@@ -205,6 +209,23 @@ Download URLs
 │ --crawlers.pawchive.embed            Download the embedded file from third party sites (if       │
 │   --crawlers.pawchive.no-embed       any)(mega.nz, pcloud, dropbox, etc..)                       │
 │                                      [default: True]                                             │
+│ --crawlers.only-haven.file           Download the main file in a post (if any)                   │
+│   --crawlers.only-haven.no-file      [default: True]                                             │
+│ --crawlers.only-haven.attachments -  Download all attachments in a post (may or may not include  │
+│   -crawlers.only-haven.no-attachmen  `file`)                                                     │
+│   ts                                 [default: True]                                             │
+│ --crawlers.only-haven.content-urls   Download any URL found inside the description (text) of a   │
+│   --crawlers.only-haven.no-content-  post (slower)                                               │
+│   urls                               [default: True]                                             │
+│ --crawlers.only-haven.embed          Download the embedded file from third party sites (if       │
+│   --crawlers.only-haven.no-embed     any)(mega.nz, pcloud, dropbox, etc..)                       │
+│                                      [default: True]                                             │
+│ --crawlers.octave-music.quality      Quality of audio file to download (lossless are .flac       │
+│                                      files)                                                      │
+│                                      [choices: lossless, mp3-320]                                │
+│                                      [default: mp3-320]                                          │
+│ --crawlers.octave-music.filename-fo  Format to generate audio file                               │
+│   rmat                               [default: {artist} - {title}{ext}]                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --downloads                     Max number of files to download simultaneously                   │
@@ -237,6 +258,8 @@ Download URLs
 │                                      [default: True]                                             │
 │ --non-media --no-non-media           Download/skip non media files (.txt, zip, .rar, etc...)     │
 │                                      [default: True]                                             │
+│ --thumbnails --no-thumbnails         Download/skip thumbnails of media files (if available)      │
+│                                      [default: False]                                            │
 │ --image.size.min                                                                                 │
 │ --image.size.max                                                                                 │
 │ --video.size.min                                                                                 │
@@ -322,19 +345,24 @@ Download URLs
 │                            [default: 0]                                                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Network ────────────────────────────────────────────────────────────────────────────────────────╮
-│ --dump-responses       Save text/HTML/JSON responses to disk (flaresolverr responses are         │
-│   --no-dump-responses  excluded)                                                                 │
-│                        [default: False]                                                          │
-│ --flaresolverr         HTTP URL of an existing flaresolverr instance                             │
-│ --proxy --http-proxy   HTTP/HTTPS proxy                                                          │
-│ --rate-limit           Max number of requests per second (only used while scraping)              │
-│                        [default: 25]                                                             │
-│ --connection-timeout   [default: 15]                                                             │
-│ --read-timeout         [default: 300]                                                            │
-│ --ssl-context          [default: truststore+certifi]                                             │
-│ --user-agent           [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101        │
-│                        Firefox/150.0]                                                            │
-│ --impersonate          Use this target as impersonation for all scrape requests                  │
+│ --dump-responses                     Save text/HTML/JSON responses to disk (flaresolverr         │
+│   --no-dump-responses                responses are excluded)                                     │
+│                                      [default: False]                                            │
+│ --flaresolverr                       HTTP URL of an existing flaresolverr instance               │
+│ --proxy --http-proxy                 HTTP/HTTPS proxy                                            │
+│ --rate-limit                         Max number of requests per second (only used while          │
+│                                      scraping)                                                   │
+│                                      [default: 25]                                               │
+│ --connection-timeout                 [default: 15]                                               │
+│ --read-timeout                       [default: 300]                                              │
+│ --ssl-context                        [default: truststore+certifi]                               │
+│ --verify --ssl --no-verify --no-ssl  [default: True]                                             │
+│ --tls.min-version                    [choices: 1.2, 1.3]                                         │
+│                                      [default: 1.2]                                              │
+│ --ca-certs                           [default: ()]                                               │
+│ --user-agent                         [default: Mozilla/5.0 (X11; Linux x86_64; rv:150.0)         │
+│                                      Gecko/20100101 Firefox/150.0]                               │
+│ --impersonate                        Use this target as impersonation for all scrape requests    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --sort.enabled --sort          Enable/Disable file sorting at the end of a run                   │
