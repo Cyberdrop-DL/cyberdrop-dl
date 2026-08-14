@@ -27,6 +27,9 @@ class DeferredModel(
 ): ...
 
 
+_warned: set[tuple[type, str]] = set()
+
+
 @DEFAULT_PARAMETER
 class ConfigModel(DeferredModel, extra="forbid"):
     @override
@@ -37,9 +40,12 @@ class ConfigModel(DeferredModel, extra="forbid"):
             return
 
         for field in deprecated:
-            logger.warning("'%s' config option is deprecated and will be removed in a future version", field)
+            warn_id = type(self), field
+            if warn_id not in _warned:
+                _warned.add(warn_id)
+                logger.warning("'%s' config option is deprecated and will be removed in a future version", field)
 
-        time.sleep(3)
+        time.sleep(2)
 
 
 def _deprecated_fields(model: BaseModel) -> list[str]:

@@ -322,8 +322,8 @@ Folder = Annotated[Path, AfterValidator(validators.Path(exists=True, file_okay=F
 
 @Parameter(name="*")
 class TLS(ConfigModel):
-    verify: bool = True
-    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str), Parameter(name="tls-min-version")] = "1.2"
+    verify: Annotated[bool, Parameter(alias="ssl")] = True
+    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str), Parameter(name="tls.min-version")] = "1.2"
     ca_certs: tuple[PemFile | Folder, ...] = ()
 
 
