@@ -5,8 +5,9 @@ from enum import auto
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, override
 
-from cyclopts import Parameter
+from cyclopts import Parameter, validators
 from pydantic import BaseModel, Field, NonNegativeInt, PrivateAttr
+from pydantic.functional_validators import AfterValidator, BeforeValidator
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
 from cyberdrop_dl.constants import LOGS_DATE_FORMAT, LOGS_DATETIME_FORMAT, CIStrEnum, HashMode
@@ -314,6 +315,17 @@ class Downloads(ConfigGroup):
         return self.delay + random.uniform(0, self.jitter)
 
 
+PemFile = Annotated[Path, AfterValidator(validators.Path(exists=True, dir_okay=False, ext=".pem"))]
+Folder = Annotated[Path, AfterValidator(validators.Path(exists=True, file_okay=False))]
+
+
+@Parameter(name="*")
+class TLS(ConfigModel):
+    verify: bool = True
+    min_version: Annotated[Literal["1.2", "1.3"], BeforeValidator(str)] = "1.2"
+    ca_certs: tuple[PemFile | Folder, ...] = ()
+
+
 class Network(ConfigGroup):
     dump_responses: bool = False
     "Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"
@@ -334,7 +346,9 @@ class Network(ConfigGroup):
             Literal["truststore", "certifi", "truststore+certifi"],
             strings.pre_validator(to_lower=True, strip=True),
         ]
-    ] = "truststore+certifi"
+    ] = Field(default="truststore+certifi", deprecated=True)
+    tls: TLS = Field(default_factory=TLS)
+
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
     impersonate: FalsyAsNone[Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"]] = None
     "Use this target as impersonation for all scrape requests"

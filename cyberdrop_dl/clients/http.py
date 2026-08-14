@@ -94,7 +94,10 @@ class HTTPClient:
             asyncio.Semaphore(config.downloads.concurrency),
         )
 
-        self._ssl_context = tcp.create_ssl_context(config.network.ssl_context)
+        self._ssl_context = config.network.tls.verify and tcp.create_ssl_context(
+            tcp.resolve_tls_version(config.network.tls.min_version),
+            config.network.tls.ca_certs,
+        )
         self._cookies: aiohttp.CookieJar | None = None
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
