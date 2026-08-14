@@ -18,7 +18,7 @@ from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
-from cyberdrop_dl.logs import capture_logs, log_spacer
+from cyberdrop_dl.logs import LoggerAdapter, capture_logs, log_spacer
 from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.signature import simple_repr
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import MediaItem
 
 
-logger = logging.getLogger(__name__)
+logger = LoggerAdapter(logging.getLogger(__name__), extra={"cdl_no_truncate": True})
 
 
 @final
