@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import ClassVar
 
+from pydantic import Field, dataclasses
+
 from cyberdrop_dl.cache import disk_cached_method
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.models import type_adapter
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -20,6 +21,7 @@ class TrackSettings:
     ext: str
 
 
+@DownloadConfig(slots=2, impersonate=True)
 class OctaveMusicCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Artist Albums": "/artist/<artist_id>",
@@ -73,7 +75,7 @@ class OctaveMusicCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         album = await self.api.album(album_id)
-        scrape_item.setup_as_album(self.create_title(album.name, album.id))
+        scrape_item.setup_as_album(self.create_title(album.title, album.id))
 
         name, ext = self.get_filename_and_ext(album.cover_xl.name)
         await self.handle_file(
@@ -173,11 +175,13 @@ class Track:
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
 class Album:
     id: str
-    name: str
+    title: str = Field(validation_alias="name")
 
 
 @dataclasses.dataclass(frozen=True, order=True, slots=True)
-class FullAlbum(Album):
+class FullAlbum:
+    id: str
+    title: str
     cover_xl: AbsoluteHttpURL
     releaseDate: str  # noqa: N815
     tracks: tuple[Track, ...] = ()
