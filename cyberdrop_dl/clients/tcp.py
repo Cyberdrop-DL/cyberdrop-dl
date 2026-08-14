@@ -10,7 +10,7 @@ import wassima
 
 if TYPE_CHECKING:
     import asyncio
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
     from pathlib import Path
 
 
@@ -63,9 +63,11 @@ def create_connector(ssl_context: ssl.SSLContext | bool, /) -> aiohttp.TCPConnec
 
 
 def create_ssl_context(min_ver: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2, certs: Iterable[Path] = ()) -> ssl.SSLContext:
-    for path in certs:
-        _load_ca_certs(path)
+    certs = tuple(_load_certs(certs))
     ctx = wassima.create_default_ssl_context(hybrid_store=True)
+    for path in certs:
+        ctx.load_verify_locations(path)
+
     ctx.minimum_version = min_ver
     return ctx
 
@@ -80,21 +82,17 @@ def resolve_tls_version(name: str) -> ssl.TLSVersion:
             raise ValueError(name)
 
 
-def _load_ca_certs(path: Path) -> None:
-    if path.is_dir():
-        for file in path.glob("*.pem"):
-            _load_ca_certs(file)
-        return
-
-    if path.suffix != ".pem":
-        logger.warning("'%s' is not a valid PEM file, ignoring..", path)
-        return
-
-    logger.debug("Loading CA certificates from '%s'", path)
-    try:
-        content = path.read_text()
-    except FileNotFoundError:
-        return
-    else:
-        wassima.register_ca(content)
+def _load_certs(paths: Iterable[Path]) -> Generator[Path]:
+    def load(path: Path) -> Path:
+        wassima.register_ca(path.read_text())
         logger.debug("Loaded CA certificates from '%s'", path)
+        return path
+
+    for path in paths:
+        if path.is_dir():
+            yield from map(load, path.glob("*.pem"))
+        elif path.suffix != ".pem":
+            logger.warning("'%s' is not a valid PEM file, ignoring..", path)
+            continue
+        else:
+            yield load(path)
