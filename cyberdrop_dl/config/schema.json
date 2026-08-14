@@ -165,6 +165,9 @@
         },
         "only_haven": {
           "$ref": "#/$defs/KemonoConfig"
+        },
+        "octave_music": {
+          "$ref": "#/$defs/OctaveMusicConfig"
         }
       },
       "title": "Crawlers",
@@ -832,6 +835,26 @@
         }
       },
       "title": "Notifications",
+      "type": "object"
+    },
+    "OctaveMusicConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "quality": {
+          "default": "mp3-320",
+          "enum": [
+            "lossless",
+            "mp3-320"
+          ],
+          "title": "Quality",
+          "type": "string"
+        },
+        "filename_format": {
+          "$ref": "#/$defs/FormatStr",
+          "default": "{artist} - {title}{ext}"
+        }
+      },
+      "title": "OctaveMusicConfig",
       "type": "object"
     },
     "OnePaceConfig": {

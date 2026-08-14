@@ -36,6 +36,9 @@ crawlers:
     video: []
     wordpress_html: []
     wordpress_media: []
+  octave_music:
+    filename_format: '{artist} - {title}{ext}'
+    quality: mp3-320
   one_pace:
     prefer_dub: false
   only_haven:
