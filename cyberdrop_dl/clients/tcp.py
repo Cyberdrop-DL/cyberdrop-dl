@@ -63,7 +63,8 @@ def create_connector(ssl_context: ssl.SSLContext | bool, /) -> aiohttp.TCPConnec
 
 
 def create_ssl_context(min_ver: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2, certs: Iterable[Path] = ()) -> ssl.SSLContext:
-    _load_ca_certs(certs)
+    for path in certs:
+        _load_ca_certs(path)
     ctx = wassima.create_default_ssl_context(hybrid_store=True)
     ctx.minimum_version = min_ver
     return ctx
@@ -79,20 +80,21 @@ def resolve_tls_version(name: str) -> ssl.TLSVersion:
             raise ValueError(name)
 
 
-def _load_ca_certs(paths: Iterable[Path]) -> None:
-    for path in paths:
-        if path.is_dir():
-            _load_ca_certs(path.glob("*.pem"))
-            continue
+def _load_ca_certs(path: Path) -> None:
+    if path.is_dir():
+        for file in path.glob("*.pem"):
+            _load_ca_certs(file)
+        return
 
-        if path.suffix != ".pem":
-            logger.warning("'%s' is not a valid PEM file, ignoring..", path)
-            continue
+    if path.suffix != ".pem":
+        logger.warning("'%s' is not a valid PEM file, ignoring..", path)
+        return
 
-        try:
-            content = path.read_text()
-        except FileNotFoundError:
-            continue
-        else:
-            wassima.register_ca(content)
-            logger.debug("Loaded CA certificates from '%s'", path)
+    logger.debug("Loading CA certificates from '%s'", path)
+    try:
+        content = path.read_text()
+    except FileNotFoundError:
+        return
+    else:
+        wassima.register_ca(content)
+        logger.debug("Loaded CA certificates from '%s'", path)

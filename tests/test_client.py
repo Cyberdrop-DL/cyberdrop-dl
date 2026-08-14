@@ -17,7 +17,7 @@ def client() -> HTTPClient:
 def test_initial_state(client: HTTPClient) -> None:
     assert client._cookies is None
     assert client._flaresolverr is None
-    assert isinstance(client._ssl_context, ssl.SSLContext)
+    assert isinstance(client.ssl_context, ssl.SSLContext)
     assert client.limiter.per_domain == {}
 
 
