@@ -12,7 +12,7 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPa
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import m3u8, open_graph, parse_url
+from cyberdrop_dl.utils import b64_pad, m3u8, open_graph, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -189,10 +189,8 @@ def _load_json(json_content: str) -> Any:
 
 def _decrypt_json(encrypted_json: str) -> Any:
     def b64_decode(b64_string: str) -> str | None:
-        if pad := len(b64_string) % 4:
-            b64_string += "=" * (4 - pad)
         try:
-            return base64.b64decode(b64_string).decode("utf-8", errors="replace")
+            return base64.b64decode(b64_pad(b64_string)).decode("utf-8", errors="replace")
         except ValueError:
             return None
 

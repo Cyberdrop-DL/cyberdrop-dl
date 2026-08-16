@@ -153,3 +153,9 @@ def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:
         return val
 
     return compute
+
+
+def b64_pad(b64_string: str) -> str:
+    if pad := len(b64_string) % 4:
+        return b64_string + "=" * (4 - pad)
+    return b64_string

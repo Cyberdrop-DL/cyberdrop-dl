@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import logging
 import platform
 import ssl
@@ -7,6 +8,9 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 import wassima
+import wassima.utils
+
+from cyberdrop_dl.utils import b64_pad
 
 if TYPE_CHECKING:
     import asyncio
@@ -84,7 +88,7 @@ def resolve_tls_version(name: str) -> ssl.TLSVersion:
 
 def _load_certs(paths: Iterable[Path]) -> Generator[Path]:
     def load(path: Path) -> Path:
-        wassima.register_ca(path.read_text())
+        wassima.register_ca(PEM_cert_to_DER_cert(path.read_text()))
         logger.debug("Loaded CA certificates from '%s'", path)
         return path
 
@@ -96,3 +100,13 @@ def _load_certs(paths: Iterable[Path]) -> Generator[Path]:
             continue
         else:
             yield load(path)
+
+
+def PEM_cert_to_DER_cert(pem_cert: str) -> bytes:  # noqa: N802
+    cert = pem_cert.strip()
+    if not cert.startswith(wassima.utils.PEM_HEADER):
+        raise ValueError(f"Invalid PEM encoding; must start with {wassima.utils.PEM_HEADER}")
+    if not cert.strip().endswith(wassima.utils.PEM_FOOTER):
+        raise ValueError(f"Invalid PEM encoding; must end with {wassima.utils.PEM_FOOTER}")
+    content = cert.strip()[len(wassima.utils.PEM_HEADER) : -len(wassima.utils.PEM_FOOTER)]
+    return base64.decodebytes(b64_pad(content).encode("ascii", "strict"))

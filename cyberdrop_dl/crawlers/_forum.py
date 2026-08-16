@@ -22,7 +22,7 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import LoginError, MaxChildrenError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, is_blob_or_svg
+from cyberdrop_dl.utils import b64_pad, css, extr_text, is_blob_or_svg
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -529,8 +529,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     @error_handling_wrapper
     async def resolve_confirmation_link(self, link: AbsoluteHttpURL) -> AbsoluteHttpURL | None:
         if url := link.query.get("url") or link.query.get("to"):
-            padding = -len(url) % 4
-            url = base64.urlsafe_b64decode(url + "=" * padding).decode("utf-8")
+            url = base64.urlsafe_b64decode(b64_pad(url)).decode("utf-8")
             if url.startswith("https://"):
                 return self.parse_url(url)
 
