@@ -10,7 +10,7 @@ import aiohttp
 import wassima
 import wassima.utils
 
-from cyberdrop_dl.utils import b64_pad
+from cyberdrop_dl.utils import TextExtractor
 
 if TYPE_CHECKING:
     import asyncio
@@ -66,12 +66,13 @@ def create_connector(ssl_context: ssl.SSLContext | bool, /) -> aiohttp.TCPConnec
     return tcp_conn
 
 
-def create_ssl_context(min_ver: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2, certs: Iterable[Path] = ()) -> ssl.SSLContext:
-    certs = tuple(_load_certs(certs))
+def create_ssl_context(
+    min_ver: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2,
+    ca_certs: Iterable[Path] = (),
+) -> ssl.SSLContext:
+    for file in _list_pem_files(ca_certs):
+        _register_pem_file(file)
     ctx = wassima.create_default_ssl_context(hybrid_store=True)
-    for path in certs:
-        ctx.load_verify_locations(path)
-
     ctx.minimum_version = min_ver
     return ctx
 
@@ -86,27 +87,30 @@ def resolve_tls_version(name: str) -> ssl.TLSVersion:
             raise ValueError(name)
 
 
-def _load_certs(paths: Iterable[Path]) -> Generator[Path]:
-    def load(path: Path) -> Path:
-        wassima.register_ca(PEM_cert_to_DER_cert(path.read_text()))
-        logger.debug("Loaded CA certificates from '%s'", path)
-        return path
-
+def _list_pem_files(paths: Iterable[Path]) -> Generator[Path]:
     for path in paths:
         if path.is_dir():
-            yield from map(load, path.glob("*.pem"))
+            yield from path.glob("*.pem")
         elif path.suffix != ".pem":
             logger.warning("'%s' is not a valid PEM file, ignoring..", path)
             continue
         else:
-            yield load(path)
+            yield path
 
 
-def PEM_cert_to_DER_cert(pem_cert: str) -> bytes:  # noqa: N802
-    cert = pem_cert.strip()
-    if not cert.startswith(wassima.utils.PEM_HEADER):
-        raise ValueError(f"Invalid PEM encoding; must start with {wassima.utils.PEM_HEADER}")
-    if not cert.strip().endswith(wassima.utils.PEM_FOOTER):
-        raise ValueError(f"Invalid PEM encoding; must end with {wassima.utils.PEM_FOOTER}")
-    content = cert.strip()[len(wassima.utils.PEM_HEADER) : -len(wassima.utils.PEM_FOOTER)]
-    return base64.decodebytes(b64_pad(content).encode("ascii", "strict"))
+def _register_pem_file(file: Path) -> Path:
+    logger.debug("Loading CA certificates from '%s'", file)
+    certs = tuple(_read_cert_chain(file))
+    if not certs:
+        raise ValueError(f"No valid certificates found in '{file}'")
+
+    for cert in certs:
+        wassima.register_ca(cert)
+
+    logger.debug("Loaded %s CA certificates from '%s'", len(certs), file)
+    return file
+
+
+def _read_cert_chain(path: Path) -> Generator[bytes]:
+    for cert in TextExtractor(path.read_text().strip()).repeat(wassima.utils.PEM_HEADER, wassima.utils.PEM_FOOTER):
+        yield base64.decodebytes(cert.encode("ascii", "strict"))
