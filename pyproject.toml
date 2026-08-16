@@ -21,7 +21,7 @@ dependencies = [
     "aiolimiter >=1.2.1",
     "aiosqlite>=0.22.1",
     "async-mega-py >=2.4.1",
-    "backports.zstd >=1.6.0; implementation_name=='cpython' and python_version < '3.14'",
+    "backports.zstd >=1.7.0; implementation_name=='cpython' and python_version < '3.14'",
     "beautifulsoup4 >=4.15.0",
     "brotli >=1.2.0; implementation_name=='cpython' and sys_platform!='ios'",
     "cffi == 2.1.1",
@@ -45,7 +45,7 @@ dependencies = [
     "typing-extensions>=4.16.0",
     "urllib3>=2.7.0",  # Transient dep with CVE
     "wassima>=2.1.3",
-    "xxhash >=3.8.1",
+    "xxhash >=4.0.0",
     "yarl >=1.24.5"
 ]
 description = "Bulk downloader for multiple file hosts"
