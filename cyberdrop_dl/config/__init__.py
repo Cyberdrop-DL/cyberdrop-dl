@@ -133,13 +133,14 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
 
     @staticmethod
     def from_files(file: Path, *overrides: Path) -> Config:
-        sources = [file]
         try:
             data = _load_yaml(file)
         except FileNotFoundError:
+            sources = []
             data = {}
 
         else:
+            sources = [file]
             for override in overrides:
                 if override.is_file():
                     logger.info("Found config override '%s'", override)
