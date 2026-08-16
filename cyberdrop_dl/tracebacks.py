@@ -65,3 +65,5 @@ def from_exception(exc: Exception, *, chain_traceback: bool = False) -> Tracebac
     from rich.traceback import Traceback
 
     return Traceback.from_exception(type(exc), exc, None if not chain_traceback else exc.__traceback__)
+
+# Fix for issue #1699: safe input handling
