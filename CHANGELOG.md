@@ -22,6 +22,18 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.5.0] - UNRELEASED
+
+### Added
+
+- Support defining config settings across 2 different files.
+  A second config file can be created at the same location as the current `--config-file` with the suffix (`.override`):
+  ex: `/.config/cyberdrop-dl/config.yaml`, `/.config/cyberdrop-dl/config.override.yaml`.
+
+### Fixed
+
+- Update website salt (Gofile)
+
 ## [10.4.0] - 2026-08-14
 
 ### Added
@@ -65,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
--- `--ssl-context` is deprecated and will be removed in a future version
+- `--ssl-context` is deprecated and will be removed in a future version
 
 ### Fixed
 

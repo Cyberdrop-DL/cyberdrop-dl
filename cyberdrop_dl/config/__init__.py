@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, final
+from typing import TYPE_CHECKING, Annotated, Any, Literal, final
 
 import yaml
 from cyclopts import App, Parameter
@@ -12,7 +12,7 @@ from pydantic import AfterValidator, BaseModel, Field, NonNegativeInt, PositiveI
 from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
-from cyberdrop_dl.models import ConfigModel, merge_models
+from cyberdrop_dl.models import ConfigModel, merge_dicts, merge_models
 from cyberdrop_dl.models.types import ByteSizeSerilized  # noqa: TC001
 from cyberdrop_dl.models.validators import to_bytesize
 from cyberdrop_dl.utils import cleanup
@@ -111,14 +111,14 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     ui: UIOptions = Field(default_factory=UIOptions)
 
     _resolved: bool = False
-    _source: Path | None = None
+    _sources: tuple[Path, ...] = ()
 
-    def __repr_args__(self) -> list[tuple[str, Path | None]]:
-        return [("source", self._source)]
+    def __repr_args__(self) -> list[tuple[str, tuple[Path, ...]]]:
+        return [("source", self._sources)]
 
     @property
     def source(self) -> Path | None:
-        return self._source
+        return self._sources[0] if self._sources else None
 
     def dump_yaml(self) -> str:
         return yaml.safe_dump(self.model_dump(mode="json"), default_flow_style=False)
@@ -128,22 +128,26 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
         file.write_text(self.dump_yaml(), encoding="utf8")
 
     @staticmethod
-    def from_file(file: Path, *, _save_if_not_found: bool = False) -> Config:
-        try:
-            content = file.read_text()
-        except FileNotFoundError:
-            default = Config()
-            if _save_if_not_found:
-                default.save_to(file)
-            return default
+    def from_file(file: Path) -> Config:
+        return Config.from_files(file, file.with_suffix(f".override{file.suffix}"))
 
+    @staticmethod
+    def from_files(file: Path, *overrides: Path) -> Config:
+        sources = [file]
         try:
-            data = yaml.safe_load(content) or {}
-        except yaml.YAMLError as e:
-            raise CDLConfigRuntimeErrorsGroup("Invalid YAML file", (InvalidYamlError(file, e),)) from None
+            data = _load_yaml(file)
+        except FileNotFoundError:
+            data = {}
+
+        else:
+            for override in overrides:
+                if override.is_file():
+                    logger.info("Found config override '%s'", override)
+                    sources.append(override)
+                    data = merge_dicts(data, _load_yaml(override))
 
         config = Config.model_validate(data)
-        config._source = file
+        config._sources = tuple(sources)
         return config
 
     @staticmethod
@@ -172,9 +176,16 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
         if not isinstance(other, Config):
             return NotImplemented
         me = merge_models(self, other)
-        me._source = self.source
+        me._sources = self._sources
         me.logs._created_at = self.logs._created_at
         return me
+
+
+def _load_yaml(file: Path) -> dict[str, Any]:
+    try:
+        return yaml.safe_load(file.read_text()) or {}
+    except yaml.YAMLError as e:
+        raise CDLConfigRuntimeErrorsGroup("Invalid YAML file", (InvalidYamlError(file, e),)) from None
 
 
 def parse_tokens(tokens: Iterable[str] | str | None) -> list[str]:

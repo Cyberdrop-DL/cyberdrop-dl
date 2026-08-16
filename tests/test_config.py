@@ -259,7 +259,8 @@ def test_config_from_file(tmp_cwd: Path) -> None:
     config_file.touch()
     config_2 = Config.from_file(config_file)
     assert config_2.source == config_file
-    config_2._source = None
+    assert config_2._sources == (config_file,)
+    config_2._sources = ()
     assert config_1 == config_2
 
 
@@ -344,7 +345,7 @@ def test_log_folder_after_resolution(tmp_cwd: Path) -> None:
 
 def test_config_union_preserves_source() -> None:
     config_1 = Config()
-    config_1._source = Path("config.yaml")
+    config_1._sources = (Path("config.yaml"),)
     config_2 = config_1 | Config()
     assert config_1 is not config_2
     assert config_1.source == config_2.source
@@ -352,9 +353,9 @@ def test_config_union_preserves_source() -> None:
 
 def test_configs_with_same_values_but_diferrent_sources_are_not_equal() -> None:
     config_1 = Config()
-    config_1._source = Path("config.yaml")
+    config_1._sources = (Path("config.yaml"),)
     config_2 = Config()
-    config_2._source = Path("config2.yaml")
+    config_2._sources = (Path("config2.yaml"),)
     assert config_1 != config_2
 
 
