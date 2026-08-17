@@ -60,7 +60,7 @@ class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIs
 @dataclasses.dataclass(slots=True)
 class MegaDownloader(Downloader):
     _client: MegaDownloadClient = dataclasses.field(init=False)
-    SUPPORTS_RETRIES: ClassVar[bool] = False
+    SUPPORTS_RETRIES: ClassVar[bool] = True
 
     def __post_init__(self) -> None:
         super(MegaDownloader, self).__post_init__()
