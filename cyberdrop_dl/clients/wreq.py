@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import wassima
 
@@ -11,15 +11,17 @@ IS_INSTALLED = importlib.util.find_spec("wreq") is not None
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from wreq.cookie import Cookie, Jar
+    from wreq.cookie import Cookie
     from wreq.emulation import Emulation, Profile
+    from wreq.tls import TlsVersion
 
+    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.constants import ImpersonateTarget
 
 if TYPE_CHECKING or IS_INSTALLED:
     from wreq.wreq import Client as WreqClient
-    from wreq.wreq import Method as Method  # noqa: PLC0414
+    from wreq.wreq import Method
     from wreq.wreq import Response as Response  # noqa: PLC0414
 else:
 
@@ -30,7 +32,20 @@ else:
     class Response: ...
 
 
-def resolve_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
+def cast_method(method: HttpMethod) -> Method:
+    from wreq.wreq import Method
+
+    return getattr(Method, method)
+
+
+def cast_tls(version: Literal["1.2", "1.3"]) -> TlsVersion:
+    from wreq.tls import TlsVersion
+
+    tls = f"TLS_{version.replace('.', '_')}"
+    return getattr(TlsVersion, tls)
+
+
+def cast_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
     from wreq.emulation import Emulation, Platform
 
     return {
@@ -43,16 +58,15 @@ def resolve_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
     }[target]
 
 
-def create_client(config: Config) -> tuple[WreqClient, Jar]:
+def create_client(config: Config) -> WreqClient:
+    import datetime
+
     from wreq import redirect  # pyright: ignore[reportPrivateImportUsage]
-    from wreq.cookie import Jar
     from wreq.dns import DnsOptions
     from wreq.proxy import Proxy
-    from wreq.tls import CertStore, TlsVersion
+    from wreq.tls import CertStore
 
     net = config.network
-    tls = f"TLS_{net.tls.min_version.replace('.', '_')}"
-    import datetime
 
     def optional_params() -> Generator[tuple[str, Any]]:
         if net.read_timeout:
@@ -60,10 +74,9 @@ def create_client(config: Config) -> tuple[WreqClient, Jar]:
         if net.proxy:
             yield "proxies", [Proxy.all(str(net.proxy))]
         if net.impersonate:
-            yield "emulation", resolve_impersonate(net.impersonate)
+            yield "emulation", cast_impersonate(net.impersonate)
 
-    cookie_jar = Jar()
-    client = WreqClient(
+    return WreqClient(
         http2_only=True,
         gzip=True,
         brotli=True,
@@ -71,17 +84,15 @@ def create_client(config: Config) -> tuple[WreqClient, Jar]:
         zstd=True,
         raise_for_status=False,
         dns_options=DnsOptions(system_dns=True),
-        tls_min_version=TlsVersion[tls],
+        tls_min_version=cast_tls(net.tls.min_version),
         tls_verify=net.tls.verify and CertStore.from_der_certs(wassima.root_der_certificates()),
         connect_timeout=datetime.timedelta(seconds=net.connection_timeout),
         cookie_store=True,
-        cookie_provider=cookie_jar,
         redirect=redirect.Policy.limited(8),
         user_agent=net.user_agent,
+        tls_verify_hostname=net.tls.verify,
         **dict(optional_params()),
     )
-
-    return client, cookie_jar
 
 
 def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:

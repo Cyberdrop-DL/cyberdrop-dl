@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import http.cookies
 import logging
 import time
 import warnings
@@ -123,7 +124,9 @@ class HTTPClient:
     @property
     def wreq_session(self) -> WreqClient:
         if self._wreq_session is None:
-            self._wreq_session, jar = wreq.create_client(self.config)
+            self._wreq_session = wreq.create_client(self.config)
+            jar = self._wreq_session.cookie_jar
+            assert jar is not None
             for (domain, path), cookie in self.cookies.cookies.items():
                 jar.add(cookie.output(), f"https://{domain}{path}")
         return self._wreq_session
@@ -161,7 +164,10 @@ class HTTPClient:
         jar = self.wreq_session.cookie_jar
         assert jar is not None
         for cookie in jar.get_all():
-            simple_cookie = wreq.make_simple_cookie(cookie, now)
+            try:
+                simple_cookie = wreq.make_simple_cookie(cookie, now)
+            except (http.cookies.CookieError, ValueError):
+                continue
             self.cookies.update_cookies(simple_cookie, url)
 
     async def __aenter__(self) -> Self:
@@ -279,12 +285,12 @@ class HTTPClient:
         if request.impersonate:
             if wreq.IS_INSTALLED:
                 resp = await self.wreq_session.request(
-                    wreq.Method(request.method),
+                    wreq.cast_method(request.method),
                     str(request.url),
-                    headers=request.headers,
+                    headers=dict(request.headers),
                     json=request.json,
                     body=request.data,
-                    emulation=wreq.resolve_impersonate(request.impersonate),  # pyright: ignore[reportArgumentType]
+                    emulation=wreq.cast_impersonate(request.impersonate),  # pyright: ignore[reportArgumentType]
                     **request.params,
                 )
                 async with resp:
