@@ -94,7 +94,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
     def _get_content(self) -> Any:
         if self._text:
-            if "json" in self.content_type:
+            if "json" in self.content_type and "aes" not in self.content_type:
                 return json.loads(self._text)
 
             if "html" in self.content_type:

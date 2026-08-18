@@ -159,6 +159,7 @@ async def _get_device(client: HTTPClient, config: JDConfig) -> Connection:
             config.username,
             config.password,
             device_id=config.device_id,
+            device_name=config.device_name,
         )
 
     raise JDownloaderError("JDownloader credentials were not provided")

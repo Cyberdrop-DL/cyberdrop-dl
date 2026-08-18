@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+_AES_JSON = "application/aesjson; charset=utf-8"
 
 
 @dataclasses.dataclass(slots=True)
@@ -111,6 +112,7 @@ class MyJDAPI:
 
     async def request(self, url: AbsoluteHttpURL, token: bytes | None = None) -> Any:
         async with self.client.request(url) as resp:
+            resp.content_type = _AES_JSON
             content = await resp.text()
             try:
                 return _decode_aes_json(content, token or self.session.server_encrypt_token)
@@ -133,9 +135,10 @@ class MyJDAPI:
 
         async with self.client.request(
             url,
-            headers={"Content-Type": "application/aesjson; charset=utf-8"},
+            headers={"Content-Type": _AES_JSON},
             data=encrypt(self.session.device_encrypt_token, _dump_aes_json(data)),
         ) as resp:
+            resp.content_type = _AES_JSON
             content = await resp.text()
             try:
                 return _decode_aes_json(content, self.session.device_encrypt_token)
