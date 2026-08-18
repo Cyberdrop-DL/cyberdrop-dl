@@ -87,7 +87,7 @@ class JDownloader:
         return cls(
             JDConfig(
                 enabled=config.jdownloader.enabled,
-                device_id=config.auth.jdownloader.device,
+                device_id=config.auth.jdownloader.device or config.auth.jdownloader.device_id,
                 device_name=config.auth.jdownloader.device_name,
                 username=config.auth.jdownloader.username,
                 password=config.auth.jdownloader.password,
