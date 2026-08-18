@@ -653,7 +653,6 @@ dependencies = [
     { name = "imagesize" },
     { name = "inquirer" },
     { name = "m3u8" },
-    { name = "myjdapi" },
     { name = "propcache" },
     { name = "psutil", marker = "sys_platform != 'android'" },
     { name = "pycryptodome" },
@@ -708,7 +707,6 @@ requires-dist = [
     { name = "imagesize", specifier = "==2.0.0" },
     { name = "inquirer", specifier = ">=3.4.1" },
     { name = "m3u8", specifier = ">=6.0.0" },
-    { name = "myjdapi", specifier = ">=1.1.10" },
     { name = "propcache", specifier = ">=0.5.2" },
     { name = "psutil", marker = "sys_platform != 'android'", specifier = ">=7.2.1" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
@@ -1053,19 +1051,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/f7/addf1087b860ac60e6f382240f64fb99f8bfb532bb06f7c542b83c29ca61/multidict-6.7.1-cp314-cp314t-win_amd64.whl", hash = "sha256:497bde6223c212ba11d462853cfa4f0ae6ef97465033e7dc9940cdb3ab5b48e5", size = 53542, upload-time = "2026-01-26T02:46:08.809Z" },
     { url = "https://files.pythonhosted.org/packages/4c/81/4629d0aa32302ef7b2ec65c75a728cc5ff4fa410c50096174c1632e70b3e/multidict-6.7.1-cp314-cp314t-win_arm64.whl", hash = "sha256:2bbd113e0d4af5db41d5ebfe9ccaff89de2120578164f86a5d17d5a576d1e5b2", size = 44719, upload-time = "2026-01-26T02:46:11.146Z" },
     { url = "https://files.pythonhosted.org/packages/81/08/7036c080d7117f28a4af526d794aab6a84463126db031b007717c1a6676e/multidict-6.7.1-py3-none-any.whl", hash = "sha256:55d97cc6dae627efa6a6e548885712d4864b81110ac76fa4e534c03819fa4a56", size = 12319, upload-time = "2026-01-26T02:46:44.004Z" },
-]
-
-[[package]]
-name = "myjdapi"
-version = "1.1.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pycryptodome" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/23/c3/4cbb86b7248025f8faa3789c804aee41e16165cca4f783b6715cb350e7eb/myjdapi-1.1.10.tar.gz", hash = "sha256:3815f4441dabc6f7f35dc163ce87fa26bfc98614912618a818cede873dd3f19d", size = 16167, upload-time = "2025-05-25T07:10:19.921Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/1b/6048ca7c298baa6d1937c477a284e2412835c184a3bc616d53f529a091c3/myjdapi-1.1.10-py3-none-any.whl", hash = "sha256:4713978e9abcc5041d4499a36195889b9f5c10cb8a35b2ab898588009f9f2327", size = 15903, upload-time = "2025-05-25T07:10:18.584Z" },
 ]
 
 [[package]]
