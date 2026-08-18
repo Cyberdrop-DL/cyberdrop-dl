@@ -17,6 +17,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
 from typing_extensions import TypeVar
 
+from cyberdrop_dl.clients import wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 _ResponseT = TypeVar(
     "_ResponseT",
-    bound=ClientResponse | CurlResponse | FlaresolverrSolution,
+    bound=ClientResponse | CurlResponse | FlaresolverrSolution | wreq.Response,
     infer_variance=True,
     default=Any,
 )
@@ -144,12 +145,13 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     async def aclose(self) -> None: ...
 
     @classmethod
-    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | _FlareSolverrResponse | _CurlResponse:
+    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | _FlareSolverrResponse | _CurlResponse | _WreqResponse:
         try:
             cls_ = {
                 ClientResponse: _AIOHTTPResponse,
                 FlaresolverrSolution: _FlareSolverrResponse,
                 CurlResponse: _CurlResponse,
+                wreq.Response: _WreqResponse,
             }[type(resp)]
         except LookupError:
             raise TypeError(resp) from None
@@ -371,6 +373,47 @@ class _CurlResponse(AbstractResponse[CurlResponse]):
         return cls(
             content_type=content_type,
             status=resp.status_code,
+            headers=headers,
+            url=url,
+            location=location,
+            _resp=resp,
+        )
+
+
+class _WreqResponse(AbstractResponse[wreq.Response]):
+    __slots__ = ()
+
+    @override
+    async def _read(self) -> bytes:
+        return await self._resp.bytes()
+
+    @override
+    async def _read_text(self, encoding: str | None = None) -> str:
+        return await self._resp.text(encoding)
+
+    @override
+    async def iter_chunked(self, size: int) -> AsyncIterator[bytes]:
+        # does not support size. We get chunks as they come
+        async with self._resp.stream() as streamer:
+            async for chunk in streamer:
+                if isinstance(chunk, bytes):
+                    yield chunk
+
+    @override
+    async def aclose(self) -> None:
+        await self._resp.close()
+
+    @override
+    @classmethod
+    def create(cls, resp: wreq.Response, /) -> Self:
+        headers = CIMultiDictProxy(
+            CIMultiDict(((name.decode("utf-8"), value.decode("utf-8")) for name, value in resp.headers))
+        )
+        url = AbsoluteHttpURL(resp.url, encoded="%" in resp.url)
+        content_type, location = _parse_headers(url, headers)
+        return cls(
+            content_type=content_type,
+            status=resp.status.as_int(),
             headers=headers,
             url=url,
             location=location,

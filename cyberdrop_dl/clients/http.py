@@ -156,6 +156,14 @@ class HTTPClient:
             simple_cookie = make_simple_cookie(cookie, now)
             self.cookies.update_cookies(simple_cookie, url)
 
+    def __sync_wreq_cookies(self, url: AbsoluteHttpURL) -> None:
+        now = time.time()
+        jar = self.wreq_session.cookie_jar
+        assert jar is not None
+        for cookie in jar.get_all():
+            simple_cookie = wreq.make_simple_cookie(cookie, now)
+            self.cookies.update_cookies(simple_cookie, url)
+
     async def __aenter__(self) -> Self:
         await tcp.choose_dns_resolver()
         self._session = self.create_aiohttp_session()
@@ -270,8 +278,8 @@ class HTTPClient:
     async def __request(self, request: Request) -> AsyncGenerator[AbstractResponse[Any]]:
         if request.impersonate:
             if wreq.IS_INSTALLED:
-                _resp = await self.wreq_session.request(
-                    wreq.Method(request.method),  # pyright: ignore[reportPrivateLocalImportUsage]
+                resp = await self.wreq_session.request(
+                    wreq.Method(request.method),
                     str(request.url),
                     headers=request.headers,
                     json=request.json,
@@ -279,6 +287,11 @@ class HTTPClient:
                     emulation=wreq.resolve_impersonate(request.impersonate),  # pyright: ignore[reportArgumentType]
                     **request.params,
                 )
+                async with resp:
+                    resp = AbstractResponse.create(resp)
+                    self.__sync_wreq_cookies(resp.url)
+                    yield resp
+                    return
 
             async with contextlib.aclosing(
                 await self.curl_session.request(
@@ -292,8 +305,8 @@ class HTTPClient:
                     **request.params,
                 )
             ) as curl_resp:
-                yield AbstractResponse.create(curl_resp)
                 self.__sync_session_cookies(request.url)
+                yield AbstractResponse.create(curl_resp)
 
             return
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import time
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 
@@ -14,20 +13,21 @@ if TYPE_CHECKING:
 
     from wreq.cookie import Cookie, Jar
     from wreq.emulation import Emulation, Profile
-    from wreq.wreq import Client as WreqClient
-    from wreq.wreq import Method
 
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.constants import ImpersonateTarget
 
-elif IS_INSTALLED:
+if TYPE_CHECKING or IS_INSTALLED:
     from wreq.wreq import Client as WreqClient
-    from wreq.wreq import Method
+    from wreq.wreq import Method as Method  # noqa: PLC0414
+    from wreq.wreq import Response as Response  # noqa: PLC0414
 else:
 
     class WreqClient: ...
 
     class Method: ...
+
+    class Response: ...
 
 
 def resolve_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
@@ -84,7 +84,7 @@ def create_client(config: Config) -> tuple[WreqClient, Jar]:
     return client, cookie_jar
 
 
-def make_simple_cookie(cookie: Cookie) -> SimpleCookie:
+def make_simple_cookie(cookie: Cookie, now: float) -> SimpleCookie:
     simple_cookie = SimpleCookie()
     assert cookie.value is not None
     simple_cookie[cookie.name] = cookie.value
@@ -93,7 +93,7 @@ def make_simple_cookie(cookie: Cookie) -> SimpleCookie:
     morsel["path"] = cookie.path
     morsel["secure"] = cookie.secure
     if cookie.expires:
-        morsel["max-age"] = str(max(0, int(cookie.expires.timestamp() - time.time())))
+        morsel["max-age"] = str(max(0, int(cookie.expires.timestamp() - now)))
     else:
         morsel["max-age"] = ""
     return simple_cookie
