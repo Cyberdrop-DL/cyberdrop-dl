@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Self
 
 from cyberdrop_dl.clients.jd.direct import DirectConnection
@@ -11,8 +12,6 @@ from cyberdrop_dl.exceptions import JDownloaderError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.config import Config
 
@@ -48,20 +47,20 @@ async def myjd_connect(
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class JDDeprecatedAPI:
-    host: str = ""
+    host: str = "localhost"
     port: int = 3128
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class JDConfig:
-    enabled: bool
-    username: str | None
-    password: str | None
-    device_id: str | None
-    device_name: str | None
-    download_dir: Path
-    autostart: bool
-    whitelist: tuple[str, ...]
+    enabled: bool = True
+    username: str | None = None
+    password: str | None = None
+    device_id: str | None = None
+    device_name: str | None = None
+    download_dir: Path = Path("downloads")
+    autostart: bool = True
+    whitelist: tuple[str, ...] = ()
     deprecated_api: JDDeprecatedAPI | None = None
 
 

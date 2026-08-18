@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class DirectConnection:
-    client: HTTPClient
+    client: HTTPClient = dataclasses.field(repr=False)
     entrypoint: AbsoluteHttpURL = AbsoluteHttpURL("http://localhost:3128")  # noqa: RUF009
     device: JDDevice = dataclasses.field(
         init=False,

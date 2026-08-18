@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass(slots=True)
 class MyJDAPI:
     ENTRYPOINT: ClassVar[str] = "https://api.jdownloader.org"
-    client: HTTPClient
+    client: HTTPClient = dataclasses.field(repr=False)
     _session: MyJDSession | None = dataclasses.field(init=False, default=None)
 
     @property
@@ -201,39 +201,3 @@ def _sign_path_qs(path: str, *params: tuple[str, str | int], token: bytes) -> st
     url = f"{path}?{query}"
     signature = sign_hmac_sha256(token, url)
     return f"{url}&signature={signature}"
-
-
-async def test() -> None:
-    from cyberdrop_dl.clients.http import HTTPClient
-    from cyberdrop_dl.config import Config
-
-    email, password, device_name, link = sys.argv[1:5]
-    async with HTTPClient(Config()) as client:
-        api = MyJDAPI(client)
-        await api.connect(email, password)
-        logger.info(f"{api.connected = }")
-        devices = await api.list_devices()
-        logger.info("devices: %s", list(map(dict, devices)))
-        device = api.find_device(devices, name=device_name)
-
-        jd_conn = MyJDConnection(api, device)
-        version = await jd_conn.jd_version()
-        logger.info(f"{version = }")
-        job_id = await jd_conn.add_links(
-            AddLinksQuery(
-                autostart=False,
-                links=link,
-                overwritePackagizerRules=True,
-            )
-        )
-        logger.info(f"{job_id = }")
-
-
-if __name__ == "__main__":
-    import sys
-
-    from cyberdrop_dl import aio
-    from cyberdrop_dl.logs import setup_console_logging
-
-    with setup_console_logging():
-        aio.run(test())
