@@ -1,18 +1,33 @@
 from __future__ import annotations
 
+import importlib.util
+import time
+from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 
 import wassima
 
+IS_INSTALLED = importlib.util.find_spec("wreq") is not None
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from wreq import Client  # pyright: ignore[reportPrivateImportUsage]
-    from wreq.cookie import Jar
+    from wreq.cookie import Cookie, Jar
     from wreq.emulation import Emulation, Profile
+    from wreq.wreq import Client as WreqClient
+    from wreq.wreq import Method
 
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.constants import ImpersonateTarget
+
+elif IS_INSTALLED:
+    from wreq.wreq import Client as WreqClient
+    from wreq.wreq import Method
+else:
+
+    class WreqClient: ...
+
+    class Method: ...
 
 
 def resolve_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
@@ -28,8 +43,8 @@ def resolve_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
     }[target]
 
 
-async def create_client(config: Config) -> tuple[Client, Jar]:
-    from wreq import Client, redirect  # pyright: ignore[reportPrivateImportUsage]
+def create_client(config: Config) -> tuple[WreqClient, Jar]:
+    from wreq import redirect  # pyright: ignore[reportPrivateImportUsage]
     from wreq.cookie import Jar
     from wreq.dns import DnsOptions
     from wreq.proxy import Proxy
@@ -48,7 +63,7 @@ async def create_client(config: Config) -> tuple[Client, Jar]:
             yield "emulation", resolve_impersonate(net.impersonate)
 
     cookie_jar = Jar()
-    client = Client(
+    client = WreqClient(
         http2_only=True,
         gzip=True,
         brotli=True,
@@ -67,3 +82,18 @@ async def create_client(config: Config) -> tuple[Client, Jar]:
     )
 
     return client, cookie_jar
+
+
+def make_simple_cookie(cookie: Cookie) -> SimpleCookie:
+    simple_cookie = SimpleCookie()
+    assert cookie.value is not None
+    simple_cookie[cookie.name] = cookie.value
+    morsel = simple_cookie[cookie.name]
+    morsel["domain"] = cookie.domain
+    morsel["path"] = cookie.path
+    morsel["secure"] = cookie.secure
+    if cookie.expires:
+        morsel["max-age"] = str(max(0, int(cookie.expires.timestamp() - time.time())))
+    else:
+        morsel["max-age"] = ""
+    return simple_cookie
