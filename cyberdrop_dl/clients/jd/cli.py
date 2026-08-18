@@ -1,3 +1,5 @@
+"For testing only"
+
 import dataclasses
 import logging
 from pathlib import Path
@@ -20,6 +22,7 @@ app.command(myjd)
 app.command(direct)
 
 
+@Parameter(name="*")
 @dataclasses.dataclass(slots=True)
 class MyJDAuth:
     username: str
@@ -41,7 +44,7 @@ async def connect(api: Annotated[JDDeprecatedAPI | None, Parameter(name="*")] = 
 
     async with _http_client() as http:
         await jd.connect(http)
-        myjd.console.print(jd._conn)
+        app.console.print(jd._conn)
 
 
 @direct.command()
@@ -52,9 +55,10 @@ async def add_links(
     "Add a new link to JD"
     jd = JDownloader(JDConfig(deprecated_api=api or JDDeprecatedAPI()))
 
+    app.console.print(jd.config)
     async with _http_client() as http:
         await jd.connect(http)
-        myjd.console.print(jd._conn)
+        app.console.print(jd._conn)
         await jd.send(AbsoluteHttpURL(link), title="test CLI CDL")
 
 
@@ -70,9 +74,10 @@ async def myjd_connect(auth: MyJDAuth) -> None:
         )
     )
 
+    app.console.print(jd.config)
     async with _http_client() as http:
         await jd.connect(http)
-        myjd.console.print(jd._conn)
+        app.console.print(jd._conn)
 
 
 @myjd.command(name="add_links")
@@ -90,7 +95,6 @@ async def myjd_add_links(link: str, auth: MyJDAuth) -> None:
 
     async with _http_client() as http:
         await jd.connect(http)
-        myjd.console.print(jd._conn)
         await jd.send(AbsoluteHttpURL(link), title="test CLI CDL")
 
 

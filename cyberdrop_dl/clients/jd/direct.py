@@ -48,31 +48,3 @@ class DirectConnection:
     async def jd_version(self) -> int:
         url = self.entrypoint / "jd/version"
         return await self.request_json(url)
-
-
-async def test(link: str) -> None:
-    from cyberdrop_dl.clients.http import HTTPClient
-    from cyberdrop_dl.config import Config
-
-    async with HTTPClient(Config()) as client:
-        jd_conn = DirectConnection(client)
-        version = await jd_conn.jd_version()
-        logger.info(f"{version = }")
-        job_id = await jd_conn.add_links(
-            AddLinksQuery(
-                autostart=False,
-                links=link,
-                overwritePackagizerRules=True,
-            )
-        )
-        logger.info(f"{job_id = }")
-
-
-if __name__ == "__main__":
-    import sys
-
-    from cyberdrop_dl import aio
-    from cyberdrop_dl.logs import setup_console_logging
-
-    with setup_console_logging():
-        aio.run(test(sys.argv[1]))

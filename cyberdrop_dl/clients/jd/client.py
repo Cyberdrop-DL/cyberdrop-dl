@@ -59,7 +59,7 @@ class JDConfig:
     device_id: str | None = None
     device_name: str | None = None
     download_dir: Path = Path("downloads")
-    autostart: bool = True
+    autostart: bool = False
     whitelist: tuple[str, ...] = ()
     deprecated_api: JDDeprecatedAPI | None = None
 
