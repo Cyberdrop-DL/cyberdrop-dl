@@ -2,7 +2,6 @@
 
 import dataclasses
 import logging
-from pathlib import Path
 from typing import Annotated
 
 from cyclopts import App, Parameter
@@ -70,7 +69,6 @@ async def myjd_connect(auth: MyJDAuth) -> None:
             password=auth.password,
             device_id=auth.device,
             device_name=auth.device_name,
-            download_dir=Path("downloads"),
         )
     )
 
@@ -89,7 +87,6 @@ async def myjd_add_links(link: str, auth: MyJDAuth) -> None:
             password=auth.password,
             device_id=auth.device,
             device_name=auth.device_name,
-            download_dir=Path("downloads"),
         )
     )
 

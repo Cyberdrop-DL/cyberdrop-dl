@@ -7,7 +7,7 @@ from typing import Literal
 from cyberdrop_dl.utils.dataclass import DictDataclass
 
 
-@dataclasses.dataclass(slots=True, frozen=True, order=True)
+@dataclasses.dataclass(slots=True, frozen=True, order=True, kw_only=True)
 class JDDevice(DictDataclass):
     id: str
     name: str
@@ -24,7 +24,7 @@ class MyJDSession:
     device_encrypt_token: bytes
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class AddLinksQuery(DictDataclass):
     links: str
     assignJobID: bool | None = None

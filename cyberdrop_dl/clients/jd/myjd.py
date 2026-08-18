@@ -124,12 +124,12 @@ class MyJDAPI:
     async def request_json(
         self,
         url: AbsoluteHttpURL,
-        path: str | None = None,
-        payload: Params | None = None,
+        path: str,
+        params: Params | None = None,
     ) -> Any:
         data = prepare_api_json(
-            path or url.path,
-            list(_dump_params(payload or ())),
+            path,
+            list(_dump_params(params or ())),
             rid=time.time_ns(),
         )
 
@@ -181,17 +181,17 @@ class MyJDConnection:
     device: JDDevice
 
     @property
-    def _action_url(self) -> str:
+    def _action_path(self) -> str:
         return "/t_" + self.api.session.token + "_" + self.device.id
 
     async def jd_version(self) -> int:
         path = "/jd/version"
-        full_path = self.api._build_url(self._action_url + path)
+        full_path = self.api._build_url(self._action_path + path)
         return await self.api.request(full_path, self.api.session.device_encrypt_token)
 
     async def action(self, path: str, params: Params | None = None) -> dict[str, Any]:
-        full_path = self.api._build_url(self._action_url + path)
-        return await self.api.request_json(full_path, path, payload=params)
+        full_path = self.api._build_url(self._action_path + path)
+        return await self.api.request_json(full_path, path=path, params=params)
 
     async def add_links(self, query: AddLinksQuery) -> int:
         resp = await self.action("/linkgrabberv2/addLinks", params=[dict(query)])
