@@ -66,6 +66,7 @@ class MyJDAPI:
             ("appkey", self._app_key),
             token=login_secret,
         )
+
         resp = await self.request(self._build_url(path), token=login_secret)
         s_token, r_token = resp["sessiontoken"], resp["regaintoken"]
         self._session = MyJDSession(
@@ -122,9 +123,12 @@ class MyJDAPI:
         logger.info("GET request to %s", url)
         async with await self.client.get(url) as resp:
             content = await resp.text()
-            if resp.status != 200:
-                raise RuntimeError(content)
-            return _decode_aes_json(content, token or self.session.server_encrypt_token)
+            try:
+                return _decode_aes_json(content, token or self.session.server_encrypt_token)
+            except Exception:
+                if resp.status != 200:
+                    raise RuntimeError(content) from None
+                raise
 
     async def request_json(
         self,
@@ -152,14 +156,8 @@ class MyJDAPI:
                     raise RuntimeError(content) from None
                 raise
 
-    def _build_url(
-        self,
-        path: str,
-        action: str | None = None,
-        api: str | None = None,
-    ) -> yarl.URL:
-        api = api or self.ENTRYPOINT
-        return yarl.URL(api + (action or "") + path)
+    def _build_url(self, path: str, action: str | None = None) -> yarl.URL:
+        return yarl.URL(self.ENTRYPOINT + (action or "") + path)
 
 
 def _dump_aes_json(data: Any) -> bytes:
@@ -195,6 +193,11 @@ class MyJDConnection:
     def _action_url(self) -> str:
         return "/t_" + self.api.session.token + "_" + self.device.id
 
+    async def jd_version(self) -> int:
+        path = "/jd/version"
+        full_path = self.api._build_url(self._action_url + path)
+        return await self.api.request(full_path, self.api.session.device_encrypt_token)
+
     async def action(self, path: str, params: Params | None = None) -> dict[str, Any]:
         full_path = self.api._build_url(self._action_url + path)
         return await self.api.request_json(full_path, path, payload=params)
@@ -223,7 +226,10 @@ async def test() -> None:
         devices = await api.list_devices()
         logger.info("devices: %s", list(map(dict, devices)))
         device = api.find_device(devices, name=device_name)
+
         jd_conn = MyJDConnection(api, device)
+        version = await jd_conn.jd_version()
+        print(f"{version = }")  # noqa: T201
         job_id = await jd_conn.add_links(
             AddLinksQuery(
                 autostart=False,

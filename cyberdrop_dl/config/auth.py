@@ -52,6 +52,7 @@ class JDownloaderAuth(CensoredModel):
     username: str | None = None
     password: str | None = None
     device: str | None = None
+    device_name: str | None = None
 
 
 class Notifications(CensoredModel):

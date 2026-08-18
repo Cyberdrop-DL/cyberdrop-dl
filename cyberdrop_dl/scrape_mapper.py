@@ -28,7 +28,7 @@ from cyberdrop_dl.utils import remove_trailing_slash
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable, Iterator
 
-    from cyberdrop_dl.clients.jdownloader import JDownloader
+    from cyberdrop_dl.clients.jd.client import JDownloader
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.config.crawlers import GenericCrawlers
     from cyberdrop_dl.crawlers.crawler import Crawler
@@ -128,7 +128,7 @@ class ScrapeMapper:
         return total
 
     def __post_init__(self) -> None:
-        from cyberdrop_dl.clients.jdownloader import JDownloader
+        from cyberdrop_dl.clients.jd.client import JDownloader
         from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
         from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
 
@@ -190,8 +190,9 @@ class ScrapeMapper:
             return
         self._init_crawlers()
         try:
-            await self._jdownloader.connect()
-        except JDownloaderError:
+            if self._jdownloader.enabled:
+                await self._jdownloader.connect(self.manager.http_client._session)
+        except Exception:
             logger.exception("Failed to connect to jDownloader")
 
         await self._real_debrid.__async_init__()

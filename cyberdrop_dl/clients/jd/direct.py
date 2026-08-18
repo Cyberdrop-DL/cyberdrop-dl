@@ -29,9 +29,12 @@ class DirectConnection:
         ),
     )
 
+    async def action(self, path: str, params: Params | None = None) -> dict[str, Any]:
+        url = self.base_url / path.removeprefix("/")
+        return await self.request_json(url, json=params)
+
     async def add_links(self, query: AddLinksQuery) -> int:
-        url = self.base_url / "linkgrabberv2/addLinks"
-        resp = await self.request_json(url, json=dict(query))
+        resp = await self.action("/linkgrabberv2/addLinks", params=[dict(query)])
         return resp["id"]
 
     async def request_json(self, url: yarl.URL, json: Params | None = None) -> Any:
