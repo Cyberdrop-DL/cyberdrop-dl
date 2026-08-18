@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, NonNegativeInt, PrivateAttr
 from pydantic.functional_validators import BeforeValidator
 from pydantic.types import ByteSize, NonNegativeFloat, PositiveFloat, PositiveInt
 
-from cyberdrop_dl.constants import LOGS_DATE_FORMAT, LOGS_DATETIME_FORMAT, CIStrEnum, HashMode
+from cyberdrop_dl.constants import LOGS_DATE_FORMAT, LOGS_DATETIME_FORMAT, CIStrEnum, HashMode, ImpersonateTarget
 from cyberdrop_dl.models import ConfigGroup, ConfigModel
 from cyberdrop_dl.models.types import (
     ByteSizeSerilized,
@@ -357,7 +357,7 @@ class Network(ConfigGroup):
     tls: TLS = Field(default_factory=TLS)
 
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) Gecko/20100101 Firefox/150.0"
-    impersonate: FalsyAsNone[Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"]] = None
+    impersonate: FalsyAsNone[ImpersonateTarget] = None
     "Use this target as impersonation for all scrape requests"
 
     @property

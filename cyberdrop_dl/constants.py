@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from contextvars import ContextVar
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Literal, final
 
 from cyclopts import Parameter
 from typing_extensions import Sentinel
@@ -13,6 +13,7 @@ from cyberdrop_dl import __version__
 if TYPE_CHECKING:
     from pathlib import Path
 
+type ImpersonateTarget = Literal["chrome", "edge", "safari", "safari_ios", "chrome_android", "firefox"]
 
 LOGS_DATETIME_FORMAT = "%Y%m%d_%H%M%S"
 LOGS_DATE_FORMAT = "%Y_%m_%d"
