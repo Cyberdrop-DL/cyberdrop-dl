@@ -37,7 +37,7 @@ class DirectConnection:
     async def request_json(self, url: yarl.URL, json: Params | None = None) -> Any:
         async with self.client.post(
             url,
-            json=prepare_api_json(url, json, rid=time.time_ns()) if json is not None else None,
+            json=prepare_api_json(url.path, json, rid=time.time_ns()) if json is not None else None,
         ) as resp:
             data = await resp.json()
             check_resp(data)

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yarl
 from yarl._query import get_str_query_from_sequence_iterable
 
-from cyberdrop_dl.clients.jd import check_resp, prepare_api_json
+from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
 from cyberdrop_dl.clients.jd.crypto import (
     create_token,
     decrypt,
@@ -21,14 +21,12 @@ from cyberdrop_dl.clients.jd.crypto import (
 from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
 
     import aiohttp
 
 
 logger = logging.getLogger(__name__)
-
-type Params = dict[str, Any] | list[Any] | tuple[Any]
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
@@ -131,23 +129,28 @@ class MyJDAPI:
     async def request_json(
         self,
         url: yarl.URL,
+        path: str | None = None,
         payload: Params | None = None,
     ) -> Any:
         data = prepare_api_json(
-            url,
-            payload or (),
-            rid=int(url.query.get("rid") or time.time_ns()),
+            path or url.path,
+            list(_dump_params(payload or ())),
+            rid=time.time_ns(),
         )
+
         logger.info("POST request to %s", url)
         async with self.client.post(
             url,
             headers={"Content-Type": "application/aesjson; charset=utf-8"},
-            data=encrypt(self.session.device_encrypt_token, json.dumps(data).encode()),
+            data=encrypt(self.session.device_encrypt_token, _dump_aes_json(data)),
         ) as resp:
             content = await resp.text()
-            if resp.status != 200:
-                raise RuntimeError(content)
-            return _decode_aes_json(content, self.session.device_encrypt_token)
+            try:
+                return _decode_aes_json(content, self.session.device_encrypt_token)
+            except Exception:
+                if resp.status != 200:
+                    raise RuntimeError(content) from None
+                raise
 
     def _build_url(
         self,
@@ -159,7 +162,24 @@ class MyJDAPI:
         return yarl.URL(api + (action or "") + path)
 
 
-def _decode_aes_json(content: str, token: bytes):
+def _dump_aes_json(data: Any) -> bytes:
+    return json.dumps(data).replace('"null"', "null").replace("'null'", "null").encode("utf-8")
+
+
+def _dump_params(params: Params) -> Generator[Any]:
+    for param in params:
+        match param:
+            case str():
+                yield param
+            case list() | tuple():
+                yield list(_dump_params(param))
+            case dict() | bool():
+                yield json.dumps(param)
+            case _:
+                yield str(param)
+
+
+def _decode_aes_json(content: str, token: bytes) -> Any:
     resp = decrypt(token, content)
     data = json.loads(resp)
     check_resp(data)
@@ -175,12 +195,12 @@ class MyJDConnection:
     def _action_url(self) -> str:
         return "/t_" + self.api.session.token + "_" + self.device.id
 
-    async def action(self, path: str, payload: Params | None = None) -> dict[str, Any]:
-        path = self._action_url + path
-        return await self.api.request_json(self.api._build_url(path), payload)
+    async def action(self, path: str, params: Params | None = None) -> dict[str, Any]:
+        full_path = self.api._build_url(self._action_url + path)
+        return await self.api.request_json(full_path, path, payload=params)
 
     async def add_links(self, query: AddLinksQuery) -> int:
-        resp = await self.action("linkgrabberv2/addLinks", payload=dict(query))
+        resp = await self.action("/linkgrabberv2/addLinks", params=[dict(query)])
         return resp["id"]
 
 
