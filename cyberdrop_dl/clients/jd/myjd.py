@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from yarl._query import get_str_query_from_sequence_iterable
 
+from cyberdrop_dl import __repo_url__
 from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
 from cyberdrop_dl.clients.jd.crypto import (
     create_token,
@@ -33,7 +34,6 @@ logger = logging.getLogger(__name__)
 class MyJDAPI:
     ENTRYPOINT: ClassVar[str] = "https://api.jdownloader.org"
     client: HTTPClient
-    _app_key: str = "https://github.com/NTFSvolume/async-jd"
     _session: MyJDSession | None = dataclasses.field(init=False, default=None)
 
     @property
@@ -53,7 +53,7 @@ class MyJDAPI:
         path = _sign_path_qs(
             "/my/connect",
             ("email", email),
-            ("appkey", self._app_key),
+            ("appkey", __repo_url__),
             token=login_secret,
         )
 

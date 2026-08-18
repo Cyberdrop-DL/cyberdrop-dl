@@ -2,7 +2,11 @@ import importlib.metadata
 import re
 
 __dist_name__ = "cyberdrop-dl-patched"
-__version__ = importlib.metadata.version(__dist_name__)
+_distribution = importlib.metadata.distribution(__dist_name__)
+__version__ = _distribution.version
+__repo_url__ = next(
+    f.removeprefix(prefix) for f in _distribution.metadata.json["project_url"] if f.startswith(prefix := "Repository, ")
+)
 
 
 def _get_version(name: str) -> str | None:
@@ -18,6 +22,4 @@ def _parse_name(pep508_requirement: str) -> str:
     return m.group(0)
 
 
-ALL_DEPENDENCIES = {
-    pkg: _get_version(pkg) for req in (importlib.metadata.requires(__dist_name__) or []) if (pkg := _parse_name(req))
-}
+ALL_DEPENDENCIES = {pkg: _get_version(pkg) for req in (_distribution.requires or []) if (pkg := _parse_name(req))}

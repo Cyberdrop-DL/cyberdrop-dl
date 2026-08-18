@@ -57,7 +57,7 @@ async def test(link: str) -> None:
     async with HTTPClient(Config()) as client:
         jd_conn = DirectConnection(client)
         version = await jd_conn.jd_version()
-        print(f"{version = }")  # noqa: T201
+        logger.info(f"{version = }")
         job_id = await jd_conn.add_links(
             AddLinksQuery(
                 autostart=False,
@@ -65,12 +65,14 @@ async def test(link: str) -> None:
                 overwritePackagizerRules=True,
             )
         )
-        print(f"{job_id = }")  # noqa: T201
+        logger.info(f"{job_id = }")
 
 
 if __name__ == "__main__":
     import sys
 
     from cyberdrop_dl import aio
+    from cyberdrop_dl.logs import setup_console_logging
 
-    aio.run(test(sys.argv[1]))
+    with setup_console_logging():
+        aio.run(test(sys.argv[1]))

@@ -4,21 +4,18 @@ import dataclasses
 import logging
 from typing import TYPE_CHECKING, Protocol, Self
 
-import yarl
-
+from cyberdrop_dl.clients.jd.direct import DirectConnection
 from cyberdrop_dl.clients.jd.myjd import MyJDAPI, MyJDConnection
 from cyberdrop_dl.clients.jd.types import AddLinksQuery
 from cyberdrop_dl.exceptions import JDownloaderError
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.config import Config
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-
-from .direct import DirectConnection
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +27,7 @@ class Connection(Protocol):
 
 
 def direct_connect(client: HTTPClient, host: str, port: int = 3128) -> DirectConnection:
-    return DirectConnection(client, yarl.URL(f"http://{host}:{port}"))
+    return DirectConnection(client, AbsoluteHttpURL(f"http://{host}:{port}"))
 
 
 async def myjd_connect(
@@ -40,7 +37,7 @@ async def myjd_connect(
     device_id: str | None = None,
     device_name: str | None = None,
 ) -> MyJDConnection:
-    api = MyJDAPI(client, "CYBERDROP-DL")
+    api = MyJDAPI(client)
     await api.connect(email, password)
     device = await api.get_device(id=device_id, name=device_name)
     devices = await api.list_devices()
@@ -74,7 +71,7 @@ class JDownloader:
 
     config: JDConfig
     _enabled: bool = dataclasses.field(init=False)
-    _device: Connection | None = dataclasses.field(default=None, init=False)
+    _conn: Connection | None = dataclasses.field(default=None, init=False)
 
     @classmethod
     def from_config(cls, config: Config, /) -> Self:
@@ -118,11 +115,11 @@ class JDownloader:
         return any(domain in url.host for domain in self.config.whitelist)
 
     async def _connect(self, client: HTTPClient) -> None:
-        if not self.enabled or self._device:
+        if not self.enabled or self._conn:
             return
 
-        self._device = await _get_device(client, self.config)
-        version = await self._device.jd_version()
+        self._conn = await _get_device(client, self.config)
+        version = await self._conn.jd_version()
         logger.debug("Connected to JDownloader instance version %s", version)
 
     async def connect(self, client: HTTPClient) -> None:
@@ -136,12 +133,12 @@ class JDownloader:
         """Sends links to JDownloader."""
 
         assert self.enabled
-        assert self._device
+        assert self._conn
         download_folder = self.config.download_dir
         if download_path:
             download_folder /= download_path
 
-        job_id = await self._device.add_links(
+        job_id = await self._conn.add_links(
             AddLinksQuery(
                 autostart=self.config.autostart,
                 links=str(url),
@@ -150,7 +147,7 @@ class JDownloader:
                 overwritePackagizerRules=True,
             )
         )
-        logger.debug("New JDownloader job id= %s for %s", job_id, url)
+        logger.debug("New JDownloader job [id=%s] for %s", job_id, url)
 
 
 async def _get_device(client: HTTPClient, config: JDConfig) -> Connection:
