@@ -14,6 +14,16 @@ class JDDevice(DictDataclass):
     type: str
 
 
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class MyJDSession:
+    login_secret: bytes
+    device_secret: bytes
+    token: str
+    regain_token: str
+    server_encrypt_token: bytes
+    device_encrypt_token: bytes
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class AddLinksQuery(DictDataclass):
     links: str

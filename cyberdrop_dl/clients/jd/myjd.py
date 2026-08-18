@@ -7,7 +7,6 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
-import yarl
 from yarl._query import get_str_query_from_sequence_iterable
 
 from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
@@ -18,31 +17,22 @@ from cyberdrop_dl.clients.jd.crypto import (
     sign_hmac_sha256,
     update_token,
 )
-from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice
+from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice, MyJDSession
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-    import aiohttp
+    from cyberdrop_dl.clients.http import HTTPClient
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
-class MyJDSession:
-    login_secret: bytes
-    device_secret: bytes
-    token: str
-    regain_token: str
-    server_encrypt_token: bytes
-    device_encrypt_token: bytes
-
-
 @dataclasses.dataclass(slots=True)
 class MyJDAPI:
     ENTRYPOINT: ClassVar[str] = "https://api.jdownloader.org"
-    client: aiohttp.ClientSession
+    client: HTTPClient
     _app_key: str = "https://github.com/NTFSvolume/async-jd"
     _session: MyJDSession | None = dataclasses.field(init=False, default=None)
 
@@ -119,9 +109,8 @@ class MyJDAPI:
         devices = await self.list_devices()
         return self.find_device(devices, id=id, name=name)
 
-    async def request(self, url: yarl.URL, token: bytes | None = None) -> Any:
-        logger.info("GET request to %s", url)
-        async with await self.client.get(url) as resp:
+    async def request(self, url: AbsoluteHttpURL, token: bytes | None = None) -> Any:
+        async with self.client.request(url) as resp:
             content = await resp.text()
             try:
                 return _decode_aes_json(content, token or self.session.server_encrypt_token)
@@ -132,7 +121,7 @@ class MyJDAPI:
 
     async def request_json(
         self,
-        url: yarl.URL,
+        url: AbsoluteHttpURL,
         path: str | None = None,
         payload: Params | None = None,
     ) -> Any:
@@ -142,8 +131,7 @@ class MyJDAPI:
             rid=time.time_ns(),
         )
 
-        logger.info("POST request to %s", url)
-        async with self.client.post(
+        async with self.client.request(
             url,
             headers={"Content-Type": "application/aesjson; charset=utf-8"},
             data=encrypt(self.session.device_encrypt_token, _dump_aes_json(data)),
@@ -156,8 +144,8 @@ class MyJDAPI:
                     raise RuntimeError(content) from None
                 raise
 
-    def _build_url(self, path: str, action: str | None = None) -> yarl.URL:
-        return yarl.URL(self.ENTRYPOINT + (action or "") + path)
+    def _build_url(self, path: str, action: str | None = None) -> AbsoluteHttpURL:
+        return AbsoluteHttpURL(self.ENTRYPOINT + (action or "") + path)
 
 
 def _dump_aes_json(data: Any) -> bytes:
@@ -216,20 +204,21 @@ def _sign_path_qs(path: str, *params: tuple[str, str | int], token: bytes) -> st
 
 
 async def test() -> None:
-    import aiohttp
+    from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.config import Config
 
     email, password, device_name, link = sys.argv[1:5]
-    async with aiohttp.ClientSession() as client:
+    async with HTTPClient(Config()) as client:
         api = MyJDAPI(client)
         await api.connect(email, password)
-        print(f"{api.connected = }")  # noqa: T201
+        logger.info(f"{api.connected = }")
         devices = await api.list_devices()
         logger.info("devices: %s", list(map(dict, devices)))
         device = api.find_device(devices, name=device_name)
 
         jd_conn = MyJDConnection(api, device)
         version = await jd_conn.jd_version()
-        print(f"{version = }")  # noqa: T201
+        logger.info(f"{version = }")
         job_id = await jd_conn.add_links(
             AddLinksQuery(
                 autostart=False,
@@ -237,7 +226,7 @@ async def test() -> None:
                 overwritePackagizerRules=True,
             )
         )
-        print(f"{job_id = }")  # noqa: T201
+        logger.info(f"{job_id = }")
 
 
 if __name__ == "__main__":

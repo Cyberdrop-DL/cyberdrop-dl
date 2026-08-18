@@ -13,8 +13,7 @@ from cyberdrop_dl.exceptions import JDownloaderError
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import aiohttp
-
+    from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -30,12 +29,12 @@ class Connection(Protocol):
     async def jd_version(self) -> int: ...
 
 
-def direct_connect(client: aiohttp.ClientSession, host: str, port: int = 3128) -> DirectConnection:
+def direct_connect(client: HTTPClient, host: str, port: int = 3128) -> DirectConnection:
     return DirectConnection(client, yarl.URL(f"http://{host}:{port}"))
 
 
 async def myjd_connect(
-    client: aiohttp.ClientSession,
+    client: HTTPClient,
     email: str,
     password: str,
     device_id: str | None = None,
@@ -118,14 +117,17 @@ class JDownloader:
 
         return any(domain in url.host for domain in self.config.whitelist)
 
-    async def _connect(self, http: aiohttp.ClientSession) -> None:
-        self._device = await _get_device(http, self.config)
+    async def _connect(self, client: HTTPClient) -> None:
+        if not self.enabled or self._device:
+            return
+
+        self._device = await _get_device(client, self.config)
         version = await self._device.jd_version()
         logger.debug("Connected to JDownloader instance version %s", version)
 
-    async def connect(self, http: aiohttp.ClientSession) -> None:
+    async def connect(self, client: HTTPClient) -> None:
         try:
-            return await self._connect(http)
+            return await self._connect(client)
         except Exception:
             self._enabled = False
             raise
@@ -151,13 +153,13 @@ class JDownloader:
         logger.debug("New JDownloader job id= %s for %s", job_id, url)
 
 
-async def _get_device(http: aiohttp.ClientSession, config: JDConfig) -> Connection:
+async def _get_device(client: HTTPClient, config: JDConfig) -> Connection:
     if config.deprecated_api:
-        return direct_connect(http, config.deprecated_api.host, config.deprecated_api.port)
+        return direct_connect(client, config.deprecated_api.host, config.deprecated_api.port)
 
     if config.username and config.password and (config.device_id or config.device_name):
         return await myjd_connect(
-            http,
+            client,
             config.username,
             config.password,
             device_id=config.device_id,

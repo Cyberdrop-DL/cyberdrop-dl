@@ -190,8 +190,7 @@ class ScrapeMapper:
             return
         self._init_crawlers()
         try:
-            if self._jdownloader.enabled:
-                await self._jdownloader.connect(self.manager.http_client._session)
+            await self._jdownloader.connect(self.manager.http_client)
         except Exception:
             logger.exception("Failed to connect to jDownloader")
 

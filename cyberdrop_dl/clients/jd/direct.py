@@ -5,21 +5,20 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-import yarl
-
 from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
 from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    import aiohttp
+    from cyberdrop_dl.clients.http import HTTPClient
 
 logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True)
 class DirectConnection:
-    client: aiohttp.ClientSession
-    base_url: yarl.URL = yarl.URL("http://localhost:3128")  # noqa: RUF009
+    client: HTTPClient
+    entrypoint: AbsoluteHttpURL = AbsoluteHttpURL("http://localhost:3128")  # noqa: RUF009
     device: JDDevice = dataclasses.field(
         init=False,
         default=JDDevice(
@@ -30,15 +29,15 @@ class DirectConnection:
     )
 
     async def action(self, path: str, params: Params | None = None) -> dict[str, Any]:
-        url = self.base_url / path.removeprefix("/")
+        url = self.entrypoint / path.removeprefix("/")
         return await self.request_json(url, json=params)
 
     async def add_links(self, query: AddLinksQuery) -> int:
         resp = await self.action("/linkgrabberv2/addLinks", params=[dict(query)])
         return resp["id"]
 
-    async def request_json(self, url: yarl.URL, json: Params | None = None) -> Any:
-        async with self.client.post(
+    async def request_json(self, url: AbsoluteHttpURL, json: Params | None = None) -> Any:
+        async with self.client.request(
             url,
             json=prepare_api_json(url.path, json, rid=time.time_ns()) if json is not None else None,
         ) as resp:
@@ -47,14 +46,15 @@ class DirectConnection:
             return data["data"]
 
     async def jd_version(self) -> int:
-        url = self.base_url / "jd/version"
+        url = self.entrypoint / "jd/version"
         return await self.request_json(url)
 
 
 async def test(link: str) -> None:
-    import aiohttp
+    from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.config import Config
 
-    async with aiohttp.ClientSession() as client:
+    async with HTTPClient(Config()) as client:
         jd_conn = DirectConnection(client)
         version = await jd_conn.jd_version()
         print(f"{version = }")  # noqa: T201

@@ -1,13 +1,13 @@
 from typing import Any
 
-type Params = dict[str, Any] | list[Any] | tuple[Any, ...]
+type Params = list[Any] | tuple[Any, ...]
 
 
 def prepare_api_json(path: str, json: Params, rid: int) -> dict[str, Any]:
     return {
         "apiVer": 1,
         "url": path,
-        "params": [json] if type(json) is dict else json,
+        "params": json,
         "rid": rid,
     }
 
