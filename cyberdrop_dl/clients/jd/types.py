@@ -8,7 +8,7 @@ from cyberdrop_dl.utils.dataclass import DictDataclass
 
 
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
-class JDDevice:
+class JDDevice(DictDataclass):
     id: str
     name: str
     type: str

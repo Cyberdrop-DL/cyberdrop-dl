@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
+from Crypto.Util.Padding import pad, unpad
 
 EMPTY_IV = b"\0" * AES.block_size
 
@@ -16,3 +16,7 @@ def aes_cbc_decrypt(data: bytes, key: bytes, iv: bytes = EMPTY_IV) -> bytes:
 
 def aes_unpad(data: bytes) -> bytes:
     return unpad(data, AES.block_size)
+
+
+def aes_pad(data: bytes) -> bytes:
+    return pad(data, AES.block_size)

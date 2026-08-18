@@ -5,8 +5,7 @@ import hashlib
 import hmac
 from typing import Literal
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_cbc_encrypt, aes_pad, aes_unpad
 
 
 def create_token(email: str, password: str, domain: Literal["server", "device"]) -> bytes:
@@ -19,19 +18,17 @@ def sign_hmac_sha256(key: bytes, url: str) -> str:
 
 
 def encrypt(secret_token: bytes, data: bytes) -> str:
-    data = pad(data, AES.block_size)
+    data = aes_pad(data)
     middle = len(secret_token) // 2
-    init_vector, key = secret_token[:middle], secret_token[middle:]
-    cypher = AES.new(key, AES.MODE_CBC, init_vector)
-    return base64.b64encode(cypher.encrypt(data)).decode("utf-8")
+    iv, key = secret_token[:middle], secret_token[middle:]
+    return base64.b64encode(aes_cbc_encrypt(data, key, iv)).decode("utf-8")
 
 
 def decrypt(secret_token: bytes, data: str) -> bytes:
     middle = len(secret_token) // 2
-    init_vector, key = secret_token[:middle], secret_token[middle:]
-    cypher = AES.new(key, AES.MODE_CBC, init_vector)
-    out = cypher.decrypt(base64.b64decode(data))
-    return unpad(out, AES.block_size)
+    iv, key = secret_token[:middle], secret_token[middle:]
+    out = aes_cbc_decrypt(base64.b64decode(data), key, iv)
+    return aes_unpad(out)
 
 
 def update_token(token: bytes, session_token: str) -> bytes:
