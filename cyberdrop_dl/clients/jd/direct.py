@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 import yarl
@@ -27,34 +28,58 @@ class DirectConnection:
         ),
     )
 
-    async def add_links(self, query: AddLinksQuery) -> dict[str, Any]:
+    async def add_links(self, query: AddLinksQuery) -> int:
         url = self.base_url / "linkgrabberv2/addLinks"
-        return await self.request_json(url, json=dict(query))
+        resp = await self.request_json(url, json=dict(query))
+        return resp["id"]
 
     async def request_json(self, url: yarl.URL, json: dict[str, Any] | None = None) -> Any:
-        async with self.client.post(url, json=json) as resp:
+        async with self.client.post(
+            url,
+            json={
+                "apiVer": 1,
+                "url": url.path,
+                "params": [json],
+                "rid": time.time_ns(),
+            }
+            if json is not None
+            else None,
+        ) as resp:
             data = await resp.json()
-            data = data.get("data", data)
-            if type(data) is dict and data.get("type") == "BAD_PARAMETERS":
-                msg = f"BAD_PARAMETERS ({str(data)[:40]})"
-                raise RuntimeError(msg)
-            return data
+            _check(data)
+            return data["data"]
 
     async def jd_version(self) -> int:
         url = self.base_url / "jd/version"
         return await self.request_json(url)
 
 
-async def test() -> None:
+def _check(data: object) -> None:
+    if type(data) is dict and data.get("type") == "BAD_PARAMETERS":
+        msg = f"BAD_PARAMETERS ({str(data)[:40]})"
+        raise RuntimeError(msg)
+
+
+async def test(link: str) -> None:
     import aiohttp
 
     async with aiohttp.ClientSession() as client:
         jd_conn = DirectConnection(client)
         version = await jd_conn.jd_version()
-        print(version)  # noqa: T201
+        print(f"{version = }")  # noqa: T201
+        job_id = await jd_conn.add_links(
+            AddLinksQuery(
+                autostart=False,
+                links=link,
+                overwritePackagizerRules=True,
+            )
+        )
+        print(f"{job_id = }")  # noqa: T201
 
 
 if __name__ == "__main__":
+    import sys
+
     from cyberdrop_dl import aio
 
-    aio.run(test())
+    aio.run(test(sys.argv[1]))
