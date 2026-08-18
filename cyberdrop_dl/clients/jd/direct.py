@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import yarl
 
+from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
 from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice
 
 if TYPE_CHECKING:
@@ -33,31 +34,18 @@ class DirectConnection:
         resp = await self.request_json(url, json=dict(query))
         return resp["id"]
 
-    async def request_json(self, url: yarl.URL, json: dict[str, Any] | None = None) -> Any:
+    async def request_json(self, url: yarl.URL, json: Params | None = None) -> Any:
         async with self.client.post(
             url,
-            json={
-                "apiVer": 1,
-                "url": url.path,
-                "params": [json],
-                "rid": time.time_ns(),
-            }
-            if json is not None
-            else None,
+            json=prepare_api_json(url, json, rid=time.time_ns()) if json is not None else None,
         ) as resp:
             data = await resp.json()
-            _check(data)
+            check_resp(data)
             return data["data"]
 
     async def jd_version(self) -> int:
         url = self.base_url / "jd/version"
         return await self.request_json(url)
-
-
-def _check(data: object) -> None:
-    if type(data) is dict and data.get("type") == "BAD_PARAMETERS":
-        msg = f"BAD_PARAMETERS ({str(data)[:40]})"
-        raise RuntimeError(msg)
 
 
 async def test(link: str) -> None:
