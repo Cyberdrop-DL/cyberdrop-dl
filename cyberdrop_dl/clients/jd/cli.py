@@ -26,7 +26,6 @@ app.command(direct)
 class MyJDAuth:
     username: str
     password: str
-    device: str | None = None
     device_name: str | None = None
 
 
@@ -63,14 +62,7 @@ async def add_links(
 
 @myjd.command(name="connect")
 async def myjd_connect(auth: MyJDAuth) -> None:
-    jd = JDownloader(
-        JDConfig(
-            username=auth.username,
-            password=auth.password,
-            device_id=auth.device,
-            device_name=auth.device_name,
-        )
-    )
+    jd = JDownloader(JDConfig(username=auth.username, password=auth.password, device_name=auth.device_name))
 
     app.console.print(jd.config)
     async with _http_client() as http:
@@ -85,7 +77,6 @@ async def myjd_add_links(link: str, auth: MyJDAuth) -> None:
         JDConfig(
             username=auth.username,
             password=auth.password,
-            device_id=auth.device,
             device_name=auth.device_name,
         )
     )

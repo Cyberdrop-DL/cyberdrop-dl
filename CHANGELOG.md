@@ -26,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support connection to JDownloader by device name or device id ([`auth.jdownloader.device_name`] or [`auth.jdownloader.device_id`])
 - Support direct local connection to JDownloader using their deprecated API
 
 ### Changed

@@ -51,8 +51,7 @@ class EmailAuth(CensoredModel):
 class JDownloaderAuth(CensoredModel):
     username: str | None = None
     password: str | None = None
-    device: str | None = Field(deprecated=True, default=None)
-    device_id: str | None = None
+    device: str | None = None
     device_name: str | None = None
 
 

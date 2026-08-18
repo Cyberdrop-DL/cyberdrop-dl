@@ -31,6 +31,7 @@ def direct_connect(client: HTTPClient, host: str, port: int = 3128) -> DirectCon
 
 async def myjd_connect(
     client: HTTPClient,
+    *,
     email: str,
     password: str,
     device_id: str | None = None,
@@ -56,7 +57,6 @@ class JDConfig:
     enabled: bool = True
     username: str | None = None
     password: str | None = None
-    device_id: str | None = None
     device_name: str | None = None
     download_dir: Path = Path("downloads")
     autostart: bool = False
@@ -87,8 +87,7 @@ class JDownloader:
         return cls(
             JDConfig(
                 enabled=config.jdownloader.enabled,
-                device_id=config.auth.jdownloader.device or config.auth.jdownloader.device_id,
-                device_name=config.auth.jdownloader.device_name,
+                device_name=config.auth.jdownloader.device_name or config.auth.jdownloader.device,
                 username=config.auth.jdownloader.username,
                 password=config.auth.jdownloader.password,
                 download_dir=download_dir.resolve(),
@@ -153,12 +152,11 @@ async def _get_device(client: HTTPClient, config: JDConfig) -> Connection:
     if config.deprecated_api:
         return direct_connect(client, config.deprecated_api.host, config.deprecated_api.port)
 
-    if config.username and config.password and (config.device_id or config.device_name):
+    if config.username and config.password and config.device_name:
         return await myjd_connect(
             client,
-            config.username,
-            config.password,
-            device_id=config.device_id,
+            email=config.username,
+            password=config.password,
             device_name=config.device_name,
         )
 
