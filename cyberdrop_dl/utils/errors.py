@@ -65,6 +65,31 @@ def _curl_context() -> Generator[None]:
 
 
 @contextlib.contextmanager
+def _wreq_context() -> Generator[None]:
+    try:
+        from wreq import exceptions
+    except ImportError:
+        yield
+        return
+    try:
+        yield
+
+    except exceptions.TimeoutError as e:
+        raise CDLAppError("Timeout", repr(e)) from None
+    except (
+        exceptions.ConnectionResetError,
+        exceptions.TlsError,
+        exceptions.ProxyConnectionError,
+        exceptions.ConnectionError,
+        exceptions.RedirectError,
+        exceptions.UpgradeError,
+    ) as e:
+        raise CDLAppError(type(e).__name__, repr(e)) from None
+    except (exceptions.BodyError, exceptions.BuilderError, exceptions.DecodingError, exceptions.RequestError) as e:
+        raise CDLAppError(type(e).__name__, repr(e)) from e
+
+
+@contextlib.contextmanager
 def _aiohttp_context() -> Generator[None]:
     try:
         yield
@@ -155,6 +180,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
             _pydantic_context(),
             _aiohttp_context(),
             _curl_context(),
+            _wreq_context(),
             _mega_nz_context(),
             _exc_group_context(),
         ):
