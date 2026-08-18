@@ -597,7 +597,32 @@
             }
           ],
           "default": null,
+          "deprecated": true,
           "title": "Device"
+        },
+        "device_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device Id"
+        },
+        "device_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device Name"
         }
       },
       "title": "JDownloaderAuth",

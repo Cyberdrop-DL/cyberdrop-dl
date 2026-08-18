@@ -3,6 +3,8 @@ auth:
     api_key: null
   jdownloader:
     device: null
+    device_id: null
+    device_name: null
     password: null
     username: null
   mega_nz:
