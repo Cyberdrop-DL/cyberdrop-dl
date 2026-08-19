@@ -4,8 +4,6 @@ import importlib.util
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any, Literal
 
-import wassima
-
 IS_INSTALLED = importlib.util.find_spec("wreq") is not None
 
 if TYPE_CHECKING:
@@ -14,20 +12,18 @@ if TYPE_CHECKING:
     from wreq.cookie import Cookie
     from wreq.emulation import Emulation, Profile
     from wreq.tls import TlsVersion
+    from wreq.wreq import Client as WreqClient
+    from wreq.wreq import Method
+    from wreq.wreq import Response as Response  # noqa: PLC0414
 
     from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.constants import ImpersonateTarget
 
-if TYPE_CHECKING or IS_INSTALLED:
-    from wreq.wreq import Client as WreqClient
-    from wreq.wreq import Method
-    from wreq.wreq import Response as Response  # noqa: PLC0414
+
 else:
 
     class WreqClient: ...
-
-    class Method: ...
 
     class Response: ...
 
@@ -61,10 +57,12 @@ def cast_impersonate(target: ImpersonateTarget) -> Emulation | Profile:
 def create_client(config: Config) -> WreqClient:
     import datetime
 
+    import wassima
     from wreq import redirect  # pyright: ignore[reportPrivateImportUsage]
     from wreq.dns import DnsOptions
     from wreq.proxy import Proxy
     from wreq.tls import CertStore
+    from wreq.wreq import Client as WreqClient
 
     net = config.network
 
