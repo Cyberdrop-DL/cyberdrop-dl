@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support direct local connection to JDownloader using their deprecated API
+- `wreq` as optional HTTP backend for browser impersonation (via the `wreq` extra)
 
 ### Changed
 
