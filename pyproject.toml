@@ -59,9 +59,9 @@ requires-python = ">=3.12"
 [project.optional-dependencies]
 apprise = [
     "apprise >=1.12.0",
-    "click >=8.4.1",
+    "click >=8.4.2",
     'pywin32>=312; platform_system == "Windows"',
-    'tzdata>=2026.2; platform_system == "Windows"'
+    'tzdata>=2026.3; platform_system == "Windows"'
 ]
 wreq = ["wreq==0.12.1"]
 
