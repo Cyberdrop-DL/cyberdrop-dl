@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, override
 
 from cyclopts import Parameter
 from pydantic import Field, Secret
@@ -55,7 +55,6 @@ class JDownloaderAuth(CensoredModel):
 
 
 class Notifications(CensoredModel):
-    _CDL_IGNORE_METADATA: ClassVar[bool] = True
     apprise: tuple[AppriseURL, ...] = ()
     webhook: FalsyAsNone[AppriseURL] = None
 

@@ -36,8 +36,6 @@ _warned: set[tuple[type, str]] = set()
 
 @DEFAULT_PARAMETER
 class ConfigModel(DeferredModel, extra="forbid"):
-    _CDL_IGNORE_METADATA: ClassVar[bool] = False
-
     @override
     def model_post_init(self, context: Any, /) -> None:
         super().model_post_init(context)
@@ -71,7 +69,6 @@ class _AppriseURLDict(TypedDict):
 
 @Parameter(name="*")
 class AppriseURL(ConfigModel):
-    _CDL_IGNORE_METADATA: ClassVar[bool] = True
     url: Secret[AnyUrl]
     tags: set[str] = set()
 
@@ -146,11 +143,10 @@ class AppriseURL(ConfigModel):
 def merge_dicts(
     dict1: dict[str, Any],
     dict2: dict[str, Any],
-    additive_keys: tuple[tuple[str, ...], ...] = (),
+    additive_keys: Iterable[tuple[str, ...]] = (),
 ) -> dict[str, Any]:
     for keys in additive_keys:
         get = operators.nested_itemgetter(*keys)
-
         try:
             current_value, new_value = get(dict1), get(dict2)
         except KeyError:
@@ -180,7 +176,7 @@ def _merge_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]
 def merge_models[M: BaseModel](
     default: M,
     new: M,
-    additive_keys: tuple[tuple[str, ...], ...] = (),
+    additive_keys: Iterable[tuple[str, ...]] = (),
 ) -> M:
     current_data = default.model_dump()
     new_data = new.model_dump(exclude_unset=True)
@@ -236,10 +232,6 @@ class FieldMetadata:
 
     @classmethod
     def _resolve(cls, model: BaseModel) -> Generator[str]:
-        if getattr(model, "_CDL_IGNORE_METADATA", False):
-            yield cls.IGNORE
-            return
-
         for name, field in type(model).model_fields.items():
             if cls.check(field):
                 yield name
