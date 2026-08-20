@@ -4,9 +4,10 @@ import logging
 import time
 import warnings
 from collections.abc import Generator, Iterable
-from typing import Any, ClassVar, Final, TypedDict, final, get_origin, override
+from typing import Any, ClassVar, Final, TypedDict, final, get_args, get_origin, override
 
 from cyclopts import Parameter
+from cyclopts.annotations import resolve
 from pydantic import AnyUrl, BaseModel, Secret, SerializationInfo, TypeAdapter, model_serializer, model_validator
 from pydantic.fields import FieldInfo
 
@@ -257,4 +258,23 @@ class AdditiveArg(FieldMetadata):
     @override
     @classmethod
     def check(cls, field: FieldInfo) -> bool:
-        return get_origin(field.annotation) in {set, list, tuple} or super().check(field)
+        if get_origin(field.annotation) in {set, list, tuple}:
+            arg = resolve(get_args(field.annotation)[0])
+            all_args = get_args(arg) or [arg]
+            if all(map(_is_str, all_args)):
+                return True
+
+        return super().check(field)
+
+
+def _is_str(type_: object) -> bool:
+    type_ = resolve(type_)
+    if type_ is str:
+        return True
+    try:
+        return issubclass(type_, str)
+    except Exception:  # noqa: BLE001
+        try:
+            return isinstance(type_, str)
+        except Exception:  # noqa: BLE001
+            return False

@@ -377,15 +377,8 @@ def test_additive_args_list() -> None:
     assert args == (
         ("crawlers", "bandcamp", "formats"),
         ("crawlers", "disabled"),
-        ("crawlers", "generic", "chevereto"),
-        ("crawlers", "generic", "discourse"),
-        ("crawlers", "generic", "kvs"),
-        ("crawlers", "generic", "video"),
-        ("crawlers", "generic", "wordpress_html"),
-        ("crawlers", "generic", "wordpress_media"),
         ("filters", "only_hosts"),
         ("filters", "skip_hosts"),
         ("hashing", "algorithms"),
         ("jdownloader", "whitelist"),
-        ("network", "tls", "ca_certs"),
     )
