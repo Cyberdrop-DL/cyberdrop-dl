@@ -193,14 +193,21 @@ def type_adapter[T](cls: type[T]) -> TypeAdapter[T]:
 
 
 def merge_additive_args[T: list[str] | tuple[str, ...] | set[str]](current_values: Iterable[str], overrides: T) -> T:
-    value = sorted(overrides) if isinstance(overrides, set) else overrides
-    match value:
-        case ["+", *_]:
+    if isinstance(overrides, set):
+        if "+" in overrides:
             new_values = set(current_values).union(overrides)
-        case ["-", *_]:
+        elif "-" in overrides:
             new_values = set(current_values) - set(overrides)
-        case _:
+        else:
             return overrides
+    else:
+        match overrides:
+            case ["+", *_]:
+                new_values = set(current_values).union(overrides)
+            case ["-", *_]:
+                new_values = set(current_values) - set(overrides)
+            case _:
+                return overrides
 
     return type(overrides)(sorted(new_values - {"+", "-"}))
 
