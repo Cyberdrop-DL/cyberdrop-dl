@@ -37,5 +37,6 @@ class nested_itemsetter:  # noqa: N801
                 obj = obj[key]
             except KeyError:
                 obj[key] = {}
+                obj = obj[key]
 
         obj[last] = value
