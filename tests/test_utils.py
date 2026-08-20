@@ -10,7 +10,7 @@ import pytest
 from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import text_editor
+from cyberdrop_dl.utils import operators, text_editor
 from cyberdrop_dl.utils._url import fix_multi_slashes, parse_http_url
 
 
@@ -181,3 +181,37 @@ class TestTextEditor:
         cmd = text_editor._find_unix_editor()
         assert cmd
         assert cmd == text_editor._editor_cmd()
+
+
+def test_operators_nested_itemgetter() -> None:
+    data = {}
+
+    get = operators.nested_itemgetter("a", "b")
+    with pytest.raises(KeyError, match=r"['a']"):
+        get(data)
+
+    data = {
+        "a": 1,
+        "c": 2,
+    }
+
+    with pytest.raises(KeyError, match=r"['a', 'b']"):
+        get(data)
+
+    data = {
+        "a": {
+            "b": 1,
+        },
+        "c": 2,
+    }
+
+    assert get(data) == 1
+
+
+def test_operators_nested_itemsetter() -> None:
+    data = {}
+
+    update = operators.nested_itemsetter("a", "b")
+    update(data, 2)
+
+    assert data == {"a": {"b": 1}}
