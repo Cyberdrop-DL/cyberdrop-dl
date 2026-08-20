@@ -12,12 +12,12 @@ from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
 import cyberdrop_dl.commands.scrape
-from cyberdrop_dl.config import Config, Files, _resolve_paths, merge_additive_args, settings
+from cyberdrop_dl.config import Config, Files, _resolve_paths, settings
 from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.config.filters import Filters, _FileFilter
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.models import AppriseURL, merge_dicts
+from cyberdrop_dl.models import AppriseURL, merge_additive_args, merge_dicts
 
 
 def test_config_equality() -> None:
@@ -370,3 +370,22 @@ def test_config_union() -> None:
     assert config.filters.files.audio is True
     assert config_2.filters.files.audio is False
     assert config | config_2 == Config(ignore_history=True, dump_json=True, filters=filters)
+
+
+def test_additive_args_list() -> None:
+    args = Config()._additive_args()
+    assert args == (
+        ("crawlers", "bandcamp", "formats"),
+        ("crawlers", "disabled"),
+        ("crawlers", "generic", "chevereto"),
+        ("crawlers", "generic", "discourse"),
+        ("crawlers", "generic", "kvs"),
+        ("crawlers", "generic", "video"),
+        ("crawlers", "generic", "wordpress_html"),
+        ("crawlers", "generic", "wordpress_media"),
+        ("filters", "only_hosts"),
+        ("filters", "skip_hosts"),
+        ("hashing", "algorithms"),
+        ("jdownloader", "whitelist"),
+        ("network", "tls", "ca_certs"),
+    )

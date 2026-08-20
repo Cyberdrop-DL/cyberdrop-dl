@@ -2,6 +2,7 @@
 
 import logging
 import time
+import warnings
 from collections.abc import Generator, Iterable
 from typing import Any, ClassVar, Final, TypedDict, final, get_origin, override
 
@@ -227,6 +228,7 @@ class FieldMetadata:
 
     @classmethod
     def resolve(cls, model: BaseModel) -> Generator[tuple[str, ...]]:
+
         for name in cls._resolve(model):
             if cls.IGNORE not in name:
                 yield tuple(name.split("."))
@@ -242,7 +244,9 @@ class FieldMetadata:
                 yield name
                 continue
 
-            value = getattr(model, name)
+            with warnings.catch_warnings(action="ignore"):
+                value = getattr(model, name)
+
             if isinstance(value, BaseModel):
                 for inner_name in cls._resolve(value):
                     yield f"{name}.{inner_name}"

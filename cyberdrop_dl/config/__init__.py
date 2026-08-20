@@ -184,7 +184,7 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     def _additive_args(self) -> tuple[tuple[str, ...], ...]:
         global _ADDITIVE_ARGS  # noqa: PLW0603
         if _ADDITIVE_ARGS is None:
-            _ADDITIVE_ARGS = tuple(AdditiveArg.resolve(self))  # pyright: ignore[reportConstantRedefinition]
+            _ADDITIVE_ARGS = tuple(sorted(AdditiveArg.resolve(self)))  # pyright: ignore[reportConstantRedefinition]
         return _ADDITIVE_ARGS
 
     def __or__(self, other: Config) -> Config:
