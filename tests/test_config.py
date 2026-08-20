@@ -265,7 +265,7 @@ def test_additive_args(
     cli_args: list[str] | tuple[str, ...],
     expected: list[str] | tuple[str, ...],
 ) -> None:
-    result = merge_additive_args(cli_args, config_args)
+    result = merge_additive_args(config_args, cli_args)
     assert type(result) is type(expected)
     assert result == expected
 

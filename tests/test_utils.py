@@ -214,4 +214,4 @@ def test_operators_nested_itemsetter() -> None:
     update = operators.nested_itemsetter("a", "b")
     update(data, 2)
 
-    assert data == {"a": {"b": 1}}
+    assert data == {"a": {"b": 2}}
