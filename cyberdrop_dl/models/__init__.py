@@ -157,7 +157,7 @@ def merge_dicts(
             continue
         else:
             new_value = merge_additive_args(current_value, new_value)
-            operators.nested_itemsetter(*keys)(dict1, new_value)
+            operators.nested_itemsetter(*keys)(dict2, new_value)
 
     return _merge_dicts(dict1, dict2)
 
