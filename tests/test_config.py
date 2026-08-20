@@ -135,19 +135,19 @@ class TestMergeDicts:
         dict1 = {"a": {"b": [1, 2]}}
         dict2 = {"a": {"b": ["+", 3, 4]}}
         additive_keys = (("a", "b"),)
-        assert merge_dicts(dict1.copy(), dict2, additive_keys) == {"a": {"b": [1, 2, 3, 4]}}
+        assert merge_dicts(dict1, dict2, additive_keys) == {"a": {"b": [1, 2, 3, 4]}}
 
     def test_additive_args_remove(self) -> None:
         dict1 = {"a": {"b": [1, 2]}}
         dict2 = {"a": {"b": ["-", 1]}}
         additive_keys = (("a", "b"),)
-        assert merge_dicts(dict1.copy(), dict2, additive_keys) == {"a": {"b": [2]}}
+        assert merge_dicts(dict1, dict2, additive_keys) == {"a": {"b": [2]}}
 
     def test_additive_args_override(self) -> None:
         dict1 = {"a": {"b": [1, 2]}}
         dict2 = {"a": {"b": [3, 1]}}
         additive_keys = (("a", "b"),)
-        assert merge_dicts(dict1.copy(), dict2, additive_keys) == {"a": {"b": [3, 1]}}
+        assert merge_dicts(dict1, dict2, additive_keys) == {"a": {"b": [3, 1]}}
 
 
 class TestRuntimeLogsConfig:
