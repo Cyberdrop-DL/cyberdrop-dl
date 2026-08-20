@@ -4,7 +4,7 @@ import logging
 import time
 import warnings
 from collections.abc import Generator, Iterable
-from typing import Any, ClassVar, Final, TypedDict, final, get_args, get_origin, override
+from typing import Any, ClassVar, Final, Self, TypedDict, final, get_args, get_origin, override
 
 from cyclopts import Parameter
 from cyclopts.annotations import resolve
@@ -223,16 +223,18 @@ class FieldMetadata:
         return f"{type(self).__name__}(data={self.data!r})"
 
     @classmethod
-    def check(cls, field: FieldInfo) -> bool:
+    def get(cls, field: FieldInfo) -> Self | None:
         if field.metadata:
             for data in field.metadata:
                 if type(data) is cls:
-                    return True
-        return False
+                    return data
+
+    @classmethod
+    def _check(cls, field: FieldInfo) -> bool:
+        return cls.get(field) is not None
 
     @classmethod
     def resolve(cls, model: BaseModel) -> Generator[tuple[str, ...]]:
-
         for name in cls._resolve(model):
             if cls.IGNORE not in name:
                 yield tuple(name.split("."))
@@ -240,7 +242,7 @@ class FieldMetadata:
     @classmethod
     def _resolve(cls, model: BaseModel) -> Generator[str]:
         for name, field in type(model).model_fields.items():
-            if cls.check(field):
+            if cls._check(field):
                 yield name
                 continue
 
@@ -256,14 +258,14 @@ class FieldMetadata:
 class AdditiveArg(FieldMetadata):
     @override
     @classmethod
-    def check(cls, field: FieldInfo) -> bool:
+    def _check(cls, field: FieldInfo) -> bool:
         if get_origin(field.annotation) in {set, list, tuple}:
             arg = resolve(get_args(field.annotation)[0])
             all_args = get_args(arg) or [arg]
             if all(map(_is_str, all_args)):
                 return True
 
-        return super().check(field)
+        return super()._check(field)
 
 
 def _is_str(type_: object) -> bool:
