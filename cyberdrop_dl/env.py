@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import hashlib
 import os
+import sys
 
 ALL_VARS: dict[str, str | None] = {}
 os.environ["PYDANTIC_ERRORS_INCLUDE_URL"] = "0"
@@ -28,6 +31,7 @@ DEBUG_MODE = bool(
     or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
     or os.getenv("TERM_PROGRAM") in {"vscode", "zed"}
+    or "pytest" in sys.modules
 )
 ENABLE_DEBUG_CRAWLERS = (
     _env("ENABLE_DEBUG_CRAWLERS", censor=True) == "d396ab8c85fcb1fecd22c8d9b58acf944a44e6d35014e9dd39e42c9a64091eda"

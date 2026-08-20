@@ -52,7 +52,6 @@ def open_folder(folder: Path) -> None:
 
         folder.mkdir(parents=True)
 
-    import webbrowser
+    from cyberdrop_dl.utils import file_browser
 
-    if not webbrowser.open_new(str(folder)):
-        logger.error("Unable to open '%s' with any file browser", folder)
+    file_browser.open_new(folder)
