@@ -54,4 +54,19 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://theditch.st/wtk8hvwb",
+        "description": "short URL (new signed URLs)",
+        "results": [
+            {
+                "url": "re:/beta22/1e34db7bc4a490dbdaa5/Oppenheimer.2023.2160p.PROPER.IMAX.HYBRID.UHD.REMUX.DV.HDR10_.TrueHD.7.1.Atmos.mkv?exp=",
+                "filename": "Oppenheimer.2023.2160p.PROPER.IMAX.HYBRID.UHD.REMUX.DV.HDR10_.TrueHD.7.1.Atmos.mkv",
+                "referer": "https://fileditchfiles.st/beta22/1e34db7bc4a490dbdaa5/Oppenheimer.2023.2160p.PROPER.IMAX.HYBRID.UHD.REMUX.DV.HDR10_.TrueHD.7.1.Atmos.mkv",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (Fileditch)",
+            }
+        ],
+        "count": 1,
+    },
 ]

@@ -154,6 +154,6 @@ def _extract_dl_url(soup: bs4.BeautifulSoup) -> AbsoluteHttpURL:
 def _parse_url_parts(js_array: str) -> AbsoluteHttpURL:
     parts: list[str] = json.loads(js_array)
     url = parse_url("".join(parts), trim=False)
-    if not (url.query.get("md5") and url.query.get("expires")):
+    if not ((url.query.get("md5") and url.query.get("expires")) or (url.query.get("exp") and url.query.get("sig"))):
         raise ValueError(url)
     return url
