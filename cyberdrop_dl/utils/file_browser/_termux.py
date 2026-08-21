@@ -49,7 +49,7 @@ class AndroidActivityManagerBrowser(webbrowser.UnixBrowser):
             return False
 
 
-@dataclasses.dataclass(slots=True, frozen=True, order=True)
+@dataclasses.dataclass(slots=True, frozen=True, order=True, kw_only=True)
 class FileManager:
     name: str
     package_name: str

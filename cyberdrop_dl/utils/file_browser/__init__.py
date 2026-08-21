@@ -31,6 +31,9 @@ _web_browsers = (
 )
 
 
+logger.setLevel(logging.DEBUG if (env.DEBUG_MODE or env.RUNNING_IN_TERMUX) else logging.ERROR)
+
+
 def get_file_browsers() -> Mapping[str, webbrowser.BaseBrowser]:
     if not _loaded:
         _register_file_browsers()
@@ -56,6 +59,7 @@ def _register_file_browsers() -> None:
         _FILE_BROWSERS.update(
             (fm.package_name, AndroidActivityManagerBrowser(fm.package_name, fm.activity))
             for fm in ANDROID_FILE_MANAGERS
+            if not fm.skip
         )
 
     _loaded = True
@@ -64,11 +68,19 @@ def _register_file_browsers() -> None:
 def open_folder(path: Path) -> bool:
     assert path.is_dir()
     uri = str(path)
-    input(tuple(get_file_browsers()))
-    for name, browser in get_file_browsers().items():
-        logger.debug("Trying to open '%s' with '%s'", uri, name)
+    file_browsers = get_file_browsers()
+    if not file_browsers:
+        logger.error("Unable to find any file browser on the system")
+        return False
+
+    logger.debug("File browsers to try (%s): \n- %s", len(file_browsers), "\n- ".join(file_browsers))
+
+    logger.info("Opening '%s' with file explorer...", uri)
+    for name, browser in list(file_browsers.items()):
         if browser.open(uri, new=1, autoraise=True):
+            logger.info("Successfully opened '%s' with '%s'", uri, name)
             return True
+        del _FILE_BROWSERS[name]
 
     logger.error("Unable to open '%s' with any file browser", uri)
     return False
