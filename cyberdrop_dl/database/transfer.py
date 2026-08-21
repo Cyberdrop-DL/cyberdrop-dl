@@ -145,8 +145,11 @@ def run(db_path: Path, *, force: bool = False) -> None:
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
-    with sqlite3.connect(db_path) as probe:
+    probe = sqlite3.connect(db_path)
+    try:
         old_version = detect_version(probe)
+    finally:
+        probe.close()
 
     logger.info("Detected schema version: %s", old_version)
 
@@ -162,7 +165,8 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
     logger.debug("Creating new database at: %s", new_path)
     _create_new_database(new_path)
-    with sqlite3.connect(new_path) as new_conn:
+    new_conn = sqlite3.connect(new_path)
+    try:
         new_conn.execute("PRAGMA foreign_keys=OFF")
         new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
         try:
@@ -175,6 +179,8 @@ def run(db_path: Path, *, force: bool = False) -> None:
             raise
         else:
             new_conn.commit()
+    finally:
+        new_conn.close()
 
     _apply_fixes(new_path)
     backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
