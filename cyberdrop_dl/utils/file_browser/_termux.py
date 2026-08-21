@@ -7,7 +7,7 @@ from typing import ClassVar
 from cyberdrop_dl import env
 
 
-class AndroidActivityManagerBrowser(webbrowser.BackgroundBrowser):
+class AndroidActivityManagerBrowser(webbrowser.GenericBrowser):
     USER_ID: ClassVar[str] = env.TERMUX.get("USER_ID", "0")
 
     def __init__(self, name: str, activity: str) -> None:
@@ -46,6 +46,12 @@ ANDROID_FILE_MANAGERS = (
         skip="Can't take custom URI, always opens at /downloads",
     ),
     FileManager(
+        name="Solid Explorer",
+        package_name="pl.solidexplorer2",
+        activity="pl.solidexplorer.SolidExplorer",
+        url="https://play.google.com/store/apps/details?id=pl.solidexplorer2",
+    ),
+    FileManager(
         name="Mixplorer",
         package_name="com.mixplorer",
         activity="com.mixplorer.activities.BrowseActivity",
@@ -62,11 +68,5 @@ ANDROID_FILE_MANAGERS = (
         package_name="com.sec.android.app.myfiles",
         activity="com.sec.android.app.myfiles.ui.MultiInstanceLaunchActivity",
         url="https://play.google.com/store/apps/details?id=com.sec.android.app.myfiles",
-    ),
-    FileManager(
-        name="Solid Explorer",
-        package_name="pl.solidexplorer2",
-        activity="pl.solidexplorer.SolidExplorer",
-        url="https://play.google.com/store/apps/details?id=pl.solidexplorer2",
     ),
 )
