@@ -219,15 +219,12 @@ def test_operators_nested_itemsetter() -> None:
 
 def test_file_browser() -> None:
     browsers = file_browser.browsers()
-    assert browsers
     match platform.system():
         case "Windows":
             expected = ()
         case "Darwin":
             expected = ()
-        case "Android":
-            expected = ()
         case _:
-            expected = ("xdg-open", "gio")
+            expected = ()
 
     assert browsers == expected

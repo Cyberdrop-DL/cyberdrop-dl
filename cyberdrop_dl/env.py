@@ -17,9 +17,7 @@ def _env(name: str, *, censor: bool = False) -> str | None:
     return value
 
 
-RUNNING_IN_TERMUX = bool(
-    os.getenv("TERMUX_VERSION") or os.getenv("TERMUX_MAIN_PACKAGE_FORMAT") or "com.termux" in os.getenv("$PREFIX", "")
-)
+RUNNING_IN_TERMUX = bool(os.getenv("TERMUX_VERSION") or "com.termux" in os.getenv("PREFIX", sys.prefix))
 FORCE_PORTRAIT_MODE = bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
 
 
@@ -45,6 +43,11 @@ EDITOR = os.getenv("EDITOR")
 
 ENABLE_TWITTER = bool(_env("ENABLE_TWITTER"))
 GOFILE_SALT = _env("GOFILE_SALT")
+TERMUX = {
+    k.removeprefix("TERMUX_APP_").removeprefix("TERMUX_").lstrip("_"): v
+    for k, v in os.environ.items()
+    if k.startswith("TERMUX_")
+}
 
 ALL_VARS = dict(sorted(ALL_VARS.items()))  # pyright: ignore[reportConstantRedefinition]
 ALL_VARS_RESOLVED = dict(
