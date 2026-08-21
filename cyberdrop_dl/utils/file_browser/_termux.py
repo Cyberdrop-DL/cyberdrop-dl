@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import webbrowser
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from cyberdrop_dl import env
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
 
 
 class AndroidActivityManagerBrowser(webbrowser.BackgroundBrowser):
@@ -73,8 +70,3 @@ ANDROID_FILE_MANAGERS = (
         url="https://play.google.com/store/apps/details?id=pl.solidexplorer2",
     ),
 )
-
-
-def load_file_explorers() -> Generator[AndroidActivityManagerBrowser]:
-    for explorer in ANDROID_FILE_MANAGERS:
-        yield AndroidActivityManagerBrowser(explorer.package_name, explorer.activity)

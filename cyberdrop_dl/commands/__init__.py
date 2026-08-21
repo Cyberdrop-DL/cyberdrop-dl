@@ -54,4 +54,4 @@ def open_folder(folder: Path) -> None:
 
     from cyberdrop_dl.utils import file_browser
 
-    file_browser.open_new(folder)
+    file_browser.open_folder(folder)
