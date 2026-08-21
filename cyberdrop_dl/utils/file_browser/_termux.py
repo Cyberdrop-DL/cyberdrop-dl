@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
+import subprocess
+import sys
 import webbrowser
-from typing import ClassVar
+from typing import ClassVar, override
 
 from cyberdrop_dl import env
 
 
-class AndroidActivityManagerBrowser(webbrowser.GenericBrowser):
+class AndroidActivityManagerBrowser(webbrowser.UnixBrowser):
     USER_ID: ClassVar[str] = env.TERMUX.get("USER_ID", "0")
 
     def __init__(self, name: str, activity: str) -> None:
@@ -25,6 +27,26 @@ class AndroidActivityManagerBrowser(webbrowser.GenericBrowser):
             "-d",
             "%s",
         ]
+
+    @override
+    def open(self, url: str, new: int = 0, autoraise: bool = True) -> bool:
+        cmdline = [self.name] + [arg.replace("%s", url) for arg in self.args]
+        sys.audit("webbrowser.open", url)
+        try:
+            p = subprocess.Popen(
+                cmdline,
+                close_fds=True,
+                start_new_session=True,
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+            )
+            try:
+                return not p.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                return True
+        except OSError:
+            return False
 
 
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
