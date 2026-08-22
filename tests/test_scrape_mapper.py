@@ -56,3 +56,10 @@ def test_skip_by_config() -> None:
     config.filters.skip_hosts.clear()
     config.filters.only_hosts = {"google.com"}
     assert scrape_mapper._skip_by_config(url, config) is True
+
+
+def test_best_match_does_not_use_substring_matches() -> None:
+    crawlers = {"anysex": "anysex", "sex.com": "sex.com"}
+
+    assert scrape_mapper._best_match(crawlers, "anysex.com") == "anysex"
+    assert scrape_mapper._best_match(crawlers, "www.sex.com") == "sex.com"

@@ -419,7 +419,14 @@ def _best_match[T](current_map: dict[str, T], domain: str) -> T | None:
         return found
 
     try:
-        best_match = max((host for host in current_map if host in domain), key=len)
+        best_match = max(
+            (
+                host
+                for host in current_map
+                if domain == host or domain.startswith(f"{host}.") or domain.endswith(f".{host}")
+            ),
+            key=len,
+        )
     except (ValueError, TypeError):
         return None
     else:
