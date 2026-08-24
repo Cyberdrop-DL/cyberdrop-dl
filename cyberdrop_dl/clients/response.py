@@ -210,25 +210,27 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
         raise ScrapeError(204, "Received empty HTML response")
 
-    @final
     async def json(
         self,
         encoding: str | None = None,
         content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
     ) -> Any:
+        self._check_json(content_type)
+        return json.loads(await self.text(encoding))
+
+    def _check_json(
+        self,
+        content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
+    ) -> None:
         if self.status == 204:
             raise ScrapeError(204)
 
-        if content_type:
-            if isinstance(content_type, str):
-                content_type = (content_type,)
+        if not content_type:
+            return
+        if isinstance(content_type, str):
+            content_type = (content_type,)
 
-            self.__check_content_type(*content_type, expecting="JSON")
-
-        return await self._json(encoding)
-
-    async def _json(self, encoding: str | None = None) -> Any:
-        return json.loads(await self.text(encoding))
+        self.__check_content_type(*content_type, expecting="JSON")
 
     @final
     def create_report(self, exc: Exception | None = None, **extras: Any) -> str:
@@ -271,13 +273,35 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     @override
     async def aclose(self) -> None: ...
 
-    @override
-    async def _json(self, encoding: str | None = None) -> Any:
-        if self._text:
-            return json.loads(self._text)
+    async def json(
+        self,
+        encoding: str | None = None,  # noqa: ARG002
+        content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
+    ) -> Any:
+        content = self._text
+        if not content:
+            # Resp content is alredy parsed json (Not a string)
+            assert "json" in self.content_type
+            return self._resp.content
 
-        assert "json" in self.content_type
-        return self._resp.content
+        try:
+            try:
+                data = json.loads(content)
+            except ValueError:
+                if "html" not in self.content_type:
+                    raise
+                content = BeautifulSoup(content, "html.parser").text
+                data = json.loads(content)
+
+            logger.warning(
+                "Detected wrapped JSON in Flaresolverr response %s, overriding content type to %s",
+                self.id,
+                content := "application/json",
+            )
+            self.content_type = content
+            return data
+        finally:
+            self._check_json(content_type)
 
     def _get_content(self) -> Any:
         return super()._get_content() or self._resp.content
