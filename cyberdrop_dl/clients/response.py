@@ -280,7 +280,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     ) -> Any:
         content = self._text
         if not content:
-            # Resp content is alredy parsed json (Not a string)
+            # Resp content is already parsed JSON (Not a string)
             assert "json" in self.content_type
             return self._resp.content
 
