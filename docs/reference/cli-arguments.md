@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.4.0
+cyberdrop-dl v10.6.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.4.0
+cyberdrop-dl v10.6.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -275,6 +275,7 @@ Download URLs
 │ --before                             Only download files uploaded before this date               │
 │ --after                              Only download files uploaded after this date                │
 │ --filename-regex                     Only download files that match this regex                   │
+│ --filename-regex-exclude             Do NOT download files that match this regex                 │
 │ --only-hosts                         Only scrape/download from these domains                     │
 │                                      [default: {}]                                               │
 │ --skip-hosts                         Skip scrape/download from these domains                     │
@@ -301,6 +302,8 @@ Download URLs
 │ --jdownloader.enabled --jdownloader  Send unsupported URLs to Jdownloader                        │
 │   --jdownloader.no-enabled           [default: False]                                            │
 │   --no-jdownloader                                                                               │
+│ --jdownloader.deprecated-api         HTTP URL of a local JDownloader instance to connect to via  │
+│                                      their deprecated API (insecure, default port=3128)          │
 │ --jdownloader.autostart              Immediately start downloads as soon as they are sent        │
 │   --jdownloader.no-autostart         [default: False]                                            │
 │ --jdownloader.download-folder        Output path for Jdownloader. Defaults to                    │
@@ -310,28 +313,33 @@ Download URLs
 │                                      [default: {}]                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Logs ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --logs.level                    Only log messages of this level or higher to the main log file   │
-│                                 [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]                 │
-│                                 [default: DEBUG]                                                 │
-│ --logs.console-level            Only log messages of this level or higher to the console. An     │
-│                                 empty or `None` value will use the same level as `log_level`     │
-│ --logs.files.main --log-file    Path of main log file                                            │
-│                                 [default: downloader.log]                                        │
-│ --logs.files.download-errors    Save download errors to this file (MUST BE .csv)                 │
-│                                 [default: download_errors.csv]                                   │
-│ --logs.files.scrape-errors      Save scrape errors to this file (MUST BE .csv)                   │
-│                                 [default: scrape_errors.csv]                                     │
-│ --logs.files.unsupported        Save unsupported URLs to this file (MUST BE .csv)                │
-│                                 [default: unsupported.csv]                                       │
-│ --logs.files.last-forum-post    Save the URL of the last scraped post from each thread to this   │
-│                                 file (MUST BE .csv)                                              │
-│                                 [default: last_forum_post.csv]                                   │
-│ --logs.folder                   Base folder to prepend to log files paths (if they are not       │
-│                                 absolute)                                                        │
-│ --logs.expire-after             Delete all log files inside `--logs.folder` if they are older    │
-│                                 that this                                                        │
-│ --logs.rotate --logs.no-rotate  Append current datetimme to every log file on each run           │
-│                                 [default: False]                                                 │
+│ --logs.level                         Only log messages of this level or higher to the main log   │
+│                                      file                                                        │
+│                                      [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]            │
+│                                      [default: DEBUG]                                            │
+│ --logs.console-level                 Only log messages of this level or higher to the console.   │
+│                                      An empty or `None` value will use the same level as         │
+│                                      `log_level`                                                 │
+│ --logs.http-traffic --print-traffic  Log HTTP requests and responses (at INFO level)             │
+│   --logs.no-http-traffic             [default: True]                                             │
+│   --no-print-traffic                                                                             │
+│ --logs.files.main --log-file         Path of main log file                                       │
+│                                      [default: downloader.log]                                   │
+│ --logs.files.download-errors         Save download errors to this file (MUST BE .csv)            │
+│                                      [default: download_errors.csv]                              │
+│ --logs.files.scrape-errors           Save scrape errors to this file (MUST BE .csv)              │
+│                                      [default: scrape_errors.csv]                                │
+│ --logs.files.unsupported             Save unsupported URLs to this file (MUST BE .csv)           │
+│                                      [default: unsupported.csv]                                  │
+│ --logs.files.last-forum-post         Save the URL of the last scraped post from each thread to   │
+│                                      this file (MUST BE .csv)                                    │
+│                                      [default: last_forum_post.csv]                              │
+│ --logs.folder                        Base folder to prepend to log files paths (if they are not  │
+│                                      absolute)                                                   │
+│ --logs.expire-after                  Delete all log files inside `--logs.folder` if they are     │
+│                                      older that this                                             │
+│ --logs.rotate --logs.no-rotate       Append current datetimme to every log file on each run      │
+│                                      [default: False]                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ MaxChildren ────────────────────────────────────────────────────────────────────────────────────╮
 │ --max-children.forum       Do not scrape more that this number of URLs inside a forum thread     │
@@ -349,6 +357,9 @@ Download URLs
 │   --no-dump-responses                responses are excluded)                                     │
 │                                      [default: False]                                            │
 │ --flaresolverr                       HTTP URL of an existing flaresolverr instance               │
+│ --flaresolverr-use-session           Create a custom session before making any request with      │
+│   --no-flaresolverr-use-session      flaresolverr                                                │
+│                                      [default: True]                                             │
 │ --proxy --http-proxy                 HTTP/HTTPS proxy                                            │
 │ --rate-limit                         Max number of requests per second (only used while          │
 │                                      scraping)                                                   │
