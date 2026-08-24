@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.4.0
+List of sites supported by cyberdrop-dl-patched as of version 10.6.0
 
 ### 1fichier
 
@@ -1919,6 +1919,8 @@ spreadsheets:
   - `/favorites?type=post|artist`
 - Post:
   - `/<service>/user/<user_id>/post/<post_id>`
+- Revision:
+  - `/<service>/user/<user_id>/post/<post_id>/revision/<revision_id>`
 - Search:
   - `/search?q=...`
 
@@ -2540,11 +2542,15 @@ spreadsheets:
 **Supported Paths**:
 
 - Photo:
+  - `/@/photo/<photo_id>`
   - `/@<user>/photo/<photo_id>`
+  - `/share/photo/<photo_id>`
 - User:
   - `/@<user>`
 - Video:
+  - `/@/video/<video_id>`
   - `/@<user>/video/<video_id>`
+  - `/share/video/<video_id>`
 
 ### TitsInTops
 
@@ -2930,6 +2936,21 @@ spreadsheets:
 - Video:
   - `/video-<video-id>`
 
+### Webmshare
+
+**Primary URL**: [https://webmshare.com](https://webmshare.com)
+
+**Supported Domains**: `webmshare.*`
+
+**Supported Paths**:
+
+- Search:
+  - `/results?q=<query>`
+- Video:
+  - `/<video_id>`
+  - `/download-webm/<video_id>`
+  - `/play/<video_id>`
+
 ### WeTransfer
 
 **Primary URL**: [https://wetransfer.com](https://wetransfer.com)
@@ -2956,11 +2977,11 @@ spreadsheets:
 **Supported Paths**:
 
 - Audio:
-  - `/tracks/<id>/...`
+  - `/tracks/<slug>-<id>`
 - Collection:
-  - `/collections/<collection_id>/<name>`
+  - `/collections/<slug>-<id>`
 - User:
-  - `/users/<id>/<name>`
+  - `/users/<slug>-<id>`
 
 ### Wikifeet
 
@@ -3117,7 +3138,8 @@ spreadsheets:
 - User Videos:
   - `/users/<user_name>/videos`
 - Video:
-  - `/videos/<title>`
+  - `/shorts/<slug>-<video_id>`
+  - `/videos/<slug>-<video_id>`
 
 ### XMegaDrive
 
