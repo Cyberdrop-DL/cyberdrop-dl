@@ -42,6 +42,7 @@ class Solution:
     url: AbsoluteHttpURL
     user_agent: str
     status: int
+    id: str = dataclasses.field(init=False, default="")
 
     @staticmethod
     def from_dict(solution: Mapping[str, Any]) -> Solution:
@@ -210,6 +211,8 @@ class Client:
                     try:
                         resp = Response.from_dict(resp_json)
                         resp.id = str(request_id)
+                        if resp.solution:
+                            resp.solution.id = resp.id
                     except (TypeError, KeyError) as e:
                         raise FlaresolverrError("Invalid response from Flaresolverr") from e
                     finally:

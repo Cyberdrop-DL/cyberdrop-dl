@@ -90,6 +90,8 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         default_factory=lambda: datetime.datetime.now(datetime.UTC).replace(microsecond=0),
     )
 
+    def __post_init__(self) -> None: ...
+
     def __repr__(self) -> str:
         return f"<{type(self).__name__} [{self.status}] ({self.url})>"
 
@@ -258,6 +260,10 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     __slots__ = ()
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.id: str = self._resp.id
+
     @override
     async def _read(self) -> bytes:
         return self._text.encode()
@@ -294,7 +300,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
                 data = json.loads(content)
 
             logger.warning(
-                "Detected wrapped JSON in Flaresolverr response %s, overriding content type to %s",
+                "Detected wrapped JSON in Flaresolverr response [id=%s], overriding content type to '%s'",
                 self.id,
                 content := "application/json",
             )
