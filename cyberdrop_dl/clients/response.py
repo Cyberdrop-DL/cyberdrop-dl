@@ -284,21 +284,24 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
         encoding: str | None = None,  # noqa: ARG002
         content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
     ) -> Any:
-        content = self._text
-        if not content:
+        if not self._text:
             # Resp content is already parsed JSON (Not a string)
             assert "json" in self.content_type
             return self._resp.content
 
         try:
-            try:
-                data = json.loads(content)
-            except ValueError:
-                if "html" not in self.content_type:
-                    raise
-                content = BeautifulSoup(content, "html.parser").text
-                data = json.loads(content)
+            return self._load_json(self._text)
+        finally:
+            self._check_json(content_type)
 
+    def _load_json(self, content: str) -> Any:
+        try:
+            return json.loads(content)
+        except ValueError:
+            if "html" not in self.content_type:
+                raise
+            content = BeautifulSoup(content, "html.parser").text
+            data = json.loads(content)
             logger.warning(
                 "Detected wrapped JSON in Flaresolverr response [id=%s], overriding content type to '%s'",
                 self.id,
@@ -306,8 +309,6 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
             )
             self.content_type = content
             return data
-        finally:
-            self._check_json(content_type)
 
     def _get_content(self) -> Any:
         return super()._get_content() or self._resp.content
