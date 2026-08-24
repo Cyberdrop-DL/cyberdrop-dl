@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New `--logs.http-traffic` option
+- New `--flaresolverr-use-session` option
 - Support direct local connection to JDownloader using their deprecated API
 - `wreq` as optional HTTP backend for browser impersonation (via the `wreq` extra)
 
@@ -37,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If scraping has already started, sending `SIGINT` (`Ctrl + C`) to the process will stop all scraping but will continue with post-runtime actions
   (sorting, hashing, send notifications, etc..). Press `Ctrl + C` again to force quit
 - Reduced the maximum size the log file can have to be sent as attachment in notifications, from 25 MB to 20 MB.
+
+### Fixed
+
+- Handle malformed JSON responses wrapped in HTML (Flaresolverr)
 
 ## [10.5.0] - 2026-08-15
 
