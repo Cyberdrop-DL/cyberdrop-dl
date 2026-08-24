@@ -16,7 +16,11 @@ pytestmark = pytest.mark.skipif(not FLARESOLVER_URL, reason=f"{ENV_NAME} environ
 @pytest.fixture
 async def flaresolverr() -> AsyncGenerator[Client]:
     async with aiohttp.ClientSession() as session:
-        yield Client(AbsoluteHttpURL(FLARESOLVER_URL) / "v1", session)
+        yield Client(
+            AbsoluteHttpURL(FLARESOLVER_URL) / "v1",
+            session,
+            use_session=True,
+        )
 
 
 def test_flaresolver(flaresolverr: Client) -> None:

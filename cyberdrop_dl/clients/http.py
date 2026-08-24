@@ -139,7 +139,11 @@ class HTTPClient:
     @property
     def flaresolverr(self) -> flaresolverr.Client | None:
         if self._flaresolverr is None and (url := self.config.network.flaresolverr):
-            self._flaresolverr = flaresolverr.Client(url, self._session)
+            self._flaresolverr = flaresolverr.Client(
+                url,
+                self._session,
+                use_session=self.config.network.flaresolverr_use_session,
+            )
         if self._flaresolverr and self._flaresolverr.is_down:
             return None
         return self._flaresolverr
