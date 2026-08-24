@@ -64,10 +64,10 @@ def run(manager: Manager, input_file: Path) -> RetrySource | Path:
 
 def _scan_and_create_hashes(manager: Manager) -> None:
     path = ask_dir("Select the directory to scan", default=manager.config.download_folder)
-    hasher = Hasher.create(manager.config, manager.database, path)
-    hash_stats = aio.run(hash_directory(hasher))
-    stats.print(hash_stats)
-    enter_to_continue()
+    with Hasher.create(manager.config, manager.database, path) as hasher:
+        hash_stats = aio.run(hash_directory(hasher))
+        stats.print(hash_stats)
+        enter_to_continue()
 
 
 def _sort_files(manager: Manager) -> None:

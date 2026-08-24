@@ -59,10 +59,12 @@ async def test_hash_directory_scanner(manager: Manager, expected_results: set[tu
 
     manager.config.download_folder.mkdir(parents=True)
     db_path = manager.appdata.db_file
-    await hash_directory(Hasher.create(manager.config, manager.database))
+    with Hasher.create(manager.config, manager.database) as hasher:
+        await hash_directory(hasher)
     assert not get_hashes(db_path)
     create_files(manager.config.download_folder, n_files)
-    await hash_directory(Hasher.create(manager.config, manager.database))
+    with Hasher.create(manager.config, manager.database) as hasher:
+        await hash_directory(hasher)
     results = get_hashes(db_path)
     assert len(results) == len(expected_results)
     assert results == expected_results
@@ -79,7 +81,8 @@ async def test_hash_directory_does_not_crash_with_subfolders(tmp_cwd: Path, mana
     for file in files:
         file.parent.mkdir(parents=True, exist_ok=True)
         file.touch()
-    await hash_directory(Hasher.create(manager.config, manager.database, hash_folder))
+    with Hasher.create(manager.config, manager.database, hash_folder) as hasher:
+        await hash_directory(hasher)
 
 
 @pytest.mark.parametrize(

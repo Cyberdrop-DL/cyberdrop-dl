@@ -5,6 +5,7 @@ import dataclasses
 import hashlib
 import logging
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, Self
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.database._db import Database
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
+logger = logging.getLogger(__name__)
+
 FileHashes = dict[str, dict[int, set[Path]]]
 
 _HASHERS: Final = {
@@ -30,9 +33,7 @@ _HASHERS: Final = {
     "sha256": hashlib.sha256,
 }
 _CHUNK_SIZE: Final = 1024 * 1024  # 1MB
-
-
-logger = logging.getLogger(__name__)
+_CONCURRENCY: Final = 20
 
 
 def _compute_hash(file: Path, algorithm: Literal["xxh128", "md5", "sha256"]) -> str:
@@ -75,16 +76,27 @@ class Hasher:
     _sem: asyncio.BoundedSemaphore = dataclasses.field(
         init=False,
         repr=False,
-        default_factory=lambda: asyncio.BoundedSemaphore(20),
+        default_factory=lambda: asyncio.BoundedSemaphore(_CONCURRENCY),
     )
     _hashed_items: set[tuple[str, ...]] = dataclasses.field(
         init=False,
         repr=False,
         default_factory=set,
     )
+    _pool: ThreadPoolExecutor = dataclasses.field(
+        init=False,
+        repr=False,
+        default_factory=lambda: ThreadPoolExecutor(max_workers=_CONCURRENCY, thread_name_prefix="hashing"),
+    )
 
     def __post_init__(self) -> None:
         self.tui = HashingUI(self.path)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_) -> None:
+        self._pool.shutdown(wait=True)
 
     @classmethod
     def create(cls, config: Config, db: Database, path: Path | None = None) -> Self:
@@ -100,7 +112,12 @@ class Hasher:
 
     async def hash_file(self, filename: Path | str, hash_type: Literal["xxh128", "md5", "sha256"]) -> str:
         file_path = self._cwd / filename
-        return await asyncio.to_thread(_compute_hash, file_path, hash_type)
+        return await asyncio.get_running_loop().run_in_executor(
+            self._pool,
+            _compute_hash,
+            file_path,
+            hash_type,
+        )
 
     async def hash_item(self, media_item: MediaItem) -> None:
         if media_item.is_segment:

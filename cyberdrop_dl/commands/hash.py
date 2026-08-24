@@ -24,9 +24,9 @@ async def compute_hashes(
     db_file = cli.database_file if cli else None
     extra_hashes = _choose_hash_algos(hashes, cli)
     database = Database(db_file or AppData.default().db_file)
-    hasher = Hasher(extra_hashes, database, folder)  # pyright: ignore[reportArgumentType]
-    hash_stats = await hash_directory(hasher)
-    stats.print(hash_stats)
+    with Hasher(extra_hashes, database, folder) as hasher:  # pyright: ignore[reportArgumentType]
+        hash_stats = await hash_directory(hasher)
+        stats.print(hash_stats)
 
 
 def _choose_hash_algos(

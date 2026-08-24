@@ -61,13 +61,14 @@ class Manager:
         self.database: Database
         self.deduper: Czkawka
         self.sorter: Sorter
+        self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
     __repr__ = simple_repr("cli_args", "_config", "http_client", "download_client")
 
     @property
     def hasher(self) -> Hasher:
         if self._hasher is None:
-            self._hasher = Hasher.create(self.config, self.database)
+            self._hasher = self.exit_stack.enter_context(Hasher.create(self.config, self.database))
         return self._hasher
 
     @property
@@ -93,6 +94,7 @@ class Manager:
         self.deduper = Czkawka.from_manager(self)
         self.sorter = Sorter.from_config(self.config)
         with (
+            self.exit_stack,
             cache_context(self.appdata.cache_file, self.cache),
             enter_context(REFRESH_RATE, self.config.ui.refresh_rate),
             enter_context(TUI_DISABLED, self.config.ui.mode.is_disabled),
