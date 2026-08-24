@@ -21,7 +21,8 @@ def request_json(url: str) -> Any:
 
 @pytest.fixture(scope="session")
 def post_resp() -> dict[str, Any]:
-    return request_json("https://pawchive.pw/api/v1/patreon/user/3295915/post/129540190")
+    resp = request_json("https://pawchive.pw/api/v1/patreon/user/3295915/post/129540190/revisions")
+    return next(p for p in resp if p["revision_id"] == 59409)
 
 
 @pytest.fixture(scope="session")
