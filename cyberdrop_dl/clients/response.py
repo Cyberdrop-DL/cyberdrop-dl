@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import dataclasses
 import datetime
 import json
-import logging
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from types import MappingProxyType
@@ -17,7 +17,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
 from typing_extensions import TypeVar
 
-from cyberdrop_dl.clients import wreq
+from cyberdrop_dl.clients import get_logger, wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -35,7 +35,7 @@ else:
         class CurlResponse: ...
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _ResponseT = TypeVar(
     "_ResponseT",
@@ -285,7 +285,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
         content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
     ) -> Any:
         if not self._text:
-            # Resp content is already parsed JSON (Not a string)
+            # Resp content is already parsed JSON
             assert "json" in self.content_type
             return self._resp.content
 
@@ -294,20 +294,24 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
         finally:
             self._check_json(content_type)
 
-    def _load_json(self, content: str) -> Any:
+    def _load_json(self, text: str) -> Any:
         try:
-            return json.loads(content)
+            return json.loads(text)
         except ValueError:
             if "html" not in self.content_type:
                 raise
-            content = BeautifulSoup(content, "html.parser").text
-            data = json.loads(content)
+            text = BeautifulSoup(text, "html.parser").text
+            data = json.loads(text)
+            self.content_type = "application/json"
+            self._text = text
+            self._resp.content = copy.deepcopy(data)
             logger.warning(
                 "Detected wrapped JSON in Flaresolverr response [id=%s], overriding content type to '%s'",
                 self.id,
-                content := "application/json",
+                self.content_type,
             )
-            self.content_type = content
+            logger.traffic("Content from Flaresolver request [id=%s]\n%s", self.id, {"content": self._resp.content})
+
             return data
 
     def _get_content(self) -> Any:
