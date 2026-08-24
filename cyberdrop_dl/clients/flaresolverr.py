@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import dataclasses
 import itertools
 import time
@@ -20,7 +19,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
 
 logger = get_logger(__name__)
@@ -43,6 +42,7 @@ class Solution:
     url: AbsoluteHttpURL
     user_agent: str
     status: int
+    id: str = dataclasses.field(init=False, default="")
 
     @staticmethod
     def from_dict(solution: Mapping[str, Any]) -> Solution:
@@ -104,6 +104,7 @@ class Client:
 
     url: AbsoluteHttpURL
     _aiohttp_session: aiohttp.ClientSession = dataclasses.field(repr=False)
+    use_session: bool
 
     _session_id: str = dataclasses.field(init=False, default="")
     _session_lock: asyncio.Lock = dataclasses.field(init=False, default_factory=asyncio.Lock)
@@ -126,20 +127,18 @@ class Client:
         except Exception as e:  # noqa: BLE001
             logger.error(f"Unable to destroy flaresolver session ({e}!r)")
 
-    @contextlib.contextmanager
-    def _disable_on_error(self) -> Generator[None]:
-        try:
-            yield
-        except Exception:
-            if not self._down:
-                self._down = True
-                logger.warning("Flaresolverr has been disabled")
-            raise
+    def disable(self) -> None:
+        if not self._down:
+            self._down = True
+            logger.warning("Flaresolverr has been disabled")
 
     async def _ensure_session(self) -> None:
         msg = "Unable to create Flaresolverr session"
         if self._down:
             raise FlaresolverrError(msg)
+
+        if not self.use_session:
+            return
 
         if self._session_id:
             return
@@ -149,25 +148,32 @@ class Client:
                 return
 
             try:
-                with self._disable_on_error():
-                    await self._create_session()
-            except aiohttp.ClientConnectionError as e:
+                await self._create_session()
+            except aiohttp.ClientError as e:
+                self.disable()
                 raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
+            except FlaresolverrError:
+                self.disable()
+                raise
             except Exception as e:
+                self.disable()
                 raise FlaresolverrError(msg) from e
 
     async def request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
         await self._ensure_session()
         try:
-            resp = await self._request(
-                Command.POST_REQUEST if data else Command.GET_REQUEST,
-                url=str(url),
-                data=data,
-                session=self._session_id,
-            )
+            return await self.raw_request(url, data)
+        except aiohttp.ClientError as e:
+            self.disable()
+            raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
 
-        except (TypeError, KeyError) as e:
-            raise FlaresolverrError("Invalid response from Flaresolverr") from e
+    async def raw_request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
+        resp = await self._request(
+            Command.POST_REQUEST if data else Command.GET_REQUEST,
+            url=str(url),
+            data=data,
+            session=self._session_id,
+        )
 
         if not resp.ok:
             raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
@@ -184,6 +190,8 @@ class Client:
 
         #  timeout in milliseconds (60s)
         params = {"cmd": str(command), "maxTimeout": 60_000} | params
+        if not self.use_session:
+            params.pop("session", None)
 
         if data:
             assert command is Command.POST_REQUEST
@@ -203,6 +211,10 @@ class Client:
                     try:
                         resp = Response.from_dict(resp_json)
                         resp.id = str(request_id)
+                        if resp.solution:
+                            resp.solution.id = resp.id
+                    except (TypeError, KeyError) as e:
+                        raise FlaresolverrError("Invalid response from Flaresolverr") from e
                     finally:
                         logger.traffic(
                             "Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json)

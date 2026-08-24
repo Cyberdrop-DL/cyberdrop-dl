@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 from cyberdrop_dl.clients.flaresolverr import Solution, _parse_cookies
 from cyberdrop_dl.clients.response import _FlareSolverrResponse, _infer_content_type_from_body
@@ -9,7 +10,7 @@ from cyberdrop_dl.clients.response import _FlareSolverrResponse, _infer_content_
 # Fixtures: example FlareSolverr JSON responses
 # ---------------------------------------------------------------------------
 
-FLARESOLVERR_RESPONSE_EMPTY_HEADERS = {
+FLARESOLVERR_RESPONSE_EMPTY_HEADERS: dict[str, Any] = {
     "status": "ok",
     "message": "Challenge solved!",
     "solution": {
@@ -36,7 +37,34 @@ FLARESOLVERR_RESPONSE_EMPTY_HEADERS = {
     "version": "3.4.6",
 }
 
-FLARESOLVER_RESP_JSON = {
+FLARESOLVER_RESP_JSON_WRAPPED_IN_HTML: dict[str, Any] = {
+    "status": "ok",
+    "message": "Challenge solved!",
+    "solution": {
+        "url": "https://www.tikwm.com/api/user/posts?unique_id=user_embongngo&count=50&cursor=0",
+        "status": 200,
+        "cookies": [
+            {
+                "domain": ".tikwm.com",
+                "expiry": 1819086364,
+                "httpOnly": True,
+                "name": "cf_clearance",
+                "path": "/",
+                "sameSite": "None",
+                "secure": True,
+                "value": "uOF3vEc7QtZfPUB28qZfCy.GKmByEgAyDpoyO9EYfSU-1787550364-1.2.1.1-HzZDz",
+            }
+        ],
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "headers": {},
+        "response": '<html><head><meta name="color-scheme" content="light dark"><meta charset="utf-8"></head><body><pre>{"code":0,"msg":"success","processed_time":0.4496,"data":{}}</pre><div class="json-formatter-container"></div></body></html>',
+    },
+    "startTimestamp": 1787550355291,
+    "endTimestamp": 1787550367316,
+    "version": "3.4.6",
+}
+
+FLARESOLVER_RESP_JSON: dict[str, Any] = {
     "status": "ok",
     "message": "Challenge not detected!",
     "solution": {
@@ -277,3 +305,25 @@ async def test_flaresolverr_response_empty_body_and_empty_headers() -> None:
     solution = Solution.from_dict(solution_data)
     response = _FlareSolverrResponse.create(solution)
     assert response.content_type == ""
+
+
+async def test_flaresolverr_response_from_json_resp_wrapped_in_html() -> None:
+    solution = Solution.from_dict(FLARESOLVER_RESP_JSON_WRAPPED_IN_HTML["solution"])
+    resp = _FlareSolverrResponse.create(solution)
+    assert resp._text
+    assert resp.content_type == "text/html"
+    assert type(solution.content) is str
+    data = await resp.json()
+    assert type(data) is dict
+    assert resp.content_type == "application/json"
+    assert data == await resp.json()
+    assert data is not await resp.json()
+    assert type(solution.content) is dict
+    assert data == {
+        "code": 0,
+        "msg": "success",
+        "processed_time": 0.4496,
+        "data": {},
+    }
+    data["extra_key"] = 0
+    assert data != await resp.json()

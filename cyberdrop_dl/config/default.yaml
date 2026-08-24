@@ -156,6 +156,7 @@ network:
   connection_timeout: 15.0
   dump_responses: false
   flaresolverr: null
+  flaresolverr_use_session: true
   impersonate: null
   proxy: null
   rate_limit: 25.0

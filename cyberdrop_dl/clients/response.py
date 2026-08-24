@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import dataclasses
 import datetime
 import json
-import logging
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from types import MappingProxyType
@@ -17,7 +17,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from propcache import under_cached_property
 from typing_extensions import TypeVar
 
-from cyberdrop_dl.clients import wreq
+from cyberdrop_dl.clients import get_logger, wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -35,7 +35,7 @@ else:
         class CurlResponse: ...
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _ResponseT = TypeVar(
     "_ResponseT",
@@ -89,6 +89,8 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
         compare=False,
         default_factory=lambda: datetime.datetime.now(datetime.UTC).replace(microsecond=0),
     )
+
+    def __post_init__(self) -> None: ...
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} [{self.status}] ({self.url})>"
@@ -210,25 +212,27 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
         raise ScrapeError(204, "Received empty HTML response")
 
-    @final
     async def json(
         self,
         encoding: str | None = None,
         content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
     ) -> Any:
+        self._check_json(content_type)
+        return json.loads(await self.text(encoding))
+
+    def _check_json(
+        self,
+        content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
+    ) -> None:
         if self.status == 204:
             raise ScrapeError(204)
 
-        if content_type:
-            if isinstance(content_type, str):
-                content_type = (content_type,)
+        if not content_type:
+            return
+        if isinstance(content_type, str):
+            content_type = (content_type,)
 
-            self.__check_content_type(*content_type, expecting="JSON")
-
-        return await self._json(encoding)
-
-    async def _json(self, encoding: str | None = None) -> Any:
-        return json.loads(await self.text(encoding))
+        self.__check_content_type(*content_type, expecting="JSON")
 
     @final
     def create_report(self, exc: Exception | None = None, **extras: Any) -> str:
@@ -256,6 +260,10 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     __slots__ = ()
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.id: str = self._resp.id
+
     @override
     async def _read(self) -> bytes:
         return self._text.encode()
@@ -271,13 +279,39 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     @override
     async def aclose(self) -> None: ...
 
-    @override
-    async def _json(self, encoding: str | None = None) -> Any:
-        if self._text:
-            return json.loads(self._text)
+    async def json(
+        self,
+        encoding: str | None = None,  # noqa: ARG002
+        content_type: tuple[str, ...] | str | Literal[False] | None = ("text/plain", "json"),
+    ) -> Any:
+        if not self._text:
+            # Resp content is already parsed JSON
+            assert "json" in self.content_type
+            return self._resp.content
 
-        assert "json" in self.content_type
-        return self._resp.content
+        try:
+            return self._load_json(self._text)
+        finally:
+            self._check_json(content_type)
+
+    def _load_json(self, text: str) -> Any:
+        try:
+            return json.loads(text)
+        except ValueError:
+            if "html" not in self.content_type:
+                raise
+            text = BeautifulSoup(text, "html.parser").text
+            data = json.loads(text)
+            self.content_type = "application/json"
+            self._text = text
+            self._resp.content = copy.deepcopy(data)
+            logger.warning(
+                "Detected wrapped JSON in Flaresolverr response [id=%s], overriding content type to '%s'",
+                self.id,
+                self.content_type,
+            )
+            logger.traffic("Content from Flaresolverr request [id=%s]\n%s", self.id, {"content": self._resp.content})
+            return data
 
     def _get_content(self) -> Any:
         return super()._get_content() or self._resp.content

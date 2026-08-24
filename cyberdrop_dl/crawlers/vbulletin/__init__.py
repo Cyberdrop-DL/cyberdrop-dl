@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 from xml.etree import ElementTree as ET
 
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
@@ -55,16 +55,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
     VBULLETIN_THREAD_QUERY_PARAM: ClassVar[str] = "t"
     VBULLETIN_POST_QUERY_PARAM: ClassVar[str] = "p"
     VBULLETIN_API_ENDPOINT: ClassVar[AbsoluteHttpURL]
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        REQUIRED_FIELDS = ("VBULLETIN_LOGIN_COOKIE_NAME", "VBULLETIN_API_ENDPOINT")
-        for field_name in REQUIRED_FIELDS:
-            assert getattr(cls, field_name, None), f"Subclass {cls.__name__} must override: {field_name}"
-        # TODO: Use the same name for these classvars across all crawlers
-        cls.XF_USER_COOKIE_NAME = cls.VBULLETIN_LOGIN_COOKIE_NAME
-        cls.XF_PAGE_URL_PART_NAME = "page"
-        cls.XF_POST_URL_PART_NAME = "post"
+    POST_URL_PART_NAME: ClassVar[str] = "post"
+    PAGE_URL_PART_NAME: ClassVar[str] = "page"
 
     async def __async_post_init__(self) -> None:
         if not self._logged_in:
@@ -98,7 +90,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
 
     async def _posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ET.Element[str]) -> None:
         if thread.page:
-            posts = itertools.islice(root_xml.iter("post"), (thread.page - 1) * _N_POSTS_PER_PAGE)
+            posts = itertools.islice(root_xml.iter("post"), (thread.page - 1) * _N_POSTS_PER_PAGE, None)
         else:
             posts = root_xml.iter("post")
 

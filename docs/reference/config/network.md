@@ -70,6 +70,17 @@ This wiki does not cover flaresolverr setup process. If you need help, refer to 
 See: [How to extract cookies (DDoSGuard or login errors) #839](https://github.com/Cyberdrop-DL/cyberdrop-dl/discussions/839) for alternatives using cookies
 {% endhint %}
 
+# `flaresolverr_use_session`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `true`  |
+
+Create a custom flaresolverr session that keeps cookies. This reduces the likelihood of CF challenges and speeds up requests since Flaresolverr won't
+have to launch a new browser instance on every new one.
+
+Set this to `false` if you are using a Flaresolverr fork that does not support the `sessions.create` command
+
 # `proxy`
 
 | Type                | Default |
@@ -193,11 +204,13 @@ If you use flaresolverr, this value **MUST** match with flaresolverr's user agen
 These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/<version>`
 
 <!-- START_CUSTOM_UA_CRAWLERS -->
+
 - Archive.org
 - E621
 - MegaNz
 - RealDebrid
 - Transfer.it
+
 <!-- END_CUSTOM_UA_CRAWLERS -->
 
 {% endhint %}

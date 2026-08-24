@@ -343,6 +343,9 @@ class Network(ConfigGroup):
     flaresolverr: FalsyAsNone[HttpURL] = None
     "HTTP URL of an existing flaresolverr instance"
 
+    flaresolverr_use_session: bool = True
+    "Create a custom session before making any request with flaresolverr"
+
     proxy: Annotated[FalsyAsNone[HttpURL], Parameter(alias=("http-proxy"))] = None
     "HTTP/HTTPS proxy"
 
