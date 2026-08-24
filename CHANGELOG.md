@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (sorting, hashing, send notifications, etc..). Press `Ctrl + C` again to force quit
 - Reduced the maximum size the log file can have to be sent as attachment in notifications, from 25 MB to 20 MB.
 
+### Fixed
+
+- All scrapes failing if running with `--dump-responses`
+
 ## [10.5.0] - 2026-08-15
 
 ### Added
