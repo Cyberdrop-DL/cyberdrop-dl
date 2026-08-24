@@ -310,8 +310,7 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
                 self.id,
                 self.content_type,
             )
-            logger.traffic("Content from Flaresolver request [id=%s]\n%s", self.id, {"content": self._resp.content})
-
+            logger.traffic("Content from Flaresolverr request [id=%s]\n%s", self.id, {"content": self._resp.content})
             return data
 
     def _get_content(self) -> Any:
