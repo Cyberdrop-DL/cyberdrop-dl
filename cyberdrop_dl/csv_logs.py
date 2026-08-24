@@ -158,6 +158,7 @@ def _write_resp_to_disk(
 ) -> None:
     ext = ".json" if "json" in response.content_type else ".html"
     file = _prepare_resp_file(folder, url, response.created_at, ext)
+    file.parent.mkdir(exist_ok=True)
     try:
         _ = file.write_text(response.create_report(exc), "utf8")
     except OSError as e:
