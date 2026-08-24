@@ -151,6 +151,9 @@ class Client:
             except aiohttp.ClientError as e:
                 self.disable()
                 raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
+            except FlaresolverrError:
+                self.disable()
+                raise
             except Exception as e:
                 self.disable()
                 raise FlaresolverrError(msg) from e
@@ -164,16 +167,12 @@ class Client:
             raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
 
     async def raw_request(self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None) -> Solution:
-        try:
-            resp = await self._request(
-                Command.POST_REQUEST if data else Command.GET_REQUEST,
-                url=str(url),
-                data=data,
-                session=self._session_id,
-            )
-
-        except (TypeError, KeyError) as e:
-            raise FlaresolverrError("Invalid response from Flaresolverr") from e
+        resp = await self._request(
+            Command.POST_REQUEST if data else Command.GET_REQUEST,
+            url=str(url),
+            data=data,
+            session=self._session_id,
+        )
 
         if not resp.ok:
             raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
@@ -211,6 +210,8 @@ class Client:
                     try:
                         resp = Response.from_dict(resp_json)
                         resp.id = str(request_id)
+                    except (TypeError, KeyError) as e:
+                        raise FlaresolverrError("Invalid response from Flaresolverr") from e
                     finally:
                         logger.traffic(
                             "Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json)
