@@ -797,6 +797,11 @@
           "$ref": "#/$defs/FalsyAsNone_HttpURL_",
           "default": null
         },
+        "flaresolverr_use_session": {
+          "default": true,
+          "title": "Flaresolverr Use Session",
+          "type": "boolean"
+        },
         "proxy": {
           "$ref": "#/$defs/FalsyAsNone_HttpURL_",
           "default": null
