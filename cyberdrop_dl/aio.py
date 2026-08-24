@@ -99,6 +99,7 @@ class EagerTaskGroup(asyncio.TaskGroup):
 
 @dataclasses.dataclass(slots=True, eq=False)
 class TaskManager:
+    logs: EagerTaskGroup = dataclasses.field(default_factory=EagerTaskGroup)
     scrape: EagerTaskGroup = dataclasses.field(default_factory=EagerTaskGroup)
     downloads: EagerTaskGroup = dataclasses.field(default_factory=EagerTaskGroup)
 

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Literal, Self, override
 from cyberdrop_dl import aio, env, filepath, storage
 from cyberdrop_dl.constants import BlockedDomains
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, create_crawlers
+from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.models.validators import bytesize_to_str
@@ -104,6 +105,7 @@ class ScrapeMapper:
     task_mngr: aio.TaskManager = dataclasses.field(init=False, default_factory=aio.TaskManager)
     tui: ScrapingUI = dataclasses.field(init=False, default_factory=ScrapingUI)
 
+    logs: CSVLogsManager = dataclasses.field(init=False)
     _direct_http: DirectHttpFileCrawler = dataclasses.field(init=False)
     _jdownloader: JDownloader = dataclasses.field(init=False)
     _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
@@ -142,6 +144,7 @@ class ScrapeMapper:
         self._jdownloader = JDownloader.from_config(self.manager.config)
         self._real_debrid = RealDebridCrawler(self.manager, self.task_mngr, self.tui)
         self._factory = CrawlerFactory(self.manager, self.task_mngr, self.tui)
+        self.logs = CSVLogsManager.from_config(self.manager.config, self.task_mngr.logs)
         self.tui.scrape.get_queue = self._scrape_queue
         self.tui.downloads.get_queue = self._download_queue
 
@@ -164,6 +167,7 @@ class ScrapeMapper:
         from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
 
         assert not self.task_mngr.scrape.done.is_set()
+        self.logs.delete_old_logs()
         config = self.manager.config
         _ = filepath.MAX_FILE_LEN.set(config.max_file_name_length)
         _ = filepath.MAX_FOLDER_LEN.set(config.max_folder_name_length)
@@ -179,12 +183,16 @@ class ScrapeMapper:
         logger.debug("Using %s as chunk size", bytesize_to_str(self.manager.download_client.chunk_size))
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
         self.tui.mode = self.manager.config.ui.mode
+
+        if config.network.dump_responses:
+            self.manager.http_client.request_done_callback = self.logs.write_response
+
         ## IMPORTANT: Order of each context matters!
         with self.__cancel_context():
             async with (
                 self.manager.http_client,
                 storage.monitor(config.min_free_space),
-                self.manager.logs.task_group,
+                self.task_mngr.logs,
                 self.task_mngr.downloads,
                 self.task_mngr.scrape,
             ):
@@ -279,7 +287,7 @@ class ScrapeMapper:
             return
 
         logger.warning(f"Unsupported URL: {scrape_item.url}")
-        self.manager.logs.write_unsupported(scrape_item.url, scrape_item.parents[0] if scrape_item.parents else None)
+        self.logs.write_unsupported(scrape_item.url, scrape_item.parents[0] if scrape_item.parents else None)
         self.tui.scrape_errors.add_unsupported()
 
     async def _send_to_jdownloader(self, scrape_item: ScrapeItem) -> bool:
@@ -289,7 +297,7 @@ class ScrapeMapper:
         except JDownloaderError as e:
             logger.error(f"Failed to send {scrape_item.url} to JDownloader\n{e.message}")
             origin = scrape_item.parents[0] if scrape_item.parents else None
-            self.manager.logs.write_unsupported(scrape_item.url, origin)
+            self.logs.write_unsupported(scrape_item.url, origin)
             return False
         else:
             return True

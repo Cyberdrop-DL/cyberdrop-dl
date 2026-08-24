@@ -14,7 +14,6 @@ from cyberdrop_dl.clients.downloads import DownloadClient
 from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.config.appdata import AppData
-from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
@@ -54,11 +53,8 @@ class Manager:
 
         self._completed_downloads: list[MediaItem] = []
         self._hasher: Hasher | None = None
-        self.logs: CSVLogsManager = CSVLogsManager.from_config(self.config)
 
         self.http_client = HTTPClient(self.config)
-        if self.config.network.dump_responses:
-            self.http_client.request_done_callback = self.logs.write_response
 
         self.download_client: DownloadClient = DownloadClient(self)
         self.scrape_mapper: ScrapeMapper
@@ -89,8 +85,6 @@ class Manager:
     def __resolve_paths(self) -> None:
         self.appdata.mkdirs()
         self.config.resolve_paths()
-        self.logs = CSVLogsManager.from_config(self.config)
-        self.logs.delete_old_logs()
 
     @contextlib.contextmanager
     def __call__(self) -> Generator[Self]:

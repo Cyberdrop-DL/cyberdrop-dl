@@ -427,7 +427,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
                     scrape_item.add_children()
         finally:
             if post_url and post_url != thread.url:
-                self.manager.logs.write_last_forum_post(post_url)
+                self.manager.scrape_mapper.logs.write_last_forum_post(post_url)
 
     def _iter_posts(self, thread: ThreadProtocol, soup: BeautifulSoup) -> Generator[ForumPost]:
         for article in soup.select(self.SELECTORS.posts.article):

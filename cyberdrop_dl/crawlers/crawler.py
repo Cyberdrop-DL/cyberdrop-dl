@@ -616,7 +616,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         if not self.config.dump_json:
             return
 
-        await self.manager.logs.write_jsonl([media_item.serialize()])
+        await self.manager.scrape_mapper.logs.write_jsonl([media_item.serialize()])
 
     @final
     async def check_complete(self, url: AbsoluteHttpURL, referer: AbsoluteHttpURL | None = None) -> bool:

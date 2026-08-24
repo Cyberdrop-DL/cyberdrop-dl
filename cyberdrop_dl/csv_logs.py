@@ -39,11 +39,22 @@ class CSVFiles:
 
     __iter__ = DictDataclass.__iter__
 
+    @classmethod
+    def from_config(cls, config: Config) -> Self:
+        files = config.logs.files
+        return cls(
+            unsupported_urls=files.unsupported,
+            download_errors=files.download_errors,
+            scrape_errors=files.scrape_errors,
+            jsonl_file=files.jsonl_file,
+            last_forum_post=files.last_forum_post,
+        )
+
 
 @dataclasses.dataclass(slots=True)
 class CSVLogsManager:
     files: CSVFiles
-    task_group: asyncio.TaskGroup = dataclasses.field(init=False, default_factory=asyncio.TaskGroup)
+    task_group: asyncio.TaskGroup
     _file_locks: dict[Path, asyncio.Lock] = dataclasses.field(
         init=False, default_factory=lambda: defaultdict(asyncio.Lock)
     )
@@ -55,17 +66,8 @@ class CSVLogsManager:
         self._responses_folder = self.files.jsonl_file.parent / "cdl_responses"
 
     @classmethod
-    def from_config(cls, config: Config) -> Self:
-        files = config.logs.files
-        return cls(
-            CSVFiles(
-                unsupported_urls=files.unsupported,
-                download_errors=files.download_errors,
-                scrape_errors=files.scrape_errors,
-                jsonl_file=files.jsonl_file,
-                last_forum_post=files.last_forum_post,
-            )
-        )
+    def from_config(cls, config: Config, task_group: asyncio.TaskGroup) -> Self:
+        return cls(CSVFiles.from_config(config), task_group)
 
     def delete_old_logs(self) -> None:
         if self._ready:

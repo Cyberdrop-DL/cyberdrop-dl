@@ -217,7 +217,7 @@ def _log_scrape_error(
     origin: yarl.URL | Path | None,
 ) -> None:
     logger.error(f"Scrape Failed: {url} ({app_error.msg})", exc_info=exc)
-    self.manager.logs.write_scrape_error(url, app_error.csv_msg, origin)
+    self.manager.scrape_mapper.logs.write_scrape_error(url, app_error.csv_msg, origin)
     self.manager.scrape_mapper.tui.scrape_errors.add(app_error.ui_error)
 
 
@@ -232,7 +232,7 @@ def _log_dl_error(
         f"{self.log_prefix} Failed: {item.url} ({app_error.msg}) \n -> Referer: {item.referer}",
         exc_info=exc,
     )
-    self.manager.logs.write_download_error(item.url, item.referer, app_error.csv_msg, origin)
+    self.manager.scrape_mapper.logs.write_download_error(item.url, item.referer, app_error.csv_msg, origin)
     self.manager.scrape_mapper.tui.files.stats.failed += 1
     self.manager.scrape_mapper.tui.download_errors.add(app_error.ui_error)
 
