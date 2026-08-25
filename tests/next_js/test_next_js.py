@@ -55,12 +55,14 @@ def test_parse() -> None:
         assert value != next_js._Magic.ERROR
 
 
+@pytest.mark.xfail(reason="IP blocked in CI")
 def test_next_js_parser(next_data: next_js.NextJSFlight) -> None:
     assert isinstance(next_data, dict)
     assert next_data["1"] == "Sreact.fragment"
     assert len(next_data) > 10
 
 
+@pytest.mark.xfail(reason="IP blocked in CI")
 def test_next_js_find(next_data: next_js.NextJSFlight) -> None:
     episode_keys = "slug", "title", "playlistGroups"
     ep = next_js.find(next_data, *episode_keys)
