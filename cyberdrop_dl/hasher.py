@@ -84,7 +84,7 @@ class Hasher:
             thread_name_prefix="hashing",
         )
 
-    __repr__ = simple_repr("path", "extra_hashes", "database")
+    __repr__ = simple_repr("path", "hashes", "database")
 
     def __enter__(self) -> Self:
         return self
