@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.6.1dev0"
+version = "10.6.1"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -25,7 +25,7 @@ dependencies = [
     "beautifulsoup4 >=4.15.0",
     "brotli >=1.2.0; implementation_name=='cpython' and sys_platform!='ios'",
     "cffi == 2.1.1",
-    "curl-cffi ==0.16.2.b1; implementation_name == 'cpython' ",
+    "curl-cffi ==0.16.2; implementation_name == 'cpython' ",
     "cyclopts==4.23.2",
     "idna>=3.18",
     "imagesize == 2.0.0",
