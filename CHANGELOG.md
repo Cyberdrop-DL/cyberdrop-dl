@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Hashing files no longer blocks the download queue. When a download reaches 100%, a slot is immediately available while hashes are computed in the background (if enabled)
-- Restore harcoded limit of 1 download per server (Bunkr)
+- Restore harcoded limit of 1 concurrent download per server (Bunkr)
 
 ### Fixed
 
