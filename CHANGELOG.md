@@ -22,6 +22,17 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.6.1] - 2026-08-25
+
+### Changed
+
+- Hashing files no longer blocks the download queue. When a download reaches 100%, a slot is immediately available while hashes are computed in the background (if enabled)
+- Restore harcoded limit of 1 download per server (Bunkr)
+
+### Fixed
+
+- All downloads freezing if too many files where currently hashing
+
 ## [10.6.0] - 2026-08-24
 
 ### Added
