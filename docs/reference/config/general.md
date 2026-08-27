@@ -89,11 +89,11 @@ Sanitize file/folder names according to the options in the list.
 
 ## `windows`
 
-remove all characters invalid on Windows: {'\\', '\', '|' ,'/', '<', '>', ':', '?', '*' }
+remove all characters invalid on Windows: {`\\`, `\`, `|` ,`/`, `<`, `>`, `:`, `?`, `*` }
 
 ## `unix`
 
-remove all characters invalid on Unix: {'/'}
+remove all characters invalid on Unix: {`/`}
 
 ## `ascii`:
 
@@ -103,7 +103,7 @@ remove all characters except ascii letters, underscores, and dots
 
 remove all unicode characters except letters, numbers and marks (categories: `C`, `N` and `M`). A few harcoded exception are still allowed:
 
-- { ` ` (literal space), `.`, `-`, `_`, `!`, `#`, `$`, `%`, `'`, `(`, `)`, `+`, `,`, `;`, `=`, `@`, `[`, `]`, `^`, `{`, `}`, `~`}
+- { ` ` (literal space `U+0020`), `.`, `-`, `_`, `!`, `#`, `$`, `%`, `'`, `(`, `)`, `+`, `,`, `;`, `=`, `@`, `[`, `]`, `^`, `{`, `}`, `~`}
 
 An empty list (the default) will use the default config according to the OS. Due to compatibility reasons, the default on Windows and macOS is [`windows`, `no_emoji`].
 The default on any other system is [`windows`]
