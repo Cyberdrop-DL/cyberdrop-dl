@@ -14,7 +14,7 @@ from cyberdrop_dl.exceptions import FileNameError, InvalidExtensionError, NoExte
 from cyberdrop_dl.signature import simple_repr
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
 _ALLOWED_FILEPATH_PUNCTUATION = " .-_!#$%'()+,;=@[]^{}~"
 _RAR_MULTIPART_PATTERN = r"^part\d+"
@@ -66,7 +66,7 @@ class PathSanitizer:
         return type(self)(self.banned_chars, *self.post_process, other)
 
     @classmethod
-    def resolve(cls, *names: Literal["unix", "windows", "no_emoji", "ascii"]) -> Self:
+    def resolve(cls, names: Iterable[Literal["unix", "windows", "no_emoji", "ascii"]]) -> Self:
         self = cls()
         for name in names:
             self = self | cls.create(name)

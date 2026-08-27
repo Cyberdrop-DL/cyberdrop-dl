@@ -109,9 +109,10 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
 
-    restrict_filenames: Annotated[
+    restrict_path: Annotated[
         tuple[Literal["unix", "windows", "no_emoji", "ascii"], ...],
         AfterValidator(remove_duplicates),
+        Parameter(alias="restrict-filenames"),
     ] = ()
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)

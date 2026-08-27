@@ -79,6 +79,39 @@ Maximum number of characters a folder should have. CDL will truncate folders lon
 max_folder_name_length: 60
 ```
 
+# `restrict_path`
+
+| Type                                            | Default |
+| ----------------------------------------------- | ------- |
+| list of 'windows','unix', 'ascii' or 'no_emoji' | []      |
+
+Sanitize file/folder names according to the options in the list.
+
+## `windows`
+
+remove all characters invalid on Windows: {'\\', '\', '|' ,'/', '<', '>', ':', '?', '*' }
+
+## `unix`
+
+remove all characters invalid on Unix: {'/'}
+
+## `ascii`:
+
+remove all characters except ascii letters, underscores, and dots
+
+## `no_emoji`:
+
+remove all unicode characters except letters, numbers and marks (categories: `C`, `N` and `M`). A few harcoded exception are still allowed:
+
+- { ` ` (literal space), `.`, `-`, `_`, `!`, `#`, `$`, `%`, `'`, `(`, `)`, `+`, `,`, `;`, `=`, `@`, `[`, `]`, `^`, `{`, `}`, `~`}
+
+An empty list (the default) will use the default config according to the OS. Due to compatibility reasons, the default on Windows and macOS is [`windows`, `no_emoji`].
+The default on any other system is [`windows`]
+
+```yaml
+restrict_path: []
+```
+
 # `min_free_space`
 
 | Type       | Default | Restrictions |
