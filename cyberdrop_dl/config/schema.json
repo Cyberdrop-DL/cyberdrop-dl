@@ -1392,6 +1392,20 @@
     "notifications": {
       "$ref": "#/$defs/Notifications"
     },
+    "restrict_path": {
+      "default": [],
+      "items": {
+        "enum": [
+          "unix",
+          "windows",
+          "no_emoji",
+          "ascii"
+        ],
+        "type": "string"
+      },
+      "title": "Restrict Path",
+      "type": "array"
+    },
     "sort": {
       "$ref": "#/$defs/Sort"
     },

@@ -170,6 +170,7 @@ network:
 notifications:
   apprise: []
   webhook: null
+restrict_path: []
 sort:
   enabled: false
   formats:
