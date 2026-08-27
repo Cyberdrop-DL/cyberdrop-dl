@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New `--restrict-path` option
 - New `--input-folder` option that scans all `.txt` within a folder for URLs (non recursive). URLs within the same file will create a group. The name of the group is the filename;
   Each group will be downloaded to their own subfolder within the downloads folder. See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/sorting#group-urls>
 - New `--input` option that accepts either a file or a folder
