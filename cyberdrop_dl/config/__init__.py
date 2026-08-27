@@ -14,7 +14,7 @@ from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
 from cyberdrop_dl.models import AdditiveArg, ConfigModel, merge_dicts, merge_models
 from cyberdrop_dl.models.types import ByteSizeSerilized  # noqa: TC001
-from cyberdrop_dl.models.validators import to_bytesize
+from cyberdrop_dl.models.validators import remove_duplicates, to_bytesize
 from cyberdrop_dl.utils import cleanup
 
 from .auth import Authentication, Notifications
@@ -109,6 +109,10 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     network: Network = Field(default_factory=Network)
     notifications: Notifications = Field(default_factory=Notifications)
 
+    restrict_filenames: Annotated[
+        tuple[Literal["unix", "windows", "no_emoji", "ascii"], ...],
+        AfterValidator(remove_duplicates),
+    ] = ()
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)
     ui: UIOptions = Field(default_factory=UIOptions)
