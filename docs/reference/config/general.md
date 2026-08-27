@@ -101,7 +101,7 @@ remove all characters except ascii letters, underscores, and dots
 
 ## `no_emoji`:
 
-remove all unicode characters except letters, numbers and marks (categories: `C`, `N` and `M`). A few harcoded exception are still allowed:
+remove all unicode characters except letters, numbers and marks (categories: `C`, `N` and `M`). A few harcoded exceptions are still allowed:
 
 - { ` ` (literal space `U+0020`), `.`, `-`, `_`, `!`, `#`, `$`, `%`, `'`, `(`, `)`, `+`, `,`, `;`, `=`, `@`, `[`, `]`, `^`, `{`, `}`, `~`}
 

@@ -399,4 +399,5 @@ def test_additive_args_list() -> None:
         ("filters", "skip_hosts"),
         ("hashing", "algorithms"),
         ("jdownloader", "whitelist"),
+        ("restrict_path",),
     )
