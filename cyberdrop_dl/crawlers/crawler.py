@@ -444,16 +444,16 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
         if lookup in self._scraped_items:
-            logger.info(f"Skipping {url} as it has already been scraped")
+            logger.info(f"Skipping {url} as it has already been scrapped")
             return
 
         self._scraped_items.add(lookup)
 
-        if check_referer and await self.check_complete_from_referer(url):
-            return
-
         if not self.__url_config__.allow_empty_path and url.path == "/":
             self.raise_exc(scrape_item, ScrapeError.unsupported())
+            return
+
+        if check_referer and await self.check_complete_from_referer(url):
             return
 
         async with self._semaphore:
