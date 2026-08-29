@@ -42,9 +42,10 @@ class Database:
         self._write_lock: asyncio.Lock = asyncio.Lock()
         self._stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
 
-        self.history: HistoryTable
-        self.hash: HashTable
-        self.schema: SchemaTable
+        self.history: HistoryTable = HistoryTable(self)
+        self.hash: HashTable = HashTable(self)
+        self.schema: SchemaTable = SchemaTable(self)
+
         self.conn: aiosqlite.Connection
         self.is_new: bool
 
@@ -53,9 +54,6 @@ class Database:
     async def _connect(self) -> None:
         self.is_new = not await aio.get_size(self.path)
         self.conn = await raw_connect(self.path)
-        self.history = HistoryTable(self.conn, self.ignore_history)
-        self.hash = HashTable(self.conn, self.ignore_history)
-        self.schema = SchemaTable(self.conn, self.ignore_history)
 
     async def _init_pool(self) -> None:
         async def new_conn() -> None:

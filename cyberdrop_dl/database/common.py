@@ -11,12 +11,17 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from pathlib import Path
 
+    from cyberdrop_dl.database._db import Database
+
 
 @dataclasses.dataclass(slots=True)
 class Table(ABC):
     NAME: ClassVar[str]
-    db_conn: aiosqlite.Connection
-    ignore_history: bool = False
+    db: Database
+
+    @property
+    def ignore_history(self) -> bool:
+        return self.db.ignore_history
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}(name={self.NAME!r})>"
@@ -30,8 +35,9 @@ class Table(ABC):
 
     async def exists(self) -> bool:
         query = "SELECT 1 FROM sqlite_master WHERE type='table' AND name= ? LIMIT 1;"
-        cursor = await self.db_conn.execute(query, (self.NAME,))
-        return await cursor.fetchone() is not None
+        async with self.db.reader() as db_conn:
+            cursor = await db_conn.execute(query, (self.NAME,))
+            return await cursor.fetchone() is not None
 
 
 async def raw_connect(path: Path) -> aiosqlite.Connection:

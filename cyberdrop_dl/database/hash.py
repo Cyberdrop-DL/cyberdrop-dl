@@ -24,23 +24,22 @@ class HashTable(Table, name="hash"):
     cwd: Path = dataclasses.field(init=False, default_factory=lambda: Path.cwd().expanduser().resolve())
 
     async def create(self) -> None:
-        for query in (
-            CREATE_FILES,
-            CREATE_HASH,
-            CREATE_HASH_INDEX,
-        ):
-            _ = await self.db_conn.execute(query)
+        async with self.db.writer() as db_conn:
+            for query in (CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX):
+                await db_conn.execute(query)
 
-        await self.db_conn.commit()
+            await db_conn.commit()
 
     async def get_file_hash_exists(self, path: Path | str, hash_type: str) -> str | None:
         query = "SELECT hash FROM hash WHERE folder= ? AND download_filename= ? AND hash_type= ? AND hash IS NOT NULL LIMIT 1;"
         path = self.cwd / path
         folder = str(path.parent)
         filename = path.name
-        cursor = await self.db_conn.execute(query, (folder, filename, hash_type))
-        if row := await cursor.fetchone():
-            return row["hash"]
+
+        async with self.db.reader() as db_conn:
+            cursor = await db_conn.execute(query, (folder, filename, hash_type))
+            if row := await cursor.fetchone():
+                return row["hash"]
 
     async def get_files_with_hash_matches(
         self,
@@ -79,7 +78,9 @@ class HashTable(Table, name="hash"):
               AND hash.hash_type = ?;
             """
 
-        rows = await self.db_conn.execute_fetchall(query, (hash_value, size, hash_algo))
+        async with self.db.reader() as db_conn:
+            rows = await db_conn.execute_fetchall(query, (hash_value, size, hash_algo))
+
         return cast("list[aiosqlite.Row]", rows)
 
     async def check_hash_exists(self, hash_type: str, hash_value: str) -> bool:
@@ -87,8 +88,9 @@ class HashTable(Table, name="hash"):
             return False
 
         query = "SELECT 1 FROM hash WHERE hash.hash_type = ? AND hash.hash = ? LIMIT 1;"
-        cursor = await self.db_conn.execute(query, (hash_type, hash_value))
-        return await cursor.fetchone() is not None
+        async with self.db.reader() as db_conn:
+            cursor = await db_conn.execute(query, (hash_type, hash_value))
+            return await cursor.fetchone() is not None
 
     async def insert_or_update_hash_db(
         self,
@@ -118,8 +120,9 @@ class HashTable(Table, name="hash"):
         full_path = self.cwd / file
         download_filename = full_path.name
         folder = str(full_path.parent)
-        await self.db_conn.execute(query, (hash_value, hash_type, folder, download_filename, hash_value))
-        await self.db_conn.commit()
+        async with self.db.writer() as db_conn:
+            await db_conn.execute(query, (hash_value, hash_type, folder, download_filename, hash_value))
+            await db_conn.commit()
 
     async def insert_or_update_file(
         self,
@@ -148,19 +151,20 @@ class HashTable(Table, name="hash"):
         stat = await aio.stat(full_path)
         file_size = stat.st_size
         file_date = int(stat.st_mtime)
-        await self.db_conn.execute(
-            query,
-            (
-                folder,
-                original_filename,
-                download_filename,
-                file_size,
-                referer_,
-                file_date,
-                original_filename,
-                file_size,
-                referer_,
-                file_date,
-            ),
-        )
-        await self.db_conn.commit()
+        async with self.db.writer() as db_conn:
+            await db_conn.execute(
+                query,
+                (
+                    folder,
+                    original_filename,
+                    download_filename,
+                    file_size,
+                    referer_,
+                    file_date,
+                    original_filename,
+                    file_size,
+                    referer_,
+                    file_date,
+                ),
+            )
+            await db_conn.commit()
