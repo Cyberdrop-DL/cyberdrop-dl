@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.6.0
+List of sites supported by cyberdrop-dl-patched as of version 10.7.0
 
 ### 1fichier
 
@@ -442,6 +442,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.6.0
   - `/video/<name>.<id>`
   - `/videos/<id>`
   - `/videos/<name>.<id>`
+
+### Clonr
+
+**Primary URL**: [https://clonr.co](https://clonr.co)
+
+**Supported Domains**: `clonr.*`
+
+**Supported Paths**:
+
+- Clone:
+  - `/<clone_id>`
 
 ### cloud.mail.ru
 
@@ -1899,7 +1910,8 @@ spreadsheets:
   - `/<creator>`
   - `/cw/<creator>`
 - Post:
-  - `/posts/<slug>`
+  - `/<creator>/posts/<slug>-<post-id>`
+  - `/posts/<slug>-<post-id>`
 
 ### Pawchive
 
