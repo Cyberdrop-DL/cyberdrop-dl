@@ -73,8 +73,9 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
+
 ```shell
-cyberdrop-dl v10.6.0
+cyberdrop-dl v10.7.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -95,7 +96,7 @@ Run 'cyberdrop-dl' without arguments to start the interactive TUI
 │ --version  Display application version.                                                          │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-file -i            Text/HTML file with URL(s) to download                                │
+│ --input-file --input -i    Text/HTML file with URL(s) to download                                │
 │ --config-file --config -c  YAML file to use as config                                            │
 │ --cache-file               JSON file to use as cache                                             │
 │ --database-file --db       SQLite file to use as database                                        │
@@ -106,7 +107,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.6.0
+cyberdrop-dl v10.7.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS]
@@ -117,7 +118,12 @@ Download URLs
 │ URLS  URL(s) to download                                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-file -i                     Text/HTML file with URL(s) to download                       │
+│ --input-file                        Text/HTML file with URL(s) to download                       │
+│ --input-folder                      Read all '.txt' within this folder for URL(s) to download    │
+│                                     (non recursive).                                             │
+│                                                 All URLs within the same file will be grouped in │
+│                                     the own subfolder (the filename) within the downloads folder │
+│ --input -i                          File/folder with URL(s) to download (non recursive)          │
 │ --config-file --config -c           YAML file to use as config                                   │
 │ --cache-file                        JSON file to use as cache                                    │
 │ --database-file --db                SQLite file to use as database                               │
@@ -155,6 +161,8 @@ Download URLs
 │ --mtime --no-mtime                  Use original upload date as modification date for downloaded │
 │                                     file                                                         │
 │                                     [default: True]                                              │
+│ --restrict-path                     [choices: unix, windows, no_emoji, ascii]                    │
+│   --restrict-filenames              [default: ()]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
 │ --crawlers.disabled                  Name of crawlers to disable for the current run             │
@@ -226,28 +234,36 @@ Download URLs
 │                                      [default: mp3-320]                                          │
 │ --crawlers.octave-music.filename-fo  Format to generate audio file                               │
 │   rmat                               [default: {artist} - {title}{ext}]                          │
+│ --crawlers.clonr.use-source          Ignore files in clone and process the original Mega.nz URL  │
+│   --crawlers.clonr.no-use-source     [default: False]                                            │
+│ --crawlers.clonr.zip                 Download entire clone as a single ZIP file                  │
+│   --crawlers.clonr.no-zip            [default: False]                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
-│ --downloads                     Max number of files to download simultaneously                   │
-│                                 [default: 15]                                                    │
-│ --downloads.per-domain          Max number of files to download simultaneously per domain        │
-│                                 [default: 5]                                                     │
-│ --attempts                      [default: 2]                                                     │
-│ --delay                         Number of seconds to wait before starting downloads              │
-│                                 [default: 0.0]                                                   │
-│ --slow-speed                    Skip downloads if their speed is below this value for more than  │
-│                                 10 seconds. Set to 0 to disable                                  │
-│                                 [default: 0]                                                     │
-│ --speed-limit                   Max speed rate (in bytes per second) to limit downloads          │
-│                                 (combined)                                                       │
-│                                 [default: 0]                                                     │
-│ --jitter                        Wait a random additional number of seconds in between 0 and      │
-│                                 <jitter> before downloads                                        │
-│                                 [default: 0]                                                     │
-│ --skip-and-mark-completed       Skip all downloads and mark them as downloaded on the database   │
-│   --no-skip-and-mark-completed  [default: False]                                                 │
-│ --concurrent-segments           Allow up to `<N>` HLS segments to be downloaded concurrently     │
-│                                 [default: 10]                                                    │
+│ --downloads                         Max number of files to download simultaneously               │
+│                                     [default: 15]                                                │
+│ --downloads.per-domain              Max number of files to download simultaneously per domain    │
+│                                     [default: 5]                                                 │
+│ --attempts                          [default: 2]                                                 │
+│ --delay                             Number of seconds to wait before starting downloads          │
+│                                     [default: 0.0]                                               │
+│ --slow-speed                        Skip downloads if their speed is below this value for more   │
+│                                     than 10 seconds. Set to 0 to disable                         │
+│                                     [default: 0]                                                 │
+│ --speed-limit                       Max speed rate (in bytes per second) to limit downloads      │
+│                                     (combined)                                                   │
+│                                     [default: 0]                                                 │
+│ --back-pressure --no-back-pressure  Throttle scrape requests if there are too many downloads     │
+│                                     queued for the same site                                     │
+│                                     [default: True]                                              │
+│ --jitter                            Wait a random additional number of seconds in between 0 and  │
+│                                     <jitter> before downloads                                    │
+│                                     [default: 0]                                                 │
+│ --skip-and-mark-completed           Skip all downloads and mark them as downloaded on the        │
+│   --no-skip-and-mark-completed      database                                                     │
+│                                     [default: False]                                             │
+│ --concurrent-segments               Allow up to `<N>` HLS segments to be downloaded concurrently │
+│                                     [default: 10]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Filters ────────────────────────────────────────────────────────────────────────────────────────╮
 │ --audio --no-audio                   Download/skip audio files                                   │
@@ -424,4 +440,5 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
+
 <!-- END_CLI_OVERVIEW -->

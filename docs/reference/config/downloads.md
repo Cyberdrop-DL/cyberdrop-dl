@@ -27,6 +27,10 @@ downloads:
   back_pressure: True
 ```
 
+{% hint style="warning" %}
+Disabling back_pressure will cause high memory usage and performance degradation if the number of URLs pending to be scrapped is high (1K+)
+{% endhint %}
+
 # `delay`
 
 | Type               | Default |
