@@ -22,7 +22,7 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.7.0] - UNRELEASED
+## [10.7.0] - 2026-08-29
 
 ### Added
 
@@ -39,11 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Increase limit of concurrent scrapes from the same site, from 20 to 40
 - Use multiple concurrent connections to the database for faster reads (up to 10)
 - Database will now operate in WAL mode, which may create additional temp files in the same folder as the database file (`.db-shm` and `.db-wal`)
+- Download preview of video assets (Patreon)
 
 ### Fixed
 
 - Clips downloads (Twitch)
 - Single post downloads (Patreon)
+- Download of image assets without name (Patreon)
 
 ## [10.6.1] - 2026-08-25
 
