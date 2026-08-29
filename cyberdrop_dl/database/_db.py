@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     import aiosqlite
 
 
-READ_POOL_SIZE = 4
+READ_POOL_SIZE = 10
 
 
 def _current_task() -> asyncio.Task[Any]:
