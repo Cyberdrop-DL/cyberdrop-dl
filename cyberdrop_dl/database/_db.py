@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import dataclasses
 from typing import TYPE_CHECKING, Any, Self
 
 from cyberdrop_dl import aio
@@ -30,7 +29,6 @@ def _current_task() -> asyncio.Task[Any]:
     return task
 
 
-@dataclasses.dataclass(slots=True)
 class Database:
     def __init__(self, path: Path, ignore_history: bool = False) -> None:  # noqa: FBT001, FBT002
         self.path: Path = path
@@ -45,6 +43,7 @@ class Database:
         self.history: HistoryTable = HistoryTable(self)
         self.hash: HashTable = HashTable(self)
         self.schema: SchemaTable = SchemaTable(self)
+        self._pool_ready: bool = False
 
         self.conn: aiosqlite.Connection
         self.is_new: bool
@@ -64,6 +63,8 @@ class Database:
         async with asyncio.TaskGroup() as tg:
             for _ in range(READ_POOL_SIZE):
                 tg.create_task(new_conn())
+
+        self._pool_ready = True
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncGenerator[aiosqlite.Connection]:
@@ -95,6 +96,10 @@ class Database:
 
     @contextlib.asynccontextmanager
     async def _reader(self) -> AsyncGenerator[aiosqlite.Connection]:
+        if not self._pool_ready:
+            yield self.conn
+            return
+
         task = _current_task()
         if self._writer_task == task:
             yield self.conn
