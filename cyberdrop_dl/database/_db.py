@@ -34,7 +34,7 @@ class Database:
         self.path: Path = path
         self.ignore_history: bool = ignore_history
 
-        self._readers: asyncio.Queue[aiosqlite.Connection] = asyncio.Queue()
+        self._readers: asyncio.Queue[aiosqlite.Connection] = asyncio.Queue(READ_POOL_SIZE)
         self._writer_task: asyncio.Task[Any] | None = None
         self._busy: dict[asyncio.Task[Any], aiosqlite.Connection] = {}
         self._write_lock: asyncio.Lock = asyncio.Lock()
@@ -52,17 +52,19 @@ class Database:
 
     async def _connect(self) -> None:
         self.is_new = not await aio.get_size(self.path)
-        self.conn = await raw_connect(self.path)
+        self.conn = await raw_connect(self.path, "db-writer")
 
     async def _init_pool(self) -> None:
-        async def new_conn() -> None:
-            conn = await self._stack.enter_async_context(connect(self.path))
+        assert not self._pool_ready
+
+        async def new_conn(idx: int) -> None:
+            conn = await self._stack.enter_async_context(connect(self.path, name=f"db-reader-{idx}"))
             await conn.execute("pragma query_only")
             self._readers.put_nowait(conn)
 
         async with asyncio.TaskGroup() as tg:
-            for _ in range(READ_POOL_SIZE):
-                tg.create_task(new_conn())
+            for idx in range(READ_POOL_SIZE):
+                tg.create_task(new_conn(idx))
 
         self._pool_ready = True
 
