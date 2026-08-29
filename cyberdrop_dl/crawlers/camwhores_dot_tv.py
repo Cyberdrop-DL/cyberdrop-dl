@@ -46,7 +46,7 @@ class CamwhoresTVCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
         scrape_item.setup_as_album(title)
 
         for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-            self.create_task(self.run(new_scrape_item))
+            self.create_task(self.run(new_scrape_item, check_referer=True))
 
         await self._iter_extra_pages(scrape_item, type_, query)
 
@@ -64,4 +64,4 @@ class CamwhoresTVCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
             from_query_param_name=from_name,
         ):
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))

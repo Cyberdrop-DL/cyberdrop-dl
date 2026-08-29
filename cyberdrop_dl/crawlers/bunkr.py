@@ -135,13 +135,24 @@ class BunkrCrawler(Crawler):
             web_url = origin / "f" / file.slug
             new_item = scrape_item.create_child(web_url)
             new_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
-            self.create_task(self.run(new_item))
+            self.create_task(self.run(new_item, check_referer=True))
             scrape_item.add_children()
+
+    @override
+    async def check_complete_from_referer(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        referer: AbsoluteHttpURL,
+        *,
+        any_crawler: bool = False,
+    ) -> bool:
+        if not self.is_subdomain(referer):
+            referer = referer.with_host(self.PRIMARY_URL.host)
+
+        return await super().check_complete_from_referer(referer, any_crawler=any_crawler)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
-        db_url = scrape_item.url.with_host(self.PRIMARY_URL.host)
-        if await self.check_complete_from_referer(db_url):
+        if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self._request_soup_lenient(scrape_item.url)

@@ -232,7 +232,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._ready: bool = False
         self._logged_in: bool = False
         self._scraped_items: set[str] = set()
-        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(20)
+        self._semaphore: asyncio.Semaphore = asyncio.Semaphore(40)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
         _CHECK_DL_CAPACITY.set(self.config.downloads.back_pressure)
@@ -435,25 +435,28 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     catch_errors: Final = error_handling_context
 
     @final
-    async def run(self, scrape_item: ScrapeItem) -> None:
+    async def run(self, scrape_item: ScrapeItem, *, check_referer: bool = False) -> None:
         if self.disabled:
             return
 
+        with scrape_item.track_changes:
+            scrape_item.url = url = self.transform_url(scrape_item.url)
+
+        lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
+        if lookup in self._scraped_items:
+            logger.info(f"Skipping {url} as it has already been scraped")
+            return
+
+        self._scraped_items.add(lookup)
+
+        if check_referer and await self.check_complete_from_referer(url):
+            return
+
+        if not self.__url_config__.allow_empty_path and url.path == "/":
+            self.raise_exc(scrape_item, ScrapeError.unsupported())
+            return
+
         async with self._semaphore:
-            with scrape_item.track_changes:
-                scrape_item.url = url = self.transform_url(scrape_item.url)
-
-            lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
-            if lookup in self._scraped_items:
-                logger.info(f"Skipping {url} as it has already been scraped")
-                return
-
-            self._scraped_items.add(lookup)
-
-            if not self.__url_config__.allow_empty_path and url.path == "/":
-                self.raise_exc(scrape_item, ScrapeError.unsupported())
-                return
-
             with self.new_task_id(scrape_item.url):
                 try:
                     await self.fetch(scrape_item)

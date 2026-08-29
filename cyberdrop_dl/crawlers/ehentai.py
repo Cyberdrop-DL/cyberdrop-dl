@@ -55,7 +55,7 @@ class EHentaiCrawler(Crawler):
 
         async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM_IMAGES):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:

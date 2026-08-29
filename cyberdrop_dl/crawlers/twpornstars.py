@@ -83,4 +83,4 @@ class TwPornstarsCrawler(TwimgCrawler):
 
         async for soup in pages:
             for new_item in self.iter_children(scrape_item, soup, Selector.THUMBS):
-                self.create_task(self.run(new_item))
+                self.create_task(self.run(new_item, check_referer=True))

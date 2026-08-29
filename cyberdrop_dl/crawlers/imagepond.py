@@ -136,7 +136,7 @@ class ImagePondCrawler(Crawler):
             for js in css.iselect(soup, *Selector.ALBUM_FILES):
                 web_url = js[js.index("'http") :].strip("'")
                 new_item = scrape_item.create_child(self.parse_url(web_url))
-                self.create_task(self.run(new_item))
+                self.create_task(self.run(new_item, check_referer=True))
                 scrape_item.add_children()
 
     @error_handling_wrapper

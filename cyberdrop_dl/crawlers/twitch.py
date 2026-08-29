@@ -138,7 +138,7 @@ class TwitchCrawler(Crawler):
 
         for edge in collection["items"]["edges"]:
             web_url = self.PRIMARY_URL / "videos" / edge["node"]["id"]
-            self.create_task(self.run(scrape_item.create_child(web_url)))
+            self.create_task(self.run(scrape_item.create_child(web_url), check_referer=True))
             scrape_item.add_children()
 
     @error_handling_wrapper

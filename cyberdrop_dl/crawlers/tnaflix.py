@@ -77,7 +77,7 @@ class TNAFlixCrawler(Crawler):
 
         async for soup in pages:
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS_THUMBS):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))
 
 
 def _parse_formats(soup: BeautifulSoup) -> Generator[Format]:

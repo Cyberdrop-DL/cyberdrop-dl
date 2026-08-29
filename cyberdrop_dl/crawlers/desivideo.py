@@ -56,4 +56,4 @@ class DesiVideoCrawler(Crawler):
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url):
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))

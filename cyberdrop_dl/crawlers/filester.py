@@ -85,16 +85,16 @@ class FilesterCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=album_id)
 
         async for soup in pages:
-            self._iter_children(scrape_item, _extract_files(soup))
+            self._iter_children(scrape_item, _extract_files(soup), files=True)
             subfolders.extend(_extract_subfolders(soup))
 
         self._iter_children(scrape_item, dict.fromkeys(subfolders))
 
-    def _iter_children(self, scrape_item: ScrapeItem, children: Iterable[str]) -> None:
+    def _iter_children(self, scrape_item: ScrapeItem, children: Iterable[str], *, files: bool = False) -> None:
         for child in children:
             web_url = self.parse_url(child, self.origin)
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self.run(new_scrape_item))
+            self.create_task(self.run(new_scrape_item, check_referer=files))
             scrape_item.add_children()
 
     async def _folder_pager(self, url: AbsoluteHttpURL, password: str | None) -> AsyncGenerator[BeautifulSoup]:

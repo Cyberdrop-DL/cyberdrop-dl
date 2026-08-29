@@ -155,7 +155,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
     async def _iter_videos(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL | None = None) -> None:
         async for soup in self.web_pager(url or scrape_item.url):
             for new_scrape_item in self.iter_children(scrape_item, soup, self.THUMBNAIL_SELECTOR):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))
 
     def _extract_upload_date(self, soup: BeautifulSoup) -> float | None:
         if date_str := _extract_upload_date(soup):

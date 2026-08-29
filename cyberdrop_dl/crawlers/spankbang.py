@@ -153,7 +153,7 @@ class SpankBangCrawler(Crawler):
     async def _iter_videos(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         async with self.new_task_group(scrape_item) as tg:
             for new_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                tg.create_task(self.run(new_item))
+                tg.create_task(self.run(new_item, check_referer=True))
 
 
 def _parse_video(soup: BeautifulSoup, display_id: str) -> Video:

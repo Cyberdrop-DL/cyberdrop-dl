@@ -240,7 +240,7 @@ class PornHubCrawler(Crawler):
         title = self.create_title(title, playlist_id)
         scrape_item.setup_as_album(f"{title} [playlist]", album_id=playlist_id)
         for new_scrape_item in self.iter_children(scrape_item, soup, Selector.PLAYLIST_VIDEOS):
-            self.create_task(self.run(new_scrape_item))
+            self.create_task(self.run(new_scrape_item, check_referer=True))
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:

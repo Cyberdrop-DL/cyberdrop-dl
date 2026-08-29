@@ -63,7 +63,7 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
 
         async for soup in pages:
             for new_item in scrape_item.create_children(self.iter_urls(soup, Selector.SEARCH_VIDEOS)):
-                self.create_task(self.run(new_item))
+                self.create_task(self.run(new_item, check_referer=True))
 
 
 def _parse_formats(soup: BeautifulSoup) -> Generator[Format]:

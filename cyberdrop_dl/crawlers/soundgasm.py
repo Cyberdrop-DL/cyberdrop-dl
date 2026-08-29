@@ -38,7 +38,7 @@ class SoundGasmCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
 
         for new_item in self.iter_children(scrape_item, soup, ".sound-details a"):
-            self.create_task(self.run(new_item))
+            self.create_task(self.run(new_item, check_referer=True))
 
     @error_handling_wrapper
     async def audio(self, scrape_item: ScrapeItem, user: str) -> None:

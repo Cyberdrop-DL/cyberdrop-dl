@@ -66,7 +66,7 @@ class PornPicsCrawler(Crawler):
 
             for link in items:
                 new_scrape_item = scrape_item.create_child(link)
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))
                 scrape_item.add_children()
 
     @error_handling_wrapper

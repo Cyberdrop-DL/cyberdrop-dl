@@ -54,7 +54,7 @@ class MissAVCrawler(Crawler):
 
         async for soup in self.web_pager(scrape_item.url.update_query(page=1)):
             for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ITEM):
-                self.create_task(self.run(new_scrape_item))
+                self.create_task(self.run(new_scrape_item, check_referer=True))
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:

@@ -299,6 +299,38 @@ async def map[T, R](
     return await map_tuples(coro_factory, ((param,) for param in params), task_limit=task_limit)
 
 
+async def afilter[T](
+    predicate: Callable[[T], Awaitable[Any]],
+    params: Iterable[T],
+    /,
+    *,
+    task_limit: asyncio.BoundedSemaphore | int | None = None,
+) -> filter[T]:
+    ## TODO use queue for lazy iteration with queue.shutdown when dropping pythohn 3.12
+
+    async def fn(value: T) -> T | MISSING:  # pyright: ignore[reportInvalidTypeForm]
+        if await predicate(value):
+            return value
+        return MISSING
+
+    results = await map(fn, params, task_limit=task_limit)  # pyright: ignore[reportUnknownArgumentType]
+    return filter(lambda x: x is not MISSING, results)
+
+
+async def afilter_false[T](
+    predicate: Callable[[T], Awaitable[Any]],
+    params: Iterable[T],
+    /,
+    *,
+    task_limit: asyncio.BoundedSemaphore | int | None = None,
+) -> filter[T]:
+
+    async def new_predicate(x: T) -> bool:
+        return not await predicate(x)
+
+    return await afilter(new_predicate, params, task_limit=task_limit)
+
+
 async def map_tuples[*Ts, R](
     coro_factory: Callable[[*Ts], Awaitable[R]],
     params_batched: Iterable[tuple[*Ts]],

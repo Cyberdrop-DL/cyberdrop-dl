@@ -74,7 +74,7 @@ class OctaveMusicCrawler(Crawler):
         scrape_item.setup_as_profile(self.create_title(resp.artist.name, artist_id))
         for track in resp.top:
             url = (self.PRIMARY_URL / "album" / track.album.id).update_query(t=track.id)
-            self.create_eager_task(self.run(scrape_item.create_child(url)))
+            self.create_eager_task(self.run(scrape_item.create_child(url), check_referer=True))
             scrape_item.add_children()
 
     @error_handling_wrapper
@@ -94,7 +94,7 @@ class OctaveMusicCrawler(Crawler):
         for track in album.tracks:
             url = scrape_item.url.update_query(t=track.id)
             new_item = scrape_item.create_child(url)
-            self.create_eager_task(self.run(new_item))
+            self.create_eager_task(self.run(new_item, check_referer=True))
             scrape_item.add_children()
 
     @error_handling_wrapper

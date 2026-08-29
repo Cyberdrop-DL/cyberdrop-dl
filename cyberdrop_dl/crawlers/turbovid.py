@@ -77,7 +77,7 @@ class TurboVidCrawler(Crawler):
             file_id = css.attr(row, "data-id")
             web_url = self.PRIMARY_URL / "d" / file_id
             new_scrape_item = scrape_item.create_child(web_url)
-            self.create_task(self.run(new_scrape_item))
+            self.create_task(self.run(new_scrape_item, check_referer=True))
             scrape_item.add_children()
 
     @error_handling_wrapper

@@ -100,7 +100,7 @@ class RumbleCrawler(Crawler):
             videos = (v for v in info["items"] if v.get("object_type") == "video")
             for video in videos:
                 new_item = scrape_item.create_child(self.parse_url(video["url"]))
-                self.create_task(self.run(new_item))
+                self.create_task(self.run(new_item, check_referer=True))
                 scrape_item.add_children()
 
     async def _pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[BeautifulSoup]:
