@@ -29,6 +29,14 @@ def _current_task() -> asyncio.Task[Any]:
     return task
 
 
+def _drain_queue(queue: asyncio.Queue[Any]) -> None:
+    while True:
+        try:
+            _ = queue.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+
+
 class Database:
     def __init__(self, path: Path, ignore_history: bool = False) -> None:  # noqa: FBT001, FBT002
         self.path: Path = path
@@ -66,6 +74,7 @@ class Database:
             for idx in range(READ_POOL_SIZE):
                 tg.create_task(new_conn(idx))
 
+        self._stack.callback(_drain_queue, self._readers)
         self._pool_ready = True
 
     @contextlib.asynccontextmanager
@@ -154,8 +163,8 @@ class Database:
 
     async def __aenter__(self) -> Self:
         await self._connect()
-        await self.conn.execute("pragma journal_mode=WAL")
-        await self.conn.execute("pragma synchronous=NORMAL")
+        await (await self.conn.execute("pragma journal_mode=WAL")).close()
+        await (await self.conn.execute("pragma synchronous=NORMAL")).close()
         await self.create_tables()
         await self._stack.__aenter__()
         await self._init_pool()
@@ -167,6 +176,8 @@ class Database:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        self._pool_ready = False
+
         await self._stack.__aexit__(exc_type, exc_value, traceback)
-        exc_type = exc_value = traceback = None
         await self.conn.close()
+        exc_type = exc_value = traceback = None
