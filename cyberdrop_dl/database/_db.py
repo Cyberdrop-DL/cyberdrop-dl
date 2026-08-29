@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import dataclasses
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.signature import simple_repr
 
-from .common import pre_allocate_250mb, raw_connect
+from .common import connect, pre_allocate_250mb, raw_connect
 from .hash import HashTable
 from .history import HistoryTable
 from .schema import SchemaTable
@@ -15,21 +16,37 @@ from .schema import SchemaTable
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from pathlib import Path
+    from types import TracebackType
 
     import aiosqlite
 
 
+READ_POOL_SIZE = 4
+
+
+def _current_task() -> asyncio.Task[Any]:
+    task = asyncio.current_task()
+    assert task is not None
+    return task
+
+
 @dataclasses.dataclass(slots=True)
 class Database:
-    path: Path
-    ignore_history: bool = False
+    def __init__(self, path: Path, ignore_history: bool = False) -> None:  # noqa: FBT001, FBT002
+        self.path: Path = path
+        self.ignore_history: bool = ignore_history
 
-    history: HistoryTable = dataclasses.field(init=False)
-    hash: HashTable = dataclasses.field(init=False)
-    schema: SchemaTable = dataclasses.field(init=False)
+        self._readers: asyncio.Queue[aiosqlite.Connection] = asyncio.Queue()
+        self._writer_task: asyncio.Task[Any] | None = None
+        self._busy: dict[asyncio.Task[Any], aiosqlite.Connection] = {}
+        self._write_lock: asyncio.Lock = asyncio.Lock()
+        self._stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
 
-    conn: aiosqlite.Connection = dataclasses.field(init=False)
-    is_new: bool = dataclasses.field(init=False)
+        self.history: HistoryTable
+        self.hash: HashTable
+        self.schema: SchemaTable
+        self.conn: aiosqlite.Connection
+        self.is_new: bool
 
     __repr__ = simple_repr("path", "ignore_history")
 
@@ -39,6 +56,62 @@ class Database:
         self.history = HistoryTable(self.conn, self.ignore_history)
         self.hash = HashTable(self.conn, self.ignore_history)
         self.schema = SchemaTable(self.conn, self.ignore_history)
+
+    async def _init_pool(self) -> None:
+        async def new_conn() -> None:
+            conn = await self._stack.enter_async_context(connect(self.path))
+            await conn.execute("pragma query_only")
+            self._readers.put_nowait(conn)
+
+        async with asyncio.TaskGroup() as tg:
+            for _ in range(READ_POOL_SIZE):
+                tg.create_task(new_conn())
+
+    @contextlib.asynccontextmanager
+    async def writer(self) -> AsyncGenerator[aiosqlite.Connection]:
+        task = _current_task()
+        if self._writer_task == task:
+            yield self.conn
+            return
+
+        async with self._write_lock:
+            self._writer_task = task
+            try:
+                yield self.conn
+            finally:
+                self._writer_task = None
+
+    @contextlib.asynccontextmanager
+    async def reader(self) -> AsyncGenerator[aiosqlite.Connection]:
+        async with self._reader() as conn:
+            if conn.in_transaction:
+                yield conn
+                return
+
+            await conn.execute("BEGIN DEFERRED;")
+            try:
+                yield conn
+            finally:
+                # discard accidental commits if conn is the writter conn
+                await conn.rollback()
+
+    @contextlib.asynccontextmanager
+    async def _reader(self) -> AsyncGenerator[aiosqlite.Connection]:
+        task = _current_task()
+        if self._writer_task == task:
+            yield self.conn
+            return
+
+        if (conn := self._busy.get(task)) is not None:
+            yield conn
+            return
+
+        conn = self._busy[task] = await self._readers.get()
+        try:
+            yield conn
+        finally:
+            del self._busy[task]
+            self._readers.put_nowait(conn)
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncGenerator[Self]:
@@ -76,8 +149,19 @@ class Database:
 
     async def __aenter__(self) -> Self:
         await self._connect()
+        await self.conn.execute("pragma journal_mode=WAL")
+        await self.conn.execute("pragma synchronous=NORMAL")
         await self.create_tables()
+        await self._stack.__aenter__()
+        await self._init_pool()
         return self
 
-    async def __aexit__(self, *_: object) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        await self._stack.__aexit__(exc_type, exc_value, traceback)
+        exc_type = exc_value = traceback = None
         await self.conn.close()
