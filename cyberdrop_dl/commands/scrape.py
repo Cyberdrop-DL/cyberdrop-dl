@@ -139,7 +139,7 @@ def download(
         FileOrURL,
         Parameter(
             group=_inputs_group,
-            help="URL(s) to download",
+            help="File(s)/ URL(s) to download",
             show_default=False,
             consume_multiple=True,
             allow_repeating=False,
