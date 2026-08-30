@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    import yarl
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 _DATE_PATTERN_REGEX = r"(\d+)\s*(second|seconds|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)"
@@ -24,7 +24,7 @@ def bytesize_to_str(value: _ConvertibleToInt) -> str:
     return ByteSize(value).human_readable()
 
 
-def to_yarl_url(value: object) -> yarl.URL:
+def to_yarl_url(value: object) -> AbsoluteHttpURL:
     from cyberdrop_dl.utils import parse_url
 
     return parse_url(str(value))

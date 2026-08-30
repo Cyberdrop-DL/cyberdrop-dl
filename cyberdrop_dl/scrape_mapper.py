@@ -464,7 +464,7 @@ def _parse_source(
             source = src
             items = load_items_from_path(src)
         case _:
-            source = "--links (CLI args)"
+            source = "CLI args"
             items = load_items_from_iterable(src)
 
     return ScrapeStats(source), items

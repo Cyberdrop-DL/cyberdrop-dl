@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 _FETCH_MANY_SIZE = 1000
 _REGEX_LINKS = re.compile(r"(?:http.*?)(?=($|\n|\r\n|\r|\s|\"|\[/URL]|']\[|]\[|\[/img]))")
 
-type URLsSource = Path | Iterable[AbsoluteHttpURL]
+type URLsSource = Path | Iterable[AbsoluteHttpURL | Path]
 
 
 class RetryQuery(StrEnum):
@@ -111,9 +111,21 @@ async def _parse_input_file_groups(input_file: Path) -> AsyncGenerator[tuple[str
                 yield ("", list(_regex_links(line)))
 
 
-async def load_items_from_iterable(links: Iterable[AbsoluteHttpURL]) -> AsyncGenerator[ScrapeItem]:
-    for url in links:
+async def load_items_from_iterable(items: Iterable[AbsoluteHttpURL | Path]) -> AsyncGenerator[ScrapeItem]:
+    paths: list[Path] = []
+    for url in items:
+        if isinstance(url, Path):
+            paths.append(url)
+            continue
         yield ScrapeItem.from_url(url)
+
+    if not paths:
+        return
+
+    for path in sorted(paths, key=lambda x: str(x).casefold()):
+        async with contextlib.aclosing(load_items_from_file(path)) as p_items:
+            async for item in p_items:
+                yield item
 
 
 def _regex_links(line: str) -> Generator[AbsoluteHttpURL]:
