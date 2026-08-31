@@ -62,6 +62,13 @@ network:
 ```
 
 {% hint style="info" %}
+You can use any software with Flaresolverr like capabilities as long as it supports the `/v1` endpoint.
+
+You may need to disable sessions with `flaresolverr_use_session`
+
+{% endhint %}
+
+{% hint style="info" %}
 `0.0.0.0` is NOT a valid IP address. To set up a flaresolverr instance running on the same machine as CDL, use `127.0.0.1` as the IP
 {% endhint %}
 
@@ -80,6 +87,24 @@ Create a custom flaresolverr session that keeps cookies. This reduces the likeli
 have to launch a new browser instance on every new one.
 
 Set this to `false` if you are using other Flaresolverr like software that supports the `v1` endpoint but does not support the `sessions.create` command
+
+# `flaresolverr_concurrency`
+
+| Type             | Default |
+| ---------------- | ------- |
+| `NonNegativeInt` | `1`     |
+
+Number of concurrent requests to make with Flaresolverr
+
+# `flaresolverr_wait`
+
+| Type             | Default |
+| ---------------- | ------- |
+| `NonNegativeInt` | `1`     |
+
+Force Flaresolverr to wait (at least) this number of seconds before returning the results, to allow dynamic content to load.
+
+Equivalent to the `waitInSeconds` param of the `request.get` command
 
 # `proxy`
 
