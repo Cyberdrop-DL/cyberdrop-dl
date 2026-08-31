@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import json
+import logging
 import sys
 import time
 from contextvars import ContextVar
@@ -25,7 +26,7 @@ from cyberdrop_dl.utils import enter_context
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterator
 
-
+logger = logging.getLogger(__name__)
 _PANEL_PADDING: Final = 5
 _STATUS: ContextVar[StatusMessage] = ContextVar("_STATUS")
 
@@ -167,10 +168,15 @@ class ScrapingUI(LiveUI):
             await asyncio.sleep(3)
 
 
-@contextlib.contextmanager
-def show_msg(msg: object) -> Generator[None]:
-    with _STATUS.get()(msg):
-        yield
+def show_msg(msg: str) -> contextlib.AbstractContextManager[None]:
+    logger.info(msg)
+
+    try:
+        status = _STATUS.get()
+    except LookupError:
+        return contextlib.nullcontext()
+
+    return status(msg)
 
 
 if __name__ == "__main__":
