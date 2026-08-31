@@ -827,6 +827,17 @@
           "title": "Flaresolverr Use Session",
           "type": "boolean"
         },
+        "flaresolverr_wait": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Flaresolverr Wait",
+          "type": "integer"
+        },
+        "flaresolverr_concurrency": {
+          "default": 1,
+          "title": "Flaresolverr Concurrency",
+          "type": "integer"
+        },
         "proxy": {
           "$ref": "#/$defs/FalsyAsNone_HttpURL_",
           "default": null
