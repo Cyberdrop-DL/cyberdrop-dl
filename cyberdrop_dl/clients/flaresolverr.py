@@ -7,13 +7,13 @@ import itertools
 import time
 from enum import StrEnum
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, Unpack
 
 import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
 
 from cyberdrop_dl import ddos_guard
-from cyberdrop_dl.clients import get_logger
+from cyberdrop_dl.clients import HttpMethod, get_logger
 from cyberdrop_dl.exceptions import DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import simple_repr
@@ -36,7 +36,7 @@ class Command(StrEnum):
     POST_REQUEST = "request.post"
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class Solution:
     content: Any
     cookies: SimpleCookie
@@ -58,7 +58,7 @@ class Solution:
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True, order=True)
+@dataclasses.dataclass(frozen=True, slots=True, order=True, kw_only=True)
 class Response:
     id: str
     status: str
@@ -138,6 +138,12 @@ class Session:
                 yield request_id
 
 
+class RequestParams(TypedDict, total=False):
+    method: HttpMethod
+    data: dict[str, Any] | None
+    wait: int
+
+
 @dataclasses.dataclass(slots=True)
 class Client:
     """Class that handles communication with Flaresolverr."""
@@ -207,25 +213,29 @@ class Client:
             except Exception as e:
                 raise FlaresolverrError("Unable to create Flaresolverr session") from e
 
-    async def request(
-        self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None, wait: int | None = None
-    ) -> Solution:
+    async def request(self, url: AbsoluteHttpURL, **params: Unpack[RequestParams]) -> Solution:
         await self._ensure_session()
         with self._disable_on_error():
-            return await self.raw_request(url, data, wait=wait)
+            return await self.raw_request(url, **params)
 
-    async def raw_request(
-        self,
-        url: AbsoluteHttpURL,
-        data: dict[str, Any] | None = None,
-        wait: int | None = None,
-    ) -> Solution:
+    async def raw_request(self, url: AbsoluteHttpURL, **params: Unpack[RequestParams]) -> Solution:
+        method = params.pop("method", "GET")
+        match method:
+            case "GET":
+                command = Command.GET_REQUEST
+            case "POST" | "PUT" | "DELETE":
+                command = Command.POST_REQUEST
+            case _:
+                raise ValueError(f"Unsupported HTTP method for Flaresolverr: {method}")
+
+        if params.get("data") is not None:
+            command = Command.POST_REQUEST
+
         resp = await self._request(
-            Command.POST_REQUEST if data is not None else Command.GET_REQUEST,
+            command,
             url=str(url),
-            data=data,
             session=self.session.name,
-            wait=wait,
+            **params,
         )
 
         if not resp.ok:
@@ -237,7 +247,12 @@ class Client:
         return resp.solution
 
     async def _request(
-        self, command: Command, /, data: dict[str, Any] | None = None, wait: int | None = None, **json_data: Any
+        self,
+        command: Command,
+        /,
+        data: dict[str, Any] | None = None,
+        wait: int | None = None,
+        **json_data: Any,
     ) -> Response:
         req_params, json_data = _prepare_req(command, self.config, json_data, data=data, wait=wait)
 

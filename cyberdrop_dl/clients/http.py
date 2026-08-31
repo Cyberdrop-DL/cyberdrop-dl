@@ -150,9 +150,6 @@ class HTTPClient:
                     proxy=net.proxy,
                 ),
             )
-        if self._flaresolverr and self._flaresolverr.is_down:
-            return None
-
         return self._flaresolverr
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
@@ -240,9 +237,11 @@ class HTTPClient:
                 await check_http_status(resp)
             except DDOSGuardError:
                 await resp.aclose()
-                if not self.flaresolverr:
+                flare = self.flaresolverr
+                if not flare or flare.is_down:
                     raise
-                yield await self._flaresolverr_request(url, kwargs.get("data"))
+                # TODO: figure out how to send JSON with Flaresolverr
+                yield await self._flaresolverr_request(url, method=method, data=kwargs.get("data"))
             else:
                 yield resp
 
@@ -336,27 +335,33 @@ class HTTPClient:
             yield AbstractResponse.create(aio_resp)
 
     async def flaresolverr_request(
-        self, url: AbsoluteHttpURL, data: Any | None = None, wait: int | None = None
+        self,
+        url: AbsoluteHttpURL,
+        **params: Unpack[flaresolverr.RequestParams],
     ) -> AbstractResponse[Any]:
         flare = self.flaresolverr
-        flare = self._flaresolverr
         if not flare:
             raise ScrapeError(
                 "Flaresolverr Required", "This request needs a real running browser to execute javascript"
             )
         if flare.is_down:
             flare.raise_conn_error()
-        return await self._flaresolverr_request(url, data, wait=wait)
+        return await self._flaresolverr_request(url, **params)
 
     async def _flaresolverr_request(
-        self, url: AbsoluteHttpURL, data: Any | None = None, wait: int | None = None
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        **params: Unpack[flaresolverr.RequestParams],
     ) -> AbstractResponse[Any]:
         """Make a request with FlareSolverr.
 
         Returns an AbstractResponse confirmed to not be a DDOS Guard page, even if flaresolverr fails to detect/solve a challenge"""
 
-        assert self.flaresolverr
-        solution = await self.flaresolverr.request(url, data, wait=wait)
+        flare = self.flaresolverr
+        assert flare
+        assert not flare.is_down
+        solution = await flare.request(url, **params)
         self.cookies.update_cookies(solution.cookies)
         flaresolverr.verify_solution(self.config.network.user_agent, solution)
         return AbstractResponse.create(solution)
@@ -422,10 +427,12 @@ class HTTPMixin(HTTPController, Protocol):
             yield resp
 
     async def flaresolverr_request(
-        self, url: AbsoluteHttpURL, data: Any | None = None, wait: int | None = None
+        self,
+        url: AbsoluteHttpURL,
+        **kwargs: Unpack[flaresolverr.RequestParams],
     ) -> AbstractResponse[Any]:
         async with self.rate_limit_ctx():
-            return await self.client.flaresolverr_request(url, data, wait)
+            return await self.client.flaresolverr_request(url, **kwargs)
 
     async def request_json(
         self,
