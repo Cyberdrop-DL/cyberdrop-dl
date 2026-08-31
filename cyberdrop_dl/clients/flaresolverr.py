@@ -100,15 +100,24 @@ class Request:
     payload: dict[str, Any]
     aiohttp_params: dict[str, Any] = dataclasses.field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        wait: int | None = self.payload.get("waitInSeconds")
+        if wait and "timeout" not in self.aiohttp_params:
+            self.aiohttp_params["timeout"] = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
+
     @classmethod
     def build(
-        cls, command: RequestCommand, url: AbsoluteHttpURL, config: Config, /, *, wait: int | None, session: str | None
+        cls,
+        command: RequestCommand,
+        url: AbsoluteHttpURL,
+        /,
+        config: Config,
+        *,
+        wait: int | None,
+        session: str | None,
     ) -> Self:
         payload: dict[str, Any] = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT, "url": str(url)}
-        aiohttp_params: dict[str, Any] = {}
-
         if wait := max(wait or 0, config.wait):
-            aiohttp_params["timeout"] = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
             payload["waitInSeconds"] = wait
 
         if config.use_session and session:
@@ -116,7 +125,7 @@ class Request:
         elif config.proxy:
             payload["proxy"] = {"url": str(config.proxy)}
 
-        return cls(command, payload, aiohttp_params)
+        return cls(command, payload, {})
 
 
 class _LazyResponseLog:
@@ -137,8 +146,7 @@ class _LazyResponseLog:
     def __str__(self) -> str:
         return str(self.__json__())
 
-    def __repr__(self) -> str:
-        return f"<{type(self).__name__}(resp={self.resp!r})>"
+    __repr__ = simple_repr("resp")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -280,7 +288,7 @@ class Client:
         resp = await self._request(Command.CREATE_SESSION, payload, timeout=self.session.TIMEOUT)
 
         if not resp.ok:
-            raise FlaresolverrError(f"FlareSolverr said: {resp.message}")
+            raise FlaresolverrError(f"Flaresolverr said: {resp.message}")
 
         self.session.name = Session.DEFAULT_NAME
 
