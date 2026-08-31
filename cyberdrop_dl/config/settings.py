@@ -341,13 +341,19 @@ class TLS(ConfigModel):
 
 class Network(ConfigGroup):
     dump_responses: bool = False
-    "Save text/HTML/JSON responses to disk (flaresolverr responses are excluded)"
+    "Save text/HTML/JSON responses to disk (Flaresolverr responses are excluded)"
 
     flaresolverr: FalsyAsNone[HttpURL] = None
-    "HTTP URL of an existing flaresolverr instance"
+    "HTTP URL of an existing Flaresolverr instance"
 
     flaresolverr_use_session: bool = True
-    "Create a custom session before making any request with flaresolverr"
+    "Create a custom session before making any request with Flaresolverr"
+
+    flaresolverr_wait: NonNegativeInt = 0
+    "Force Flaresolverr to wait (at least) this number of seconds before returning the results, to allow dynamic content to load"
+
+    flaresolverr_concurrency: int = 1
+    "Number of concurrent requests to make with Flaresolverr"
 
     proxy: Annotated[FalsyAsNone[HttpURL], Parameter(alias=("http-proxy"))] = None
     "HTTP/HTTPS proxy"

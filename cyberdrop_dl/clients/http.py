@@ -17,7 +17,7 @@ from cyberdrop_dl.clients import curl_cffi, flaresolverr, get_logger, tcp, wreq
 from cyberdrop_dl.clients.request import Request, RequestParams
 from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.cookies import make_simple_cookie
-from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, FlaresolverrError, ScrapeError
+from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.utils import enter_context, truncated_preview
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
@@ -139,12 +139,14 @@ class HTTPClient:
     @property
     def flaresolverr(self) -> flaresolverr.Client | None:
         if self._flaresolverr is None and (url := self.config.network.flaresolverr):
+            net = self.config.network
             self._flaresolverr = flaresolverr.Client(
                 self._session,
                 flaresolverr.Config(
                     url=url.origin() / "v1",
-                    use_session=self.config.network.flaresolverr_use_session,
-                    concurrency=5,
+                    use_session=net.flaresolverr_use_session,
+                    concurrency=net.flaresolverr_concurrency,
+                    wait=net.flaresolverr_wait,
                 ),
             )
         if self._flaresolverr and self._flaresolverr.is_down:
@@ -342,7 +344,7 @@ class HTTPClient:
                 "Flaresolverr Required", "This request needs a real running browser to execute javascript"
             )
         if flare.is_down:
-            raise FlaresolverrError(f"Could not connect to Flaresolverr at {flare.config.url}")
+            flare.raise_conn_error()
         return await self._flaresolverr_request(url, data, wait=wait)
 
     async def _flaresolverr_request(

@@ -105,6 +105,7 @@ class Config:
     url: AbsoluteHttpURL
     use_session: bool = True
     concurrency: int = 5
+    wait: int = 0
 
 
 class Session:
@@ -200,7 +201,7 @@ class Client:
         wait: int | None = None,
     ) -> Solution:
         resp = await self._request(
-            Command.POST_REQUEST if data else Command.GET_REQUEST,
+            Command.POST_REQUEST if data is not None else Command.GET_REQUEST,
             url=str(url),
             data=data,
             session=self.session.name,
@@ -218,7 +219,7 @@ class Client:
     async def _request(
         self, command: Command, /, data: dict[str, Any] | None = None, wait: int | None = None, **json_data: Any
     ) -> Response:
-        req_params, json_data = self._prepare_req(command, json_data, data=data, wait=wait)
+        req_params, json_data = _prepare_req(command, self.config, json_data, data=data, wait=wait)
 
         async with self.session.sem:
             request_id = self.session.request_id()
@@ -266,36 +267,42 @@ class Client:
             _ = await self._request(Command.DESTROY_SESSION, session=self.session.name)
             self.session.name = ""
 
-    def _prepare_req(
-        self,
-        command: Command,
-        /,
-        json: dict[str, Any],
-        *,
-        wait: int | None,
-        data: dict[str, Any] | None,
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
-        json = {"cmd": str(command), "maxTimeout": 60_000} | json
-        if not self.config.use_session:
-            json.pop("session", None)
 
-        req_params: dict[str, Any] = {}
-        timeout = None
-        if command is Command.CREATE_SESSION:
-            timeout = aiohttp.ClientTimeout(total=5 * 60, connect=60)
+def _prepare_req(
+    command: Command,
+    config: Config,
+    /,
+    json: dict[str, Any],
+    *,
+    wait: int | None,
+    data: dict[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    payload = {"cmd": str(command), "maxTimeout": 60_000} | json
 
-        elif wait:
-            timeout = aiohttp.ClientTimeout(total=wait + 60, connect=60)
-            json["waitInSeconds"] = wait
+    req_params: dict[str, Any] = {}
+    timeout = None
 
-        if timeout:
-            req_params["timeout"] = timeout
+    match command:
+        case Command.CREATE_SESSION | Command.DESTROY_SESSION:
+            timeout = aiohttp.ClientTimeout(sock_read=5 * 60, sock_connect=60)
+        case Command.GET_REQUEST | Command.POST_REQUEST:
+            if wait := max(wait or 0, config.wait):
+                timeout = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
+                payload["waitInSeconds"] = wait
 
-        if data:
-            assert command is Command.POST_REQUEST
-            json["postData"] = aiohttp.FormData(data)().decode()
+            if not config.use_session:
+                payload.pop("session", None)
+        case _:
+            pass
 
-        return req_params, json
+    if timeout:
+        req_params["timeout"] = timeout
+
+    if data:
+        assert command is Command.POST_REQUEST
+        payload["postData"] = aiohttp.FormData(data)().decode()
+
+    return req_params, payload
 
 
 def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
