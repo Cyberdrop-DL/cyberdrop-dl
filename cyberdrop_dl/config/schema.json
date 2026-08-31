@@ -835,6 +835,7 @@
         },
         "flaresolverr_concurrency": {
           "default": 1,
+          "exclusiveMinimum": 0,
           "title": "Flaresolverr Concurrency",
           "type": "integer"
         },

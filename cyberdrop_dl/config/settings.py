@@ -352,7 +352,7 @@ class Network(ConfigGroup):
     flaresolverr_wait: NonNegativeInt = 0
     "Force Flaresolverr to wait (at least) this number of seconds before returning the results, to allow dynamic content to load"
 
-    flaresolverr_concurrency: int = 1
+    flaresolverr_concurrency: PositiveInt = 1
     "Number of concurrent requests to make with Flaresolverr"
 
     proxy: Annotated[FalsyAsNone[HttpURL], Parameter(alias=("http-proxy"))] = None

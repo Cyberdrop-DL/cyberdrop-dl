@@ -90,9 +90,9 @@ Set this to `false` if you are using other Flaresolverr like software that suppo
 
 # `flaresolverr_concurrency`
 
-| Type             | Default |
-| ---------------- | ------- |
-| `NonNegativeInt` | `1`     |
+| Type          | Default |
+| ------------- | ------- |
+| `PositiveInt` | `1`     |
 
 Number of concurrent requests to make with Flaresolverr
 
@@ -100,7 +100,7 @@ Number of concurrent requests to make with Flaresolverr
 
 | Type             | Default |
 | ---------------- | ------- |
-| `NonNegativeInt` | `1`     |
+| `NonNegativeInt` | `0`     |
 
 Force Flaresolverr to wait (at least) this number of seconds before returning the results, to allow dynamic content to load.
 
