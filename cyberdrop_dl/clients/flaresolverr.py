@@ -103,16 +103,16 @@ class _LazyResponseLog:
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Config:
     url: AbsoluteHttpURL
-    use_session: bool = True
-    concurrency: int = 5
+    concurrency: int = 1
     wait: int = 0
+    use_session: bool = True
 
 
 class Session:
     DEFAULT_NAME: ClassVar[str] = "cyberdrop-dl"
 
     def __init__(self, concurrency: int) -> None:
-        self.name: str = ""
+        self.name: str | None = None
         self.lock: asyncio.Lock = asyncio.Lock()
         self.sem: asyncio.BoundedSemaphore = asyncio.BoundedSemaphore(concurrency)
         self.request_id: Callable[[], int] = itertools.count(1).__next__
@@ -265,7 +265,7 @@ class Client:
     async def _destroy_session(self) -> None:
         if self.session.name:
             _ = await self._request(Command.DESTROY_SESSION, session=self.session.name)
-            self.session.name = ""
+            self.session.name = None
 
 
 def _prepare_req(

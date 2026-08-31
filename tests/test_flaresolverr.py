@@ -32,7 +32,7 @@ def test_flaresolver(flaresolverr: Client) -> None:
 
 
 async def test_create_session(flaresolverr: Client) -> None:
-    assert flaresolverr.session.name == ""
+    assert flaresolverr.session.name is None
     resp = await flaresolverr._request(Command.CREATE_SESSION, session="cyberdrop-dl")
     assert resp.ok
     assert "Session created successfully" in resp.message or "Session already exists" in resp.message
@@ -42,11 +42,11 @@ async def test_create_session(flaresolverr: Client) -> None:
 
 
 async def test_create_session_methods(flaresolverr: Client) -> None:
-    assert flaresolverr.session.name == ""
+    assert flaresolverr.session.name is None
     await flaresolverr._create_session()
     assert flaresolverr.session.name == "cyberdrop-dl"
     await flaresolverr._destroy_session()
-    assert flaresolverr.session.name == ""
+    assert flaresolverr.session.name is None
 
 
 async def test_request_w_solution(flaresolverr: Client) -> None:
