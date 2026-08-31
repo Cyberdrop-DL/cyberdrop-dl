@@ -140,12 +140,16 @@ class HTTPClient:
     def flaresolverr(self) -> flaresolverr.Client | None:
         if self._flaresolverr is None and (url := self.config.network.flaresolverr):
             self._flaresolverr = flaresolverr.Client(
-                url,
                 self._session,
-                use_session=self.config.network.flaresolverr_use_session,
+                flaresolverr.Config(
+                    url=url.origin() / "v1",
+                    use_session=self.config.network.flaresolverr_use_session,
+                    concurrency=5,
+                ),
             )
         if self._flaresolverr and self._flaresolverr.is_down:
             return None
+
         return self._flaresolverr
 
     def __sync_session_cookies(self, url: AbsoluteHttpURL) -> None:
@@ -338,7 +342,7 @@ class HTTPClient:
                 "Flaresolverr Required", "This request needs a real running browser to execute javascript"
             )
         if flare.is_down:
-            raise FlaresolverrError(f"Could not connect to Flaresolverr at {flare.url}")
+            raise FlaresolverrError(f"Could not connect to Flaresolverr at {flare.config.url}")
         return await self._flaresolverr_request(url, data, wait=wait)
 
     async def _flaresolverr_request(

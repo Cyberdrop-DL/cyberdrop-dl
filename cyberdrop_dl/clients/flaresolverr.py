@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import itertools
 import time
 from enum import StrEnum
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
@@ -15,11 +16,12 @@ from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.clients import get_logger
 from cyberdrop_dl.exceptions import DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.progress.scraping import show_msg
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable, Mapping
 
 
 logger = get_logger(__name__)
@@ -98,28 +100,40 @@ class _LazyResponseLog:
         return f"<{type(self).__name__}(resp={self.resp!r})>"
 
 
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Config:
+    url: AbsoluteHttpURL
+    use_session: bool = True
+    concurrency: int = 5
+
+
+class Session:
+    DEFAULT_NAME: ClassVar[str] = "cyberdrop-dl"
+
+    def __init__(self, concurrency: int) -> None:
+        self.name: str = ""
+        self.lock: asyncio.Lock = asyncio.Lock()
+        self.sem: asyncio.BoundedSemaphore = asyncio.BoundedSemaphore(concurrency)
+        self.request_id: Callable[[], int] = itertools.count(1).__next__
+
+    __repr__ = simple_repr("name")
+
+
 @dataclasses.dataclass(slots=True)
 class Client:
     """Class that handles communication with Flaresolverr."""
 
-    url: AbsoluteHttpURL
-    _aiohttp_session: aiohttp.ClientSession = dataclasses.field(repr=False)
-    use_session: bool
-
-    _session_id: str = dataclasses.field(init=False, default="")
-    _session_lock: asyncio.Lock = dataclasses.field(init=False, default_factory=asyncio.Lock)
-    _sem: asyncio.Semaphore = dataclasses.field(init=False, default_factory=lambda: asyncio.Semaphore(10))
-    _request_id: Callable[[], int] = dataclasses.field(
-        init=False, repr=False, default_factory=lambda: itertools.count(1).__next__
-    )
+    http: aiohttp.ClientSession = dataclasses.field(repr=False)
+    config: Config
+    session: Session = dataclasses.field(init=False)
     _down: bool = dataclasses.field(init=False, default=False)
+
+    def __post_init__(self) -> None:
+        self.session = Session(self.config.concurrency)
 
     @property
     def is_down(self) -> bool:
         return self._down
-
-    def __post_init__(self) -> None:
-        self.url = self.url.origin() / "v1"
 
     async def aclose(self) -> None:
         try:
@@ -132,42 +146,52 @@ class Client:
             self._down = True
             logger.warning("Flaresolverr has been disabled")
 
+    @contextlib.contextmanager
+    def _disable_on_error(self) -> Generator[None]:
+        try:
+            yield
+        except aiohttp.ClientError as e:
+            self.disable()
+            self.raise_conn_error(e)
+        except Exception:
+            self.disable()
+            raise
+
+    def raise_conn_error(self, e: Exception | None = None):
+        msg = f"Could not connect to Flaresolverr at {self.config.url}"
+        if e is None:
+            raise FlaresolverrError(msg)
+        raise FlaresolverrError(f"{msg} ({e!r})") from None
+
     async def _ensure_session(self) -> None:
         msg = "Unable to create Flaresolverr session"
         if self._down:
             raise FlaresolverrError(msg)
 
-        if not self.use_session:
+        if not self.config.use_session:
             return
 
-        if self._session_id:
+        if self.session.name:
             return
 
-        async with self._session_lock:
-            if self._session_id:
+        async with self.session.lock:
+            if self.session.name:
                 return
 
             try:
-                await self._create_session()
-            except aiohttp.ClientError as e:
-                self.disable()
-                raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
+                with self._disable_on_error():
+                    await self._create_session()
             except FlaresolverrError:
-                self.disable()
                 raise
             except Exception as e:
-                self.disable()
                 raise FlaresolverrError(msg) from e
 
     async def request(
         self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None, wait: int | None = None
     ) -> Solution:
         await self._ensure_session()
-        try:
+        with self._disable_on_error():
             return await self.raw_request(url, data, wait=wait)
-        except aiohttp.ClientError as e:
-            self.disable()
-            raise FlaresolverrError(f"Could not connect to Flaresolverr at {self.url} ({e!r})") from None
 
     async def raw_request(
         self,
@@ -179,7 +203,7 @@ class Client:
             Command.POST_REQUEST if data else Command.GET_REQUEST,
             url=str(url),
             data=data,
-            session=self._session_id,
+            session=self.session.name,
             wait=wait,
         )
 
@@ -196,8 +220,8 @@ class Client:
     ) -> Response:
         req_params, json_data = self._prepare_req(command, json_data, data=data, wait=wait)
 
-        async with self._sem:
-            request_id = self._request_id()
+        async with self.session.sem:
+            request_id = self.session.request_id()
             msg = (
                 "Destroying Flaresolverr session"
                 if command is Command.DESTROY_SESSION
@@ -205,7 +229,7 @@ class Client:
             )
             with show_msg(msg):
                 logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, json_data)
-                async with self._aiohttp_session.post(self.url, json=json_data, **req_params) as response:
+                async with self.http.post(self.config.url, json=json_data, **req_params) as response:
                     resp_json = await response.json()
                     try:
                         resp = Response.from_dict(resp_json)
@@ -221,21 +245,26 @@ class Client:
                     return resp
 
     async def _create_session(self) -> None:
-        session_id = "cyberdrop-dl"
         params: dict[str, dict[str, str]] = {}
 
-        if proxy := self._aiohttp_session._default_proxy:
+        if proxy := self.http._default_proxy:  # pyright: ignore[reportPrivateUsage]
             params.update(proxy={"url": str(proxy)})
 
-        resp = await self._request(Command.CREATE_SESSION, session=session_id, wait=None, **params)
+        resp = await self._request(
+            Command.CREATE_SESSION,
+            session=Session.DEFAULT_NAME,
+            wait=None,
+            **params,
+        )
         if not resp.ok:
             raise FlaresolverrError(f"FlareSolverr said: {resp.message}")
-        self._session_id = session_id
+
+        self.session.name = Session.DEFAULT_NAME
 
     async def _destroy_session(self) -> None:
-        if self._session_id:
-            _ = await self._request(Command.DESTROY_SESSION, session=self._session_id)
-            self._session_id = ""
+        if self.session.name:
+            _ = await self._request(Command.DESTROY_SESSION, session=self.session.name)
+            self.session.name = ""
 
     def _prepare_req(
         self,
@@ -247,7 +276,7 @@ class Client:
         data: dict[str, Any] | None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         json = {"cmd": str(command), "maxTimeout": 60_000} | json
-        if not self.use_session:
+        if not self.config.use_session:
             json.pop("session", None)
 
         req_params: dict[str, Any] = {}

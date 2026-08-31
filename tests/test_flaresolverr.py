@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 import aiohttp
 import pytest
 
-from cyberdrop_dl.clients.flaresolverr import Client, Command
+from cyberdrop_dl.clients.flaresolverr import Client, Command, Config
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
@@ -17,20 +17,22 @@ pytestmark = pytest.mark.skipif(not FLARESOLVER_URL, reason=f"{ENV_NAME} environ
 async def flaresolverr() -> AsyncGenerator[Client]:
     async with aiohttp.ClientSession() as session:
         yield Client(
-            AbsoluteHttpURL(FLARESOLVER_URL) / "v1",
             session,
-            use_session=True,
+            Config(
+                url=AbsoluteHttpURL(FLARESOLVER_URL) / "v1",
+                use_session=True,
+            ),
         )
 
 
 def test_flaresolver(flaresolverr: Client) -> None:
-    assert flaresolverr.url
-    assert flaresolverr._request_id() == 1
-    assert flaresolverr._request_id() == 2
+    assert flaresolverr.config.url
+    assert flaresolverr.session.request_id() == 1
+    assert flaresolverr.session.request_id() == 2
 
 
 async def test_create_session(flaresolverr: Client) -> None:
-    assert flaresolverr._session_id == ""
+    assert flaresolverr.session.name == ""
     resp = await flaresolverr._request(Command.CREATE_SESSION, session="cyberdrop-dl")
     assert resp.ok
     assert "Session created successfully" in resp.message or "Session already exists" in resp.message
@@ -40,11 +42,11 @@ async def test_create_session(flaresolverr: Client) -> None:
 
 
 async def test_create_session_methods(flaresolverr: Client) -> None:
-    assert flaresolverr._session_id == ""
+    assert flaresolverr.session.name == ""
     await flaresolverr._create_session()
-    assert flaresolverr._session_id == "cyberdrop-dl"
+    assert flaresolverr.session.name == "cyberdrop-dl"
     await flaresolverr._destroy_session()
-    assert flaresolverr._session_id == ""
+    assert flaresolverr.session.name == ""
 
 
 async def test_request_w_solution(flaresolverr: Client) -> None:
