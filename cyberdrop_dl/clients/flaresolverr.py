@@ -21,7 +21,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import AsyncGenerator, Callable, Generator, Iterable, Mapping
 
 
 logger = get_logger(__name__)
@@ -58,20 +58,25 @@ class Solution:
         )
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(frozen=True, slots=True, order=True)
 class Response:
+    id: str
     status: str
     message: str
     solution: Solution | None
-    id: str = dataclasses.field(init=False, default="")
+
+    def __post_init__(self) -> None:
+        if self.solution:
+            self.solution.id = self.id
 
     @property
     def ok(self) -> bool:
         return self.status == "ok"
 
     @staticmethod
-    def from_dict(resp: Mapping[str, Any]) -> Response:
+    def parse(request_id: int, resp: Mapping[str, Any]) -> Response:
         return Response(
+            id=str(request_id),
             status=resp["status"],
             message=resp["message"],
             solution=Solution.from_dict(sol) if (sol := resp.get("solution")) else None,
@@ -79,8 +84,8 @@ class Response:
 
 
 class _LazyResponseLog:
-    def __init__(self, response: dict[str, Any]) -> None:
-        self.resp = response
+    def __init__(self, resp: dict[str, Any]) -> None:
+        self.resp: dict[str, Any] = resp
 
     def __json__(self) -> dict[str, Any]:
         try:
@@ -119,6 +124,18 @@ class Session:
         self.request_id: Callable[[], int] = itertools.count(1).__next__
 
     __repr__ = simple_repr("name")
+
+    @contextlib.asynccontextmanager
+    async def new_request(self, command: Command) -> AsyncGenerator[int]:
+        async with self.sem:
+            request_id = self.request_id()
+            msg = (
+                "Destroying Flaresolverr session"
+                if command is Command.DESTROY_SESSION
+                else f"Waiting for Flaresolverr [{request_id}]"
+            )
+            with show_msg(msg):
+                yield request_id
 
 
 @dataclasses.dataclass(slots=True)
@@ -176,6 +193,9 @@ class Client:
             return
 
         async with self.session.lock:
+            if self._down:
+                self.raise_conn_error()
+
             if self.session.name:
                 return
 
@@ -221,35 +241,22 @@ class Client:
     ) -> Response:
         req_params, json_data = _prepare_req(command, self.config, json_data, data=data, wait=wait)
 
-        async with self.session.sem:
-            request_id = self.session.request_id()
-            msg = (
-                "Destroying Flaresolverr session"
-                if command is Command.DESTROY_SESSION
-                else f"Waiting for Flaresolverr [{request_id}]"
-            )
-            with show_msg(msg):
-                logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, json_data)
-                async with self.http.post(self.config.url, json=json_data, **req_params) as response:
-                    resp_json = await response.json()
-                    try:
-                        resp = Response.from_dict(resp_json)
-                        resp.id = str(request_id)
-                        if resp.solution:
-                            resp.solution.id = resp.id
-                    except (TypeError, KeyError) as e:
-                        raise FlaresolverrError("Invalid response from Flaresolverr") from e
-                    finally:
-                        logger.traffic(
-                            "Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json)
-                        )
-                    return resp
+        async with self.session.new_request(command) as request_id:
+            logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, json_data)
+            async with self.http.post(self.config.url, json=json_data, **req_params) as response:
+                resp_json = await response.json()
+                try:
+                    return Response.parse(request_id, resp_json)
+                except (TypeError, KeyError) as e:
+                    raise FlaresolverrError("Invalid response from Flaresolverr") from e
+                finally:
+                    logger.traffic("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json))
 
     async def _create_session(self) -> None:
-        params: dict[str, dict[str, str]] = {}
+        params: dict[str, Any] = {}
 
         if self.config.proxy:
-            params.update(proxy={"url": str(self.config.proxy)})
+            params["proxy"] = {"url": str(self.config.proxy)}
 
         resp = await self._request(
             Command.CREATE_SESSION,
