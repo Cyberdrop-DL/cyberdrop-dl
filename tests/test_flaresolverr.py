@@ -33,11 +33,11 @@ def test_flaresolver(flaresolverr: Client) -> None:
 
 async def test_create_session(flaresolverr: Client) -> None:
     assert flaresolverr.session.name is None
-    resp = await flaresolverr._request(Command.CREATE_SESSION, session="cyberdrop-dl")
+    resp = await flaresolverr._request(Command.CREATE_SESSION, {"session": "cyberdrop-dl"})
     assert resp.ok
     assert "Session created successfully" in resp.message or "Session already exists" in resp.message
     assert resp.solution is None
-    resp = await flaresolverr._request(Command.DESTROY_SESSION, session="cyberdrop-dl")
+    resp = await flaresolverr._request(Command.DESTROY_SESSION, {"session": "cyberdrop-dl"})
     assert "The session has been removed" in resp.message
 
 

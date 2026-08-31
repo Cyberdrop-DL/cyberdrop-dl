@@ -7,7 +7,7 @@ import itertools
 import time
 from enum import StrEnum
 from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, Unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, Unpack
 
 import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+MAX_TIMEOUT = 60_000
+
 
 class Command(StrEnum):
     CREATE_SESSION = "sessions.create"
@@ -34,6 +36,15 @@ class Command(StrEnum):
 
     GET_REQUEST = "request.get"
     POST_REQUEST = "request.post"
+
+
+type RequestCommand = Literal[Command.GET_REQUEST, Command.POST_REQUEST]
+
+
+class RequestParams(TypedDict, total=False):
+    method: HttpMethod
+    data: dict[str, Any] | None
+    wait: int
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -83,6 +94,31 @@ class Response:
         )
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class Request:
+    command: RequestCommand
+    payload: dict[str, Any]
+    aiohttp_params: dict[str, Any] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def build(
+        cls, command: RequestCommand, url: AbsoluteHttpURL, config: Config, /, *, wait: int | None, session: str | None
+    ) -> Self:
+        payload: dict[str, Any] = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT, "url": str(url)}
+        aiohttp_params: dict[str, Any] = {}
+
+        if wait := max(wait or 0, config.wait):
+            aiohttp_params["timeout"] = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
+            payload["waitInSeconds"] = wait
+
+        if config.use_session and session:
+            payload["session"] = session
+        elif config.proxy:
+            payload["proxy"] = {"url": str(config.proxy)}
+
+        return cls(command, payload, aiohttp_params)
+
+
 class _LazyResponseLog:
     def __init__(self, resp: dict[str, Any]) -> None:
         self.resp: dict[str, Any] = resp
@@ -116,6 +152,7 @@ class Config:
 
 class Session:
     DEFAULT_NAME: ClassVar[str] = "cyberdrop-dl"
+    TIMEOUT: ClassVar[aiohttp.ClientTimeout] = aiohttp.ClientTimeout(sock_read=5 * 60, sock_connect=60)
 
     def __init__(self, concurrency: int) -> None:
         self.name: str | None = None
@@ -136,12 +173,6 @@ class Session:
             )
             with show_msg(msg):
                 yield request_id
-
-
-class RequestParams(TypedDict, total=False):
-    method: HttpMethod
-    data: dict[str, Any] | None
-    wait: int
 
 
 @dataclasses.dataclass(slots=True)
@@ -216,49 +247,22 @@ class Client:
     async def request(self, url: AbsoluteHttpURL, **params: Unpack[RequestParams]) -> Solution:
         await self._ensure_session()
         with self._disable_on_error():
-            return await self.raw_request(url, **params)
+            request = prepare_request(url, self.config, params, self.session.name)
+            resp = await self._request(request.command, request.payload, **request.aiohttp_params)
+            if not resp.ok:
+                raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
 
-    async def raw_request(self, url: AbsoluteHttpURL, **params: Unpack[RequestParams]) -> Solution:
-        method = params.pop("method", "GET")
-        match method:
-            case "GET":
-                command = Command.GET_REQUEST
-            case "POST" | "PUT" | "DELETE":
-                command = Command.POST_REQUEST
-            case _:
-                raise ValueError(f"Unsupported HTTP method for Flaresolverr: {method}")
+            if not resp.solution:
+                raise FlaresolverrError("Flaresolverr response did not include a solution")
 
-        if params.get("data") is not None:
-            command = Command.POST_REQUEST
+            return resp.solution
 
-        resp = await self._request(
-            command,
-            url=str(url),
-            session=self.session.name,
-            **params,
-        )
-
-        if not resp.ok:
-            raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
-
-        if not resp.solution:
-            raise FlaresolverrError("Flaresolverr response did not include a solution")
-
-        return resp.solution
-
-    async def _request(
-        self,
-        command: Command,
-        /,
-        data: dict[str, Any] | None = None,
-        wait: int | None = None,
-        **json_data: Any,
-    ) -> Response:
-        req_params, json_data = _prepare_req(command, self.config, json_data, data=data, wait=wait)
+    async def _request(self, command: Command, /, json: dict[str, Any], **aiohttp_params: Any) -> Response:
+        payload = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT} | json
 
         async with self.session.new_request(command) as request_id:
-            logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, json_data)
-            async with self.http.post(self.config.url, json=json_data, **req_params) as response:
+            logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, payload)
+            async with self.http.post(self.config.url, json=payload, **aiohttp_params) as response:
                 resp_json = await response.json()
                 try:
                     return Response.parse(request_id, resp_json)
@@ -268,65 +272,50 @@ class Client:
                     logger.traffic("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json))
 
     async def _create_session(self) -> None:
-        params: dict[str, Any] = {}
+        payload: dict[str, Any] = {"session": Session.DEFAULT_NAME}
 
         if self.config.proxy:
-            params["proxy"] = {"url": str(self.config.proxy)}
+            payload["proxy"] = {"url": str(self.config.proxy)}
 
-        resp = await self._request(
-            Command.CREATE_SESSION,
-            session=Session.DEFAULT_NAME,
-            wait=None,
-            **params,
-        )
+        resp = await self._request(Command.CREATE_SESSION, payload, timeout=self.session.TIMEOUT)
+
         if not resp.ok:
             raise FlaresolverrError(f"FlareSolverr said: {resp.message}")
 
         self.session.name = Session.DEFAULT_NAME
 
     async def _destroy_session(self) -> None:
-        if self.session.name:
-            _ = await self._request(Command.DESTROY_SESSION, session=self.session.name)
-            self.session.name = None
+        if not self.session.name:
+            return
+
+        await self._request(Command.DESTROY_SESSION, {"session": self.session.name}, timeout=self.session.TIMEOUT)
+        self.session.name = None
 
 
-def _prepare_req(
-    command: Command,
-    config: Config,
-    /,
-    json: dict[str, Any],
-    *,
-    wait: int | None,
-    data: dict[str, Any] | None,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    payload = {"cmd": str(command), "maxTimeout": 60_000} | json
-
-    req_params: dict[str, Any] = {}
-    timeout = None
-
-    match command:
-        case Command.CREATE_SESSION | Command.DESTROY_SESSION:
-            timeout = aiohttp.ClientTimeout(sock_read=5 * 60, sock_connect=60)
-        case Command.GET_REQUEST | Command.POST_REQUEST:
-            if wait := max(wait or 0, config.wait):
-                timeout = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
-                payload["waitInSeconds"] = wait
-
-            if not config.use_session:
-                payload.pop("session", None)
-                if config.proxy:
-                    payload["proxy"] = {"url": str(config.proxy)}
+def _cmd_from_http_method(method: HttpMethod) -> RequestCommand:
+    match method:
+        case "GET" | "HEAD":
+            return Command.GET_REQUEST
+        case "POST" | "PUT" | "DELETE":
+            return Command.POST_REQUEST
         case _:
-            pass
+            raise ValueError(f"Unsupported HTTP method for Flaresolverr: {method}")
 
-    if timeout:
-        req_params["timeout"] = timeout
 
-    if data:
-        assert command is Command.POST_REQUEST
-        payload["postData"] = aiohttp.FormData(data)().decode()
+def prepare_request(
+    url: AbsoluteHttpURL,
+    config: Config,
+    params: RequestParams,
+    session: str | None = None,
+) -> Request:
+    command = _cmd_from_http_method(params.get("method", "GET"))
+    command = Command.POST_REQUEST if params.get("data") is not None else command
 
-    return req_params, payload
+    req = Request.build(command, url, config, wait=params.get("wait"), session=session)
+    if (data := params.get("data")) is not None:
+        req.payload["postData"] = aiohttp.FormData(data)().decode()
+
+    return req
 
 
 def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
