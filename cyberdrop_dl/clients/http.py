@@ -147,6 +147,7 @@ class HTTPClient:
                     use_session=net.flaresolverr_use_session,
                     concurrency=net.flaresolverr_concurrency,
                     wait=net.flaresolverr_wait,
+                    proxy=net.proxy,
                 ),
             )
         if self._flaresolverr and self._flaresolverr.is_down:

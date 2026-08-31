@@ -106,6 +106,7 @@ class Config:
     concurrency: int = 1
     wait: int = 0
     use_session: bool = True
+    proxy: AbsoluteHttpURL | None = None
 
 
 class Session:
@@ -165,9 +166,8 @@ class Client:
         raise FlaresolverrError(f"{msg} ({e!r})") from None
 
     async def _ensure_session(self) -> None:
-        msg = "Unable to create Flaresolverr session"
         if self._down:
-            raise FlaresolverrError(msg)
+            self.raise_conn_error()
 
         if not self.config.use_session:
             return
@@ -185,7 +185,7 @@ class Client:
             except FlaresolverrError:
                 raise
             except Exception as e:
-                raise FlaresolverrError(msg) from e
+                raise FlaresolverrError("Unable to create Flaresolverr session") from e
 
     async def request(
         self, url: AbsoluteHttpURL, data: dict[str, Any] | None = None, wait: int | None = None
@@ -248,8 +248,8 @@ class Client:
     async def _create_session(self) -> None:
         params: dict[str, dict[str, str]] = {}
 
-        if proxy := self.http._default_proxy:  # pyright: ignore[reportPrivateUsage]
-            params.update(proxy={"url": str(proxy)})
+        if self.config.proxy:
+            params.update(proxy={"url": str(self.config.proxy)})
 
         resp = await self._request(
             Command.CREATE_SESSION,
@@ -292,6 +292,8 @@ def _prepare_req(
 
             if not config.use_session:
                 payload.pop("session", None)
+                if config.proxy:
+                    payload["proxy"] = {"url": str(config.proxy)}
         case _:
             pass
 
