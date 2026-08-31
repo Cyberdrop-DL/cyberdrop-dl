@@ -152,10 +152,10 @@ class _LazyResponseLog:
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Config:
     url: AbsoluteHttpURL
-    concurrency: int = 1
     wait: int = 0
-    use_session: bool = True
     proxy: AbsoluteHttpURL | None = None
+    concurrency: int = 1
+    use_session: bool = True
 
 
 class Session:
@@ -183,17 +183,16 @@ class Session:
                 yield request_id
 
 
-@dataclasses.dataclass(slots=True)
 class Client:
     """Class that handles communication with Flaresolverr."""
 
-    http: aiohttp.ClientSession = dataclasses.field(repr=False)
-    config: Config
-    session: Session = dataclasses.field(init=False)
-    _down: bool = dataclasses.field(init=False, default=False)
+    def __init__(self, http: aiohttp.ClientSession, config: Config) -> None:
+        self.http: aiohttp.ClientSession = http
+        self.config: Config = config
+        self.session: Session = Session(config.concurrency)
+        self._down: bool = False
 
-    def __post_init__(self) -> None:
-        self.session = Session(self.config.concurrency)
+    __repr__ = simple_repr("config", "session", "is_down")
 
     @property
     def is_down(self) -> bool:
