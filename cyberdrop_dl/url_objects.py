@@ -233,6 +233,7 @@ class ScrapeItem:
     _type: ScrapeItemType | None = None
     _uploaded_at: int | None = None
     retry_info: RetryInfo | None = None
+    markers: list[Any] = dataclasses.field(default_factory=list)
 
     __repr__ = signature.simple_repr("url", "folders", "uploaded_at")
 
@@ -389,7 +390,9 @@ class ScrapeItem:
 
     def copy(self) -> Self:
         """Returns a deep copy of this scrape_item"""
-        return copy.deepcopy(self)
+        me = copy.deepcopy(self)
+        me.markers = self.markers.copy()
+        return me
 
     def get_referer(self) -> AbsoluteHttpURL | None:
         if self.referer:
