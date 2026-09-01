@@ -391,13 +391,14 @@ def test_config_union() -> None:
 
 
 def test_additive_args_list() -> None:
-    args = Config()._additive_args()
-    assert args == (
+    args = set(Config()._additive_args())
+    assert args == {
         ("crawlers", "bandcamp", "formats"),
         ("crawlers", "disabled"),
+        ("crawlers", "pornhub", "profile_paths"),
         ("filters", "only_hosts"),
         ("filters", "skip_hosts"),
         ("hashing", "algorithms"),
         ("jdownloader", "whitelist"),
         ("restrict_path",),
-    )
+    }
