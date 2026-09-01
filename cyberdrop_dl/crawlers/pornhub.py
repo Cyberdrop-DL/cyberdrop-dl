@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from enum import StrEnum
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict, final
 
@@ -24,18 +23,27 @@ if TYPE_CHECKING:
 
 @final
 class Selector:
-    ALBUM_FROM_PHOTO = "div#thumbSlider > h2 > a"
-    ALBUM_TITLE = "h1[class*=photoAlbumTitle]"
-    GIF = "div#js-gifToWebm"
     FLASHVARS = "script:-soup-contains-own('var flashvars_')"
+    GIF = "div#js-gifToWebm"
     NEXT_PAGE = "li.page_next a"
     PHOTO = "div#photoImageSection img"
-    PLAYLIST_TITLE = "h1.playlistTitle"
-    PLAYLIST_VIDEOS = "ul#videoPlaylist a.linkVideoThumb"
 
-    GEO_BLOCKED = ".geoBlocked > h1:-soup-contains('page is not available')"
-    NO_VIDEO = "section.noVideo"
-    REMOVED = "div.removed"
+    @final
+    class Playlist:
+        TITLE = "h1.playlistTitle"
+        VIDEOS = "ul#videoPlaylist a.linkVideoThumb"
+
+    @final
+    class Album:
+        FROM_PHOTO = "div#thumbSlider > h2 > a"
+        TITLE = "h1[class*=photoAlbumTitle]"
+
+    @final
+    class Profile:
+        NAME = ".topProfileHeader h1[itemprop=name], div.title h1"
+        VIDEOS = "div.container a.linkVideoThumb"
+        GIFS = "#moreData li.gifLi a"
+        ALBUMS = "#moreData.photosAlbumsListing a"
 
 
 class PornHubCrawler(Crawler):
@@ -177,10 +185,10 @@ class PornHubCrawler(Crawler):
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        title: str = css.select_text(soup, Selector.PLAYLIST_TITLE)
+        title: str = css.select_text(soup, Selector.Playlist.TITLE)
         title = self.create_title(title, playlist_id)
         scrape_item.setup_as_album(f"{title} [playlist]", album_id=playlist_id)
-        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.PLAYLIST_VIDEOS):
+        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.Playlist.VIDEOS):
             self.create_task(self.run(new_scrape_item, check_referer=True))
 
     @error_handling_wrapper
@@ -210,12 +218,6 @@ class PornHubCrawler(Crawler):
 
 @final
 class PornHubProfile:
-    class Selector(StrEnum):
-        NAME = ".topProfileHeader h1[itemprop=name], div.title h1"
-        VIDEOS = "div.container a.linkVideoThumb"
-        GIFS = "#moreData li.gifLi a"
-        ALBUMS = "#moreData.photosAlbumsListing a"
-
     def __init__(self, crawler: PornHubCrawler) -> None:
         self.crawler = crawler
         self.manager = crawler.manager
@@ -224,11 +226,11 @@ class PornHubProfile:
     async def fetch(self, scrape_item: ScrapeItem, profile: Profile, rest: list[str]) -> None:
         match rest:
             case ["videos" | "clips", *_]:
-                await self(scrape_item, profile, self.Selector.VIDEOS)
+                await self(scrape_item, profile, Selector.Profile.VIDEOS)
             case ["gifs", *_]:
-                await self(scrape_item, profile, self.Selector.GIFS)
+                await self(scrape_item, profile, Selector.Profile.GIFS)
             case ["photos", *_]:
-                await self(scrape_item, profile, self.Selector.ALBUMS)
+                await self(scrape_item, profile, Selector.Profile.ALBUMS)
             case []:
                 await self.dispatch(scrape_item, profile)
             case _:
@@ -256,7 +258,7 @@ class PornHubProfile:
 
         url = self.crawler.PRIMARY_URL / profile.type / profile.name
         soup = await self.crawler.request_soup(url)
-        name = css.select_text(soup, self.Selector.NAME, decompose="span")
+        name = css.select_text(soup, Selector.Profile.NAME, decompose="span")
         title = self.crawler.create_title(f"{name} [{profile.type.removesuffix('s')}]")
         scrape_item.setup_as_profile(title)
         scrape_item.markers.append(profile)
@@ -328,7 +330,7 @@ class PornHubAPI(API):
     async def album(self, album_id: str) -> Album:
         url = self.PRIMARY_URL / "album" / album_id
         soup = await self.request_soup(url, impersonate="firefox")
-        return Album(album_id, name=css.select_text(soup, Selector.ALBUM_TITLE))
+        return Album(album_id, name=css.select_text(soup, Selector.Album.TITLE))
 
     async def album_photos(self, album_id: str) -> AsyncGenerator[Photo]:
         url = self.PRIMARY_URL / "api/v1/album" / album_id / "show_album_json"
@@ -356,7 +358,7 @@ class PornHubAPI(API):
 
 
 def _extr_album(soup: BeautifulSoup) -> Album:
-    album = css.select(soup, Selector.ALBUM_FROM_PHOTO)
+    album = css.select(soup, Selector.Album.FROM_PHOTO)
     url: str = css.attr(album, "href")
     return Album(id=url.rpartition("/")[-1], name=css.text(album))
 
@@ -392,11 +394,14 @@ def _parse_formats(medias: Iterable[Media]) -> Generator[Format]:
 
 
 def _check_video_is_available(soup: BeautifulSoup) -> None:
-    if soup.select_one(Selector.NO_VIDEO):
+    if soup.select_one("section.noVideo"):
         raise ScrapeError(HTTPStatus.NOT_FOUND)
 
     page_text = soup.text
-    if soup.select_one(Selector.GEO_BLOCKED) or "This content is unavailable in your country" in page_text:
+    if (
+        soup.select_one(".geoBlocked > h1:-soup-contains('page is not available')")
+        or "This content is unavailable in your country" in page_text
+    ):
         raise ScrapeError(HTTPStatus.FORBIDDEN, "Video is geo restricted")
 
     if (
@@ -406,7 +411,7 @@ def _check_video_is_available(soup: BeautifulSoup) -> None:
         raise ScrapeError(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS)
 
     if (
-        soup.select_one(Selector.REMOVED)
+        soup.select_one("div.removed")
         or "This video has been removed" in page_text
         or "This video is currently unavailable" in page_text
     ):
