@@ -26,9 +26,8 @@ if TYPE_CHECKING:
 class Selector:
     ALBUM_FROM_PHOTO = "div#thumbSlider > h2 > a"
     ALBUM_TITLE = "h1[class*=photoAlbumTitle]"
-    DATE = "script:-soup-contains('uploadDate')"
     GIF = "div#js-gifToWebm"
-    FLASHVARS = "script:-soup-contains('var flashvars_')"
+    FLASHVARS = "script:-soup-contains-own('var flashvars_')"
     NEXT_PAGE = "li.page_next a"
     PHOTO = "div#photoImageSection img"
     PLAYLIST_TITLE = "h1.playlistTitle"
@@ -146,6 +145,7 @@ class PornHubCrawler(Crawler):
         gif = css.select(soup, Selector.GIF)
         attrs = ("data-mp4", "data-fallback", "data-webm")
         src = next(value for attr in attrs if (value := css.attr_or_none(gif, attr)))
+        scrape_item.uploaded_at = self.parse_iso_date(_extr_upload_date(soup))
         await self._photo(scrape_item, Photo(gif_id, self.parse_url(src)))
 
     @error_handling_wrapper
@@ -348,8 +348,7 @@ def _extr_album(soup: BeautifulSoup) -> Album:
 
 
 def _extr_upload_date(soup: BeautifulSoup) -> str:
-    date_text = css.select_text(soup, Selector.DATE)
-    return extr_text(date_text, 'uploadDate": "', '",')
+    return css.json_ld(soup, "uploadDate")["uploadDate"]
 
 
 def _extr_flashvars(soup: BeautifulSoup) -> dict[str, Any]:

@@ -4,13 +4,13 @@ TEST_CASES = [
         "url": "https://www.pornhub.com/gif/54960161",
         "results": [
             {
-                "url": "https://el2.phncdn.com/pics/gifs/054/960/161/54960161a.mp4",
+                "url": "re:/pics/gifs/054/960/161/54960161a.mp4",
                 "filename": "54960161a.mp4",
                 "debrid_url": "re:/pics/gifs/054/960/161/54960161a.mp4?validfrom=",
                 "original_filename": "54960161a.mp4",
                 "referer": "https://www.pornhub.com/gif/54960161",
                 "album_id": None,
-                "uploaded_at": None,
+                "uploaded_at": 1786683600,
                 "download_folder": "re:Loose Files (PornHub)",
                 "thumbnail": None,
             }
@@ -36,7 +36,7 @@ TEST_CASES = [
         "url": "https://www.pornhub.com/album/36252941",
         "results": [
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277841/453277841.jpg",
+                "url": "re:/pics/albums/036/252/941/453277841/453277841.jpg",
                 "filename": "453277841.jpg",
                 "debrid_url": "re:/pics/albums/036/252/941/453277841/",
                 "original_filename": "original_453277841.jpg",
@@ -47,43 +47,43 @@ TEST_CASES = [
                 "thumbnail": None,
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277871/453277871.jpg",
+                "url": "re:/pics/albums/036/252/941/453277871/453277871.jpg",
                 "filename": "453277871.jpg",
                 "original_filename": "original_453277871.jpg",
                 "referer": "https://www.pornhub.com/photo/453277871",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277801/453277801.jpg",
+                "url": "re:/pics/albums/036/252/941/453277801/453277801.jpg",
                 "filename": "453277801.jpg",
                 "original_filename": "original_453277801.jpg",
                 "referer": "https://www.pornhub.com/photo/453277801",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277861/453277861.jpg",
+                "url": "re:/pics/albums/036/252/941/453277861/453277861.jpg",
                 "filename": "453277861.jpg",
                 "original_filename": "original_453277861.jpg",
                 "referer": "https://www.pornhub.com/photo/453277861",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277821/453277821.jpg",
+                "url": "re:/pics/albums/036/252/941/453277821/453277821.jpg",
                 "filename": "453277821.jpg",
                 "original_filename": "original_453277821.jpg",
                 "referer": "https://www.pornhub.com/photo/453277821",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277901/453277901.jpg",
+                "url": "re:/pics/albums/036/252/941/453277901/453277901.jpg",
                 "filename": "453277901.jpg",
                 "original_filename": "original_453277901.jpg",
                 "referer": "https://www.pornhub.com/photo/453277901",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277831/453277831.jpg",
+                "url": "re:/pics/albums/036/252/941/453277831/453277831.jpg",
                 "filename": "453277831.jpg",
                 "original_filename": "original_453277831.jpg",
                 "referer": "https://www.pornhub.com/photo/453277831",
             },
             {
-                "url": "https://ei.phncdn.com/pics/albums/036/252/941/453277851/453277851.jpg",
+                "url": "re:/pics/albums/036/252/941/453277851/453277851.jpg",
                 "filename": "453277851.jpg",
                 "original_filename": "original_453277851.jpg",
                 "referer": "https://www.pornhub.com/photo/453277851",
