@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.crawlers.crawler import DownloadConfig
 from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
 from cyberdrop_dl.crawlers.kemono.kemono import KemonoBaseCrawler
 from cyberdrop_dl.crawlers.kemono.models import UserPostModel
@@ -31,6 +34,8 @@ class PawchiveAPI(KemonoAPI[UserPostModel]):
         return {p["revision_id"]: p for p in map(parse, resp)}
 
 
+@HTTPConfig(rate_limit=(3, 1), headers={"User-Agent": CDL_USER_AGENT})
+@DownloadConfig(slots=5)
 class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = KemonoBaseCrawler.SUPPORTED_PATHS | {
         "Revision": "/<service>/user/<user_id>/post/<post_id>/revision/<revision_id>",

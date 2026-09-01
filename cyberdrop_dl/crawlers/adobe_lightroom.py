@@ -83,7 +83,7 @@ class AdobeLightroomAPI(API):
         except KeyError:
             name = album["payload"]["name"]
 
-        assets_url = album["base"] + album["links"]["/rels/space_album_images_videos"]["href"]
+        assets_url = _override_origin(album["base"]) + album["links"]["/rels/space_album_images_videos"]["href"]
         return Album(album["id"], name, self.parse_url(assets_url))
 
     async def images(self, assets_url: AbsoluteHttpURL) -> AsyncGenerator[map[Image]]:
@@ -99,7 +99,11 @@ class AdobeLightroomAPI(API):
             if not next_href:
                 break
 
-            next_page = self.parse_url(data["base"] + next_href)
+            next_page = self.parse_url(_override_origin(data["base"]) + next_href)
+
+
+def _override_origin(origin: str) -> str:
+    return origin.replace("photos.adobe.io/v2/", "lightroom.adobe.com/v2c/", 1)
 
 
 def _parse_image(resource: dict[str, Any]) -> Image:
