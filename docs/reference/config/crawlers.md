@@ -180,14 +180,14 @@ crawlers:
       - "photos/public"
       - "gifs/public"
       - "videos"
-      - "videos/uploaded"
+      - "videos/upload"
 ```
 
 ## `profile_paths`
 
-| Type                  | Default                                                       |
-| --------------------- | ------------------------------------------------------------- |
-| list of `NonEmptyStr` | [`photos/public`, `gifs/public`, `videos`, `videos/uploaded`] |
+| Type                  | Default                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| list of `NonEmptyStr` | [`photos/public`, `gifs/public`, `videos`, `videos/upload`] |
 
 Subpaths to scrape when an input URL is a profile's homepage. ex: `https://www.pornhub.com/model/<model_name>`
 

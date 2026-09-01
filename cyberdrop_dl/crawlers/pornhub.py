@@ -56,9 +56,9 @@ class PornHubCrawler(Crawler):
             "/pornstar/<name>/videos",
         ),
         "Profile uploaded videos": (
-            "/users/<name>/videos/uploaded",
-            "/model/<name>/videos/uploaded",
-            "/pornstar/<name>/videos/uploaded",
+            "/users/<name>/videos/upload",
+            "/model/<name>/videos/upload",
+            "/pornstar/<name>/videos/upload",
         ),
         "Profile clips": (
             "/users/<name>/clips",
@@ -245,9 +245,9 @@ class PornHubProfile:
             scrape_item.add_children()
 
     @error_handling_wrapper
-    async def __call__(self, scrape_item: ScrapeItem, profile: Profile, selector: PornHubProfile.Selector) -> None:
+    async def __call__(self, scrape_item: ScrapeItem, profile: Profile, selector: str) -> None:
         await self._init(scrape_item, profile)
-        scrape_item.append_folders(selector.name.casefold())
+        scrape_item.append_folders(*filter(None, scrape_item.url.parts[3:]))
         await self._iter_pages(scrape_item, selector)
 
     async def _init(self, scrape_item: ScrapeItem, profile: Profile) -> None:

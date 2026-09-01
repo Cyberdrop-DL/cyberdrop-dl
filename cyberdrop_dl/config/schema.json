@@ -945,7 +945,7 @@
             "photos/public",
             "gifs/public",
             "videos",
-            "videos/uploaded"
+            "videos/upload"
           ],
           "items": {
             "$ref": "#/$defs/NonEmptyStr"

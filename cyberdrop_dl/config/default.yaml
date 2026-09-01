@@ -59,7 +59,7 @@ crawlers:
     - photos/public
     - gifs/public
     - videos
-    - videos/uploaded
+    - videos/upload
   tiktok:
     original: false
   twitter:

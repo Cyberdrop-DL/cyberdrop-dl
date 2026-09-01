@@ -123,7 +123,7 @@ class ClonrConfig(ConfigModel):
 
 
 class PornHubConfig(ConfigModel):
-    profile_paths: tuple[NonEmptyStr, ...] = "photos/public", "gifs/public", "videos", "videos/uploaded"
+    profile_paths: tuple[NonEmptyStr, ...] = "photos/public", "gifs/public", "videos", "videos/upload"
     "Subpaths to scrape when an input URL is a profile's homepage"
 
     @override
