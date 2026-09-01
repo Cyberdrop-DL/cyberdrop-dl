@@ -96,6 +96,10 @@ Set this to `false` if you are using other Flaresolverr like software that suppo
 
 Number of concurrent requests to make with Flaresolverr
 
+{% hint style="warning" %}
+if `flaresolverr_use_session` is True, `flaresolverr_concurrency` **must be** 1. Sessions can only handle 1 request at a time.
+{% endhint %}
+
 # `flaresolverr_wait`
 
 | Type             | Default |
