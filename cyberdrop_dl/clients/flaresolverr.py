@@ -159,7 +159,6 @@ class Config:
 
 
 class Session:
-    DEFAULT_NAME: ClassVar[str] = "cyberdrop-dl"
     TIMEOUT: ClassVar[aiohttp.ClientTimeout] = aiohttp.ClientTimeout(sock_read=5 * 60, sock_connect=60)
 
     def __init__(self, concurrency: int) -> None:
@@ -279,7 +278,12 @@ class Client:
                     logger.traffic("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(resp_json))
 
     async def _create_session(self) -> None:
-        payload: dict[str, Any] = {"session": Session.DEFAULT_NAME}
+        import os
+        import socket
+
+        session_name = f"cyberdrop-dl @{socket.gethostname()} (PID{os.getpid()})"
+
+        payload: dict[str, Any] = {"session": session_name}
 
         if self.config.proxy:
             payload["proxy"] = {"url": str(self.config.proxy)}
@@ -289,7 +293,7 @@ class Client:
         if not resp.ok:
             raise FlaresolverrError(f"Flaresolverr said: {resp.message}")
 
-        self.session.name = Session.DEFAULT_NAME
+        self.session.name = session_name
 
     async def _destroy_session(self) -> None:
         if not self.session.name:

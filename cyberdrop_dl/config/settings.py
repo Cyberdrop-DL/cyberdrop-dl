@@ -375,6 +375,13 @@ class Network(ConfigGroup):
     impersonate: FalsyAsNone[ImpersonateTarget] = None
     "Use this target as impersonation for all scrape requests"
 
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
+        # https://github.com/FlareSolverr/FlareSolverr/issues/1685
+        if self.flaresolverr_concurrency > 1 and self.flaresolverr_use_session:
+            raise ValueError("'flaresolverr_concurrency' can't be > 1 if 'flaresolverr_use_session' is True")
+
 
 class UIMode(CIStrEnum):
     DISABLED = auto()
