@@ -95,7 +95,6 @@ class PornHubCrawler(Crawler):
 
     def __post_init__(self) -> None:
         self.api: PornHubAPI = PornHubAPI.from_crawler(self)
-        self.profile: PornHubProfile = PornHubProfile(self)
         self.update_cookies(
             dict.fromkeys(
                 (
@@ -114,10 +113,9 @@ class PornHubCrawler(Crawler):
             case [
                 "user" | "users" | "channel" | "channels" | "model" | "models" | "pornstar" | "pornstars" as type_,
                 name,
-                *rest,
+                *_,
             ]:
-                profile = Profile(type_.removesuffix("s"), name)
-                await self.profile.fetch(scrape_item, profile, rest)
+                await PornHubProfileCrawler(self, Profile(type_, name), scrape_item).fetch()
             case ["album", album_id]:
                 await self.album(scrape_item, album_id)
             case ["playlist", playlist_id]:
@@ -216,56 +214,51 @@ class PornHubCrawler(Crawler):
         )
 
 
-@final
-class PornHubProfile:
-    def __init__(self, crawler: PornHubCrawler) -> None:
-        self.crawler = crawler
-        self.manager = crawler.manager
-        self.paths = crawler.config.crawlers.pornhub.profile_paths
+@dataclasses.dataclass(frozen=True, slots=True)
+class PornHubProfileCrawler:
+    crawler: PornHubCrawler
+    profile: Profile
+    item: ScrapeItem
 
-    async def fetch(self, scrape_item: ScrapeItem, profile: Profile, rest: list[str]) -> None:
-        match rest:
-            case ["videos" | "clips", *_]:
-                await self(scrape_item, profile, Selector.Profile.VIDEOS)
-            case ["gifs", *_]:
-                await self(scrape_item, profile, Selector.Profile.GIFS)
-            case ["photos", *_]:
-                await self(scrape_item, profile, Selector.Profile.ALBUMS)
-            case []:
-                await self.dispatch(scrape_item, profile)
-            case _:
-                raise ValueError
+    async def fetch(self) -> None:
+        with self.crawler.catch_errors(self.item):
+            match self.item.url.parts[3:]:
+                case ["videos" | "clips", *_]:
+                    await self.pages(Selector.Profile.VIDEOS)
+                case ["gifs", *_]:
+                    await self.pages(Selector.Profile.GIFS)
+                case ["photos", *_]:
+                    await self.pages(Selector.Profile.ALBUMS)
+                case []:
+                    await self.dispatch()
+                case _:
+                    raise ScrapeError.unsupported()
 
-    @error_handling_wrapper
-    async def dispatch(self, scrape_item: ScrapeItem, profile: Profile) -> None:
-        url = self.crawler.PRIMARY_URL / profile.type / profile.name
-        await self._init(scrape_item, profile)
-
-        for path in self.paths:
-            new_item = scrape_item.create_child(url / path)
+    async def dispatch(self) -> None:
+        await self._init()
+        for path in self.crawler.config.crawlers.pornhub.profile_paths:
+            new_item = self.item.create_child(self.profile.url / path)
             self.crawler.create_task(self.crawler.run(new_item))
-            scrape_item.add_children()
+            self.item.add_children()
 
-    @error_handling_wrapper
-    async def __call__(self, scrape_item: ScrapeItem, profile: Profile, selector: str) -> None:
-        await self._init(scrape_item, profile)
-        scrape_item.append_folders(*filter(None, scrape_item.url.parts[3:]))
-        await self._iter_pages(scrape_item, selector)
+    async def pages(self, selector: str) -> None:
+        await self._init()
+        self.item.append_folders(*filter(None, self.item.url.parts[3:]))
+        await self._iter_pages(selector)
 
-    async def _init(self, scrape_item: ScrapeItem, profile: Profile) -> None:
-        if profile in scrape_item.markers:
+    async def _init(self) -> None:
+        if self.profile in self.item.markers:
             return
 
-        url = self.crawler.PRIMARY_URL / profile.type / profile.name
-        soup = await self.crawler.request_soup(url)
+        soup = await self.crawler.request_soup(self.profile.url)
         name = css.select_text(soup, Selector.Profile.NAME, decompose="span")
-        title = self.crawler.create_title(f"{name} [{profile.type.removesuffix('s')}]")
-        scrape_item.setup_as_profile(title)
-        scrape_item.markers.append(profile)
+        title = self.crawler.create_title(f"{name} [{self.profile.type.removesuffix('s')}]")
+        self.item.setup_as_profile(title)
+        self.item.markers.append(self.profile)
 
-    async def _iter_pages(self, scrape_item: ScrapeItem, selector: str) -> None:
-        async for soup in self.crawler.web_pager(scrape_item.url):
-            for new_item in self.crawler.iter_children(scrape_item, soup, selector):
+    async def _iter_pages(self, selector: str) -> None:
+        async for soup in self.crawler.web_pager(self.item.url):
+            for new_item in self.crawler.iter_children(self.item, soup, selector):
                 self.crawler.create_task(self.crawler.run(new_item))
 
 
@@ -273,6 +266,10 @@ class PornHubProfile:
 class Profile:
     type: str
     name: str
+
+    @property
+    def url(self) -> AbsoluteHttpURL:
+        return PornHubCrawler.PRIMARY_URL / self.type / self.name
 
 
 @dataclasses.dataclass(slots=True, order=True)
