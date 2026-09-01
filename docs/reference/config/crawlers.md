@@ -171,6 +171,26 @@ crawlers:
     file: true
 ```
 
+# PornHub
+
+```yaml
+crawlers:
+  pornhub:
+    profile_paths:
+      - "photos/public"
+      - "gifs/public"
+      - "videos"
+      - "videos/uploaded"
+```
+
+## `profile_paths`
+
+| Type                  | Default                                                       |
+| --------------------- | ------------------------------------------------------------- |
+| list of `NonEmptyStr` | [`photos/public`, `gifs/public`, `videos`, `videos/uploaded`] |
+
+Subpaths to scrape when an input URL is a profile's homepage. ex: `https://www.pornhub.com/model/<model_name>`
+
 # Tiktok
 
 ```yaml

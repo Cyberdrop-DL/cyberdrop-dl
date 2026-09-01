@@ -188,6 +188,9 @@
         },
         "clonr": {
           "$ref": "#/$defs/ClonrConfig"
+        },
+        "pornhub": {
+          "$ref": "#/$defs/PornHubConfig"
         }
       },
       "title": "Crawlers",
@@ -932,6 +935,26 @@
         }
       },
       "title": "OnePaceConfig",
+      "type": "object"
+    },
+    "PornHubConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_paths": {
+          "default": [
+            "photos/public",
+            "gifs/public",
+            "videos",
+            "videos/uploaded"
+          ],
+          "items": {
+            "$ref": "#/$defs/NonEmptyStr"
+          },
+          "title": "Profile Paths",
+          "type": "array"
+        }
+      },
+      "title": "PornHubConfig",
       "type": "object"
     },
     "Sort": {

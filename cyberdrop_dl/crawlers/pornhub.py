@@ -55,6 +55,16 @@ class PornHubCrawler(Crawler):
             "/model/<name>/videos",
             "/pornstar/<name>/videos",
         ),
+        "Profile uploaded videos": (
+            "/user/<name>/videos/uploaded",
+            "/model/<name>/videos/uploaded",
+            "/pornstar/<name>/videos/uploaded",
+        ),
+        "Profile clips": (
+            "/user/<name>/clips",
+            "/model/<name>/clips",
+            "/pornstar/<name>/clips",
+        ),
         "Profile albums": (
             "/user/<name>/photos",
             "/model/<name>/photos",
@@ -205,10 +215,11 @@ class PornHubProfile:
     def __init__(self, crawler: PornHubCrawler) -> None:
         self.crawler = crawler
         self.manager = crawler.manager
+        self.paths = crawler.config.crawlers.pornhub.profile_paths
 
     async def fetch(self, scrape_item: ScrapeItem, profile: Profile, rest: list[str]) -> None:
         match rest:
-            case ["videos", *_]:
+            case ["videos" | "clips", *_]:
                 await self(scrape_item, profile, self.Selector.VIDEOS)
             case ["gifs", *_]:
                 await self(scrape_item, profile, self.Selector.GIFS)
@@ -224,8 +235,7 @@ class PornHubProfile:
         url = self.crawler.PRIMARY_URL / profile.type / profile.name
         await self._init(scrape_item, profile)
 
-        paths = ("videos",) if "channel" not in profile.type else ("videos", "gifs/public", "photos/public")
-        for path in paths:
+        for path in self.paths:
             new_item = scrape_item.create_child(url / path)
             self.crawler.create_task(self.crawler.run(new_item))
             scrape_item.add_children()

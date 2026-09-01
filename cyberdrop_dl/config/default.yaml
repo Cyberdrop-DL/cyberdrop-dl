@@ -54,6 +54,12 @@ crawlers:
     content_urls: true
     embed: true
     file: true
+  pornhub:
+    profile_paths:
+    - photos/public
+    - gifs/public
+    - videos
+    - videos/uploaded
   tiktok:
     original: false
   twitter:

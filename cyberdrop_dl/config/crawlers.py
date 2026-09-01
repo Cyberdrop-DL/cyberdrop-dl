@@ -122,6 +122,16 @@ class ClonrConfig(ConfigModel):
             raise ValueError("'clonr.zip' and 'clonr.use_source' are mutually exclusive")
 
 
+class PornHubConfig(ConfigModel):
+    profile_paths: tuple[NonEmptyStr, ...] = "photos/public", "gifs/public", "videos", "videos/uploaded"
+    "Subpaths to scrape when an input URL is a profile's homepage"
+
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
+        self.profile_paths = tuple(p.lstrip("/") for p in self.profile_paths)
+
+
 class GenericCrawlers(ConfigModel):
     wordpress_media: tuple[HttpURL, ...] = ()
     wordpress_html: tuple[HttpURL, ...] = ()
@@ -145,3 +155,4 @@ class Crawlers(ConfigGroup, name=None):
     only_haven: KemonoConfig = Field(default_factory=KemonoConfig)
     octave_music: OctaveMusicConfig = Field(default_factory=OctaveMusicConfig)
     clonr: ClonrConfig = Field(default_factory=ClonrConfig)
+    pornhub: PornHubConfig = Field(default_factory=PornHubConfig)
