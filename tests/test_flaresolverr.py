@@ -12,6 +12,7 @@ from cyberdrop_dl.clients.flaresolverr import (
     Request,
     RequestCommand,
     _cmd_from_http_method,
+    _default_session_name,
 )
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
@@ -38,13 +39,13 @@ async def flaresolverr() -> AsyncGenerator[Client]:
 @needs_flaresolverr()
 def test_flaresolver(flaresolverr: Client) -> None:
     assert flaresolverr.config.url
-    assert flaresolverr.session.request_id() == 1
-    assert flaresolverr.session.request_id() == 2
+    assert flaresolverr.request_id() == 1
+    assert flaresolverr.request_id() == 2
 
 
 @needs_flaresolverr()
 async def test_create_session(flaresolverr: Client) -> None:
-    assert flaresolverr.session.name is None
+    assert flaresolverr.session is None
     resp = await flaresolverr._request(Command.CREATE_SESSION, {"session": "cyberdrop-dl"})
     assert resp.ok
     assert "Session created successfully" in resp.message or "Session already exists" in resp.message
@@ -55,11 +56,15 @@ async def test_create_session(flaresolverr: Client) -> None:
 
 @needs_flaresolverr()
 async def test_create_session_methods(flaresolverr: Client) -> None:
-    assert flaresolverr.session.name is None
-    await flaresolverr._create_session()
-    assert flaresolverr.session.name == "cyberdrop-dl"
-    await flaresolverr._destroy_session()
-    assert flaresolverr.session.name is None
+    assert flaresolverr.session is None
+    name = "cyberdrop-dl test"
+    await flaresolverr.create_session(name)
+    assert flaresolverr.session is None
+    await flaresolverr.destroy_session(name)
+    assert flaresolverr.session is None
+    await flaresolverr._ensure_session()
+    assert flaresolverr.session
+    assert flaresolverr.session == _default_session_name()
 
 
 @needs_flaresolverr()
