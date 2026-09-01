@@ -212,20 +212,15 @@ class Client:
             raise FlaresolverrError(msg)
         raise FlaresolverrError(f"{msg} ({e!r})") from None
 
-    async def _ensure_session(self) -> None:
+    def check_can_connect(self) -> None:
         if self.is_down:
             self.raise_conn_error()
 
-        if not self.config.use_session:
-            return
-
+    async def _ensure_session(self) -> None:
         if self.session:
             return
 
         async with self.limiter.session_lock:
-            if self.is_down:
-                self.raise_conn_error()
-
             if self.session:
                 return
 
@@ -253,9 +248,11 @@ class Client:
                 yield request_id
 
     async def request(self, url: AbsoluteHttpURL, **params: Unpack[RequestParams]) -> Solution:
-        await self._ensure_session()
+        self.check_can_connect()
+        if self.config.use_session:
+            await self._ensure_session()
         with self._disable_on_error():
-            req = prepare_request(url, self.config, params, self.session)
+            req = build_request(url, self.config, params, self.session)
             resp = await self._request(req.command, req.payload, **req.aiohttp_params)
             if not resp.ok:
                 raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
@@ -279,8 +276,9 @@ class Client:
                 finally:
                     logger.traffic("Finished FlareSolverr request [id=%s]\n%s", request_id, _LazyResponseLog(data))
 
-    async def create_session(self, session_name: str, proxy: AbsoluteHttpURL | None = None) -> None:
-        payload: dict[str, Any] = {"session": session_name}
+    async def create_session(self, name: str, *, proxy: AbsoluteHttpURL | None = None) -> None:
+        self.check_can_connect()
+        payload: dict[str, Any] = {"session": name}
 
         if proxy:
             payload["proxy"] = {"url": str(proxy)}
@@ -291,6 +289,7 @@ class Client:
             raise FlaresolverrError(f"Flaresolverr said: {resp.message}")
 
     async def destroy_session(self, name: str) -> None:
+        self.check_can_connect()
         resp = await self._request(Command.DESTROY_SESSION, {"session": name}, timeout=self.limiter.session_timeout)
         if not resp.ok:
             raise FlaresolverrError(f"Flaresolverr said: {resp.message}")
@@ -313,14 +312,10 @@ def _cmd_from_http_method(method: HttpMethod) -> RequestCommand:
             raise ValueError(f"Unsupported HTTP method for Flaresolverr: {method}")
 
 
-def prepare_request(
-    url: AbsoluteHttpURL,
-    config: Config,
-    params: RequestParams,
-    session: str | None = None,
-) -> Request:
+def build_request(url: AbsoluteHttpURL, config: Config, params: RequestParams, session: str | None = None) -> Request:
     command = _cmd_from_http_method(params.get("method", "GET"))
-    command = Command.POST_REQUEST if params.get("data") is not None else command
+    if params.get("data") is not None:
+        command = Command.POST_REQUEST
 
     req = Request.build(command, url, config, wait=params.get("wait"), session=session)
     if (data := params.get("data")) is not None:

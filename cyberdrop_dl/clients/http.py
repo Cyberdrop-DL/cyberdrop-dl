@@ -364,8 +364,7 @@ class HTTPClient:
             raise ScrapeError(
                 "Flaresolverr Required", "This request needs a real running browser to execute javascript"
             )
-        if flare.is_down:
-            flare.raise_conn_error()
+        flare.check_can_connect()
         return await self._flaresolverr_request(url, **params)
 
     async def _flaresolverr_request(
