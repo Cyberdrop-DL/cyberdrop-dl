@@ -46,32 +46,32 @@ class PornHubCrawler(Crawler):
         "Photo": "/photo/<photo_id>",
         "Playlist": "/playlist/<playlist_id>",
         "Profile": (
-            "/user/<name>",
+            "/users/<name>",
             "/model/<name>",
             "/pornstar/<name>",
         ),
         "Profile videos": (
-            "/user/<name>/videos",
+            "/users/<name>/videos",
             "/model/<name>/videos",
             "/pornstar/<name>/videos",
         ),
         "Profile uploaded videos": (
-            "/user/<name>/videos/uploaded",
+            "/users/<name>/videos/uploaded",
             "/model/<name>/videos/uploaded",
             "/pornstar/<name>/videos/uploaded",
         ),
         "Profile clips": (
-            "/user/<name>/clips",
+            "/users/<name>/clips",
             "/model/<name>/clips",
             "/pornstar/<name>/clips",
         ),
         "Profile albums": (
-            "/user/<name>/photos",
+            "/users/<name>/photos",
             "/model/<name>/photos",
             "/pornstar/<name>/photos",
         ),
         "Profile gifs": (
-            "/user/<name>/gifs",
+            "/users/<name>/gifs",
             "/model/<name>/gifs",
             "/pornstar/<name>/gifs",
         ),
@@ -103,8 +103,12 @@ class PornHubCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["user" | "channel" | "channels" | "model" | "pornstar" as type_, name, *rest]:
-                profile = Profile(type_, name)
+            case [
+                "user" | "users" | "channel" | "channels" | "model" | "models" | "pornstar" | "pornstars" as type_,
+                name,
+                *rest,
+            ]:
+                profile = Profile(type_.removesuffix("s"), name)
                 await self.profile.fetch(scrape_item, profile, rest)
             case ["album", album_id]:
                 await self.album(scrape_item, album_id)
