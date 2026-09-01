@@ -240,25 +240,30 @@ class HTTPClient:
                 flare = self.flaresolverr
                 if not flare or flare.is_down:
                     raise
-
-                resp = await self._flaresolverr_request(url, method=method, data=kwargs.get("data"))
-                has_custom_headers = bool(set(kwargs.get("headers", ())) - {hdrs.USER_AGENT, hdrs.REFERER, hdrs.ORIGIN})
-                has_json = kwargs.get("json") is not None
-                if not (has_json or has_custom_headers):
-                    yield resp
-                    return
-
-                logger.info(
-                    f"Making %s request to %s again with Flaresolverr cookies. Reasons: {has_json = }, {has_custom_headers = }",
-                    method,
-                    url,
-                )
-                async with self.raw_request(url, method, **kwargs) as resp:
-                    await check_http_status(resp)
-                    yield resp
-
             else:
                 yield resp
+                return
+
+        # TODO: implement per host weak locks to only make one flaresolverr request
+        # Use the cookies from that request for all future ones
+        resp = await self._flaresolverr_request(url, method=method, data=kwargs.get("data"))
+        custom_headers = tuple(
+            sorted(map(str, set(kwargs.get("headers", ())) - {hdrs.USER_AGENT, hdrs.REFERER, hdrs.ORIGIN}))
+        )
+        has_json = kwargs.get("json") is not None
+        if not (has_json or custom_headers):
+            yield resp
+            return
+
+        logger.info(
+            "Making %s request to %s again with Flaresolverr cookies. Reasons: %s",
+            method,
+            url,
+            f"{has_json = }, {custom_headers = }",
+        )
+        async with self.raw_request(url, method, **kwargs) as resp:
+            await check_http_status(resp)
+            yield resp
 
     def raw_request(
         self,
