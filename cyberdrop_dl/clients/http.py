@@ -240,8 +240,23 @@ class HTTPClient:
                 flare = self.flaresolverr
                 if not flare or flare.is_down:
                     raise
-                # TODO: figure out how to send JSON with Flaresolverr
-                yield await self._flaresolverr_request(url, method=method, data=kwargs.get("data"))
+
+                resp = await self._flaresolverr_request(url, method=method, data=kwargs.get("data"))
+                has_custom_headers = bool(set(kwargs.get("headers", ())) - {hdrs.USER_AGENT, hdrs.REFERER, hdrs.ORIGIN})
+                has_json = kwargs.get("json") is not None
+                if not (has_json or has_custom_headers):
+                    yield resp
+                    return
+
+                logger.info(
+                    f"Making %s request to %s again with Flaresolverr cookies. Reasons: {has_json = }, {has_custom_headers = }",
+                    method,
+                    url,
+                )
+                async with self.raw_request(url, method, **kwargs) as resp:
+                    await check_http_status(resp)
+                    yield resp
+
             else:
                 yield resp
 
@@ -366,13 +381,6 @@ class HTTPClient:
         flaresolverr.verify_solution(self.config.network.user_agent, solution)
         return AbstractResponse.create(solution)
 
-    @contextlib.asynccontextmanager
-    async def rate_limit_ctx(self, domain: str, json_check: JSONCheck | None = None) -> AsyncGenerator[None]:
-        limiter = self.limiter.per_domain.get(domain, contextlib.nullcontext())
-        with enter_context(JSON_CHECK, json_check):
-            async with limiter, self.limiter.global_:
-                yield
-
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
@@ -404,8 +412,10 @@ class HTTPMixin(HTTPController, Protocol):
         if ctx.throttle is not None:
             await ctx.throttle()
 
-        async with self.client.rate_limit_ctx(ctx.domain, ctx.json_check):
-            yield
+        limiter = self.client.limiter.per_domain.get(ctx.domain, contextlib.nullcontext())
+        with enter_context(JSON_CHECK, ctx.json_check):
+            async with limiter, self.client.limiter.global_:
+                yield
 
     @contextlib.asynccontextmanager
     async def request(

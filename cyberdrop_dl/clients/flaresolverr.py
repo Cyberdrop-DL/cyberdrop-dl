@@ -360,4 +360,12 @@ def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
             raise
 
     if solution.user_agent != cdl_user_agent:
-        logger.warning(f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid")
+        msg = (
+            f"{mismatch_ua_msg}\n Response was successful but cookies will not be valid"
+            if solution.cookies
+            else mismatch_ua_msg
+        )
+        logger.warning(msg)
+
+    if not solution.cookies:
+        logger.warning("Got empty cookies from Flaresolverr request %s", solution.id)
