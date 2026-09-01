@@ -1070,6 +1070,10 @@ class API(HTTPMixin, ABC):
         self.parse_url = crawler.parse_url
         self.log = crawler.log
         self.__http_config__ = config  # pyright: ignore[reportAttributeAccessIssue]
+        try:
+            self.__http_ctx__.headers.setdefault("Referer", str(self.PRIMARY_URL))
+        except AttributeError:
+            pass
         return self
 
     def __post_init__(self) -> None: ...
