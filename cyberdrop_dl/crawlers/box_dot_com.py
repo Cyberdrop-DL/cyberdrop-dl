@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 APP_URL = AbsoluteHttpURL("https://app.box.com")
 
 
+@HTTPConfig(headers={"Referer": str(APP_URL)})
 class BoxDotComCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (APP_URL.host,)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
