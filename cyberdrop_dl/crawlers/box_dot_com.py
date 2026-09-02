@@ -1,53 +1,37 @@
 from __future__ import annotations
 
+import asyncio
+import dataclasses
 import json
 from collections import defaultdict
-from enum import StrEnum
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from pathlib import PurePosixPath
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, override
 
-from pydantic import Field
+from typing_extensions import ReadOnly
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.models import DeferredModel
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
-
-class ItemType(StrEnum):
-    folder = "folder"
-    file = "file"
-
-
-class Item(DeferredModel):
-    name: str
-    type: str
-    id: str = Field(validation_alias="itemID", coerce_numbers_to_str=True)
-    typed_id: str = Field("hola", validation_alias="typedID")
-    date: int | None = Field(default=None, validation_alias="contentUpdated")
-    parent_id: str = Field(validation_alias="parentFolderID", coerce_numbers_to_str=True)
-
-
-class SharedFolder(DeferredModel):
-    name: str = Field(validation_alias="currentFolderName")
-    id: str = Field(validation_alias="currentFolderID", coerce_numbers_to_str=True)
-    items: list[Item]
-
-
-APP_DOMAIN = "app.box.com"
-DOWNLOAD_URL_BASE = AbsoluteHttpURL("https://app.box.com/index.php?rm=box_download_shared_file")
-JS_SELECTOR = "script:-soup-contains('Box.postStreamData')"
+APP_URL = AbsoluteHttpURL("https://app.box.com")
 
 
 class BoxDotComCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (APP_DOMAIN,)
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (APP_URL.host,)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File or Folder": "app.box.com/s?sh=<share_code>",
+        "File or Folder": (
+            "/s?sh=<share_code>",
+            "/s/<share_code>",
+        ),
         "Embedded File or Folder": (
             "app.box.com/embed/s?sh=<share_code>",
             "app.box.com/embed_widget/s?sh=<share_code>",
@@ -57,111 +41,185 @@ class BoxDotComCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "Box"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.box.com")
 
+    def __post_init__(self) -> None:
+        self.api: BoxDotComAPI = BoxDotComAPI.from_crawler(self)
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.host == APP_DOMAIN and ("s" in scrape_item.url.parts or scrape_item.url.query.get("s")):
-            return await self.file_or_folder(scrape_item)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case ["s", share_code]:
+                await self.share(scrape_item, share_code)
+            case ["s"] if share_code := scrape_item.url.query.get("sh"):
+                await self.share(scrape_item, share_code)
+            case _:
+                raise ValueError
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["embed_widget" | "embed_widget", *_] if share_code := url.query.get("sh"):
+                return APP_URL / "s" / share_code
+            case ["shared" | "embed_widget" | "embed_widget", share_code]:
+                return APP_URL / "s" / share_code
+            case _:
+                return url
 
     @error_handling_wrapper
-    async def file_or_folder(self, scrape_item: ScrapeItem) -> None:
-        canonical_path = scrape_item.url.path
-        for trash in ("/embed_widget/", "/embed/"):
-            canonical_path = canonical_path.replace(trash, "")
-        scrape_item.url = scrape_item.url.with_path(canonical_path, keep_query=True, keep_fragment=True)
-        if "file" in scrape_item.url.parts and await self.check_complete_from_referer(scrape_item.url):
-            return None
+    async def share(self, scrape_item: ScrapeItem, share_code: str) -> None:
+        share = await self.api.share(share_code)
+        if isinstance(share, File):
+            scrape_item.url = share.url
+            await self._file(scrape_item, share)
+            return
 
-        soup = await self.request_soup(scrape_item.url)
+        await self._filesystem(scrape_item, share)
 
-        if "file or folder link has been removed" in soup.get_text():
-            raise ScrapeError(410)
+    async def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem) -> None:
+        scrape_item.setup_as_album(self.create_title(fs.name, fs.share_code), album_id=fs.share_code)
+        scrape_item.url = APP_URL / "s" / fs.share_code / f"folder/{fs.id}"
 
-        js_text: str = css.select_text(soup, JS_SELECTOR)
-        data = js_text.removesuffix(";").partition("=")[-1]
-        if not data:
-            raise ScrapeError(422)
+        sleep = aio.periodic_sleep(100)
+        async with self.new_task_group(scrape_item) as tg:
+            for path, node in fs.nodes.items():
+                if node["type"] != "file":
+                    continue
 
-        info: dict[str, Any] = json.loads(data)
-        shared_name: str = info["/app-api/enduserapp/shared-item"]["sharedName"]
-        shared_folder_data: dict[str, Any] | None = info.get("/app-api/enduserapp/shared-folder")
-        if not shared_folder_data:
-            # This is a file direct URL, ex: https://app.box.com/s/f30ss109euq3r2yhsuics35acxmnm
-            # only the /file/ URL returns all the info about the file
-            # We need to re make the request
-            file_key = next(key for key in info if key.startswith("/app-api/enduserapp/item/f_"))
-            _, file_id = file_key.rsplit("f_", 1)
-            canonical_url = get_canonical_url(shared_name, file_id)
-            scrape_item.url = canonical_url
-            self.create_task(self.run(scrape_item))
-            return None
-
-        shared_folder = SharedFolder(**shared_folder_data)
-        if "file" not in scrape_item.url.parts:
-            # Process folder
-            return await self.folder(scrape_item, shared_name, shared_folder)
-
-        # Process individual file
-        assert len(scrape_item.url.parts) >= 5
-        file_id = scrape_item.url.parts[4]
-        file = next(item for item in shared_folder.items if item.id == file_id)
-        scrape_item.url = get_canonical_url(shared_name, file_id)
-        await self.file(scrape_item, shared_name, file)
+                file = File.from_node(node, fs.share_code)
+                new_item = scrape_item.create_child(file.url)
+                new_item.append_folders(*path.parts)
+                tg.create_task(self._file(new_item, file))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
-    async def folder(self, scrape_item: ScrapeItem, shared_name: str, folder: SharedFolder) -> None:
-        title = self.create_title(folder.name, folder.id)
-        scrape_item.setup_as_album(title, album_id=folder.id)
-        scrape_item.url = get_canonical_url(shared_name, folder.id, is_folder=True)
-
-        file_system = self.build_file_system(folder.items, folder.id)
-        for path, item in file_system.items():
-            if item.type != ItemType.file:
-                continue
-            link = get_canonical_url(shared_name, item.id)
-            new_scrape_item = scrape_item.create_child(link)
-            for part in path.parts:
-                new_scrape_item.append_folders(part)
-            await self.file(new_scrape_item, shared_name, item)
-            scrape_item.add_children()
-
-    @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, shared_name: str, file: Item) -> None:
-        assert file.type == ItemType.file
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
         filename, ext = self.get_filename_and_ext(file.name)
-        link = DOWNLOAD_URL_BASE.update_query(shared_name=shared_name, file_id=file.typed_id)
         scrape_item.uploaded_at = file.date
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=link)
-
-    def build_file_system(self, items: list[Item], root_id: str) -> dict[Path, Item]:
-        """Builds a flattened dictionary representing a file system from a list of items.
-
-        Returns:
-            A 1-level dictionary where the each keys is the full path to a file/folder, and each value is the actual file/folder
-        """
-
-        path_mapping: dict[Path, Item] = {}
-        parents_mapping: dict[str, list[Item]] = defaultdict(list)
-
-        for item in items:
-            parents_mapping[item.parent_id].append(item)
-
-        def build_tree(parent_id: str, current_path: Path) -> None:
-            for item in parents_mapping.get(parent_id, []):
-                item_path = current_path / item.name
-                path_mapping[item_path] = item
-
-                if item.type == ItemType.folder:
-                    build_tree(item.id, item_path)
-
-        root_item = next(item for item in items if item.id == root_id)
-        path = Path()
-        path_mapping[path] = root_item
-        build_tree(root_id, path)
-        return dict(sorted(path_mapping.items()))
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            file.name,
+            ext,
+            custom_filename=filename,
+            debrid_link=self.api.src(file),
+        )
 
 
-def get_canonical_url(shared_name: str, share_id: str, *, is_folder: bool = False) -> AbsoluteHttpURL:
-    base = AbsoluteHttpURL(f"https://app.box.com/s/{shared_name}")
-    if is_folder:
-        return base / "folder" / share_id
-    return base / "file" / share_id
+class BoxDotComAPI(API):
+    async def share(self, share_code: str) -> File | FileSystem:
+        url = self.PRIMARY_URL / "s" / share_code
+        data = await self.request_stream_data(url)
+        return await asyncio.to_thread(_parse_share, data)
+
+    async def request_stream_data(self, url: AbsoluteHttpURL) -> str:
+        async with self.request(url) as resp:
+            if "file or folder link has been removed" in await resp.text():
+                raise ScrapeError(410)
+
+            soup = await resp.soup()
+
+        js_text: str = css.select_text(soup, "script:-soup-contains('Box.postStreamData')")
+        return "{" + extr_text(js_text, "{", "};") + "}"
+
+    def src(self, file: File) -> AbsoluteHttpURL:
+        return (APP_URL / "index.php").with_query(
+            shared_name=file.share_code,
+            file_id=file.typed_id,
+            rm="box_download_shared_file",
+        )
+
+
+class Node(TypedDict):
+    name: str
+    type: ReadOnly[Literal["file", "folder"]]
+    id: int
+    typed_id: str
+    date: int
+    parent_id: int
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class File:
+    id: int
+    name: str
+    typed_id: str
+    date: int
+    share_code: str
+
+    @classmethod
+    def from_node(cls, node: Node, share_code: str) -> Self:
+        assert node["type"] == "file"
+        return deserialize(cls, node, share_code=share_code)
+
+    @property
+    def url(self) -> AbsoluteHttpURL:
+        return APP_URL / "s" / self.share_code / "file" / str(self.id)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FileSystem:
+    id: int
+    name: str
+    share_code: str
+    nodes: dict[PurePosixPath, Node]
+
+
+def _normalize_node(node: dict[str, Any]) -> Node:
+    return {
+        "name": node["name"],
+        "type": node["type"],
+        "id": node["id"],
+        "typed_id": node["typedID"],
+        "date": node.get("contentUpdated") or node["date"],
+        "parent_id": node["parentFolderID"],
+    }
+
+
+def _build_file_system(nodes_map: Mapping[int, Node], root_id: int) -> dict[PurePosixPath, Node]:
+    path_mapping: dict[PurePosixPath, Node] = {}
+    parents_mapping: dict[int, list[Node]] = defaultdict(list)
+
+    for node in nodes_map.values():
+        parents_mapping[node["parent_id"]].append(node)
+
+    def build_tree(parent_id: int, current_path: PurePosixPath) -> None:
+        for node in parents_mapping.get(parent_id, []):
+            item_path = current_path / node["name"]
+            path_mapping[item_path] = node
+
+            if node["type"] == "folder":
+                build_tree(node["id"], item_path)
+
+    path = PurePosixPath("/")
+    path_mapping[path] = nodes_map[root_id]
+    build_tree(root_id, path)
+    return dict(sorted(path_mapping.items()))
+
+
+def _parse_share(data: str) -> File | FileSystem:
+    share: dict[str, Any] = json.loads(data)
+
+    share_meta: dict[str, Any] = share["/app-api/enduserapp/shared-item"]
+    share_code: str = share_meta["sharedName"]
+    share_type: str = share_meta["type"]
+
+    match share_type:
+        case "file":
+            file = next(f for key, f in share.items() if key.startswith("/app-api/enduserapp/item/f_"))
+            node = _normalize_node(file["items"][0])
+            return File.from_node(node, share_code)
+
+        case "folder":
+            folder = share["/app-api/enduserapp/shared-folder"]
+            root_id = folder["currentFolderID"]
+            nodes = {node["id"]: node for node in map(_normalize_node, folder["items"])}
+            return FileSystem(
+                id=root_id,
+                name=folder["currentFolderName"],
+                share_code=share_code,
+                nodes=_build_file_system(nodes, root_id),
+            )
+
+        case _:
+            raise ScrapeError(422, f"Unsupported {share_type = }")
