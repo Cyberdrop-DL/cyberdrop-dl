@@ -106,7 +106,7 @@ class BoxDotComCrawler(Crawler):
         seen: set[int] = set()
 
         while True:
-            async with self.new_task_group(folder.url) as tg, contextlib.aclosing(get_nodes) as pages:
+            async with contextlib.aclosing(get_nodes) as pages:
                 async for nodes in pages:
                     for node in nodes:
                         if node["id"] in seen:
@@ -124,7 +124,7 @@ class BoxDotComCrawler(Crawler):
                         file = File.from_node(node, folder.share)
                         new_item = scrape_item.create_child(file.url)
                         new_item.append_folders(*folder.path.parts[1:])
-                        tg.create_task(self._file(new_item, file))
+                        self.create_eager_task(self._file(new_item, file))
                         try:
                             scrape_item.add_children()
                         except MaxChildrenError as e:
@@ -132,7 +132,7 @@ class BoxDotComCrawler(Crawler):
                             return
 
             if not subfolders:
-                break
+                return
 
             folder, get_nodes = await self.api.folder(subfolders.popleft(), folder.share)
 
@@ -146,7 +146,7 @@ class BoxDotComCrawler(Crawler):
             file.name,
             ext,
             custom_filename=filename,
-            debrid_link=self.api.request_dl(file),
+            debrid_link=self.api.download(file),
         )
 
 
@@ -188,7 +188,7 @@ class BoxDotComAPI(API):
 
         return Folder.parse(resp["folder"], share_name), nodes()
 
-    def request_dl(self, file: File) -> AbsoluteHttpURL:
+    def download(self, file: File) -> AbsoluteHttpURL:
         return (APP_URL / "index.php").with_query(
             shared_name=file.share,
             file_id=f"f_{file.id}",
