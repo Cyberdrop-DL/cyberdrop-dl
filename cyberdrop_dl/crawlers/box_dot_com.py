@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, overr
 from typing_extensions import AsyncGenerator, ReadOnly
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -26,11 +27,9 @@ APP_URL = AbsoluteHttpURL("https://app.box.com")
 class BoxDotComCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (APP_URL.host,)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "File or Folder": (
+        "Shared file/folder": (
             "/s?sh=<share_name>",
             "/s/<share_name>",
-        ),
-        "Embedded File or Folder": (
             "/embed/s?sh=<share_name>",
             "/embed_widget/s?sh=<share_name>",
         ),
@@ -85,11 +84,16 @@ class BoxDotComCrawler(Crawler):
     ) -> None:
         sleep = aio.periodic_sleep(100)
         subfolders: deque[int] = deque()
+        seen: set[int] = set()
 
         while True:
             async with contextlib.aclosing(get_nodes) as pages, self.new_task_group(folder.url) as tg:
                 async for nodes in pages:
                     for node in nodes:
+                        if node["id"] in seen:
+                            continue
+                        seen.add(node["id"])
+
                         if node["type"] == "folder":
                             subfolders.append(node["id"])
                             continue
@@ -124,6 +128,7 @@ class BoxDotComCrawler(Crawler):
         )
 
 
+@HTTPConfig(headers={"X-Box-Client-Name": "enduserapp", "X-Box-Client-Version": "23.718.0", "Referer": str(APP_URL)})
 class BoxDotComAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = APP_URL / "app-api/enduserapp"
 
@@ -151,7 +156,7 @@ class BoxDotComAPI(API):
                     break
                 resp = await self.request_json(url.update_query(page=page), headers=headers)
 
-        return Folder.parse(resp, share_name), nodes()
+        return Folder.parse(resp["folder"], share_name), nodes()
 
 
 class Node(TypedDict):
@@ -179,9 +184,9 @@ class File:
     share: str
 
     @classmethod
-    def from_node(cls, node: Node, share: str) -> Self:
+    def from_node(cls, node: Node, share_name: str) -> Self:
         assert node["type"] == "file"
-        return deserialize(cls, node, share=share)
+        return deserialize(cls, node, share=share_name)
 
     @property
     def url(self) -> AbsoluteHttpURL:
@@ -208,8 +213,8 @@ class Folder:
     @classmethod
     def parse(cls, folder: dict[str, Any], share_name: str) -> Self:
         return cls(
-            id=folder["currentFolderID"],
-            name=folder["currentFolderName"],
+            id=folder["id"],
+            name=folder["name"],
             share=share_name,
             path=PurePosixPath(*(p["name"] for p in folder["path"])),
         )
