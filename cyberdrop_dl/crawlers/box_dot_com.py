@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, overr
 
 from typing_extensions import AsyncGenerator, ReadOnly
 
-from cyberdrop_dl import aio, signature
+from cyberdrop_dl import signature
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.exceptions import MaxChildrenError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -100,7 +101,6 @@ class BoxDotComCrawler(Crawler):
         folder: Folder,
         get_nodes: AsyncGenerator[Iterable[Node]],
     ) -> None:
-        sleep = aio.periodic_sleep(100)
         subfolders: deque[int] = deque()
         seen: set[int] = set()
 
@@ -124,8 +124,11 @@ class BoxDotComCrawler(Crawler):
                         new_item = scrape_item.create_child(file.url)
                         new_item.append_folders(*folder.path.parts[1:])
                         tg.create_task(self._file(new_item, file))
-                        scrape_item.add_children()
-                        await sleep()
+                        try:
+                            scrape_item.add_children()
+                        except MaxChildrenError as e:
+                            self.raise_exc(scrape_item, e)
+                            return
 
             if not subfolders:
                 break
