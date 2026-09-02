@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parsing of embeded folder URLs (GoogleDrive)
 - `400 Bad request` for albums (PornHub)
 - URL matching (Anysex)
+- Download of nested folders (Box.com)
 
 ## [10.7.0] - 2026-08-29
 
