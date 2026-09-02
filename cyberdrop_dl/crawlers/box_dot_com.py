@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, overr
 
 from typing_extensions import AsyncGenerator, ReadOnly
 
-from cyberdrop_dl import aio
+from cyberdrop_dl import aio, signature
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -150,13 +150,21 @@ class BoxDotComCrawler(Crawler):
 class BoxDotComAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = APP_URL / "app-api/enduserapp"
 
+    @signature.copy(API.request_json)
+    async def request_json(self, *args, **kwargs) -> dict[str, Any]:
+        async with self.request(*args, **kwargs) as resp:
+            content = await resp.text()
+            if content.lstrip().startswith("<!DOCTYPE html>"):
+                resp.content_type = "text/html"
+            return await resp.json()
+
     async def share(self, name: str) -> ShareItem:
         url = (self.ENTRYPOINT / "shared-item").with_query(sharedName=name)
         resp = await self.request_json(url)
         return ShareItem(item_id=resp["itemID"], name=resp["sharedName"], type=resp["itemType"])
 
     async def file(self, file_id: int, share_name: str) -> File:
-        url = (self.ENTRYPOINT / f"item/f_{file_id}").with_query(preview="true")
+        url = (self.ENTRYPOINT / f"item/f_{file_id}").with_query(format="preview")
         resp = await self.request_json(url, headers={"X-Box-EndUser-API": f"sharedName={share_name}"})
         return File.from_node(_normalize_node(resp["items"][0]), share_name)
 
