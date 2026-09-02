@@ -105,7 +105,7 @@ class BoxDotComCrawler(Crawler):
         seen: set[int] = set()
 
         while True:
-            async with contextlib.aclosing(get_nodes) as pages, self.new_task_group(folder.url) as tg:
+            async with self.new_task_group(folder.url) as tg, contextlib.aclosing(get_nodes) as pages:
                 async for nodes in pages:
                     for node in nodes:
                         if node["id"] in seen:
