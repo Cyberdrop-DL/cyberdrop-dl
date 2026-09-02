@@ -124,7 +124,7 @@ class BoxDotComCrawler(Crawler):
             file.name,
             ext,
             custom_filename=filename,
-            debrid_link=file.dl_url,
+            debrid_link=self.api.request_dl(file),
         )
 
 
@@ -158,6 +158,13 @@ class BoxDotComAPI(API):
 
         return Folder.parse(resp["folder"], share_name), nodes()
 
+    def request_dl(self, file: File) -> AbsoluteHttpURL:
+        return (APP_URL / "index.php").with_query(
+            shared_name=file.share,
+            file_id=f"f_{file.id}",
+            rm="box_download_shared_file",
+        )
+
 
 class Node(TypedDict):
     name: str
@@ -179,7 +186,6 @@ class ShareItem:
 class File:
     id: int
     name: str
-    typed_id: str
     date: int
     share: str
 
@@ -191,12 +197,6 @@ class File:
     @property
     def url(self) -> AbsoluteHttpURL:
         return APP_URL / "s" / self.share / "file" / str(self.id)
-
-    @property
-    def dl_url(self) -> AbsoluteHttpURL:
-        return (APP_URL / "index.php").with_query(
-            shared_name=self.share, file_id=self.typed_id, rm="box_download_shared_file"
-        )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
