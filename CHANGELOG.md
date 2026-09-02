@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support file paths as positional arguments
 - Support multiple files as input
 - Support mixing URLs and input files on the same run (all files must exists and all URLs/files must be positional arguments)
+- Support sub-file/sub-folder URLs (Box.com)
 
 ### Changed
 

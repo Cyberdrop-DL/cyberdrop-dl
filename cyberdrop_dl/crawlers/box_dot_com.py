@@ -30,6 +30,8 @@ class BoxDotComCrawler(Crawler):
         "Shared file/folder": (
             "/s?sh=<share_name>",
             "/s/<share_name>",
+            "/s/<share_name>/file/<file_id>",
+            "/s/<share_name>/folder/<folder_id>",
             "/embed/s?sh=<share_name>",
             "/embed_widget/s?sh=<share_name>",
         ),
@@ -55,8 +57,16 @@ class BoxDotComCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["s", share_name]:
-                await self.share(scrape_item, share_name)
+            case ["s", share_name, *rest]:
+                match rest:
+                    case []:
+                        await self.share(scrape_item, share_name)
+                    case ["file", file_id]:
+                        await self.file(scrape_item, int(file_id), share_name)
+                    case ["folder", folder_id]:
+                        await self.folder(scrape_item, int(folder_id), share_name)
+                    case _:
+                        raise ValueError
             case ["s"] if share_name := scrape_item.url.query.get("sh"):
                 await self.share(scrape_item, share_name)
             case _:
@@ -66,15 +76,23 @@ class BoxDotComCrawler(Crawler):
     async def share(self, scrape_item: ScrapeItem, share_name: str) -> None:
         share = await self.api.share(share_name)
         if share.type == "file":
-            file = await self.api.file(share.id, share.code)
-            scrape_item.url = file.url
-            await self._file(scrape_item, file)
+            await self.file(scrape_item, share.item_id, share.name)
             return
 
-        folder, get_nodes = await self.api.folder(share.id, share.code)
+        await self.folder(scrape_item, share.item_id, share.name)
+
+    @error_handling_wrapper
+    async def folder(self, scrape_item: ScrapeItem, folder_id: int, share_name: str):
+        folder, get_nodes = await self.api.folder(folder_id, share_name)
         scrape_item.setup_as_album(self.create_title(folder.name, folder.share), album_id=folder.share)
         scrape_item.url = folder.url
         await self._walk_nodes(scrape_item, folder, get_nodes)
+
+    @error_handling_wrapper
+    async def file(self, scrape_item: ScrapeItem, file_id: int, share_name: str):
+        file = await self.api.file(file_id, share_name)
+        scrape_item.url = file.url
+        await self._file(scrape_item, file)
 
     async def _walk_nodes(
         self,
@@ -135,7 +153,7 @@ class BoxDotComAPI(API):
     async def share(self, name: str) -> ShareItem:
         url = (self.ENTRYPOINT / "shared-item").with_query(sharedName=name)
         resp = await self.request_json(url)
-        return ShareItem(id=resp["itemID"], code=resp["sharedName"], type=resp["itemType"])
+        return ShareItem(item_id=resp["itemID"], name=resp["sharedName"], type=resp["itemType"])
 
     async def file(self, file_id: int, share_name: str) -> File:
         url = (self.ENTRYPOINT / f"item/f_{file_id}").with_query(preview="true")
@@ -177,8 +195,8 @@ class Node(TypedDict):
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class ShareItem:
-    id: int
-    code: str
+    item_id: int
+    name: str
     type: Literal["file", "folder"]
 
 
