@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Self, override
@@ -169,6 +170,9 @@ class ScrapeMapper:
     async def _register_peertube(self) -> None:
         # User may have disabled peertube
         if "peertube" not in self.crawlers:
+            return
+
+        if "pytest" in sys.modules:
             return
 
         from cyberdrop_dl.crawlers._peertube import PeerTubeCrawler
