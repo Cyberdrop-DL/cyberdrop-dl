@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Self, override
 
 from pydantic import dataclasses
 
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -13,17 +14,33 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 
-class PeerTubeCrawler(Crawler, is_generic=True):
+@HTTPConfig(rate_limit=(5, 1))
+@Crawler.db_path_builder("url")
+class PeerTubeGenericCrawler(Crawler, is_generic=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
-            "/videos/watch/0b04f13d-1e18-4f1d-814e-4979aa7c9c44",
-            "/w/<video_id>",
+            "/w/<video_uuid>",
+            "/w/<short_uuid>",
+            "/videos/watch/<video_uuid>",
+            "/videos/watch/<short_uuid>",
         ),
     }
+    DOMAIN: ClassVar[str] = "peertube"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://joinpeertube.org")
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        cls.DOMAIN = cls.PRIMARY_URL.host
-        return super().__init_subclass__(**kwargs)
+        super().__init_subclass__(**kwargs)
+        cls.DOMAIN = PeerTubeGenericCrawler.DOMAIN  # pyright: ignore[reportConstantRedefinition]
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["videos", "watch", video_id]:
+                return url.with_path(f"/w/{video_id}", keep_query=True)
+            case _:
+                return url
 
     def __post_init__(self) -> None:
         self.api: PeerTubeAPI = PeerTubeAPI.from_crawler(self)
@@ -41,13 +58,16 @@ class PeerTubeCrawler(Crawler, is_generic=True):
             return
 
         video = await self.api.video(video_id, scrape_item.password)
+        await self._video(scrape_item, video)
+
+    async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         scrape_item.uploaded_at = self.parse_iso_date(video.publishedAt)
         best_src = max(video.files)
         _, ext = self.get_filename_and_ext(best_src.fileUrl.name)
         filename = self.create_custom_filename(
-            video.name, ext, file_id=video_id, resolution=best_src.resolution, fps=best_src.fps
+            video.name, ext, file_id=video.uuid, resolution=best_src.resolution, fps=best_src.fps
         )
-        subs = await self.api.captions(video_id, scrape_item.password)
+        subs = await self.api.captions(video.uuid, scrape_item.password)
         self.handle_subs(scrape_item, filename, subs)
         await self.handle_file(
             best_src.fileUrl,
@@ -66,12 +86,12 @@ class PeerTubeAPI(API):
         return {"x-peertube-video-password": password} if password else {}
 
     async def video(self, video_id: str, password: str | None) -> Video:
-        url = self.PRIMARY_URL / "api/v1/videos" / video_id
+        url = self.origin / "api/v1/videos" / video_id
         resp = await self.request_json(url, headers=self.headers(password))
         return Video.parse(resp)
 
     async def captions(self, video_id: str, password: str | None) -> list[ISO639Subtitle]:
-        url = self.PRIMARY_URL / "api/v1/videos" / video_id / "captions"
+        url = self.origin / "api/v1/videos" / video_id / "captions"
         resp = await self.request_json(url, headers=self.headers(password))
         return [ISO639Subtitle(sub["fileUrl"], sub["language"]["id"], sub["language"]["label"]) for sub in resp["data"]]
 
@@ -113,5 +133,5 @@ class File:
         return deserialize(cls, file, resolution=Resolution(file["width"], file["height"]))
 
 
-class FramaTubeCrawler(PeerTubeCrawler):
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://framatube.org")
+class PeerTubeCrawler(PeerTubeGenericCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("peertube",)
