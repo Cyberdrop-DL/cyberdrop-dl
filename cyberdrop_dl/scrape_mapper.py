@@ -61,6 +61,12 @@ class CrawlerFactory:
     def __getitem__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT:
         instance = self.get(obj)
         if instance is None:
+            raise KeyError(obj)
+        return instance
+
+    def __call__[CrawlerT: Crawler](self, obj: type[CrawlerT]) -> CrawlerT:
+        instance = self.get(obj)
+        if instance is None:
             instance = self._instances[obj] = obj(self.manager, self.task_mngr, self.tui)
         return instance
 
@@ -149,7 +155,7 @@ class ScrapeMapper:
         self.tui.scrape.get_queue = self._scrape_queue
         self.tui.downloads.get_queue = self._download_queue
 
-    def _init_crawlers(self) -> None:
+    async def _init_crawlers(self) -> None:
         crawlers = get_crawlers_mapping()
         self.crawlers.update(crawlers)
 
@@ -162,6 +168,22 @@ class ScrapeMapper:
         logger.debug(msg)
 
         _disable_crawlers_by_config(self.crawlers, *self.manager.config.crawlers.disabled)
+        await self._register_peertube()
+
+    async def _register_peertube(self) -> None:
+        # User may have disabled peertube
+        if "peertube" not in self.crawlers:
+            return
+
+        from cyberdrop_dl.crawlers.peertube import PeerTubeCrawler
+
+        peertube = self._factory(PeerTubeCrawler)
+        for host in await peertube.get_instances():
+            crawler = self.crawlers.setdefault(host, PeerTubeCrawler)
+            if crawler.DOMAIN == PeerTubeCrawler.DOMAIN:
+                continue
+
+            logger.warning("Found PeerTube site '%s' mapped to a non PeerTube crawler: %s", host, crawler.INFO)
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
@@ -217,7 +239,7 @@ class ScrapeMapper:
     async def __async_init__(self) -> None:
         if self._ready:
             return
-        self._init_crawlers()
+        await self._init_crawlers()
         try:
             await self._jdownloader.connect(self.manager.http_client)
         except Exception:
@@ -265,7 +287,7 @@ class ScrapeMapper:
 
     async def _send_to_crawler(self, scrape_item: ScrapeItem) -> None:
         if cls := _best_match(self.crawlers, scrape_item.url.host):
-            crawler = self._factory[cls]
+            crawler = self._factory(cls)
             await crawler.__async_init__()
             if crawler.__url_config__.trim:
                 scrape_item.url = remove_trailing_slash(scrape_item.url)
