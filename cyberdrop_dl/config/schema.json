@@ -162,38 +162,38 @@
         "bandcamp": {
           "$ref": "#/$defs/BandcampConfig"
         },
+        "clonr": {
+          "$ref": "#/$defs/ClonrConfig"
+        },
         "clypit": {
           "$ref": "#/$defs/ClypitConfig"
         },
         "generic": {
           "$ref": "#/$defs/GenericCrawlers"
         },
+        "google_drive": {
+          "$ref": "#/$defs/GoogleDriveConfig"
+        },
+        "octave_music": {
+          "$ref": "#/$defs/OctaveMusicConfig"
+        },
         "one_pace": {
           "$ref": "#/$defs/OnePaceConfig"
+        },
+        "only_haven": {
+          "$ref": "#/$defs/KemonoConfig"
+        },
+        "pawchive": {
+          "$ref": "#/$defs/KemonoConfig"
+        },
+        "pornhub": {
+          "$ref": "#/$defs/PornHubConfig"
         },
         "tiktok": {
           "$ref": "#/$defs/TikTokConfig"
         },
         "twitter": {
           "$ref": "#/$defs/TwitterConfig"
-        },
-        "pawchive": {
-          "$ref": "#/$defs/KemonoConfig"
-        },
-        "only_haven": {
-          "$ref": "#/$defs/KemonoConfig"
-        },
-        "octave_music": {
-          "$ref": "#/$defs/OctaveMusicConfig"
-        },
-        "clonr": {
-          "$ref": "#/$defs/ClonrConfig"
-        },
-        "pornhub": {
-          "$ref": "#/$defs/PornHubConfig"
-        },
-        "google_drive": {
-          "$ref": "#/$defs/GoogleDriveConfig"
         }
       },
       "title": "Crawlers",
@@ -538,6 +538,14 @@
           },
           "title": "Video",
           "type": "array"
+        },
+        "peertube": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HttpURL"
+          },
+          "title": "Peertube",
+          "type": "array"
         }
       },
       "title": "GenericCrawlers",
@@ -556,6 +564,21 @@
     "GoogleDriveFormats": {
       "additionalProperties": false,
       "properties": {
+        "docs": {
+          "default": "docx",
+          "enum": [
+            "docx",
+            "odt",
+            "rtf",
+            "txt",
+            "epub",
+            "pdf",
+            "md",
+            "zip"
+          ],
+          "title": "Docs",
+          "type": "string"
+        },
         "sheets": {
           "default": "xslx",
           "enum": [
@@ -575,21 +598,6 @@
             "odp"
           ],
           "title": "Slides",
-          "type": "string"
-        },
-        "docs": {
-          "default": "docx",
-          "enum": [
-            "docx",
-            "odt",
-            "rtf",
-            "txt",
-            "epub",
-            "pdf",
-            "md",
-            "zip"
-          ],
-          "title": "Docs",
           "type": "string"
         }
       },
