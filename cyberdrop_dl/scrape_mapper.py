@@ -29,7 +29,7 @@ from cyberdrop_dl.utils import remove_trailing_slash
 from cyberdrop_dl.utils._url import matches_any_host
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable, Iterator
+    from collections.abc import AsyncGenerator, Generator, Iterator
 
     from cyberdrop_dl.clients.jd.client import JDownloader
     from cyberdrop_dl.config import Config
@@ -41,10 +41,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
-
-def _filter_by_domain(url: AbsoluteHttpURL, domains: Iterable[str]) -> bool:
-    return any(domain in url.host for domain in domains)
 
 
 @dataclasses.dataclass(slots=True, eq=False)
@@ -176,6 +172,14 @@ class ScrapeMapper:
             return
 
         from cyberdrop_dl.crawlers.peertube import PeerTubeCrawler
+
+        for url in self.manager.config.crawlers.generic.peertube:
+            if other := _best_match(self.crawlers, url.host):
+                msg = GENERIC_MAP_ERROR.format(url, PeerTubeCrawler.NAME, other.NAME)
+                logger.error(msg)
+                continue
+
+            self.crawlers[url.host] = PeerTubeCrawler
 
         peertube = self._factory(PeerTubeCrawler)
         for host in await peertube.get_instances():
@@ -352,6 +356,13 @@ def get_crawlers_mapping() -> dict[str, type[Crawler]]:
     return crawlers_map
 
 
+GENERIC_MAP_ERROR = (
+    "Unable to assign {} to generic crawler {}. "
+    "URL conflicts with URL format of builtin crawler {}. "
+    "URL will be ignored"
+)
+
+
 def register_crawler(
     crawlers_map: dict[str, type[Crawler]],
     crawler: type[Crawler],
@@ -365,11 +376,7 @@ def register_crawler(
             if not other and (match := _best_match(crawlers_map, crawler.PRIMARY_URL.host)):
                 other = match
             if other:
-                msg = (
-                    f"Unable to assign {crawler.PRIMARY_URL} to generic crawler {crawler.NAME}. "
-                    f"URL conflicts with URL format of builtin crawler {other.NAME}. "
-                    "URL will be ignored"
-                )
+                msg = GENERIC_MAP_ERROR.format(crawler.PRIMARY_URL, crawler.NAME, other.NAME)
                 if from_user == "raise":
                     raise ValueError(msg)
                 logger.error(msg)
@@ -413,11 +420,6 @@ def _create_generic_crawlers(generics_config: GenericCrawlers) -> Generator[type
         from cyberdrop_dl.crawlers._video import GenericVideoCrawler
 
         yield from create_crawlers(generics_config.video, GenericVideoCrawler)
-
-    if generics_config.peertube:
-        from cyberdrop_dl.crawlers.peertube import PeerTubeGenericCrawler
-
-        yield from create_crawlers(generics_config.peertube, PeerTubeGenericCrawler)
 
 
 def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *crawlers_to_disable: str) -> None:

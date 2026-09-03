@@ -111,11 +111,34 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
 
 class NodeInfoError(ScrapeError):
     def __init__(self, msg: str = "Unable to get nodeinfo from PeerTube instance") -> None:
-        super().__init__(422, msg)
+        super().__init__("PeerTube Nodeinfo Error", msg)
 
 
 class PeerTubeAPI(API):
-    @disk_cached_method("instances", ttl=30 * 86400)
+    @classmethod
+    def headers(cls, password: str | None) -> dict[str, Any]:
+        return {"x-peertube-video-password": password} if password else {}
+
+    async def node_info(self) -> dict[str, Any]:
+        # https://nodeinfo.diaspora.software/protocol.html
+        url = self.origin / ".well-known/nodeinfo"
+
+        try:
+            resp = await self.request_json(url)
+        except Exception as e:
+            raise NodeInfoError from e
+
+        try:
+            for link in resp["links"]:
+                rel: str = link["rel"]
+                if rel.startswith("http://nodeinfo.diaspora.software/ns/schema"):
+                    return await self.request_json(self.parse_url(link["href"]), headers={"Accept": "application/json"})
+        except Exception as e:
+            raise NodeInfoError("PeerTube instance does not support the nodeinfo protocol") from e
+
+        raise NodeInfoError("PeerTube instance does not support the nodeinfo protocol")
+
+    @disk_cached_method(ttl=30 * 86400)
     async def instances(self) -> tuple[str, ...]:
         self.log.info("Fetching list of PeerTube instances")
         count = 1000
@@ -128,25 +151,6 @@ class PeerTubeAPI(API):
                 break
 
         return tuple(sorted(hosts))
-
-    @classmethod
-    def headers(cls, password: str | None) -> dict[str, Any]:
-        return {"x-peertube-video-password": password} if password else {}
-
-    async def node_info(self) -> dict[str, Any]:
-        # https://nodeinfo.diaspora.software/protocol.html
-        url = self.origin / ".well-known/nodeinfo"
-        try:
-            resp = await self.request_json(url)
-        except Exception as e:
-            raise NodeInfoError from e
-
-        for link in resp["links"]:
-            rel: str = link["rel"]
-            if rel.startswith("http://nodeinfo.diaspora.software/ns/schema"):
-                return await self.request_json(self.parse_url(link["href"]), headers={"Accept": "application/json"})
-
-        raise NodeInfoError("PeerTube instance does not support not the nodeinfo protocol")
 
     async def video(self, video_id: str, password: str | None) -> Video:
         url = self.origin / "api/v1/videos" / video_id
@@ -167,10 +171,6 @@ class Video:
     thumb: AbsoluteHttpURL
     publishedAt: str
     files: tuple[File, ...]
-
-    @property
-    def web_path(self) -> str:
-        return f"/videos/watch/{self.uuid}"
 
     @classmethod
     def parse(cls, video: dict[str, Any]) -> Self:
