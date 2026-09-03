@@ -392,6 +392,11 @@ def _create_generic_crawlers(generics_config: GenericCrawlers) -> Generator[type
 
         yield from create_crawlers(generics_config.video, GenericVideoCrawler)
 
+    if generics_config.peertube:
+        from cyberdrop_dl.crawlers.peertube import PeerTubeGenericCrawler
+
+        yield from create_crawlers(generics_config.peertube, PeerTubeGenericCrawler)
+
 
 def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *crawlers_to_disable: str) -> None:
     if not crawlers_to_disable:
