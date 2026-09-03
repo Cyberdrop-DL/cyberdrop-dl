@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from m3u8.model import InitializationSection, Segment
 
     from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
@@ -98,24 +98,14 @@ def _create_media_segments(
         # TODO: segments download should bypass the downloads slots limits.
         # They count as a single download
 
-        seg_media_item = MediaItem(
-            url=segment.url,
-            domain=media_item.domain,
-            download_folder=download_folder,
-            filename=segment.name,
-            db_path=media_item.db_path,
-            referer=media_item.url,
-            album_id=media_item.album_id,
-            ext=media_item.ext,
-            parents=media_item.parents,
-            uploaded_at=media_item.uploaded_at,
-            is_segment=True,
-        )
-        seg_media_item.headers = media_item.headers.copy()
+        seg_item = media_item.as_segment()
+        seg_item.filename = segment.name
+        seg_item.url = segment.url
+        seg_item.download_folder = download_folder
         if segment.decrypt_info:
-            segment.decrypt_info(seg_media_item.extra_info)
+            segment.decrypt_info(seg_item.extra_info)
 
-        yield seg_media_item
+        yield seg_item
 
 
 def _segments(m3u8: M3U8) -> list[Segment | InitializationSection]:

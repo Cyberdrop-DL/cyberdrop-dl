@@ -5,6 +5,7 @@ import contextlib
 import dataclasses
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
@@ -286,22 +287,55 @@ class Downloader:
         async with self.__download_context(media_item):
             await self.__hls_download(media_item, m3u8_group)
 
-    async def __hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
+    @error_handling_wrapper
+    async def download_streams(self, media_item: MediaItem, mux: MuxVideo) -> None:
+        if media_item.db_path in self._processed_items and not self.config.ignore_history:
+            return
+
+        assert ffmpeg.is_installed()
+        async with self.__download_context(media_item):
+            await self.__streams_download(media_item, mux)
+
+    async def _prepare_multi_stream_output(self, media_item: MediaItem):
         media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
         media_item.path = media_item.download_folder / media_item.filename
         media_item.download_filename = media_item.path.name
         await self.manager.database.history.add_download_filename(media_item.domain, media_item)
 
+    async def __streams_download(self, media_item: MediaItem, mux: MuxVideo) -> None:
+        await self._prepare_multi_stream_output(media_item)
+        p_name = Path(media_item.filename)
+
+        def file(name: str, url: AbsoluteHttpURL) -> MediaItem:
+            seg_item = media_item.as_segment()
+            seg_item.filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
+            seg_item.url = url
+            return seg_item
+
+        with self.manager.scrape_mapper.tui.downloads.download_hls(
+            media_item.filename, media_item.domain, segments=2, url=media_item.url
+        ):
+            video, audio = file("video", mux.video), file("audio", mux.audio)
+            results = await aio.map(self._download, (audio, video), task_limit=None)
+            if not all(results):
+                msg = f"Download of some streams failed. {dict(zip(('audio', 'video'), results, strict=True))}"
+                raise DownloadError("Mux Download Error", msg)
+
+            streams = hls.Streams(video.path, audio.path, subs=None)
+            await self._merge_streams(media_item, streams)
+
+    async def __hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
+        await self._prepare_multi_stream_output(media_item)
         with self.manager.scrape_mapper.tui.downloads.download_hls(
             media_item.filename,
             media_item.domain,
             segments=sum(m.total_segments for m in rendition if m is not None),
             url=media_item.url,
         ):
-            await self._hls_download(media_item, rendition)
+            streams = await hls.download(media_item, rendition, self._download, self.client.http_client)
+            await self._merge_streams(media_item, streams)
 
-    async def _hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
-        streams = await hls.download(media_item, rendition, self._download, self.client.http_client)
+    async def _merge_streams(self, media_item: MediaItem, streams: hls.Streams) -> None:
         if not streams.audio:
             await aio.move(streams.video, media_item.path)
 
@@ -322,6 +356,12 @@ class Downloader:
         await self.client.process_completed(media_item, media_item.domain)
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         await self.__finalize_download(media_item)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class MuxVideo:
+    video: AbsoluteHttpURL
+    audio: AbsoluteHttpURL
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
