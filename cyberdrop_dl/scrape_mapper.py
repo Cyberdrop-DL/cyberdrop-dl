@@ -171,7 +171,7 @@ class ScrapeMapper:
         if "peertube" not in self.crawlers:
             return
 
-        from cyberdrop_dl.crawlers.peertube import PeerTubeCrawler
+        from cyberdrop_dl.crawlers._peertube import PeerTubeCrawler
 
         for url in self.manager.config.crawlers.generic.peertube:
             if other := _best_match(self.crawlers, url.host):
