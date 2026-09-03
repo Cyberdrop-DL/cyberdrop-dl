@@ -41,7 +41,7 @@ EDITOR = os.getenv("EDITOR")
 
 # CRAWLERS
 
-ENABLE_TWITTER = bool(_env("ENABLE_TWITTER"))
+FILEDITCH_WAIT = int(_env("FILEDITCH_WAIT") or 20)
 GOFILE_SALT = _env("GOFILE_SALT")
 TERMUX = {
     k.removeprefix("TERMUX_APP_").removeprefix("TERMUX_").lstrip("_"): v
