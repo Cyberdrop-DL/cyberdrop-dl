@@ -12,6 +12,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, Suppor
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -91,21 +92,27 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
 
     async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         scrape_item.uploaded_at = self.parse_iso_date(video.publishedAt)
-        best_src = max(video.files)
-        _, ext = self.get_filename_and_ext(best_src.fileUrl.name)
+        mux_streams = None
+        best_video = max(f for f in video.files if f.hasVideo)
+        if not best_video.hasAudio:
+            best_audio = max((f for f in video.files if f.hasAudio and not f.hasVideo), key=lambda x: x.size)
+            mux_streams = [best_video, best_audio]
+
+        _, ext = self.get_filename_and_ext(best_video.fileUrl.name)
         filename = self.create_custom_filename(
-            video.name, ext, file_id=video.uuid, resolution=best_src.resolution, fps=best_src.fps
+            video.name, ext, file_id=video.uuid, resolution=best_video.resolution, fps=best_video.fps
         )
         subs = await self.api.captions(video.uuid, scrape_item.password)
         self.handle_subs(scrape_item, filename, subs)
         await self.handle_file(
-            best_src.fileUrl,
+            best_video.fileUrl,
             scrape_item,
             video.name,
             ext,
             custom_filename=filename,
             thumbnail=video.thumb,
             headers=self.api.headers(scrape_item.password),
+            m3u8=mux_streams,
         )
 
 
@@ -179,24 +186,34 @@ class Video:
 
         *_, thumb = max((t["width"], t["height"], t["fileUrl"]) for t in video["thumbnails"])
 
-        files = itertools.chain.from_iterable(p["files"] for p in video["streamingPlaylists"])
-        files = itertools.chain(video["files"], files)
+        files = unique(
+            itertools.chain(
+                itertools.chain.from_iterable(p["files"] for p in video["streamingPlaylists"]),
+                video["files"],
+            ),
+            key=lambda x: x["id"],
+        )
         return deserialize(cls, video, thumb=thumb, files=map(File.parse, files))
 
 
 # ruff: noqa: N815
 @dataclasses.dataclass(slots=True, frozen=True, order=True)
 class File:
-    hasAudio: bool
-    hasVideo: bool
-    resolution: Resolution
+    resolution: Resolution | None
     fps: int | None
     size: int
+    id: int
     fileUrl: AbsoluteHttpURL
+    hasAudio: bool
+    hasVideo: bool
 
     @classmethod
     def parse(cls, file: dict[str, Any]) -> Self:
-        return deserialize(cls, file, resolution=Resolution(file["width"], file["height"]))
+        return deserialize(
+            cls,
+            file,
+            resolution=Resolution(file["width"], file["height"]) if file.get("hasVideo") else None,
+        )
 
 
 class PeerTubeCrawler(PeerTubeGenericCrawler):

@@ -1,4 +1,4 @@
-DOMAIN = "framatube.org"
+DOMAIN = "peertube"
 TEST_CASES = [
     {
         "url": "https://framatube.org/w/217eefeb-883d-45be-b7fc-a788ad8507d3",
