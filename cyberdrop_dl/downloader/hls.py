@@ -74,7 +74,7 @@ class AESHLSDecrypter(HLSDecrypter):
         return aes_unpad(aes_cbc_decrypt(content, aes_key, key.iv))
 
 
-def _parse_segments(segments: Iterable[Segment | InitializationSection], count: int) -> Generator[HLSSegment]:
+def _create_segments(segments: Iterable[Segment | InitializationSection], count: int) -> Generator[HLSSegment]:
     padding = max(5, len(str(count)))
     for index, segment in enumerate(segments, 1):
         assert segment.uri
@@ -98,6 +98,13 @@ def _create_media_segment(media_item: MediaItem, segment: HLSSegment, download_f
     return new_item
 
 
+def _create_media_segments(m3u8: M3U8, temp_dir: Path, item: MediaItem) -> Generator[MediaItem]:
+    assert m3u8.media_type
+    out_folder = temp_dir / m3u8.media_type
+    for segment in _create_segments(itertools.chain(m3u8.segment_map, m3u8.segments), count=m3u8.total_segments):
+        yield _create_media_segment(item, segment, out_folder)
+
+
 def _check_segments(m3u8: M3U8) -> None:
     if m3u8.total_segments == 0:
         msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.source}) has no valid segments"
@@ -117,7 +124,6 @@ async def _download_m3u8(
     if await aio.is_file(output):
         return output
 
-    out_folder = temp_dir / m3u8.media_type
     logger.debug(
         "Starting HLS download (%s, %s segments) for %s (%s)",
         m3u8.media_type,
@@ -127,13 +133,7 @@ async def _download_m3u8(
     )
 
     m_segments = await _download_segments(
-        (
-            _create_media_segment(item, segment, out_folder)
-            for segment in _parse_segments(
-                itertools.chain(m3u8.segment_map, m3u8.segments),
-                count=m3u8.total_segments,
-            )
-        ),
+        _create_media_segments(m3u8, temp_dir, item),
         m3u8.total_segments,
         download_fn,
         sem,

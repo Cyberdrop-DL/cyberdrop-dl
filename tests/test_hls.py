@@ -39,7 +39,7 @@ media-segment-00003.ts
 
 def test_parse_segments() -> None:
     segments = [Segment(uri="/m3u8/test", base_uri="https://example.com") for _ in range(8)]
-    result = list(hls._parse_segments(segments, len(segments)))
+    result = list(hls._create_segments(segments, len(segments)))
     assert len(result) == 8
     first = result[0]
     assert type(first) is hls.HLSSegment
