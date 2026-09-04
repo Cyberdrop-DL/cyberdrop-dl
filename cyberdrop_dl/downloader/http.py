@@ -309,7 +309,7 @@ class Downloader:
             seg_item.extra_info["MUX_STREAM"] = True
             return seg_item
 
-        logger.info(f"{self.log_prefix} starting: {media_item.url} (multistream video):\n %s", mux.__json__())
+        logger.info(f"{self.log_prefix} starting (multistream video): {media_item.url}\n %s", mux.__json__())
         audio, video = create_stream_item("audio", mux.audio), create_stream_item("video", mux.video)
         results = await aio.map(self._download, (audio, video), task_limit=None)
         if not all(results):
@@ -330,8 +330,7 @@ class Downloader:
         ):
             streams = await hls.download(media_item, rendition, self._download, self.client.http_client)
             await _merge_streams(media_item, streams)
-            if not streams.audio:
-                await _fixup_video(media_item)
+            await _fixup_video(media_item)
             await self.__finish_download(media_item)
 
     async def __finish_download(self, media_item: MediaItem) -> None:
@@ -375,11 +374,11 @@ async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
 
 
 async def _fixup_video(media_item: MediaItem) -> None:
-    if not env.FFMPEG_MP4_FIXUP:
+    if not env.FFMPEG_FIX_HLS:
         return
 
-    with show_msg(f"FFmpeg: {media_item.path.name}"):
-        logger.debug("Running MP4 fixup on '%s' (%s)", media_item.path, media_item.real_url)
+    with show_msg(f"Optimizing {media_item.path.name}"):
+        logger.debug("Fixing MP4 container with ffmpeg: '%s' (%s)", media_item.path, media_item.real_url)
         result = await ffmpeg.optimize(media_item.path)
 
     if not result.success:
