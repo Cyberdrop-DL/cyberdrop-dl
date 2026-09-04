@@ -6,7 +6,7 @@ import dataclasses
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
@@ -108,6 +108,7 @@ class Downloader:
     SUPPORTS_RETRIES: ClassVar[bool] = True
     log_prefix: str = "Download"
 
+    @final
     def __init__(self, manager: Manager, slots: int | None = None, *, use_server_lock: bool = False) -> None:
         self.manager: Manager = manager
         self.use_server_lock: bool = use_server_lock
@@ -119,6 +120,7 @@ class Downloader:
         self._slots: int | None = slots
         self._semaphore: asyncio.Semaphore
         self._set_capacity_limit(slots)
+        self.__post_init__()
 
     def __post_init__(self) -> None: ...
 
