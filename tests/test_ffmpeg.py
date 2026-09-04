@@ -198,3 +198,17 @@ class TestMergeSubs:
         out = tmp_path / "out.srt"
         ffmpeg._concat_bytes([src], out)
         assert out.read_bytes() == b" test \n"
+
+
+@pytest.mark.parametrize(
+    ("arg", "expected"),
+    [
+        ("Crime dAmour", r"'Crime dAmour'"),
+        ("'Crime dAmour'", r"\''Crime dAmour'\'"),
+        ("Crime d'Amour", r"'Crime d'\''Amour'"),
+        ("  this string starts and ends with whitespaces  ", "'  this string starts and ends with whitespaces  '"),
+        (r"c:\foo", r"'c:\foo'"),
+    ],
+)
+def test_quote(arg: str, expected: str) -> None:
+    assert ffmpeg.quote(arg) == expected

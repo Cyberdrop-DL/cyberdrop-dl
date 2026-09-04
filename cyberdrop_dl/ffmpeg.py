@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+type CMD = Sequence[str | Path]
 
 _FFPROBE_CALL_PREFIX = (
     "ffprobe",
@@ -80,8 +81,9 @@ def ffprobe_version() -> str | None:
         return _get_bin_version(bin_path)
 
 
-async def run(args: Iterable[str | Path]) -> SubProcessResult:
-    return await _run_command(("ffmpeg", "-y", "-loglevel", "warning", *args))
+async def run(args: CMD) -> SubProcessResult:
+    assert args, "Supply at least 1 argument"
+    return await _run_command(("ffmpeg", "-y", "-loglevel", "warning", "-hide_banner", *args))
 
 
 async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
@@ -91,87 +93,69 @@ async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
     return ()
 
 
-async def merge(video: Path, audio: Path, output_file: Path) -> SubProcessResult:
-    cmd = (
-        "-i",
-        video,
-        "-i",
-        audio,
-        "-c",
-        "copy",
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        *(await _aac_dts_fix_args(audio)),
-        "-movflags",
-        "+faststart",
-        output_file,
-    )
+async def merge(video: Path, audio: Path, output: Path) -> SubProcessResult:
+    inputs = "-i", video, "-i", audio, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", *(await _aac_dts_fix_args(audio))
+    cmd = *inputs, "-movflags", "+faststart", output
     result = await run(cmd)
     if result.success:
         await aio.gather(*map(_try_delete, (video, audio)))
     return result
 
 
-async def concat(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
-    concat_file = output_file.with_suffix(output_file.suffix + ".ffmpeg_concat.txt")
-    await _create_concat_file(input_files, output_file=concat_file)
-    try:
-        result = await _concat(concat_file, output_file)
-        if result.success:
-            await aio.gather(*map(_try_delete, input_files))
-    finally:
-        await _try_delete(concat_file)
-
-    return result
+def quote(arg: str):
+    # https://ffmpeg.org/ffmpeg-utils.html#toc-Quoting-and-escaping
+    arg = arg.replace("'", r"'\''").replace("'''", "'")
+    arg = arg[1:] if arg[0] == "'" else "'" + arg
+    return arg[:-1] if arg[-1] == "'" else arg + "'"
 
 
-async def _concat(input_file: Path, /, output: Path) -> SubProcessResult:
-    temp_file = output.with_suffix(".concat" + output.suffix)
-    args = "-f", "concat", "-safe", "0", "-i", input_file, "-c", "copy", temp_file
-    result = await run(args)
-    if result.success:
-        await aio.move(temp_file, output)
-    else:
-        await _try_delete(temp_file)
-    return result
-
-
-async def _create_concat_file(input_files: Iterable[Path], output_file: Path) -> None:
+def create_concat_spec(files: Iterable[Path]) -> str:
     # Input paths MUST be absolute!!.
 
-    def write() -> None:
-        with output_file.open("w", encoding="utf8") as f:
-            f.writelines(f"file '{file}'\n" for file in input_files)
+    def lines():
+        yield "ffconcat version 1.0"
+        for file in files:
+            if not file.is_absolute():
+                raise ValueError("file is not an absolute path", file)
+            yield f"file {quote(str(file))}"
 
-    return await asyncio.to_thread(write)
+    return "\n".join(lines())
+
+
+async def concat(files: Iterable[Path], output: Path) -> SubProcessResult:
+    """Concatenate fragments w the same streams (same codecs, same time base)"""
+    # https://trac.ffmpeg.org/wiki/Concatenate#demuxer
+
+    concat_in = output.with_suffix(output.suffix + ".ffmpeg_concat.txt")
+    concat_out = output.with_suffix(".concat" + output.suffix)
+    logger.debug("Writing FFMPEG concat spec to '%s'", concat_in)
+    await aio.write_text(concat_in, create_concat_spec(files), encoding="utf8")
+
+    try:
+        args = "-f", "concat", "-safe", "0", "-i", concat_in, "-c", "copy", concat_out
+        result = await run(args)
+        if result.success:
+            await aio.move(concat_out, output)
+            await aio.gather(*map(_try_delete, files))
+        else:
+            await _try_delete(concat_out)
+    finally:
+        await _try_delete(concat_in)
+
+    return result
 
 
 async def optimize(file: Path) -> SubProcessResult:
-    temp_file = file.with_suffix(".fixup" + file.suffix)
-    args = (
-        "-i",
-        file,
-        "-map",
-        "0",
-        "-ignore_unknown",
-        "-c",
-        "copy",
-        *(await _aac_dts_fix_args(file)),
-        "-f",
-        "mp4",
-        "-movflags",
-        "+faststart",
-        temp_file,
-    )
-
+    fixup_out = file.with_suffix(".fixup" + file.suffix)
+    inputs = "-i", file, "-map", "0", "-ignore_unknown", "-c", "copy", *(await _aac_dts_fix_args(file))
+    args = *inputs, "-f", "mp4", "-movflags", "+faststart", fixup_out
     result = await run(args)
+
     if result.success:
         await aio.unlink(file)
-        await aio.move(temp_file, file)
+        await aio.move(fixup_out, file)
     else:
-        await _try_delete(temp_file)
+        await _try_delete(fixup_out)
 
     return result
 
