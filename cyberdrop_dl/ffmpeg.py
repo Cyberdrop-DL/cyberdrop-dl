@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import functools
-import itertools
 import json
 import logging
 import shutil
@@ -27,15 +26,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Args:
-    CODEC_COPY = "-c", "copy"
-    MAP_ALL_STREAMS = "-map", "0"
-    CONCAT = "-f", "concat", "-safe", "0", "-i"
-    FIXUP_MP4 = *MAP_ALL_STREAMS, "-ignore_unknown", *CODEC_COPY, "-f", "mp4", "-movflags", "+faststart"
-    FIXUP_AUDIO_DTS_FILTER = "-bsf:a", "aac_adtstoasc"
-
-
-_FFMPEG_CALL_PREFIX = "ffmpeg", "-y", "-loglevel", "error"
 _FFPROBE_CALL_PREFIX = (
     "ffprobe",
     "-hide_banner",
@@ -90,17 +80,38 @@ def ffprobe_version() -> str | None:
         return _get_bin_version(bin_path)
 
 
-async def merge(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
-    result = await _merge(input_files, output_file)
+async def run(args: Iterable[str | Path]) -> SubProcessResult:
+    return await _run_command(("ffmpeg", "-y", "-loglevel", "warning", *args))
+
+
+async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
+    result = await probe(audio_stream)
+    if result and (audio := result.audio) and audio.codec == "aac":
+        return "-bsf:a", "aac_adtstoasc"
+    return ()
+
+
+async def merge(video: Path, audio: Path, output_file: Path) -> SubProcessResult:
+    cmd = (
+        "-i",
+        video,
+        "-i",
+        audio,
+        "-c",
+        "copy",
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        *(await _aac_dts_fix_args(audio)),
+        "-movflags",
+        "+faststart",
+        output_file,
+    )
+    result = await run(cmd)
     if result.success:
-        await aio.gather(*map(_try_delete, input_files))
+        await aio.gather(*map(_try_delete, (video, audio)))
     return result
-
-
-async def _merge(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
-    inputs = itertools.chain.from_iterable(("-i", path) for path in input_files)
-    command = *_FFMPEG_CALL_PREFIX, *inputs, *Args.MAP_ALL_STREAMS, *Args.CODEC_COPY, output_file
-    return await _run_command(command)
 
 
 async def concat(input_files: Iterable[Path], output_file: Path) -> SubProcessResult:
@@ -118,8 +129,8 @@ async def concat(input_files: Iterable[Path], output_file: Path) -> SubProcessRe
 
 async def _concat(input_file: Path, /, output: Path) -> SubProcessResult:
     temp_file = output.with_suffix(".concat" + output.suffix)
-    command = *_FFMPEG_CALL_PREFIX, *Args.CONCAT, input_file, *Args.CODEC_COPY, temp_file
-    result = await _run_command(command)
+    args = "-f", "concat", "-safe", "0", "-i", input_file, "-c", "copy", temp_file
+    result = await run(args)
     if result.success:
         await aio.move(temp_file, output)
     else:
@@ -137,14 +148,25 @@ async def _create_concat_file(input_files: Iterable[Path], output_file: Path) ->
     return await asyncio.to_thread(write)
 
 
-async def fixup_video(file: Path) -> SubProcessResult:
+async def optimize(file: Path) -> SubProcessResult:
     temp_file = file.with_suffix(".fixup" + file.suffix)
-    command = *_FFMPEG_CALL_PREFIX, "-i", file, *Args.FIXUP_MP4
-    probe_result = await probe(file)
-    if probe_result and (audio := probe_result.audio) and audio.codec == "aac":
-        command = *command, *Args.FIXUP_AUDIO_DTS_FILTER
-    command = *command, temp_file
-    result = await _run_command(command)
+    args = (
+        "-i",
+        file,
+        "-map",
+        "0",
+        "-ignore_unknown",
+        "-c",
+        "copy",
+        *(await _aac_dts_fix_args(file)),
+        "-f",
+        "mp4",
+        "-movflags",
+        "+faststart",
+        temp_file,
+    )
+
+    result = await run(args)
     if result.success:
         await aio.unlink(file)
         await aio.move(temp_file, file)
@@ -162,12 +184,11 @@ async def _try_delete(file: Path) -> None:
 
 
 async def raw_concat(files: Iterable[Path], output: Path) -> None:
-    logger.debug("Merging subs to '%s'", output)
-    await asyncio.to_thread(_raw_concat, files, output)
+    await asyncio.to_thread(_concat_bytes, files, output)
     await aio.gather(*map(_try_delete, files))
 
 
-def _raw_concat(files: Iterable[Path], output: Path) -> None:
+def _concat_bytes(files: Iterable[Path], output: Path) -> None:
     with output.open("wb") as out:
         for file in files:
             with file.open("rb") as fp_in:
@@ -199,13 +220,14 @@ async def probe_url(
             yield "-http_proxy"
             yield str(proxy)
 
-    command = *_FFPROBE_CALL_PREFIX, "-tls_verify", str(int(verify)), str(url), *extra_params()
-    return await _probe(command)
+    args = "-tls_verify", str(int(verify)), str(url), *extra_params()
+    return await _probe(args)
 
 
-async def _probe(command: Sequence[str | Path]) -> FFprobeResult:
+async def _probe(args: Iterable[str | Path]) -> FFprobeResult:
     _check_ffprobe()
-    result = await _run_command(command)
+    cmd = *_FFPROBE_CALL_PREFIX, *args
+    result = await _run_command(cmd)
     if not result.success:
         return _EMPTY_FFPROBE_RESULT
     return FFprobeResult.from_output(json.loads(result.stdout))
@@ -429,12 +451,13 @@ async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
     assert not isinstance(command, str)
     program, *cmd = command
 
-    if program == "ffmpeg":
-        bin_path = which_ffmpeg()
-    elif program == "ffprobe":
-        bin_path = which_ffprobe()
-    else:
-        raise ValueError(f"Unexpected program in command {command}")
+    match program:
+        case "ffmpeg":
+            bin_path = which_ffmpeg()
+        case "ffprobe":
+            bin_path = which_ffprobe()
+        case _:
+            raise ValueError(f"Unexpected program in command {command}")
 
     assert bin_path
     process_id = str(uuid.uuid4())

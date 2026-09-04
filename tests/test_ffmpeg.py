@@ -183,18 +183,18 @@ class TestMergeSubs:
 
         out = tmp_path / "merged.srt"
 
-        ffmpeg._raw_concat(srcs, out)
+        ffmpeg._concat_bytes(srcs, out)
 
         assert out.read_bytes() == b"AAA\nBBB\nCCC\n"
 
     def test_empty_input(self, tmp_path: Path) -> None:
         out = tmp_path / "empty.srt"
-        ffmpeg._raw_concat([], out)
+        ffmpeg._concat_bytes([], out)
         assert out.read_bytes() == b""
 
     def test_single_file(self, tmp_path: Path) -> None:
         src = tmp_path / "subtitles.srt"
         src.write_bytes(b" test \n")
         out = tmp_path / "out.srt"
-        ffmpeg._raw_concat([src], out)
+        ffmpeg._concat_bytes([src], out)
         assert out.read_bytes() == b" test \n"
