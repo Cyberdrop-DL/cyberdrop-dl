@@ -111,19 +111,22 @@ class Downloader:
     def __init__(self, manager: Manager, slots: int | None = None, *, use_server_lock: bool = False) -> None:
         self.manager: Manager = manager
         self.use_server_lock: bool = use_server_lock
+        self.capacity: Capacity = Capacity()
+        self.config: Config = self.manager.config
         self._processed_items: set[str] = set()
         self._current_attempt_filesize: dict[str, int] = {}
         self._server_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
-        self.capacity: Capacity = Capacity()
-        self.config: Config = self.manager.config
-        self.tui: ScrapingUI = self.manager.scrape_mapper.tui
         self._slots: int | None = slots
-        self.__prepare_sem(slots)
         self._semaphore: asyncio.Semaphore
+        self._set_capacity_limit(slots)
 
     def __post_init__(self) -> None: ...
 
-    __repr__ = simple_repr("slots", "use_server_lock", "log_prefix", "capacity", "_sem")
+    __repr__ = simple_repr("slots", "use_server_lock", "log_prefix", "capacity", "_semaphore")
+
+    @property
+    def tui(self) -> ScrapingUI:
+        return self.manager.scrape_mapper.tui
 
     @property
     def slots(self) -> int | None:
@@ -133,9 +136,9 @@ class Downloader:
     def slots(self, new_limit: int | None) -> None:
         if not (self._semaphore._waiters is None and self._semaphore._value == self._slots):
             raise RuntimeError("Can't change download slots. Downloader is already in use")
-        self.__prepare_sem(new_limit)
+        self._set_capacity_limit(new_limit)
 
-    def __prepare_sem(self, slots: int | None) -> None:
+    def _set_capacity_limit(self, slots: int | None) -> None:
         upper_limit = self.config.downloads.concurrency_per_domain
         self._slots = min(slots or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._slots)
