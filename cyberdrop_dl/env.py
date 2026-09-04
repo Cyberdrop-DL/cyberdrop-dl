@@ -17,14 +17,24 @@ def _env(name: str, *, censor: bool = False) -> str | None:
     return value
 
 
-RUNNING_IN_TERMUX = bool(os.getenv("TERMUX_VERSION") or "com.termux" in os.getenv("PREFIX", sys.prefix))
-FORCE_PORTRAIT_MODE = bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
+def _cast_bool(value: bool | str | None) -> bool:  # noqa: FBT001
+    if not value:
+        return False
+
+    if value is True:
+        return value
+
+    return value.casefold() not in {"no", "0", "false"}
+
+
+RUNNING_IN_TERMUX = _cast_bool(os.getenv("TERMUX_VERSION") or "com.termux" in os.getenv("PREFIX", sys.prefix))
+FORCE_PORTRAIT_MODE = _cast_bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
 
 
 DEBUG_LOG_FOLDER = _env("DEBUG_LOG_FOLDER")
 
 MAX_LOG_MSG_LENGTH = int(_env("MAX_LOG_MSG_LENGTH") or 0) or 5_000
-DEBUG_MODE = bool(
+DEBUG_MODE = _cast_bool(
     _env("DEBUG_MODE")
     or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
@@ -37,8 +47,9 @@ ENABLE_DEBUG_CRAWLERS = (
 
 APPDATA_FOLDER = _env("APPDATA_FOLDER")
 WRITE_JSON_UI = int(_env("WRITE_JSON_UI") or 0) or None
+FFMPEG_MP4_FIXUP = _cast_bool(_env("FFMPEG_MP4_FIXUP"))
 EDITOR = os.getenv("EDITOR")
-CI = bool(os.getenv("CI"))
+CI = _cast_bool(os.getenv("CI"))
 
 # CRAWLERS
 

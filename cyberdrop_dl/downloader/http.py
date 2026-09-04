@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, ClassVar, final
 
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
-from cyberdrop_dl import aio, constants, ffmpeg, storage
+from cyberdrop_dl import aio, constants, env, ffmpeg, storage
 from cyberdrop_dl.clients.downloads import filter_by_duration, resolve_download_dir
 from cyberdrop_dl.downloader import hls
 from cyberdrop_dl.exceptions import (
@@ -346,6 +346,7 @@ class Downloader:
         await self.client.mark_completed(media_item, media_item.domain)
 
     async def _compute_hashes(self, media_item: MediaItem) -> None:
+        # TODO: move this to the scrape_mapper as a post-download task
         if self.config.hashing.mode is not constants.HashMode.IN_PLACE:
             return
         try:
@@ -372,6 +373,9 @@ async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
 
 
 async def _fixup_video(media_item: MediaItem) -> None:
+    if not env.FFMPEG_MP4_FIXUP:
+        return
+
     logger.debug("Running MP4 fixup on '%s' (%s)", media_item.path, media_item.real_url)
     ffmpeg_result = await ffmpeg.fixup_video(media_item.path)
     if not ffmpeg_result.success:
