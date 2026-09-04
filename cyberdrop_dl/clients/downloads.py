@@ -131,7 +131,7 @@ class DownloadClient:
             return True
 
     def _make_hook(self, media_item: MediaItem, resume_point: int) -> ProgressHook:
-        if media_item.is_segment:
+        if media_item.is_segment and not media_item.extra_info.get("MUX_STREAM"):
             return self.manager.scrape_mapper.tui.downloads.download_hls_seg()
 
         size = (media_item.size + resume_point) if media_item.size is not None else None

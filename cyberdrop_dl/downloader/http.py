@@ -22,8 +22,10 @@ from cyberdrop_dl.exceptions import (
     RestrictedFiletypeError,
     SkipDownloadError,
 )
+from cyberdrop_dl.url_objects import MuxVideo
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.m3u8 import Rendition
 
 if TYPE_CHECKING:
     import datetime
@@ -33,8 +35,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.progress.scraping import ScrapingUI
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo
-    from cyberdrop_dl.utils.m3u8 import Rendition
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 logger = logging.getLogger(__name__)
 
@@ -260,33 +261,30 @@ class Downloader:
     def _should_skip(self, media_item: MediaItem) -> bool:
         return bool(media_item.db_path in self._processed_items and not self.config.ignore_history)
 
-    async def run(self, media_item: MediaItem) -> None:
+    @error_handling_wrapper
+    async def run(self, media_item: MediaItem, streams: Rendition | MuxVideo | None = None) -> None:
         if self._should_skip(media_item):
             return
 
+        if streams is not None:
+            assert ffmpeg.is_installed()
+
         async with self.__download_context(media_item):
-            if not await self._download(media_item):
-                return
+            match streams:
+                case None:
+                    await self._file(media_item)
+                case Rendition():
+                    await self._hls(media_item, streams)
+                case MuxVideo():
+                    await self._mux(media_item, streams)
+                case _:
+                    raise ValueError(f"Unsupported streams: {streams!r}")
+
+    async def _file(self, media_item: MediaItem) -> None:
+        if not await self._download(media_item):
+            return
 
         await self.__finish_download(media_item)
-
-    @error_handling_wrapper
-    async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if self._should_skip(media_item):
-            return
-
-        assert ffmpeg.is_installed()
-        async with self.__download_context(media_item):
-            await self.__hls_download(media_item, m3u8_group)
-
-    @error_handling_wrapper
-    async def download_streams(self, media_item: MediaItem, mux: MuxVideo) -> None:
-        if self._should_skip(media_item):
-            return
-
-        assert ffmpeg.is_installed()
-        async with self.__download_context(media_item):
-            await self.__mux_download(media_item, mux)
 
     async def _prepare_multi_stream_output(self, media_item: MediaItem) -> None:
         media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
@@ -294,7 +292,7 @@ class Downloader:
         media_item.download_filename = media_item.path.name
         await self.manager.database.history.add_download_filename(media_item.domain, media_item)
 
-    async def __mux_download(self, media_item: MediaItem, mux: MuxVideo) -> None:
+    async def _mux(self, media_item: MediaItem, mux: MuxVideo) -> None:
         await self._prepare_multi_stream_output(media_item)
         p_name = Path(media_item.filename)
 
@@ -302,6 +300,7 @@ class Downloader:
             seg_item = media_item.as_segment()
             seg_item.filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
             seg_item.url = url
+            seg_item.extra_info["MUX_STREAM"] = True
             return seg_item
 
         with self.tui.downloads.download_hls(media_item.filename, media_item.domain, segments=2, url=media_item.url):
@@ -316,7 +315,7 @@ class Downloader:
             await _fixup_video(media_item)
             await self.__finish_download(media_item)
 
-    async def __hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
+    async def _hls(self, media_item: MediaItem, rendition: Rendition) -> None:
         await self._prepare_multi_stream_output(media_item)
         with self.tui.downloads.download_hls(
             media_item.filename,

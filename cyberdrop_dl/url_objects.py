@@ -224,6 +224,7 @@ class MediaItem:
             is_segment=True,
         )
         me.headers = self.headers.copy()
+        me.extra_info = self.extra_info.copy()
         return me
 
 
