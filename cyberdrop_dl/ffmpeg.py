@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 import uuid
-from fractions import Fraction
 from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from multidict import CIMultiDict, CIMultiDictProxy
@@ -27,76 +26,71 @@ logger = logging.getLogger(__name__)
 type CMD = Sequence[str | Path]
 
 
-def is_installed() -> bool:
-    try:
-        _check()
-    except RuntimeError:
-        return False
-    else:
-        return True
-
-
-def _check() -> None:
-    if not version():
-        raise RuntimeError("ffmpeg is not installed")
-    _check_ffprobe()
-
-
-def _check_ffprobe() -> None:
-    if not ffprobe_version():
-        raise RuntimeError("ffprobe is not installed")
-
-
 @fast_cache
-def _cached_which(program: str) -> str | None:
+def _which(program: str) -> str | None:
     return shutil.which(program)
 
 
 @fast_cache
-def _cached_version(program: str) -> str | None:
-    if bin_path := _cached_which(program):
-        return _get_bin_version(bin_path)
+def _get_bin_version(bin_path: str) -> str | None:
+    import subprocess
+
+    try:
+        stdout = subprocess.run(
+            (bin_path, "-version"),
+            timeout=5,
+            check=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        ).stdout.decode("utf-8", errors="ignore")
+
+    except Exception:  # noqa: BLE001
+        return None
+    else:
+        return stdout.partition("version")[-1].partition("Copyright")[0].strip()
 
 
 def which_ffmpeg() -> str | None:
-    return _cached_which("ffmpeg")
+    return _which("ffmpeg")
 
 
 def which_ffprobe() -> str | None:
-    return _cached_which("ffprobe")
+    return _which("ffprobe")
 
 
 def version() -> str | None:
-    return _cached_version("ffmpeg")
+    if bin_path := which_ffmpeg():
+        return _get_bin_version(bin_path)
 
 
 def ffprobe_version() -> str | None:
-    return _cached_version("ffprobe")
+    if bin_path := which_ffprobe():
+        return _get_bin_version(bin_path)
+
+
+def is_installed() -> bool:
+    return bool(version() and ffprobe_version())
 
 
 async def run(args: CMD) -> SubProcessResult:
     assert args, "Supply at least 1 argument"
-    return await _run_cmd(("ffmpeg", "-y", "-loglevel", "warning", "-hide_banner", *args))
+    if not version():
+        raise RuntimeError("ffmpeg is not installed")
+    return await _run_cmd(("ffmpeg", "-y", "-nostats", "-loglevel", "warning", "-hide_banner", *args))
 
 
-async def run_ffprobe(args: CMD):
+async def ffprobe_run(args: CMD) -> SubProcessResult:
     assert args, "Supply at least 1 argument"
-    return await _run_cmd(
-        (
-            "ffprobe",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-show_streams",
-            "-show_format",
-            "-print_format",
-            "json",
-            *args,
-        )
-    )
+    if not ffprobe_version():
+        raise RuntimeError("ffprobe is not installed")
+    cmd = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-show_format", "-print_format", "json"
+    return await _run_cmd((*cmd, *args))
 
 
 async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
+    # Old issue of ffmpeg, fixed in v5.0
+    # https://trac.ffmpeg.org/ticket/9433
     result = await probe(audio_stream)
     if result and (audio := result.audio) and audio.codec == "aac":
         return "-bsf:a", "aac_adtstoasc"
@@ -104,22 +98,21 @@ async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
 
 
 async def merge(video: Path, audio: Path, output: Path) -> SubProcessResult:
-    inputs = "-i", video, "-i", audio, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", *(await _aac_dts_fix_args(audio))
+    inputs = "-i", video, "-i", audio, "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", *(await _aac_dts_fix_args(audio))
     cmd = *inputs, "-movflags", "+faststart", output
     result = await run(cmd)
     if result.success:
-        await aio.gather(*map(_try_delete, (video, audio)))
+        await aio.gather(_try_delete(video), _try_delete(audio))
     return result
 
 
-def quote_arg(arg: str) -> str:
-    # https://ffmpeg.org/ffmpeg-utils.html#toc-Quoting-and-escaping
+def quote_concat_arg(arg: str) -> str:
     arg = arg.replace("'", r"'\''").replace("'''", "'")
     arg = arg[1:] if arg[0] == "'" else "'" + arg
     return arg[:-1] if arg[-1] == "'" else arg + "'"
 
 
-def create_concat_spec(files: Iterable[Path]) -> str:
+def create_concat_doc(files: Iterable[Path]) -> str:
     # Input paths MUST be absolute!!.
 
     def lines():
@@ -127,26 +120,28 @@ def create_concat_spec(files: Iterable[Path]) -> str:
         for file in files:
             if not file.is_absolute():
                 raise ValueError("file is not an absolute path", file)
-            yield f"file {quote_arg(str(file))}"
+            yield f"file {quote_concat_arg(str(file))}"
 
     return "\n".join(lines())
 
 
-async def concat(files: Iterable[Path], output: Path) -> SubProcessResult:
-    """Concatenate fragments w the same streams (same codecs, same time base)"""
+async def concat(files: Sequence[Path], output: Path) -> SubProcessResult:
+    """Concatenate fragments of the same video.
+
+    All file must have the same streams (same codecs, resolution, time base, etc..)"""
     # https://trac.ffmpeg.org/wiki/Concatenate#demuxer
 
-    concat_in = output.with_suffix(output.suffix + ".ffmpeg_concat.txt")
+    concat_in = output.with_suffix(output.suffix + ".ffconcat.txt")
     concat_out = output.with_suffix(".concat" + output.suffix)
-    logger.debug("Writing FFMPEG concat spec to '%s'", concat_in)
-    await aio.write_text(concat_in, create_concat_spec(files), encoding="utf8")
+    logger.debug("Writing ffmpeg concat file to '%s'", concat_in)
+    await aio.write_text(concat_in, create_concat_doc(files), encoding="utf8")
 
+    args = "-f", "concat", "-safe", "0", "-i", concat_in, "-c", "copy", concat_out
     try:
-        args = "-f", "concat", "-safe", "0", "-i", concat_in, "-c", "copy", concat_out
         result = await run(args)
         if result.success:
             await aio.move(concat_out, output)
-            await aio.gather(*map(_try_delete, files))
+            await aio.gather(*(_try_delete(f) for f in files))
         else:
             await _try_delete(concat_out)
     finally:
@@ -156,9 +151,15 @@ async def concat(files: Iterable[Path], output: Path) -> SubProcessResult:
 
 
 async def optimize(file: Path) -> SubProcessResult:
+    """
+    - Make MP4s actual MP4s instead of MPEG-TS
+    - Fix broken timestamps
+    - Optimize for streaming (faststart)
+
+    Should only be used for HLS downloads"""
     fixup_out = file.with_suffix(".fixup" + file.suffix)
-    inputs = "-i", file, "-map", "0", "-ignore_unknown", "-c", "copy", *(await _aac_dts_fix_args(file))
-    args = *inputs, "-f", "mp4", "-movflags", "+faststart", fixup_out
+    inputs = "-i", file, "-map", "0", "-ignore_unknown", "-c", "copy", "-f", "mp4", *(await _aac_dts_fix_args(file))
+    args = *inputs, "-movflags", "+faststart", fixup_out
     result = await run(args)
 
     if result.success:
@@ -174,12 +175,12 @@ async def _try_delete(file: Path) -> None:
     try:
         await aio.unlink(file, missing_ok=True)
     except OSError as e:
-        logger.warning(f"Unable to delete '{file}' {e}")
+        logger.warning("Unable to delete '%s': %s", file, e)
 
 
-async def raw_concat(files: Iterable[Path], output: Path) -> None:
+async def raw_concat(files: Sequence[Path], output: Path) -> None:
     await asyncio.to_thread(_concat_bytes, files, output)
-    await aio.gather(*map(_try_delete, files))
+    await aio.gather(*(_try_delete(f) for f in files))
 
 
 def _concat_bytes(files: Iterable[Path], output: Path) -> None:
@@ -218,30 +219,10 @@ async def probe_url(
 
 
 async def _probe(args: CMD) -> FFprobeResult:
-    _check_ffprobe()
-    result = await run_ffprobe(args)
+    result = await ffprobe_run(args)
     if not result.success:
         return _EMPTY_FFPROBE_RESULT
     return FFprobeResult.from_output(json.loads(result.stdout))
-
-
-def _get_bin_version(bin_path: str) -> str | None:
-    import subprocess
-
-    try:
-        stdout = subprocess.run(
-            (bin_path, "-version"),
-            timeout=5,
-            check=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        ).stdout.decode("utf-8", errors="ignore")
-
-    except Exception:  # noqa: BLE001
-        return None
-    else:
-        return stdout.partition("version")[-1].partition("Copyright")[0].strip()
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ FFprobe ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -335,6 +316,8 @@ class VideoStream(Stream):
             resolution: str | None = f"{width}x{height}"
 
         if (avg_fps := stream_info.get("avg_frame_rate")) and str(avg_fps) not in {"0/0", "0", "0.0"}:
+            from fractions import Fraction
+
             fps: TruncatedFloat | None = TruncatedFloat(Fraction(avg_fps))
 
         defaults = super(VideoStream, cls).validate(stream_info)
@@ -462,7 +445,7 @@ async def _run_cmd(command: CMD) -> SubProcessResult:
     import asyncio.subprocess
 
     process_id = str(uuid.uuid4())
-    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [path, *map(str, args)]})
+    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, (path, *map(str, args)))
 
     process = await asyncio.subprocess.create_subprocess_exec(
         path,
