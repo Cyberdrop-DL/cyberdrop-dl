@@ -23,6 +23,7 @@ from cyberdrop_dl.exceptions import (
     SkipDownloadError,
 )
 from cyberdrop_dl.hasher import compute_in_place_hash
+from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.url_objects import MuxVideo
 from cyberdrop_dl.utils import dates
@@ -317,7 +318,6 @@ class Downloader:
 
         streams = hls.Streams(video.path, audio.path, None)
         await _merge_streams(media_item, streams)
-        await _fixup_video(media_item)
         await self.__finish_download(media_item)
 
     async def _hls(self, media_item: MediaItem, rendition: Rendition) -> None:
@@ -362,24 +362,27 @@ async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
         await aio.move(streams.video, media_item.path)
         return
 
-    # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
+    # TODO: add remux method to create an mkv file instead of mp4
     # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
     # so we leave them as independent files for now
-    logger.debug(f"Merging audio and video stream from {media_item.real_url}")
-    ffmpeg_result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
+    with show_msg(f"Merging {media_item.path.name}"):
+        logger.debug("Merging audio and video stream for '%s' (%s)", media_item.path.name, media_item.real_url)
+        result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
 
-    if not ffmpeg_result.success:
-        raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
+    if not result.success:
+        raise DownloadError("FFmpeg Concat Error", result.stderr, media_item)
 
 
 async def _fixup_video(media_item: MediaItem) -> None:
     if not env.FFMPEG_MP4_FIXUP:
         return
 
-    logger.debug("Running MP4 fixup on '%s' (%s)", media_item.path, media_item.real_url)
-    ffmpeg_result = await ffmpeg.fixup_video(media_item.path)
-    if not ffmpeg_result.success:
-        raise DownloadError("FFmpeg Fixup Error", ffmpeg_result.stderr, media_item)
+    with show_msg(f"Fixing {media_item.path.name}"):
+        logger.debug("Running MP4 fixup on '%s' (%s)", media_item.path, media_item.real_url)
+        result = await ffmpeg.fixup_video(media_item.path)
+
+    if not result.success:
+        raise DownloadError("FFmpeg Fixup Error", result.stderr, media_item)
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:

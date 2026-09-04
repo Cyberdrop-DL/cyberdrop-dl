@@ -200,7 +200,7 @@ class Hasher:
                     referer,
                 )
         except Exception:
-            logger.exception("Error hashing '%s'", file)
+            logger.exception("Error computing %s hash of '%s'", hash_type, file)
         else:
             return hash_value
 
