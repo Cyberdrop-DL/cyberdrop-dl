@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import itertools
 import logging
 from contextvars import ContextVar
 from http import HTTPStatus
@@ -26,14 +27,10 @@ if TYPE_CHECKING:
     DownloadFn = Callable[[MediaItem], Awaitable[bool]]
 
 
-CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
-_DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 logger = logging.getLogger(__name__)
 
-
-class SegmentDownloadResult(NamedTuple):
-    item: MediaItem
-    downloaded: bool
+CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
+_DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 
 
 class Streams(NamedTuple):
@@ -77,8 +74,8 @@ class AESHLSDecrypter(HLSDecrypter):
         return aes_unpad(aes_cbc_decrypt(content, aes_key, key.iv))
 
 
-def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Generator[HLSSegment]:
-    padding = max(5, len(str(len(segments))))
+def _parse_segments(segments: Iterable[Segment | InitializationSection], count: int) -> Generator[HLSSegment]:
+    padding = max(5, len(str(count)))
     for index, segment in enumerate(segments, 1):
         assert segment.uri
         yield HLSSegment(
@@ -89,65 +86,60 @@ def _parse_segments(segments: Sequence[Segment | InitializationSection]) -> Gene
         )
 
 
-def _create_media_segments(
-    media_item: MediaItem,
-    segments: Iterable[HLSSegment],
-    download_folder: Path,
-) -> Generator[MediaItem]:
-    for segment in segments:
-        # TODO: segments download should bypass the downloads slots limits.
-        # They count as a single download
+def _create_media_segment(media_item: MediaItem, segment: HLSSegment, download_folder: Path) -> MediaItem:
+    # TODO: segments download should bypass the downloads slots limits.
+    # They count as a single download
 
-        seg_item = media_item.as_segment()
-        seg_item.filename = segment.name
-        seg_item.url = segment.url
-        seg_item.download_folder = download_folder
-        if segment.decrypt_info:
-            segment.decrypt_info(seg_item.extra_info)
+    new_item = media_item.as_segment(segment.name, segment.url)
+    new_item.download_folder = download_folder
+    if segment.decrypt_info:
+        segment.decrypt_info(new_item.extra_info)
 
-        yield seg_item
+    return new_item
 
 
-def _segments(m3u8: M3U8) -> list[Segment | InitializationSection]:
-    segments = m3u8.segment_map + m3u8.segments
-    if not segments:
+def _check_segments(m3u8: M3U8) -> None:
+    if m3u8.total_segments == 0:
         msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.source}) has no valid segments"
         raise DownloadError(HTTPStatus.NO_CONTENT, msg)
-    return segments
 
 
 async def _download_m3u8(
     m3u8: M3U8,
     temp_dir: Path,
-    media_item: MediaItem,
+    item: MediaItem,
     download_fn: DownloadFn,
     sem: asyncio.BoundedSemaphore,
 ) -> Path:
     assert m3u8.media_type
-    segments = _segments(m3u8)
-    output = _prepare_output_path(m3u8, media_item.path)
+    _check_segments(m3u8)
+    output = _prepare_output_path(m3u8, item.path)
     if await aio.is_file(output):
         return output
 
-    async def download(seg_media_item: MediaItem) -> SegmentDownloadResult:
-        return SegmentDownloadResult(seg_media_item, await download_fn(seg_media_item))
-
-    m_segments = _create_media_segments(
-        media_item,
-        _parse_segments(segments),
-        download_folder=temp_dir / m3u8.media_type,
-    )
-
+    out_folder = temp_dir / m3u8.media_type
     logger.debug(
         "Starting HLS download (%s, %s segments) for %s (%s)",
         m3u8.media_type,
-        f"{len(segments):,}",
-        media_item.real_url,
+        f"{m3u8.total_segments:,}",
+        item.real_url,
         m3u8.source,
     )
-    results = await _download_segments(m_segments, m3u8.total_segments, download, sem)
-    await _decrypt_segments((r.item for r in results), sem)
-    await _merge_segments(tuple(result.item.path for result in results), output)
+
+    m_segments = await _download_segments(
+        (
+            _create_media_segment(item, segment, out_folder)
+            for segment in _parse_segments(
+                itertools.chain(m3u8.segment_map, m3u8.segments),
+                count=m3u8.total_segments,
+            )
+        ),
+        m3u8.total_segments,
+        download_fn,
+        sem,
+    )
+    await _decrypt_segments(m_segments, sem)
+    await _merge_segments(m_segments, output)
     return output
 
 
@@ -166,29 +158,33 @@ async def _decrypt_segments(items: Iterable[MediaItem], sem: asyncio.BoundedSema
 async def _download_segments(
     segments: Iterable[MediaItem],
     count: int,
-    download: Callable[[MediaItem], Awaitable[SegmentDownloadResult]],
+    download_fn: Callable[[MediaItem], Awaitable[bool]],
     sem: asyncio.BoundedSemaphore,
-) -> list[SegmentDownloadResult]:
+) -> list[MediaItem]:
+
+    async def download(seg_media_item: MediaItem) -> MediaItem | None:
+        if await download_fn(seg_media_item):
+            return seg_media_item
+
     results = await aio.map(
         download,
         segments,
         task_limit=sem,
     )
 
-    n_successful = sum(1 for result in results if result.downloaded)
-    if n_successful != count:
-        msg = f"Download of some segments failed. Successful: {n_successful:,}/{count:,} "
+    results = [item for item in results if item is not None]
+    if len(results) != count:
+        msg = f"Download of some segments failed. Successful: {len(results):,}/{count:,} "
         raise DownloadError("HLS Seg Error", msg)
 
     return results
 
 
-async def _merge_segments(seg_paths: Sequence[Path], output: Path) -> None:
-    if len(seg_paths) == 1:
-        _ = await aio.move(seg_paths[0], output)
-        return
-
-    await ffmpeg.raw_concat(seg_paths, output)
+async def _merge_segments(results: Sequence[MediaItem], output: Path) -> None:
+    if len(results) == 1:
+        await aio.move(results[0].path, output)
+    else:
+        await ffmpeg.raw_concat((item.path for item in results), output)
 
 
 def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:

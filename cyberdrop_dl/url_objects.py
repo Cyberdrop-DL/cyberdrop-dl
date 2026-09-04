@@ -209,12 +209,12 @@ class MediaItem:
             me["xxhash"] = f"xxh128:{self.xxhash}"
         return me
 
-    def as_segment(self) -> MediaItem:
+    def as_segment(self, filename: str, url: AbsoluteHttpURL) -> MediaItem:
         me = MediaItem(
-            url=self.url,
+            url=url,
             domain=self.domain,
             download_folder=self.download_folder,
-            filename=self.filename,
+            filename=filename,
             db_path=self.db_path,
             referer=self.url,
             album_id=self.album_id,

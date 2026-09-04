@@ -141,6 +141,8 @@ class Downloader:
         self._set_capacity_limit(new_limit)
 
     def _set_capacity_limit(self, slots: int | None) -> None:
+        if slots is not None and slots < 1:
+            raise ValueError("slots has to be >=1 or None (unlimited)")
         upper_limit = self.config.downloads.concurrency_per_domain
         self._slots = min(slots or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._slots)
@@ -162,7 +164,7 @@ class Downloader:
 
                 logger.error(f"{self.log_prefix} failed: {media_item.url} with error: {e!s}")
                 logger.info(
-                    "Retrying %s: %s, retry attempt: %s",
+                    "Retrying %s: %s, attempt: %s",
                     self.log_prefix.lower(),
                     media_item.url,
                     media_item.attempts + 1,
@@ -300,9 +302,8 @@ class Downloader:
         p_name = Path(media_item.filename)
 
         def create_stream_seg(name: str, url: AbsoluteHttpURL) -> MediaItem:
-            seg_item = media_item.as_segment()
-            seg_item.filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
-            seg_item.url = url
+            filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
+            seg_item = media_item.as_segment(filename, url)
             seg_item.extra_info["MUX_STREAM"] = True
             return seg_item
 
