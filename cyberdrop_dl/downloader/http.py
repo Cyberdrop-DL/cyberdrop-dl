@@ -156,9 +156,11 @@ class Downloader:
                     raise
 
                 logger.error(f"{self.log_prefix} failed: {media_item.url} with error: {e!s}")
-
                 logger.info(
-                    f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
+                    "Retrying %s: %s, retry attempt: %s",
+                    self.log_prefix.lower(),
+                    media_item.url,
+                    media_item.attempts + 1,
                 )
 
     async def _check_skip_by_config(self, media_item: MediaItem) -> None:
@@ -292,24 +294,24 @@ class Downloader:
         await self._prepare_multi_stream_output(media_item)
         p_name = Path(media_item.filename)
 
-        def file(name: str, url: AbsoluteHttpURL) -> MediaItem:
+        def create_stream_seg(name: str, url: AbsoluteHttpURL) -> MediaItem:
             seg_item = media_item.as_segment()
             seg_item.filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
             seg_item.url = url
             seg_item.extra_info["MUX_STREAM"] = True
             return seg_item
 
-        with self.tui.downloads.download_hls(media_item.filename, media_item.domain, segments=2, url=media_item.url):
-            audio, video = file("audio", mux.audio), file("video", mux.video)
-            results = await aio.map(self._download, (audio, video), task_limit=None)
-            if not all(results):
-                msg = f"Download of some streams failed. {dict(zip(('audio', 'video'), results, strict=True))}"
-                raise DownloadError("Mux Download Error", msg)
+        logger.info(f"{self.log_prefix} starting: {media_item.url}")
+        audio, video = create_stream_seg("audio", mux.audio), create_stream_seg("video", mux.video)
+        results = await aio.map(self._download, (audio, video), task_limit=None)
+        if not all(results):
+            msg = f"Download of some streams failed. {dict(zip(('audio', 'video'), results, strict=True))}"
+            raise DownloadError("Mux Download Error", msg)
 
-            streams = hls.Streams(video.path, audio.path, None)
-            await _merge_streams(media_item, streams)
-            await _fixup_video(media_item)
-            await self.__finish_download(media_item)
+        streams = hls.Streams(video.path, audio.path, None)
+        await _merge_streams(media_item, streams)
+        await _fixup_video(media_item)
+        await self.__finish_download(media_item)
 
     async def _hls(self, media_item: MediaItem, rendition: Rendition) -> None:
         await self._prepare_multi_stream_output(media_item)
