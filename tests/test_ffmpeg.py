@@ -13,7 +13,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 @contextlib.contextmanager
 def mock_call() -> Generator[AsyncMock]:
-    with patch("cyberdrop_dl.ffmpeg._run_command", new_callable=AsyncMock) as m:
+    with patch("cyberdrop_dl.ffmpeg._run_cmd", new_callable=AsyncMock) as m:
         m.return_value = ffmpeg.SubProcessResult(
             stdout="{}",
             stderr="",
@@ -27,7 +27,7 @@ def last_call_args(mock: AsyncMock) -> list[Any]:
 
 
 def get_probe_args(mock: AsyncMock) -> list[Any]:
-    return last_call_args(mock)[len(ffmpeg._FFPROBE_CALL_PREFIX) :]
+    return last_call_args(mock)[8:]
 
 
 @pytest.mark.http
