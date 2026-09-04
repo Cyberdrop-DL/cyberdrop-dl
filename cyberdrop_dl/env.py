@@ -38,6 +38,7 @@ ENABLE_DEBUG_CRAWLERS = (
 APPDATA_FOLDER = _env("APPDATA_FOLDER")
 WRITE_JSON_UI = int(_env("WRITE_JSON_UI") or 0) or None
 EDITOR = os.getenv("EDITOR")
+CI = bool(os.getenv("CI"))
 
 # CRAWLERS
 
