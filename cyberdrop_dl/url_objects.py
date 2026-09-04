@@ -120,6 +120,12 @@ class ScrapeItemType(IntEnum):
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class MuxVideo:
+    video: AbsoluteHttpURL
+    audio: AbsoluteHttpURL
+
+
 @final
 @dataclasses.dataclass(slots=True, kw_only=True)
 class MediaItem:

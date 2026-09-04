@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.progress.scraping import ScrapingUI
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo
     from cyberdrop_dl.utils.m3u8 import Rendition
 
 logger = logging.getLogger(__name__)
@@ -164,14 +164,6 @@ class Downloader:
                     f"Retrying {self.log_prefix.lower()}: {media_item.url}, retry attempt: {media_item.attempts + 1}"
                 )
 
-    async def __finalize_download(self, media_item: MediaItem) -> None:
-        await aio.chmod(media_item.path, 0o666)
-        if media_item.is_segment:
-            return
-        await _set_mtime(media_item, self.config)
-        self.tui.files.stats.completed += 1
-        logger.info(f"Download finished: {media_item.url}")
-
     async def _check_skip_by_config(self, media_item: MediaItem) -> None:
         if not _is_allowed_filetype(media_item, self.config):
             raise RestrictedFiletypeError(origin=media_item)
@@ -242,7 +234,7 @@ class Downloader:
 
         else:
             if downloaded:
-                await self.__finalize_download(media_item)
+                await aio.chmod(media_item.path, 0o666)
             return downloaded
 
     @contextlib.asynccontextmanager
@@ -265,25 +257,22 @@ class Downloader:
             self.tui.files.stats.skipped += 1
         return not proceed
 
-    async def run(self, media_item: MediaItem) -> bool:
-        if media_item.db_path in self._processed_items and not self.config.ignore_history:
-            return False
+    def _should_skip(self, media_item: MediaItem) -> bool:
+        return bool(media_item.db_path in self._processed_items and not self.config.ignore_history)
+
+    async def run(self, media_item: MediaItem) -> None:
+        if self._should_skip(media_item):
+            return
 
         async with self.__download_context(media_item):
-            downloaded = await self._download(media_item)
+            if not await self._download(media_item):
+                return
 
-        if not downloaded:
-            return False
-        assert not media_item.is_segment
-        if await self.__skip_by_duration(media_item):
-            return False
-        await self.client.process_completed(media_item, media_item.domain)
-        await self.client.handle_media_item_completion(media_item, downloaded=True)
-        return True
+        await self.__finish_download(media_item)
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
-        if media_item.db_path in self._processed_items and not self.config.ignore_history:
+        if self._should_skip(media_item):
             return
 
         assert ffmpeg.is_installed()
@@ -292,12 +281,12 @@ class Downloader:
 
     @error_handling_wrapper
     async def download_streams(self, media_item: MediaItem, mux: MuxVideo) -> None:
-        if media_item.db_path in self._processed_items and not self.config.ignore_history:
+        if self._should_skip(media_item):
             return
 
         assert ffmpeg.is_installed()
         async with self.__download_context(media_item):
-            await self.__streams_download(media_item, mux)
+            await self.__mux_download(media_item, mux)
 
     async def _prepare_multi_stream_output(self, media_item: MediaItem) -> None:
         media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
@@ -305,7 +294,7 @@ class Downloader:
         media_item.download_filename = media_item.path.name
         await self.manager.database.history.add_download_filename(media_item.domain, media_item)
 
-    async def __streams_download(self, media_item: MediaItem, mux: MuxVideo) -> None:
+    async def __mux_download(self, media_item: MediaItem, mux: MuxVideo) -> None:
         await self._prepare_multi_stream_output(media_item)
         p_name = Path(media_item.filename)
 
@@ -323,7 +312,9 @@ class Downloader:
                 raise DownloadError("Mux Download Error", msg)
 
             streams = hls.Streams(video.path, audio.path, None)
-            await self._merge_streams(media_item, streams)
+            await _merge_streams(media_item, streams)
+            await _fixup_video(media_item)
+            await self.__finish_download(media_item)
 
     async def __hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
         await self._prepare_multi_stream_output(media_item)
@@ -334,20 +325,20 @@ class Downloader:
             url=media_item.url,
         ):
             streams = await hls.download(media_item, rendition, self._download, self.client.http_client)
-            await self._merge_streams(media_item, streams)
+            await _merge_streams(media_item, streams)
+            await _fixup_video(media_item)
+            await self.__finish_download(media_item)
 
-    async def _merge_streams(self, media_item: MediaItem, streams: hls.Streams) -> None:
-        await _merge_streams(media_item, streams)
-        await _fixup_video(media_item)
+    async def __finish_download(self, media_item: MediaItem) -> None:
+        assert not media_item.is_segment
+        if await self.__skip_by_duration(media_item):
+            return
+
+        await _set_mtime(media_item, self.config)
+        self.tui.files.stats.completed += 1
+        logger.info(f"Download finished: {media_item.url}")
         await self.client.process_completed(media_item, media_item.domain)
         await self.client.handle_media_item_completion(media_item, downloaded=True)
-        await self.__finalize_download(media_item)
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class MuxVideo:
-    video: AbsoluteHttpURL
-    audio: AbsoluteHttpURL
 
 
 async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
