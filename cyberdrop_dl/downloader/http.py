@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients.downloads import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.progress.scraping import ScrapingUI
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
     from cyberdrop_dl.utils.m3u8 import Rendition
 
@@ -117,9 +118,11 @@ class Downloader:
     )
     capacity: Capacity = dataclasses.field(default_factory=Capacity)
     config: Config = dataclasses.field(init=False)
+    tui: ScrapingUI = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         self.config = self.manager.config
+        self.tui = self.manager.scrape_mapper.tui
         self.slots = self._slots
 
     @property
@@ -166,7 +169,7 @@ class Downloader:
         if media_item.is_segment:
             return
         await _set_mtime(media_item, self.config)
-        self.manager.scrape_mapper.tui.files.stats.completed += 1
+        self.tui.files.stats.completed += 1
         logger.info(f"Download finished: {media_item.url}")
 
     async def _check_skip_by_config(self, media_item: MediaItem) -> None:
@@ -214,7 +217,7 @@ class Downloader:
         except SkipDownloadError as e:
             if not media_item.is_segment:
                 logger.info(f"Download skipped {media_item.url}: {e}")
-                self.manager.scrape_mapper.tui.files.stats.skipped += 1
+                self.tui.files.stats.skipped += 1
 
         except (DownloadError, ClientResponseError, InvalidContentTypeError):
             raise
@@ -252,6 +255,16 @@ class Downloader:
         ):
             yield
 
+    async def __skip_by_duration(self, media_item: MediaItem) -> bool:
+        proceed = not await filter_by_duration(media_item, self.config)
+        await self.manager.database.history.add_duration(media_item.domain, media_item)
+        if not proceed:
+            logger.info(f"Download skipped {media_item.url} due to runtime restrictions")
+            await aio.unlink(media_item.path)
+            await self.client.mark_incomplete(media_item, media_item.domain)
+            self.tui.files.stats.skipped += 1
+        return not proceed
+
     async def run(self, media_item: MediaItem) -> bool:
         if media_item.db_path in self._processed_items and not self.config.ignore_history:
             return False
@@ -267,16 +280,6 @@ class Downloader:
         await self.client.process_completed(media_item, media_item.domain)
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         return True
-
-    async def __skip_by_duration(self, media_item: MediaItem) -> bool:
-        proceed = not await filter_by_duration(media_item, self.config)
-        await self.manager.database.history.add_duration(media_item.domain, media_item)
-        if not proceed:
-            logger.info(f"Download skipped {media_item.url} due to runtime restrictions")
-            await aio.unlink(media_item.path)
-            await self.client.mark_incomplete(media_item, media_item.domain)
-            self.manager.scrape_mapper.tui.files.stats.skipped += 1
-        return not proceed
 
     @error_handling_wrapper
     async def download_hls(self, media_item: MediaItem, m3u8_group: Rendition) -> None:
@@ -296,7 +299,7 @@ class Downloader:
         async with self.__download_context(media_item):
             await self.__streams_download(media_item, mux)
 
-    async def _prepare_multi_stream_output(self, media_item: MediaItem):
+    async def _prepare_multi_stream_output(self, media_item: MediaItem) -> None:
         media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
         media_item.path = media_item.download_folder / media_item.filename
         media_item.download_filename = media_item.path.name
@@ -312,21 +315,19 @@ class Downloader:
             seg_item.url = url
             return seg_item
 
-        with self.manager.scrape_mapper.tui.downloads.download_hls(
-            media_item.filename, media_item.domain, segments=2, url=media_item.url
-        ):
-            video, audio = file("video", mux.video), file("audio", mux.audio)
+        with self.tui.downloads.download_hls(media_item.filename, media_item.domain, segments=2, url=media_item.url):
+            audio, video = file("audio", mux.audio), file("video", mux.video)
             results = await aio.map(self._download, (audio, video), task_limit=None)
             if not all(results):
                 msg = f"Download of some streams failed. {dict(zip(('audio', 'video'), results, strict=True))}"
                 raise DownloadError("Mux Download Error", msg)
 
-            streams = hls.Streams(video.path, audio.path, subs=None)
+            streams = hls.Streams(video.path, audio.path, None)
             await self._merge_streams(media_item, streams)
 
     async def __hls_download(self, media_item: MediaItem, rendition: Rendition) -> None:
         await self._prepare_multi_stream_output(media_item)
-        with self.manager.scrape_mapper.tui.downloads.download_hls(
+        with self.tui.downloads.download_hls(
             media_item.filename,
             media_item.domain,
             segments=sum(m.total_segments for m in rendition if m is not None),
@@ -336,23 +337,8 @@ class Downloader:
             await self._merge_streams(media_item, streams)
 
     async def _merge_streams(self, media_item: MediaItem, streams: hls.Streams) -> None:
-        if not streams.audio:
-            await aio.move(streams.video, media_item.path)
-
-        else:
-            # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
-            # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
-            # so we leave them as independent files for now
-            logger.debug(f"Merging audio and video stream from {media_item.real_url}")
-            ffmpeg_result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
-
-            if not ffmpeg_result.success:
-                raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
-
-        logger.debug(f"Running MP4 fixup ({media_item.real_url})")
-        ffmpeg_result = await ffmpeg.fixup_video(media_item.path)
-        if not ffmpeg_result.success:
-            raise DownloadError("FFmpeg Fixup Error", ffmpeg_result.stderr, media_item)
+        await _merge_streams(media_item, streams)
+        await _fixup_video(media_item)
         await self.client.process_completed(media_item, media_item.domain)
         await self.client.handle_media_item_completion(media_item, downloaded=True)
         await self.__finalize_download(media_item)
@@ -362,6 +348,28 @@ class Downloader:
 class MuxVideo:
     video: AbsoluteHttpURL
     audio: AbsoluteHttpURL
+
+
+async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
+    if not streams.audio:
+        await aio.move(streams.video, media_item.path)
+        return
+
+    # TODO: add remux method to ffmpeg to create an mkv file instead of mp4
+    # Subtitles format may be incompatible with mp4 and they will be silently dropped by ffmpeg
+    # so we leave them as independent files for now
+    logger.debug(f"Merging audio and video stream from {media_item.real_url}")
+    ffmpeg_result = await ffmpeg.merge((streams.video, streams.audio), media_item.path)
+
+    if not ffmpeg_result.success:
+        raise DownloadError("FFmpeg Concat Error", ffmpeg_result.stderr, media_item)
+
+
+async def _fixup_video(media_item: MediaItem) -> None:
+    logger.debug("Running MP4 fixup on '%s' (%s)", media_item.path, media_item.real_url)
+    ffmpeg_result = await ffmpeg.fixup_video(media_item.path)
+    if not ffmpeg_result.success:
+        raise DownloadError("FFmpeg Fixup Error", ffmpeg_result.stderr, media_item)
 
 
 def _is_allowed_filetype(media_item: MediaItem, config: Config) -> bool:
