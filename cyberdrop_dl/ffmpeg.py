@@ -77,14 +77,15 @@ async def run(args: CMD) -> SubProcessResult:
     assert args, "Supply at least 1 argument"
     if not version():
         raise RuntimeError("ffmpeg is not installed")
-    return await _run_cmd(("ffmpeg", "-y", "-nostats", "-loglevel", "warning", "-hide_banner", *args))
+    cmd = "ffmpeg", "-y", "-nostats", "-loglevel", "warning", "-hide_banner", *args
+    return await _run_cmd(cmd)
 
 
 async def ffprobe_run(args: CMD) -> SubProcessResult:
     assert args, "Supply at least 1 argument"
     if not ffprobe_version():
         raise RuntimeError("ffprobe is not installed")
-    cmd = "ffprobe", "-hide_banner", "-loglevel", "error", "-show_streams", "-show_format", "-print_format", "json"
+    cmd = "ffprobe", "-hide_banner", "-loglevel", "warning", "-show_streams", "-show_format", "-print_format", "json"
     return await _run_cmd((*cmd, *args))
 
 
@@ -99,8 +100,8 @@ async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
 
 async def merge(video: Path, audio: Path, output: Path) -> SubProcessResult:
     inputs = "-i", video, "-i", audio, "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", *(await _aac_dts_fix_args(audio))
-    cmd = *inputs, "-movflags", "+faststart", output
-    result = await run(cmd)
+    args = *inputs, "-movflags", "+faststart", output
+    result = await run(args)
     if result.success:
         await aio.gather(_try_delete(video), _try_delete(audio))
     return result
@@ -113,7 +114,7 @@ def quote_concat_arg(arg: str) -> str:
 
 
 def create_concat_doc(files: Iterable[Path]) -> str:
-    # Input paths MUST be absolute!!.
+    "Input paths MUST be absolute!!."
 
     def lines():
         yield "ffconcat version 1.0"
@@ -128,7 +129,7 @@ def create_concat_doc(files: Iterable[Path]) -> str:
 async def concat(files: Sequence[Path], output: Path) -> SubProcessResult:
     """Concatenate fragments of the same video.
 
-    All file must have the same streams (same codecs, resolution, time base, etc..)"""
+    All files must have the same streams (same codecs, resolution, time base, etc..)"""
     # https://trac.ffmpeg.org/wiki/Concatenate#demuxer
 
     concat_in = output.with_suffix(output.suffix + ".ffconcat.txt")
@@ -157,6 +158,7 @@ async def optimize(file: Path) -> SubProcessResult:
     - Optimize for streaming (faststart)
 
     Should only be used for HLS downloads"""
+
     fixup_out = file.with_suffix(".fixup" + file.suffix)
     inputs = "-i", file, "-map", "0", "-ignore_unknown", "-c", "copy", "-f", "mp4", *(await _aac_dts_fix_args(file))
     args = *inputs, "-movflags", "+faststart", fixup_out
@@ -175,7 +177,7 @@ async def _try_delete(file: Path) -> None:
     try:
         await aio.unlink(file, missing_ok=True)
     except OSError as e:
-        logger.warning("Unable to delete '%s': %s", file, e)
+        logger.warning("Unable to delete '%s': %r", file, e)
 
 
 async def raw_concat(files: Sequence[Path], output: Path) -> None:
@@ -201,20 +203,25 @@ async def probe_url(
     *,
     headers: Mapping[str, str] | None = None,
     proxy: AbsoluteHttpURL | None = None,
+    cookies: tuple[str, ...] = (),
     verify: bool = True,
 ) -> FFprobeResult:
 
     def extra_params() -> Generator[str]:
         if headers:
-            for name, value in headers.items():
-                yield "-headers"
-                yield f"{name}: {value}"
+            yield "-headers"
+            yield "".join(f"{name}: {value}\r\n" for name, value in headers.items())
 
         if proxy:
+            # Only available since v5.0
             yield "-http_proxy"
             yield str(proxy)
 
-    args = "-tls_verify", str(int(verify)), str(url), *extra_params()
+        if cookies:
+            # TODO: add cookies support
+            pass
+
+    args = "-tls_verify", str(int(verify)), *extra_params(), str(url)
     return await _probe(args)
 
 
