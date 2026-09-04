@@ -216,7 +216,7 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
             logger.exception("Unable to download subtitles for %s, Skipping", media_item.url)
         else:
             logger.warning(
-                "Found subtitles for %s, but CDL is currently unable to merge them. Subtitle were saved at '%s'",
+                "Found subtitles for %s, but CDL is currently unable to merge them. Subtitles were saved at '%s'",
                 media_item.url,
                 subs,
             )

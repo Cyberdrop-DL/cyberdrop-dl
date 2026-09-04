@@ -22,6 +22,7 @@ from cyberdrop_dl.exceptions import (
     RestrictedFiletypeError,
     SkipDownloadError,
 )
+from cyberdrop_dl.hasher import compute_in_place_hash
 from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.url_objects import MuxVideo
 from cyberdrop_dl.utils import dates
@@ -258,17 +259,20 @@ class Downloader:
         await self.manager.database.history.add_duration(media_item.domain, media_item)
         if not proceed:
             logger.info(f"Download skipped {media_item.url} due to runtime restrictions")
-            await aio.unlink(media_item.path)
+            await aio.unlink(media_item.path, missing_ok=True)
             await self.client.mark_incomplete(media_item, media_item.domain)
             self.tui.files.stats.skipped += 1
         return not proceed
 
-    def _should_skip(self, media_item: MediaItem) -> bool:
-        return bool(media_item.db_path in self._processed_items and not self.config.ignore_history)
+    async def _prepare_multi_stream_output(self, media_item: MediaItem) -> None:
+        media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
+        media_item.path = media_item.download_folder / media_item.filename
+        media_item.download_filename = media_item.path.name
+        await self.manager.database.history.add_download_filename(media_item.domain, media_item)
 
     @error_handling_wrapper
     async def run(self, media_item: MediaItem, streams: Rendition | MuxVideo | None = None) -> None:
-        if self._should_skip(media_item):
+        if media_item.db_path in self._processed_items and not self.config.ignore_history:
             return
 
         if streams is not None:
@@ -282,8 +286,11 @@ class Downloader:
                     await self._hls(media_item, streams)
                 case MuxVideo():
                     await self._mux(media_item, streams)
-                case _:
+                case _:  # pyright: ignore[reportUnnecessaryComparison]
                     raise ValueError(f"Unsupported streams: {streams!r}")
+
+        if media_item.downloaded:
+            await self._compute_hashes(media_item)
 
     async def _file(self, media_item: MediaItem) -> None:
         if not await self._download(media_item):
@@ -291,24 +298,18 @@ class Downloader:
 
         await self.__finish_download(media_item)
 
-    async def _prepare_multi_stream_output(self, media_item: MediaItem) -> None:
-        media_item.download_folder = resolve_download_dir(media_item.download_folder, self.config)
-        media_item.path = media_item.download_folder / media_item.filename
-        media_item.download_filename = media_item.path.name
-        await self.manager.database.history.add_download_filename(media_item.domain, media_item)
-
     async def _mux(self, media_item: MediaItem, mux: MuxVideo) -> None:
         await self._prepare_multi_stream_output(media_item)
         p_name = Path(media_item.filename)
 
-        def create_stream_seg(name: str, url: AbsoluteHttpURL) -> MediaItem:
+        def create_stream_item(name: str, url: AbsoluteHttpURL) -> MediaItem:
             filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
             seg_item = media_item.as_segment(filename, url)
             seg_item.extra_info["MUX_STREAM"] = True
             return seg_item
 
         logger.info(f"{self.log_prefix} starting: {media_item.url}")
-        audio, video = create_stream_seg("audio", mux.audio), create_stream_seg("video", mux.video)
+        audio, video = create_stream_item("audio", mux.audio), create_stream_item("video", mux.video)
         results = await aio.map(self._download, (audio, video), task_limit=None)
         if not all(results):
             msg = f"Download of some streams failed. {dict(zip(('audio', 'video'), results, strict=True))}"
@@ -334,14 +335,25 @@ class Downloader:
 
     async def __finish_download(self, media_item: MediaItem) -> None:
         assert not media_item.is_segment
+        media_item.downloaded = True
         if await self.__skip_by_duration(media_item):
+            media_item.downloaded = False
             return
 
         await _set_mtime(media_item, self.config)
         self.tui.files.stats.completed += 1
         logger.info(f"Download finished: {media_item.url}")
-        await self.client.process_completed(media_item, media_item.domain)
-        await self.client.handle_media_item_completion(media_item, downloaded=True)
+        await self.client.mark_completed(media_item, media_item.domain)
+
+    async def _compute_hashes(self, media_item: MediaItem) -> None:
+        if self.config.hashing.mode is not constants.HashMode.IN_PLACE:
+            return
+        try:
+            await compute_in_place_hash(self.manager.hasher, media_item)
+        except Exception:
+            logger.exception("Unable to compute hashes of '%s'", media_item.path)
+        finally:
+            self.manager.add_completed(media_item)
 
 
 async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
@@ -398,9 +410,6 @@ def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
 
 
 async def _set_mtime(media_item: MediaItem, config: Config) -> None:
-    if media_item.is_segment:
-        return
-
     if not config.mtime:
         return
 
