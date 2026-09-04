@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import functools
 import json
 import logging
 import shutil
-import subprocess
 import uuid
 from fractions import Fraction
 from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
@@ -14,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 from multidict import CIMultiDict, CIMultiDictProxy
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.utils import fast_cache
 from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
@@ -26,17 +25,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 type CMD = Sequence[str | Path]
-
-_FFPROBE_CALL_PREFIX = (
-    "ffprobe",
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-show_streams",
-    "-show_format",
-    "-print_format",
-    "json",
-)
 
 
 def is_installed() -> bool:
@@ -59,31 +47,53 @@ def _check_ffprobe() -> None:
         raise RuntimeError("ffprobe is not installed")
 
 
-@functools.cache
+@fast_cache
+def _cached_which(program: str) -> str | None:
+    return shutil.which(program)
+
+
+@fast_cache
+def _cached_version(program: str) -> str | None:
+    if bin_path := _cached_which(program):
+        return _get_bin_version(bin_path)
+
+
 def which_ffmpeg() -> str | None:
-    return shutil.which("ffmpeg")
+    return _cached_which("ffmpeg")
 
 
-@functools.cache
 def which_ffprobe() -> str | None:
-    return shutil.which("ffprobe")
+    return _cached_which("ffprobe")
 
 
-@functools.cache
 def version() -> str | None:
-    if bin_path := which_ffmpeg():
-        return _get_bin_version(bin_path)
+    return _cached_version("ffmpeg")
 
 
-@functools.cache
 def ffprobe_version() -> str | None:
-    if bin_path := which_ffprobe():
-        return _get_bin_version(bin_path)
+    return _cached_version("ffprobe")
 
 
 async def run(args: CMD) -> SubProcessResult:
     assert args, "Supply at least 1 argument"
-    return await _run_command(("ffmpeg", "-y", "-loglevel", "warning", "-hide_banner", *args))
+    return await _run_cmd(("ffmpeg", "-y", "-loglevel", "warning", "-hide_banner", *args))
+
+
+async def run_ffprobe(args: CMD):
+    assert args, "Supply at least 1 argument"
+    return await _run_cmd(
+        (
+            "ffprobe",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-show_streams",
+            "-show_format",
+            "-print_format",
+            "json",
+            *args,
+        )
+    )
 
 
 async def _aac_dts_fix_args(audio_stream: Path) -> tuple[str, ...]:
@@ -102,7 +112,7 @@ async def merge(video: Path, audio: Path, output: Path) -> SubProcessResult:
     return result
 
 
-def quote(arg: str):
+def quote_arg(arg: str) -> str:
     # https://ffmpeg.org/ffmpeg-utils.html#toc-Quoting-and-escaping
     arg = arg.replace("'", r"'\''").replace("'''", "'")
     arg = arg[1:] if arg[0] == "'" else "'" + arg
@@ -117,7 +127,7 @@ def create_concat_spec(files: Iterable[Path]) -> str:
         for file in files:
             if not file.is_absolute():
                 raise ValueError("file is not an absolute path", file)
-            yield f"file {quote(str(file))}"
+            yield f"file {quote_arg(str(file))}"
 
     return "\n".join(lines())
 
@@ -181,8 +191,7 @@ def _concat_bytes(files: Iterable[Path], output: Path) -> None:
 
 async def probe(file: Path, /) -> FFprobeResult:
     assert file.is_absolute()
-    command = *_FFPROBE_CALL_PREFIX, str(file)
-    return await _probe(command)
+    return await _probe([str(file)])
 
 
 async def probe_url(
@@ -208,16 +217,17 @@ async def probe_url(
     return await _probe(args)
 
 
-async def _probe(args: Iterable[str | Path]) -> FFprobeResult:
+async def _probe(args: CMD) -> FFprobeResult:
     _check_ffprobe()
-    cmd = *_FFPROBE_CALL_PREFIX, *args
-    result = await _run_command(cmd)
+    result = await run_ffprobe(args)
     if not result.success:
         return _EMPTY_FFPROBE_RESULT
     return FFprobeResult.from_output(json.loads(result.stdout))
 
 
 def _get_bin_version(bin_path: str) -> str | None:
+    import subprocess
+
     try:
         stdout = subprocess.run(
             (bin_path, "-version"),
@@ -431,9 +441,10 @@ class SubProcessResult:
         return str(self.__json__())
 
 
-async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
+async def _run_cmd(command: CMD) -> SubProcessResult:
     assert not isinstance(command, str)
-    program, *cmd = command
+    program, *args = command
+    import asyncio.subprocess
 
     match program:
         case "ffmpeg":
@@ -444,9 +455,17 @@ async def _run_command(command: Sequence[str | Path]) -> SubProcessResult:
             raise ValueError(f"Unexpected program in command {command}")
 
     assert bin_path
+
     process_id = str(uuid.uuid4())
-    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin_path, *map(str, cmd)]})
-    process = await asyncio.create_subprocess_exec(bin_path, *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin_path, *map(str, args)]})
+
+    process = await asyncio.subprocess.create_subprocess_exec(
+        bin_path,
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
     stdout, stderr = await process.communicate()
     result = SubProcessResult(
         stdout=stdout.decode("utf-8", errors="ignore"),

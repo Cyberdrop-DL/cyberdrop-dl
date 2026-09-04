@@ -211,4 +211,4 @@ class TestMergeSubs:
     ],
 )
 def test_quote(arg: str, expected: str) -> None:
-    assert ffmpeg.quote(arg) == expected
+    assert ffmpeg.quote_arg(arg) == expected
