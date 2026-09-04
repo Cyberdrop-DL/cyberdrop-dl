@@ -77,6 +77,7 @@ class DownloadClient:
             media_item.partial_file = media_item.download_folder / f"{name}{constants.TempExt.PART}"
 
         resume_point = 0
+        media_item.headers.pop(hdrs.RANGE, None)  # Delete ranges from previous attempts
         if self.SUPPORTS_RANGES and media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
             resume_point = size
             media_item.headers[hdrs.RANGE] = f"bytes={size}-"
