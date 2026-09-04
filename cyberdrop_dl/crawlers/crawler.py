@@ -240,7 +240,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self.downloader: Downloader = Downloader(
             manager,
             use_server_lock=self.__dl_config__.server_lock,
-            _slots=self.__dl_config__.slots,
+            slots=self.__dl_config__.slots,
         )
 
         self.__http_ctx__: HTTPContext = HTTPContext.build(self.DOMAIN, self.__http_config__, self.__throttle)

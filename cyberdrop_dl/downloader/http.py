@@ -22,6 +22,7 @@ from cyberdrop_dl.exceptions import (
     RestrictedFiletypeError,
     SkipDownloadError,
 )
+from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.url_objects import MuxVideo
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -101,30 +102,28 @@ class Capacity:
             self._should_warn = True
 
 
-@dataclasses.dataclass(slots=True)
 class Downloader:
     """High level class that handles limiters, database checks, skip by config checks and retries"""
 
     SUPPORTS_RETRIES: ClassVar[bool] = True
-    manager: Manager = dataclasses.field(repr=False)
     log_prefix: str = "Download"
-    use_server_lock: bool = False
 
-    _slots: int | None = None
-    _processed_items: set[str] = dataclasses.field(init=False, default_factory=set)
-    _current_attempt_filesize: dict[str, int] = dataclasses.field(init=False, default_factory=dict)
-    _semaphore: asyncio.Semaphore = dataclasses.field(init=False)
-    _server_locks: aio.WeakAsyncLocks[str] = dataclasses.field(
-        init=False, default_factory=aio.WeakAsyncLocks, repr=False
-    )
-    capacity: Capacity = dataclasses.field(default_factory=Capacity)
-    config: Config = dataclasses.field(init=False)
-    tui: ScrapingUI = dataclasses.field(init=False)
+    def __init__(self, manager: Manager, slots: int | None = None, *, use_server_lock: bool = False) -> None:
+        self.manager: Manager = manager
+        self.use_server_lock: bool = use_server_lock
+        self._processed_items: set[str] = set()
+        self._current_attempt_filesize: dict[str, int] = {}
+        self._server_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+        self.capacity: Capacity = Capacity()
+        self.config: Config = self.manager.config
+        self.tui: ScrapingUI = self.manager.scrape_mapper.tui
+        self._slots: int | None = slots
+        self.__prepare_sem(slots)
+        self._semaphore: asyncio.Semaphore
 
-    def __post_init__(self) -> None:
-        self.config = self.manager.config
-        self.tui = self.manager.scrape_mapper.tui
-        self.slots = self._slots
+    def __post_init__(self) -> None: ...
+
+    __repr__ = simple_repr("slots", "use_server_lock", "log_prefix", "capacity", "_sem")
 
     @property
     def slots(self) -> int | None:
@@ -132,16 +131,13 @@ class Downloader:
 
     @slots.setter
     def slots(self, new_limit: int | None) -> None:
-        try:
-            sem = self._semaphore
-        except AttributeError:
-            pass
-        else:
-            if not (sem._waiters is None and sem._value == self._slots):
-                raise RuntimeError("Can't change download limits. Downloader is already in use")
+        if not (self._semaphore._waiters is None and self._semaphore._value == self._slots):
+            raise RuntimeError("Can't change download slots. Downloader is already in use")
+        self.__prepare_sem(new_limit)
 
+    def __prepare_sem(self, slots: int | None) -> None:
         upper_limit = self.config.downloads.concurrency_per_domain
-        self._slots = min(new_limit or upper_limit, upper_limit)
+        self._slots = min(slots or upper_limit, upper_limit)
         self._semaphore = asyncio.Semaphore(self._slots)
         self.capacity.limit = min(self._slots * 10, 50)
 

@@ -6,7 +6,7 @@ import logging
 import time
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, final
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from aiohttp import hdrs
 
@@ -43,11 +43,12 @@ _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
 class DownloadClient:
     """Low level class that performs the actual HTTP download operations."""
 
+    SUPPORTS_RANGES: ClassVar[bool] = True
+
     def __init__(self, manager: Manager) -> None:
         self.manager = manager
         self.config = self.manager.config
         self.download_speed_threshold = self.config.downloads.slow_speed
-        self._supports_ranges: bool = True
         speed_limit = self.config.downloads.speed_limit
 
         self.speed_limiter = aio.RateLimiter(speed_limit, time_period=1)
@@ -77,7 +78,7 @@ class DownloadClient:
             media_item.partial_file = media_item.download_folder / f"{name}{constants.TempExt.PART}"
 
         resume_point = 0
-        if self._supports_ranges and media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
+        if self.SUPPORTS_RANGES and media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
             resume_point = size
             media_item.headers[hdrs.RANGE] = f"bytes={size}-"
 
