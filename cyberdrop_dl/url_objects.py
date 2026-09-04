@@ -125,6 +125,9 @@ class MuxVideo:
     video: AbsoluteHttpURL
     audio: AbsoluteHttpURL
 
+    def __json__(self) -> dict[str, Any]:
+        return {"video": str(self.video), "audio": str(self.audio)}
+
 
 @final
 @dataclasses.dataclass(slots=True, kw_only=True)
