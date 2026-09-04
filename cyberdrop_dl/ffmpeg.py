@@ -441,27 +441,31 @@ class SubProcessResult:
         return str(self.__json__())
 
 
-async def _run_cmd(command: CMD) -> SubProcessResult:
-    assert not isinstance(command, str)
+def _split_cmd(command: CMD) -> tuple[str, str, list[str | Path]]:
     program, *args = command
-    import asyncio.subprocess
 
     match program:
         case "ffmpeg":
-            bin_path = which_ffmpeg()
+            path = which_ffmpeg()
         case "ffprobe":
-            bin_path = which_ffprobe()
+            path = which_ffprobe()
         case _:
             raise ValueError(f"Unexpected program in command {command}")
 
-    assert bin_path
+    assert path
+    return program, path, args
+
+
+async def _run_cmd(command: CMD) -> SubProcessResult:
+    assert not isinstance(command, str)
+    program, path, args = _split_cmd(command)
+    import asyncio.subprocess
 
     process_id = str(uuid.uuid4())
-
-    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [bin_path, *map(str, args)]})
+    logger.debug("Running %s subprocess [id=%s]:\n%s", program, process_id, {"command": [path, *map(str, args)]})
 
     process = await asyncio.subprocess.create_subprocess_exec(
-        bin_path,
+        path,
         *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
