@@ -148,7 +148,7 @@ async def _decrypt_segments(items: Iterable[MediaItem], sem: asyncio.BoundedSema
 
     async def decrypt(item: MediaItem) -> None:
         if key := HLSKey.get(item.extra_info):
-            logger.debug(f"Decrypting '{item.path}' with {key}")
+            logger.debug("Decrypting '%s' with %s", item.path, key)
             content = await decrypter(await aio.read_bytes(item.path), key, item.headers)
             await aio.write_bytes(item.path, content)
 
@@ -213,10 +213,12 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
         try:
             subs = await download(rendition.subtitle)
         except Exception:
-            logger.exception(f"Unable to download subtitles for {media_item.url}, Skipping")
+            logger.exception("Unable to download subtitles for %s, Skipping", media_item.url)
         else:
             logger.warning(
-                f"Found subtitles for {media_item.url}, but CDL is currently unable to merge them. Subtitle were saved at '{subs}'"
+                "Found subtitles for %s, but CDL is currently unable to merge them. Subtitle were saved at '%s'",
+                media_item.url,
+                subs,
             )
             return subs
 
