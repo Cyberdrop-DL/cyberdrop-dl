@@ -33,16 +33,6 @@ _MOBILE_HEADERS = _HEADERS | {
 
 
 @final
-class VideoProvider:
-    # This site also embeds videos from other sources as their own
-    OK_RU = "UPLOADED_ODKL"
-    OK_RU2 = "UploadedODKL"
-    YOUTUBE = "USER_YOUTUBE"
-    OG = "OPEN_GRAPH"
-    LIVESTREAM = "LIVE_TV_APP"
-
-
-@final
 class Selector:
     CHANNEL_NAME = ".album-info_name"
     CHANNEL_HASH = "script:-soup-contains('gwtHash:')"
@@ -143,9 +133,6 @@ class OdnoklassnikiCrawler(Crawler):
         name: str = metadata["videoName"]
         scrape_item.uploaded_at = json_ld.upload_date(soup)
 
-        if (provider := metadata["providerName"]) not in {VideoProvider.OK_RU, VideoProvider.OK_RU2}:
-            raise ScrapeError(422, f"Unsupported provider: {provider}")
-
         m3u8, info = await self.request_m3u8_playlist(src, headers=_MOBILE_HEADERS)
         # downloads may fail if we have cdn cookies
         self.client.cookies.clear_domain(info.urls.video.host)
@@ -155,7 +142,15 @@ class OdnoklassnikiCrawler(Crawler):
             file_id=video_id,
             resolution=info.resolution,
         )
-        await self.handle_file(mobile_url, scrape_item, name, ext, custom_filename=filename, m3u8=m3u8)
+        await self.handle_file(
+            mobile_url,
+            scrape_item,
+            name,
+            ext,
+            custom_filename=filename,
+            m3u8=m3u8,
+            thumbnail=metadata.get("videoPosterSrc"),
+        )
 
 
 def _check_video_is_available(soup: BeautifulSoup) -> None:
