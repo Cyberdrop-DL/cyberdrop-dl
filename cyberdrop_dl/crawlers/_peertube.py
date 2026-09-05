@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from pydantic import dataclasses
 
@@ -16,6 +16,9 @@ from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
 
 @HTTPConfig(rate_limit=(5, 1))
 @Crawler.db_path_builder("url")
@@ -27,6 +30,12 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
             "/videos/watch/<video_uuid>",
             "/videos/watch/<short_uuid>",
         ),
+        "Playlist": (
+            "/w/p/<playlist_uuid>",
+            "/w/p/<short_uuid>",
+        ),
+        "Account": ("/a/<username>/videos",),
+        "Channel": ("/c/<channel_uuid>",),
     }
     DOMAIN: ClassVar[str] = "peertube"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://joinpeertube.org")
@@ -40,6 +49,19 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
         self.instance_locks: aio.WeakAsyncLocks[AbsoluteHttpURL] = aio.WeakAsyncLocks()
         self.good_hosts: set[AbsoluteHttpURL] = set()
         self.bad_hosts: set[AbsoluteHttpURL] = set()
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        match scrape_item.url.parts[1:]:
+            case ["w", video_id] | ["videos", "watch", video_id]:
+                await self.video(scrape_item, video_id)
+            case ["a", playlist_id, "videos"]:
+                await self.playlist(scrape_item, playlist_id, "accounts")
+            case ["c", playlist_id]:
+                await self.playlist(scrape_item, playlist_id, "video-channels")
+            case ["w", "p", playlist_id]:
+                await self.playlist(scrape_item, playlist_id, "video-playlists")
+            case _:
+                raise ValueError
 
     async def _check_node_info(self) -> None:
         if self.origin in self.good_hosts:
@@ -56,13 +78,6 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
             node_info = await self.api.node_info()
             self.log.info("Server software running on %s:\n %s", self.origin, node_info["software"])
             self.good_hosts.add(self.origin)
-
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
-        match scrape_item.url.parts[1:]:
-            case ["w", video_id] | ["videos", "watch", video_id]:
-                await self.video(scrape_item, video_id)
-            case _:
-                raise ValueError
 
     async def get_instances(self) -> tuple[str, ...]:
         try:
@@ -105,16 +120,65 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
             m3u8=mux_streams,
         )
 
+    @error_handling_wrapper
+    async def playlist(self, scrape_item: ScrapeItem, playlist_id: str, kind: str) -> None:
+        info = await self.api.playlist(playlist_id, kind)
+        self.create_eager_task(self.write_metadata(scrape_item, playlist_id, info))
+        scrape_item.setup_as_album(self.create_title(info["displayName"], playlist_id), album_id=playlist_id)
+
+        async for video in self.api.playlist_videos(playlist_id, kind):
+            self.create_task(self.run(scrape_item.create_child(video)))
+            scrape_item.add_children()
+
 
 class NodeInfoError(ScrapeError):
     def __init__(self, msg: str = "Unable to get nodeinfo from PeerTube instance") -> None:
         super().__init__("PeerTube Nodeinfo Error", msg)
 
 
+@HTTPConfig(headers={"Accept": "application/json"})
 class PeerTubeAPI(API):
     @classmethod
     def headers(cls, password: str | None) -> dict[str, Any]:
         return {"x-peertube-video-password": password} if password else {}
+
+    async def pager(self, url: AbsoluteHttpURL, count: int = 30) -> AsyncGenerator[list[dict[str, Any]]]:
+        for start in itertools.count(0, count):
+            resp = await self.request_json(url.update_query(start=start, count=count))
+            yield resp["data"]
+            if len(resp["data"]) < count:
+                break
+
+    @disk_cached_method(ttl=30 * 86400)
+    async def instances(self) -> tuple[str, ...]:
+        self.log.info("Fetching list of PeerTube instances")
+        url = AbsoluteHttpURL("https://instances.joinpeertube.org/api/v1/instances?healthy=true")
+        hosts: set[str] = set()
+        async for data in self.pager(url, count=1_000):
+            hosts.update(inst["host"] for inst in data)
+
+        return tuple(sorted(hosts))
+
+    async def video(self, video_id: str, password: str | None) -> Video:
+        url = self.origin / "api/v1/videos" / video_id
+        resp = await self.request_json(url, headers=self.headers(password))
+        return Video.parse(resp)
+
+    async def captions(self, video_id: str, password: str | None) -> list[ISO639Subtitle]:
+        url = self.origin / "api/v1/videos" / video_id / "captions"
+        resp = await self.request_json(url, headers=self.headers(password))
+        return [ISO639Subtitle(sub["fileUrl"], sub["language"]["id"], sub["language"]["label"]) for sub in resp["data"]]
+
+    async def playlist(self, playlist_id: str, kind: str) -> dict[str, Any]:
+        url = self.origin / "api/v1" / kind / playlist_id
+        return await self.request_json(url)
+
+    async def playlist_videos(self, playlist_id: str, kind: str) -> AsyncGenerator[AbsoluteHttpURL]:
+        url = self.origin / "api/v1" / kind / playlist_id / "videos"
+        async for data in self.pager(url.with_query(sort="-publishedAt", nsfw="both", isLive="false")):
+            for video in data:
+                uuid: str = video.get("shortUUID") or video["video"]["shortUUID"]
+                yield self.origin / "w" / uuid
 
     async def node_info(self) -> dict[str, Any]:
         # https://nodeinfo.diaspora.software/protocol.html
@@ -129,35 +193,12 @@ class PeerTubeAPI(API):
             for link in resp["links"]:
                 rel: str = link["rel"]
                 if rel.startswith("http://nodeinfo.diaspora.software/ns/schema"):
-                    return await self.request_json(self.parse_url(link["href"]), headers={"Accept": "application/json"})
+                    return await self.request_json(self.parse_url(link["href"]))
+
         except Exception as e:
             raise NodeInfoError("PeerTube instance does not support the nodeinfo protocol") from e
 
         raise NodeInfoError("PeerTube instance does not support the nodeinfo protocol")
-
-    @disk_cached_method(ttl=30 * 86400)
-    async def instances(self) -> tuple[str, ...]:
-        self.log.info("Fetching list of PeerTube instances")
-        count = 1000
-        url = AbsoluteHttpURL(f"https://instances.joinpeertube.org/api/v1/instances?count={count}&healthy=true")
-        hosts: set[str] = set()
-        for start in itertools.count(0, count):
-            resp = await self.request_json(url.update_query(start=start))
-            hosts.update(inst["host"] for inst in resp["data"])
-            if len(resp["data"]) < count:
-                break
-
-        return tuple(sorted(hosts))
-
-    async def video(self, video_id: str, password: str | None) -> Video:
-        url = self.origin / "api/v1/videos" / video_id
-        resp = await self.request_json(url, headers=self.headers(password))
-        return Video.parse(resp)
-
-    async def captions(self, video_id: str, password: str | None) -> list[ISO639Subtitle]:
-        url = self.origin / "api/v1/videos" / video_id / "captions"
-        resp = await self.request_json(url, headers=self.headers(password))
-        return [ISO639Subtitle(sub["fileUrl"], sub["language"]["id"], sub["language"]["label"]) for sub in resp["data"]]
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
