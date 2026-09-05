@@ -11,7 +11,7 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, MuxVideo, ScrapeItem
 from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -86,7 +86,7 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
         best_video = max(f for f in video.files if f.hasVideo)
         if not best_video.hasAudio:
             best_audio = max((f for f in video.files if f.hasAudio and not f.hasVideo), key=lambda x: x.size)
-            mux_streams = [best_video, best_audio]
+            mux_streams = MuxVideo(best_video.fileUrl, best_audio.fileUrl)
 
         _, ext = self.get_filename_and_ext(best_video.fileUrl.name)
         filename = self.create_custom_filename(
