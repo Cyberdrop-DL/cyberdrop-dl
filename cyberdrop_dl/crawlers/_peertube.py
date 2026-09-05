@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, ClassVar, Self, override
+from typing import Any, ClassVar, Self
 
 from pydantic import dataclasses
 
@@ -35,16 +35,6 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
         super().__init_subclass__(**kwargs)
         cls.DOMAIN = PeerTubeGenericCrawler.DOMAIN  # pyright: ignore[reportConstantRedefinition]
 
-    @classmethod
-    @override
-    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = super().transform_url(url)
-        match url.parts[1:]:
-            case ["videos", "watch", video_id]:
-                return url.with_path(f"/w/{video_id}", keep_query=True)
-            case _:
-                return url
-
     def __post_init__(self) -> None:
         self.api: PeerTubeAPI = PeerTubeAPI.from_crawler(self)
         self.instance_locks: aio.WeakAsyncLocks[AbsoluteHttpURL] = aio.WeakAsyncLocks()
@@ -69,7 +59,7 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["w", video_id]:
+            case ["w", video_id] | ["videos", "watch", video_id]:
                 await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
