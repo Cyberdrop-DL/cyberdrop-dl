@@ -65,7 +65,7 @@ class APKMirrorCrawler(Crawler):
 
 def _extract_app_name(soup: BeautifulSoup) -> str:
     try:
-        _, elem = json_ld.find(soup, validate={"@type": "BreadcrumbList"})
+        elem = json_ld.find_elem(soup, "BreadcrumbList")
         return elem["itemListElement"][2]["name"]
     except (css.SelectorError, LookupError):
         raise css.SelectorError("Unable to extract application name") from None

@@ -7,7 +7,7 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url
+from cyberdrop_dl.utils import css, json_ld, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -58,8 +58,6 @@ class DirtyShipCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        from cyberdrop_dl.utils import json_ld
-
         article = json_ld.find_elem(soup, "Article")
         title = css.unescape(article["headline"])
         scrape_item.uploaded_at = self.parse_iso_date(article["datePublished"])

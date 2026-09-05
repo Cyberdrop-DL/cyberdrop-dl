@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
@@ -51,7 +51,7 @@ class MyDesiCrawler(Crawler):
         resolution, link = max(_parse_formats(soup))
         link = self.parse_url(link)
         _, ext = self.get_filename_and_ext(link.name)
-        _, metadata = json_ld.find(soup, "subjectOf")
+        metadata: dict[str, Any] = json_ld.find_attr(soup, "subjectOf")
         title = metadata["name"]
 
         scrape_item.uploaded_at = self.parse_iso_date(metadata["uploadDate"])

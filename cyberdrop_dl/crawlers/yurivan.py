@@ -42,7 +42,7 @@ class YuriVanCrawler(Crawler):
     async def story(self, scrape_item: ScrapeItem, story_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         try:
-            _, video_props = json_ld.find(soup, validate={"@type": "VideoObject"})
+            video_props = json_ld.find_elem(soup, "VideoObject")
         except css.SelectorError:
             scrape_item.setup_as_album("")
             self._chapters(scrape_item, story_id, soup)
