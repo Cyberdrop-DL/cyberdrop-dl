@@ -30,12 +30,9 @@ class PeerTubeGenericCrawler(Crawler, is_generic=True):
             "/videos/watch/<video_uuid>",
             "/videos/watch/<short_uuid>",
         ),
-        "Playlist": (
-            "/w/p/<playlist_uuid>",
-            "/w/p/<short_uuid>",
-        ),
-        "Account": ("/a/<username>/videos",),
-        "Channel": ("/c/<channel_uuid>",),
+        "Playlist": "/w/p/<playlist_uuid>",
+        "Account": "/a/<username>/videos",
+        "Channel": "/c/<channel_uuid>",
     }
     DOMAIN: ClassVar[str] = "peertube"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://joinpeertube.org")
