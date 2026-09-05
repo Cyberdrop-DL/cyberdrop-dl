@@ -7,7 +7,7 @@ from pydantic import dataclasses
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, next_js
+from cyberdrop_dl.utils import css, json_ld, next_js
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -42,14 +42,14 @@ class YuriVanCrawler(Crawler):
     async def story(self, scrape_item: ScrapeItem, story_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
         try:
-            video_props = css.json_ld(soup, "VideoObject")
+            video_props = json_ld.find_elem(soup, "VideoObject")
         except css.SelectorError:
             scrape_item.setup_as_album("")
             self._chapters(scrape_item, story_id, soup)
         else:
             await self._video(scrape_item, video_props)
 
-    def _chapters(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup):
+    def _chapters(self, scrape_item: ScrapeItem, story_id: str, soup: BeautifulSoup) -> None:
         selector = f"a[href*='/story/{story_id}/read?chapter=']"
         for new_item in scrape_item.create_children(self.iter_urls(soup, selector)):
             self.create_task(self.run(new_item))
