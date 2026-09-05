@@ -127,6 +127,18 @@ def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[
                 yield attr
 
 
+def iselect_text(soup: Tag, /, selector: str, contains: tuple[str, ...] | str = ()) -> Generator[str]:
+    if isinstance(contains, str):
+        contains = (contains,)
+
+    for tag in iselect(soup, selector):
+        content = text(tag)
+        for key in contains:
+            if key not in content:
+                continue
+        yield content
+
+
 def _parse_srcset(srcset: str) -> str:
     # The best src is the last one (usually)
     return [src.split(" ")[0] for src in srcset.split(", ")][-1]
