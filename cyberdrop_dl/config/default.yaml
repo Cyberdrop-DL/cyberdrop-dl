@@ -36,6 +36,7 @@ crawlers:
     chevereto: []
     discourse: []
     kvs: []
+    peertube: []
     video: []
     wordpress_html: []
     wordpress_media: []
