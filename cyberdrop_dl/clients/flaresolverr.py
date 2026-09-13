@@ -57,6 +57,7 @@ class Solution:
     url: AbsoluteHttpURL
     user_agent: str
     status: int
+    turnstile_token: str | None = None
     id: str = dataclasses.field(init=False, default="")
 
     @staticmethod
@@ -68,6 +69,7 @@ class Solution:
             content=solution["response"],
             url=AbsoluteHttpURL(solution["url"]),
             headers=CIMultiDictProxy(CIMultiDict(solution["headers"])),
+            turnstile_token=solution.get("turnstile_token"),
         )
 
 

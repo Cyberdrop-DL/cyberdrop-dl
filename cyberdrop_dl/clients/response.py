@@ -150,11 +150,11 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     async def aclose(self) -> None: ...
 
     @classmethod
-    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | _FlareSolverrResponse | _CurlResponse | _WreqResponse:
+    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | FlareSolverrResponse | _CurlResponse | _WreqResponse:
         try:
             cls_ = {
                 ClientResponse: _AIOHTTPResponse,
-                FlaresolverrSolution: _FlareSolverrResponse,
+                FlaresolverrSolution: FlareSolverrResponse,
                 CurlResponse: _CurlResponse,
                 wreq.Response: _WreqResponse,
             }[type(resp)]
@@ -376,8 +376,12 @@ class _WreqResponse(AbstractResponse[wreq.Response]):
         )
 
 
-class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
+class FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     __slots__ = ()
+
+    @property
+    def solution(self) -> FlaresolverrSolution:
+        return self._resp
 
     def __post_init__(self) -> None:
         super().__post_init__()
