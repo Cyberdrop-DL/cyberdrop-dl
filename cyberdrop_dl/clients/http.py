@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, Unpack, final, 
 import aiohttp
 from aiohttp import hdrs
 
-from cyberdrop_dl import aio, cookies, ddos_guard
+from cyberdrop_dl import aio, cookies, ddos_guard, env
 from cyberdrop_dl.clients import curl_cffi, flaresolverr, get_logger, tcp, wreq
 from cyberdrop_dl.clients.request import Request, RequestParams
 from cyberdrop_dl.clients.response import AbstractResponse, FlareSolverrResponse
@@ -47,18 +47,20 @@ logger = get_logger(__name__)
 
 
 class _LazyResponseLog:
-    def __init__(self, response: AbstractResponse[Any]) -> None:
+    def __init__(self, response: AbstractResponse[Any], *, content_only: bool = False) -> None:
         self.resp: AbstractResponse[Any] = response
+        self.content_only: bool = content_only
 
     def __json__(self) -> dict[str, Any]:
         resp = self.resp.__json__()
-        del resp["created_at"]
         if type(resp["content"]) is str:
-            resp["content"] = truncated_preview(resp["content"])
-        return resp
+            resp["content"] = truncated_preview(resp["content"], env.MAX_LOG_MSG_LENGTH if self.content_only else 100)
 
-    def content(self) -> dict[str, Any]:
-        return {"content": self.__json__()["content"]}
+        if self.content_only:
+            return {"content": resp["content"]}
+
+        del resp["created_at"]
+        return resp
 
     def __str__(self) -> str:
         return str(self.__json__())
@@ -317,7 +319,7 @@ class HTTPClient:
                         "Content from %s request [id=%s]\n%s",
                         request.method,
                         request.id,
-                        _LazyResponseLog(resp).content(),
+                        _LazyResponseLog(resp, content_only=True),
                     )
                 if self.request_done_callback:
                     self.request_done_callback(request.url, resp, exc)
@@ -398,7 +400,7 @@ class HTTPClient:
         assert not flare.is_down
         solution = await flare.request(url, **params)
         self.cookies.update_cookies(solution.cookies)
-        flaresolverr.verify_solution(self.config.network.user_agent, solution)
+        await flaresolverr.verify_solution(self.config.network.user_agent, solution)
         self._use_flaresolverr_ua.add(url.host)
         self._flaresolverr_ua = flaresolverr.USER_AGENT.get()
         return FlareSolverrResponse.create(solution)

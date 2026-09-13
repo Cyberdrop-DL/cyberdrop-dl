@@ -3,8 +3,6 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, PasswordProtectedError, ScrapeError
@@ -12,6 +10,8 @@ from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -186,7 +186,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
                 headers={"X-Requested-With": "XMLHttpRequest"},
             )
 
-            return BeautifulSoup(json_resp["html"].replace("\\", ""), "html.parser")
+            return await css.asoup(json_resp["html"].replace("\\", ""))
 
         soup = await ajax_api_request()
         if soup.select_one(Selector.PASSWORD_PROTECTED):
@@ -203,7 +203,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
         password_post_url = (self.PRIMARY_URL / file_id).with_query("pt=")
 
-        content = await self.request_text(
+        soup = await self.request_soup(
             password_post_url,
             method="POST",
             data={
@@ -211,7 +211,6 @@ class YetiShareCrawler(Crawler, is_abc=True):
                 "submitme": 1,
             },
         )
-        soup = BeautifulSoup(content, "html.parser")
 
         if soup.select_one(Selector.PASSWORD_PROTECTED):
             raise PasswordProtectedError("File password is invalid")

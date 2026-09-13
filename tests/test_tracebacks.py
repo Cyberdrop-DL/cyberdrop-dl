@@ -1,10 +1,10 @@
-from bs4 import BeautifulSoup
 from rich import pretty
 from rich.traceback import Traceback
 
 from cyberdrop_dl import tracebacks
+from cyberdrop_dl.utils import css
 
-soup = BeautifulSoup("".join(f"{i}" for i in range(500)), "html.parser")
+soup = css.soup("".join(f"{i}" for i in range(500)))
 
 
 def test_pretty_truncates_bs4() -> None:

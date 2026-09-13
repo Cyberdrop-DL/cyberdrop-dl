@@ -1,12 +1,12 @@
 import dataclasses
 
 import pytest
-from bs4 import BeautifulSoup
 from multidict import CIMultiDict
 
 from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.clients.request import prepare_headers
 from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.utils import css
 
 anubis_html = """
     <!doctype html>
@@ -33,7 +33,7 @@ anubis_html = """
     </body>
     </html>
 """
-anubis_soup = BeautifulSoup(anubis_html, "html.parser")
+anubis_soup = css.soup(anubis_html)
 
 
 def test_anubis_detection() -> None:

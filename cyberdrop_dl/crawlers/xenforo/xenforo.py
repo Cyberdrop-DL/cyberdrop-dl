@@ -14,8 +14,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl.crawlers._forum import HTMLMessageBoardCrawler, MessageBoardSelectors, PostSelectors
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -131,8 +129,7 @@ class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
 
 
 def parse_login_form(resp_text: str) -> dict[str, str]:
-    soup = BeautifulSoup(resp_text, "html.parser")
-    inputs = soup.select("form:first-of-type input")
+    inputs = css.iselect(css.soup(resp_text), "form:first-of-type input")
     data = {
         name: value
         for elem in inputs

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import html
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast, overload
+
+from bs4 import BeautifulSoup
 
 from cyberdrop_dl.exceptions import ScrapeError
 
@@ -182,6 +185,14 @@ def parse_form(form: Tag, /) -> HTMLForm:
     method = attr(form, "method").upper()
     action = attr(form, "action")
     return HTMLForm(cast("HttpMethod", method), action, inputs)
+
+
+def soup(content: str) -> BeautifulSoup:
+    return BeautifulSoup(content, "html.parser")
+
+
+async def asoup(content: str) -> BeautifulSoup:
+    return await asyncio.to_thread(soup, content)
 
 
 unescape = html.unescape

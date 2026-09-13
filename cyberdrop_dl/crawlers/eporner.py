@@ -3,8 +3,6 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -220,11 +218,7 @@ class EpornerCrawler(Crawler):
 
 def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
-    ld_json = (
-        css.select_text(BeautifulSoup(html, "html.parser"), Selector.DATE_JS)
-        .encode("raw_unicode_escape")
-        .decode("unicode-escape")
-    )
+    ld_json = css.select_text(css.soup(html), Selector.DATE_JS).encode("raw_unicode_escape").decode("unicode-escape")
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1211
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
@@ -8,6 +9,7 @@ import cyclopts.validators
 from cyclopts import Parameter, Token
 from cyclopts.group import Group
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands._compat import check_for_v9_files
 from cyberdrop_dl.config import Config
@@ -31,7 +33,6 @@ if TYPE_CHECKING:
 
 
 def scrape(manager: Manager, source: URLsSource | RetryScrapeSource) -> None:
-    from cyberdrop_dl import aio
 
     with setup_file_logging(
         manager.config.logs.files.main,
@@ -78,7 +79,7 @@ async def _post_runtime(manager: Manager) -> None:
     if manager.config.sort.enabled:
         await manager.sorter.run()
 
-    _perform_cleanup(manager.config)
+    await asyncio.to_thread(_perform_cleanup, manager.config)
 
 
 async def _check_for_updates(manager: Manager) -> None:

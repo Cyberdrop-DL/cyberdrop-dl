@@ -343,7 +343,7 @@ def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
     return simple_cookie
 
 
-def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
+async def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
     mismatch_ua_msg = (
         "Config user_agent and Flaresolverr user_agent do not match:"
         f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
@@ -354,7 +354,7 @@ def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
 
     if type(solution.content) is str:
         try:
-            ddos_guard.check_html(solution.content)
+            await ddos_guard.check_html(solution.content)
         except DDOSGuardError as e:
             if solution.user_agent != cdl_user_agent:
                 e.add_note(mismatch_ua_msg)

@@ -5,8 +5,6 @@ import json
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
@@ -21,6 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     import yarl
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -261,7 +260,7 @@ class RumbleAPI(API):
     async def embed_id(self, video_url: AbsoluteHttpURL) -> str:
         oembed_url = (self.PRIMARY_URL / "api/Media/oembed.json").with_query(url=str(video_url))
         resp = await self.request_json(oembed_url)
-        soup = BeautifulSoup(resp["html"], "html.parser")
+        soup = await css.asoup(resp["html"])
         return self.parse_url(css.select(soup, "iframe", "src")).name
 
     async def resolve(self, permalink: AbsoluteHttpURL) -> Video:

@@ -7,14 +7,15 @@ import json
 from typing import TYPE_CHECKING, Protocol, final, override
 
 import yarl
-from bs4 import BeautifulSoup
 
 from cyberdrop_dl import multi_process
 from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.utils import css
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from bs4 import BeautifulSoup
     from multidict import MultiMapping
 
 
@@ -26,10 +27,6 @@ class _Response(Protocol):
     @property
     def status(self) -> int: ...
     async def text(self) -> str: ...
-
-
-def _soup(html: str) -> BeautifulSoup:
-    return BeautifulSoup(html, "html.parser")
 
 
 async def check_resp(resp: _Response, /) -> None:
@@ -47,12 +44,12 @@ async def check_resp(resp: _Response, /) -> None:
     if not mitigations:
         return
 
-    soup = _soup(await resp.text())
+    soup = await css.asoup(await resp.text())
     check_soup(soup, mitigations)
 
 
-def check_html(html: str) -> None:
-    check_soup(_soup(html))
+async def check_html(html: str) -> None:
+    check_soup(await css.asoup(html))
 
 
 def check_soup(soup: BeautifulSoup, /, posibilities: Iterable[type[DDosGuard]] | None = None) -> None:

@@ -11,12 +11,12 @@ from collections.abc import Generator
 from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING, Any, NewType, final
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl.utils import css, json
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+
+    from bs4 import BeautifulSoup
 
 type _ChunkID = str
 FlightData = NewType("FlightData", str)
@@ -245,15 +245,6 @@ def parse(flight_data: FlightData, /) -> NextJSFlight:
     return {chunk.id: chunk.decoded_data for chunk in _hidrate_chunks(_parse_raw_chunks(flight_data))}  # pyright: ignore[reportAny]
 
 
-def remove_unused_tags(file: Path) -> None:
-    soup = BeautifulSoup(file.read_text(), "html.parser")
-    for tag in soup.find_all():
-        if tag.name.lower() not in {"script", "html", "body"}:
-            tag.decompose()
-
-    file.write_text(soup.prettify())
-
-
 def data(tag: BeautifulSoup) -> Any:
     return json.loads(css.select_text(tag, "#__NEXT_DATA__"))
 
@@ -263,7 +254,7 @@ if __name__ == "__main__":
     from pathlib import Path
 
     file = Path(sys.argv[1])
-    soup = BeautifulSoup(file.read_text(), "html.parser")
+    soup = css.soup(file.read_text())
     flight_data = extract_flight_data(soup)
     Path("flight_data.txt").write_text(flight_data)
     decoded = parse(flight_data)
