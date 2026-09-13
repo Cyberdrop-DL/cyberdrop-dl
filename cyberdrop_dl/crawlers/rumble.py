@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -61,10 +61,14 @@ class Video:
     id: str
     title: str
     upload_date: str
-    url: AbsoluteHttpURL
+    permalink: AbsoluteHttpURL
     formats: tuple[Format, ...]
     subtitles: tuple[Subtitle, ...]
     thumb: str | None = None
+
+    @property
+    def permalink_id(self) -> str:
+        return self.permalink.name.partition("-")[0]
 
 
 @HTTPConfig(impersonate="firefox", rate_limit=(8, 1))
@@ -137,8 +141,8 @@ class RumbleCrawler(Crawler):
             found_videos: bool = False
             for video in map(_parse_video_obj, _find_video_objs(soup)):
                 found_videos = True
-                new_item = scrape_item.create_child(video.url)
-                self.create_eager_task(self._video(new_item, video))
+                new_item = scrape_item.create_child(video.permalink)
+                self.create_eager_task(self.video_task(new_item, video))
                 scrape_item.add_children()
 
             if found_videos:
@@ -146,12 +150,8 @@ class RumbleCrawler(Crawler):
 
             # Fallback if we made the request with Flaresolverr. Video objects in the HTML are destroyed after JS loads
             for new_item in self.iter_children(scrape_item, soup, "rum-video-thumbnail a"):
-                found_videos = True
                 self.create_task(self.run(new_item))
                 scrape_item.add_children()
-
-            if not found_videos:
-                raise ScrapeError(422, "Did not find any videos on the last page")
 
     @error_handling_wrapper
     async def short(self, scrape_item: ScrapeItem, short_id: str) -> None:
@@ -176,22 +176,33 @@ class RumbleCrawler(Crawler):
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:
         video = await self.api.embed(embed_id)
+        if await self.check_complete_from_referer(video.permalink):
+            return
         await self._video(scrape_item, video)
 
     @error_handling_wrapper
-    async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
+    @auto_task_id
+    async def video_task(self, scrape_item: ScrapeItem, video: Video) -> None:
+        if await self.check_complete_from_referer(video.permalink):
             return
 
+        await self._video(scrape_item, video)
+
+    async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         best_format = max(await self._resolve_formats(video.formats))
         if best_format.m3u8:
             ext = ".mp4"
         else:
             _, ext = self.get_filename_and_ext(best_format.url.name)
 
-        video_name = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=best_format.resolution)
+        video_name = self.create_custom_filename(
+            video.title,
+            ext,
+            file_id=video.permalink_id,
+            resolution=best_format.resolution,
+        )
         scrape_item.uploaded_at = self.parse_iso_date(video.upload_date)
-        scrape_item.url = video.url
+        scrape_item.url = video.permalink
         self.create_eager_task(
             self.handle_file(
                 best_format.url,
@@ -233,7 +244,7 @@ class RumbleAPI(API):
             id=embed_id,
             upload_date=data["pubDate"],
             title=css.unescape(data["title"]),
-            url=self.parse_url(data["l"]),
+            permalink=self.parse_url(data["l"]),
             formats=tuple(_parse_embed_formats(data.get("ua") or {})),
             subtitles=tuple(_parse_subs(data.get("cc") or {})),
         )
@@ -246,14 +257,14 @@ class RumbleAPI(API):
 
         raise ScrapeError(422, "Unable to find short data")
 
-    async def get_embed_id(self, video_url: AbsoluteHttpURL) -> str:
+    async def embed_id(self, video_url: AbsoluteHttpURL) -> str:
         oembed_url = (self.PRIMARY_URL / "api/Media/oembed.json").with_query(url=str(video_url))
         resp = await self.request_json(oembed_url)
         soup = BeautifulSoup(resp["html"], "html.parser")
         return self.parse_url(css.select(soup, "iframe", "src")).name
 
-    async def resolve(self, url: AbsoluteHttpURL) -> Video:
-        embed_id = await self.get_embed_id(url)
+    async def resolve(self, permalink: AbsoluteHttpURL) -> Video:
+        embed_id = await self.embed_id(permalink)
         return await self.embed(embed_id)
 
 
@@ -262,7 +273,7 @@ def _parse_video_obj(short: dict[str, Any]) -> Video:
         id=short["permalink_id"],
         upload_date=short["upload_date"],
         title=css.unescape(short["title"]),
-        url=RumbleCrawler.parse_url(short["url"]),
+        permalink=RumbleCrawler.parse_url(short["url"]),
         formats=tuple(_parse_video_obj_formats(short["videos"])),
         subtitles=(),
         thumb=short.get("thumb"),

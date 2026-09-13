@@ -23,7 +23,7 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:/video/s8/2/z/z/A/s/zzAsd.caa.mp4",
-                "filename": "RESIDENTE -- BZRP Music Sessions #49 [vu82er][360p].mp4",
+                "filename": "RESIDENTE -- BZRP Music Sessions #49 [vwu8gp][360p].mp4",
                 "original_filename": "RESIDENTE -- BZRP Music Sessions #49.mp4",
                 "referer": "https://rumble.com/vwu8gp-residente-bzrp-music-sessions-49.html",
                 "album_id": None,
@@ -36,19 +36,19 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:/video/vo/47ww/m03gQsmi4GE/Px13ulRwHFM.mp4",
-                "filename": "CLOSING OUT Dave Rubin & Benny Johnson LIVE - Rumble Exclusive Live at TPU [v1at1kt][1080p].mp4",
+                "filename": "CLOSING OUT Dave Rubin & Benny Johnson LIVE - Rumble Exclusive Live at TPU [v1df7i1][1080p].mp4",
                 "referer": "https://rumble.com/v1df7i1-rumble-exclusive-live-at-tpusa.html",
                 "album_id": None,
                 "download_folder": "re:RumbleEvents (Rumble)",
             },
             {
                 "url": "re:/video/vo/y7pe/dPdI3HbQ11Q/kkxZS05zoL0.mp4",
-                "filename": "Turning Point USA 2022 Student Action Summit DAY 1  - Rumble Exclusive Liv [v1amumr][1080p].mp4",
+                "filename": "Turning Point USA 2022 Student Action Summit DAY 1 - Rumble Exclusive Live [v1d90jz][1080p].mp4",
                 "referer": "https://rumble.com/v1d90jz-rumble-exclusive-live-at-tpusa.html",
             },
             {
                 "url": "re:/video/vo/5j7n/fsuRaNtWx5A/K9ZKZmzRXAg.mp4",
-                "filename": "President Donald J. Trump LIVE at Turning Point - Rumble Exclusive Live at [v1apryd][1080p].mp4",
+                "filename": "President Donald J. Trump LIVE at Turning Point - Rumble Exclusive Live at [v1dbxvl][1080p].mp4",
                 "referer": "https://rumble.com/v1dbxvl-rumble-exclusive-live-at-tpusa.html",
             },
         ],
