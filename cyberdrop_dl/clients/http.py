@@ -401,7 +401,7 @@ class HTTPClient:
         flaresolverr.verify_solution(self.config.network.user_agent, solution)
         self._use_flaresolverr_ua.add(url.host)
         self._flaresolverr_ua = flaresolverr.USER_AGENT.get()
-        return AbstractResponse.create(solution)
+        return FlareSolverrResponse.create(solution)
 
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
