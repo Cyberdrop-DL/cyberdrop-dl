@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.8.0
+cyberdrop-dl v10.9.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.8.0
+cyberdrop-dl v10.9.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -172,6 +172,16 @@ Download URLs
 │                                      alas]                                                       │
 │                                      [default: ('mp3-320', 'mp3', 'aac-hi', 'wav', 'flac',       │
 │                                      'vorbis', 'aiff', 'alas')]                                  │
+│ --crawlers.bluesky.external          Parse and download embeds from third-party sites            │
+│   --crawlers.bluesky.no-external     [default: True]                                             │
+│ --crawlers.bluesky.threads           Downloads all posts in a thread (All direct replies from OP │
+│   --crawlers.bluesky.no-threads      to their own post)                                          │
+│                                      [default: True]                                             │
+│ --crawlers.bluesky.content-urls      Parse and try to download any URL found inside the text of  │
+│   --crawlers.bluesky.no-content-url  a post                                                      │
+│   s                                  [default: True]                                             │
+│ --crawlers.bluesky.reposts           Download media from reposts in the user's timeline          │
+│   --crawlers.bluesky.no-reposts      [default: False]                                            │
 │ --crawlers.clonr.use-source          Ignore files in clone and process the original Mega.nz URL  │
 │   --crawlers.clonr.no-use-source     [default: False]                                            │
 │ --crawlers.clonr.zip                 Download entire clone as a single ZIP file                  │
@@ -235,7 +245,7 @@ Download URLs
 │                                      'videos/upload')]                                           │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
-│ --crawlers.twitter.cards             Parse and download cards in a post (embeds from thirdparty  │
+│ --crawlers.twitter.cards             Parse and download cards in a post (embeds from third-party │
 │   --crawlers.twitter.no-cards        sites)                                                      │
 │                                      [default: True]                                             │
 │ --crawlers.twitter.threads           Downloads all posts in a thread (All direct replies from OP │
