@@ -203,17 +203,16 @@ class RumbleCrawler(Crawler):
         )
         scrape_item.uploaded_at = self.parse_iso_date(video.upload_date)
         scrape_item.url = video.permalink
-        self.create_eager_task(
-            self.handle_file(
-                best_format.url,
-                scrape_item,
-                f"{video.title}{ext}",
-                ext,
-                custom_filename=video_name,
-                m3u8=best_format.m3u8,
-                thumbnail=video.thumb,
-            )
+        await self.handle_file(
+            best_format.url,
+            scrape_item,
+            f"{video.title}{ext}",
+            ext,
+            custom_filename=video_name,
+            m3u8=best_format.m3u8,
+            thumbnail=video.thumb,
         )
+
         self.handle_subs(scrape_item, video_name, video.subtitles)
 
     async def _resolve_formats(self, formats: Iterable[Format]) -> list[Format]:
@@ -235,18 +234,20 @@ class RumbleCrawler(Crawler):
 class RumbleAPI(API):
     async def embed(self, embed_id: str) -> Video:
         api_url = (self.PRIMARY_URL / "embedJS/u3").with_query(request="video", ver=2, v=embed_id)
-        data: dict[str, Any] = await self.request_json(api_url)
+        video: dict[str, Any] = await self.request_json(api_url)
 
-        if data.get("live") == LiveStatus.CURRENTLY_LIVE:
+        if video.get("live") == LiveStatus.CURRENTLY_LIVE:
             raise ScrapeError(422, "livestreams are not supported")
 
+        thumb = max(video.get("t", ()), key=lambda t: t["w"], default=None)
         return Video(
             id=embed_id,
-            upload_date=data["pubDate"],
-            title=css.unescape(data["title"]),
-            permalink=self.parse_url(data["l"]),
-            formats=tuple(_parse_embed_formats(data.get("ua") or {})),
-            subtitles=tuple(_parse_subs(data.get("cc") or {})),
+            upload_date=video["pubDate"],
+            title=css.unescape(video["title"]),
+            permalink=self.parse_url(video["l"]),
+            formats=tuple(_parse_embed_formats(video.get("ua") or {})),
+            subtitles=tuple(_parse_subs(video.get("cc") or {})),
+            thumb=thumb and thumb["i"],
         )
 
     async def short(self, short_id: str) -> Video:
