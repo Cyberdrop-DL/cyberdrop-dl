@@ -420,7 +420,7 @@ class FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
             return self._resp.content
 
         try:
-            return self._load_json(self._text)
+            return await self._load_json(self._text)
         finally:
             self._check_json(content_type)
 
@@ -431,8 +431,7 @@ class FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
             if "html" not in self.content_type:
                 raise
 
-            soup = await css.asoup(text)
-            text = soup.text
+            text = (await css.asoup(text)).text
             data = json.loads(text)
             self.content_type = "application/json"
             self._text = text

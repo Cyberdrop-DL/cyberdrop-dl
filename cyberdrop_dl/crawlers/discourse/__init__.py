@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from cyberdrop_dl.crawlers._forum import MessageBoardCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 from .models import AvailablePost, PostStream, Topic
@@ -126,10 +126,9 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
         links = css.iselect(soup, *css.links)
         external_links = (ref.url for ref in post.link_counts)
 
-        for link_str in dict.fromkeys(itertools.chain(external_links, images, links)):
+        for link_str in filter(None, unique(itertools.chain(external_links, images, links))):
             try:
-                if link_str:
-                    yield self.parse_url(link_str)
+                yield self.parse_url(link_str)
             except Exception:  # noqa: BLE001, S112
                 continue
 
