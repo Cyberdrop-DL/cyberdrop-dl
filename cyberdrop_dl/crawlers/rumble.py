@@ -73,13 +73,15 @@ class RumbleCrawler(Crawler):
         "Channel videos": "/c/<name>/videos",
         "Channel shorts": "/c/<name>/shorts",
         "User": "/user/<name>",
+        "User videos": "/user/<name>/videos",
+        "User shorts": "/user/<name>/shorts",
         "Video": "<video_id>-<video-title>.html",
         "Short": "/shorts/<short_id>",
         "Embed": "/embed/<video_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://rumble.com")
     DOMAIN: ClassVar[str] = "rumble"
-    NEXT_PAGE_SELECTOR: ClassVar[str] = "nav a[href*=page]:has(svg[stroke-linecap=round])"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "nav a[href*=page]:has(svg)"
 
     def __post_init__(self) -> None:
         self.api: RumbleAPI = RumbleAPI.from_crawler(self)
@@ -243,6 +245,10 @@ def _parse_short(short: dict[str, Any]) -> Video:
 
 
 def _find_video_objs(soup: BeautifulSoup) -> Generator[dict[str, Any]]:
+    # TODO: Add a way for crawler to reject Flaresolver responses and force remake the request with its cookies with a native HTTP backend
+    # These JSON objects are only available before loading any JS
+    # That means Flaresolverr responses won't have them
+    found_at_least_one = False
     for script in css.iselect_text(
         soup,
         selector="script[type='application/json'], script[type='application/ld+json']",
@@ -254,7 +260,10 @@ def _find_video_objs(soup: BeautifulSoup) -> Generator[dict[str, Any]]:
                 "object_type": "video",
             },
         ):
+            found_at_least_one = True
             yield obj
+    if not found_at_least_one:
+        raise ScrapeError(422, "Did not find any video on this page")
 
 
 def _filter_formats[T](fmts: Iterable[tuple[str, T]]) -> Generator[tuple[FormatType, T]]:
