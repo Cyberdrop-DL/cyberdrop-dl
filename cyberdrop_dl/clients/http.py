@@ -99,6 +99,7 @@ class HTTPClient:
         self._flaresolverr: flaresolverr.Client | None = None
         self._curl_session: AsyncSession[CurlResponse] | None = None
         self._use_flaresolverr_ua: set[str] = set()
+        self._flaresolverr_ua: str = ""
         self._wreq_session: WreqClient | None = None
         self._session: aiohttp.ClientSession
         self._download_session: aiohttp.ClientSession
@@ -289,7 +290,7 @@ class HTTPClient:
             # We already made a (successful) flaresolverr request to this host
             # Use the same UA as flaresolverr to make sure cookies are valid
             request.impersonate = False
-            request.headers[hdrs.USER_AGENT] = flaresolverr.USER_AGENT.get()
+            request.headers[hdrs.USER_AGENT] = self._flaresolverr_ua
 
         elif request.impersonate:
             request.headers.pop(hdrs.USER_AGENT, None)
@@ -399,6 +400,7 @@ class HTTPClient:
         self.cookies.update_cookies(solution.cookies)
         flaresolverr.verify_solution(self.config.network.user_agent, solution)
         self._use_flaresolverr_ua.add(url.host)
+        self._flaresolverr_ua = flaresolverr.USER_AGENT.get()
         return AbstractResponse.create(solution)
 
 
