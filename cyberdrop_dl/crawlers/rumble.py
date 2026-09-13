@@ -5,13 +5,15 @@ import json
 from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from bs4 import BeautifulSoup
+
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, json_ld, m3u8, parse_url, traversal
+from cyberdrop_dl.utils import css, m3u8, parse_url, traversal
 from cyberdrop_dl.utils._url import remove_query_params
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     import yarl
-    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -108,16 +109,6 @@ class RumbleCrawler(Crawler):
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         return remove_query_params(super().transform_url(url), keep=("page",))
 
-    @error_handling_wrapper
-    async def channel_shorts(self, scrape_item: ScrapeItem, name: str) -> None:
-        scrape_item.setup_as_album(self.create_title(name))
-        scrape_item.append_folders("shorts")
-        async for soup in self.web_pager(scrape_item.url):
-            for short in map(_parse_short, _find_video_objs(soup)):
-                new_item = scrape_item.create_child(short.url)
-                self.create_eager_task(self._video(new_item, short))
-                scrape_item.add_children()
-
     @override
     @classmethod
     def parse_url(
@@ -133,18 +124,45 @@ class RumbleCrawler(Crawler):
     @error_handling_wrapper
     async def channel_videos(self, scrape_item: ScrapeItem, name: str) -> None:
         scrape_item.setup_as_album(self.create_title(name))
+        await self._iter_videos(scrape_item)
+
+    @error_handling_wrapper
+    async def channel_shorts(self, scrape_item: ScrapeItem, name: str) -> None:
+        scrape_item.setup_as_album(self.create_title(name))
+        scrape_item.append_folders("shorts")
+        await self._iter_videos(scrape_item)
+
+    async def _iter_videos(self, scrape_item: ScrapeItem) -> None:
         async for soup in self.web_pager(scrape_item.url):
-            for item in _find_video_objs(soup):
-                new_item = scrape_item.create_child(self.parse_url(item["url"]))
-                self.create_task(self.video(new_item))
+            found_videos: bool = False
+            for video in map(_parse_video_obj, _find_video_objs(soup)):
+                found_videos = True
+                new_item = scrape_item.create_child(video.url)
+                self.create_eager_task(self._video(new_item, video))
                 scrape_item.add_children()
+
+            if found_videos:
+                continue
+
+            # Fallback if we made the request with Flaresolverr. Video objects in the HTML are destroyed after JS loads
+            for new_item in self.iter_children(scrape_item, soup, "rum-video-thumbnail a"):
+                found_videos = True
+                self.create_task(self.run(new_item))
+                scrape_item.add_children()
+
+            if not found_videos:
+                raise ScrapeError(422, "Did not find any videos on the last page")
 
     @error_handling_wrapper
     async def short(self, scrape_item: ScrapeItem, short_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        video = await self.api.short(short_id)
+        try:
+            video = await self.api.short(short_id)
+        except (ScrapeError, DDOSGuardError):
+            video = await self.api.resolve(scrape_item.url)
+
         await self._video(scrape_item, video)
 
     @error_handling_wrapper
@@ -152,9 +170,8 @@ class RumbleCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-        embed_id = self.parse_url(json_ld.find_attr(soup, "embedUrl")).name
-        await self.embed(scrape_item, embed_id)
+        video = await self.api.resolve(scrape_item.url)
+        await self._video(scrape_item, video)
 
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, embed_id: str) -> None:
@@ -217,7 +234,7 @@ class RumbleAPI(API):
             upload_date=data["pubDate"],
             title=css.unescape(data["title"]),
             url=self.parse_url(data["l"]),
-            formats=tuple(_parse_formats(data.get("ua") or {})),
+            formats=tuple(_parse_embed_formats(data.get("ua") or {})),
             subtitles=tuple(_parse_subs(data.get("cc") or {})),
         )
 
@@ -225,30 +242,34 @@ class RumbleAPI(API):
         soup = await self.request_soup(self.PRIMARY_URL / "shorts" / short_id)
         for obj in _find_video_objs(soup):
             if obj.get("permalink_id") == short_id:
-                short = obj
-                break
-        else:
-            raise ScrapeError(422, "Unable to find short data")
-        return _parse_short(short)
+                return _parse_video_obj(obj)
+
+        raise ScrapeError(422, "Unable to find short data")
+
+    async def get_embed_id(self, video_url: AbsoluteHttpURL) -> str:
+        oembed_url = (self.PRIMARY_URL / "api/Media/oembed.json").with_query(url=str(video_url))
+        resp = await self.request_json(oembed_url)
+        soup = BeautifulSoup(resp["html"], "html.parser")
+        return self.parse_url(css.select(soup, "iframe", "src")).name
+
+    async def resolve(self, url: AbsoluteHttpURL) -> Video:
+        embed_id = await self.get_embed_id(url)
+        return await self.embed(embed_id)
 
 
-def _parse_short(short: dict[str, Any]) -> Video:
+def _parse_video_obj(short: dict[str, Any]) -> Video:
     return Video(
         id=short["permalink_id"],
         upload_date=short["upload_date"],
         title=css.unescape(short["title"]),
         url=RumbleCrawler.parse_url(short["url"]),
-        formats=tuple(_parse_short_formats(short["videos"])),
+        formats=tuple(_parse_video_obj_formats(short["videos"])),
         subtitles=(),
         thumb=short.get("thumb"),
     )
 
 
 def _find_video_objs(soup: BeautifulSoup) -> Generator[dict[str, Any]]:
-    # TODO: Add a way for crawler to reject Flaresolver responses and force remake the request with its cookies with a native HTTP backend
-    # These JSON objects are only available before loading any JS
-    # That means Flaresolverr responses won't have them
-    found_at_least_one = False
     for script in css.iselect_text(
         soup,
         selector="script[type='application/json'], script[type='application/ld+json']",
@@ -260,10 +281,7 @@ def _find_video_objs(soup: BeautifulSoup) -> Generator[dict[str, Any]]:
                 "object_type": "video",
             },
         ):
-            found_at_least_one = True
             yield obj
-    if not found_at_least_one:
-        raise ScrapeError(422, "Did not find any video on this page")
 
 
 def _filter_formats[T](fmts: Iterable[tuple[str, T]]) -> Generator[tuple[FormatType, T]]:
@@ -279,7 +297,7 @@ def _filter_formats[T](fmts: Iterable[tuple[str, T]]) -> Generator[tuple[FormatT
         yield f_type, fmt
 
 
-def _parse_short_formats(formats: Iterable[dict[str, Any]]) -> Generator[Format]:
+def _parse_video_obj_formats(formats: Iterable[dict[str, Any]]) -> Generator[Format]:
     for type_, fmt in _filter_formats((fmt["type"], fmt) for fmt in formats):
         is_hls = type_ is FormatType.HLS
         yield Format(
@@ -292,7 +310,7 @@ def _parse_short_formats(formats: Iterable[dict[str, Any]]) -> Generator[Format]
         )
 
 
-def _parse_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
+def _parse_embed_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dict[str, Any]]]) -> Generator[Format]:
     for type_, format_options in _filter_formats(formats.items()):
         pairs = ((None, f) for f in format_options) if isinstance(format_options, list) else format_options.items()
         for height, fmt in pairs:

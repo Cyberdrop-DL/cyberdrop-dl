@@ -862,11 +862,14 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         url: AbsoluteHttpURL,
         selector: Callable[[BeautifulSoup], yarl.URL | str | None] | str | None = None,
         *,
-        impersonate: str | bool | None = False,
+        impersonate: str | bool | None = None,
         relative_to: AbsoluteHttpURL | None = None,
         trim: bool | None = None,
     ) -> AsyncIterator[BeautifulSoup]:
         """Generator of website pages"""
+
+        if impersonate is None:
+            impersonate = self.__http_config__.impersonate
 
         relative_to = relative_to or url
         page_url = url
@@ -884,7 +887,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
                     return None
 
         while True:
-            soup = await self.request_soup(page_url, impersonate=impersonate or None)
+            soup = await self.request_soup(page_url, impersonate=impersonate)
             yield soup
             page_url_str = get_next_page(soup)
             if not page_url_str:
