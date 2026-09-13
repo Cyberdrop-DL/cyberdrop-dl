@@ -99,6 +99,49 @@ crawlers:
       - alas
 ```
 
+# bluesky
+
+```yaml
+crawlers:
+  bluesky:
+    content_urls: true
+    external: true
+    reposts: false
+    threads: true
+```
+
+## `external`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and download embeds from third-party sites
+
+## `content_urls`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and try to download any URL found inside the text of a post
+
+## `threads`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Downloads all posts in a thread (All direct replies from OP to their own post)
+
+## `reposts`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Download media from reposts in the user's timeline
+
 # Clyp.it
 
 ```yaml
