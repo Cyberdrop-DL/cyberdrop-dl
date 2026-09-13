@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.8.0
+List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 
 ### 1fichier
 
@@ -300,6 +300,19 @@ List of sites supported by cyberdrop-dl-patched as of version 10.8.0
   - `/<post_slug>/`
 - Tag:
   - `/tag/<tag_slug>`
+
+### BlueSky
+
+**Primary URL**: [https://bsky.app](https://bsky.app)
+
+**Supported Domains**: `bsky.app`, `bsky.social`, `main.bsky.dev`
+
+**Supported Paths**:
+
+- Post:
+  - `/profile/<handle>/post/<post_id>`
+- Profile:
+  - `/profile/<handle>`
 
 ### Box
 
@@ -821,6 +834,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.8.0
 - Short URL:
   - `https://theditch.st/<short_id>`
 
+### Fileditch
+
+**Primary URL**: [https://fileditchalbums.st](https://fileditchalbums.st)
+
+**Supported Domains**: `fileditchalbums.*`
+
+**Supported Paths**:
+
+- Album:
+  - `/<album_id>`
+
 ### Filester
 
 **Primary URL**: [https://filester.me](https://filester.me)
@@ -990,6 +1014,8 @@ List of sites supported by cyberdrop-dl-patched as of version 10.8.0
 - Direct link:
   - `/download/<content_id>/<filename>`
   - `/download/web/<content_id>/<filename>`
+- Direct link (Premium):
+  - `/download/direct/<content_id>/<filename>`
 - Folder / File:
   - `/d/<content_id>`
 
@@ -2418,10 +2444,20 @@ spreadsheets:
 
 - Channel:
   - `/c/<name>`
+- Channel shorts:
+  - `/c/<name>/shorts`
+- Channel videos:
+  - `/c/<name>/videos`
 - Embed:
   - `/embed/<video_id>`
+- Short:
+  - `/shorts/<short_id>`
 - User:
   - `/user/<name>`
+- User shorts:
+  - `/user/<name>/shorts`
+- User videos:
+  - `/user/<name>/videos`
 - Video:
   - `<video_id>-<video-title>.html`
 
@@ -2931,7 +2967,7 @@ spreadsheets:
 
 **Primary URL**: [https://vidara.to](https://vidara.to)
 
-**Supported Domains**: `stmix.io`, `streamix.so`, `vidara.so`, `vidara.to`, `xca.cymru`
+**Supported Domains**: `stmix.io`, `streamix.so`, `vidara.*`, `vidara.so`, `vidara.to`, `vidvara.lol`, `xca.cymru`
 
 **Supported Paths**:
 
