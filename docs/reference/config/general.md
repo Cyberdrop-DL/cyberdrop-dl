@@ -196,6 +196,8 @@ Download files even if their hash matches a file on the database.
 Not all file hosts provide hash information before download
 {% endhint %}
 
+This does not affect auto dedupe. Duplicates are still deleted after the download. See [Retries and Download History](../retry-and-history.md).
+
 ```yaml
 ignore_hashes: false
 ```
@@ -209,6 +211,11 @@ ignore_hashes: false
 By default, the program tracks your downloads in a database to prevent downloading the same file multiple times, to save time and reduce load on the servers you're downloading from.
 
 Setting this to `true` to disable it, ignoring the database and allowing you to re-download files.
+
+This only stops CDL from reading the database. New downloads are still recorded, and files that already exist on disk with the expected size are still skipped.
+It also disables auto dedupe for the run. It has no effect on scraping.
+
+See [Retries and Download History](../retry-and-history.md).
 
 ```yaml
 ignore_history: false
