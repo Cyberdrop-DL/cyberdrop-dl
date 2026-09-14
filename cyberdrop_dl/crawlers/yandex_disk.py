@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import dataclasses
 import json
-from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -76,7 +75,7 @@ class YandexDiskCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
 
     def __post_init__(self) -> None:
-        self._session_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        self._session_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
         self._hosts_with_session: set[str] = set()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
