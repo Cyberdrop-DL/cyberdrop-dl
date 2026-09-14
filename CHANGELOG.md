@@ -28,9 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Allow downloads to go outside the current `--download-folder` when using a retry option with `--force-original-path`
 
+### Removed
+
+- OneManager support
+- Motherless support
+- Anontransfer support
+
 ### Fixed
 
-- Download from users with new profile layout (xHamster)
+- Download from users with the new profile layout (xHamster)
 
 ## [10.9.0] - 2026-09-13
 
