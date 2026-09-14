@@ -494,6 +494,7 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
     def loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
         loop.set_task_factory(asyncio.eager_task_factory)
+        loop.slow_callback_duration = 0.2
         return loop
 
     with asyncio.Runner(loop_factory=loop_factory) as runner:
