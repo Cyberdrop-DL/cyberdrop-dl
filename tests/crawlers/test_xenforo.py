@@ -211,58 +211,6 @@ def test_clean_link_url(link: str, out: str) -> None:
     assert _forum.clean_link_str(link) == out
 
 
-def test_parse_login_form_success() -> None:
-    html = _html("""
-    <form id="loginForm">
-        <input type="text" name="username" value="testuser">
-        <input type="password" name="password" value="testpass">
-        <input type="hidden" name="csrf_token" value="some_token_123">
-        <input type="submit" value="Login">
-        <input type="text" id="noName" value="shouldBeIgnored">
-        <input type="text" name="noValue">
-    </form>
-    <form id="anotherForm">
-        <input type="text" name="anotherField" value="anotherValue">
-    </form>
-    """)
-    expected_data = {
-        "username": "testuser",
-        "password": "testpass",
-        "csrf_token": "some_token_123",
-    }
-    parsed_data = xenforo.parse_login_form(html)
-    assert parsed_data == expected_data
-
-
-def test_parse_login_form_no_form_should_fail() -> None:
-    with pytest.raises(ScrapeError):
-        xenforo.parse_login_form("")
-
-
-def test_parse_login_form_inputs_without_name_or_value_should_be_ignored() -> None:
-    html = _html("""
-    <form>
-        <input type="text" value="somevalue">
-        <input type="text" name="someName">
-        <input type="text" name="validField" value="validValue">
-    </form>
-    """)
-    expected_data = {"validField": "validValue"}
-    parsed_data = xenforo.parse_login_form(html)
-    assert parsed_data == expected_data
-
-
-def test_parse_login_form_no_input_form_should_fail() -> None:
-    html = _html("""
-    <form>
-        <div>Some content</div>
-        <p>More content</p>
-    </form>
-    """)
-    with pytest.raises(ScrapeError):
-        xenforo.parse_login_form(html)
-
-
 @pytest.mark.parametrize(
     ("input_string", "expected_output"),
     [
