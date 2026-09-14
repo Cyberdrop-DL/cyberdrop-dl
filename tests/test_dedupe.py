@@ -1,4 +1,5 @@
 # ruff: noqa: ASYNC240
+import dataclasses
 import sqlite3
 from pathlib import Path
 from typing import cast
@@ -6,7 +7,11 @@ from unittest.mock import patch
 
 import pytest
 
-from cyberdrop_dl.dedupe import _delete_file, _filter_db_matches
+from cyberdrop_dl.dedupe import Czkawka, _delete_file, _filter_db_matches
+from cyberdrop_dl.hasher import FileHashes
+from cyberdrop_dl.manager import Manager
+
+_HASH = "a5aec63d0fef8660b00570f23be727e9"
 
 
 @pytest.fixture
@@ -60,16 +65,17 @@ class TestFilterDbMatches:
     def _row(folder: Path | str, download_filename: str) -> sqlite3.Row:
         return cast("sqlite3.Row", {"folder": folder, "download_filename": download_filename})  # pyright: ignore[reportInvalidCast]
 
-    def test_filter_db_matches_should_skip_first_row(self, tmp_path: Path) -> None:
+    def test_filter_db_matches_should_pair_every_duplicate_with_the_first_row(self, tmp_path: Path) -> None:
         rows = [
             self._row(tmp_path, "skip_me.txt"),
             self._row(tmp_path, "do not skip me.txt"),
             self._row(tmp_path, "do not skip me 2.txt"),
         ]
+        original = tmp_path / "skip_me.txt"
         found = list(_filter_db_matches(rows, tmp_path))
         assert found == [
-            tmp_path / "do not skip me.txt",
-            tmp_path / "do not skip me 2.txt",
+            (original, tmp_path / "do not skip me.txt"),
+            (original, tmp_path / "do not skip me 2.txt"),
         ]
 
     def test_filter_db_matches_should_skip_non_relative_paths(self, tmp_path: Path) -> None:
@@ -79,11 +85,91 @@ class TestFilterDbMatches:
             self._row("/another/dir", "skip me 2.txt"),
             self._row(tmp_path, "do not skip me 2.txt"),
         ]
+        original = tmp_path / "skip_me.txt"
         found = list(_filter_db_matches(rows, tmp_path))
         assert found == [
-            tmp_path / "do not skip me.txt",
-            tmp_path / "do not skip me 2.txt",
+            (original, tmp_path / "do not skip me.txt"),
+            (original, tmp_path / "do not skip me 2.txt"),
         ]
+
+    def test_filter_db_matches_should_report_originals_outside_base_dir(self, tmp_path: Path) -> None:
+        rows = [
+            self._row("/another/dir", "original.txt"),
+            self._row(tmp_path, "dupe.txt"),
+        ]
+        found = list(_filter_db_matches(rows, tmp_path))
+        assert found == [(Path("/another/dir/original.txt"), tmp_path / "dupe.txt")]
+
+    def test_filtering_a_single_row(self, tmp_path: Path) -> None:
+        assert list(_filter_db_matches([self._row(tmp_path, "alone.txt")], tmp_path)) == []
 
     def test_filtering_no_rows(self) -> None:
         assert list(_filter_db_matches([], Path("/a/dir"))) == []
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _DedupeCase:
+    deduper: Czkawka
+    file_hashes: FileHashes
+    original: Path
+    duplicate: Path
+
+    @property
+    def csv_file(self) -> Path:
+        return self.deduper.csv_file
+
+    async def run(self) -> None:
+        await self.deduper.run(self.file_hashes)
+
+
+class TestDedupeRun:
+    @pytest.fixture
+    async def case(self, running_manager: Manager, tmp_path: Path) -> _DedupeCase:
+        """Registers a file and a duplicate of it, both with the same hash, in the database"""
+
+        base_dir = tmp_path / "downloads"
+        original = base_dir / "original.jpg"
+        duplicate = base_dir / "sub" / "duplicate.jpg"
+        for file in (original, duplicate):
+            file.parent.mkdir(parents=True, exist_ok=True)
+            _ = file.write_text("same content")
+            await running_manager.database.hash.insert_or_update_hash_db(_HASH, "xxh128", file, None, None)
+
+        deduper = Czkawka(
+            base_dir=base_dir,
+            database=running_manager.database,
+            use_trash_bin=False,
+            csv_file=tmp_path / "dedupe.csv",
+        )
+        return _DedupeCase(deduper, {_HASH: {original.stat().st_size: {original, duplicate}}}, original, duplicate)
+
+    async def test_deletes_the_duplicate_and_keeps_the_original(self, case: _DedupeCase) -> None:
+        await case.run()
+        assert case.original.exists()
+        assert not case.duplicate.exists()
+
+    async def test_logs_the_path_of_the_original(self, case: _DedupeCase, logs: pytest.LogCaptureFixture) -> None:
+        await case.run()
+        assert f"Removed new download '{case.duplicate}'" in logs.text
+        assert f"duplicate of '{case.original}'" in logs.text
+
+    async def test_logs_the_start_and_the_end_of_the_dedupe(
+        self, case: _DedupeCase, logs: pytest.LogCaptureFixture
+    ) -> None:
+        await case.run()
+        assert "Starting dedupe" in logs.text
+        assert "Dedupe finished. Deleted 1 of 1 duplicates found" in logs.text
+
+    async def test_writes_the_csv_log(self, case: _DedupeCase) -> None:
+        await case.run()
+        assert case.csv_file.read_text("utf8").splitlines() == [
+            '"duplicate","original","hash"',
+            f'"{case.duplicate}","{case.original}","xxh128:{_HASH}"',
+        ]
+
+    async def test_no_csv_log_when_nothing_was_deleted(self, case: _DedupeCase) -> None:
+        await case.deduper.run({})
+        assert not case.csv_file.exists()
+
+    def test_from_manager_uses_the_csv_file_from_the_config(self, manager: Manager) -> None:
+        assert Czkawka.from_manager(manager).csv_file == manager.config.logs.files.dedupe

@@ -15,7 +15,7 @@ from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping, Sequence
 
     import yarl
 
@@ -35,6 +35,7 @@ class CSVFiles:
     download_errors: Path
     scrape_errors: Path
     last_forum_post: Path
+    dedupe: Path
     jsonl_file: Path
 
     __iter__ = DictDataclass.__iter__
@@ -48,6 +49,7 @@ class CSVFiles:
             scrape_errors=files.scrape_errors,
             jsonl_file=files.jsonl_file,
             last_forum_post=files.last_forum_post,
+            dedupe=files.dedupe,
         )
 
 
@@ -173,6 +175,24 @@ def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.
     path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))
     filename = f"{path_safe_url[:max_stem_len]}_{log_date}{ext}"
     return folder / filename
+
+
+def write_rows(file: Path, rows: Sequence[Mapping[str, object]]) -> None:
+    """Write every row to a new CSV file, replacing any existing file. Does nothing if `rows` is empty."""
+
+    if not rows:
+        return
+
+    file.parent.mkdir(parents=True, exist_ok=True)
+    with file.open("w", encoding="utf8", newline="") as csv_file:
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=tuple(rows[0]),
+            delimiter=_CSV_DELIMITER,
+            quoting=csv.QUOTE_ALL,
+        )
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def _write_to_csv(file: Path, row: dict[str, object], *, write_headers: bool) -> None:

@@ -1,9 +1,11 @@
+import asyncio
 import datetime
 from pathlib import Path
 
 import pytest
 
-from cyberdrop_dl.csv_logs import _prepare_resp_file, _write_to_csv
+from cyberdrop_dl.config import Config
+from cyberdrop_dl.csv_logs import CSVFiles, CSVLogsManager, _prepare_resp_file, _write_to_csv, write_rows
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
@@ -30,6 +32,37 @@ def test_prepare_resp_filename(url: str, expected: str) -> None:
     result = _prepare_resp_file(Path("/"), AbsoluteHttpURL(url), now)
     assert result.as_posix().count("/") == 1
     assert result.as_posix() == expected
+
+
+async def test_delete_old_logs_removes_a_stale_dedupe_log(tmp_cwd: Path) -> None:
+    config = Config()
+    config.logs.resolve_filenames(tmp_cwd)
+    stale_log = config.logs.files.dedupe
+    stale_log.parent.mkdir(parents=True, exist_ok=True)
+    _ = stale_log.write_text("from a previous run")
+
+    async with asyncio.TaskGroup() as task_group:
+        CSVLogsManager(CSVFiles.from_config(config), task_group).delete_old_logs()
+
+    assert not stale_log.exists()
+
+
+class TestWriteRows:
+    def test_writes_headers_and_every_row(self, tmp_path: Path) -> None:
+        file = tmp_path / "subfolder" / "dedupe.csv"
+        write_rows(file, [{"a": 1, "b": 2}, {"a": 3, "b": 4}])
+        assert file.read_text("utf8").splitlines() == ['"a","b"', '"1","2"', '"3","4"']
+
+    def test_replaces_an_existing_file(self, tmp_path: Path) -> None:
+        file = tmp_path / "dedupe.csv"
+        _ = file.write_text("<<OLD CONTENT>>\n")
+        write_rows(file, [{"a": 1}])
+        assert file.read_text("utf8").splitlines() == ['"a"', '"1"']
+
+    def test_no_rows_creates_no_file(self, tmp_path: Path) -> None:
+        file = tmp_path / "dedupe.csv"
+        write_rows(file, [])
+        assert not file.exists()
 
 
 class TestWriteToCsv:
