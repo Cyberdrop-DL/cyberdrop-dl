@@ -118,5 +118,5 @@ TEST_CASES = [
         "results": [{"url": "ANY", "download_folder": "re:DanielaGomezx \\[user\\] \\(xHamster\\)"}],
         "count": range(71, 80),
     },
-    {"url": "https://xhamster.com/creators/danielagomezz/exclusive", "results": [], "count": range(50, 70)},
+    {"url": "https://xhamster.com/creators/danielagomezz/exclusive", "results": [], "count": range(70, 100)},
 ]
