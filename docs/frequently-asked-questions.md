@@ -69,7 +69,7 @@ See [Retries and Download History](reference/retry-and-history.md) for all the c
 See [Retries and Download History](reference/retry-and-history.md). In short:
 
 - `cyberdrop-dl retry failed` re-downloads what never completed.
-- `cyberdrop-dl retry all` re-visits the pages you scraped before and downloads anything new that was added to them.
+- To get new files in an album, profile or thread, scrape that URL again. CDL downloads what is new and skips what you already have.
 - `--ignore-history` downloads files again even if the database says they are already done.
 
 ## `cyberdrop-dl` is not a recognized internal command
