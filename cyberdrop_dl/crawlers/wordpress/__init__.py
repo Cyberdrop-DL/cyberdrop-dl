@@ -11,12 +11,10 @@ import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils import css, open_graph, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 from .models import HTML, Category, CategorySequence, ColletionType, Post, PostSequence, Tag, TagSequence
@@ -25,6 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterable, Iterable
 
     import yarl
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -131,9 +130,12 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         scrape_item.add_children()
 
     async def _post_content(self, scrape_item: ScrapeItem, post: Post) -> None:
-        for link in self.iter_parse_url(_iter_links(post.content, use_regex=self.WP_USE_REGEX)):
-            if link:
-                await self._handle_link(scrape_item, link)
+        for link in filter(None, unique(await _iter_links(post.content, use_regex=self.WP_USE_REGEX))):
+            try:
+                url = self.parse_url(link)
+            except ValueError:
+                continue
+            await self._handle_link(scrape_item, url)
 
     @classmethod
     def parse_url(
@@ -150,14 +152,6 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         if url.host == "ouo.io" and (redirect_url := url.query.get("s")):
             return super().parse_url(redirect_url)
         return url
-
-    @final
-    def iter_parse_url(self, iterable: Iterable[str]) -> Iterable[AbsoluteHttpURL]:
-        for link_str in dict.fromkeys(iterable):
-            try:
-                yield self.parse_url(link_str)
-            except Exception:  # noqa: BLE001, S112
-                continue
 
 
 class WordPressMediaCrawler(WordPressBaseCrawler, is_generic=True):
@@ -290,8 +284,8 @@ def _get_original_quality_link(link: str) -> str:
     return link
 
 
-def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
-    soup = BeautifulSoup(html, "html.parser")
+async def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
+    soup = await css.asoup(html)
     images = css.iselect(soup, *css.images)
     iframes = css.iselect(soup, *css.iframes)
     if use_regex:

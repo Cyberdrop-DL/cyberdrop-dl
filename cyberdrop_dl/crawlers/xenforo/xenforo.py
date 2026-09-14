@@ -11,20 +11,15 @@ Xenforo sites have a REST API but the APi is private only. Admins of the site ne
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers._forum import HTMLMessageBoardCrawler, MessageBoardSelectors, PostSelectors
-from cyberdrop_dl.exceptions import LoginError, ScrapeError
-from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
-from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 Selector = css.CssAttributeSelector
@@ -73,68 +68,3 @@ class XenforoCrawler(HTMLMessageBoardCrawler, is_abc=True):
     # Attachments hosts should technically be defined on each specific Crawler, but they do no harm here
     ATTACHMENT_HOSTS = "smgmedia", "attachments.f95zone"
     login_required = True
-
-    @error_handling_wrapper
-    async def xf_login(self, login_url: AbsoluteHttpURL, session_cookie: str, username: str, password: str) -> None:
-        """Logic to login as a Xenforo user
-
-        This was deprecated in v6.5.0 but the code itself it useful for debuggig without cookie extraction.
-        Login functionality may come back in a future version..."""
-
-        manual_login = username and password
-        missing_credentials = not (manual_login or session_cookie)
-        if missing_credentials:
-            msg = f"Login info wasn't provided for {self.FOLDER_DOMAIN}"
-            raise LoginError(message=msg)
-
-        if session_cookie:
-            cookies = {self.LOGIN_USER_COOKIE_NAME: session_cookie}
-            self.update_cookies(cookies)
-
-        credentials = {"login": username, "password": password, "_xfRedirect": str(self.PRIMARY_URL)}
-        await self._xf_try_login(login_url, credentials, retries=5)
-
-    async def _xf_try_login(
-        self,
-        login_url: AbsoluteHttpURL,
-        credentials: dict[str, str],
-        retries: int,
-        wait_time: int | None = None,
-    ) -> None:
-        # Check first if we have cookies and they are valid
-        text, logged_in = await self.check_login_with_request(login_url)
-        if logged_in:
-            self._logged_in = True
-            return
-
-        wait_time = wait_time or retries
-        attempt = 0
-        while attempt < retries:
-            try:
-                attempt += 1
-                await asyncio.sleep(wait_time)
-                data = parse_login_form(text) | credentials
-                async with self.request(login_url / "login", method="POST", data=data):
-                    pass
-                await asyncio.sleep(wait_time)
-                text, logged_in = await self.check_login_with_request(login_url)
-                if logged_in:
-                    self._logged_in = True
-                    return
-            except TimeoutError:
-                continue
-
-        msg = f"Failed to login on {self.FOLDER_DOMAIN} after {retries} attempts"
-        raise LoginError(message=msg)
-
-
-def parse_login_form(resp_text: str) -> dict[str, str]:
-    inputs = css.iselect(css.soup(resp_text), "form:first-of-type input")
-    data = {
-        name: value
-        for elem in inputs
-        if (name := css.attr_or_none(elem, "name")) and (value := css.attr_or_none(elem, "value"))
-    }
-    if data:
-        return data
-    raise ScrapeError(422)
