@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.csv_logs import CSVFiles, CSVLogsManager, _prepare_resp_file, _write_to_csv, write_rows
+from cyberdrop_dl.csv_logs import CSVFiles, CSVLogsManager, _prepare_resp_file, _write_to_csv
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
@@ -45,24 +45,6 @@ async def test_delete_old_logs_removes_a_stale_dedupe_log(tmp_cwd: Path) -> None
         CSVLogsManager(CSVFiles.from_config(config), task_group).delete_old_logs()
 
     assert not stale_log.exists()
-
-
-class TestWriteRows:
-    def test_writes_headers_and_every_row(self, tmp_path: Path) -> None:
-        file = tmp_path / "subfolder" / "dedupe.csv"
-        write_rows(file, [{"a": 1, "b": 2}, {"a": 3, "b": 4}])
-        assert file.read_text("utf8").splitlines() == ['"a","b"', '"1","2"', '"3","4"']
-
-    def test_replaces_an_existing_file(self, tmp_path: Path) -> None:
-        file = tmp_path / "dedupe.csv"
-        _ = file.write_text("<<OLD CONTENT>>\n")
-        write_rows(file, [{"a": 1}])
-        assert file.read_text("utf8").splitlines() == ['"a"', '"1"']
-
-    def test_no_rows_creates_no_file(self, tmp_path: Path) -> None:
-        file = tmp_path / "dedupe.csv"
-        write_rows(file, [])
-        assert not file.exists()
 
 
 class TestWriteToCsv:
