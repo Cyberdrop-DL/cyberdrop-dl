@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Download from users with the new profile layout (xHamster)
+- Downloads from users using the new profile layout (xHamster)
 
 ## [10.9.0] - 2026-09-13
 
