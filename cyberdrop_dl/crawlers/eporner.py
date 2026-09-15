@@ -213,12 +213,14 @@ class EpornerCrawler(Crawler):
         if resp.get("available") is False:
             raise ScrapeError(404, resp.get("message"))
 
-        return _parse_video(html, resp)
+        return await _parse_video(html, resp)
 
 
-def _parse_video(html: str, video: dict[str, Any]) -> Video:
+async def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
-    ld_json = css.select_text(css.soup(html), Selector.DATE_JS).encode("raw_unicode_escape").decode("unicode-escape")
+    ld_json = (
+        css.select_text(await css.asoup(html), Selector.DATE_JS).encode("raw_unicode_escape").decode("unicode-escape")
+    )
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1211
 
