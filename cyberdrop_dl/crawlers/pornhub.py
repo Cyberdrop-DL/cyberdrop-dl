@@ -314,7 +314,7 @@ class Video:
     id: str
     title: str
     thumb: str | None
-    uploaded_at: float
+    uploaded_at: float | None
     formats: tuple[Format, ...]
     url: AbsoluteHttpURL
 
@@ -356,7 +356,7 @@ class PornHubAPI(API):
             title=flashvars["video_title"],
             thumb=flashvars.get("image_url"),
             formats=tuple(_parse_formats(flashvars["mediaDefinitions"])),
-            uploaded_at=json_ld.upload_date(soup),
+            uploaded_at=_extr_upload_date(soup, html),
             url=page_url,
         )
 
@@ -371,6 +371,16 @@ def _extr_flashvars(soup: BeautifulSoup) -> dict[str, Any]:
     flashvars: str = css.select_text(soup, Selector.FLASHVARS)
     payload = extr_text(flashvars, "{", "};").strip()
     return json.loads("{" + payload + "}")
+
+
+def _extr_upload_date(soup: BeautifulSoup, html: str) -> float | None:
+    try:
+        return json_ld.upload_date(soup)
+    except css.SelectorError:
+        # Unlisted videos have no ld+json
+        if "This video is unlisted" in html:
+            return None
+        raise
 
 
 def _parse_formats(medias: Iterable[Media]) -> Generator[Format]:
