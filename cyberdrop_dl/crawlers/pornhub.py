@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import json
 from http import HTTPStatus
@@ -11,7 +12,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, json_ld
+from cyberdrop_dl.utils import css, dates, extr_text, json_ld
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ class Selector:
     GIF = "div#js-gifToWebm"
     NEXT_PAGE = "li.page_next a"
     PHOTO = "div#photoImageSection img"
+    VIDEO_DATA = "script:-soup-contains-own('video_date_published')"
 
     @final
     class Playlist:
@@ -356,7 +358,7 @@ class PornHubAPI(API):
             title=flashvars["video_title"],
             thumb=flashvars.get("image_url"),
             formats=tuple(_parse_formats(flashvars["mediaDefinitions"])),
-            uploaded_at=_extr_upload_date(soup, html),
+            uploaded_at=_extr_upload_date(soup),
             url=page_url,
         )
 
@@ -373,14 +375,17 @@ def _extr_flashvars(soup: BeautifulSoup) -> dict[str, Any]:
     return json.loads("{" + payload + "}")
 
 
-def _extr_upload_date(soup: BeautifulSoup, html: str) -> float | None:
-    try:
+def _extr_upload_date(soup: BeautifulSoup) -> float | None:
+    with contextlib.suppress(css.SelectorError):
         return json_ld.upload_date(soup)
-    except css.SelectorError:
-        # Unlisted videos have no ld+json
-        if "This video is unlisted" in html:
-            return None
-        raise
+
+    # Unlisted videos have no ld+json, but still have this date-only field
+    with contextlib.suppress(css.SelectorError, ValueError):
+        script = css.select_text(soup, Selector.VIDEO_DATA)
+        raw_date = extr_text(script, "'video_date_published' : '", "'")
+        return dates.parse_format(f"{raw_date}+0000", "%Y%m%d%z").timestamp()
+
+    return None
 
 
 def _parse_formats(medias: Iterable[Media]) -> Generator[Format]:
