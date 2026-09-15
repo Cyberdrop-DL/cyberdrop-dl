@@ -1,11 +1,19 @@
-from typing import Annotated
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated
 
 from cyclopts import App, Parameter
 
 from cyberdrop_dl.commands import CLIarguments, SQLiteFile, open_folder
 from cyberdrop_dl.config.appdata import AppData
 
+if TYPE_CHECKING:
+    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.hash import PruneStats
+
 app = App(name="database", help="Commands for managing the database")
+prune_app = App(name="prune", help="Delete database entries that are no longer useful")
+app.command(prune_app)
 
 
 @app.command()
@@ -26,6 +34,32 @@ def transfer(
     from cyberdrop_dl.database.transfer import run as transfer_db
 
     transfer_db(database_file, force=force)
+
+
+@prune_app.command()
+def hashes(
+    *,
+    dry_run: Annotated[
+        bool,
+        Parameter(help="Report what would be deleted without modifying the database"),
+    ] = False,
+    cli: CLIarguments | None = None,
+) -> None:
+    """Delete the hashes of files that no longer exist on disk.
+
+    Only affects the `hash` and `files` tables. Download history is left untouched,
+    so this will never cause a previously downloaded URL to be downloaded again.
+    """
+    from cyberdrop_dl import aio, stats
+    from cyberdrop_dl.database import Database
+
+    db_file = (cli and cli.database_file) or AppData.default().db_file
+    stats.print(aio.run(_prune_hashes(Database(db_file), dry_run=dry_run)))
+
+
+async def _prune_hashes(database: Database, *, dry_run: bool) -> PruneStats:
+    async with database:
+        return await database.hash.prune_missing_files(dry_run=dry_run)
 
 
 @app.command()

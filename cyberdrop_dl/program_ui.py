@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.hash import PruneStats
     from cyberdrop_dl.manager import Manager
 
 _INPUT_FILE: ContextVar[Path] = ContextVar("_INPUT_FILE")
@@ -49,6 +51,7 @@ def run(manager: Manager, input_file: Path) -> RetrySource | Path:
         "Download": lambda _: input_file,
         "Retry failed downloads": _retry_failed,
         "Create file hashes": _scan_and_create_hashes,
+        "Delete hashes of missing files": _prune_hashes,
         "Sort files in download folder": _sort_files,
         "Edit URLs.txt": lambda _: _edit_urls(),
         "Edit config": _edit_config,
@@ -75,6 +78,20 @@ def _scan_and_create_hashes(manager: Manager) -> None:
         hash_stats = aio.run(hash_directory(hasher))
         stats.print(hash_stats)
         enter_to_continue()
+
+
+def _prune_hashes(manager: Manager) -> None:
+    console.warning(
+        "You are about to delete the hashes of every file in the database that no longer exists on disk",
+    )
+    if ask_confirmation(explicit=True):
+        stats.print(aio.run(_prune(manager.database)))
+        enter_to_continue()
+
+
+async def _prune(database: Database) -> PruneStats:
+    async with database:
+        return await database.hash.prune_missing_files()
 
 
 def _sort_files(manager: Manager) -> None:

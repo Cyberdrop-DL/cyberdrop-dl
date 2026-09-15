@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -11,12 +12,29 @@ from .common import Table
 from .definitions import CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Sequence
+
     import aiosqlite
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
 logger = logging.getLogger(__name__)
+
+type _FileKey = tuple[str, str]
+"""A `(folder, download_filename)` pair, the primary key of both the `files` and the `hash` table"""
+
+_CHUNK_SIZE = 400
+"""Rows per query. Each row binds 2 parameters, keeping us under SQLite's 999 parameter limit"""
+
+
+@dataclasses.dataclass(slots=True)
+class PruneStats:
+    scanned: int = 0
+    missing: int = 0
+    hash_rows: int = 0
+    file_rows: int = 0
+    dry_run: bool = False
 
 
 @dataclasses.dataclass(slots=True)
@@ -91,6 +109,37 @@ class HashTable(Table, name="hash"):
         async with self.db.reader() as db_conn:
             cursor = await db_conn.execute(query, (hash_type, hash_value))
             return await cursor.fetchone() is not None
+
+    async def prune_missing_files(self, *, dry_run: bool = False) -> PruneStats:
+        """Delete every `hash` and `files` row whose file is no longer on disk."""
+        query = """
+        SELECT folder, download_filename FROM files
+        UNION
+        SELECT folder, download_filename FROM hash;
+        """
+        async with self.db.reader() as db_conn:
+            rows = await db_conn.execute_fetchall(query)
+
+        known_files = [(row["folder"], row["download_filename"]) for row in rows]
+        missing = await _filter_missing(known_files)
+        stats = PruneStats(scanned=len(known_files), missing=len(missing), dry_run=dry_run)
+        if not missing:
+            return stats
+
+        if dry_run:
+            async with self.db.reader() as db_conn:
+                stats.hash_rows = await _count_rows(db_conn, "hash", missing)
+                stats.file_rows = await _count_rows(db_conn, "files", missing)
+            return stats
+
+        # Foreign keys are never enabled at runtime, so deletes do not cascade. `hash` has to go first
+        # to make sure we never leave a hash row pointing at a files row that no longer exists
+        async with self.db.writer() as db_conn:
+            stats.hash_rows = await _delete_rows(db_conn, "hash", missing)
+            stats.file_rows = await _delete_rows(db_conn, "files", missing)
+            await db_conn.commit()
+
+        return stats
 
     async def insert_or_update_hash_db(
         self,
@@ -168,3 +217,41 @@ class HashTable(Table, name="hash"):
                 ),
             )
             await db_conn.commit()
+
+
+@aio.to_thread
+def _filter_missing(files: Sequence[_FileKey]) -> list[_FileKey]:
+    # A single thread hop for the whole database. `os.path` instead of `pathlib` because a large
+    # library means hundreds of thousands of these, and building a Path for each one is not free
+    return [file for file in files if not os.path.exists(os.path.join(*file))]  # noqa: PTH110, PTH118
+
+
+def _chunks(files: Sequence[_FileKey]) -> Generator[Sequence[_FileKey]]:
+    for index in range(0, len(files), _CHUNK_SIZE):
+        yield files[index : index + _CHUNK_SIZE]
+
+
+def _where_in(chunk: Sequence[_FileKey]) -> tuple[str, list[str]]:
+    values = ", ".join(["(?, ?)"] * len(chunk))
+    params = [value for file in chunk for value in file]
+    return f"WHERE (folder, download_filename) IN (VALUES {values})", params
+
+
+async def _delete_rows(db_conn: aiosqlite.Connection, table: str, files: Sequence[_FileKey]) -> int:
+    deleted = 0
+    for chunk in _chunks(files):
+        where, params = _where_in(chunk)
+        cursor = await db_conn.execute(f"DELETE FROM {table} {where};", params)  # noqa: S608
+        deleted += cursor.rowcount
+    return deleted
+
+
+async def _count_rows(db_conn: aiosqlite.Connection, table: str, files: Sequence[_FileKey]) -> int:
+    count = 0
+    for chunk in _chunks(files):
+        where, params = _where_in(chunk)
+        cursor = await db_conn.execute(f"SELECT COUNT(*) AS count FROM {table} {where};", params)  # noqa: S608
+        row = await cursor.fetchone()
+        assert row is not None
+        count += row["count"]
+    return count

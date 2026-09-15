@@ -4,6 +4,7 @@ import functools
 import logging
 from typing import TYPE_CHECKING, final
 
+from cyberdrop_dl.database.hash import PruneStats
 from cyberdrop_dl.logs import log_spacer
 from cyberdrop_dl.progress.dedupe import DedupeStats
 from cyberdrop_dl.progress.hashing import HashingStats
@@ -62,6 +63,17 @@ def _(stats: DedupeStats) -> None:
     logger.info(f"  Deleted (duplicates of previous downloads): {stats.deleted:,} files")
     errors = stats.total - stats.deleted
     logger.info(f"  Errors: {errors:,} files", extra=Color.RED if errors else None)
+
+
+@print.register
+def _(stats: PruneStats) -> None:
+    log_spacer()
+    logger.info("Prune Stats:", extra=Color.CYAN)
+    logger.info(f"  Scanned: {stats.scanned:,} known files")
+    logger.info(f"  No longer on disk: {stats.missing:,} files")
+    verb = "Would delete" if stats.dry_run else "Deleted"
+    logger.info(f"  {verb}: {stats.hash_rows:,} hash entries", extra=Color.GREEN if stats.hash_rows else None)
+    logger.info(f"  {verb}: {stats.file_rows:,} file entries", extra=Color.GREEN if stats.file_rows else None)
 
 
 @print.register
