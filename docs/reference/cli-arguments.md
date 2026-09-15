@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.9.0
+cyberdrop-dl v10.9.1
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.9.0
+cyberdrop-dl v10.9.1
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -376,6 +376,9 @@ Download URLs
 │ --logs.files.last-forum-post         Save the URL of the last scraped post from each thread to   │
 │                                      this file (MUST BE .csv)                                    │
 │                                      [default: last_forum_post.csv]                              │
+│ --logs.files.dedupe                  Save every duplicate deleted by the deduper, and the file   │
+│                                      it matched, to this file (MUST BE .csv)                     │
+│                                      [default: dedupe.csv]                                       │
 │ --logs.folder                        Base folder to prepend to log files paths (if they are not  │
 │                                      absolute)                                                   │
 │ --logs.expire-after                  Delete all log files inside `--logs.folder` if they are     │

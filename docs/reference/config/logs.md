@@ -190,3 +190,19 @@ logs:
   files:
     unsupported: last_forum_post.csv
 ```
+
+## `dedupe`
+
+| Type   | Default      | Restrictions                                  |
+| ------ | ------------ | --------------------------------------------- |
+| `Path` | `dedupe.csv` | extension will always be overridden to `.csv` |
+
+Path of the dedupe log file. For relative paths, the final path will be `logs.folder` / `logs.files.dedupe`
+
+Every duplicate that the deduper deletes is saved here, together with the file it matched and their shared hash. The file is only created if at least one duplicate was deleted.
+
+```yaml
+logs:
+  files:
+    dedupe: dedupe.csv
+```

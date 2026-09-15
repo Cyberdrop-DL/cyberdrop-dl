@@ -135,6 +135,8 @@ downloads:
 
 Skip the download process for every file and mark them as downloaded in the database.
 
+Use this to make CDL permanently skip a set of URLs. See [Retries and Download History](../retry-and-history.md).
+
 ```yaml
 downloads:
   skip_and_mark_completed: false

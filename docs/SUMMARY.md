@@ -26,6 +26,7 @@
   - [UI](reference/config/ui-options.md)
 
 - [CLI Arguments](reference/cli-arguments.md)
+- [Retries and Download History](reference/retry-and-history.md)
 - [Supported Websites](reference/supported-websites.md)
 - [Changelog](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CHANGELOG.md)
 - [Contributing](https://github.com/Cyberdrop-DL/cyberdrop-dl/blob/main/CONTRIBUTING.md)

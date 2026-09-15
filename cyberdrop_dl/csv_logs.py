@@ -35,6 +35,7 @@ class CSVFiles:
     download_errors: Path
     scrape_errors: Path
     last_forum_post: Path
+    dedupe: Path
     jsonl_file: Path
 
     __iter__ = DictDataclass.__iter__
@@ -48,6 +49,7 @@ class CSVFiles:
             scrape_errors=files.scrape_errors,
             jsonl_file=files.jsonl_file,
             last_forum_post=files.last_forum_post,
+            dedupe=files.dedupe,
         )
 
 
@@ -100,6 +102,11 @@ class CSVLogsManager:
 
     def write_last_forum_post(self, url: AbsoluteHttpURL) -> None:
         _ = self.task_group.create_task(self._write_to_csv(self.files.last_forum_post, url=url))
+
+    def write_dedupe(self, duplicate: Path, original: Path, file_hash: str) -> None:
+        _ = self.task_group.create_task(
+            self._write_to_csv(self.files.dedupe, duplicate=duplicate, original=original, hash=file_hash)
+        )
 
     def write_download_error(
         self,

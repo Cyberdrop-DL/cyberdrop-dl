@@ -1,9 +1,11 @@
+import asyncio
 import datetime
 from pathlib import Path
 
 import pytest
 
-from cyberdrop_dl.csv_logs import _prepare_resp_file, _write_to_csv
+from cyberdrop_dl.config import Config
+from cyberdrop_dl.csv_logs import CSVFiles, CSVLogsManager, _prepare_resp_file, _write_to_csv
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
@@ -30,6 +32,19 @@ def test_prepare_resp_filename(url: str, expected: str) -> None:
     result = _prepare_resp_file(Path("/"), AbsoluteHttpURL(url), now)
     assert result.as_posix().count("/") == 1
     assert result.as_posix() == expected
+
+
+async def test_delete_old_logs_removes_a_stale_dedupe_log(tmp_cwd: Path) -> None:
+    config = Config()
+    config.logs.resolve_filenames(tmp_cwd)
+    stale_log = config.logs.files.dedupe
+    stale_log.parent.mkdir(parents=True, exist_ok=True)
+    _ = stale_log.write_text("from a previous run")
+
+    async with asyncio.TaskGroup() as task_group:
+        CSVLogsManager(CSVFiles.from_config(config), task_group).delete_old_logs()
+
+    assert not stale_log.exists()
 
 
 class TestWriteToCsv:

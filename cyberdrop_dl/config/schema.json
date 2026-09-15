@@ -785,6 +785,10 @@
         "last_forum_post": {
           "$ref": "#/$defs/CSVPath",
           "default": "last_forum_post.csv"
+        },
+        "dedupe": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "dedupe.csv"
         }
       },
       "title": "LogFiles",

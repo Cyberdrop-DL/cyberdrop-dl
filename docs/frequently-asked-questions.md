@@ -61,6 +61,17 @@ by `cyberdrop-dl` on top of the constant DDOS attacks they receive.
 The program tracks your download history and will skip any files you've been previously downloaded to avoid duplicates.
 You can disable this behavior by using the `--ignore-history` CLI argument or setting `ignore_history` to `true` in your config file
 
+CDL also skips any file that already exists on disk with the expected size, even with `--ignore-history`.
+See [Retries and Download History](reference/retry-and-history.md) for all the checks CDL makes and how to bypass each one.
+
+## How do I re-download files, or download only the new files in an album?
+
+See [Retries and Download History](reference/retry-and-history.md). In short:
+
+- `cyberdrop-dl retry failed` re-downloads what never completed.
+- To get new files in an album, profile or thread, scrape that URL again. CDL downloads what is new and skips what you already have.
+- `--ignore-history` downloads files again even if the database says they are already done.
+
 ## `cyberdrop-dl` is not a recognized internal command
 
 This issue is caused by an improper installation.
