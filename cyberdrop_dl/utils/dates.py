@@ -89,7 +89,9 @@ else:
 
 
 def _normalize(date_time: datetime.datetime) -> datetime.datetime:
-    if date_time.tzinfo is not datetime.UTC:
+    if date_time.tzinfo is None:
+        date_time = date_time.replace(tzinfo=datetime.UTC)
+    elif date_time.tzinfo is not datetime.UTC:
         date_time = date_time.astimezone(datetime.UTC)
     if date_time.microsecond:
         return date_time.replace(microsecond=0)
