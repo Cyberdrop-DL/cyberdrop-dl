@@ -54,8 +54,6 @@ class TestPruneMissingFiles:
 
         stats = await database.hash.prune_missing_files()
 
-        assert stats.scanned == 2
-        assert stats.missing == 1
         assert stats.hash_rows == 1
         assert stats.file_rows == 1
         assert await _filenames(database, "files") == {"kept.txt"}
@@ -66,8 +64,6 @@ class TestPruneMissingFiles:
 
         stats = await database.hash.prune_missing_files()
 
-        assert stats.scanned == 1
-        assert stats.missing == 0
         assert stats.hash_rows == 0
         assert stats.file_rows == 0
         assert await _count(database, "files") == 1
@@ -82,7 +78,6 @@ class TestPruneMissingFiles:
 
         stats = await database.hash.prune_missing_files()
 
-        assert stats.scanned == 1
         assert stats.hash_rows == 2
         assert stats.file_rows == 1
         assert await _count(database, "hash") == 0
@@ -94,33 +89,8 @@ class TestPruneMissingFiles:
 
         stats = await database.hash.prune_missing_files()
 
-        assert stats.scanned == 1
-        assert stats.missing == 1
         assert stats.hash_rows == 1
         assert stats.file_rows == 0
-        assert await _count(database, "hash") == 0
-
-    async def test_scans_a_path_once_when_it_is_in_both_tables(self, database: Database, tmp_cwd: Path) -> None:
-        await _add_file(database, tmp_cwd / "kept.txt")
-
-        stats = await database.hash.prune_missing_files()
-
-        assert stats.scanned == 1
-
-    async def test_removes_more_rows_than_the_sqlite_parameter_limit(self, database: Database, tmp_cwd: Path) -> None:
-        files = [tmp_cwd / f"file_{index}.txt" for index in range(1200)]
-        for file in files:
-            await _add_file(database, file)
-        for file in files:
-            file.unlink()
-
-        stats = await database.hash.prune_missing_files()
-
-        assert stats.scanned == 1200
-        assert stats.missing == 1200
-        assert stats.hash_rows == 1200
-        assert stats.file_rows == 1200
-        assert await _count(database, "files") == 0
         assert await _count(database, "hash") == 0
 
     async def test_dry_run_reports_counts_without_deleting(self, database: Database, tmp_cwd: Path) -> None:
@@ -132,8 +102,6 @@ class TestPruneMissingFiles:
         stats = await database.hash.prune_missing_files(dry_run=True)
 
         assert stats.dry_run is True
-        assert stats.scanned == 2
-        assert stats.missing == 1
         assert stats.hash_rows == 1
         assert stats.file_rows == 1
         assert await _count(database, "files") == 2

@@ -12,8 +12,6 @@ from .common import Table
 from .definitions import CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
-
     import aiosqlite
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -21,17 +19,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-type _FileKey = tuple[str, str]
-"""A `(folder, download_filename)` pair, the primary key of both the `files` and the `hash` table"""
+_PATH_EXISTS = "path_exists"
+"""Name of the custom SQLite function registered by `HashTable.prune_missing_files`"""
 
-_CHUNK_SIZE = 400
-"""Rows per query. Each row binds 2 parameters, keeping us under SQLite's 999 parameter limit"""
+_WHERE_MISSING = f"WHERE {_PATH_EXISTS}(folder, download_filename) = 0"
 
 
 @dataclasses.dataclass(slots=True)
 class PruneStats:
-    scanned: int = 0
-    missing: int = 0
     hash_rows: int = 0
     file_rows: int = 0
     dry_run: bool = False
@@ -112,31 +107,21 @@ class HashTable(Table, name="hash"):
 
     async def prune_missing_files(self, *, dry_run: bool = False) -> PruneStats:
         """Delete every `hash` and `files` row whose file is no longer on disk."""
-        query = """
-        SELECT folder, download_filename FROM files
-        UNION
-        SELECT folder, download_filename FROM hash;
-        """
-        async with self.db.reader() as db_conn:
-            rows = await db_conn.execute_fetchall(query)
-
-        known_files = [(row["folder"], row["download_filename"]) for row in rows]
-        missing = await _filter_missing(known_files)
-        stats = PruneStats(scanned=len(known_files), missing=len(missing), dry_run=dry_run)
-        if not missing:
-            return stats
-
+        stats = PruneStats(dry_run=dry_run)
         if dry_run:
             async with self.db.reader() as db_conn:
-                stats.hash_rows = await _count_rows(db_conn, "hash", missing)
-                stats.file_rows = await _count_rows(db_conn, "files", missing)
+                await _register_path_exists(db_conn)
+                stats.hash_rows = await _count_missing(db_conn, "hash")
+                stats.file_rows = await _count_missing(db_conn, "files")
+
             return stats
 
-        # Foreign keys are never enabled at runtime, so deletes do not cascade. `hash` has to go first
-        # to make sure we never leave a hash row pointing at a files row that no longer exists
+        # Foreign keys are never enabled at runtime, so deletes do not cascade. `hash` goes first so
+        # that a failure can never leave a hash row pointing at a files row that is already gone
         async with self.db.writer() as db_conn:
-            stats.hash_rows = await _delete_rows(db_conn, "hash", missing)
-            stats.file_rows = await _delete_rows(db_conn, "files", missing)
+            await _register_path_exists(db_conn)
+            stats.hash_rows = await _delete_missing(db_conn, "hash")
+            stats.file_rows = await _delete_missing(db_conn, "files")
             await db_conn.commit()
 
         return stats
@@ -219,39 +204,25 @@ class HashTable(Table, name="hash"):
             await db_conn.commit()
 
 
-@aio.to_thread
-def _filter_missing(files: Sequence[_FileKey]) -> list[_FileKey]:
-    # A single thread hop for the whole database. `os.path` instead of `pathlib` because a large
-    # library means hundreds of thousands of these, and building a Path for each one is not free
-    return [file for file in files if not os.path.exists(os.path.join(*file))]  # noqa: PTH110, PTH118
+def _path_exists(folder: str, download_filename: str) -> bool:
+    # `os.path` instead of `pathlib` because a large library means hundreds of thousands of these,
+    # and building a Path for each one is not free
+    return os.path.exists(os.path.join(folder, download_filename))  # noqa: PTH110, PTH118
 
 
-def _chunks(files: Sequence[_FileKey]) -> Generator[Sequence[_FileKey]]:
-    for index in range(0, len(files), _CHUNK_SIZE):
-        yield files[index : index + _CHUNK_SIZE]
+async def _register_path_exists(db_conn: aiosqlite.Connection) -> None:
+    # Registering as deterministic does not memoize calls with different arguments, so this still runs
+    # once per row. It lets SQLite treat the call as a pure expression, which is what we want here
+    await db_conn.create_function(_PATH_EXISTS, 2, _path_exists, deterministic=True)
 
 
-def _where_in(chunk: Sequence[_FileKey]) -> tuple[str, list[str]]:
-    values = ", ".join(["(?, ?)"] * len(chunk))
-    params = [value for file in chunk for value in file]
-    return f"WHERE (folder, download_filename) IN (VALUES {values})", params
+async def _delete_missing(db_conn: aiosqlite.Connection, table: str) -> int:
+    cursor = await db_conn.execute(f"DELETE FROM {table} {_WHERE_MISSING};")  # noqa: S608
+    return cursor.rowcount
 
 
-async def _delete_rows(db_conn: aiosqlite.Connection, table: str, files: Sequence[_FileKey]) -> int:
-    deleted = 0
-    for chunk in _chunks(files):
-        where, params = _where_in(chunk)
-        cursor = await db_conn.execute(f"DELETE FROM {table} {where};", params)  # noqa: S608
-        deleted += cursor.rowcount
-    return deleted
-
-
-async def _count_rows(db_conn: aiosqlite.Connection, table: str, files: Sequence[_FileKey]) -> int:
-    count = 0
-    for chunk in _chunks(files):
-        where, params = _where_in(chunk)
-        cursor = await db_conn.execute(f"SELECT COUNT(*) AS count FROM {table} {where};", params)  # noqa: S608
-        row = await cursor.fetchone()
-        assert row is not None
-        count += row["count"]
-    return count
+async def _count_missing(db_conn: aiosqlite.Connection, table: str) -> int:
+    cursor = await db_conn.execute(f"SELECT COUNT(*) AS count FROM {table} {_WHERE_MISSING};")  # noqa: S608
+    row = await cursor.fetchone()
+    assert row is not None
+    return row["count"]
