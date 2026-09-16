@@ -1,6 +1,8 @@
 # ruff: noqa: ASYNC240
 from __future__ import annotations
 
+import contextlib
+import os
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -9,15 +11,31 @@ import pytest
 from cyberdrop_dl import aio, program_ui
 from cyberdrop_dl.__main__ import run_cdl
 from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.hash import _path_exists, _path_exists_inner
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
     from cyberdrop_dl.manager import Manager
 
 _HASH = "a5aec63d0fef8660b00570f23be727e9"
 _REFERER = AbsoluteHttpURL("https://example.com/file.txt")
+
+
+@contextlib.contextmanager
+def _stat_raises(target: Path, error: OSError) -> Generator[None]:
+    """Make `os.stat` fail for a single path, leaving every other path alone."""
+    real_stat = os.stat
+
+    def fake_stat(path, *args, **kwargs):
+        if str(path) == str(target):
+            raise error
+        return real_stat(path, *args, **kwargs)
+
+    with patch("os.stat", fake_stat):
+        yield
 
 
 async def _add_file(database: Database, file: Path) -> None:
@@ -43,6 +61,20 @@ async def _filenames(database: Database, table: str) -> set[str]:
 @pytest.fixture
 async def database(running_manager: Manager) -> Database:
     return running_manager.database
+
+
+@pytest.fixture
+def txt_file(tmp_cwd: Path) -> Path:
+    file = tmp_cwd / "text_file.txt"
+    file.write_text("12345")
+    return file
+
+
+@pytest.fixture(autouse=True)
+def _clear_path_cache() -> Generator[None]:
+    _path_exists_inner.cache_clear()
+    yield
+    _path_exists_inner.cache_clear()
 
 
 class TestPruneMissingFiles:
@@ -106,6 +138,47 @@ class TestPruneMissingFiles:
         assert stats.file_rows == 1
         assert await _count(database, "files") == 2
         assert await _count(database, "hash") == 2
+
+    async def test_keeps_rows_whose_path_cannot_be_checked(self, database: Database, tmp_cwd: Path) -> None:
+        unreadable = tmp_cwd / "unreadable.txt"
+        await _add_file(database, unreadable)
+        unreadable.unlink()
+
+        with _stat_raises(unreadable, PermissionError(13, "Permission denied")):
+            stats = await database.hash.prune_missing_files()
+
+        assert stats.hash_rows == 0
+        assert stats.file_rows == 0
+        assert await _count(database, "files") == 1
+        assert await _count(database, "hash") == 1
+
+    async def test_clears_the_path_cache_when_done(self, database: Database, tmp_cwd: Path) -> None:
+        await _add_file(database, tmp_cwd / "kept.txt")
+        _path_exists(str(tmp_cwd), "primed.txt")
+        assert _path_exists_inner.cache_info().currsize == 1
+
+        await database.hash.prune_missing_files()
+
+        assert _path_exists_inner.cache_info().currsize == 0
+
+
+class TestPathExists:
+    def test_reports_an_existing_file(self, txt_file: Path) -> None:
+        assert _path_exists(str(txt_file.parent), txt_file.name) is True
+
+    def test_reports_a_deleted_file(self, txt_file: Path) -> None:
+        txt_file.unlink()
+        assert _path_exists(str(txt_file.parent), txt_file.name) is False
+
+    def test_reports_a_path_it_cannot_read_as_still_there(self, txt_file: Path) -> None:
+        with _stat_raises(txt_file, PermissionError(13, "Permission denied")):
+            assert _path_exists(str(txt_file.parent), txt_file.name) is True
+
+    def test_looks_a_repeated_path_up_only_once(self, txt_file: Path) -> None:
+        _path_exists(str(txt_file.parent), txt_file.name)
+        _path_exists(str(txt_file.parent), txt_file.name)
+
+        assert _path_exists_inner.cache_info().hits == 1
 
 
 class TestPruneCommand:
