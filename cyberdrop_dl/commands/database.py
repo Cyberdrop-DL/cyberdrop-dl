@@ -47,8 +47,7 @@ def hashes(
 ) -> None:
     """Delete the hashes of files that no longer exist on disk.
 
-    Only affects the `hash` and `files` tables. Download history is left untouched,
-    so this will never cause a previously downloaded URL to be downloaded again.
+    Only affects the `hash` and `files` tables.
     """
     from cyberdrop_dl import aio, stats
     from cyberdrop_dl.database import Database
