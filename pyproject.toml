@@ -30,7 +30,7 @@ dependencies = [
     "idna>=3.19",
     "imagesize >= 2.0.1",
     "m3u8 >=6.0.0",
-    "multidict>=6.8.0",
+    "multidict>=6.9.0",
     "propcache>=0.5.4",
     "psutil >=7.2.1; sys_platform != 'android'",
     "pycryptodome >=3.23.0",
