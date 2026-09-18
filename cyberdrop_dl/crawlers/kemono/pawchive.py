@@ -92,22 +92,22 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
 
         post = post_files.post
         if not self.__kemono_config__.expand_posts:
-            self.log.warning("Post %s has defered files but `expand_posts` is disabled. Ignoring..", post.id)
+            self.log.warning("Post %s has deferred files but `expand_posts` is disabled. Ignoring..", post.id)
             return
 
-        await self._defered_files(scrape_item, post)
+        await self._deferred_files(scrape_item, post)
 
-    async def _defered_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
-        self.log.info("Trying to get temp download URLs for defered files in post %s", post.id)
+    async def _deferred_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
+        self.log.info("Trying to get temp download URLs for deferred files in post %s", post.id)
         soup = await self.request_soup(scrape_item.url)
-        files = await asyncio.to_thread(lambda: tuple(_extract_defered_files(soup)))
+        files = await asyncio.to_thread(lambda: tuple(_extract_deferred_files(soup)))
         if not files:
-            self.log.warning("Did not find any defered URL for post %", post.id)
+            self.log.warning("Did not find any deferred URL for post %", post.id)
             return
 
         async with self.new_task_group() as tg:
             for name, src in files:
-                self.log.info("Found temp defered file '%s' (%s)", name, src)
+                self.log.info("Found temp deferred file '%s' (%s)", name, src)
                 tg.create_task(self._temp_file(scrape_item, src, name))
 
     async def _temp_file(
@@ -144,12 +144,12 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
         )
 
 
-def _extract_defered_files(soup: bs4.Tag) -> Iterable[tuple[str, AbsoluteHttpURL]]:
+def _extract_deferred_files(soup: bs4.Tag) -> Iterable[tuple[str, AbsoluteHttpURL]]:
     body = css.select(soup, ".post__body")
-    defered_span = "span.post__relay-clock"
+    deferred_span = "span.post__relay-clock"
     for li in css.iselect(body, "li:has(source)"):
         try:
-            summary = css.select(li, f"summary:has({defered_span})")
+            summary = css.select(li, f"summary:has({deferred_span})")
         except css.SelectorError:
             continue
         else:
@@ -157,7 +157,7 @@ def _extract_defered_files(soup: bs4.Tag) -> Iterable[tuple[str, AbsoluteHttpURL
             src = css.select(li, "source", "src")
             yield name, PawchiveCrawler.parse_url(src)
 
-    for li in css.iselect(body, f"li.post__attachment:has({defered_span})"):
+    for li in css.iselect(body, f"li.post__attachment:has({deferred_span})"):
         attach = css.select(li, "a.post__attachment-link")
         name = css.text(attach).removeprefix("Download ")
         src = css.attr(attach, "href")
