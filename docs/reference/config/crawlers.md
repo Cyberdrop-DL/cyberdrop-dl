@@ -241,10 +241,11 @@ This option slows down scraping significally (50x requests in total)
 | ------ | ------- |
 | `Bool` | `false` |
 
-When crawling profiles/favorites/searchs results, make an additional request per post to get the original filenames of files and the content/text in the post
+When crawling profiles/favorites/searchs results, make an additional request per post to get the original filenames of files and the content/text in the post.
+To download deferred big files, this option must be enabled
 
 {% hint style="warning" %}
-This option slows down scraping significally (50x requests in total)
+This option slows down scraping significally (100x requests in total)
 {% endhint %}
 
 ## `embed`
