@@ -72,10 +72,10 @@ def check_url(url: yarl.URL) -> None:
         raise ValueError("URL has no TLD", url)
 
 
-def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+def remove_trailing_slash[T: yarl.URL](url: T) -> T:
     if url.name or url.path == "/":
         return url
-    return url.parent.with_fragment(url.fragment).with_query(url.query)
+    return cast("T", url.parent.with_fragment(url.fragment).with_query(url.query))
 
 
 def matches_any_host(url: yarl.URL, hosts: Iterable[str]) -> bool:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt, overload
+from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt, cast, overload
 
 from pydantic import ByteSize, TypeAdapter
 
@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 _BYTE_SIZE_ADAPTER = TypeAdapter(ByteSize)
 
+# Schemes supported by libcurl (via curl-cffi) for proxy connections
+_PROXY_SCHEMES = frozenset(("http", "https", "socks4", "socks4a", "socks5", "socks5h"))
+
 type _ConvertibleToInt = str | SupportsInt | SupportsIndex
 
 
@@ -25,6 +28,28 @@ def to_yarl_url(value: object) -> AbsoluteHttpURL:
     from cyberdrop_dl.utils import parse_url
 
     return parse_url(str(value), trim=False)
+
+
+def to_yarl_proxy_url(value: object) -> AbsoluteHttpURL:
+    """Parse a proxy URL, allowing SOCKS schemes in addition to HTTP(S).
+
+    `parse_url` is restricted to http(s) because it is used to parse scraped URLs.
+    Proxies, however, are valid with `socks4`, `socks4a`, `socks5` and `socks5h`
+    schemes, which libcurl (via curl-cffi) supports natively.
+    """
+    import yarl
+
+    from cyberdrop_dl.utils._url import check_url, remove_trailing_slash, str_to_url
+
+    url = str_to_url(value) if isinstance(value, str) else value
+    if not isinstance(url, yarl.URL):
+        url = yarl.URL(str(url))
+
+    if not url.absolute or url.scheme not in _PROXY_SCHEMES:
+        raise ValueError(f"Unsupported proxy scheme: {url.scheme!r}", url)
+
+    check_url(url)
+    return cast("AbsoluteHttpURL", remove_trailing_slash(url))
 
 
 def to_bytesize(value: ByteSize | str | int) -> ByteSize:

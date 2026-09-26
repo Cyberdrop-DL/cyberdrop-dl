@@ -10,13 +10,14 @@ from pathlib import Path
 import pytest
 import yaml
 from cyclopts.exceptions import UnknownOptionError
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import cyberdrop_dl.commands.scrape
 from cyberdrop_dl.config import Config, Files, _resolve_paths, settings
 from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.config.filters import Filters, _FileFilter
+from cyberdrop_dl.config.settings import Network
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.models import AppriseURL, merge_additive_args, merge_dicts
 
@@ -307,6 +308,37 @@ def test_config_default_has_not_changed() -> None:
 
 def test_config_can_be_serialized_as_json() -> None:
     Config().model_dump_json()
+
+
+@pytest.mark.parametrize(
+    "proxy",
+    [
+        "http://127.0.0.1:8888",
+        "https://127.0.0.1:8888",
+        "http://user:password@127.0.0.1:8888",
+        "socks4://127.0.0.1:1080",
+        "socks4a://127.0.0.1:1080",
+        "socks5://127.0.0.1:1080",
+        "socks5h://127.0.0.1:1080",
+    ],
+)
+def test_valid_proxies_are_accepted(proxy: str) -> None:
+    config = Network(proxy=proxy)  # pyright: ignore[reportArgumentType]
+    assert str(config.proxy) == proxy
+
+
+@pytest.mark.parametrize("proxy", ["ftp://127.0.0.1:21", "bogus://127.0.0.1", "127.0.0.1:8080"])
+def test_invalid_proxies_are_rejected(proxy: str) -> None:
+    with pytest.raises(ValidationError, match="proxy"):
+        Network(proxy=proxy)  # pyright: ignore[reportArgumentType]
+
+
+def test_empty_proxy_is_coerced_to_none() -> None:
+    assert Network(proxy="").proxy is None  # pyright: ignore[reportArgumentType]
+
+
+def test_proxy_is_none_by_default() -> None:
+    assert Network().proxy is None
 
 
 def test_config_defaults_are_valid() -> None:

@@ -402,6 +402,16 @@
         }
       ]
     },
+    "FalsyAsNone_ProxyURL_": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProxyURL"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "FalsyAsNone_LogLevel_": {
       "anyOf": [
         {
@@ -904,7 +914,7 @@
           "type": "integer"
         },
         "proxy": {
-          "$ref": "#/$defs/FalsyAsNone_HttpURL_",
+          "$ref": "#/$defs/FalsyAsNone_ProxyURL_",
           "default": null
         },
         "rate_limit": {
@@ -1015,7 +1025,12 @@
       "title": "PornHubConfig",
       "type": "object"
     },
-    "Sort": {
+    "ProxyURL": {
+   "format": "uri",
+   "pattern": "^(https?|socks4a?|socks5h?)://",
+   "type": "string"
+  },
+  "Sort": {
       "additionalProperties": false,
       "properties": {
         "enabled": {

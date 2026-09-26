@@ -22,6 +22,7 @@ from cyberdrop_dl.models.types import (
     LogLevel,
     LogPath,
     NonEmptyStr,
+    ProxyURL,
     Timedelta,
 )
 from cyberdrop_dl.models.validators import strings
@@ -358,8 +359,8 @@ class Network(ConfigGroup):
     flaresolverr_concurrency: PositiveInt = 1
     "Number of concurrent requests to make with Flaresolverr"
 
-    proxy: Annotated[FalsyAsNone[HttpURL], Parameter(alias=("http-proxy"))] = None
-    "HTTP/HTTPS proxy"
+    proxy: Annotated[FalsyAsNone[ProxyURL], Parameter(alias=("http-proxy"))] = None
+    "HTTP/HTTPS/SOCKS proxy"
 
     rate_limit: PositiveFloat = 25
     "Max number of requests per second (only used while scraping)"

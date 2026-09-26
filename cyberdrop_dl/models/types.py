@@ -15,6 +15,7 @@ from .validators import (
     falsy_as_none,
     strings,
     to_timedelta,
+    to_yarl_proxy_url,
     to_yarl_url,
 )
 
@@ -42,6 +43,13 @@ type HttpURL = Annotated[
     AbsoluteHttpURL,
     PlainValidator(to_yarl_url, json_schema_input_type=str),
     WithJsonSchema({"type": "string", "format": "uri"}),
+]
+
+# Proxies may also use the SOCKS schemes supported by libcurl (via curl-cffi)
+type ProxyURL = Annotated[
+    AbsoluteHttpURL,
+    PlainValidator(to_yarl_proxy_url, json_schema_input_type=str),
+    WithJsonSchema({"type": "string", "format": "uri", "pattern": "^(https?|socks4a?|socks5h?)://"}),
 ]
 
 
