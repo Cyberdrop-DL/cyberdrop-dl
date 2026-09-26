@@ -31,11 +31,11 @@ class HotPicCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["album", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["i", _]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case ["uploads" | "reddit", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

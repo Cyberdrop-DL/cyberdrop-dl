@@ -62,17 +62,17 @@ class PimpBunnyCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["videos", _, *_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["onlyfans-models", model_name, *_]:
-                return await self.model(scrape_item, model_name)
+                await self.model(scrape_item, model_name)
             case ["albums", "models", model_name, *_]:
-                return await self.model_albums(scrape_item, model_name)
+                await self.model_albums(scrape_item, model_name)
             case ["albums", name, *_]:
-                return await self.album(scrape_item, name)
+                await self.album(scrape_item, name)
             case ["categories" as type_, name, *_]:
-                return await self.collection(scrape_item, type_, name)
+                await self.collection(scrape_item, type_, name)
             case ["tags" as type_, name, *_]:
-                return await self.collection(scrape_item, type_, name)
+                await self.collection(scrape_item, type_, name)
             case _:
                 raise ValueError
 

@@ -31,17 +31,17 @@ class AnySexCrawler(FluidPlayerCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, "video", video_id, _]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["contents", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case ["photos", "search", *_] if query := scrape_item.url.query.get("q"):
                 query = query.replace("-", " ")
-                return await self.photo_search(scrape_item, query)
+                await self.photo_search(scrape_item, query)
             case [*_, "photos", album_id, _]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["search" as type_, *_] if query := scrape_item.url.query.get("q"):
                 query = query.replace("-", " ")
-                return await self.collection(scrape_item, type_, query)
+                await self.collection(scrape_item, type_, query)
             case _:
                 raise ValueError
 

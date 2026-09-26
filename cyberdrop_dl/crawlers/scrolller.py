@@ -26,7 +26,7 @@ class ScrolllerCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["r", subreddit]:
-                return await self.subreddit(scrape_item, subreddit)
+                await self.subreddit(scrape_item, subreddit)
             case _:
                 raise ValueError
 

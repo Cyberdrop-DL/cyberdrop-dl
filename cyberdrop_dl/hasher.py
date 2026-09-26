@@ -47,7 +47,7 @@ _HASHERS: Final = {
     HashAlgo.SHA256: hashlib.sha256,
 }
 _CHUNK_SIZE: Final = 1024 * 1024  # 1MB
-_CONCURRENCY: Final = 10
+_CONCURRENCY: Final = 4
 
 
 def _compute_hash(file: Path, algorithm: HashAlgo | HashAlgoLiteral, shutdown: threading.Event | None = None) -> str:

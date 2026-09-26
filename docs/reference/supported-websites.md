@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.9.0
+List of sites supported by cyberdrop-dl-patched as of version 10.10.0
 
 ### 1fichier
 
@@ -150,22 +150,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 **Notes**
 
 - base crawler: Xenforo
-
-### Anontransfer.com
-
-**Primary URL**: [https://anontransfer.com](https://anontransfer.com)
-
-**Supported Domains**: `anontransfer.com`
-
-**Supported Paths**:
-
-- Direct Link:
-  - `/download-direct.php?dir=<file_id>&file=<filename>`
-  - `/uploads/<file_id>/<filename>`
-- File:
-  - `/d/<file_id>`
-- Folder:
-  - `/f/<folder_uuid>`
 
 ### AnySex
 
@@ -261,9 +245,12 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 
 **Supported Paths**:
 
+- Tags / Network / Model:
+  - `/<tag>`
+  - `/<tag_1>+<tag_2>`
 - Video:
-  - `/<video_id>`
-  - `/video/<video_id>`
+  - `/-<video_id>`
+  - `/video/-<video_id>`
 
 ### Bellazon
 
@@ -364,11 +351,12 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 
 **Primary URL**: [https://buzzheavier.com](https://buzzheavier.com)
 
-**Supported Domains**: `buzzheavier.com`
+**Supported Domains**: `buzzheavier.com`, `bzzhr.co`, `bzzhr.to`, `fuckingfast.net`
 
 **Supported Paths**:
 
-- Direct Links:
+- File:
+  - `/<file_id>`
 
 ### Camwhores.tv
 
@@ -858,6 +846,18 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 - Folder:
   - `/f/<slug>`
 
+### Firestream
+
+**Primary URL**: [https://firestream.site](https://firestream.site)
+
+**Supported Domains**: `firestream.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/e/<video_id>`
+  - `/v/<video_id>`
+
 ### Flickr
 
 **Primary URL**: [https://www.flickr.com](https://www.flickr.com)
@@ -891,9 +891,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 
 ### FSIBlog
 
-**Primary URL**: [https://fsiblog5.com](https://fsiblog5.com)
+**Primary URL**: [https://www.fsiblogxx.com](https://www.fsiblogxx.com)
 
-**Supported Domains**: `fsiblog.club`, `fsiblog.com`, `fsiblog1.club`, `fsiblog1.com`, `fsiblog2.club`, `fsiblog2.com`, `fsiblog3.club`, `fsiblog3.com`, `fsiblog4.club`, `fsiblog4.com`, `fsiblog5.club`, `fsiblog5.com`
+**Supported Domains**: `fsiblog.club`, `fsiblog.com`, `fsiblog1.club`, `fsiblog1.com`, `fsiblog2.club`, `fsiblog2.com`, `fsiblog3.club`, `fsiblog3.com`, `fsiblog4.club`, `fsiblog4.com`, `fsiblog5.club`, `fsiblog5.com`, `fsiblogxx.com`
 
 **Supported Paths**:
 
@@ -910,7 +910,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
 
 **Supported Paths**:
 
-- Direct links:
+- File:
   - `/<file_id>`
 
 ### FuXXX
@@ -1052,29 +1052,26 @@ List of sites supported by cyberdrop-dl-patched as of version 10.9.0
   ex: https://docs.google.com/document/d/1ZzEzJbemBMPm46O2q5VcGNoPbqDu9AhhUc2djQbvbTY?format=ods
   Valid Formats:
 
-document:
+  document:
+  - docx (default)
+  - epub
+  - md
+  - odt
+  - pdf
+  - rtf
+  - txt
+  - zip
 
-- docx (default)
-- epub
-- md
-- odt
-- pdf
-- rtf
-- txt
-- zip
+  presentation:
+  - odp
+  - pptx (default)
 
-presentation:
-
-- odp
-- pptx (default)
-
-spreadsheets:
-
-- csv
-- html
-- ods
-- tsv
-- xslx (default)
+  spreadsheets:
+  - csv
+  - html
+  - ods
+  - tsv
+  - xslx (default)
 
 ### GooglePhotos
 
@@ -1107,8 +1104,11 @@ spreadsheets:
 - Direct Links:
 - Image:
   - `/img/<image_id>`
-- User:
+- User albums:
   - `/u/<username>`
+- User images:
+  - `/u/<username>/images`
+  - `/u/<username>?tab=images`
 
 ### GUpload
 
@@ -1413,6 +1413,24 @@ spreadsheets:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+### Kick
+
+**Primary URL**: [https://kick.com](https://kick.com)
+
+**Supported Domains**: `kick.*`
+
+**Supported Paths**:
+
+- Channel clips:
+  - `/<channel>/clips?sort=...&range=...`
+- Channel videos:
+  - `/<channel>/videos`
+- Clip:
+  - `/<channel>/clip/clip_<clip_id>`
+  - `/<channel>?clip=clip_<clip_id>`
+- VOD:
+  - `/<channel>/videos/<vod_uuid>`
+
 ### Koofr
 
 **Primary URL**: [https://koofr.eu](https://koofr.eu)
@@ -1495,6 +1513,19 @@ spreadsheets:
   - `/embed/<video_id>`
   - `/watch/<video_id>`
 
+### Lulustream
+
+**Primary URL**: [https://lulustream.com](https://lulustream.com)
+
+**Supported Domains**: `cdn1.site`, `lulu.st`, `lulustream.*`, `luluvdo.com`, `luluvdoo.com`, `luluvid.com`, `streamhihi.com`
+
+**Supported Paths**:
+
+- Video:
+  - `/<video_id>`
+  - `/d/<video_id>`
+  - `/e/<video_id>`
+
 ### Luscious
 
 **Primary URL**: [https://members.luscious.net](https://members.luscious.net)
@@ -1524,9 +1555,9 @@ spreadsheets:
 
 ### Masahub
 
-**Primary URL**: [https://masahub.com](https://masahub.com)
+**Primary URL**: [https://lalamasa.mobi](https://lalamasa.mobi)
 
-**Supported Domains**: `lol49.com`, `masa49.com`, `masafun.net`, `masahub.com`, `masahub2.com`, `vido99.com`
+**Supported Domains**: `lalamasa.mobi`, `lol49.com`, `masa49.com`, `masafun.net`, `masahub.com`, `masahub2.com`, `vido99.com`
 
 **Supported Paths**:
 
@@ -1642,35 +1673,6 @@ spreadsheets:
 
 - Release:
   - `/release/<slug>`
-
-### Motherless
-
-**Primary URL**: [https://motherless.xxx](https://motherless.xxx)
-
-**Supported Domains**: `motherless.com`, `motherless.xxx`
-
-**Supported Paths**:
-
-- Gallery:
-  - `/G<gallery_id>`
-  - `/GI<gallery_id>`
-  - `/GV<gallery_id>`
-- Group:
-  - `/g/<group_name>`
-  - `/gi/<group_name>`
-  - `/gv/<group_name>`
-- Image or Video:
-  - `/<media_id>`
-  - `/G<gallery_id>/<media_id>`
-  - `/g/<group_name>/<media_id>`
-- User:
-  - `/m/<user_name>`
-  - `/member/<user_name>`
-  - `/u/<user_name>`
-  - `/u/<user_name>?t=i`
-  - `/u/<user_name>?t=v`
-- User galleries:
-  - `/galleries/member/<user_name>/...`
 
 ### Multporn.net
 
@@ -1926,6 +1928,17 @@ spreadsheets:
 - Post Search:
   - `/search?q=...`
 
+### Origrid
+
+**Primary URL**: [https://origrid.io](https://origrid.io)
+
+**Supported Domains**: `origrid.*`
+
+**Supported Paths**:
+
+- File:
+  - `/d/<file_id>`
+
 ### OwnCloud
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
@@ -2155,6 +2168,18 @@ spreadsheets:
 - Set:
   - `/set/...`
 
+### Playmate
+
+**Primary URL**: [https://playmate.to](https://playmate.to)
+
+**Supported Domains**: `playmate.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/embed/<video_id>`
+  - `/watch/<video_id>`
+
 ### Pluto.tv
 
 **Primary URL**: [https://pluto.tv](https://pluto.tv)
@@ -2244,18 +2269,20 @@ spreadsheets:
 **Supported Paths**:
 
 - Categories:
-  - `/categories/....`
+  - `/<category>/`
 - Channels:
-  - `/channels/...`
+  - `/channels/<name>`
 - Direct Links:
 - Gallery:
-  - `/galleries/...`
+  - `/galleries/<name>-<gallery_id>`
 - Pornstars:
-  - `/pornstars/...`
+  - `/pornstars/<name>`
 - Search:
   - `/?q=<query>`
 - Tags:
-  - `/tags/...`
+  - `/tags/<name>`
+- Video preview:
+  - `/videos/<video_id>`
 
 ### Porntrex
 
@@ -2329,6 +2356,29 @@ spreadsheets:
 
 **Supported Paths**:
 
+### Recordplay
+
+**Primary URL**: [https://recordplay.biz](https://recordplay.biz)
+
+**Supported Domains**: `recordplay.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/d/<video_id>`
+  - `/e/<video_id>`
+
+### Reddit
+
+**Primary URL**: [https://v.redd.it](https://v.redd.it)
+
+**Supported Domains**: `v.redd.it`
+
+**Supported Paths**:
+
+- Video:
+  - `v.redd.it/<video_id>`
+
 ### RedGifs
 
 **Primary URL**: [https://www.redgifs.com](https://www.redgifs.com)
@@ -2355,8 +2405,8 @@ spreadsheets:
 **Supported Paths**:
 
 - Video:
-- `/<video_id>`
-- `?id=<video_id>`
+  - `/<video_id>`
+  - `?id=<video_id>`
 
 ### Rootz.so
 
@@ -2581,6 +2631,17 @@ spreadsheets:
 - Video:
   - `/...`
 
+### Streamfile
+
+**Primary URL**: [https://streamfile.net](https://streamfile.net)
+
+**Supported Domains**: `streamfile.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/<video_id>.html`
+
 ### Streamtape
 
 **Primary URL**: [https://streamtape.com](https://streamtape.com)
@@ -2589,9 +2650,8 @@ spreadsheets:
 
 **Supported Paths**:
 
-- Player:
-  - `/e/<video_id>`
 - Videos:
+  - `/e/<video_id>`
   - `/v/<video_id>`
 
 ### Suvobox
@@ -2841,7 +2901,7 @@ spreadsheets:
 
 **Primary URL**: [https://turbo.cr](https://turbo.cr)
 
-**Supported Domains**: `saint.to`, `saint2.cr`, `saint2.su`, `turbo.cr`, `turbovid.cr`
+**Supported Domains**: `beta.turbo.cr`, `saint.to`, `saint2.cr`, `saint2.su`, `turbo.cr`, `turbovid.cr`
 
 **Supported Paths**:
 
@@ -2967,12 +3027,13 @@ spreadsheets:
 
 **Primary URL**: [https://vidara.to](https://vidara.to)
 
-**Supported Domains**: `stmix.io`, `streamix.so`, `vidara.*`, `vidara.so`, `vidara.to`, `vidvara.lol`, `xca.cymru`
+**Supported Domains**: `stmix.io`, `streamix.*`, `thebesthosterv.com`, `vidara.*`, `viderea.*`, `vidmatrixa.*`, `vidvara.*`, `vidwara.*`, `viewdara.*`, `xca.cymru`
 
 **Supported Paths**:
 
 - Video:
   - `/e/<video_id>`
+  - `/v/<video_id>`
 
 ### Vidstack
 

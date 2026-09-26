@@ -31,16 +31,16 @@ class DesiVideoCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["search"] if query := scrape_item.url.query.get("s"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case ["videos", video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
         video_url = self.parse_url(Selector.VIDEO_SRC(soup))
@@ -49,7 +49,7 @@ class DesiVideoCrawler(Crawler):
 
         scrape_item.uploaded_at = json_ld.upload_date(soup)
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
-        return await self.handle_file(video_url, scrape_item, video_url.name, ext, custom_filename=custom_filename)
+        await self.handle_file(video_url, scrape_item, video_url.name, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

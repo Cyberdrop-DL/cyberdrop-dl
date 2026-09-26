@@ -26,9 +26,9 @@ class SoundGasmCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["u", user, _]:
-                return await self.audio(scrape_item, user)
+                await self.audio(scrape_item, user)
             case ["u", user]:
-                return await self.user(scrape_item)
+                await self.user(scrape_item)
             case _:
                 raise ValueError
 

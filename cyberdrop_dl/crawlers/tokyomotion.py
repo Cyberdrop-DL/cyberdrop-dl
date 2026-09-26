@@ -51,21 +51,21 @@ class TokioMotionCrawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["video", video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["photo", _]:
-                return await self.photo(scrape_item)
+                await self.photo(scrape_item)
             case ["album", album_id, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["user", user, *_]:
                 title = self.create_title(f"{user} [user]")
                 scrape_item.setup_as_profile(title)
-                return await self.profile(scrape_item)
+                await self.profile(scrape_item)
             case ["search"] if (
                 (query := scrape_item.url.query.get("search_query"))
                 and (query_type := scrape_item.url.query.get("search_type"))
                 and query_type != "users"
             ):
-                return await self.search(scrape_item, query, query_type)
+                await self.search(scrape_item, query, query_type)
             case _:
                 raise ValueError
 
@@ -122,11 +122,11 @@ class TokioMotionCrawler(Crawler):
             case ["favorite", "videos"]:
                 scrape_item.setup_as_album("favorite")
                 scrape_item.append_folders("videos")
-                return await self.crawl_children(scrape_item, Selector.VIDEO)
+                await self.crawl_children(scrape_item, Selector.VIDEO)
 
             case ["videos"]:
                 scrape_item.setup_as_album("videos")
-                return await self.crawl_children(scrape_item, Selector.VIDEO)
+                await self.crawl_children(scrape_item, Selector.VIDEO)
 
             case ["favorite", "photos"]:
                 scrape_item.setup_as_album("favorite")
@@ -141,7 +141,7 @@ class TokioMotionCrawler(Crawler):
 
             case ["albums"]:
                 scrape_item.setup_as_album("albums")
-                return await self.crawl_children(scrape_item, Selector.ALBUM)
+                await self.crawl_children(scrape_item, Selector.ALBUM)
 
             case []:
                 for path in ("albums", "favorite/photos", "videos", "favorite/videos"):

@@ -51,40 +51,44 @@ def as_rich_table() -> Table:
 
 
 def as_markdown(indent_level: int = 2) -> str:
-    indent = "#" * indent_level
-
-    def pad(line: str) -> str:
-        if line.startswith("#"):
-            return indent + line
-        return line
-
-    return "\n".join(map(pad, _generate_md_rows()))
+    return "\n\n".join(_generate_md_blocks(indent_level))
 
 
-def _generate_md_rows() -> Generator[str]:
+def _generate_md_blocks(indent_level: int) -> Generator[str]:
     def quoted(lines: Iterable[str], quoted_char: str = "`") -> str:
         return ", ".join(f"{quoted_char}{lines}{quoted_char}" for lines in lines)
 
+    def as_list_item(note: str) -> str:
+        first, *rest = note.rstrip().splitlines()
+        lines = [f"- {first}"]
+        # Lines already indented (ex: a nested sub-list) are continuations of the
+        # list item as-is; only un-indented lines need the 2-space list padding.
+        lines.extend("" if not line else line if line.startswith(" ") else f"  {line}" for line in rest)
+        return "\n".join(lines)
+
     for info in _gen_crawlers_info():
         url = str(info.primary_url).rstrip("/")
-        yield f"# {info.site}\n"
-        yield f"**Primary URL**: [{url}]({url})\n"
-        yield f"**Supported Domains**: {quoted(info.supported_domains)}".rstrip() + "\n"
+        lines = [
+            f"{'#' * (indent_level + 1)} {info.site}",
+            "",
+            f"**Primary URL**: [{url}]({url})",
+            "",
+            f"**Supported Domains**: {quoted(info.supported_domains)}".rstrip(),
+        ]
 
         supported_paths, notes = _get_supported_paths_and_notes(info)
-        yield "**Supported Paths**:\n"
-        for name, paths in supported_paths.items():
-            yield f"- {name}:"
-            for path in paths:
-                yield f"  - `{path}`"
+        lines += ["", "**Supported Paths**:"]
+        if supported_paths:
+            lines.append("")
+            for name, paths in supported_paths.items():
+                lines.append(f"- {name}:")
+                lines.extend(f"  - `{path}`" for path in paths)
 
         if notes:
-            yield "\n"
-            yield "**Notes**\n"
-            for note in notes:
-                yield f"- {note.rstrip()}"
+            lines += ["", "**Notes**", ""]
+            lines.extend(as_list_item(note) for note in notes)
 
-        yield "\n"
+        yield "\n".join(lines)
 
 
 def _get_supported_paths_and_notes(crawler_info: CrawlerInfo) -> tuple[dict[str, tuple[str, ...]], tuple[str, ...]]:

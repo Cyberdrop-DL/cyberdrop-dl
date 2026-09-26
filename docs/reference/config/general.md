@@ -370,3 +370,11 @@ max_thread_folder_depth: null
     ├── thread_12
     └── thread_08
 ```
+
+# `update_check`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `True`  |
+
+Check for updates at the end of the session

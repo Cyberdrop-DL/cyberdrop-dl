@@ -32,9 +32,9 @@ class EromeCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["a", album_id, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["search", *_] if query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case [name]:
                 await self.profile(scrape_item, name)
             case _:

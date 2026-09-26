@@ -35,7 +35,7 @@ class NovaStorageCrawler(PixelDrainCrawler):
             raise ValueError
         match scrape_item.url.parts[1:]:
             case ["d", *path] if path:
-                return await self.filesystem(scrape_item, "/".join(path))
+                await self.filesystem(scrape_item, "/".join(path))
             case _:
                 raise ValueError
 

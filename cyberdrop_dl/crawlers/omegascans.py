@@ -38,9 +38,9 @@ class OmegaScansCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["series", series_slug]:
-                return await self.series(scrape_item, series_slug)
+                await self.series(scrape_item, series_slug)
             case ["series", series_slug, chapter_slug]:
-                return await self.chapter(scrape_item, series_slug, chapter_slug)
+                await self.chapter(scrape_item, series_slug, chapter_slug)
             case ["file", *_]:
                 await self.direct_file(scrape_item)
             case _:

@@ -35,10 +35,10 @@ class LuxureTVCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["searchgate", "videos", query, *_]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case ["videos", slug, *_]:
                 video_id = slug.split("-")[-1].split(".")[0]
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
 

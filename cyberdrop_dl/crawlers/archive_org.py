@@ -47,7 +47,7 @@ class ArchiveOrgCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["details" | "download", identifier, *rest]:
                 base_path = "/".join(rest) if rest else None
-                return await self.item(scrape_item, identifier, base_path)
+                await self.item(scrape_item, identifier, base_path)
             case _:
                 raise ValueError
 

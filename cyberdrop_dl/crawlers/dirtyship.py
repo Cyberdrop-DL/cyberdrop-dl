@@ -38,9 +38,9 @@ class DirtyShipCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["tag" | "category" as type_, _]:
-                return await self.playlist(scrape_item, type_)
+                await self.playlist(scrape_item, type_)
             case [_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case _:
                 raise ValueError
 

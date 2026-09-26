@@ -6,6 +6,7 @@ import html
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast, overload
 
 from bs4 import BeautifulSoup
+from bs4.filter import SoupStrainer
 
 from cyberdrop_dl.exceptions import ScrapeError
 
@@ -80,12 +81,16 @@ def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str |
     return text(inner_tag, strip=strip)
 
 
+def select_tag_text(html: str, tag_name: str) -> str:
+    return select_text(soup(html, parse_only=tag_name), tag_name)
+
+
 def attr_or_none(tag: Tag, attribute: str) -> str | None:
     """Same as `tag.get(attribute)` but asserts the result is a single str"""
     attribute_ = attribute
     if attribute_ == "srcset":
         if (srcset := tag.get(attribute_)) and type(srcset) is str:
-            return _parse_srcset(srcset)
+            return best_from_srcset(srcset)
         attribute_ = "src"
 
     value = tag.get("data-src") or tag.get(attribute_) if attribute_ == "src" else tag.get(attribute_)
@@ -155,9 +160,21 @@ def iselect_text(soup: Tag, /, selector: str, contains: tuple[str, ...] | str = 
         yield content
 
 
-def _parse_srcset(srcset: str) -> str:
-    # The best src is the last one (usually)
-    return [src.split(" ")[0] for src in srcset.split(", ")][-1]
+def parse_srcset(srcset: str) -> Generator[tuple[str, str]]:
+    for option in srcset.split(","):
+        match option.strip().rsplit(maxsplit=1):
+            case [url, decriptor]:
+                yield decriptor, url
+            case [url]:
+                yield "1x", url
+            case _:
+                continue
+
+
+def best_from_srcset(srcset: str) -> str:
+    options = dict(parse_srcset(srcset))
+    best = max(options, key=lambda decriptor: int(decriptor.rstrip("wx")))
+    return options[best]
 
 
 def decompose(tag: Tag, selector: str) -> None:
@@ -199,12 +216,14 @@ def parse_form(form: Tag, /) -> HTMLForm:
     return HTMLForm(cast("HttpMethod", method), action, inputs)
 
 
-def soup(content: str) -> BeautifulSoup:
-    return BeautifulSoup(content, HTML_PARSER)
+def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
+    return BeautifulSoup(
+        content, "html.parser", parse_only=SoupStrainer(parse_only) if parse_only is not None else None
+    )
 
 
-async def asoup(content: str) -> BeautifulSoup:
-    return await asyncio.to_thread(soup, content)
+async def asoup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
+    return await asyncio.to_thread(soup, content, parse_only)
 
 
 unescape = html.unescape

@@ -57,7 +57,7 @@ class OneFichierCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [] | [""] if _get_file_id(scrape_item.url.query):
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case _:
                 raise ValueError
 

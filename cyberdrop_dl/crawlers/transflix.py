@@ -36,16 +36,16 @@ class TransflixCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["video", slug] if video_id := slug.rsplit("-", 1)[-1]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["search"] if query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
         title = open_graph.title(soup)
@@ -55,7 +55,7 @@ class TransflixCrawler(Crawler):
         scrape_item.uploaded_at = _timestamp_from_filename(link.name)
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
 
-        return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:

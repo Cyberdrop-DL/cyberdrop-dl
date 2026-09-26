@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Unpack, final, override
 
 from aiohttp import ClientConnectorError
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers import Registry
@@ -94,15 +95,15 @@ class BunkrCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["file", file_id] if scrape_item.url.host == self.api.DL_ENDPOINT.host:
-                return await self.file_download(scrape_item, file_id)
+                await self.file_download(scrape_item, file_id)
             case ["a", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["v" | "d" | "i", _]:
-                return await self.follow_redirect(scrape_item)
+                await self.follow_redirect(scrape_item)
             case ["f", _]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case [_] if _is_stream_redirect(scrape_item.url.host):
-                return await self.follow_redirect(scrape_item)
+                await self.follow_redirect(scrape_item)
             case _:
                 raise ValueError
 
@@ -131,12 +132,13 @@ class BunkrCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=album_id)
 
         origin = scrape_item.url.origin()
+        sleep = aio.periodic_sleep(10)
         for file in self._parse_files(css.select_text(soup, Selector.ALBUM_FILES)):
-            web_url = origin / "f" / file.slug
-            new_item = scrape_item.create_child(web_url)
+            new_item = scrape_item.create_child(origin / "f" / file.slug)
             new_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
             self.create_task(self.run(new_item, check_referer=True))
             scrape_item.add_children()
+            await sleep()
 
     @override
     async def check_complete_from_referer(  # pyright: ignore[reportIncompatibleMethodOverride]

@@ -14,6 +14,6 @@ class TrannyGemCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["videos", *_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case _:
                 raise ValueError

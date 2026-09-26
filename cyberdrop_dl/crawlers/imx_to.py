@@ -39,9 +39,9 @@ class ImxToCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["g", gallery_id]:
-                return await self.gallery(scrape_item, gallery_id)
+                await self.gallery(scrape_item, gallery_id)
             case ["i", _]:
-                return await self.image(scrape_item)
+                await self.image(scrape_item)
             case _:
                 raise ValueError
 

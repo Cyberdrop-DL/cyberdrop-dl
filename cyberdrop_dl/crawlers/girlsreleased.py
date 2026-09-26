@@ -40,13 +40,13 @@ class GirlsReleasedCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["set", set_id]:
-                return await self.set(scrape_item, set_id)
+                await self.set(scrape_item, set_id)
             case ["site", domain]:
-                return await self.site(scrape_item, domain)
+                await self.site(scrape_item, domain)
             case ["site", domain, "model", model_id, model_name]:
-                return await self.site(scrape_item, domain, model_id, model_name)
+                await self.site(scrape_item, domain, model_id, model_name)
             case ["model", model_id, name]:
-                return await self.model(scrape_item, model_id, name)
+                await self.model(scrape_item, model_id, name)
             case _:
                 raise ValueError
 

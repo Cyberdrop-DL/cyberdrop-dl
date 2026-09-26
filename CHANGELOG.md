@@ -22,11 +22,40 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [10.10.0] - 2026-09-18
+
+### Added
+
+- New `database prune hashes` command
+- New `--logs.files.dedupe` option
+- New `--update-check` option
+- New `--crawlers.pawchive.expand-posts` and `--crawlers.only-haven.expand-posts` options
+- Origrid support
+- Kick.com support
+- Lulustream support
+- Playmate support
+- Streamfile support
+- Firestream support
+- Recordplay support
+- Support downloads of deferred big files (requires `expand-posts` to be enabled) (Pawchive)
+- Support for reddit videos (`v.redd.it`)
+- Support tags/network/models (Beeg)
+- Support loose images from an user's profile (Goonbox)
+- Support video previews (Pornpics)
+
+### Changed
+
+- Make download rows fill out the available space on the terminal (TUI)
+- Log the original path alongside the deleted duplicate (auto dedupe)
 
 ### Fixed
 
-- Downloads failing with "DDoS-Guard" errors when several links are scraped at once (Yandex Disk)
+- Downloads failing with `DDoS-Guard` when several links are scraped at once (Yandex Disk)
+- `Key Error` trying to download some posts with videos (BlueSky)
+- Update for v2 redesign (Turbo)
+- All downloads failing (Beeg)
+- Download of unlisted videos (PornHub)
+- Channels and search results (Pornpics)
 
 ## [10.9.1] - 2026-09-13
 

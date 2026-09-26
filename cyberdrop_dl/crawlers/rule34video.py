@@ -44,11 +44,11 @@ class Rule34VideoCrawler(KernelVideoSharingCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["video" | "videos", _, *_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["search" as type_, query]:
-                return await self.search(scrape_item, query, type_)
+                await self.search(scrape_item, query, type_)
             case ["tags" | "categories" | "members" | "models" as type_, _]:
-                return await self.search(scrape_item, None, type_)
+                await self.search(scrape_item, None, type_)
             case _:
                 raise ValueError
 

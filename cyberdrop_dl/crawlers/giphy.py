@@ -22,7 +22,7 @@ class GiPhyCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["gifs", slug]:
                 gif_id = slug.rpartition("-")[-1]
-                return await self.gif(scrape_item, gif_id)
+                await self.gif(scrape_item, gif_id)
             case _:
                 raise ValueError
 

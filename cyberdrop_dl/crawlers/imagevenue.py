@@ -39,11 +39,11 @@ class ImageVenueCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["img.php"] if scrape_item.url.query.get("image"):
-                return await self.follow_redirect(scrape_item)
+                await self.follow_redirect(scrape_item)
             case [image_id] if image_id.startswith("ME"):
-                return await self.image(scrape_item)
+                await self.image(scrape_item)
             case ["view", "o"] if scrape_item.url.query.get("i") and scrape_item.url.query.get("h"):
-                return await self.image(scrape_item)
+                await self.image(scrape_item)
             case _:
                 raise ValueError
 

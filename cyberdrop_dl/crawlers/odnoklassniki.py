@@ -61,9 +61,9 @@ class OdnoklassnikiCrawler(Crawler):
             case ["video", id_]:
                 if id_.startswith("c"):
                     return await self.channel(scrape_item, id_)
-                return await self.video(scrape_item, id_)
+                await self.video(scrape_item, id_)
             case ["profile", _, channel] if channel.startswith("c"):
-                return await self.channel(scrape_item, channel)
+                await self.channel(scrape_item, channel)
             case _:
                 raise ValueError
 

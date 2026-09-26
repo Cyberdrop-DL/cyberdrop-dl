@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         AsyncIterator,
         Awaitable,
         Callable,
+        Container,
         Coroutine,
         Generator,
         Iterable,
@@ -98,6 +99,15 @@ _DB_PATH_BUILDERS: MappingProxyType[str, URLHasher] = MappingProxyType(
         "path_frag": lambda url: f"{url.path}#{frag}" if (frag := url.fragment) else url.path,
     }
 )
+
+
+@frozen(order=False, kw_only=False)
+class ContainerChecker[T: Container, R]:
+    values: T
+    check: Callable[[R], bool]
+
+    def __contains__(self, obj: R) -> bool:
+        return self.check(obj)
 
 
 @frozen(order=True, kw_only=False)
@@ -440,6 +450,16 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     catch_errors: Final = error_handling_context
 
     @final
+    def was_scrapped_before(self, url: AbsoluteHttpURL) -> bool:
+        lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
+        if lookup in self.scraped_items:
+            logger.info("Skipping %s as it has already been scrapped", url)
+            return True
+
+        self.scraped_items.add(lookup)
+        return False
+
+    @final
     async def run(self, scrape_item: ScrapeItem, *, check_referer: bool = False) -> None:
         if self.disabled:
             return
@@ -447,12 +467,8 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         with scrape_item.track_changes:
             scrape_item.url = url = self.transform_url(scrape_item.url)
 
-        lookup = url.path_qs if self.__url_config__.ignore_fragment else _path_qs_frag(url)
-        if lookup in self.scraped_items:
-            logger.info("Skipping %s as it has already been scrapped", url)
+        if self.was_scrapped_before(url):
             return
-
-        self.scraped_items.add(lookup)
 
         if not self.__url_config__.allow_empty_path and url.path == "/":
             self.raise_exc(scrape_item, ScrapeError.unsupported())
@@ -719,6 +735,19 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     async def get_album_results(self, album_id: str) -> dict[str, bool]:
         """Checks whether an album has completed given its domain and album id."""
         return await self.database.history.query_album(self.DOMAIN, album_id)
+
+    @final
+    async def get_completed_by_album(self, album_id: str) -> ContainerChecker[set[str], AbsoluteHttpURL]:
+        completed = await self.database.history.query_completed_by_album(self.DOMAIN, album_id)
+
+        def check(url: AbsoluteHttpURL) -> bool:
+            if completed and self.__db_path__(url) in completed:
+                logger.info("Skipping %s as it has already been downloaded", url)
+                self.tui.files.stats.prev_completed += 1
+                return True
+            return False
+
+        return ContainerChecker(completed, check)
 
     @final
     def handle_external_links(self, scrape_item: ScrapeItem, *, reset: bool = True) -> None:
@@ -1193,13 +1222,15 @@ def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, tuple[st
 
 def auto_task_id[CrawlerT: Crawler, **P, R](
     func: Callable[Concatenate[CrawlerT, ScrapeItem, P], Coroutine[None, None, R]],
-) -> Callable[Concatenate[CrawlerT, ScrapeItem, P], Coroutine[None, None, R]]:
+) -> Callable[Concatenate[CrawlerT, ScrapeItem, P], Coroutine[None, None, None]]:
     """Autocreate a new `task_id` from the scrape_item of the method"""
 
     @functools.wraps(func)
-    async def wrapper(self: CrawlerT, scrape_item: ScrapeItem, *args: P.args, **kwargs: P.kwargs) -> R:
+    async def wrapper(self: CrawlerT, scrape_item: ScrapeItem, *args: P.args, **kwargs: P.kwargs) -> None:
+        if self.was_scrapped_before(scrape_item.url):
+            return
         with self.new_task_id(scrape_item.url):
-            return await func(self, scrape_item, *args, **kwargs)
+            await func(self, scrape_item, *args, **kwargs)
 
     return wrapper
 

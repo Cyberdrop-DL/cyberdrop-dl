@@ -38,7 +38,10 @@ class KemonoConfig(ConfigModel):
     "Download all attachments in a post (may or may not include `file`)"
 
     content_urls: bool = True
-    "Download any URL found inside the description (text) of a post (slower)"
+    "Download any URL found inside the description (text) of a post"
+
+    expand_posts: bool = False
+    "Make an additional API request for each post to get original filenames and the content/text (slower)"
 
     embed: bool = True
     "Download the embedded file from third party sites (if any)(mega.nz, pcloud, dropbox, etc..)"

@@ -58,13 +58,13 @@ class YetiShareCrawler(Crawler, is_abc=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["folder", folder_id, *_]:
-                return await self.folder(scrape_item, folder_id)
+                await self.folder(scrape_item, folder_id)
             case ["shared", folder_id]:
-                return await self.folder(scrape_item, folder_id, is_shared=True)
+                await self.folder(scrape_item, folder_id, is_shared=True)
             case [file_id]:
-                return await self.file(scrape_item, file_id)
+                await self.file(scrape_item, file_id)
             case [file_id, _]:
-                return await self.file(scrape_item, file_id)
+                await self.file(scrape_item, file_id)
             case _:
                 raise ValueError
 

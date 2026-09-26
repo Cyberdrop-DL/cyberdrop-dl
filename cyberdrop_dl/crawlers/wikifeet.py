@@ -27,8 +27,9 @@ class WikiFeetCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case [name]:
                 if ".jpg" in name:
-                    return await self.direct_file(scrape_item)
-                return await self.celeb(scrape_item, name)
+                    await self.direct_file(scrape_item)
+                    return
+                await self.celeb(scrape_item, name)
             case _:
                 raise ValueError
 

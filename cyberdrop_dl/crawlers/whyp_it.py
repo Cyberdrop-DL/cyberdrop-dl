@@ -30,11 +30,11 @@ class WhypItCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["tracks", slug] if track_id := slug.rpartition("-")[-1]:
-                return await self.track(scrape_item, track_id)
+                await self.track(scrape_item, track_id)
             case ["users", slug] if user_id := slug.rpartition("-")[-1]:
-                return await self.user(scrape_item, user_id)
+                await self.user(scrape_item, user_id)
             case ["collections", slug] if collection_id := slug.rpartition("-")[-1]:
-                return await self.collection(scrape_item, collection_id)
+                await self.collection(scrape_item, collection_id)
             case _:
                 raise ValueError
 

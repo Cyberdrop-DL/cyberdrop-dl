@@ -30,7 +30,7 @@ class LividCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["embed" | "watch", video_id]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
 

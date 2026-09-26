@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
@@ -26,14 +27,14 @@ class MonstercatCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["release", release_slug]:
-                return await self.release(scrape_item, release_slug)
+                await self.release(scrape_item, release_slug)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def release(self, scrape_item: ScrapeItem, release_slug: str) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name, release_date = _extract_info(soup)
+        name, release_date = await asyncio.to_thread(_extract_info, soup)
         scrape_item.uploaded_at = self.parse_date(release_date, "%B %d, %Y")
         scrape_item.setup_as_album(self.create_title(name, release_slug), album_id=release_slug)
         downloaded = await self.get_album_results(release_slug)

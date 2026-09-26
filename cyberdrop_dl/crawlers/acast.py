@@ -23,9 +23,9 @@ class ACastCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [show, "episodes", episode_id]:
-                return await self.episode(scrape_item, show, episode_id)
+                await self.episode(scrape_item, show, episode_id)
             case [show]:
-                return await self.show(scrape_item, show)
+                await self.show(scrape_item, show)
             case _:
                 raise ValueError
 

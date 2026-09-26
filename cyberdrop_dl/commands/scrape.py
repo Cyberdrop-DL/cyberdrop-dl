@@ -83,6 +83,9 @@ async def _post_runtime(manager: Manager) -> None:
 
 
 async def _check_for_updates(manager: Manager) -> None:
+    if not manager.config.update_check:
+        return
+
     from cyberdrop_dl.updates import check_latest_pypi
 
     log_spacer()

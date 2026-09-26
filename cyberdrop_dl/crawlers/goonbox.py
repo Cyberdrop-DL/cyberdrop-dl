@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from cyberdrop_dl.crawlers import Registry
@@ -12,7 +11,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable
+    from collections.abc import AsyncGenerator, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -25,7 +24,11 @@ class GoonBoxCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/img/<image_id>",
         "Album": "/a/<album_id>",
-        "User": "/u/<username>",
+        "User albums": "/u/<username>",
+        "User images": (
+            "/u/<username>/images",
+            "/u/<username>?tab=images",
+        ),
         "Direct links": "",
     }
 
@@ -66,15 +69,21 @@ class GoonBoxCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if self.is_subdomain(scrape_item.url):
-            return await self.direct_file(scrape_item)
+            await self.direct_file(scrape_item)
+            return
 
         match scrape_item.url.parts[1:]:
             case ["img", file_id]:
                 await self.image(scrape_item, file_id)
             case ["a", album_id]:
                 await self.album(scrape_item, album_id)
+            case ["u", user, "images"]:
+                await self.user_images(scrape_item, user)
             case ["u", user]:
-                await self.user(scrape_item, user)
+                if scrape_item.url.query.get("tab") == "images":
+                    await self.user_images(scrape_item, user)
+                else:
+                    await self.user_albums(scrape_item, user)
             case _:
                 raise ValueError
 
@@ -99,10 +108,10 @@ class GoonBoxCrawler(Crawler):
         await self._album(scrape_item, album)
 
     @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem, user: str) -> None:
+    async def user_albums(self, scrape_item: ScrapeItem, user: str) -> None:
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
 
-        async for albums in self.api.user_albums(user, sort=scrape_item.url.query.get("sort")):
+        async for albums in self.api.user_albums(user, scrape_item.url.query):
             async with self.new_task_group() as tg:
                 for album in albums:
                     url = self.PRIMARY_URL / "a" / album.encoded_id
@@ -111,34 +120,36 @@ class GoonBoxCrawler(Crawler):
                     scrape_item.add_children()
 
     @error_handling_wrapper
-    async def _album(self, scrape_item: ScrapeItem, album: Album) -> None:
-        title = self.create_title(album.title, album.encoded_id)
-        scrape_item.setup_as_album(title, album_id=album.encoded_id)
+    async def user_images(self, scrape_item: ScrapeItem, user: str) -> None:
+        scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
+        scrape_item.append_folders("images")
 
-        async for images in self._album_images(album):
+        async for images in self.api.user_images(user, scrape_item.url.query):
             for img in images:
                 url = self.PRIMARY_URL / "img" / img.encoded_id
                 new_item = scrape_item.create_child(url)
                 self.create_eager_task(self._image(new_item, img))
                 scrape_item.add_children()
 
-    async def _album_images(self, album: Album) -> AsyncGenerator[Iterable[Image]]:
-        already_downloaded = await self.get_album_results(album.encoded_id)
+    @error_handling_wrapper
+    async def _album(self, scrape_item: ScrapeItem, album: Album) -> None:
+        title = self.create_title(album.title, album.encoded_id)
+        scrape_item.setup_as_album(title, album_id=album.encoded_id)
 
-        def filter_images(images: Iterable[Image]):
+        downloaded = await self.get_completed_by_album(album.encoded_id)
+
+        async for images in self.api.album_images(album.encoded_id, scrape_item.url.query):
             for img in images:
-                if not self.check_album_results(img.src, already_downloaded):
-                    yield img
+                if img.src in downloaded:
+                    continue
 
-        yield filter_images(album.images)
-        if not album.has_more:
-            return
-
-        async for images in self.api.album_images(album.encoded_id, init_page=1 if album.images == () else 2):
-            yield filter_images(images)
+                url = self.PRIMARY_URL / "img" / img.encoded_id
+                new_item = scrape_item.create_child(url)
+                self.create_eager_task(self._image(new_item, img))
+                scrape_item.add_children()
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Image:
     encoded_id: str
     mime: str
@@ -151,13 +162,11 @@ class Image:
         return deserialize(cls, img, src=parse_url(img["original_url"]))
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class Album:
     title: str
     description: str | None
     encoded_id: str
-    images: Iterable[Image] = ()
-    has_more: bool = True
 
     parse = classmethod(deserialize)
 
@@ -170,32 +179,44 @@ class GoonBoxAPI(API):
 
     async def album(self, album_id: str) -> Album:
         api_url = self.PRIMARY_URL / "api/albums" / album_id
-        resp = await self.request_json(api_url.with_query(per_page=100))
-        return Album.parse(
-            resp["album"],
-            images=map(Image.parse, resp["images"]),
-            has_more=resp["pagination"]["total"] > 1,
-        )
+        resp = await self.request_json(api_url)
+        return Album.parse(resp["album"])
 
-    async def album_images(self, album_id: str, init_page: int = 1) -> AsyncGenerator[map[Image]]:
+    async def album_images(self, album_id: str, query: Mapping[str, Any]) -> AsyncGenerator[map[Image]]:
         api_url = self.PRIMARY_URL / "api/albums" / album_id / "images"
-        async for page in self.pager(api_url, "images", init_page):
+        async for page in self._pager(api_url, "images", query):
             yield map(Image.parse, page)
 
-    async def user_albums(
-        self, user: str, init_page: int = 1, *, sort: str | None = "newest"
-    ) -> AsyncGenerator[map[Album]]:
+    async def user_albums(self, user: str, query: Mapping[str, Any]) -> AsyncGenerator[map[Album]]:
         api_url = self.PRIMARY_URL / "api/users" / user / "albums"
-        sort = sort if sort in {"newest", "oldest", "most_images", "least_images"} else "newest"
-        async for page in self.pager(api_url.update_query(sort=sort), "albums", init_page):
+        async for page in self._pager(api_url, "albums", query):
             yield map(Album.parse, page)
 
-    async def pager(self, url: AbsoluteHttpURL, key: str, init_page: int = 1) -> AsyncGenerator[list[dict[str, Any]]]:
-        for page in itertools.count(init_page):
-            resp = await self.request_json(url.update_query(page=page, per_page=100))
+    async def user_images(self, user: str, query: Mapping[str, Any]) -> AsyncGenerator[map[Image]]:
+        api_url = self.PRIMARY_URL / "api/users" / user / "images"
+        async for page in self._pager(api_url, "images", query):
+            yield map(Image.parse, page)
+
+    async def _pager(
+        self, url: AbsoluteHttpURL, key: str, query: Mapping[str, Any]
+    ) -> AsyncGenerator[list[dict[str, Any]]]:
+        url = url.update_query(_filter_query(query))
+        while True:
+            resp = await self.request_json(url)
             yield resp[key]
-            if page >= resp["pagination"]["last_page"]:
+            current_page: int = resp["pagination"]["current_page"]
+            if current_page >= resp["pagination"]["last_page"]:
                 break
+            url = url.update_query(page=current_page + 1)
+
+
+def _filter_query(query: Mapping[str, str]) -> dict[str, str | int]:
+    sort = query.get("sort")
+    return {
+        "page": int(query.get("page") or 1),
+        "per_page": 100,
+        "sort": sort if sort in {"newest", "oldest", "most_images", "least_images"} else "newest",
+    }
 
 
 def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:

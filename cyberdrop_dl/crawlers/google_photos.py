@@ -50,13 +50,14 @@ class GooglePhotosCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.host == "photos.app.goo.gl":
-            return await self.follow_redirect(scrape_item)
+            await self.follow_redirect(scrape_item)
+            return
 
         match scrape_item.url.parts[1:]:
             case ["album" | "share" as type_, album_id, "photo", photo_id, *_]:
-                return await self.album(scrape_item, type_, album_id, photo_id)
+                await self.album(scrape_item, type_, album_id, photo_id)
             case ["album" | "share" as type_, album_id]:
-                return await self.album(scrape_item, type_, album_id)
+                await self.album(scrape_item, type_, album_id)
             case _:
                 raise ValueError
 

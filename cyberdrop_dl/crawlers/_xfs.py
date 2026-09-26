@@ -112,6 +112,6 @@ class EmbedOnlyMixin(_XVSMixinBase):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["embed", video_id]:
-                return await self.embed(scrape_item, video_id)
+                await self.embed(scrape_item, video_id)
             case _:
                 raise ValueError

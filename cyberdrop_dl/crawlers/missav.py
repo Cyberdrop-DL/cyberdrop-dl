@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -9,7 +11,7 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup, Tag
+    from bs4 import BeautifulSoup
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -41,9 +43,9 @@ class MissAVCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, collection_type, name] if collection_type in _COLLECTION_TYPES:
-                return await self.collection(scrape_item, collection_type, name)
+                await self.collection(scrape_item, collection_type, name)
             case [*_, video_id]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
 
@@ -63,23 +65,45 @@ class MissAVCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-
-        title = open_graph.title(soup)
-        if dvd_code_tag := soup.select_one(Selector.DVD_CODE):
-            title = _fix_title(title, dvd_code_tag)
-
-        scrape_item.uploaded_at = self.parse_iso_date(
-            open_graph.get("video_release_date", soup) or css.select(soup, Selector.DATE, "datetime")
-        )
-
-        uuid = _extract_uuid(soup)
-        m3u8_url = _M3U8_SERVER / uuid / "playlist.m3u8"
-        m3u8, info = await self.request_m3u8_playlist(
+        video = await asyncio.to_thread(_extract_video, soup)
+        scrape_item.uploaded_at = self.parse_iso_date(video.release_date)
+        m3u8_url = _M3U8_SERVER / video.m3u8_uuid / "playlist.m3u8"
+        m3u8, info = await self.request_m3u8_playlist(m3u8_url, headers={"Referer": "https://missav.ws/"})
+        await self.handle_file(
             m3u8_url,
-            headers={"Referer": "https://missav.ws/"},
+            scrape_item,
+            video.title,
+            ext := ".mp4",
+            m3u8=m3u8,
+            custom_filename=self.create_custom_filename(video.title, ext, resolution=info.resolution),
         )
-        filename = self.create_custom_filename(title, ext := ".mp4", resolution=info.resolution)
-        await self.handle_file(m3u8_url, scrape_item, title, ext, m3u8=m3u8, custom_filename=filename)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Video:
+    title: str
+    dvd_code: str | None
+    release_date: str
+    m3u8_uuid: str
+
+
+def _extract_video(soup: BeautifulSoup) -> Video:
+    title = open_graph.title(soup)
+    dvd_code = None
+    try:
+        dvd_code = css.select_text(soup, Selector.DVD_CODE).upper()
+    except css.SelectorError:
+        pass
+
+    if dvd_code:
+        title = _fix_title(title, dvd_code)
+
+    return Video(
+        title=title,
+        dvd_code=dvd_code,
+        release_date=open_graph.get("video_release_date", soup) or css.select(soup, Selector.DATE, "datetime"),
+        m3u8_uuid=_extract_uuid(soup),
+    )
 
 
 def _extract_uuid(soup: BeautifulSoup) -> str:
@@ -89,8 +113,7 @@ def _extract_uuid(soup: BeautifulSoup) -> str:
     return "-".join(uuid_parts)
 
 
-def _fix_title(title: str, dvd_code_tag: Tag) -> str:
-    dvd_code = css.text(dvd_code_tag).upper()
+def _fix_title(title: str, dvd_code: str) -> str:
     uncensored = "UNCENSORED" in dvd_code
     leak = "LEAK" in dvd_code
     for trash in ("-UNCENSORED", "-LEAK"):

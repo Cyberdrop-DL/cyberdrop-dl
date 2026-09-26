@@ -118,10 +118,11 @@ class TikTokCrawler(Crawler):
             case [_, "video" | "photo" | "v" as type_, media_id]:
                 media_id = media_id.removesuffix(".html")
                 if type_ != "photo" and self.download_src_quality_videos:
-                    return await self.src_quality_media(scrape_item, media_id)
-                return await self.media(scrape_item, media_id)
+                    await self.src_quality_media(scrape_item, media_id)
+                    return
+                await self.media(scrape_item, media_id)
             case [profile] if profile.startswith("@"):
-                return await self.profile(scrape_item, profile.removeprefix("@"))
+                await self.profile(scrape_item, profile.removeprefix("@"))
             case _:
                 raise ValueError
 

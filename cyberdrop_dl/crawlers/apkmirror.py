@@ -32,7 +32,7 @@ class APKMirrorCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["apk", _, _, _, variant, *_] if variant.endswith("-download"):
-                return await self.apk(scrape_item)
+                await self.apk(scrape_item)
             case _:
                 raise ValueError
 

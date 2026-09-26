@@ -35,9 +35,9 @@ class LivestreamFailsCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["clip", clip_id]:
-                return await self.clip(scrape_item, clip_id)
+                await self.clip(scrape_item, clip_id)
             case ["streamer", streamer_id]:
-                return await self.streamer(scrape_item, streamer_id)
+                await self.streamer(scrape_item, streamer_id)
             case _:
                 raise ValueError
 

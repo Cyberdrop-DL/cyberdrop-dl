@@ -26,7 +26,7 @@ class HohojTVCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["lang_en", "video"] if video_id := scrape_item.url.query.get("id"):
-                return await self.video(scrape_item, int(video_id))
+                await self.video(scrape_item, int(video_id))
             case _:
                 raise ValueError
 

@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
@@ -94,7 +95,7 @@ class VoeSxCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["e", video_id] | [video_id, "download"] | [video_id]:
-                return await self.embed(scrape_item, video_id)
+                await self.embed(scrape_item, video_id)
             case _:
                 raise ValueError
 
@@ -112,8 +113,8 @@ class VoeSxCrawler(Crawler):
                 self.create_task(self._redirect(scrape_item))
                 return
 
-        soup = await resp.soup()
-        video = extract_voe_video(soup, origin)
+            video = await extract_voe_video(await resp.soup(), origin)
+
         if not video.id:
             video.id = video_id
         scrape_item.url = embed_url
@@ -153,6 +154,7 @@ class VoeSxCrawler(Crawler):
     _redirect = auto_task_id(fetch)
 
 
+@aio.to_thread
 def extract_voe_video(soup: BeautifulSoup, origin: AbsoluteHttpURL) -> VoeVideo:
     for js_script in soup.select("script[type='application/json']"):
         script_text = js_script.decode_contents()

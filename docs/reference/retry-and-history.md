@@ -95,6 +95,30 @@ cyberdrop-dl retry all --from 2026-08-01 --ignore-history
 
 [`downloads.skip_and_mark_completed`](config/downloads.md) does the reverse of a retry. It marks every scraped file as completed without downloading anything. Use it to make CDL permanently skip a set of URLs.
 
+## Pruning stale hashes
+
+Auto dedupe deletes a new download when its hash matches a file CDL downloaded before, without checking that the older file is still there. If you moved, renamed or lost those files (a dead drive, a manual cleanup), the hash table keeps pointing at paths that no longer exist and new downloads keep getting deleted to preserve originals you do not have.
+
+`prune hashes` clears that out. It walks every path recorded in the hash table, checks whether the file is still on disk, and deletes the entries of the ones that are gone:
+
+```shell
+cyberdrop-dl database prune hashes
+```
+
+Use `--dry-run` to see what it would delete without touching the database:
+
+```shell
+cyberdrop-dl database prune hashes --dry-run
+```
+
+The same action is available in the main menu as **Delete hashes of missing files**.
+
+{% hint style="info" %}
+This only touches the hash table (check 3). Download history (check 2) is left alone, so pruning never causes a URL you already downloaded to be downloaded again.
+{% endhint %}
+
+Pruning is a one time cleanup, not a setting. If you move files around again, run it again.
+
 ## Common scenarios
 
 | What happened                                        | What to run                                             | What CDL does                                                       |
@@ -105,6 +129,7 @@ cyberdrop-dl retry all --from 2026-08-01 --ignore-history
 | You deleted some downloaded files and want them back | `cyberdrop-dl download <url> --ignore-history`          | Ignores the database and downloads them again                        |
 | You want to replace files you still have on disk     | Move or rename them, then run with `--ignore-history`   | Without moving them, the on disk check skips the download            |
 | You want CDL to never download a set of URLs         | `cyberdrop-dl download <url> --skip-and-mark-completed` | Marks them as completed without downloading                          |
+| Dedupe deleted new downloads whose "original" is gone | `cyberdrop-dl database prune hashes`                    | Deletes the hashes of files that are no longer on disk               |
 | You want to start over from scratch                  | Delete the database file                                | `cyberdrop-dl database file` prints its path                         |
 
 ## Options that no longer exist

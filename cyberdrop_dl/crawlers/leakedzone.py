@@ -65,9 +65,9 @@ class LeakedZoneCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_, "video", video_id]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case [_]:
-                return await self.model(scrape_item)
+                await self.model(scrape_item)
             case _:
                 raise ValueError
 

@@ -81,12 +81,13 @@ class YandexDiskCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["d", folder_id, file_name]:
-                return await self.folder(scrape_item, folder_id, file_name)
+                await self.folder(scrape_item, folder_id, file_name)
             case ["d", folder_id]:
-                return await self.folder(scrape_item, folder_id)
+                await self.folder(scrape_item, folder_id)
             case ["i", _]:
-                return await self.file(scrape_item)
-        raise ValueError
+                await self.file(scrape_item)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:

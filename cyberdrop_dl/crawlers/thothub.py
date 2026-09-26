@@ -33,15 +33,15 @@ class ThotHubCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:-1]:
             case ["albums", album_id, _]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["videos", _, _]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["categories" | "tags" as type_, _]:
-                return await self.search(scrape_item, None, type_)
+                await self.search(scrape_item, None, type_)
             case ["search" as type_, query]:
-                return await self.search(scrape_item, query, type_)
+                await self.search(scrape_item, query, type_)
             case ["get_image", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

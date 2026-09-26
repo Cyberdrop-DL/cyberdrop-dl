@@ -41,16 +41,15 @@ class TrannyOneCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["view", video_id]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["search", query]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case ["pornstars", model_id, _]:
-                return await self.model(scrape_item, model_id)
+                await self.model(scrape_item, model_id)
             case ["pics", "album", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["work", "orig", _, _, _]:
-                return await self.direct_file(scrape_item)
-
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, final, override
 
 from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import TextExtractor, css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -14,11 +16,11 @@ if TYPE_CHECKING:
 
 @final
 class Selector:
-    ALBUMS = "#listView a.album-row"
-    ALBUM_FILES = "#fileTbody tr[data-id]"
+    SEARCH_RESULTS = "#list > a"
+    ALBUM_FILES = "#grid .tile[data-id]"
     MD5 = "div:-soup-contains('Checksum (MD5)') + div"
-    UPLOAD_DATE = "svg.h-4.w-4 + span"
-    NEXT_PAGE = "a:-soup-contains(Next)[href*='?page']"
+    UPLOAD_DATE = "div.card #fileName + div > span:last-child"
+    NEXT_PAGE = "a.page[aria-label*=Next]"
 
 
 class TurboVidCrawler(Crawler):
@@ -67,18 +69,17 @@ class TurboVidCrawler(Crawler):
         title = self.create_title(f"{query} [search]")
         scrape_item.setup_as_album(title)
         async for soup in self.web_pager(scrape_item.url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUMS):
+            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.SEARCH_RESULTS):
                 self.create_task(self.run(new_scrape_item))
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        name = css.select_text(soup, "h1")
-        title = self.create_title(name, album_id)
+        album = await self.api.album(album_id)
+        title = self.create_title(album.name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         async with self.new_task_group() as tg:
-            for file_id in css.iselect(soup, Selector.ALBUM_FILES, "data-id"):
+            for file_id in album.files:
                 new_item = scrape_item.create_child(self.PRIMARY_URL / "d" / file_id)
                 tg.create_task(self.video(new_item, file_id))
                 scrape_item.add_children()
@@ -111,8 +112,28 @@ class TurboAPI(API):
         name: str = resp.get("original_filename") or resp["filename"]
         return name, self.parse_url(resp["url"])
 
+    async def album(self, album_id: str) -> Album:
+        url = self.PRIMARY_URL / "a" / album_id
+        html = await self.request_text(url)
+        return await asyncio.to_thread(_extract_album, html)
+
 
 @Registry.database.referer_fix_for(TurboVidCrawler)
 def fix_turbovid_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer.replace("/embed/", "/d/"))
     return str(TurboVidCrawler.transform_url(url))
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class Album:
+    id: str
+    name: str
+    files: tuple[str, ...]
+
+
+def _extract_album(html: str) -> Album:
+    return Album(
+        id=extr_text(html, 'const ALBUM_ENC_ID = "', '"'),
+        name=css.select_tag_text(html, "h1"),
+        files=tuple(TextExtractor(extr_text(html, "const FILES = [", "],")).repeat('{ id:"', '"')),
+    )

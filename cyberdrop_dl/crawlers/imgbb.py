@@ -35,15 +35,17 @@ class ImgBBCrawler(CheveretoCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         username, _, rest = scrape_item.url.host.partition(".imgbb.")
         if username and rest:
-            return await self.profile(scrape_item)
+            await self.profile(scrape_item)
+            return
 
         if scrape_item.url.host == IMAGES_CDN:
-            return await self.direct_file(scrape_item)
+            await self.direct_file(scrape_item)
+            return
 
         match scrape_item.url.parts[1:]:
             case ["album", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case [_]:
-                return await self.media(scrape_item)
+                await self.media(scrape_item)
             case _:
                 raise ValueError

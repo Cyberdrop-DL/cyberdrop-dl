@@ -46,11 +46,11 @@ class PinterestCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["pin", pin_id]:
-                return await self.pin(scrape_item, pin_id)
+                await self.pin(scrape_item, pin_id)
             case [user, slug]:
-                return await self.board(scrape_item, user, slug)
+                await self.board(scrape_item, user, slug)
             case [user]:
-                return await self.user(scrape_item, user)
+                await self.user(scrape_item, user)
             case _:
                 raise ValueError
 

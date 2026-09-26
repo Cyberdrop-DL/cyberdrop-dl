@@ -30,11 +30,11 @@ class CamwhoresTVCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:-1]:
             case ["categories" | "tags" as type_, _]:
-                return await self.search(scrape_item, type_)
+                await self.search(scrape_item, type_)
             case ["search" as type_, query]:
-                return await self.search(scrape_item, type_, query)
+                await self.search(scrape_item, type_, query)
             case ["videos", _, _]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case _:
                 raise ValueError
 

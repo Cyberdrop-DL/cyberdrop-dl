@@ -30,13 +30,13 @@ class WeTransferCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_] if scrape_item.url.host == "we.tl":
-                return await self.follow_redirect(scrape_item)
+                await self.follow_redirect(scrape_item)
             case ["downloads", file_id, security_hash]:
-                return await self.file(scrape_item, file_id, security_hash)
+                await self.file(scrape_item, file_id, security_hash)
             case ["downloads", file_id, recipient_id, security_hash]:
-                return await self.file(scrape_item, file_id, security_hash, recipient_id)
+                await self.file(scrape_item, file_id, security_hash, recipient_id)
             case [*_] if "download." in scrape_item.url.host:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

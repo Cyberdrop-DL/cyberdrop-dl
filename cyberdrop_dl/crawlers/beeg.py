@@ -41,10 +41,7 @@ class BeegComCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["reacted", "saved", "following"]:
-                raise ValueError
-
-            case [slug]:
+            case [slug] if slug not in {"reacted", "saved", "following"}:
                 if slug.startswith("-"):
                     video_id = int(slug.lstrip("-"))
                     await self.video(scrape_item, video_id)

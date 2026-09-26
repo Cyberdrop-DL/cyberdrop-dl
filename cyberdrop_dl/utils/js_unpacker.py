@@ -25,13 +25,21 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from cyberdrop_dl.utils import css
+
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import bs4
 
 _ALPHABET = {
     62: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
     95: (" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"),
 }
+
+
+def find(soup: bs4.Tag) -> str:
+    return css.select_text(soup, "script:-soup-contains('p,a,c,k,e,d')")
 
 
 def unpack(source: str) -> str:

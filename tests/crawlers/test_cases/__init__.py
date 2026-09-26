@@ -25,6 +25,7 @@ class CrawlerTestCase:
     domain: str
     url: str
     results: list[Result]
+    args: tuple[str, ...] = ()
     description: str | None = None
     fail: bool | str | int = False
     xfail: str | None = None

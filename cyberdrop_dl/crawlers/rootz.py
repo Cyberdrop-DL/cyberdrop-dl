@@ -32,7 +32,7 @@ class RootzCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["d" | "file", short_code]:
-                return await self.file(scrape_item, short_code)
+                await self.file(scrape_item, short_code)
             case _:
                 raise ValueError
 

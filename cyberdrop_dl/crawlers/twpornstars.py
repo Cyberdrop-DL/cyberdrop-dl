@@ -47,11 +47,11 @@ class TwPornstarsCrawler(TwimgCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["p", _post_id]:
-                return await self.media(scrape_item)
+                await self.media(scrape_item)
             case ["hashtag", _slug]:
-                return await self.collection(scrape_item)
+                await self.collection(scrape_item)
             case [_]:
-                return await self.collection(scrape_item)
+                await self.collection(scrape_item)
             case _:
                 raise ValueError
 

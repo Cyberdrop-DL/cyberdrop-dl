@@ -32,7 +32,7 @@ class PimpAndHostCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["album", album_id, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case _:
                 await self.image(scrape_item)
 

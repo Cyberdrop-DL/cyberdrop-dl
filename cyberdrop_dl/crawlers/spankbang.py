@@ -74,18 +74,19 @@ class SpankBangCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [playlist_id, "playlist", _, _page]:
-                return await self.playlist(scrape_item, playlist_id)
+                await self.playlist(scrape_item, playlist_id)
             case [video_id, "video" | "embed" | "play", *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["profile", user, "videos"]:
-                return await self.profile(scrape_item, user)
+                await self.profile(scrape_item, user)
             case ["s", query, *_]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case [id_, "playlist", _]:
                 playlist_id, _, video_id = id_.partition("-")
                 if video_id:
-                    return await self.video(scrape_item, video_id)
-                return await self.playlist(scrape_item, playlist_id)
+                    await self.video(scrape_item, video_id)
+                    return
+                await self.playlist(scrape_item, playlist_id)
             case _:
                 raise ValueError
 
@@ -114,8 +115,9 @@ class SpankBangCrawler(Crawler):
 
             scrape_item.url = resp.url
             video_id = resp.url.parts[1]
-            video = _parse_video(await resp.soup(), video_id)
+            html = await resp.text()
 
+        video = await _parse_video(html, video_id)
         old_db_url2 = self.PRIMARY_URL / video.stream_id / "video"
         if old_db_url2 != old_db_url and await self.check_complete_from_referer(old_db_url2):
             return
@@ -156,10 +158,12 @@ class SpankBangCrawler(Crawler):
                 tg.create_task(self.run(new_item, check_referer=True))
 
 
-def _parse_video(soup: BeautifulSoup, display_id: str) -> Video:
+@aio.to_thread
+def _parse_video(html: str, display_id: str) -> Video:
     # The title of the video is localized
     # soup should be from the main english site
-    if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in soup.get_text():
+    soup = css.soup(html)
+    if soup.select_one(Selector.VIDEO_REMOVED) or "This video is no longer available" in html:
         raise ScrapeError(410)
 
     title_tag = css.select(soup, "div#video h1")
