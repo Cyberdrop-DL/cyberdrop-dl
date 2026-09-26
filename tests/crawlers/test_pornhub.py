@@ -1,7 +1,7 @@
 import pytest
-from bs4 import BeautifulSoup
 
 from cyberdrop_dl.crawlers import pornhub
+from cyberdrop_dl.utils import css
 
 _LD_JSON = (
     '<script type="application/ld+json">{"@type": "VideoObject", "uploadDate": "2025-08-04T16:23:26+00:00"}</script>'
@@ -20,5 +20,5 @@ _NO_DATE = "<html></html>"
     ],
 )
 def test_extr_upload_date(html: str, expected: int | None) -> None:
-    result = pornhub._extr_upload_date(BeautifulSoup(html, "html.parser"))
+    result = pornhub._extr_upload_date(css.soup(html))
     assert result == expected
