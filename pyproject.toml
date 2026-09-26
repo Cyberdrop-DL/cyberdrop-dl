@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.10.0"
+version = "10.10.1dev0"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -26,11 +26,11 @@ dependencies = [
     "brotli >=1.2.0; implementation_name=='cpython' and sys_platform!='ios'",
     "cffi == 2.1.1",
     "curl-cffi >=0.16.3; implementation_name == 'cpython' ",
-    "cyclopts==4.25.3",
-    "idna>=3.19",
+    "cyclopts>=5.0.0",
+    "idna>=3.20",
     "imagesize >= 2.0.1",
     "m3u8 >=6.0.0",
-    "multidict>=6.9.0",
+    "multidict>=6.9.1",
     "propcache>=0.5.4",
     "psutil >=7.2.1; sys_platform != 'android'",
     "pycryptodome >=3.23.0",
