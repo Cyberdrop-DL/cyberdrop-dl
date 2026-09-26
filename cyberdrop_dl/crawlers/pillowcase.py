@@ -30,9 +30,9 @@ class PillowCaseCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["f", file_id]:
-                return await self.file(scrape_item, file_id)
+                await self.file(scrape_item, file_id)
             case ["api", "download" | "get" | "metadata", slug, *_]:
-                return await self.file(scrape_item, file_id=slug.partition(".")[0])
+                await self.file(scrape_item, file_id=slug.partition(".")[0])
             case _:
                 raise ValueError
 

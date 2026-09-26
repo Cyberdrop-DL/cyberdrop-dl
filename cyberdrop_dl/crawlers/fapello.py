@@ -33,9 +33,9 @@ class FapelloComCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [model]:
-                return await self.model(scrape_item, model)
+                await self.model(scrape_item, model)
             case [model, _post_id]:
-                return await self.post(scrape_item, model)
+                await self.post(scrape_item, model)
             case _:
                 raise ValueError
 

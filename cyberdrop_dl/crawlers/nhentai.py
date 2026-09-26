@@ -49,9 +49,9 @@ class NHentaiCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["favorites" | "tag" | "search" | "parody" | "group" | "character" | "artist" as type_, _]:
-                return await self.collection(scrape_item, type_)
+                await self.collection(scrape_item, type_)
             case ["g", _]:
-                return await self.gallery(scrape_item)
+                await self.gallery(scrape_item)
             case _:
                 raise ValueError
 

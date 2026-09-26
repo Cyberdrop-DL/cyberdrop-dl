@@ -77,6 +77,9 @@ class CrawlerFactory:
     def __iter__(self) -> Iterator[Crawler]:
         return iter(self._instances.values())
 
+    def clear(self) -> None:
+        self._instances.clear()
+
 
 @dataclasses.dataclass(slots=True)
 class ScrapeStats:
@@ -292,7 +295,17 @@ class ScrapeMapper:
         stats.url_count.update(
             (crawler.DOMAIN, count) for crawler in self._factory if (count := len(crawler.scraped_items))
         )
-        self._factory = CrawlerFactory(self.manager, self.task_mngr, self.tui)
+
+        # Let GC destroy all crawlers and just keep a reference to the downloaders for the UI
+        dl_caps = tuple(crawler.downloader.capacity for crawler in self._factory)
+
+        def download_queue() -> int:
+            total = sum(cap.waiting for cap in dl_caps)
+            self.tui.files.stats.queued = total
+            return total
+
+        self.tui.downloads.get_queue = download_queue
+        self._factory.clear()
         self._seen_urls.clear()
         for crawler in self._direct_http, self._real_debrid:
             crawler.scraped_items.clear()

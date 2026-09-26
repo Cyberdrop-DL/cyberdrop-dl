@@ -27,11 +27,11 @@ class NudeletedCrawler(KernelVideoSharingCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["videos", *_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["search", query, *_]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case ["tags" as type_, name, *_]:
-                return await self.collection(scrape_item, name, type_)
+                await self.collection(scrape_item, name, type_)
             case _:
                 raise ValueError
 

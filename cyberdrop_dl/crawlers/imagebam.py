@@ -48,11 +48,11 @@ class ImageBamCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["gallery", _]:
-                return await self.gallery(scrape_item)
+                await self.gallery(scrape_item)
             case ["image", _]:
-                return await self.image(scrape_item)
+                await self.image(scrape_item)
             case ["view", _]:
-                return await self.view(scrape_item)
+                await self.view(scrape_item)
             case _:
                 raise ValueError
 

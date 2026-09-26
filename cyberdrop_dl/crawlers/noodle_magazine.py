@@ -5,6 +5,7 @@ import itertools
 import json
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
@@ -54,9 +55,9 @@ class NoodleMagazineCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["watch", _]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["video", query]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case _:
                 raise ValueError
 
@@ -86,21 +87,23 @@ class NoodleMagazineCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        video = _parse_video(soup)
+        video = await _parse_video(soup)
 
         scrape_item.uploaded_at = self.parse_iso_date(video.uploaded_at)
         _, ext = self.get_filename_and_ext(filename=video.content_url.name)
-        filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)
         await self.handle_file(
             video.content_url,
             scrape_item,
             video.title,
             ext,
-            custom_filename=filename,
+            custom_filename=self.create_custom_filename(
+                video.title, ext, file_id=video.id, resolution=video.resolution
+            ),
             debrid_link=video.src,
         )
 
 
+@aio.to_thread
 def _parse_video(soup: BeautifulSoup) -> Video:
 
     _, props = json_ld.find(soup, "contentUrl")

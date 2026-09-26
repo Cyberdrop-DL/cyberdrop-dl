@@ -33,6 +33,24 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://www.pornhub.com/view_video.php?viewkey=65c0930fe408a",
+        "description": "unlisted video",
+        "results": [
+            {
+                "url": "https://www.pornhub.com/embed/65c0930fe408a",
+                "filename": "SpiderGwen Ties Me Up and Uses My Cock [65c0930fe408a][1080p].mp4",
+                "debrid_url": None,
+                "original_filename": "SpiderGwen Ties Me Up and Uses My Cock",
+                "referer": "https://www.pornhub.com/view_video.php?viewkey=65c0930fe408a",
+                "album_id": None,
+                "uploaded_at": 1707091200,
+                "download_folder": "re:Loose Files (PornHub)",
+                "thumbnail": "re:/videos/202402/05/447684541/original/",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://www.pornhub.com/album/36252941",
         "results": [
             {

@@ -26,9 +26,9 @@ class EightMusesCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "8Muses"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "album" in scrape_item.url.parts:
-            return await self.album(scrape_item)
-        raise ValueError
+        if "album" not in scrape_item.url.parts:
+            raise ValueError
+        await self.album(scrape_item)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem) -> None:

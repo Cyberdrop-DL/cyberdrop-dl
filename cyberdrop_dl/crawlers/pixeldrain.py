@@ -78,7 +78,7 @@ class PixelDrainProxyCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["u", _]:
-                return self.handle_external_links(scrape_item)
+                self.handle_external_links(scrape_item)
             case _:
                 raise ValueError
 

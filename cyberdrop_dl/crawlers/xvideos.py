@@ -90,13 +90,13 @@ class XVideosCrawler(Crawler):
             raise ValueError
         match scrape_item.url.parts[1:]:
             case [part, _] if part.startswith("video"):
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case [_ as part, _] if part in _EXTENDED_ACCOUNTS:
-                return await self.account(scrape_item)
+                await self.account(scrape_item)
             case [_ as part, _, "photos" | "post", gallery_id, *_] if part in _EXTENDED_ACCOUNTS:
-                return await self.gallery(scrape_item, gallery_id)
+                await self.gallery(scrape_item, gallery_id)
             case [_ as part] if part not in _EXTENDED_ACCOUNTS:  # channel
-                return await self.account(scrape_item)
+                await self.account(scrape_item)
             case _:
                 raise ValueError
 

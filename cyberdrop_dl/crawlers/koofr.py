@@ -41,11 +41,12 @@ class KooFrCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.host == _SHORT_LINK_CDN.host:
-            return await self.follow_redirect(scrape_item)
+            await self.follow_redirect(scrape_item)
+            return
 
         match scrape_item.url.parts[1:]:
             case ["links", content_id]:
-                return await self.share(scrape_item, content_id)
+                await self.share(scrape_item, content_id)
             case _:
                 raise ValueError
 

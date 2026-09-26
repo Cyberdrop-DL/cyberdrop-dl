@@ -37,15 +37,15 @@ class NsfwXXXCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["post", post_id]:
-                return await self.post(scrape_item, post_id)
+                await self.post(scrape_item, post_id)
             case ["user", user]:
-                return await self.user(scrape_item, user)
+                await self.user(scrape_item, user)
             case ["r", subreddit]:
-                return await self.subreddit(scrape_item, subreddit)
+                await self.subreddit(scrape_item, subreddit)
             case ["category", name]:
-                return await self.category(scrape_item, name)
+                await self.category(scrape_item, name)
             case ["search"] if query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case _:
                 raise ValueError
 

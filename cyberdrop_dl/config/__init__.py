@@ -119,6 +119,8 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     sort: Sort = Field(default_factory=Sort)
     subfolders: SubFolders = Field(default_factory=SubFolders)
     ui: UIOptions = Field(default_factory=UIOptions)
+    update_check: Annotated[bool, Parameter(alias=("-U"))] = True
+    "Check for updates at the end of the session"
 
     _resolved: bool = False
     _sources: tuple[Path, ...] = ()

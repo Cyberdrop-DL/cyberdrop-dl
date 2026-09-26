@@ -34,12 +34,18 @@ class DeferredModel(
 
 _warned: set[tuple[type, str]] = set()
 
+# Merges re-validate from a full dump, marking every field as set; this context lets model_post_init tell.
+MERGE_CONTEXT: Final[dict[str, bool]] = {"merging": True}
+
 
 @DEFAULT_PARAMETER
 class ConfigModel(DeferredModel, extra="forbid"):
     @override
     def model_post_init(self, context: Any, /) -> None:
         super().model_post_init(context)
+        if context is MERGE_CONTEXT:
+            return
+
         deprecated = self.model_fields_set.intersection(_deprecated_fields(self))
         if not deprecated:
             return
@@ -184,7 +190,17 @@ def merge_models[M: BaseModel](
     current_data = default.model_dump()
     new_data = new.model_dump(exclude_unset=True)
     updated_dict = merge_dicts(current_data, new_data, additive_keys)
-    return default.model_validate(updated_dict)
+    merged = default.model_validate(updated_dict, context=MERGE_CONTEXT)
+    _restore_fields_set(merged, default, new)
+    return merged
+
+
+def _restore_fields_set(merged: BaseModel, default: BaseModel, new: BaseModel) -> None:
+    # Reads __dict__ instead of getattr so deprecated fields don't trigger their DeprecationWarning.
+    merged.__pydantic_fields_set__.intersection_update(default.model_fields_set | new.model_fields_set)
+    for name, value in merged.__dict__.items():
+        if isinstance(value, BaseModel):
+            _restore_fields_set(value, default.__dict__[name], new.__dict__[name])
 
 
 @fast_cache

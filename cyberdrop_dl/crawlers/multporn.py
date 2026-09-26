@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, parse_url
@@ -31,16 +32,16 @@ class MultPornCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["comics" | "hentai_manga" | "gay_porn_comics" | "humor", _]:
-                return await self.comic(scrape_item)
+                await self.comic(scrape_item)
             case ["video", _]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def comic(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name, date = _extract_info(soup)
+        name, date = await _extract_info(soup)
         scrape_item.uploaded_at = self.parse_iso_date(date)
         scrape_item.setup_as_album(self.create_title(name))
         async with self.new_task_group() as tg:
@@ -51,7 +52,7 @@ class MultPornCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
         soup = await self.request_soup(scrape_item.url)
-        name, date = _extract_info(soup)
+        name, date = await _extract_info(soup)
         scrape_item.uploaded_at = self.parse_iso_date(date)
         filename = self.create_custom_filename(name, ext := ".mp4")
         src = css.select(soup, ".content video source", "src")
@@ -66,6 +67,7 @@ def _extract_images(soup: BeautifulSoup) -> Generator[AbsoluteHttpURL]:
         yield url.with_path(path)
 
 
+@aio.to_thread
 def _extract_info(soup: BeautifulSoup) -> tuple[str, str]:
     name = css.select_text(soup, "h1#page-title")
     date = css.select(soup, "meta[name='dcterms.date']", "content")

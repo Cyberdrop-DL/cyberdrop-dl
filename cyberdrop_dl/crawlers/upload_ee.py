@@ -20,7 +20,7 @@ class UploadEECrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["files", _, *_]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case _:
                 raise ValueError
 

@@ -21,7 +21,7 @@ class CloudMailRuCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["public", *rest] if rest:
-                return await self.public(scrape_item, path="/".join(rest))
+                await self.public(scrape_item, path="/".join(rest))
             case _:
                 raise ValueError
 

@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final, override
 
 import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
-from bs4 import BeautifulSoup
 from multidict import CIMultiDict, CIMultiDictProxy
 from typing_extensions import TypeVar
 
@@ -20,11 +19,12 @@ from cyberdrop_dl.clients import get_logger, wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import parse_url, truncated_preview
+from cyberdrop_dl.utils import css, parse_url, truncated_preview
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from bs4 import BeautifulSoup
     from curl_cffi.requests.models import Response as CurlResponse
 else:
     try:
@@ -104,9 +104,9 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
                 return json.loads(self._text)
 
             if "html" in self.content_type:
-                return BeautifulSoup(self._text, "html.parser").prettify(formatter="html")
+                return css.soup(self._text).prettify(formatter="html")
 
-        if not ("json" in self.content_type or "html" in self.content_type):
+        if not any(cont in self.content_type for cont in ("json", "html", "text")):
             return f"<{self.content_type or 'application/octet-stream'} payload>"
 
         return self._text
@@ -150,11 +150,11 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     async def aclose(self) -> None: ...
 
     @classmethod
-    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | _FlareSolverrResponse | _CurlResponse | _WreqResponse:
+    def create(cls, resp: _ResponseT, /) -> _AIOHTTPResponse | FlareSolverrResponse | _CurlResponse | _WreqResponse:
         try:
             cls_ = {
                 ClientResponse: _AIOHTTPResponse,
-                FlaresolverrSolution: _FlareSolverrResponse,
+                FlaresolverrSolution: FlareSolverrResponse,
                 CurlResponse: _CurlResponse,
                 wreq.Response: _WreqResponse,
             }[type(resp)]
@@ -211,7 +211,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     async def soup(self, encoding: str | None = None) -> BeautifulSoup:
         self.__check_content_type("text", "html", expecting="HTML")
         if content := await self.text(encoding):
-            return BeautifulSoup(content, "html.parser")
+            return await css.asoup(content)
 
         raise ScrapeError(204, "Received empty HTML response")
 
@@ -376,8 +376,12 @@ class _WreqResponse(AbstractResponse[wreq.Response]):
         )
 
 
-class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
+class FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
     __slots__ = ()
+
+    @property
+    def solution(self) -> FlaresolverrSolution:
+        return self._resp
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -416,17 +420,18 @@ class _FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
             return self._resp.content
 
         try:
-            return self._load_json(self._text)
+            return await self._load_json(self._text)
         finally:
             self._check_json(content_type)
 
-    def _load_json(self, text: str) -> Any:
+    async def _load_json(self, text: str) -> Any:
         try:
             return json.loads(text)
         except ValueError:
             if "html" not in self.content_type:
                 raise
-            text = BeautifulSoup(text, "html.parser").text
+
+            text = (await css.asoup(text)).text
             data = json.loads(text)
             self.content_type = "application/json"
             self._text = text

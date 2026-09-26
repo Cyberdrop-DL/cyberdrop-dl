@@ -16,8 +16,6 @@ import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, final
 
-from bs4 import BeautifulSoup, Tag
-
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import LoginError, MaxChildrenError, ScrapeError
@@ -28,7 +26,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Sequence
 
-    from aiohttp import ClientResponse
+    from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -612,20 +610,6 @@ def get_thread_page_and_post(
     post_id = find_number(post_name)
     page_number = find_number(page_name) or 1
     return page_number, post_id
-
-
-async def check_is_not_last_page(response: ClientResponse, selectors: MessageBoardSelectors) -> bool:
-    soup = BeautifulSoup(await response.text(), "html.parser")
-    return not is_last_page(soup, selectors)
-
-
-def is_last_page(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> bool:
-    try:
-        last_page = css.select(soup, *selectors.last_page)
-        current_page = css.select(soup, *selectors.current_page)
-    except (AttributeError, IndexError, css.SelectorError):
-        return True
-    return current_page == last_page
 
 
 def get_post_title(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> str:

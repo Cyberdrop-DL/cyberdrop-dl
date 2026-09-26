@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 class RedtubeCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        " Video": (
+        "Video": (
             "/<video_id>",
             "?id=<video_id>",
         ),

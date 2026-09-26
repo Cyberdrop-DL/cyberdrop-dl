@@ -43,9 +43,9 @@ class XXXBunkerCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["search" | "categories" as type_, name]:
-                return await self.playlist(scrape_item, name, type_)
+                await self.playlist(scrape_item, name, type_)
             case [username, "favoritevideos" as type_]:
-                return await self.playlist(scrape_item, f"user {username}", type_)
+                await self.playlist(scrape_item, f"user {username}", type_)
             case [_]:
                 await self.video(scrape_item)
             case _:

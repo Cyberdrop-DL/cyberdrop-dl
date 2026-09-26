@@ -24,7 +24,7 @@ class BunkrAlbumsCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [] | [""] if query := scrape_item.url.query.get("search"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case _:
                 raise ValueError
 

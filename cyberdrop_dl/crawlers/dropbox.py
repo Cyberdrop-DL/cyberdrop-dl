@@ -49,13 +49,13 @@ class DropboxCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["s" | "sh", _, *_]:
-                return await self.follow_db_redirect(scrape_item)
+                await self.follow_db_redirect(scrape_item)
             case ["scl", "fi", _, *_]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case ["scl", "fo", link_key, secure_hash]:
-                return await self.folder(scrape_item, link_key, secure_hash)
+                await self.folder(scrape_item, link_key, secure_hash)
             case ["scl", "fo", link_key, secure_hash, _]:
-                return await self.file(scrape_item)
+                await self.file(scrape_item)
             case _:
                 raise ValueError
 

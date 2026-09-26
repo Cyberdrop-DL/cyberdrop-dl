@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.8.0
+cyberdrop-dl v10.10.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.8.0
+cyberdrop-dl v10.10.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -117,51 +117,54 @@ Download URLs
 │ URLS_OR_FILES  File(s)/ URL(s) to download                                                       │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Parameters ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --input-file                        Text/HTML file with URL(s) to download                       │
-│ --input-folder                      Read all '.txt' within this folder for URL(s) to download    │
-│                                     (non recursive).                                             │
-│                                                 All URLs within the same file will be grouped in │
-│                                     the own subfolder (the filename) within the downloads folder │
-│ --input -i                          File/folder with URL(s) to download (non recursive)          │
-│ --config-file --config -c           YAML file to use as config                                   │
-│ --cache-file                        JSON file to use as cache                                    │
-│ --database-file --db                SQLite file to use as database                               │
-│ --cookies                           File/folder to import cookies from (.txt Netscape files)     │
-│ --deep-scrape --no-deep-scrape      Make additional requests while scraping (slower)             │
-│                                     [default: False]                                             │
-│ --delete-empty-folders              Delete empty files and folders after a run                   │
-│   --no-delete-empty-folders         [default: True]                                              │
-│ --delete-partial-files              Delete partial files after a run                             │
-│   --no-delete-partial-files         [default: False]                                             │
-│ --download-folder --output -o -d    Base output path for all downloads                           │
-│                                     [default: downloads/cyberdrop-dl]                            │
-│ --dump-json -j --no-dump-json       Save details about each file (both skipped and downloaded)   │
-│                                     to a .jsonl file                                             │
-│                                     [default: False]                                             │
-│ --ignore-history                    Download files even if the already are marked as downloaded  │
-│   --no-ignore-history               on the database                                              │
-│                                     [default: False]                                             │
-│ --ignore-hashes --no-ignore-hashes  Download files even if their hash matches a file downloaded  │
-│                                     on the database                                              │
-│                                     [default: False]                                             │
-│ --max-file-name-length              Max number of characters a filename should have. Filenames   │
-│                                     longer that this will be truncated                           │
-│                                     [default: 95]                                                │
-│ --max-folder-name-length            Max number of characters a folder should have. Filenames     │
-│                                     longer that this will be truncated                           │
-│                                     [default: 60]                                                │
-│ --max-thread-depth                  Restricts how many levels of nested threads are scraped on a │
-│                                     forum                                                        │
-│                                     [default: 0]                                                 │
-│ --max-thread-folder-depth           Max number of nested folders CDL will create when            │
-│                                     maximum_thread_depth is greater that 0                       │
-│ --min-free-space                    Minimum free space require to start new downloads            │
-│                                     [default: 5368709120]                                        │
-│ --mtime --no-mtime                  Use original upload date as modification date for downloaded │
-│                                     file                                                         │
-│                                     [default: True]                                              │
-│ --restrict-path                     [choices: unix, windows, no_emoji, ascii]                    │
-│   --restrict-filenames              [default: ()]                                                │
+│ --input-file                         Text/HTML file with URL(s) to download                      │
+│ --input-folder                       Read all '.txt' within this folder for URL(s) to download   │
+│                                      (non recursive).                                            │
+│                                                  All URLs within the same file will be grouped   │
+│                                      in the own subfolder (the filename) within the downloads    │
+│                                      folder                                                      │
+│ --input -i                           File/folder with URL(s) to download (non recursive)         │
+│ --config-file --config -c            YAML file to use as config                                  │
+│ --cache-file                         JSON file to use as cache                                   │
+│ --database-file --db                 SQLite file to use as database                              │
+│ --cookies                            File/folder to import cookies from (.txt Netscape files)    │
+│ --deep-scrape --no-deep-scrape       Make additional requests while scraping (slower)            │
+│                                      [default: False]                                            │
+│ --delete-empty-folders               Delete empty files and folders after a run                  │
+│   --no-delete-empty-folders          [default: True]                                             │
+│ --delete-partial-files               Delete partial files after a run                            │
+│   --no-delete-partial-files          [default: False]                                            │
+│ --download-folder --output -o -d     Base output path for all downloads                          │
+│                                      [default: downloads/cyberdrop-dl]                           │
+│ --dump-json -j --no-dump-json        Save details about each file (both skipped and downloaded)  │
+│                                      to a .jsonl file                                            │
+│                                      [default: False]                                            │
+│ --ignore-history                     Download files even if the already are marked as downloaded │
+│   --no-ignore-history                on the database                                             │
+│                                      [default: False]                                            │
+│ --ignore-hashes --no-ignore-hashes   Download files even if their hash matches a file downloaded │
+│                                      on the database                                             │
+│                                      [default: False]                                            │
+│ --max-file-name-length               Max number of characters a filename should have. Filenames  │
+│                                      longer that this will be truncated                          │
+│                                      [default: 95]                                               │
+│ --max-folder-name-length             Max number of characters a folder should have. Filenames    │
+│                                      longer that this will be truncated                          │
+│                                      [default: 60]                                               │
+│ --max-thread-depth                   Restricts how many levels of nested threads are scraped on  │
+│                                      a forum                                                     │
+│                                      [default: 0]                                                │
+│ --max-thread-folder-depth            Max number of nested folders CDL will create when           │
+│                                      maximum_thread_depth is greater that 0                      │
+│ --min-free-space                     Minimum free space require to start new downloads           │
+│                                      [default: 5368709120]                                       │
+│ --mtime --no-mtime                   Use original upload date as modification date for           │
+│                                      downloaded file                                             │
+│                                      [default: True]                                             │
+│ --restrict-path                      [choices: unix, windows, no_emoji, ascii]                   │
+│   --restrict-filenames               [default: ()]                                               │
+│ --update-check -U --no-update-check  Check for updates at the end of the session                 │
+│                                      [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
 │ --crawlers.disabled                  Name of crawlers to disable for the current run             │
@@ -172,6 +175,16 @@ Download URLs
 │                                      alas]                                                       │
 │                                      [default: ('mp3-320', 'mp3', 'aac-hi', 'wav', 'flac',       │
 │                                      'vorbis', 'aiff', 'alas')]                                  │
+│ --crawlers.bluesky.external          Parse and download embeds from third-party sites            │
+│   --crawlers.bluesky.no-external     [default: True]                                             │
+│ --crawlers.bluesky.threads           Downloads all posts in a thread (All direct replies from OP │
+│   --crawlers.bluesky.no-threads      to their own post)                                          │
+│                                      [default: True]                                             │
+│ --crawlers.bluesky.content-urls      Parse and try to download any URL found inside the text of  │
+│   --crawlers.bluesky.no-content-url  a post                                                      │
+│   s                                  [default: True]                                             │
+│ --crawlers.bluesky.reposts           Download media from reposts in the user's timeline          │
+│   --crawlers.bluesky.no-reposts      [default: False]                                            │
 │ --crawlers.clonr.use-source          Ignore files in clone and process the original Mega.nz URL  │
 │   --crawlers.clonr.no-use-source     [default: False]                                            │
 │ --crawlers.clonr.zip                 Download entire clone as a single ZIP file                  │
@@ -213,8 +226,11 @@ Download URLs
 │   -crawlers.only-haven.no-attachmen  `file`)                                                     │
 │   ts                                 [default: True]                                             │
 │ --crawlers.only-haven.content-urls   Download any URL found inside the description (text) of a   │
-│   --crawlers.only-haven.no-content-  post (slower)                                               │
+│   --crawlers.only-haven.no-content-  post                                                        │
 │   urls                               [default: True]                                             │
+│ --crawlers.only-haven.expand-posts   Make an additional API request for each post to get         │
+│   --crawlers.only-haven.no-expand-p  original filenames and the content/text (slower)            │
+│   osts                               [default: False]                                            │
 │ --crawlers.only-haven.embed          Download the embedded file from third party sites (if       │
 │   --crawlers.only-haven.no-embed     any)(mega.nz, pcloud, dropbox, etc..)                       │
 │                                      [default: True]                                             │
@@ -224,8 +240,11 @@ Download URLs
 │   --crawlers.pawchive.no-attachment  `file`)                                                     │
 │   s                                  [default: True]                                             │
 │ --crawlers.pawchive.content-urls     Download any URL found inside the description (text) of a   │
-│   --crawlers.pawchive.no-content-ur  post (slower)                                               │
+│   --crawlers.pawchive.no-content-ur  post                                                        │
 │   ls                                 [default: True]                                             │
+│ --crawlers.pawchive.expand-posts     Make an additional API request for each post to get         │
+│   --crawlers.pawchive.no-expand-pos  original filenames and the content/text (slower)            │
+│   ts                                 [default: False]                                            │
 │ --crawlers.pawchive.embed            Download the embedded file from third party sites (if       │
 │   --crawlers.pawchive.no-embed       any)(mega.nz, pcloud, dropbox, etc..)                       │
 │                                      [default: True]                                             │
@@ -235,7 +254,7 @@ Download URLs
 │                                      'videos/upload')]                                           │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
-│ --crawlers.twitter.cards             Parse and download cards in a post (embeds from thirdparty  │
+│ --crawlers.twitter.cards             Parse and download cards in a post (embeds from third-party │
 │   --crawlers.twitter.no-cards        sites)                                                      │
 │                                      [default: True]                                             │
 │ --crawlers.twitter.threads           Downloads all posts in a thread (All direct replies from OP │
@@ -366,6 +385,9 @@ Download URLs
 │ --logs.files.last-forum-post         Save the URL of the last scraped post from each thread to   │
 │                                      this file (MUST BE .csv)                                    │
 │                                      [default: last_forum_post.csv]                              │
+│ --logs.files.dedupe                  Save every duplicate deleted by the deduper, and the file   │
+│                                      it matched, to this file (MUST BE .csv)                     │
+│                                      [default: dedupe.csv]                                       │
 │ --logs.folder                        Base folder to prepend to log files paths (if they are not  │
 │                                      absolute)                                                   │
 │ --logs.expire-after                  Delete all log files inside `--logs.folder` if they are     │

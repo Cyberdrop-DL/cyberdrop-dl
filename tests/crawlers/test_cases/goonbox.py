@@ -68,6 +68,24 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://goonbox.cr/u/backgroundrock?tab=images",
+        "description": "user inamges",
+        "results": [
+            {
+                "url": "https://simp6.cuckcapital.cr/images4/43f5ee4e-ef3e-4977-99cc-1673ec4a0b87.png",
+                "filename": "43f5ee4e-ef3e-4977-99cc-1673ec4a0b87.png",
+                "debrid_url": None,
+                "original_filename": "43f5ee4e-ef3e-4977-99cc-1673ec4a0b87.png",
+                "referer": "https://goonbox.cr/img/t2WQlbP",
+                "album_id": None,
+                "uploaded_at": 1789059399,
+                "download_folder": "re:backgroundrock [user] (GoonBox)/images",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://jpg6.su/a/testalbum.YnfD4p",
         "results": [
             {

@@ -32,9 +32,9 @@ class ClypItCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [audio_id]:
-                return await self.audio(scrape_item, audio_id)
+                await self.audio(scrape_item, audio_id)
             case ["user", user_id]:
-                return await self.user(scrape_item, user_id)
+                await self.user(scrape_item, user_id)
             case _:
                 raise ValueError
 

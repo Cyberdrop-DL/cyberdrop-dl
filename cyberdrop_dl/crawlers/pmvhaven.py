@@ -41,13 +41,13 @@ class PMVHavenCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["video", slug] if video_id := slug.rsplit("_", 1)[-1]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["search"] if query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case ["users" | "profile", user_id]:
-                return await self.profile(scrape_item, user_id)
+                await self.profile(scrape_item, user_id)
             case ["playlists", playlist_id]:
-                return await self.playlist(scrape_item, playlist_id)
+                await self.playlist(scrape_item, playlist_id)
             case _:
                 raise ValueError
 

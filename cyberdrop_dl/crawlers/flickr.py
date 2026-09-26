@@ -28,10 +28,10 @@ class FlickrCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["photos", user, "albums", photoset_id, *_]:
-                return await self.photoset(scrape_item, user, photoset_id)
+                await self.photoset(scrape_item, user, photoset_id)
             case ["photos", user, photo_id, *_]:
                 scrape_item.url = self.PRIMARY_URL / "photos" / user / photo_id
-                return await self.photo(scrape_item, photo_id)
+                await self.photo(scrape_item, photo_id)
             case _:
                 raise ValueError
 

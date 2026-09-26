@@ -1,8 +1,8 @@
 import pytest
-from bs4 import BeautifulSoup
 
 from cyberdrop_dl.crawlers import bunkr
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css
 
 
 def test_album_parser() -> None:
@@ -153,5 +153,5 @@ def test_fix_tumb(url: str, expected: str | None) -> None:
     ],
 )
 def test_extract_js_vars(js_value: str, expected: str) -> None:
-    soup = BeautifulSoup(f"<script>var jsCDN = {js_value};</script>", "html.parser")
+    soup = css.soup(f"<script>var jsCDN = {js_value};</script>")
     assert bunkr._extract_js_vars(soup)["jsCDN"] == expected

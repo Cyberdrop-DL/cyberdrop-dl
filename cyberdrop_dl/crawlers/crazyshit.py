@@ -25,9 +25,9 @@ class CrazyShitCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["cnt", "medias", slug]:
                 video_id = str(int(slug.partition("-")[0]))
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["series", _]:
-                return await self.series(scrape_item)
+                await self.series(scrape_item)
             case _:
                 raise ValueError
 

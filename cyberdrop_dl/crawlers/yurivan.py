@@ -32,9 +32,9 @@ class YuriVanCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["story", story_id, "read"] if chapter := scrape_item.url.query.get("chapter"):
-                return await self.chapter(scrape_item, story_id, int(chapter))
+                await self.chapter(scrape_item, story_id, int(chapter))
             case ["story", story_id, *_]:
-                return await self.story(scrape_item, story_id)
+                await self.story(scrape_item, story_id)
             case _:
                 raise ValueError
 

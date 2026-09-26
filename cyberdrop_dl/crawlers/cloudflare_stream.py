@@ -59,10 +59,10 @@ class CloudflareStreamCrawler(Crawler):
             video_id = jwt.payload["sub"]
             if jwt.is_expired():
                 self.raise_exc(scrape_item, ScrapeError(401, "Access token to the video has expired"))
-                return None
+                return
 
         scrape_item.url = _DEFAULT_VIDEO_CDN / video_id
-        return await self.video(scrape_item, video_id, token)
+        await self.video(scrape_item, video_id, token)
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str, token: str | None) -> None:

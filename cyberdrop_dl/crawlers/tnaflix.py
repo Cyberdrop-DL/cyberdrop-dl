@@ -46,11 +46,11 @@ class TNAFlixCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_, _, name] if name.startswith("video") and (video_id := name.removeprefix("video")):
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["search" as type_] if query := scrape_item.url.query.get("what"):
-                return await self.collection(scrape_item, type_, query)
+                await self.collection(scrape_item, type_, query)
             case ["channel" | "profile" as type_, _]:
-                return await self.collection(scrape_item, type_)
+                await self.collection(scrape_item, type_)
             case _:
                 raise ValueError
 

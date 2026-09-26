@@ -99,6 +99,49 @@ crawlers:
       - alas
 ```
 
+# bluesky
+
+```yaml
+crawlers:
+  bluesky:
+    content_urls: true
+    external: true
+    reposts: false
+    threads: true
+```
+
+## `external`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and download embeds from third-party sites
+
+## `content_urls`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Parse and try to download any URL found inside the text of a post.
+
+## `threads`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Downloads all posts in a thread (All direct replies from OP to their own post)
+
+## `reposts`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Download media from reposts in the user's timeline
+
 # Clyp.it
 
 ```yaml
@@ -162,7 +205,7 @@ Default format for presentations (can be overridden per URL with the 'format' qu
 
 Download episodes with english audio tracks instead of japanese (if available)
 
-# Pawchive
+# Pawchive / OnlyHaven
 
 ## `file`
 
@@ -189,8 +232,20 @@ Download all attachments in a post (may or may not include `file`)
 Scan the description (text) in a post and download any URL found
 
 {% hint style="warning" %}
-This option slows down scraping significally. The default response from a search query does not return the content of each post.
-`cyberdrop-dl` needs to make an additional request for each post to get its content (50x requests in total).
+This option slows down scraping significally (50x requests in total)
+{% endhint %}
+
+## `expand_posts`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+When crawling profiles/favorites/searchs results, make an additional request per post to get the original filenames of files and the content/text in the post.
+To download deferred big files, this option must be enabled
+
+{% hint style="warning" %}
+This option slows down scraping significally (100x requests in total)
 {% endhint %}
 
 ## `embed`

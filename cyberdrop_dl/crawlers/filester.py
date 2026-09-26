@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import dataclasses
 import time
@@ -45,9 +46,9 @@ class FilesterCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["d", slug]:
-                return await self.file(scrape_item, slug)
+                await self.file(scrape_item, slug)
             case ["f", slug]:
-                return await self.folder(scrape_item, slug)
+                await self.folder(scrape_item, slug)
             case _:
                 raise ValueError
 
@@ -57,7 +58,7 @@ class FilesterCrawler(Crawler):
             return
 
         soup = await self._request_soup_w_pass(scrape_item.url, scrape_item.password)
-        file = _parse_file(soup)
+        file = await asyncio.to_thread(_parse_file, soup)
 
         if file.hash and await self.check_complete_by_hash(scrape_item.url, file.hash.algo, file.hash.cheksum):
             return

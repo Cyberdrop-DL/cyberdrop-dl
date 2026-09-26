@@ -37,9 +37,9 @@ class CaraCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["post", user_name]:
-                return await self.post(scrape_item, user_name)
+                await self.post(scrape_item, user_name)
             case [user_name]:
-                return await self.user(scrape_item, user_name)
+                await self.user(scrape_item, user_name)
             case _:
                 raise ValueError
 

@@ -8,18 +8,17 @@ from __future__ import annotations
 import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
 from cyberdrop_dl.crawlers._forum import MessageBoardCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 from .models import AvailablePost, PostStream, Topic
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, Iterable
+    from collections.abc import AsyncGenerator, AsyncIterable
 
     import yarl
 
@@ -118,24 +117,20 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
     async def post(self, scrape_item: ScrapeItem, /, post: AvailablePost) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         title = self.create_separate_post_title(post.title, str(post.id), post.created_at)
         scrape_item.setup_as_post(title)
-        for link in self.extract_links(post):
-            await self.handle_link(scrape_item, link)
+        async for link in self.extract_links(post):
+            self.create_task(self.handle_link(scrape_item, link))
 
-    def extract_links(self, post: AvailablePost) -> Iterable[AbsoluteHttpURL]:
-        def iter_links() -> Iterable[AbsoluteHttpURL]:
-            soup = BeautifulSoup(post.content_html, "html.parser")
-            images = css.iselect(soup, *css.images)
-            links = css.iselect(soup, *css.links)
-            external_links = (ref.url for ref in post.link_counts)
+    async def extract_links(self, post: AvailablePost) -> AsyncGenerator[AbsoluteHttpURL]:
+        soup = await css.asoup(post.content_html)
+        images = css.iselect(soup, *css.images)
+        links = css.iselect(soup, *css.links)
+        external_links = (ref.url for ref in post.link_counts)
 
-            for link_str in dict.fromkeys(itertools.chain(external_links, images, links)):
-                try:
-                    if link_str:
-                        yield self.parse_url(link_str)
-                except Exception:  # noqa: BLE001, S112
-                    continue
-
-        return iter_links()
+        for link_str in filter(None, unique(itertools.chain(external_links, images, links))):
+            try:
+                yield self.parse_url(link_str)
+            except Exception:  # noqa: BLE001, S112
+                continue
 
     @classmethod
     def parse_url(

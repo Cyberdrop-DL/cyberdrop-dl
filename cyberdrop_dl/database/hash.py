@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -17,6 +19,18 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+_PATH_EXISTS = "path_exists"
+"""Name of the custom SQLite function registered by `HashTable.prune_missing_files`"""
+
+_WHERE_MISSING = f"WHERE {_PATH_EXISTS}(folder, download_filename) = 0"
+
+
+@dataclasses.dataclass(slots=True)
+class PruneStats:
+    hash_rows: int = 0
+    file_rows: int = 0
+    dry_run: bool = False
 
 
 @dataclasses.dataclass(slots=True)
@@ -91,6 +105,32 @@ class HashTable(Table, name="hash"):
         async with self.db.reader() as db_conn:
             cursor = await db_conn.execute(query, (hash_type, hash_value))
             return await cursor.fetchone() is not None
+
+    async def prune_missing_files(self, *, dry_run: bool = False) -> PruneStats:
+        """Delete every `hash` and `files` row whose file is no longer on disk."""
+        stats = PruneStats(dry_run=dry_run)
+        try:
+            if dry_run:
+                async with self.db.reader() as db_conn:
+                    await _register_path_exists(db_conn)
+                    stats.hash_rows = await _count_missing(db_conn, "hash")
+                    stats.file_rows = await _count_missing(db_conn, "files")
+
+                return stats
+
+            # Foreign keys are never enabled at runtime, so deletes do not cascade. `hash` goes first
+            # so a failure can never leave a hash row pointing at a files row that is already gone
+            async with self.db.writer() as db_conn:
+                await _register_path_exists(db_conn)
+                stats.hash_rows = await _delete_missing(db_conn, "hash")
+                stats.file_rows = await _delete_missing(db_conn, "files")
+                await db_conn.commit()
+
+            return stats
+        finally:
+            # The answers are only good for as long as this one prune. Do not hold on to them, or to
+            # the memory, once it is over
+            _path_exists_inner.cache_clear()
 
     async def insert_or_update_hash_db(
         self,
@@ -168,3 +208,43 @@ class HashTable(Table, name="hash"):
                 ),
             )
             await db_conn.commit()
+
+
+def _path_exists(folder: str, download_filename: str) -> bool:
+    # `os.path` instead of `pathlib` because a large library means hundreds of thousands of these,
+    # and building a Path for each one is not free
+    return _path_exists_inner(os.path.join(folder, download_filename))  # noqa: PTH118
+
+
+@functools.lru_cache(maxsize=100_000)
+def _path_exists_inner(path: str) -> bool:
+    # Every hash of a file shares its path, so the same path is looked up once per `hash` row plus
+    # once for its `files` row. Bounded because a large library can hold millions of rows; the worst
+    # an eviction costs us is one repeated system call
+    try:
+        _ = os.stat(path)  # noqa: PTH116
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError):
+        # `os.path.exists` reports all of these as "missing". Here they mean we could not find out
+        # (no permission, an unreachable network drive), which is not a reason to delete the row
+        return True
+    return True
+
+
+async def _register_path_exists(db_conn: aiosqlite.Connection) -> None:
+    # Deterministic does not memoize calls with different arguments, that is what the cache above is
+    # for. It lets SQLite treat the call as a pure expression, which is what we want here
+    await db_conn.create_function(_PATH_EXISTS, 2, _path_exists, deterministic=True)
+
+
+async def _delete_missing(db_conn: aiosqlite.Connection, table: str) -> int:
+    cursor = await db_conn.execute(f"DELETE FROM {table} {_WHERE_MISSING};")  # noqa: S608
+    return cursor.rowcount
+
+
+async def _count_missing(db_conn: aiosqlite.Connection, table: str) -> int:
+    cursor = await db_conn.execute(f"SELECT COUNT(*) AS count FROM {table} {_WHERE_MISSING};")  # noqa: S608
+    row = await cursor.fetchone()
+    assert row is not None
+    return row["count"]

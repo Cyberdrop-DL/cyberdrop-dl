@@ -24,10 +24,10 @@ class XasiatCrawler(KernelVideoSharingCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["albums", album_id, _, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["videos", _, _, *_]:
-                return await self.video(scrape_item)
+                await self.video(scrape_item)
             case ["get_image", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError

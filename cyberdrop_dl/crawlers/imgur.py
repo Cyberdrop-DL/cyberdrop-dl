@@ -49,14 +49,15 @@ class ImgurCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if scrape_item.url.host == _IMAGE_CDN.host:
-            return await self.direct_file(scrape_item)
+            await self.direct_file(scrape_item)
+            return
 
         match scrape_item.url.parts[1:]:
             case ["a", album_id]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case [slug]:
                 image_id = slug.partition(".")[0]
-                return await self.image(scrape_item, image_id)
+                await self.image(scrape_item, image_id)
             case _:
                 raise ValueError
 

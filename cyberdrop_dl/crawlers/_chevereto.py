@@ -70,15 +70,15 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
         match scrape_item.url.parts[1:]:
             case ["a" | "album" | "category", album_slug]:
-                return await self.album(scrape_item, _id(album_slug))
+                await self.album(scrape_item, _id(album_slug))
             case ["img" | "image" | "video" | "videos", _]:
-                return await self.media(scrape_item)
+                await self.media(scrape_item)
             case ["images", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case [_, "albums"]:
-                return await self.profile(scrape_item, albums=True)
+                await self.profile(scrape_item, albums=True)
             case [_]:
-                return await self.profile(scrape_item)
+                await self.profile(scrape_item)
             case _:
                 raise ValueError
 
@@ -203,7 +203,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
         await self.direct_file(scrape_item, source)
 
     def _get_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
-        for item in soup.select(".list-item[data-object]"):
+        for item in css.iselect(soup, ".list-item[data-object]"):
             web_url = self.parse_url(css.select(item, "a.image-container", "href"))
             encoded_data = css.attr(item, "data-object")
             data = json.loads(urllib.parse.unquote(encoded_data))

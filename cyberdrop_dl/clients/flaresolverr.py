@@ -57,6 +57,7 @@ class Solution:
     url: AbsoluteHttpURL
     user_agent: str
     status: int
+    turnstile_token: str | None = None
     id: str = dataclasses.field(init=False, default="")
 
     @staticmethod
@@ -68,6 +69,7 @@ class Solution:
             content=solution["response"],
             url=AbsoluteHttpURL(solution["url"]),
             headers=CIMultiDictProxy(CIMultiDict(solution["headers"])),
+            turnstile_token=solution.get("turnstile_token"),
         )
 
 
@@ -341,7 +343,7 @@ def _parse_cookies(cookies: Iterable[Mapping[str, Any]]) -> SimpleCookie:
     return simple_cookie
 
 
-def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
+async def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
     mismatch_ua_msg = (
         "Config user_agent and Flaresolverr user_agent do not match:"
         f"\n  Cyberdrop-DL: '{cdl_user_agent}'"
@@ -352,7 +354,7 @@ def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
 
     if type(solution.content) is str:
         try:
-            ddos_guard.check_html(solution.content)
+            await ddos_guard.check_html(solution.content)
         except DDOSGuardError as e:
             if solution.user_agent != cdl_user_agent:
                 e.add_note(mismatch_ua_msg)

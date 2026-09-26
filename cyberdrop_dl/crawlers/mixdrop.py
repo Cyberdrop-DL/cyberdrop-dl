@@ -32,7 +32,7 @@ class MixDropCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["f" | "e", file_id]:
-                return await self.file(scrape_item, file_id)
+                await self.file(scrape_item, file_id)
             case _:
                 raise ValueError
 

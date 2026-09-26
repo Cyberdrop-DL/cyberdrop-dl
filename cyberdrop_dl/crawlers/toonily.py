@@ -27,9 +27,9 @@ class ToonilyCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["serie", _]:
-                return await self.series(scrape_item)
+                await self.series(scrape_item)
             case ["serie", _, chapter] if chapter.startswith("chapter-"):
-                return await self.chapter(scrape_item)
+                await self.chapter(scrape_item)
             case _:
                 raise ValueError
 

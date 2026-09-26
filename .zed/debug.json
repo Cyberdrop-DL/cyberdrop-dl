@@ -18,6 +18,7 @@
       "2",
       "--flaresolverr",
       "http://localhost:8191",
+      "--no-flaresolverr-use-session",
       "--input-file",
       "URLs.txt",
       "--log-file",

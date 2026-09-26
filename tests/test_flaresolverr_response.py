@@ -4,7 +4,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl.clients.flaresolverr import Solution, _parse_cookies
-from cyberdrop_dl.clients.response import _FlareSolverrResponse, _infer_content_type_from_body
+from cyberdrop_dl.clients.response import FlareSolverrResponse, _infer_content_type_from_body
 
 if TYPE_CHECKING:
     import pytest
@@ -264,7 +264,7 @@ def test_solution_from_dict_json_resp() -> None:
 def test_flaresolverr_response_infers_html_from_empty_headers(logs: pytest.LogCaptureFixture) -> None:
     """When FlareSolverr returns empty headers, content-type should be inferred from the body."""
     solution = Solution.from_dict(FLARESOLVERR_RESPONSE_EMPTY_HEADERS["solution"])
-    response = _FlareSolverrResponse.create(solution)
+    response = FlareSolverrResponse.create(solution)
     assert response.content_type == "text/html"
     assert response.status == 200
     assert response.location is None
@@ -273,14 +273,14 @@ def test_flaresolverr_response_infers_html_from_empty_headers(logs: pytest.LogCa
 
 async def test_flaresolverr_response_reads_text() -> None:
     solution = Solution.from_dict(FLARESOLVERR_RESPONSE_EMPTY_HEADERS["solution"])
-    response = _FlareSolverrResponse.create(solution)
+    response = FlareSolverrResponse.create(solution)
     text = await response.text()
     assert "<html>" in text
 
 
 async def test_flaresolverr_response_from_json_resp() -> None:
     solution = Solution.from_dict(FLARESOLVER_RESP_JSON["solution"])
-    response = _FlareSolverrResponse.create(solution)
+    response = FlareSolverrResponse.create(solution)
     assert not response._text
     assert response.content_type == "application/json"
     assert response._get_content() == solution.content
@@ -296,7 +296,7 @@ def test_flaresolverr_response_with_explicit_content_type() -> None:
         "response": '{"data": True}',
     }
     solution = Solution.from_dict(solution_data)
-    response = _FlareSolverrResponse.create(solution)
+    response = FlareSolverrResponse.create(solution)
     assert response.content_type == "application/json"
 
 
@@ -308,7 +308,7 @@ def test_flaresolverr_response_empty_body_and_empty_headers(logs: pytest.LogCapt
     }
     solution = Solution.from_dict(solution_data)
     solution.id = "1"
-    response = _FlareSolverrResponse.create(solution)
+    response = FlareSolverrResponse.create(solution)
     assert response.content_type == "text/html"
     assert len(logs.records) == 1
     assert (
@@ -318,7 +318,7 @@ def test_flaresolverr_response_empty_body_and_empty_headers(logs: pytest.LogCapt
 
 async def test_flaresolverr_response_from_json_resp_wrapped_in_html() -> None:
     solution = Solution.from_dict(FLARESOLVER_RESP_JSON_WRAPPED_IN_HTML["solution"])
-    resp = _FlareSolverrResponse.create(solution)
+    resp = FlareSolverrResponse.create(solution)
     assert resp._text
     assert resp.content_type == "text/html"
     assert type(solution.content) is str

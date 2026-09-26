@@ -48,11 +48,11 @@ class TwitchCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [_, "v", video_id]:
-                return await self.vod(scrape_item, video_id)
+                await self.vod(scrape_item, video_id)
             case ["video" | "videos", video_id]:
-                return await self.vod(scrape_item, video_id)
+                await self.vod(scrape_item, video_id)
             case ["collections", collection_id]:
-                return await self.collection(scrape_item, collection_id)
+                await self.collection(scrape_item, collection_id)
             case [*_, "clip", slug]:
                 await self.clip(scrape_item, slug)
             case ["embed"] if slug := scrape_item.url.query.get("clip"):
@@ -61,11 +61,11 @@ class TwitchCrawler(Crawler):
                 await self.clip(scrape_item, slug)
             case _:
                 if video_id := scrape_item.url.query.get("video"):
-                    return await self.vod(scrape_item, video_id)
-                if slug := scrape_item.url.query.get("clip"):
-                    return await self.clip(scrape_item, slug)
-
-                raise ValueError
+                    await self.vod(scrape_item, video_id)
+                elif slug := scrape_item.url.query.get("clip"):
+                    await self.clip(scrape_item, slug)
+                else:
+                    raise ValueError
 
     def __post_init__(self) -> None:
         self.api: TwitchAPI = TwitchAPI.from_crawler(self)

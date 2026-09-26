@@ -74,12 +74,12 @@ class RedGifsCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["users", user_name]:
-                return await self.user(scrape_item, user_name.lower())
+                await self.user(scrape_item, user_name.lower())
             case ["i" | "watch" | "ifr", gif_id]:
-                return await self.gif(scrape_item, _id(gif_id))
+                await self.gif(scrape_item, _id(gif_id))
             case [_, _] | [_] if self.is_subdomain(scrape_item.url):
                 scrape_item.url = _canonical_url(scrape_item.url.name)
-                return await self.gif(scrape_item, scrape_item.url.name)
+                await self.gif(scrape_item, scrape_item.url.name)
             case _:
                 raise ValueError
 

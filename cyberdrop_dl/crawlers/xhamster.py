@@ -9,11 +9,11 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import extr_text, parse_url, xor_decrypt
+from cyberdrop_dl.utils import extr_text, parse_url, traversal, xor_decrypt
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -84,12 +84,7 @@ class XhamsterCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "xHamster"
 
     def __post_init__(self) -> None:
-        self._seen_hosts: set[str] = set()
-
-    def _disable_ai_title_translations(self, url: AbsoluteHttpURL) -> None:
-        if url.host not in self._seen_hosts:
-            self.update_cookies({"lang": "en", "video_titles_translation": "0"}, url.origin())
-            self._seen_hosts.add(url.host)
+        self.api: XHamsterAPI = XHamsterAPI.from_crawler(self)
 
     @classmethod
     @override
@@ -99,20 +94,20 @@ class XhamsterCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["photos", "gallery", _]:
-                return await self.gallery(scrape_item)
+                await self.gallery(scrape_item)
             case ["videos" | "shorts", slug]:
                 video_id = slug.rpartition("-")[-1]
-                return await self.video(scrape_item, video_id)
-            case ["users" | "creators" as type_, _, *rest]:
+                await self.video(scrape_item, video_id)
+            case ["users" | "creators" as kind, name, *rest]:
                 match rest:
                     case []:
-                        return await self.profile(scrape_item)
+                        await self.profile(scrape_item, kind, name)
                     case ["photos"]:
-                        return await self.profile(scrape_item, download_videos=False)
-                    case ["videos"] if type_ == "users":
-                        return await self.profile(scrape_item, download_photos=False)
-                    case ["exclusive"] if type_ == "creators":
-                        return await self.profile(scrape_item, download_photos=False)
+                        await self.profile(scrape_item, kind, name, videos=False)
+                    case ["videos"] if kind == "users":
+                        await self.profile(scrape_item, kind, name, photos=False)
+                    case ["exclusive"] if kind == "creators":
+                        await self.profile(scrape_item, kind, name, photos=False)
                     case _:
                         raise ValueError
             case _:
@@ -133,51 +128,30 @@ class XhamsterCrawler(Crawler):
     async def profile(
         self,
         scrape_item: ScrapeItem,
+        kind: str,
+        username: str,
         *,
-        download_photos: bool = True,
-        download_videos: bool = True,
+        photos: bool = True,
+        videos: bool = True,
     ) -> None:
-        url_type, username = scrape_item.url.parts[1:3]
-        canonical_url = scrape_item.url.origin() / url_type / username
-        initials = await self._get_window_initials(canonical_url)
-        is_creator = url_type == "creators"
-        if is_creator:
-            info: dict[str, Any] = initials["infoComponent"]["displayUserModel"]
-            web_page_url = self.parse_url(info["pageURL"])
+        user = await self.api.user(kind, username)
+        scrape_item.setup_as_profile(self.create_title(f"{user.name} [user]"))
 
-        else:
-            info = initials["displayUserModel"]
-            web_page_url = canonical_url
+        for scrape, part, selector, name in [
+            (videos, "videos", Selector.VIDEO, "videos"),
+            (photos, "photos", Selector.GALLERY, "galleries"),
+        ]:
+            if not scrape:
+                continue
 
-        # every creator is an user, but not every user is a creator
-        # the creator's name and the user_name are different for the same account
-        # we will ignore the creator's name and always use the user_name
-
-        _creator_name: str | None = info.get("pageTitle")
-        user_name: str = info.get("displayName") or info["name"]
-        title = self.create_title(f"{user_name} [user]")
-        scrape_item.setup_as_profile(title)
-
-        if download_videos:
-            videos_url = web_page_url / "videos"
-            await self._iter_profile_pages(scrape_item, videos_url, Selector.VIDEO, "videos")
-
-        if download_photos:
-            gallerys_url = web_page_url / "photos"
-            await self._iter_profile_pages(scrape_item, gallerys_url, Selector.GALLERY, "galleries")
-
-    @error_handling_wrapper
-    async def _iter_profile_pages(
-        self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, selector: str, name: str
-    ) -> None:
-        async for soup in self.web_pager(url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, selector):
-                new_scrape_item.append_folders(name)
-                self.create_task(self.run(new_scrape_item))
+            async for soup in self.web_pager(user.page_url / part):
+                for new_item in self.iter_children(scrape_item, soup, selector):
+                    new_item.append_folders(name)
+                    self.create_task(self.run(new_item))
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
-        initials = await self._get_window_initials(scrape_item.url)
+        initials = await self.api.get_window_initials(scrape_item.url)
         page_details: dict[str, Any] = initials["galleryPage"]
         gallery: dict[str, Any] = page_details["galleryModel"]
         gallery_id = str(gallery["id"])
@@ -199,7 +173,7 @@ class XhamsterCrawler(Crawler):
                 break
 
             next_page_url = scrape_item.url / str(next_page)
-            initials = await self._get_window_initials(next_page_url)
+            initials = await self.api.get_window_initials(next_page_url)
             images = initials["photosGalleryModel"]["photos"]
 
     def _handle_img(self, scrape_item: ScrapeItem, img: dict[str, Any], results: dict[str, bool]) -> None:
@@ -219,7 +193,7 @@ class XhamsterCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        initials = await self._get_window_initials(scrape_item.url)
+        initials = await self.api.get_window_initials(scrape_item.url)
         video = _parse_video(initials, video_id)
         scrape_item.uploaded_at = video.created
         m3u8 = debrid_link = None
@@ -248,11 +222,41 @@ class XhamsterCrawler(Crawler):
             thumbnail=video.thumb,
         )
 
-    async def _get_window_initials(self, url: AbsoluteHttpURL) -> dict[str, Any]:
-        self._disable_ai_title_translations(url)
+
+class XHamsterAPI(API):
+    def __post_init__(self) -> None:
+        self._seen_hosts: set[str] = set()
+
+    def disable_ai_title_translations(self, url: AbsoluteHttpURL) -> None:
+        if url.host in self._seen_hosts:
+            return
+        self.client.cookies.update_cookies({"lang": "en", "video_titles_translation": "0"}, url.origin())
+        self._seen_hosts.add(url.host)
+
+    async def get_window_initials(self, url: AbsoluteHttpURL) -> dict[str, Any]:
+        self.disable_ai_title_translations(url)
         content = await self.request_text(url)
-        initials = extr_text(content, "window.initials=", ";</script>")
-        return json.loads(initials)
+        return json.loads(extr_text(content, "window.initials=", ";</script>"))
+
+    async def user(self, type_: str, name: str) -> User:
+        web_page_url = self.origin / type_ / name
+        initials = await self.get_window_initials(web_page_url)
+
+        _, info = traversal.find_obj(initials, "id", "name", validate={"modelName": "userModel"})
+        if page := info.get("pageURL"):
+            web_page_url = self.parse_url(page, self.origin)
+
+        # every creator is an user, but not every user is a creator
+        # the creator's name and the user_name are different for the same account
+        # we will ignore the creator's name and always use the user_name
+
+        return User(name=info.get("displayName") or info["name"], page_url=web_page_url)
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class User:
+    name: str
+    page_url: AbsoluteHttpURL
 
 
 class Codec(IntEnum):

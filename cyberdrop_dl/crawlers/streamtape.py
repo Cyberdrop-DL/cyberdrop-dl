@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+import asyncio
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     BAIT_LINK = "#ideoooolink"
     JS_TOKEN = "script:-soup-contains(ideoooolink)"  # noqa: S105
@@ -20,8 +22,10 @@ class Selector:
 
 class StreamtapeCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Videos": "/v/<video_id>",
-        "Player": "/e/<video_id>",
+        "Videos": (
+            "/v/<video_id>",
+            "/e/<video_id>",
+        )
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://streamtape.com")
     DOMAIN: ClassVar[str] = "streamtape.com"
@@ -30,7 +34,7 @@ class StreamtapeCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["e" | "v", video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
 
@@ -38,18 +42,23 @@ class StreamtapeCrawler(Crawler):
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         scrape_item.url = self.PRIMARY_URL / "v" / video_id
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
-        link = _extract_download_link(soup)
+        link = await asyncio.to_thread(_extract_dl_url, soup)
         name = open_graph.title(soup)
-        filename, ext = self.get_filename_and_ext(name)
-        return await self.handle_file(
-            scrape_item.url, scrape_item, name, ext, debrid_link=link, custom_filename=filename
+        _, ext = self.get_filename_and_ext(name)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            name,
+            ext,
+            debrid_link=link,
+            custom_filename=self.create_custom_filename(name, ext, file_id=video_id),
         )
 
 
-def _extract_download_link(soup: BeautifulSoup) -> AbsoluteHttpURL:
+def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
     script = css.select_text(soup, Selector.JS_TOKEN)
     token = extr_text(script, "&token=", "'")
     bait_url = css.select_text(soup, Selector.BAIT_LINK)

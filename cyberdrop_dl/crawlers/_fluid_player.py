@@ -36,17 +36,21 @@ class FluidPlayerCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
         best_format = max(_parse_formats(soup))
-        link = self.parse_url(best_format.link_str)
-        filename, ext = self.get_filename_and_ext(link.name)
-        title = open_graph.title(soup)
+        src = self.parse_url(best_format.link_str)
+        _, ext = self.get_filename_and_ext(src.name)
+        name = open_graph.title(soup)
         scrape_item.uploaded_at = json_ld.upload_date(soup)
-        custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=best_format.resolution)
-        return await self.handle_file(
-            scrape_item.url, scrape_item, filename, ext, custom_filename=custom_filename, debrid_link=link
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            name,
+            ext,
+            custom_filename=self.create_custom_filename(name, ext, file_id=video_id, resolution=best_format.resolution),
+            debrid_link=src,
         )
 
     @error_handling_wrapper

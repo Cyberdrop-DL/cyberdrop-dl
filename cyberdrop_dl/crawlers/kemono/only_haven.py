@@ -126,13 +126,13 @@ class OnlyHavenCrawler(KemonoBaseCrawler[OnlyHavenAPI]):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["creators", service, creator_id, "post", post_id]:
-                return await self.post(scrape_item, service, creator_id, post_id)
+                await self.post(scrape_item, service, creator_id, post_id)
             case ["creators", service, creator_id, "dm", dm_id]:
-                return await self.dm(scrape_item, service, creator_id, dm_id)
+                await self.dm(scrape_item, service, creator_id, dm_id)
             case ["creators", service, creator_id]:
-                return await self.creator(scrape_item, service, creator_id)
+                await self.creator(scrape_item, service, creator_id)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, search_query)
+                await self.search(scrape_item, search_query)
             case _:
                 raise ValueError
 
@@ -159,21 +159,22 @@ class OnlyHavenCrawler(KemonoBaseCrawler[OnlyHavenAPI]):
         await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
 
     @override
-    def _post(self, scrape_item: ScrapeItem, post: UserPostModel) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def _post(self, scrape_item: ScrapeItem, post: UserPostModel) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         scrape_item.uploaded_at = post.timestamp
         self.create_eager_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
         files = FileFilterer(post, self.__kemono_config__, self.log)
         try:
-            self._extract_post_files(scrape_item, files)
+            await self._extract_post_files(scrape_item, files)
         finally:
             self.tui.files.stats.skipped += files.skipped
         self._extract_urls_from_post_content(scrape_item, post)
 
     @override
-    def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
-        for url in unique(map(self._compose_file_url, post_files)):
-            self.create_eager_task(self._direct_file(scrape_item, url))
-            scrape_item.add_children()
+    async def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+        async with self.new_task_group() as tg:
+            for url in unique(map(self._compose_file_url, post_files)):
+                tg.create_task(self._direct_file(scrape_item, url))
+                scrape_item.add_children()
 
     @override
     def _compose_file_url(self, file: File) -> AbsoluteHttpURL:  # pyright: ignore[reportIncompatibleMethodOverride]

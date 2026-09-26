@@ -19,7 +19,7 @@ class OwnCloudCrawler(Crawler, is_generic=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["s", folder_token]:
-                return await self.public_share(scrape_item, folder_token)
+                await self.public_share(scrape_item, folder_token)
             case _:
                 raise ValueError
 

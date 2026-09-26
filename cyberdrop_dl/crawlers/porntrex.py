@@ -55,11 +55,11 @@ class PorntrexCrawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["video", video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["tags" | "categories" | "models" | "playlists" | "search" | "members" as type_, _, *_]:
-                return await self.collection(scrape_item, type_)
+                await self.collection(scrape_item, type_)
             case ["albums", album_id, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case _:
                 raise ValueError
 

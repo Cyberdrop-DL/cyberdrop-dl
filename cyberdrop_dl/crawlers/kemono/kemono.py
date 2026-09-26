@@ -60,17 +60,17 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [service, "user", creator_id, "post", post_id]:
-                return await self.post(scrape_item, service, creator_id, post_id)
+                await self.post(scrape_item, service, creator_id, post_id)
             case [service, "user", creator_id]:
-                return await self.creator(scrape_item, service, creator_id)
+                await self.creator(scrape_item, service, creator_id)
             case ["favorites"] if (type_ := scrape_item.url.query.get("type")) in ("post", "artist", None):
-                return await self.favorites(scrape_item, type_ or "artist")
+                await self.favorites(scrape_item, type_ or "artist")
             case ["account", "favorites", slug] if (type_ := slug.removesuffix("s")) in ("post", "artist"):
-                return await self.favorites(scrape_item, type_)
+                await self.favorites(scrape_item, type_)
             case ["posts"] if search_query := scrape_item.url.query.get("q"):
-                return await self.search(scrape_item, search_query)
+                await self.search(scrape_item, search_query)
             case ["thumbnail" | "thumbnails" | "data", _, *_]:
-                return await self._direct_file(scrape_item)
+                await self._direct_file(scrape_item)
             case _:
                 raise ValueError
 
@@ -135,22 +135,23 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
         scrape_item.setup_as_album(title, album_id=post.user_id)
         post_title = self.create_separate_post_title(post.title, post.id, post.timestamp)
         scrape_item.append_folders(post_title)
-        self._post(scrape_item, post)  # pyright: ignore[reportArgumentType]
+        await self._post(scrape_item, post)  # pyright: ignore[reportArgumentType]
 
-    def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
+    async def _post(self, scrape_item: ScrapeItem, post: PostModel) -> None:
         scrape_item.uploaded_at = post.timestamp
         self.create_eager_task(self.write_metadata(scrape_item, f"post_{post.id}", post))
         files = FileFilterer(post, self.__kemono_config__, self.log)
         try:
-            self._extract_post_files(scrape_item, files)
+            await self._extract_post_files(scrape_item, files)
         finally:
             self.tui.files.stats.skipped += files.skipped
         self._extract_urls_from_post_content(scrape_item, post)
 
-    def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:
-        for url in unique(map(self._compose_file_url, post_files)):
-            self.create_eager_task(self._direct_file(scrape_item, url))
-            scrape_item.add_children()
+    async def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:
+        async with self.new_task_group() as tg:
+            for url in unique(map(self._compose_file_url, post_files)):
+                tg.create_task(self._direct_file(scrape_item, url))
+                scrape_item.add_children()
 
         if embed := post_files.embed():
             embed_url = self.parse_url(embed.url)
@@ -188,10 +189,11 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
         for post in posts:
             self.__check_for_ads(post)
             new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
-            if post.content or not self.__kemono_config__.content_urls:
-                await self._user_post(new_item, post)
+            expand = self.__kemono_config__.expand_posts or (self.__kemono_config__.content_urls and not post.content)
+            if expand:
+                self.create_task(self.post(new_item, post.service, post.user_id, post.id))
             else:
-                self.create_task(self.run(new_item))
+                await self._user_post(new_item, post)
             scrape_item.add_children()
 
 
@@ -220,6 +222,7 @@ class FileFilterer:
     config: KemonoConfig
     log: logging.LoggerAdapter[logging.Logger] | logging.Logger
     skipped: int = dataclasses.field(init=False, default=0)
+    has_deferred_files: bool = dataclasses.field(init=False, default=False)
 
     def _files(self) -> Generator[tuple[File, str, bool]]:
         if not self.post.has_full:
@@ -234,9 +237,13 @@ class FileFilterer:
     def __iter__(self) -> Generator[File]:
         for file, kind, should_download in self._files():
             file_name = file.name or file.path
+            if file.deferred:
+                self.has_deferred_files = True
+
             if self.post.preview_state == "pending" or file.deferred or not file.path:
                 self.log.warning("Skipping file '%s' in post #%s [incomplete %s import]", file_name, self.post.id, kind)
                 self.skipped += 1
+
             elif not should_download:
                 self._report_skip_by_config(file_name, kind)
             else:

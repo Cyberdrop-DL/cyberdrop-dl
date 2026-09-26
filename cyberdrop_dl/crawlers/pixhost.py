@@ -36,13 +36,13 @@ class PixHostCrawler(Crawler):
             case ["thumbs", _, *_] if self.is_subdomain(scrape_item.url):
                 src = _thumbnail_to_src(scrape_item.url)
                 scrape_item.url = _thumbnail_to_web_url(scrape_item.url)
-                return await self.direct_file(scrape_item, src)
+                await self.direct_file(scrape_item, src)
             case ["gallery", gallery_id]:
-                return await self.gallery(scrape_item, gallery_id)
+                await self.gallery(scrape_item, gallery_id)
             case ["show", _, *_]:
-                return await self.image(scrape_item)
+                await self.image(scrape_item)
             case ["images", _, *_]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

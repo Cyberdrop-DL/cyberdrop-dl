@@ -48,7 +48,7 @@ class MegaCloudCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["embed-2", "v3", _, _]:
-                return await self.embed_v3(scrape_item)
+                await self.embed_v3(scrape_item)
             case _:
                 raise ValueError
 

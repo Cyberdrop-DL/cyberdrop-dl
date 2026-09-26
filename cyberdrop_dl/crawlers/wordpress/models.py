@@ -4,24 +4,17 @@ import datetime
 from enum import StrEnum
 from typing import Annotated, Literal, NewType
 
-from bs4 import BeautifulSoup
 from pydantic import AfterValidator, AliasPath, BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
-
-def make_soup(string: str) -> BeautifulSoup:
-    return BeautifulSoup(string, "html.parser")
-
-
-def unescape_html(string: str) -> str:
-    return make_soup(string).get_text(strip=True)
+from cyberdrop_dl.utils import css
 
 
 def add_utc_tz(parsed_date: datetime.datetime) -> datetime.datetime:
     return parsed_date.replace(tzinfo=datetime.UTC)
 
 
-TitleFromHTML = Annotated[str, AfterValidator(unescape_html)]
+TitleFromHTML = Annotated[str, AfterValidator(css.unescape)]
 AwareDatetimeUTC = Annotated[datetime.datetime, AfterValidator(add_utc_tz)]
 
 

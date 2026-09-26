@@ -39,11 +39,11 @@ class FourChanCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [board, "thread", thread_id, *_]:
-                return await self.thread(scrape_item, board, thread_id)
+                await self.thread(scrape_item, board, thread_id)
             case [board]:
-                return await self.board(scrape_item, board)
+                await self.board(scrape_item, board)
             case [board, _]:
-                return await self.board(scrape_item, board)
+                await self.board(scrape_item, board)
             case _:
                 raise ValueError
 

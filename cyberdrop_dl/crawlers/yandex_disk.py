@@ -3,8 +3,10 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 
+from cyberdrop_dl import aio
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -36,8 +39,26 @@ _DEFAULT_HEADERS = {
     "Pragma": "no-cache",
     "Cache-Control": "no-cache",
 }
+_MAX_SK_RETRIES = 2
 
 
+class _WrongSkError(ScrapeError):
+    def __init__(self, new_sk: str) -> None:
+        super().__init__(403, "Yandex rejected the session token (sk)")
+        self.new_sk: str = new_sk
+
+
+def _raise_for_wrong_sk(json_resp: Any, _: AbstractResponse[Any] | None = None) -> None:
+    # Yandex answers the download API with a 400 when the sk does not match the session cookie
+    if not isinstance(json_resp, dict):
+        return
+    resp = cast("dict[str, Any]", json_resp)
+    new_sk: str | None = resp.get("newSk")
+    if resp.get("wrongSk") and new_sk:
+        raise _WrongSkError(new_sk)
+
+
+@HTTPConfig(json_check=_raise_for_wrong_sk)
 class YandexDiskCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "disk.yandex", "yadi.sk"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -53,24 +74,27 @@ class YandexDiskCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "YandexDisk"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
 
+    def __post_init__(self) -> None:
+        self._session_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
+        self._hosts_with_session: set[str] = set()
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["d", folder_id, file_name]:
-                return await self.folder(scrape_item, folder_id, file_name)
+                await self.folder(scrape_item, folder_id, file_name)
             case ["d", folder_id]:
-                return await self.folder(scrape_item, folder_id)
+                await self.folder(scrape_item, folder_id)
             case ["i", _]:
-                return await self.file(scrape_item)
-        raise ValueError
+                await self.file(scrape_item)
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return None
 
-        with self._request_context():
-            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
-
+        soup = await self._request_page(scrape_item.url)
         item_info = _get_item_info(soup)
         assert _is_single_item(item_info)
         item_info["sk"] = item_info["environment"]["sk"]
@@ -85,9 +109,7 @@ class YandexDiskCrawler(Crawler):
             return None
 
         scrape_item.url = canonical_url
-        with self._request_context():
-            soup = await self.request_soup(scrape_item.url, headers=_DEFAULT_HEADERS)
-
+        soup = await self._request_page(scrape_item.url)
         item_info = _get_item_info(soup)
         del soup
         if _is_single_item(item_info):
@@ -121,31 +143,9 @@ class YandexDiskCrawler(Crawler):
     @error_handling_wrapper
     async def _process_file(self, scrape_item: ScrapeItem, file: YandexFile) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
-        referer = str(file.url)
-        headers = _DEFAULT_HEADERS | {
-            "Content-Type": "text/plain",
-            "X-Requested-With": "XMLHttpRequest",
-            "Origin": str(scrape_item.url.host),
-            "Referer": referer,
-            "X-Retpath-Y": referer,
-        }
-
-        api_url = _DOWNLOAD_API_ENTRYPOINT.with_host(scrape_item.url.host)
-        with self._request_context():
-            json_resp: dict[str, Any] = await self.request_json(
-                api_url,
-                method="POST",
-                headers=headers,
-                data=file.post_data,
-            )
-
-        new_sk = json_resp.get("new_sk")
-        if new_sk:
-            new_file = file.with_sk(new_sk)
-            return await self._process_file(scrape_item, new_file)
-
+        json_resp = await self._request_download_url(scrape_item.url, file)
         error = json_resp.get("error")
         if error:
             raise ScrapeError(422, message=json.dumps(json_resp)[:50])
@@ -158,6 +158,55 @@ class YandexDiskCrawler(Crawler):
         filename = link.query.get("filename") or file.name
         filename, ext = self.get_filename_and_ext(filename)
         await self.handle_file(file.url, scrape_item, filename, ext, debrid_link=link)
+
+    async def _request_page(self, url: AbsoluteHttpURL) -> BeautifulSoup:
+        # Yandex ties the sk embedded in a page to the session cookie it sets with that page.
+        # If the first pages of a host are requested concurrently, each one starts a new session and
+        # overwrites the previous cookie, so only the sk of the last page stays valid.
+        # Let the first request of each host set the session cookie before any other page is requested
+        if url.host not in self._hosts_with_session:
+            async with self._session_locks[url.host]:
+                if url.host not in self._hosts_with_session:
+                    soup = await self._get_soup(url)
+                    self._hosts_with_session.add(url.host)
+                    return soup
+
+        return await self._get_soup(url)
+
+    async def _get_soup(self, url: AbsoluteHttpURL) -> BeautifulSoup:
+        with self._request_context():
+            return await self.request_soup(url, headers=_DEFAULT_HEADERS)
+
+    async def _request_download_url(self, url: AbsoluteHttpURL, file: YandexFile) -> dict[str, Any]:
+        # The session can still change mid-run. Yandex then answers with a 400 and the sk that is valid now
+        for _ in range(_MAX_SK_RETRIES):
+            try:
+                return await self._post_download_url(url, file)
+            except _WrongSkError as e:
+                self.log.debug("Yandex rejected the sk for %s, retrying with the one it sent back", url)
+                file = file.with_sk(e.new_sk)
+
+        return await self._post_download_url(url, file)
+
+    async def _post_download_url(self, url: AbsoluteHttpURL, file: YandexFile) -> dict[str, Any]:
+        api_url = _DOWNLOAD_API_ENTRYPOINT.with_host(url.host)
+        with self._request_context():
+            return await self.request_json(
+                api_url,
+                method="POST",
+                headers=_download_url_headers(url, file.url),
+                data=file.post_data,
+            )
+
+
+def _download_url_headers(url: AbsoluteHttpURL, referer: AbsoluteHttpURL) -> dict[str, str]:
+    return _DEFAULT_HEADERS | {
+        "Content-Type": "text/plain",
+        "X-Requested-With": "XMLHttpRequest",
+        "Origin": str(url.origin()),
+        "Referer": str(referer),
+        "X-Retpath-Y": str(referer),
+    }
 
 
 def _get_item_info(soup: BeautifulSoup) -> dict[str, Any]:

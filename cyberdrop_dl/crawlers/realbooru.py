@@ -37,10 +37,11 @@ class RealBooruCrawler(Crawler):
             case ["index.php"]:
                 query = scrape_item.url.query
                 if tags := query.get("tags"):
-                    return await self.tags(scrape_item, tags)
-                if query.get("id"):
-                    return await self.file(scrape_item)
-                raise ValueError
+                    await self.tags(scrape_item, tags)
+                elif query.get("id"):
+                    await self.file(scrape_item)
+                else:
+                    raise ValueError
             case _:
                 raise ValueError
 

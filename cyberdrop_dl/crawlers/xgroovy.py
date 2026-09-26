@@ -51,15 +51,15 @@ class XGroovyCrawler(FluidPlayerCrawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [*_, "videos" | "gifs", video_id, _]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case [*_, "pornstars" as type_, _]:
-                return await self.collection(scrape_item, type_)
+                await self.collection(scrape_item, type_)
             case [*_, "categories" | "channels" | "search" | "tag" as type_, slug]:
-                return await self.collection(scrape_item, type_, slug)
+                await self.collection(scrape_item, type_, slug)
             case [*_, "photos", album_id, _]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case [*_, "contents", "albums", "sources", _, _, _]:
-                return await self.direct_file(scrape_item)
+                await self.direct_file(scrape_item)
             case _:
                 raise ValueError
 

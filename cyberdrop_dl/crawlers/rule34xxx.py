@@ -35,10 +35,11 @@ class Rule34XXXCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if tags := scrape_item.url.query.get("tags"):
-            return await self.tag(scrape_item, tags)
-        if scrape_item.url.query.get("id"):
-            return await self.file(scrape_item)
-        raise ValueError
+            await self.tag(scrape_item, tags)
+        elif scrape_item.url.query.get("id"):
+            await self.file(scrape_item)
+        else:
+            raise ValueError
 
     @error_handling_wrapper
     async def tag(self, scrape_item: ScrapeItem, tags: str) -> None:

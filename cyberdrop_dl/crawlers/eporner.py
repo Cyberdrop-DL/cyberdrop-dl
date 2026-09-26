@@ -3,8 +3,6 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from bs4 import BeautifulSoup
-
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -77,23 +75,23 @@ class EpornerCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "ePorner"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:  # noqa: PLR0911
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case [slug, *_] if slug.startswith("video-"):
                 video_id = slug.removeprefix("video-")
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["hd-porn" | "embed", video_id, *_]:
-                return await self.video(scrape_item, video_id)
+                await self.video(scrape_item, video_id)
             case ["cat" | "channel" | "search" | "pornstar" | "tag", *_]:
-                return await self.playlist(scrape_item)
+                await self.playlist(scrape_item)
             case ["gallery", *_]:
-                return await self.gallery(scrape_item)
+                await self.gallery(scrape_item)
             case ["profile", username, *_]:
-                return await self.profile(scrape_item, username)
+                await self.profile(scrape_item, username)
             case ["photo", photo_id, *_]:
-                return await self.photo(scrape_item, photo_id)
+                await self.photo(scrape_item, photo_id)
             case ["search-photos", query, *_]:
-                return await self.search_photos(scrape_item, query)
+                await self.search_photos(scrape_item, query)
             case _:
                 raise ValueError
 
@@ -220,11 +218,7 @@ class EpornerCrawler(Crawler):
 
 def _parse_video(html: str, video: dict[str, Any]) -> Video:
 
-    ld_json = (
-        css.select_text(BeautifulSoup(html, "html.parser"), Selector.DATE_JS)
-        .encode("raw_unicode_escape")
-        .decode("unicode-escape")
-    )
+    ld_json = css.select_text(css.soup(html), Selector.DATE_JS).encode("raw_unicode_escape").decode("unicode-escape")
     # This may have invalid json. They do not sanitize the description field
     # See: https://github.com/Cyberdrop-DL/cyberdrop-dl/issues/1211
 

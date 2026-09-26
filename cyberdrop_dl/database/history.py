@@ -64,6 +64,16 @@ class HistoryTable(Table, name="media"):
 
         return {row["url_path"]: bool(row["completed"]) for row in rows}
 
+    async def query_completed_by_album(self, domain: str, album_id: str) -> set[str]:
+        if self.ignore_history:
+            return set()
+
+        query = "SELECT url_path FROM media WHERE domain = ? and album_id = ? and completed = 1"
+        async with self.db.reader() as db_conn:
+            rows = await db_conn.execute_fetchall(query, (domain, album_id))
+
+        return {row["url_path"] for row in rows}
+
     async def set_album_id(self, domain: str, media_item: MediaItem) -> None:
         query = "UPDATE media SET album_id = ? WHERE domain = ? and url_path = ?"
         async with self.db.writer() as db_conn:

@@ -5,6 +5,7 @@ import dataclasses
 from collections import defaultdict
 from typing import TYPE_CHECKING, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -92,11 +93,11 @@ class PkmncardsCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["card", _, *_]:
-                return await self.card(scrape_item)
+                await self.card(scrape_item)
             case ["set", slug, *_]:
-                return await self.card_set(scrape_item, slug)
+                await self.card_set(scrape_item, slug)
             case ["series", slug, *_]:
-                return await self.series(scrape_item, slug)
+                await self.series(scrape_item, slug)
             case _:
                 raise ValueError
 
@@ -135,7 +136,7 @@ class PkmncardsCrawler(Crawler):
         number = css.select_text(soup, Selector.CARD_NUMBER)
         link_str: str = css.select(soup, Selector.CARD_DOWNLOAD, "href")
         link = self.parse_url(link_str)
-        card_set = create_set(soup)
+        card_set = await _create_set(soup)
         card = Card(name, number, card_set, link)
         await self._card(scrape_item, card)
 
@@ -153,16 +154,16 @@ class PkmncardsCrawler(Crawler):
         await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
 
     async def _simple_card(self, scrape_item: ScrapeItem, simple_card: SimpleCard) -> None:
-        @error_handling_wrapper
-        async def get_card_set(self, scrape_item: ScrapeItem) -> CardSet:
-            soup = await self.request_soup(scrape_item.url)
-            return create_set(soup)
+        async def get_card_set(scrape_item: ScrapeItem) -> CardSet:
+            with self.catch_errors(scrape_item.url):
+                soup = await self.request_soup(scrape_item.url)
+                return await _create_set(soup)
 
         async with self.set_locks[simple_card.set_abbr]:
             card_set = self.known_sets.get(simple_card.set_abbr)
             if not card_set:
                 # Make a request for 1 card, to get the set information about the set
-                card_set = await get_card_set(self, scrape_item)
+                card_set = await get_card_set(scrape_item)
                 if not card_set:  # Request failed
                     return
                 self.known_sets[simple_card.set_abbr] = card_set
@@ -197,7 +198,8 @@ def create_simple_card(title: str, download_url: AbsoluteHttpURL) -> SimpleCard:
     return SimpleCard(card_name.strip(), card_number.strip(), set_name.strip(), set_abbr.strip().upper(), download_url)
 
 
-def create_set(soup: Tag) -> CardSet:
+@aio.to_thread
+def _create_set(soup: Tag) -> CardSet:
     series = soup.select_one(Selector.SET_SERIES_CODE)
     return CardSet(
         name=css.select_text(soup, Selector.SET_NAME),

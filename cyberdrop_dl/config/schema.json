@@ -754,6 +754,11 @@
           "title": "Content Urls",
           "type": "boolean"
         },
+        "expand_posts": {
+          "default": false,
+          "title": "Expand Posts",
+          "type": "boolean"
+        },
         "embed": {
           "default": true,
           "title": "Embed",
@@ -785,6 +790,10 @@
         "last_forum_post": {
           "$ref": "#/$defs/CSVPath",
           "default": "last_forum_post.csv"
+        },
+        "dedupe": {
+          "$ref": "#/$defs/CSVPath",
+          "default": "dedupe.csv"
         }
       },
       "title": "LogFiles",
@@ -1503,6 +1512,11 @@
     },
     "ui": {
       "$ref": "#/$defs/UIOptions"
+    },
+    "update_check": {
+      "default": true,
+      "title": "Update Check",
+      "type": "boolean"
     }
   },
   "title": "cyberdrop-dl config",

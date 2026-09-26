@@ -4,6 +4,7 @@ import datetime
 import json
 import os
 import time
+import warnings
 from pathlib import Path
 
 import pytest
@@ -402,3 +403,38 @@ def test_additive_args_list() -> None:
         ("jdownloader", "whitelist"),
         ("restrict_path",),
     }
+
+
+def test_merge_does_not_mark_unset_fields_as_set() -> None:
+    merged = Config() | Config.parse_args(["--download-folder", "downloads"])
+    assert merged.network.model_fields_set == set()
+    assert merged.model_fields_set == {"download_folder"}
+
+
+def test_merge_does_not_warn_about_untouched_deprecated_options(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from cyberdrop_dl.models import _warned
+
+    _warned.clear()
+    start = time.monotonic()
+    with caplog.at_level("WARNING", logger="cyberdrop_dl.models"):
+        _ = Config() | Config.parse_args(["--download-folder", "downloads"])
+
+    assert "deprecated" not in caplog.text
+    assert time.monotonic() - start < 1
+
+
+def test_deprecated_option_set_by_the_user_still_warns(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from cyberdrop_dl.models import _warned
+
+    _warned.clear()
+    with caplog.at_level("WARNING", logger="cyberdrop_dl.models"):
+        config = Config.load({"network": {"ssl_context": "certifi"}})
+
+    assert "'ssl_context' config option is deprecated" in caplog.text
+    with warnings.catch_warnings(action="ignore"):
+        assert config.network.ssl_context == "certifi"
+        assert (config | Config.parse_args([])).network.ssl_context == "certifi"

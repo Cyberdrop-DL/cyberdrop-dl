@@ -116,13 +116,17 @@ class DownloadClient:
     ) -> bool:
         await _check_response(media_item, resp, resume_point)
         media_item.size = _get_content_length(resp.headers)
+        if resp.status == HTTPStatus.PARTIAL_CONTENT:
+            # Content-Length of a ranged response only counts the bytes after resume_point.
+            # Every check below (partial size, final size, filesize limits) needs the size of the whole file
+            media_item.size += resume_point
         _set_upload_date(media_item, resp.headers)
         if not media_item.path:
             downloaded = await self._predownload_skip(media_item, domain)
             if downloaded is not None:
                 return downloaded
 
-        hook = self._make_hook(media_item, resume_point)
+        hook = self._make_hook(media_item)
         if resume_point:
             hook.advance(resume_point)
 
@@ -130,11 +134,11 @@ class DownloadClient:
             await self._append_content(media_item, hook, resp)
             return True
 
-    def _make_hook(self, media_item: MediaItem, resume_point: int) -> ProgressHook:
+    def _make_hook(self, media_item: MediaItem) -> ProgressHook:
         if media_item.is_segment and not media_item.extra_info.get("MUX_STREAM"):
             return self.manager.scrape_mapper.tui.downloads.download_hls_seg()
 
-        size = (media_item.size + resume_point) if media_item.size is not None else None
+        size = media_item.size
         return self.manager.scrape_mapper.tui.downloads.download_file(
             media_item.filename,
             media_item.domain,
@@ -153,7 +157,7 @@ class DownloadClient:
     async def _append_content(self, media_item: MediaItem, hook: ProgressHook, resp: AbstractResponse[Any]) -> None:
         check_free_space = storage.create_free_space_checker(media_item)
         check_download_speed = make_speed_checker(media_item, hook, self.download_speed_threshold)
-        await check_free_space(media_item.size)
+        await check_free_space(_get_content_length(resp.headers))
         await self._pre_download_check(media_item)
 
         async with self._track_speed(hook), aio.open(media_item.partial_file, mode="ab") as f:
@@ -233,10 +237,11 @@ class DownloadClient:
                     skip = True
                     return proceed, skip
 
-            if not media_item.path.exists() and not media_item.partial_file.exists():
+            path_exists, partial_exists = await aio.gather(*map(aio.exists, (media_item.path, media_item.partial_file)))
+            if not path_exists and not partial_exists:
                 break
 
-            if media_item.path.exists() and media_item.path.stat().st_size == media_item.size:
+            if path_exists and await aio.get_size(media_item.path) == media_item.size:
                 logger.info(f"Found {media_item.path.name} locally, skipping download")
                 proceed = False
                 break
@@ -253,16 +258,16 @@ class DownloadClient:
                 break
 
             if media_item.filename == downloaded_filename:
-                if media_item.partial_file.exists():
+                if partial_exists:
                     logger.info(f"Found {downloaded_filename} locally, trying to resume")
                     assert media_item.size
-                    size = media_item.partial_file.stat().st_size
-                    if size >= media_item.size:
+                    size = await aio.get_size(media_item.partial_file)
+                    if size is not None and size >= media_item.size:
                         logger.info(f"Deleting partial file {media_item.partial_file}. Size is out of bound")
-                        media_item.partial_file.unlink()
+                        await aio.unlink(media_item.partial_file)
 
                     elif size == media_item.size:
-                        if media_item.path.exists():
+                        if path_exists:
                             logger.warning(
                                 f"Found conflicting complete file '{media_item.path}' locally, iterating filename"
                             )
@@ -270,19 +275,19 @@ class DownloadClient:
                                 media_item.path,
                                 media_item,
                             )
-                            media_item.partial_file.rename(new_complete_filename)
+                            await aio.move(media_item.partial_file, new_complete_filename)
                             proceed = False
 
                             media_item.path = new_complete_filename
                             media_item.partial_file = new_partial_file
                         else:
                             proceed = False
-                            media_item.partial_file.rename(media_item.path)
+                            await aio.move(media_item.partial_file, media_item.path)
                         logger.info(
                             f"Renaming found partial file '{media_item.partial_file}' to complete file {media_item.path}"
                         )
-                elif media_item.path.exists():
-                    if media_item.path.stat().st_size == media_item.size:
+                elif path_exists:
+                    if await aio.get_size(media_item.path) == media_item.size:
                         logger.info(f"Found complete file '{media_item.path}' locally, skipping download")
                         proceed = False
                     else:
@@ -307,9 +312,9 @@ class DownloadClient:
         for iteration in itertools.count(1):
             filename = f"{complete_file.stem} ({iteration}){complete_file.suffix}"
             temp_complete_file = media_item.download_folder / filename
-            if not temp_complete_file.exists() and not await self.manager.database.history.check_filename_exists(
-                filename
-            ):
+            if not await aio.exists(
+                temp_complete_file
+            ) and not await self.manager.database.history.check_filename_exists(filename):
                 media_item.filename = filename
                 complete_file = media_item.download_folder / media_item.filename
                 partial_file = complete_file.with_suffix(part_suffix)

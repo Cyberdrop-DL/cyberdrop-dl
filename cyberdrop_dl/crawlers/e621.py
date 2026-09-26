@@ -31,11 +31,11 @@ class E621Crawler(Crawler):
 
         match scrape_item.url.parts[1:]:
             case ["posts"] if tags := scrape_item.url.query.get("tags"):
-                return await self.tags(scrape_item, tags)
+                await self.tags(scrape_item, tags)
             case ["posts", post_id]:
-                return await self.post(scrape_item, post_id)
+                await self.post(scrape_item, post_id)
             case ["pools", pool_id]:
-                return await self.pool(scrape_item, pool_id)
+                await self.pool(scrape_item, pool_id)
             case _:
                 raise ValueError
 
