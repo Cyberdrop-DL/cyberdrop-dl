@@ -116,3 +116,43 @@ def test_init_segments_should_be_include() -> None:
     assert len(m3u8.segments) == 5
     hls._check_segments(m3u8)
     assert m3u8.total_segments == 6
+
+
+def _segments(*urls: str) -> list[hls.HLSSegment]:
+    return list(hls._create_segments((Segment(uri=url) for url in urls), len(urls)))
+
+
+def test_playlist_id_ignores_query() -> None:
+    first = _segments("https://cdn.example.com/seg-1.ts?hash=abc", "https://cdn.example.com/seg-2.ts?hash=abc")
+    second = _segments("https://cdn.example.com/seg-1.ts?hash=xyz", "https://cdn.example.com/seg-2.ts?hash=xyz")
+    assert hls._playlist_id(first) == hls._playlist_id(second)
+
+
+def test_playlist_id_changes_with_segments() -> None:
+    ts = _segments("https://cdn.example.com/seg-1.ts", "https://cdn.example.com/seg-2.ts")
+    fmp4 = _segments("https://cdn.example.com/init.mp4", "https://cdn.example.com/seg-1.m4s")
+    assert hls._playlist_id(ts) != hls._playlist_id(fmp4)
+
+
+async def test_segments_of_the_same_playlist_are_kept(tmp_path: Path) -> None:
+    folder = tmp_path / "video"
+    await hls._discard_stale_segments(folder, "playlist-a")
+    (folder / "00001.cdl_hls").write_bytes(b"segment")
+    await hls._discard_stale_segments(folder, "playlist-a")
+    assert (folder / "00001.cdl_hls").read_bytes() == b"segment"
+
+
+async def test_segments_of_another_playlist_are_discarded(tmp_path: Path) -> None:
+    folder = tmp_path / "video"
+    await hls._discard_stale_segments(folder, "playlist-a")
+    (folder / "00001.cdl_hls").write_bytes(b"segment")
+    await hls._discard_stale_segments(folder, "playlist-b")
+    assert not (folder / "00001.cdl_hls").exists()
+
+
+async def test_segments_of_an_unknown_playlist_are_discarded(tmp_path: Path) -> None:
+    folder = tmp_path / "video"
+    folder.mkdir()
+    (folder / "00001.cdl_hls").write_bytes(b"segment")
+    await hls._discard_stale_segments(folder, "playlist-a")
+    assert not (folder / "00001.cdl_hls").exists()
