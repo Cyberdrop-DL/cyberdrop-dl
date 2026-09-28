@@ -78,7 +78,7 @@ class FileditchCrawler(Crawler):
         soup = await resp.soup()
         if soup.select_one(".gone-path"):
             raise ScrapeError(410)
-        if soup.select("form"):
+        if soup.select_one("form#pow-form"):
             raise DDOSGuardError("Flaresolverr failed proof of work challenge")
         src = self.parse_url(css.select(soup, "a.btn[download]", "href"))
         _check_url(src)
