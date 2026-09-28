@@ -114,6 +114,10 @@ class DownloadClient:
         resume_point: int,
         resp: AbstractResponse[Any],
     ) -> bool:
+        if media_item.is_segment and _is_complete(resp, resume_point):
+            media_item.size = resume_point
+            return True
+
         await _check_response(media_item, resp, resume_point)
         media_item.size = _get_content_length(resp.headers)
         if resp.status == HTTPStatus.PARTIAL_CONTENT:
@@ -457,6 +461,14 @@ def _set_upload_date(media_item: MediaItem, headers: Mapping[str, str]) -> None:
             hdrs.LAST_MODIFIED,
         )
         media_item.uploaded_at = last_modified
+
+
+def _is_complete(resp: AbstractResponse[Any], resume_point: int) -> bool:
+    """Whether a 416 to a resume request says every byte is already on disk (`Content-Range: bytes */<size>`)"""
+    if resp.status != HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE or not resume_point:
+        return False
+    unit, _, total = resp.headers.get(hdrs.CONTENT_RANGE, "").partition(" */")
+    return unit == "bytes" and total == str(resume_point)
 
 
 async def _check_response(media_item: MediaItem, resp: AbstractResponse[Any], resume_point: int) -> None:
