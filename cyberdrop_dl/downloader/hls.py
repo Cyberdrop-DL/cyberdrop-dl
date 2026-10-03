@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import hashlib
 import itertools
 import logging
 from contextvars import ContextVar
@@ -11,6 +12,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.cleanup import rm_partial_files
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
 
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
+_PLAYLIST_FILE = f"playlist{constants.TempExt.HLS}"
 _DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 
 
@@ -105,6 +108,37 @@ def _create_media_segments(m3u8: M3U8, temp_dir: Path, item: MediaItem) -> Gener
         yield _create_media_segment(item, segment, out_folder)
 
 
+def _playlist_id(m3u8: M3U8) -> str:
+    """Identifies the files a playlist points to. The query is ignored: it usually holds a short-lived token"""
+    hasher = hashlib.sha256()
+    for segment in itertools.chain(m3u8.segment_map, m3u8.segments):
+        hasher.update(segment.absolute_uri.partition("?")[0].encode() + b"\n")
+    return hasher.hexdigest()
+
+
+async def _discard_stale_segments(folder: Path, playlist_id: str) -> None:
+    """Delete segments downloaded from a different playlist.
+
+    Segments are named by their position, so the ones left over by an interrupted download of another playlist
+    (another CDN, another format, or a CDL version without this check) would be resumed and merged as if they
+    were part of this one"""
+    marker = folder / _PLAYLIST_FILE
+    try:
+        previous_id = await aio.read_text(marker)
+    except FileNotFoundError:
+        previous_id = None
+
+    if previous_id == playlist_id:
+        return
+
+    if await aio.is_dir(folder):
+        logger.info("Deleting segments in '%s' downloaded from a different playlist", folder)
+        await asyncio.to_thread(rm_partial_files, folder)
+
+    await aio.mkdir(folder, parents=True, exist_ok=True)
+    await aio.write_text(marker, playlist_id)
+
+
 def _check_segments(m3u8: M3U8) -> None:
     if m3u8.total_segments == 0:
         msg = f"{m3u8.media_type} m3u8 manifest ({m3u8.source}) has no valid segments"
@@ -132,6 +166,8 @@ async def _download_m3u8(
         m3u8.source,
     )
 
+    folder = temp_dir / m3u8.media_type
+    await _discard_stale_segments(folder, _playlist_id(m3u8))
     m_segments = await _download_segments(
         _create_media_segments(m3u8, temp_dir, item),
         m3u8.total_segments,
@@ -140,6 +176,7 @@ async def _download_m3u8(
     )
     await _decrypt_segments(m_segments, sem)
     await _merge_segments(m_segments, output)
+    await aio.unlink(folder / _PLAYLIST_FILE, missing_ok=True)
     return output
 
 
