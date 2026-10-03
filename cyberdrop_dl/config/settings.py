@@ -343,9 +343,6 @@ class TLS(ConfigModel):
 
 
 class Network(ConfigGroup):
-    async_dns: bool = True
-    "Resolve DNS queries asynchronously (UNIX only)"
-
     dump_responses: bool = False
     "Save text/HTML/JSON responses to disk (Flaresolverr responses are excluded)"
 
