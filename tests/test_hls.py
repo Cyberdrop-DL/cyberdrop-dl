@@ -118,19 +118,19 @@ def test_init_segments_should_be_include() -> None:
     assert m3u8.total_segments == 6
 
 
-def _segments(*urls: str) -> list[hls.HLSSegment]:
-    return list(hls._create_segments((Segment(uri=url) for url in urls), len(urls)))
+def _playlist(*urls: str) -> M3U8:
+    return M3U8("#EXTM3U\n" + "".join(f"#EXTINF:10,\n{url}\n" for url in urls) + "#EXT-X-ENDLIST\n")
 
 
 def test_playlist_id_ignores_query() -> None:
-    first = _segments("https://cdn.example.com/seg-1.ts?hash=abc", "https://cdn.example.com/seg-2.ts?hash=abc")
-    second = _segments("https://cdn.example.com/seg-1.ts?hash=xyz", "https://cdn.example.com/seg-2.ts?hash=xyz")
+    first = _playlist("https://cdn.example.com/seg-1.ts?hash=abc", "https://cdn.example.com/seg-2.ts?hash=abc")
+    second = _playlist("https://cdn.example.com/seg-1.ts?hash=xyz", "https://cdn.example.com/seg-2.ts?hash=xyz")
     assert hls._playlist_id(first) == hls._playlist_id(second)
 
 
 def test_playlist_id_changes_with_segments() -> None:
-    ts = _segments("https://cdn.example.com/seg-1.ts", "https://cdn.example.com/seg-2.ts")
-    fmp4 = _segments("https://cdn.example.com/init.mp4", "https://cdn.example.com/seg-1.m4s")
+    ts = _playlist("https://cdn.example.com/seg-1.ts", "https://cdn.example.com/seg-2.ts")
+    fmp4 = _playlist("https://cdn.example.com/init.mp4", "https://cdn.example.com/seg-1.m4s")
     assert hls._playlist_id(ts) != hls._playlist_id(fmp4)
 
 
@@ -156,3 +156,13 @@ async def test_segments_of_an_unknown_playlist_are_discarded(tmp_path: Path) -> 
     (folder / "00001.cdl_hls").write_bytes(b"segment")
     await hls._discard_stale_segments(folder, "playlist-a")
     assert not (folder / "00001.cdl_hls").exists()
+
+
+async def test_only_partial_files_are_discarded(tmp_path: Path) -> None:
+    folder = tmp_path / "video"
+    folder.mkdir()
+    (folder / "00001.cdl_hls").write_bytes(b"segment")
+    (folder / "notes.txt").write_text("not ours")
+    await hls._discard_stale_segments(folder, "playlist-a")
+    assert not (folder / "00001.cdl_hls").exists()
+    assert (folder / "notes.txt").read_text() == "not ours"

@@ -5,7 +5,6 @@ import dataclasses
 import hashlib
 import itertools
 import logging
-import shutil
 from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, NamedTuple, Protocol
@@ -13,6 +12,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.cleanup import rm_partial_files
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
 
@@ -101,15 +101,19 @@ def _create_media_segment(media_item: MediaItem, segment: HLSSegment, download_f
     return new_item
 
 
-def _create_media_segments(segments: Iterable[HLSSegment], folder: Path, item: MediaItem) -> Generator[MediaItem]:
-    for segment in segments:
-        yield _create_media_segment(item, segment, folder)
+def _create_media_segments(m3u8: M3U8, temp_dir: Path, item: MediaItem) -> Generator[MediaItem]:
+    assert m3u8.media_type
+    out_folder = temp_dir / m3u8.media_type
+    for segment in _create_segments(itertools.chain(m3u8.segment_map, m3u8.segments), count=m3u8.total_segments):
+        yield _create_media_segment(item, segment, out_folder)
 
 
-def _playlist_id(segments: Iterable[HLSSegment]) -> str:
+def _playlist_id(m3u8: M3U8) -> str:
     """Identifies the files a playlist points to. The query is ignored: it usually holds a short-lived token"""
-    urls = "\n".join(str(segment.url.with_query(None)) for segment in segments)
-    return hashlib.sha256(urls.encode()).hexdigest()
+    hasher = hashlib.sha256()
+    for segment in itertools.chain(m3u8.segment_map, m3u8.segments):
+        hasher.update(segment.absolute_uri.partition("?")[0].encode() + b"\n")
+    return hasher.hexdigest()
 
 
 async def _discard_stale_segments(folder: Path, playlist_id: str) -> None:
@@ -124,9 +128,12 @@ async def _discard_stale_segments(folder: Path, playlist_id: str) -> None:
     except FileNotFoundError:
         previous_id = None
 
-    if previous_id != playlist_id and await aio.is_dir(folder):
+    if previous_id == playlist_id:
+        return
+
+    if await aio.is_dir(folder):
         logger.info("Deleting segments in '%s' downloaded from a different playlist", folder)
-        await asyncio.to_thread(shutil.rmtree, folder)
+        await asyncio.to_thread(rm_partial_files, folder)
 
     await aio.mkdir(folder, parents=True, exist_ok=True)
     await aio.write_text(marker, playlist_id)
@@ -160,10 +167,9 @@ async def _download_m3u8(
     )
 
     folder = temp_dir / m3u8.media_type
-    segments = list(_create_segments(itertools.chain(m3u8.segment_map, m3u8.segments), count=m3u8.total_segments))
-    await _discard_stale_segments(folder, _playlist_id(segments))
+    await _discard_stale_segments(folder, _playlist_id(m3u8))
     m_segments = await _download_segments(
-        _create_media_segments(segments, folder, item),
+        _create_media_segments(m3u8, temp_dir, item),
         m3u8.total_segments,
         download_fn,
         sem,
