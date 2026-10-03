@@ -16,9 +16,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class UntrustedCAError(ValueError): ...
-
-
 logger = logging.getLogger(__name__)
 
 
