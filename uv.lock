@@ -671,7 +671,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "10.10.1.dev0"
+version = "10.11.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohappyeyeballs" },
