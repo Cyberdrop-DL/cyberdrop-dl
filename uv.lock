@@ -734,6 +734,7 @@ dependencies = [
     { name = "multidict" },
     { name = "propcache" },
     { name = "psutil", marker = "sys_platform != 'android'" },
+    { name = "pycparser" },
     { name = "pycryptodome" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -797,6 +798,7 @@ requires-dist = [
     { name = "oauthlib", marker = "extra == 'apprise'", specifier = ">=4.0.0" },
     { name = "propcache", specifier = ">=0.5.4" },
     { name = "psutil", marker = "sys_platform != 'android'", specifier = ">=7.2.1" },
+    { name = "pycparser", specifier = ">=3.1.0" },
     { name = "pycryptodome", specifier = ">=3.24.0" },
     { name = "pydantic", specifier = "==2.14.0" },
     { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'apprise'", specifier = ">=312" },
@@ -1450,11 +1452,11 @@ wheels = [
 
 [[package]]
 name = "pycparser"
-version = "3.0"
+version = "3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1b/7d/92392ff7815c21062bea51aa7b87d45576f649f16458d78b7cf94b9ab2e6/pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29", size = 103492, upload-time = "2026-01-21T14:26:51.89Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/d3/eb1d3bc30dda12f7e69640ae2ac8cb10240b71fb73024ad528b7d2ae73da/pycparser-3.1.tar.gz", hash = "sha256:b3fc6dec06a8b2fefa0ed4ff92285306a5e3be9987bc5603c9edbdc4e492418f", size = 105946, upload-time = "2026-10-08T12:26:34.349Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992", size = 48172, upload-time = "2026-01-21T14:26:50.693Z" },
+    { url = "https://files.pythonhosted.org/packages/99/ce/b3ae9ee0324d991c860187be2a6ee436d27a3d02397eaddbb101ec901f3d/pycparser-3.1-py3-none-any.whl", hash = "sha256:f09d358c840bd147b79e55f2bc494f18ea869dc897f5852a8f5766b74f787882", size = 48709, upload-time = "2026-10-08T12:26:32.97Z" },
 ]
 
 [[package]]
