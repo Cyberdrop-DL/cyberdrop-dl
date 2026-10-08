@@ -73,6 +73,9 @@ crawlers:
       - gifs/public
       - videos
       - videos/upload
+  reddit:
+    api: arctic_shift
+    content_urls: true
   tiktok:
     original: false
   twitter:

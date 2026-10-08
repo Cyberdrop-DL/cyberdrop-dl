@@ -121,3 +121,49 @@ async def test_truncated_resume_is_not_marked_complete(running_manager: Manager,
         pytest.raises(DownloadError, match="Corrupted File"),
     ):
         await client._process_response(item, _DOMAIN, resume_point, resp)
+
+
+def _range_not_satisfiable(total: int) -> _FakeResponse:
+    return _FakeResponse(
+        content_type="text/plain",
+        status=416,
+        headers=CIMultiDictProxy(CIMultiDict({"Content-Length": "0", "Content-Range": f"bytes */{total}"})),
+        url=AbsoluteHttpURL("https://cdn.example.com/seg-1.m4s"),
+        location=None,
+        _resp=b"",
+    )
+
+
+async def _segment(manager: Manager, tmp_path: Path, on_disk: bytes) -> MediaItem:
+    parent = await _resumable_item(manager, tmp_path, 0)
+    item = parent.as_segment("00001.cdl_hls", AbsoluteHttpURL("https://cdn.example.com/seg-1.m4s"))
+    item.partial_file = item.path = parent.download_folder / item.filename
+    item.path.write_bytes(on_disk)
+    return item
+
+
+async def test_finished_segment_is_kept_when_resume_is_not_satisfiable(
+    running_manager: Manager, tmp_path: Path
+) -> None:
+    item = await _segment(running_manager, tmp_path, _PAYLOAD)
+    client = DownloadClient(running_manager)
+    resp = _range_not_satisfiable(len(_PAYLOAD))
+    assert await client._process_response(item, _DOMAIN, len(_PAYLOAD), resp)
+    assert item.path.read_bytes() == _PAYLOAD
+
+
+async def test_oversized_segment_is_still_discarded(running_manager: Manager, tmp_path: Path) -> None:
+    item = await _segment(running_manager, tmp_path, _PAYLOAD + b"junk")
+    client = DownloadClient(running_manager)
+    resp = _range_not_satisfiable(len(_PAYLOAD))
+    with pytest.raises(DownloadError):
+        await client._process_response(item, _DOMAIN, len(_PAYLOAD) + 4, resp)
+    assert not item.path.exists()
+
+
+async def test_complete_partial_of_a_regular_file_is_unchanged(running_manager: Manager, tmp_path: Path) -> None:
+    item = await _resumable_item(running_manager, tmp_path, len(_PAYLOAD))
+    client = DownloadClient(running_manager)
+    resp = _range_not_satisfiable(len(_PAYLOAD))
+    with pytest.raises(DownloadError):
+        await client._process_response(item, _DOMAIN, len(_PAYLOAD), resp)

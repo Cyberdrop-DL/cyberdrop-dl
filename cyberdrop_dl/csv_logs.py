@@ -114,6 +114,7 @@ class CSVLogsManager:
         referer: AbsoluteHttpURL,
         error_message: str,
         origin: yarl.URL | Path | None = None,
+        parent: yarl.URL | None = None,
     ) -> None:
         _ = self.task_group.create_task(
             self._write_to_csv(
@@ -121,6 +122,7 @@ class CSVLogsManager:
                 url=url,
                 error=error_message,
                 referer=referer,
+                parent=parent,
                 origin=origin,
             )
         )

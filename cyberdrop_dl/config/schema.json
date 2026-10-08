@@ -222,6 +222,9 @@
         },
         "twitter": {
           "$ref": "#/$defs/TwitterConfig"
+        },
+        "reddit": {
+          "$ref": "#/$defs/RedditConfig"
         }
       },
       "title": "Crawlers",
@@ -1013,6 +1016,24 @@
         }
       },
       "title": "PornHubConfig",
+      "type": "object"
+    },
+    "RedditConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "const": "arctic_shift",
+          "default": "arctic_shift",
+          "title": "Api",
+          "type": "string"
+        },
+        "content_urls": {
+          "default": true,
+          "title": "Content Urls",
+          "type": "boolean"
+        }
+      },
+      "title": "RedditConfig",
       "type": "object"
     },
     "Sort": {

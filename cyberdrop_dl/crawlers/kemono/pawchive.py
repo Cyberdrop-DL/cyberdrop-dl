@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -8,17 +7,12 @@ from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import DownloadConfig
 from cyberdrop_dl.crawlers.kemono.api import KemonoAPI
 from cyberdrop_dl.crawlers.kemono.kemono import FileFilterer, KemonoBaseCrawler
-from cyberdrop_dl.crawlers.kemono.models import PostModel, UserPostModel
+from cyberdrop_dl.crawlers.kemono.models import UserPostModel
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    import bs4
-
     from cyberdrop_dl.config.crawlers import KemonoConfig
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
 
@@ -87,28 +81,17 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
     async def _extract_post_files(self, scrape_item: ScrapeItem, post_files: FileFilterer) -> None:
         await super()._extract_post_files(scrape_item, post_files)
 
-        if not post_files.has_deferred_files:
+        if not post_files.temp_dls:
             return
 
-        post = post_files.post
-        if not self.__kemono_config__.expand_posts:
-            self.log.warning("Post %s has deferred files but `expand_posts` is disabled. Ignoring..", post.id)
-            return
-
-        await self._deferred_files(scrape_item, post)
-
-    async def _deferred_files(self, scrape_item: ScrapeItem, post: PostModel) -> None:
-        self.log.info("Trying to get temp download URLs for deferred files in post %s", post.id)
-        soup = await self.request_soup(scrape_item.url)
-        files = await asyncio.to_thread(lambda: tuple(_extract_deferred_files(soup)))
-        if not files:
-            self.log.warning("Did not find any deferred URL for post %", post.id)
-            return
-
+        self.log.info("Trying to get temp download URLs for deferred files in post %s", post_files.post.id)
         async with self.new_task_group() as tg:
-            for name, src in files:
-                self.log.info("Found temp deferred file '%s' (%s)", name, src)
-                tg.create_task(self._temp_file(scrape_item, src, name))
+            for file in post_files.temp_dls:
+                src = file.temp_download_url or file.temp_url
+                if not src:
+                    continue
+                self.log.info("Found temp deferred file '%s' (%s)", file.deferred, src)
+                tg.create_task(self._temp_file(scrape_item, self.parse_url(src), file.name))
 
     async def _temp_file(
         self, scrape_item: ScrapeItem, src: AbsoluteHttpURL | None = None, name: str | None = None
@@ -142,23 +125,3 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
                 audio_codec=info and info.codecs.audio,
             ),
         )
-
-
-def _extract_deferred_files(soup: bs4.Tag) -> Iterable[tuple[str, AbsoluteHttpURL]]:
-    body = css.select(soup, ".post__body")
-    deferred_span = "span.post__relay-clock"
-    for li in css.iselect(body, "li:has(source)"):
-        try:
-            summary = css.select(li, f"summary:has({deferred_span})")
-        except css.SelectorError:
-            continue
-        else:
-            name = css.text(summary)
-            src = css.select(li, "source", "src")
-            yield name, PawchiveCrawler.parse_url(src)
-
-    for li in css.iselect(body, f"li.post__attachment:has({deferred_span})"):
-        attach = css.select(li, "a.post__attachment-link")
-        name = css.text(attach).removeprefix("Download ")
-        src = css.attr(attach, "href")
-        yield name, PawchiveCrawler.parse_url(src)

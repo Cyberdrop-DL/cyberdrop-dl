@@ -8,6 +8,13 @@ from cyberdrop_dl.models.types import FormatStr, HttpURL, NonEmptyStr
 from cyberdrop_dl.models.validators import remove_duplicates, strings
 
 
+class RedditConfig(ConfigModel):
+    api: Literal["arctic_shift"] = "arctic_shift"
+
+    content_urls: bool = True
+    "Download any URL found inside the description (text) of a post"
+
+
 class GoogleDriveFormats(ConfigModel):
     docs: Literal["docx", "odt", "rtf", "txt", "epub", "pdf", "md", "zip"] = "docx"
     "Default format for documents (can be overridden per URL with the 'format' query param)"
@@ -198,3 +205,4 @@ class Crawlers(ConfigGroup, name=None):
     pornhub: PornHubConfig = Field(default_factory=PornHubConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
     twitter: TwitterConfig = Field(default_factory=TwitterConfig)
+    reddit: RedditConfig = Field(default_factory=RedditConfig)

@@ -22,6 +22,29 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.11.0] - UNRELEASED
+
+### Added
+
+- Optional `lxml` dependency for faster HTML parsing
+- Vimeo support
+- Reddit support (via `arctic_shift`)
+
+### Changed
+
+- Include `parent` in `download_errors.csv`
+
+### Removed
+
+- Async DNS support (UNIX)
+
+### Fixed
+
+- Warnings for deprecated CLI/config options showing up at startup even if none of them were used
+- PoW challenge detection (Fileditch)
+- HLS downloads (PornHub)
+- Discard HLS segments left over from a different playlist
+
 ## [10.10.0] - 2026-09-18
 
 ### Added

@@ -18,6 +18,18 @@ if TYPE_CHECKING:
     from cyberdrop_dl.constants import HttpMethod
 
 
+def _choose_html_parser() -> str:
+    try:
+        __import__("lxml")
+    except ImportError:
+        return "html.parser"
+    else:
+        return "lxml"
+
+
+HTML_PARSER = _choose_html_parser()
+
+
 class SelectorError(ScrapeError):
     def __init__(self, message: str | None = None) -> None:
         super().__init__(422, message)
@@ -205,9 +217,7 @@ def parse_form(form: Tag, /) -> HTMLForm:
 
 
 def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
-    return BeautifulSoup(
-        content, "html.parser", parse_only=SoupStrainer(parse_only) if parse_only is not None else None
-    )
+    return BeautifulSoup(content, HTML_PARSER, parse_only=SoupStrainer(parse_only) if parse_only is not None else None)
 
 
 async def asoup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:

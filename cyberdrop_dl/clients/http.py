@@ -189,7 +189,6 @@ class HTTPClient:
             self.cookies.update_cookies(simple_cookie, url)
 
     async def __aenter__(self) -> Self:
-        await tcp.choose_dns_resolver()
         self._session = self.create_aiohttp_session()
         self._download_session = self.create_aiohttp_session()
         return self

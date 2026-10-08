@@ -199,7 +199,7 @@ def _restore_fields_set(merged: BaseModel, default: BaseModel, new: BaseModel) -
     # Reads __dict__ instead of getattr so deprecated fields don't trigger their DeprecationWarning.
     merged.__pydantic_fields_set__.intersection_update(default.model_fields_set | new.model_fields_set)
     for name, value in merged.__dict__.items():
-        if isinstance(value, BaseModel):
+        if all(isinstance(val, BaseModel) for val in (value, default.__dict__[name], new.__dict__[name])):
             _restore_fields_set(value, default.__dict__[name], new.__dict__[name])
 
 

@@ -6,7 +6,7 @@ import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl import aio
+from cyberdrop_dl import aio, env
 from cyberdrop_dl.constants import MAIN_LOG_FILE
 from cyberdrop_dl.logs import MAX_ATTACHMENT_SIZE, borrow_logger, export_logs, log_spacer
 
@@ -62,7 +62,8 @@ async def notify(urls: Sequence[AppriseURL], body: str) -> None:
 
 
 async def _notify(apprise_obj: apprise.Apprise, messages: Iterable[_AppriseMessage]) -> None:
-    with borrow_logger("apprise", level=logging.INFO):
+    log_level = logging.DEBUG if env.DEBUG_MODE else logging.INFO
+    with borrow_logger("apprise", level=log_level):
         _ = await aio.gather(
             *(
                 apprise_obj.async_notify(
@@ -71,6 +72,8 @@ async def _notify(apprise_obj: apprise.Apprise, messages: Iterable[_AppriseMessa
                     body_format=msg.body_format,
                     attach=msg.attachment,
                     tag=msg.tag,
+                    timeout=15,
+                    log_level=log_level,
                 )
                 for msg in messages
             )

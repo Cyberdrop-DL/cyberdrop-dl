@@ -109,6 +109,11 @@ def _truncate_text(text: str, max_bytes: int) -> str:
     return str_bytes.decode("utf-8", "ignore").strip()
 
 
+def _guess_ext(mime: str) -> str | None:
+    mime = {"image/jpg": "image/jpeg"}.get(mime, mime)
+    return mimetypes.guess_extension(mime)
+
+
 def get_filename_and_ext(
     filename: str,
     /,
@@ -120,7 +125,7 @@ def get_filename_and_ext(
     filename_as_path = Path(remove_os_sep(filename))
 
     if not filename_as_path.suffix:
-        if mime_type and (ext := mimetypes.guess_extension(mime_type)):
+        if mime_type and (ext := _guess_ext(mime_type)):
             filename_as_path = filename_as_path.with_suffix(ext)
         else:
             raise NoExtensionError(filename)

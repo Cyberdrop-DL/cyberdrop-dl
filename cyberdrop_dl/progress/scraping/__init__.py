@@ -65,7 +65,7 @@ class ScrapingUI(LiveUI):
         if is_terminal_in_portrait():
             return
 
-        terminal_height = shutil.get_terminal_size().lines
+        terminal_height = shutil.get_terminal_size().lines - env.RUNNING_IN_TERMUX
         top_height = self.scrape_errors.max_rows + _PANEL_PADDING
         scrape_height = self.scrape.max_rows + _PANEL_PADDING
         status_height = 2

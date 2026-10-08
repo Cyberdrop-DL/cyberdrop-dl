@@ -28,4 +28,21 @@ TEST_CASES = [
         ],
         "count": 2,
     },
+    {
+        "url": "https://external-preview.redd.it/wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsrwcXv7X6s4U9t0oQGskmpWM4E03oM0.png?width=640&crop=smart&format=pjpg&auto=webp&s=6bd97cd797ba966cc43637a9bcd5627a7e48a909",
+        "results": [
+            {
+                "url": "https://external-preview.redd.it/wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsrwcXv7X6s4U9t0oQGskmpWM4E03oM0.png?width=640&crop=smart&format=pjpg&auto=webp&s=6bd97cd797ba966cc43637a9bcd5627a7e48a909",
+                "filename": "wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsr.png",
+                "debrid_url": None,
+                "original_filename": "wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsr.png",
+                "referer": "https://external-preview.redd.it/wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsrwcXv7X6s4U9t0oQGskmpWM4E03oM0.png?width=640&crop=smart&format=pjpg&auto=webp&s=6bd97cd797ba966cc43637a9bcd5627a7e48a909",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (Reddit)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
 ]

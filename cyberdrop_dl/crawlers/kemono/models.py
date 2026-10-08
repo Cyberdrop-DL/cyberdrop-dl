@@ -35,6 +35,8 @@ class File:
     name: str | None = None  # Sometimes present
     server: str | None = None  # Sometimes present in attachments
     deferred: bool = False
+    temp_url: str | None = None
+    temp_download_url: str | None = None
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

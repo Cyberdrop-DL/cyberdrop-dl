@@ -153,10 +153,10 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
                 tg.create_task(self._direct_file(scrape_item, url))
                 scrape_item.add_children()
 
-        if embed := post_files.embed():
-            embed_url = self.parse_url(embed.url)
-            self.handle_external_links(scrape_item.create_child(embed_url))
-            scrape_item.add_children()
+            if embed := post_files.embed():
+                embed_url = self.parse_url(embed.url)
+                self.handle_external_links(scrape_item.create_child(embed_url))
+                scrape_item.add_children()
 
     def _extract_urls_from_post_content(self, scrape_item: ScrapeItem, post: PostProtocol[Any]) -> None:
         if not (post.content and self.__kemono_config__.content_urls):
@@ -186,15 +186,18 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
         return url.update_query(f=file.name or url.name)
 
     async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPostModel]) -> None:
-        for post in posts:
-            self.__check_for_ads(post)
-            new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
-            expand = self.__kemono_config__.expand_posts or (self.__kemono_config__.content_urls and not post.content)
-            if expand:
-                self.create_task(self.post(new_item, post.service, post.user_id, post.id))
-            else:
-                await self._user_post(new_item, post)
-            scrape_item.add_children()
+        async with self.new_task_group() as tg:
+            for post in posts:
+                self.__check_for_ads(post)
+                new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
+                expand = self.__kemono_config__.expand_posts or (
+                    self.__kemono_config__.content_urls and not post.content
+                )
+                if expand:
+                    tg.create_task(self.post(new_item, post.service, post.user_id, post.id))
+                else:
+                    await self._user_post(new_item, post)
+                scrape_item.add_children()
 
 
 def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -222,7 +225,7 @@ class FileFilterer:
     config: KemonoConfig
     log: logging.LoggerAdapter[logging.Logger] | logging.Logger
     skipped: int = dataclasses.field(init=False, default=0)
-    has_deferred_files: bool = dataclasses.field(init=False, default=False)
+    temp_dls: list[File] = dataclasses.field(init=False, default_factory=list)
 
     def _files(self) -> Generator[tuple[File, str, bool]]:
         if not self.post.has_full:
@@ -237,15 +240,18 @@ class FileFilterer:
     def __iter__(self) -> Generator[File]:
         for file, kind, should_download in self._files():
             file_name = file.name or file.path
-            if file.deferred:
-                self.has_deferred_files = True
+            temp_dl = bool(file.temp_download_url or file.temp_url)
+            missing = (file.deferred and not temp_dl) and not file.path
 
-            if self.post.preview_state == "pending" or file.deferred or not file.path:
+            if self.post.preview_state == "pending" or missing:
                 self.log.warning("Skipping file '%s' in post #%s [incomplete %s import]", file_name, self.post.id, kind)
                 self.skipped += 1
 
             elif not should_download:
                 self._report_skip_by_config(file_name, kind)
+
+            elif temp_dl:
+                self.temp_dls.append(file)
             else:
                 yield file
 

@@ -1,0 +1,60 @@
+DOMAIN = "reddit"
+TEST_CASES = [
+    {
+        "url": "https://www.reddit.com/r/anime/comments/1wbvs4b/plastic_neesan_we_recreated_the_iconic_wall_smash",
+        "results": [
+            {
+                "url": "https://i.redd.it/y8prf13sqjoh1.png",
+                "filename": "y8prf13sqjoh1.png",
+                "debrid_url": None,
+                "original_filename": "y8prf13sqjoh1.png",
+                "referer": "https://i.redd.it/y8prf13sqjoh1.png",
+                "album_id": None,
+                "uploaded_at": 1788982478,
+                "download_folder": "re:[Plastic Neesan] We recreated the iconic wall smash - 1wbvs4 (Reddit)",
+                "thumbnail": None,
+            },
+            {
+                "url": "https://i.redd.it/1hbfqg6tqjoh1.gif",
+                "filename": "1hbfqg6tqjoh1.gif",
+                "debrid_url": None,
+                "original_filename": "1hbfqg6tqjoh1.gif",
+                "referer": "https://i.redd.it/1hbfqg6tqjoh1.gif",
+                "album_id": None,
+                "uploaded_at": 1788982478,
+                "download_folder": "re:[Plastic Neesan] We recreated the iconic wall smash - 1wbvs4 (Reddit)",
+                "thumbnail": None,
+            },
+        ],
+        "count": 2,
+    },
+    {
+        "url": "https://www.reddit.com/user/-frogchamp-/comments/1n260wh/osc_art_request_timelapsespeed_draw_so_far_flash",
+        "description": "video embed",
+        "results": [
+            {
+                "url": "https://v.redd.it/8q50b220tplf1/HLSPlaylist.m3u8",
+                "filename": "8q50b220tplf1 [avc1][1044p].mp4",
+                "debrid_url": None,
+                "original_filename": "8q50b220tplf1",
+                "referer": "https://v.redd.it/8q50b220tplf1",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:OSC art request timelapse-speed draw (so far)! [flash warnin (Reddit)",
+                "thumbnail": None,
+            },
+            {
+                "url": "https://v.redd.it/8q50b220tplf1/wh_ben_en.vtt",
+                "filename": "8q50b220tplf1 [avc1][1044p].en.vtt",
+                "debrid_url": None,
+                "original_filename": "wh_ben_en.vtt",
+                "referer": "https://v.redd.it/8q50b220tplf1#8q50b220tplf1%20%5Bavc1%5D%5B1044p%5D.en.vtt",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:OSC art request timelapse-speed draw (so far)! [flash warnin (Reddit)",
+                "thumbnail": None,
+            },
+        ],
+        "count": 2,
+    },
+]
