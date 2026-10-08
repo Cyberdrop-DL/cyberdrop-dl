@@ -186,15 +186,18 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
         return url.update_query(f=file.name or url.name)
 
     async def __iter_user_posts(self, scrape_item: ScrapeItem, posts: Iterable[UserPostModel]) -> None:
-        for post in posts:
-            self.__check_for_ads(post)
-            new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
-            expand = self.__kemono_config__.expand_posts or (self.__kemono_config__.content_urls and not post.content)
-            if expand:
-                self.create_task(self.post(new_item, post.service, post.user_id, post.id))
-            else:
-                await self._user_post(new_item, post)
-            scrape_item.add_children()
+        async with self.new_task_group() as tg:
+            for post in posts:
+                self.__check_for_ads(post)
+                new_item = scrape_item.create_child(self.parse_url(post.web_path_qs))
+                expand = self.__kemono_config__.expand_posts or (
+                    self.__kemono_config__.content_urls and not post.content
+                )
+                if expand:
+                    tg.create_task(self.post(new_item, post.service, post.user_id, post.id))
+                else:
+                    await self._user_post(new_item, post)
+                scrape_item.add_children()
 
 
 def _thumbnail_to_src(og_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
