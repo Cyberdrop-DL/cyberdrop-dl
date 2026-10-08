@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PoW challenge detection (Fileditch)
 - HLS downloads (PornHub)
 - Discard HLS segments left over from a different playlist
-- A single download error crashing the entire program (Dropbox)
+- A single scrape error crashing the entire program (Dropbox)
 
 ## [10.10.0] - 2026-09-18
 
