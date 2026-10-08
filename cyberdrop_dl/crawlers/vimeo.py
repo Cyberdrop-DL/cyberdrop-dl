@@ -1,8 +1,3 @@
-"""
-https://archive.org/developers/bots.html#user-agent-requirements
-https://archive.org/developers/metadata-schema/index.html#public-files-fields
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -64,7 +59,6 @@ class VimeoCrawler(Crawler):
         m3u8 = info = debrid_url = None
         if best.is_hls:
             m3u8, info = await self.request_m3u8_playlist(best.url)
-
         else:
             debrid_url = best.url
 

@@ -80,21 +80,20 @@ class DropboxCrawler(Crawler):
     async def file(self, scrape_item: ScrapeItem) -> None:
         scrape_item.url = await self._ensure_rlkey(scrape_item.url)
         async with self.request(scrape_item.url.update_query(dl=1)) as resp:
-            self._file(scrape_item, resp.content_disposition.filename)
+            await self._file(scrape_item, resp.content_disposition.filename)
 
-    def _file(self, scrape_item: ScrapeItem, filename: str) -> None:
+    @error_handling_wrapper
+    async def _file(self, scrape_item: ScrapeItem, filename: str) -> None:
         scrape_item.url = view_url = scrape_item.url.with_query(rlkey=scrape_item.url.query["rlkey"], dl=0)
         download_url = view_url.update_query(dl=1)
         custom_filename, ext = self.get_filename_and_ext(filename)
-        self.create_eager_task(
-            self.handle_file(
-                view_url,
-                scrape_item,
-                filename,
-                ext,
-                debrid_link=download_url,
-                custom_filename=custom_filename,
-            )
+        await self.handle_file(
+            view_url,
+            scrape_item,
+            filename,
+            ext,
+            debrid_link=download_url,
+            custom_filename=custom_filename,
         )
 
     async def _ensure_rlkey(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -106,6 +105,7 @@ class DropboxCrawler(Crawler):
             return url
         raise ScrapeError(401)
 
+    @error_handling_wrapper
     async def _walk_folder(
         self,
         scrape_item: ScrapeItem,
@@ -136,7 +136,7 @@ class DropboxCrawler(Crawler):
                     )
                     continue
 
-                self._file(new_scrape_item, node.filename)
+                self.create_eager_task(self._file(new_scrape_item, node.filename))
                 scrape_item.add_children()
 
     async def _web_api_pager(
