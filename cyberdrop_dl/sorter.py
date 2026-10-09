@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import datetime
+import datetime as dt
 import hashlib
 import logging
 import shutil
@@ -219,7 +219,7 @@ def _format_dest(
     sort_dir: Path,
     **kwargs: object,
 ) -> Path:
-    file_date = datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)  # noqa: DTZ006
+    file_date = dt.datetime.fromtimestamp(mtime).replace(microsecond=0)  # noqa: DTZ006
 
     dest, _ = strings.safe_format(
         format_string,

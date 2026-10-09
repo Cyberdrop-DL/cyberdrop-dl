@@ -5,7 +5,7 @@ Reference: https://developer.wordpress.org/rest-api/reference/#rest-api-develope
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import itertools
 import re
 from abc import abstractmethod
@@ -266,11 +266,11 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
                 self.create_task(self.run(new_scrape_item))
 
 
-def _match_date_from_path(url_parts: tuple[str, ...]) -> datetime.datetime | None:
+def _match_date_from_path(url_parts: tuple[str, ...]) -> dt.datetime | None:
     match url_parts:
         case [year, month, day]:
             try:
-                return datetime.datetime(int(year), int(month), int(day), tzinfo=datetime.UTC)
+                return dt.datetime(int(year), int(month), int(day), tzinfo=dt.UTC)
             except Exception:  # noqa: BLE001
                 return None
         case _:

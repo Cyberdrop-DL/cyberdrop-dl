@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime  # noqa: TC003
+import datetime as dt  # noqa: TC003
 import re  # noqa: TC003
 from typing import TYPE_CHECKING, Self
 
@@ -145,10 +145,10 @@ class Filters(ConfigGroup):
     files: _FileFilter = Field(default_factory=_FileFilter)
     sizes: _FileSizes = Field(default_factory=_FileSizes)
     duration: _DurationLimits = Field(default_factory=_DurationLimits)
-    before: FalsyAsNone[datetime.date] = None
+    before: FalsyAsNone[dt.date] = None
     "Only download files uploaded before this date"
 
-    after: FalsyAsNone[datetime.date] = None
+    after: FalsyAsNone[dt.date] = None
     "Only download files uploaded after this date"
 
     filename_regex: FalsyAsNone[re.Pattern[str]] = None

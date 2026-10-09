@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+import datetime as dt
 import email.utils
 import shutil
 import subprocess
@@ -88,36 +88,36 @@ else:
     async def set_creation_time(file: Path, timestamp: float) -> None: ...
 
 
-def _normalize(date_time: datetime.datetime) -> datetime.datetime:
+def _normalize(date_time: dt.datetime) -> dt.datetime:
     if date_time.tzinfo is None:
-        date_time = date_time.replace(tzinfo=datetime.UTC)
-    elif date_time.tzinfo is not datetime.UTC:
-        date_time = date_time.astimezone(datetime.UTC)
+        date_time = date_time.replace(tzinfo=dt.UTC)
+    elif date_time.tzinfo is not dt.UTC:
+        date_time = date_time.astimezone(dt.UTC)
     if date_time.microsecond:
         return date_time.replace(microsecond=0)
     return date_time
 
 
-def parse_iso(date_or_datetime: str, /) -> datetime.datetime:
-    return _normalize(datetime.datetime.fromisoformat(date_or_datetime))
+def parse_iso(date_or_datetime: str, /) -> dt.datetime:
+    return _normalize(dt.datetime.fromisoformat(date_or_datetime))
 
 
-def parse_format(date_or_datetime: str, /, format: str) -> datetime.datetime:  # noqa: A002
-    return _normalize(datetime.datetime.strptime(date_or_datetime, format))  # noqa: DTZ007
+def parse_format(date_or_datetime: str, /, format: str) -> dt.datetime:  # noqa: A002
+    return _normalize(dt.datetime.strptime(date_or_datetime, format))  # noqa: DTZ007
 
 
-def parse_http(date: str, /) -> datetime.datetime:
+def parse_http(date: str, /) -> dt.datetime:
     """parse rfc 2822 or an "HTTP-date" format as defined by RFC 9110"""
     return _normalize(email.utils.parsedate_to_datetime(date))
 
 
-def from_timestamp(timestamp: float) -> datetime.datetime:
-    return _normalize(datetime.datetime.fromtimestamp(timestamp, tz=datetime.UTC))
+def from_timestamp(timestamp: float) -> dt.datetime:
+    return _normalize(dt.datetime.fromtimestamp(timestamp, tz=dt.UTC))
 
 
-def now(*, utc: bool = False) -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC if utc else None)
+def now(*, utc: bool = False) -> dt.datetime:
+    return dt.datetime.now(dt.UTC if utc else None)
 
 
-MIN = datetime.datetime.min.replace(tzinfo=datetime.UTC)
-MAX = datetime.datetime.max.replace(tzinfo=datetime.UTC)
+MIN = dt.datetime.min.replace(tzinfo=dt.UTC)
+MAX = dt.datetime.max.replace(tzinfo=dt.UTC)

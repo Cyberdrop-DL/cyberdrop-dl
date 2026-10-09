@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import logging
 import random
 from enum import auto
@@ -106,7 +106,7 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
     rotate: bool = False
     "Append current datetimme to every log file on each run"
 
-    _created_at: datetime.datetime = PrivateAttr(default_factory=datetime.datetime.now)
+    _created_at: dt.datetime = PrivateAttr(default_factory=dt.datetime.now)
 
     @property
     def effective_level(self) -> int:
@@ -148,7 +148,7 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
             if file.suffix.lower() not in {".log", ".csv"}:
                 continue
 
-            if (self._created_at - datetime.datetime.fromtimestamp(file.stat().st_ctime)) > self.expire_after:  # noqa: DTZ006
+            if (self._created_at - dt.datetime.fromtimestamp(file.stat().st_ctime)) > self.expire_after:  # noqa: DTZ006
                 file.unlink()
 
     def __eq__(self, other: object) -> bool:

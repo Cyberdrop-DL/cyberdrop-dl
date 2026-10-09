@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
@@ -15,7 +15,7 @@ def make_resp(content_type: str, url: str = "https://example.com") -> _AIOHTTPRe
         location=None,
         _resp=None,  # pyright: ignore[reportArgumentType]
     )
-    resp.created_at = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+    resp.created_at = dt.datetime.min.replace(tzinfo=dt.UTC)
     return resp
 
 

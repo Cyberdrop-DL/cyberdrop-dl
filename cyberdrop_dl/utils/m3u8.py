@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime
+import datetime as dt
 import logging
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Self
@@ -236,9 +236,9 @@ class M3U8(_M3U8):
     __repr__ = simple_repr("media_type", "base_uri", "is_variant", "source")
 
     @property
-    def total_duration(self) -> datetime.timedelta:
+    def total_duration(self) -> dt.timedelta:
         total_duration: float = sum(duration for segment in self.segments if (duration := segment.duration))
-        return datetime.timedelta(seconds=total_duration)
+        return dt.timedelta(seconds=total_duration)
 
 
 class _LazyRenditionLog:

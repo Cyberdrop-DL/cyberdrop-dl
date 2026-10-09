@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-import datetime
+import datetime as dt
 import logging
 import os
 import sys
@@ -136,7 +136,7 @@ class Manager:
 
     def __print_stats(self, scrape_stats: ScrapeStats) -> None:
 
-        elapsed = datetime.timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
+        elapsed = dt.timedelta(seconds=int(time.monotonic() - scrape_stats.start_time))
         total_data_written = bytesize_to_str(self.scrape_mapper.tui.downloads.bytes_downloaded)
 
         logger.info("Run Stats:", extra={"color": "cyan"})

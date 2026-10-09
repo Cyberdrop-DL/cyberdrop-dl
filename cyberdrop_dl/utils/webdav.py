@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime
+import datetime as dt
 import email.utils
 from collections.abc import Generator
 from enum import StrEnum
@@ -46,8 +46,8 @@ class Resource:
     name: str
     content_type: str
     etag: str
-    last_modified: datetime.datetime
-    creation_date: datetime.datetime
+    last_modified: dt.datetime
+    creation_date: dt.datetime
 
     href: str
 
@@ -77,7 +77,7 @@ def parse_propfind(xml_resp: str) -> Generator[Resource]:
             content_type=pop("{DAV:}getcontenttype"),
             etag=pop("{DAV:}getetag").strip('"'),
             type=pop("{DAV:}resourcetype", None) or None,
-            creation_date=datetime.datetime.fromisoformat(pop("{DAV:}creationdate")),
+            creation_date=dt.datetime.fromisoformat(pop("{DAV:}creationdate")),
             last_modified=email.utils.parsedate_to_datetime(pop("{DAV:}getlastmodified")),
             content_length=int(pop("{DAV:}getcontentlength", 0)) or None,
             extra_props=props,

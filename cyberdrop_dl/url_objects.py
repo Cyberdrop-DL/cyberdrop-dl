@@ -4,7 +4,7 @@ import base64
 import contextlib
 import copy
 import dataclasses
-import datetime
+import datetime as dt
 import logging
 from enum import IntEnum
 from pathlib import Path
@@ -159,7 +159,7 @@ class MediaItem:
 
     metadata: object = dataclasses.field(init=False, default_factory=dict)
 
-    uploaded_at_date: datetime.datetime | None = dataclasses.field(init=False, default=None)
+    uploaded_at_date: dt.datetime | None = dataclasses.field(init=False, default=None)
     extra_info: dict[str, Any] = dataclasses.field(init=False, default_factory=dict)
 
     id: tuple[str, ...] = dataclasses.field(init=False)
@@ -177,7 +177,7 @@ class MediaItem:
 
         if self.uploaded_at:
             assert type(self.uploaded_at) is int, f"Invalid {self.uploaded_at =!r} from {self.referer}"
-            self.uploaded_at_date = datetime.datetime.fromtimestamp(self.uploaded_at, tz=datetime.UTC)
+            self.uploaded_at_date = dt.datetime.fromtimestamp(self.uploaded_at, tz=dt.UTC)
 
         self.base64_id = base64.urlsafe_b64encode("".join(self.id).encode()).decode().rstrip("=")
 
@@ -288,12 +288,12 @@ class ScrapeItem:
         self._uploaded_at = None if value is None else int(value)
 
     @property
-    def upload_date(self) -> datetime.datetime | None:
+    def upload_date(self) -> dt.datetime | None:
         if self._uploaded_at:
-            return datetime.datetime.fromtimestamp(self._uploaded_at, tz=datetime.UTC)
+            return dt.datetime.fromtimestamp(self._uploaded_at, tz=dt.UTC)
 
     @upload_date.setter
-    def upload_date(self, date: datetime.datetime | None) -> None:
+    def upload_date(self, date: dt.datetime | None) -> None:
         if date:
             self.uploaded_at = date.timestamp()
 

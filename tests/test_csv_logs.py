@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+import datetime as dt
 from pathlib import Path
 
 import pytest
@@ -8,7 +8,7 @@ from cyberdrop_dl.config import Config
 from cyberdrop_dl.csv_logs import CSVFiles, CSVLogsManager, _prepare_resp_file, _write_to_csv
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
-now = datetime.datetime(2026, 5, 8, tzinfo=datetime.UTC)
+now = dt.datetime(2026, 5, 8, tzinfo=dt.UTC)
 
 
 @pytest.mark.parametrize(

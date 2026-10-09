@@ -13,7 +13,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
 from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import AsyncGenerator, Generator, Iterable, Mapping
 
     import aiosqlite
@@ -52,8 +52,8 @@ class RetrySource(StrEnum):
 @dataclasses.dataclass(slots=True, frozen=True)
 class RetryScrapeSource:
     source: RetrySource
-    after: datetime.date
-    before: datetime.date
+    after: dt.date
+    before: dt.date
 
 
 async def load_items_from_path(path: Path) -> AsyncGenerator[ScrapeItem]:
@@ -165,8 +165,8 @@ async def load_items_from_db(
     db_conn: aiosqlite.Connection,
     query: RetryQuery,
     *,
-    after: datetime.date,
-    before: datetime.date,
+    after: dt.date,
+    before: dt.date,
 ) -> AsyncGenerator[ScrapeItem]:
     cursor = await db_conn.execute(query, (after.isoformat(), before.isoformat()))
     while rows := await cursor.fetchmany(_FETCH_MANY_SIZE):

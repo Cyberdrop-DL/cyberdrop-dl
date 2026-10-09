@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, final
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import Sequence
 
     import yarl
@@ -20,7 +20,7 @@ class HasParents(Protocol):
 
 class MediaItemLike(HasParents, Protocol):
     @property
-    def uploaded_at_date(self) -> datetime.datetime | None: ...
+    def uploaded_at_date(self) -> dt.datetime | None: ...
     @property
     def ext(self) -> str: ...
     @property

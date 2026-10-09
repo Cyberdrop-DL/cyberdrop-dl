@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from typing import LiteralString
 
 import pytest
@@ -130,7 +130,7 @@ def test_codecs_parse(codecs: str, result: m3u8.Codecs) -> None:
 
 def test_m3u8(m3u8_content: str) -> None:
     m3u8_obj = m3u8.M3U8(m3u8_content)
-    assert m3u8_obj.total_duration == datetime.timedelta(seconds=28.5)
+    assert m3u8_obj.total_duration == dt.timedelta(seconds=28.5)
     assert not m3u8_obj.is_variant
     with pytest.raises(AssertionError):
         m3u8.VariantM3U8Parser(m3u8_obj)

@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+import datetime as dt
 from typing import Any
 
 import aiohttp
@@ -58,11 +58,11 @@ def test_post_validation(post_resp: dict[str, Any]) -> None:
             server=None,
         ),
     )
-    assert post.published == datetime.datetime(2025, 5, 21, 18, 11, 4, tzinfo=datetime.UTC)
+    assert post.published == dt.datetime(2025, 5, 21, 18, 11, 4, tzinfo=dt.UTC)
     assert post.added
-    assert post.added.date() >= datetime.date(2026, 6, 11)
+    assert post.added.date() >= dt.date(2026, 6, 11)
     assert post.edited
-    assert post.edited > datetime.datetime(2026, 7, 8, 3, 11, 18, tzinfo=datetime.UTC)
+    assert post.edited > dt.datetime(2026, 7, 8, 3, 11, 18, tzinfo=dt.UTC)
     assert post.timestamp == 1747851064
     assert post.tags == ("Animation", "Announcement")
     assert post.embed is None
@@ -107,9 +107,9 @@ def test_validation_of_post_not_archived_yet(post_resp_w_embeds: dict[str, Any])
         server=None,
     )
     assert post.attachments == ()
-    assert post.published == datetime.datetime(2025, 5, 3, 17, 12, 47, tzinfo=datetime.UTC)
+    assert post.published == dt.datetime(2025, 5, 3, 17, 12, 47, tzinfo=dt.UTC)
     assert post.added
-    assert post.added.date() == datetime.date(2026, 6, 10)
+    assert post.added.date() == dt.date(2026, 6, 10)
     assert post.edited is None
     assert post.timestamp == 1746292367
     assert post.tags == ("Naughty ASMR",)

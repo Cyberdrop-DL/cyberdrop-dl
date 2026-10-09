@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from contextvars import ContextVar
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Any, Literal, final
@@ -17,7 +17,7 @@ type ImpersonateTarget = Literal["chrome", "edge", "safari", "safari_ios", "chro
 
 LOGS_DATETIME_FORMAT = "%Y%m%d_%H%M%S"
 LOGS_DATE_FORMAT = "%Y_%m_%d"
-STARTUP_TIME_STR = datetime.datetime.now().strftime(LOGS_DATETIME_FORMAT)  # noqa: DTZ005
+STARTUP_TIME_STR = dt.datetime.now().strftime(LOGS_DATETIME_FORMAT)  # noqa: DTZ005
 CDL_USER_AGENT = f"cyberdrop-dl/{__version__}"
 
 

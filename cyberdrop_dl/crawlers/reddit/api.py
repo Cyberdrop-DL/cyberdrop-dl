@@ -13,7 +13,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import AsyncGenerator
 
 
@@ -28,8 +28,8 @@ class SearchQuery:
     author: str | None = None
     subreddit: str | None = None
     author_flair_text: str | None = None
-    after: datetime.date | None = None
-    before: datetime.date | None = None
+    after: dt.date | None = None
+    before: dt.date | None = None
     sort: Literal["desc", "asc"] = "desc"
     limit: int = 100
 

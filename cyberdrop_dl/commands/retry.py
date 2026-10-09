@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from typing import Annotated
 
 from cyclopts import App, Parameter
@@ -15,10 +15,10 @@ app = App(name="retry", help="Retry downloads from the database")
 
 @Parameter(name="*")
 class RetryArgs(ConfigModel):
-    from_: Annotated[datetime.date, Parameter(name="from")] = datetime.date(1970, 1, 1)
+    from_: Annotated[dt.date, Parameter(name="from")] = dt.date(1970, 1, 1)
     "Only retry URLs added to the database since this date"
 
-    to: Annotated[datetime.date | None, Parameter(show_default=True)] = None
+    to: Annotated[dt.date | None, Parameter(show_default=True)] = None
     "Only retry URLs added to the database before this date"
 
     force_original_path: bool = False
@@ -28,8 +28,8 @@ class RetryArgs(ConfigModel):
     cli_overrides: Config | None = None
 
 
-def _tomorrow() -> datetime.date:
-    return datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(days=1)
+def _tomorrow() -> dt.date:
+    return dt.datetime.now(tz=dt.UTC).date() + dt.timedelta(days=1)
 
 
 def create_retry_src(retry: RetrySource, args: RetryArgs | None = None) -> RetryScrapeSource:

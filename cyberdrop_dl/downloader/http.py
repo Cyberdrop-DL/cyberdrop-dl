@@ -31,7 +31,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.m3u8 import Rendition
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import AsyncGenerator
 
     from cyberdrop_dl.clients.downloads import DownloadClient
@@ -407,7 +407,7 @@ def _is_allowed_date_range(media_item: MediaItem, config: Config) -> bool:
     return _filter_by_date(media_item.uploaded_at_date, config)
 
 
-def _filter_by_date(item_datetime: datetime.datetime, config: Config) -> bool:
+def _filter_by_date(item_datetime: dt.datetime, config: Config) -> bool:
     item_date = item_datetime.date()
     filters = config.filters
 

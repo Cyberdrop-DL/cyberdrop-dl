@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from enum import StrEnum
 from typing import Annotated, Literal, NewType
 
@@ -10,12 +10,12 @@ from pydantic.type_adapter import TypeAdapter
 from cyberdrop_dl.utils import css
 
 
-def add_utc_tz(parsed_date: datetime.datetime) -> datetime.datetime:
-    return parsed_date.replace(tzinfo=datetime.UTC)
+def add_utc_tz(parsed_date: dt.datetime) -> dt.datetime:
+    return parsed_date.replace(tzinfo=dt.UTC)
 
 
 TitleFromHTML = Annotated[str, AfterValidator(css.unescape)]
-AwareDatetimeUTC = Annotated[datetime.datetime, AfterValidator(add_utc_tz)]
+AwareDatetimeUTC = Annotated[dt.datetime, AfterValidator(add_utc_tz)]
 
 
 class ColletionType(StrEnum):
@@ -65,8 +65,8 @@ CategorySequence = TypeAdapter(list[Category])
 
 class PostExtraData(Post):
     # Not used at the moment
-    date: datetime.datetime
-    modified: datetime.datetime
+    date: dt.datetime
+    modified: dt.datetime
     modified_gmt: AwareDatetimeUTC
     status: Literal["publish", "future", "draft", "pending", "private"]
     type: str
