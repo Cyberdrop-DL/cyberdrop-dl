@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -218,16 +218,16 @@ wheels = [
 
 [[package]]
 name = "async-mega-py"
-version = "2.4.1"
+version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiolimiter" },
     { name = "pycryptodome" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/25/82/c0739566383372feb4498dffc39e70d641b838a3f0c2b1fbc520238c60d7/async_mega_py-2.4.1.tar.gz", hash = "sha256:0a975cc8802faee14c4f01be1c7fa61fc53acbdd6258722de74f683919c47d5b", size = 40812, upload-time = "2026-05-16T20:54:02.966Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/64/c3e7c70a69cd1bb28f3437550c1e7239216a23d9ebdc8253af9628662d2e/async_mega_py-2.5.0.tar.gz", hash = "sha256:4ac99b02426600008de765156991461ba5b4504c3f7807935c1f9eb6ea013fa5", size = 43810, upload-time = "2026-10-09T00:45:16.391Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/7f/a7dec4327739cb6a66fc9e7d1b945d89015d394db74382890e44e484cb45/async_mega_py-2.4.1-py3-none-any.whl", hash = "sha256:bf25c702b5456f597790c2c0abcab9bbe90e55b682377ce518da34d62fda20dd", size = 49566, upload-time = "2026-05-16T20:54:01.622Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/cd/548c47d8a36dabb0003fa12b9b6f1715aa1fad3a07353024d54d4dd8988f/async_mega_py-2.5.0-py3-none-any.whl", hash = "sha256:11269e37680110689f25bfc0bc6b42b2caa28c81f0f1bc8e9138424dfb794bbb", size = 49599, upload-time = "2026-10-09T00:45:15.229Z" },
 ]
 
 [[package]]
@@ -714,8 +714,9 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "10.11.0.dev1"
+version = "10.11.0.dev2"
 source = { editable = "." }
+default-groups = "all"
 dependencies = [
     { name = "aiohappyeyeballs" },
     { name = "aiohttp" },
@@ -782,7 +783,7 @@ requires-dist = [
     { name = "aiolimiter", specifier = ">=1.3.0" },
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "apprise", marker = "extra == 'apprise'", specifier = ">=2.0.1,<3.0.0" },
-    { name = "async-mega-py", specifier = ">=2.4.1" },
+    { name = "async-mega-py", specifier = ">=2.5.0" },
     { name = "backports-zstd", marker = "python_full_version < '3.14' and implementation_name == 'cpython'", specifier = ">=1.7.0" },
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "brotli", marker = "implementation_name == 'cpython' and sys_platform != 'ios'", specifier = ">=1.2.0" },

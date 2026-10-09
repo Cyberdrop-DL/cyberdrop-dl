@@ -360,6 +360,7 @@ def setup_file_logging(
         file.open("w", encoding="utf8", errors="backslashreplace") as fp,
         enter_context(MAIN_LOG_FILE, file),
         enter_context(mega.LOG_HTTP_TRAFFIC, log_http_traffic),
+        enter_context(mega.LOG_HTTP_TRAFFIC_LEVEL, logging.INFO),
         enter_context(mega.LOG_FILE_PROGRESS, False),
         _threaded_logger(
             log_handler=LogHandler(

@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.11.0dev1"
+version = "10.11.0dev2"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,7 +19,7 @@ dependencies = [
     "aiohttp >=3.14.4, < 4.0.0",
     "aiolimiter >=1.3.0",
     "aiosqlite>=0.22.1",
-    "async-mega-py >=2.4.1",
+    "async-mega-py >=2.5.0",
     "backports.zstd >=1.7.0; implementation_name=='cpython' and python_version < '3.14'",
     "beautifulsoup4 >=4.15.0",
     "brotli >=1.2.0; implementation_name=='cpython' and sys_platform!='ios'",
@@ -226,7 +226,7 @@ spaces_indent_inline_array = 4
 
 [tool.uv]
 default-groups = "all"
-required-version = ">=0.11.14"
+required-version = ">=0.12.24"
 
 [tool.uv.build-backend]
 module-name = ["cyberdrop_dl"]
