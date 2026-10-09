@@ -156,6 +156,7 @@ ignore = [
     "FIX002",  # line-contains-todo
     "FLY002",  # static-join-to-f-string
     "G004",  # logging-f-string
+    "ICN001",  # datetime as dt
     "N806",  # uppercase variables in functions
     "PLC0415",  # import-outside-top-level
     "PLR2004",  # magic-value-comparison

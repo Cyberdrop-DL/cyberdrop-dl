@@ -201,9 +201,7 @@ def _validate_keys(stream: M3U8) -> None:
     if not stream.keys:
         return
     for key in stream.keys:
-        if (
-            key is None or key.method == "NONE"
-        ):  # First one could be None # pyright: ignore[reportUnnecessaryComparison]
+        if key is None or key.method == "NONE":  # First one could be None # pyright: ignore[reportUnnecessaryComparison]
             continue
         if key.method != Encryption.AES_128:
             raise DownloadError(
