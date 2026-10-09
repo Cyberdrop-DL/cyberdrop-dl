@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from typing import TYPE_CHECKING, Literal, SupportsIndex, SupportsInt, overload
 
 from pydantic import ByteSize, TypeAdapter
@@ -38,7 +38,7 @@ def change_path_suffix(suffix: str) -> Callable[[Path], Path]:
     return with_suffix
 
 
-def _str_to_timedelta(input_date: str) -> datetime.timedelta:
+def _str_to_timedelta(input_date: str) -> dt.timedelta:
     import re
 
     time_str = input_date.casefold()
@@ -72,10 +72,10 @@ def _str_to_timedelta(input_date: str) -> datetime.timedelta:
     if not matches:
         msg = f"Unable to convert '{input_date}' to timedelta object"
         raise ValueError(msg)
-    return datetime.timedelta(**time_dict)
+    return dt.timedelta(**time_dict)
 
 
-def to_timedelta(input_date: datetime.timedelta | str | int | None) -> datetime.timedelta | str:
+def to_timedelta(input_date: dt.timedelta | str | int | None) -> dt.timedelta | str:
     """Parses `datetime.timedelta`, `str` or `int` into a timedelta format.
 
     For `str`, the expected format is `<value> <unit>`, ex: `5 days`, `10 minutes`, `1 year`
@@ -85,11 +85,11 @@ def to_timedelta(input_date: datetime.timedelta | str | int | None) -> datetime.
 
     For `int`, `input_date` is assumed as `days`
     """
-    input_date = falsy_as(input_date, datetime.timedelta(0))
-    if isinstance(input_date, datetime.timedelta):
+    input_date = falsy_as(input_date, dt.timedelta(0))
+    if isinstance(input_date, dt.timedelta):
         return input_date
     if isinstance(input_date, int):
-        return datetime.timedelta(seconds=input_date)
+        return dt.timedelta(seconds=input_date)
     try:
         return _str_to_timedelta(input_date)
     except Exception:  # noqa: BLE001
@@ -119,7 +119,7 @@ def remove_duplicates[T](values: list[T] | tuple[T, ...]) -> list[T] | tuple[T, 
     return type(values)(dict.fromkeys(values))
 
 
-def assume_utc[T: datetime.datetime](date: T) -> T:
+def assume_utc[T: dt.datetime](date: T) -> T:
     if date.tzinfo is None:
-        return date.replace(tzinfo=datetime.UTC)
+        return date.replace(tzinfo=dt.UTC)
     return date

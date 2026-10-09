@@ -61,7 +61,7 @@ def cast_impersonate(target: ImpersonateTarget | Literal[True]) -> Emulation | P
 
 
 def create_client(config: Config) -> WreqClient:
-    import datetime
+    import datetime as dt
 
     import wassima
     from wreq import redirect  # pyright: ignore[reportPrivateImportUsage]
@@ -74,7 +74,7 @@ def create_client(config: Config) -> WreqClient:
 
     def optional_params() -> Generator[tuple[str, Any]]:
         if net.read_timeout:
-            yield "read_timeout", datetime.timedelta(seconds=net.read_timeout)
+            yield "read_timeout", dt.timedelta(seconds=net.read_timeout)
         if net.proxy:
             yield "proxies", [Proxy.all(str(net.proxy))]
         if net.impersonate:
@@ -90,7 +90,7 @@ def create_client(config: Config) -> WreqClient:
         dns_options=DnsOptions(system_dns=True),
         tls_min_version=cast_tls(net.tls.min_version),
         tls_verify=net.tls.verify and CertStore.from_der_certs(wassima.root_der_certificates()),
-        connect_timeout=datetime.timedelta(seconds=net.connection_timeout),
+        connect_timeout=dt.timedelta(seconds=net.connection_timeout),
         cookie_store=True,
         redirect=redirect.Policy.limited(8),
         user_agent=net.user_agent,

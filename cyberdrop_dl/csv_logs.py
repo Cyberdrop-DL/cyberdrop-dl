@@ -14,7 +14,7 @@ from cyberdrop_dl.utils import json
 from cyberdrop_dl.utils.dataclass import DictDataclass
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import Iterable
 
     import yarl
@@ -176,7 +176,7 @@ def _write_resp_to_disk(
         logger.debug(f"Saved response from {url} to '{file}'")
 
 
-def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: datetime.datetime, ext: str = ".html") -> Path:
+def _prepare_resp_file(folder: Path, url: AbsoluteHttpURL, created_at: dt.datetime, ext: str = ".html") -> Path:
     max_stem_len = 245 - len(str(folder)) + len(constants.STARTUP_TIME_STR) + 10
     log_date = created_at.strftime(constants.LOGS_DATETIME_FORMAT)
     path_safe_url = sanitize_filename(Path(str(url)).as_posix().replace("/", "-"))

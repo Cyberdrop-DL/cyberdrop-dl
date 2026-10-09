@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
-import datetime
+import datetime as dt
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, final, override
 
@@ -116,9 +116,9 @@ class TwitterCrawler(Crawler):
         self.api: FXTwitterAPI = FXTwitterAPI.from_crawler(self)
         self.x_api: TwitterAPI = TwitterAPI.from_crawler(self)
         if after := self.config.filters.after:
-            self._default_since = int(datetime.datetime.combine(after, datetime.time.min).timestamp())
+            self._default_since = int(dt.datetime.combine(after, dt.time.min).timestamp())
         if before := self.config.filters.before:
-            self._default_until = int(datetime.datetime.combine(before, datetime.time.min).timestamp())
+            self._default_until = int(dt.datetime.combine(before, dt.time.min).timestamp())
 
     @classmethod
     @override
@@ -245,7 +245,7 @@ class TwitterCrawler(Crawler):
                     return int(value)
                 except ValueError:
                     try:
-                        return int(datetime.datetime.fromisoformat(value).timestamp())
+                        return int(dt.datetime.fromisoformat(value).timestamp())
                     except ValueError:
                         self.log.error("Unable to parse '%s' query param from %s, ignoring...", query_name, url)
 

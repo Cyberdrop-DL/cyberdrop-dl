@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -44,8 +44,8 @@ def test_webdav_parse_propfind() -> None:
         type=None,
         etag="ac8d5ef02ce089df735bf8c3813be492",
         content_length=422682383,
-        last_modified=datetime.datetime(2026, 3, 27, 22, 3, 10, tzinfo=datetime.UTC),
-        creation_date=datetime.datetime(1970, 1, 1, 0, 0, tzinfo=datetime.UTC),
+        last_modified=dt.datetime(2026, 3, 27, 22, 3, 10, tzinfo=dt.UTC),
+        creation_date=dt.datetime(1970, 1, 1, 0, 0, tzinfo=dt.UTC),
         href="/public.php/dav/files/e5mYoDxSSGn2b",
     )
 

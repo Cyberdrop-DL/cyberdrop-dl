@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime
+import datetime as dt
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
-_PREMIUM_SUB_RELEASE_DATE = datetime.datetime(2017, 1, 1, tzinfo=datetime.UTC).timestamp()
+_PREMIUM_SUB_RELEASE_DATE = dt.datetime(2017, 1, 1, tzinfo=dt.UTC).timestamp()
 # Approx date from https://web.archive.org/web/20170520211342/https://clyp.it/premium-pricing
 
 

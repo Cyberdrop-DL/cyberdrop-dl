@@ -10,7 +10,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     from collections.abc import Iterable
 
     from cyberdrop_dl.crawlers._forum import Thread
@@ -25,7 +25,7 @@ class Post:
     id: int
     title: str
     xml: ET.Element[str]
-    date: datetime.datetime | None = None
+    date: dt.datetime | None = None
 
     @staticmethod
     def new(element: ET.Element[str]) -> Post:

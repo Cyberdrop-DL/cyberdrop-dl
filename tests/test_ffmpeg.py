@@ -1,5 +1,5 @@
 import contextlib
-import datetime
+import datetime as dt
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -160,7 +160,7 @@ async def test_ffprobe_video_url() -> None:
 )
 def test_parse_duration(duration: str, hours: float, minutes: float, seconds: float) -> None:
     output = ffmpeg._parse_duration(duration)
-    expected = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()
+    expected = dt.timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()
     assert output == expected
 
 

@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import itertools
 import shutil
 from pathlib import Path
@@ -10,7 +10,7 @@ from cyberdrop_dl.sorter import Sorter, _format_dest, _have_same_content, _move_
 
 DOWNLOADS = Path("/mnt/home/user/downloads/cdl/")
 SORT_DIR = DOWNLOADS.parent / "cdl_sorted"
-MTIME = datetime.datetime(2023, 7, 14, 12, 34, 56, tzinfo=datetime.UTC).timestamp()
+MTIME = dt.datetime(2023, 7, 14, 12, 34, 56, tzinfo=dt.UTC).timestamp()
 
 
 @pytest.mark.parametrize(

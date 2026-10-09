@@ -10,7 +10,7 @@ from cyberdrop_dl.utils import css, dates, parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
 
     from bs4 import BeautifulSoup
 
@@ -102,7 +102,7 @@ class EfuktCrawler(Crawler):
 
 @dataclasses.dataclass(slots=True)
 class Media:
-    date: datetime.datetime
+    date: dt.datetime
     title: str
     src: AbsoluteHttpURL
     id: str = ""

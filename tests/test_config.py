@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 import os
 import time
@@ -384,7 +384,7 @@ def test_config_union() -> None:
     assert config | Config() == config
     assert config | Config(deep_scrape=True) == Config(ignore_history=True, dump_json=True, deep_scrape=True)
 
-    filters = Filters(files=_FileFilter(audio=False), before=datetime.date.today())  # noqa: DTZ011
+    filters = Filters(files=_FileFilter(audio=False), before=dt.date.today())  # noqa: DTZ011
     config_2 = Config(filters=filters)
     assert config.filters.files.audio is True
     assert config_2.filters.files.audio is False

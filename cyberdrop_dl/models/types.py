@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -28,9 +28,9 @@ type LogPath = Annotated[Path, AfterValidator(change_path_suffix(".log"))]
 type ByteSizeSerilized = Annotated[ByteSize, PlainSerializer(bytesize_to_str, return_type=str, when_used="json")]
 type FalsyAsNone[T] = Annotated[T | None, BeforeValidator(falsy_as_none)]
 type Timedelta = Annotated[
-    datetime.timedelta,
+    dt.timedelta,
     BeforeValidator(to_timedelta),
-    Field(ge=datetime.timedelta(seconds=0)),
+    Field(ge=dt.timedelta(seconds=0)),
     PlainSerializer(
         str, return_type=str, when_used="json"
     ),  # Serialize as str to save it as sexageximal (hh:mm:ss) instead of pydantic's ISO duration (PT1H5M26S)
@@ -45,5 +45,5 @@ type HttpURL = Annotated[
 ]
 
 
-type AwareDatetime = Annotated[datetime.datetime, AfterValidator(assume_utc)]
+type AwareDatetime = Annotated[dt.datetime, AfterValidator(assume_utc)]
 type ExistingPath = Annotated[Path, AfterValidator(path.exists)]

@@ -33,7 +33,7 @@ from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, frozen
 from cyberdrop_dl.utils.errors import error_handling_context
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
     import http.cookies
     from collections.abc import (
         AsyncGenerator,
@@ -812,7 +812,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self,
         title: str | None = None,
         id: str | None = None,  # noqa: A002
-        date: datetime.datetime | datetime.date | float | None = None,
+        date: dt.datetime | dt.date | float | None = None,
         /,
     ) -> str:
         if not self.separate_posts:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import dataclasses
-import datetime
+import datetime as dt
 import enum
 import functools
 import json
@@ -43,7 +43,7 @@ class _DataclassInstance(Protocol):
 
 
 def default(obj: object, /) -> Any:  # noqa: PLR0911
-    if isinstance(obj, datetime.date):
+    if isinstance(obj, dt.date):
         return obj.isoformat()
     if isinstance(obj, enum.Enum):
         return obj.value
