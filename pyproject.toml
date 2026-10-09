@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.11.0dev2"
+version = "10.11.0dev3"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -80,7 +80,7 @@ Repository = "https://github.com/Cyberdrop-DL/cyberdrop-dl"
 
 [build-system]
 build-backend = "uv_build"
-requires = ["uv_build>=0.12.23,<0.13.0"]
+requires = ["uv_build>=0.13.0,<0.14.0"]
 
 [dependency-groups]
 dev = [
@@ -88,7 +88,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest>=9.1.1",
-    "ruff>=0.16.10,<0.17.0"
+    "ruff>=0.17.0,<0.18.0"
 ]
 
 [tool.basedpyright]
@@ -226,7 +226,7 @@ spaces_indent_inline_array = 4
 
 [tool.uv]
 default-groups = "all"
-required-version = ">=0.12.24"
+required-version = ">=0.13.0"
 
 [tool.uv.build-backend]
 module-name = ["cyberdrop_dl"]
