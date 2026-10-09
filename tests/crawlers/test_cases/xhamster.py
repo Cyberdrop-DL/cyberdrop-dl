@@ -256,6 +256,11 @@ TEST_CASES = [
         ],
     },
     {
+        "url": "https://xhamster.com/photos/gallery/selfie-porn-pic-242-16043978",
+        "description": "gallery w 2 pages, each page only has 60 images",
+        "count": 62,
+    },
+    {
         "url": "https://ge.xhamster.desi/videos/horny-asian-slut-fucking-with-big-toy-and-cumming-a-lot-xhW9s1z",
         "results": [
             {
