@@ -340,7 +340,7 @@ class _WreqResponse(AbstractResponse[wreq.Response]):
 
     @override
     async def _read(self) -> bytes:
-        return await self._resp.bytes()
+        return (await self._resp.bytes()).tobytes()
 
     @override
     async def _read_text(self, encoding: str | None = None) -> str:
@@ -362,7 +362,9 @@ class _WreqResponse(AbstractResponse[wreq.Response]):
     @classmethod
     def create(cls, resp: wreq.Response, /) -> Self:
         headers = CIMultiDictProxy(
-            CIMultiDict(((name.decode("utf-8"), value.decode("utf-8")) for name, value in resp.headers))
+            CIMultiDict(
+                ((name.tobytes().decode("utf-8"), value.tobytes().decode("utf-8")) for name, value in resp.headers)
+            )
         )
         url = AbsoluteHttpURL(resp.url, encoded="%" in resp.url)
         content_type, location = _parse_headers(url, headers)

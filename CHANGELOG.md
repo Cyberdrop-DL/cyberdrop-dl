@@ -26,9 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Optional `lxml` dependency for faster HTML parsing
+- Python 3.15 support
 - Vimeo support
 - Reddit support (via `arctic_shift`)
+- Optional `lxml` dependency for faster HTML parsing
 
 ### Changed
 
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PoW challenge detection (Fileditch)
 - HLS downloads (PornHub)
 - Discard HLS segments left over from a different playlist
+- A single scrape error crashing the entire program (Dropbox)
 
 ## [10.10.0] - 2026-09-18
 
