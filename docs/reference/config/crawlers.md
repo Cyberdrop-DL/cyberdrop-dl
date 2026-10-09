@@ -289,6 +289,31 @@ crawlers:
 
 Subpaths to scrape when an input URL is a profile's homepage. ex: `https://www.pornhub.com/model/<model_name>`
 
+# Reddit
+
+```yaml
+reddit:
+  api: arctic_shift
+  content_urls: true
+```
+
+## `api`
+
+| Type           | Default        |
+| -------------- | -------------- |
+| `arctic_shift` | `arctic_shift` |
+
+Backend API to use to connect to Reddit. The only currently supported API is `arctic_shift`, which allows retrieving deleted posts and subreddit-specific
+posts with no authentication.
+
+## `content_urls`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Scan the description (text) in a post and download any URL found
+
 # Tiktok
 
 ```yaml
