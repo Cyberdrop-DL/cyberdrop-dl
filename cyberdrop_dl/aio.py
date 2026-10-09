@@ -490,6 +490,14 @@ async def queue_consumer[T](queue: asyncio.Queue[T], stop_sentinel: Any = MISSIN
             queue.task_done()
 
 
+async def aenumerate[T](agen: AsyncGenerator[T], *, start: int = 0) -> AsyncGenerator[tuple[int, T]]:
+    index = start
+    async with contextlib.aclosing(agen) as items:
+        async for item in items:
+            yield index, item
+            index += 1
+
+
 def run[T](coro: Coroutine[Any, Any, T]) -> T:
     def loop_factory() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()

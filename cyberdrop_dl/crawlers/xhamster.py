@@ -6,8 +6,9 @@ import dataclasses
 import itertools
 import json
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
@@ -152,41 +153,43 @@ class XhamsterCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
         initials = await self.api.get_window_initials(scrape_item.url)
-        page_details: dict[str, Any] = initials["galleryPage"]
-        gallery: dict[str, Any] = page_details["galleryModel"]
-        gallery_id = str(gallery["id"])
-        title = self.create_title(f"{gallery['title']} [gallery]", gallery_id)
-        scrape_item.setup_as_album(title, album_id=gallery_id)
-        scrape_item.uploaded_at = gallery["created"]
+        gallery = Gallery.parse(initials)
+        scrape_item.setup_as_album(self.create_title(f"{gallery.title} [gallery]", gallery.id), album_id=gallery.id)
+        scrape_item.uploaded_at = gallery.created
+        downloaded = await self.get_completed_by_album(gallery.id)
 
-        results = await self.get_album_results(gallery_id)
-        n_pages: int = page_details["paginationProps"]["lastPageNumber"]
-        index: int = 0
-        images: list[dict[str, Any]] = gallery["photos"]
+        async def images():
+            for img in gallery.images:
+                yield img
 
-        for next_page in itertools.count(2):
-            for img in images:
-                img["index"] = index = index + 1
-                self._handle_img(scrape_item, img, results)
+            for next_page in itertools.count(2):
+                if next_page > gallery.n_pages:
+                    break
 
-            if next_page > n_pages:
-                break
+                next_page_url = scrape_item.url / str(next_page)
+                initials = await self.api.get_window_initials(next_page_url)
+                for img in Gallery.parse(initials).images:
+                    yield img
 
-            next_page_url = scrape_item.url / str(next_page)
-            initials = await self.api.get_window_initials(next_page_url)
-            images = initials["photosGalleryModel"]["photos"]
+        async with self.new_task_group() as tg:
+            async for index, img in aio.aenumerate(images(), start=1):
+                if img.src in downloaded:
+                    continue
 
-    def _handle_img(self, scrape_item: ScrapeItem, img: dict[str, Any], results: dict[str, bool]) -> None:
-        src, page_url = self.parse_url(img["imageURL"]), self.parse_url(img["pageURL"])
-        if self.check_album_results(src, results):
-            return
+                tg.create_task(self._image(scrape_item.create_child(img.url), img, index))
+                scrape_item.add_children()
 
-        _, ext = self.get_filename_and_ext(src.name)
-        stem = f"{str(img['index']).zfill(3)} - {src.name.removesuffix(ext)}"
-        filename = self.create_custom_filename(stem, ext, file_id=img["id"])
-        new_scrape_item = scrape_item.create_child(page_url)
-        self.create_eager_task(self.handle_file(src, new_scrape_item, src.name, ext, custom_filename=filename))
-        scrape_item.add_children()
+    @error_handling_wrapper
+    async def _image(self, scrape_item: ScrapeItem, img: Image, index: int) -> None:
+        _, ext = self.get_filename_and_ext(img.src.name)
+        stem = f"{str(index).zfill(3)} - {img.src.name.removesuffix(ext)}"
+        await self.handle_file(
+            img.src,
+            scrape_item,
+            img.src.name,
+            ext,
+            custom_filename=self.create_custom_filename(stem, ext, file_id=str(img.id)),
+        )
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -465,3 +468,43 @@ def _decode_hex_url(encrypted_url: str) -> str:
         raise ValueError(f"Unknown encrypted URL {encrypted_url} with {algo = } and {seed = }") from None
     decoded_array = bytearray([(array[idx + 5] ^ decode_next()) & 255 for idx in range(len(array) - 5)])
     return decoded_array.decode("utf-8")
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Gallery:
+    id: str
+    title: str
+    created: int
+    images: tuple[Image, ...] = ()
+    n_pages: int = 1
+
+    @classmethod
+    def parse(cls, initials: dict[str, Any]) -> Self:
+        gallery: dict[str, Any] = initials["galleryPage"]
+        crumbs = gallery["breadCrumbsProps"]["breadCrumbs"]
+        info = gallery["infoProps"]
+        author = info["authorInfoProps"]
+        return cls(
+            id=str(gallery["id"]),
+            title=crumbs[-1]["name"],
+            created=author["createdDate"],
+            images=tuple(map(Image.parse, gallery["photoItems"])),
+            n_pages=gallery["paginationProps"]["lastPageNumber"],
+        )
+
+
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Image:
+    id: int
+    src: AbsoluteHttpURL
+    url: AbsoluteHttpURL
+    alt: str | None = None
+
+    @classmethod
+    def parse(cls, photo: dict[str, Any]) -> Self:
+        return cls(
+            id=photo["id"],
+            src=XhamsterCrawler.parse_url(photo["imgSrc"]),
+            url=XhamsterCrawler.parse_url(photo["link"]),
+            alt=photo.get("alt") or None,
+        )
