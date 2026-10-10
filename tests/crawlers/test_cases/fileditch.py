@@ -4,7 +4,7 @@ TEST_CASES = [
         "url": "https://fileditchfiles.me/file.php?f=/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
         "results": [
             {
-                "url": "re:/b71/FrmLzfLKUHBWDTQfqaTZ.mp4?exp=",
+                "url": "re:/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "filename": "FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "referer": "https://fileditchfiles.me/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "download_folder": "re:Loose Files (Fileditch)",
@@ -28,7 +28,7 @@ TEST_CASES = [
         "url": "https://fileditchfiles.me/beta5/a292619a708980582542/%5B8.11%5D_valk1.mp4",
         "results": [
             {
-                "url": "re:/beta5/a292619a708980582542/%5B8.11%5D_valk1.mp4?",
+                "url": "re:/beta5/a292619a708980582542/%5B8.11%5D_valk1.mp4",
                 "filename": "[8.11]_valk1.mp4",
                 "original_filename": "[8.11]_valk1.mp4",
                 "referer": "https://fileditchfiles.me/beta5/a292619a708980582542/%5B8.11%5D_valk1.mp4",
@@ -43,7 +43,7 @@ TEST_CASES = [
         "url": "https://fileditchfiles.me/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
         "results": [
             {
-                "url": "re:/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4?md5=",
+                "url": "re:/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
                 "filename": "Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
                 "original_filename": "Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
                 "referer": "https://fileditchfiles.me/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
