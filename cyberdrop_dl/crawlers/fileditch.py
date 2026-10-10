@@ -158,10 +158,10 @@ def _file_path(url: AbsoluteHttpURL) -> str:
         # https://<node>/<token>, token = urlsafe_b64("<expires>:<sig>:<n>/<path>") without padding
         try:
             token = base64.urlsafe_b64decode(b64_pad(url.name)).decode()
+            expires, sig, path = token.split(":", 2)
         except ValueError:
             pass
         else:
-            expires, sig, path = token.split(":", 2)
             if expires.isdecimal() and sig and "/" in path:
                 return "/" + path.partition("/")[-1]
 
