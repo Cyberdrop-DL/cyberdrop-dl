@@ -70,6 +70,7 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "domain": "fileditchalbums",
         "url": "https://fileditchalbums.st/pbxrzgde8g",
         "description": "album",
         "results": [
