@@ -72,22 +72,34 @@ class FileditchCrawler(Crawler):
         if file.path == _HOMEPAGE_CATCH_ALL:
             raise ScrapeError(422)
 
+        scrape_item.uploaded_at = self.parse_iso_date(file.uploaded)
         filename, ext = self.get_filename_and_ext(file.name)
-        await self.handle_file(file.url, scrape_item, filename, ext, debrid_link=file.src, thumbnail=file.thumb)
+        await self.handle_file(
+            file.url,
+            scrape_item,
+            file.name,
+            ext,
+            debrid_link=file.src,
+            thumbnail=file.thumb,
+            custom_filename=filename,
+        )
 
     async def request_download(self, url: AbsoluteHttpURL) -> File:
         resp = await self.flaresolverr_request(url, wait=env.FILEDITCH_WAIT)
         soup = await resp.soup()
+
         if soup.select_one(".gone-path"):
             raise ScrapeError(410)
         if soup.select_one("form#pow-form"):
             raise DDOSGuardError("Flaresolverr failed proof of work challenge")
+
         src = self.parse_url(css.select(soup, "a.btn[download]", "href"))
         return File(
             name=src.name if src.query else url.name,
             path=_file_path(src),
             url=url,
             src=src,
+            uploaded=css.select(soup, ".pathline .up", "title").replace("UTC", "Z"),
             thumb=_extr_thumb(soup),
         )
 
@@ -98,6 +110,7 @@ class File:
     path: str
     url: AbsoluteHttpURL
     src: AbsoluteHttpURL
+    uploaded: str
     thumb: str | None
 
 

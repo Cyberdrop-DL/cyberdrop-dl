@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "referer": "https://fileditchfiles.me/b71/FrmLzfLKUHBWDTQfqaTZ.mp4",
                 "download_folder": "re:Loose Files (Fileditch)",
-                "uploaded_at": None,
+                "uploaded_at": 1769407080,
             }
         ],
     },
@@ -17,10 +17,10 @@ TEST_CASES = [
         "description": "multiple slashes on URL",
         "results": [
             {
-                "url": "re:/b70/jRuBeGZlRoBWPurUARg.mp4?",
+                "url": "re:/b70/jRuBeGZlRoBWPurUARg.mp4",
                 "referer": "https://fileditchfiles.me/b70/jRuBeGZlRoBWPurUARg.mp4",
                 "download_folder": "re:Loose Files (Fileditch)",
-                "uploaded_at": None,
+                "uploaded_at": int,
             }
         ],
     },
@@ -33,7 +33,7 @@ TEST_CASES = [
                 "original_filename": "[8.11]_valk1.mp4",
                 "referer": "https://fileditchfiles.me/beta5/a292619a708980582542/%5B8.11%5D_valk1.mp4",
                 "album_id": None,
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:Loose Files (Fileditch)",
             }
         ],
@@ -48,7 +48,7 @@ TEST_CASES = [
                 "original_filename": "Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
                 "referer": "https://fileditchfiles.me/alpha7/adf9b7514d0d86d1cadd/Anai_Loves_-_Cheating_At_The_World_Cup_Match_1080p.mp4",
                 "album_id": None,
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:Loose Files (Fileditch)",
             }
         ],
@@ -63,7 +63,7 @@ TEST_CASES = [
                 "filename": "Oppenheimer.2023.2160p.PROPER.IMAX.HYBRID.UHD.REMUX.DV.HDR10_.TrueHD.7.1.Atmos.mkv",
                 "referer": "https://fileditchvids.st/beta22/1e34db7bc4a490dbdaa5/Oppenheimer.2023.2160p.PROPER.IMAX.HYBRID.UHD.REMUX.DV.HDR10_.TrueHD.7.1.Atmos.mkv",
                 "album_id": None,
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:Loose Files (Fileditch)",
             }
         ],
@@ -77,7 +77,7 @@ TEST_CASES = [
             {
                 "url": "ANY",
                 "album_id": "pbxrzgde8g",
-                "uploaded_at": None,
+                "uploaded_at": int,
                 "download_folder": "re:wehavealbumsnow (Fileditch)",
             },
         ],
