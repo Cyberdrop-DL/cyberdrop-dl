@@ -60,7 +60,7 @@ class FileditchCrawler(Crawler):
         url = super().transform_url(url)
         if url.name == "file.php" and (path := url.query.get("f")):
             return url.with_path(path)
-        return url
+        return url.without_query_params("fdrh")
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:

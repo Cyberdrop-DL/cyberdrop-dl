@@ -49,3 +49,23 @@ def test_file_path(url: str, expected: str) -> None:
 def test_file_path_rejects_unsigned_urls(url: str) -> None:
     with pytest.raises(ScrapeError):
         fileditch._file_path(AbsoluteHttpURL(url))
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://fileditchvids.st/beta22/abc/file.mkv?fdrh=1787436084.aHR0cHM6Ly9maWxlZGl0Y2hmaWxlcy5tZQ.abc123",
+            "https://fileditchvids.st/beta22/abc/file.mkv",
+        ),
+        ("https://fileditchfiles.me/file.php?f=/b71/file.mp4", "https://fileditchfiles.me/b71/file.mp4"),
+        (
+            "https://fileditchfiles.me/beta5/abc/%5B8.11%5D_valk1.mp4",
+            "https://fileditchfiles.me/beta5/abc/%5B8.11%5D_valk1.mp4",
+        ),
+        ("https://theditch.st/wtk8hvwb", "https://theditch.st/wtk8hvwb"),
+    ],
+)
+def test_transform_url(url: str, expected: str) -> None:
+    result = str(fileditch.FileditchCrawler.transform_url(AbsoluteHttpURL(url)))
+    assert result == expected
