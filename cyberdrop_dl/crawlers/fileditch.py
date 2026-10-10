@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl import env
@@ -67,19 +68,14 @@ class FileditchCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        src, thumb = await self.request_download(scrape_item.url)
-        if _file_path(src) == _HOMEPAGE_CATCH_ALL:
+        file = await self.request_download(scrape_item.url)
+        if file.path == _HOMEPAGE_CATCH_ALL:
             raise ScrapeError(422)
 
-        if src.query:
-            filename, ext = self.get_filename_and_ext(src.name)
-            await self.handle_file(src, scrape_item, filename, ext, thumbnail=thumb)
-            return
+        filename, ext = self.get_filename_and_ext(file.name)
+        await self.handle_file(file.url, scrape_item, filename, ext, debrid_link=file.src, thumbnail=file.thumb)
 
-        filename, ext = self.get_filename_and_ext(scrape_item.url.name)
-        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=src, thumbnail=thumb)
-
-    async def request_download(self, url: AbsoluteHttpURL) -> tuple[AbsoluteHttpURL, str | None]:
+    async def request_download(self, url: AbsoluteHttpURL) -> File:
         resp = await self.flaresolverr_request(url, wait=env.FILEDITCH_WAIT)
         soup = await resp.soup()
         if soup.select_one(".gone-path"):
@@ -87,8 +83,22 @@ class FileditchCrawler(Crawler):
         if soup.select_one("form#pow-form"):
             raise DDOSGuardError("Flaresolverr failed proof of work challenge")
         src = self.parse_url(css.select(soup, "a.btn[download]", "href"))
-        _ = _file_path(src)
-        return src, _extr_thumb(soup)
+        return File(
+            name=src.name if src.query else url.name,
+            path=_file_path(src),
+            url=url,
+            src=src,
+            thumb=_extr_thumb(soup),
+        )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class File:
+    name: str
+    path: str
+    url: AbsoluteHttpURL
+    src: AbsoluteHttpURL
+    thumb: str | None
 
 
 @FileditchCrawler.__http_config__
