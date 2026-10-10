@@ -9,7 +9,7 @@ from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils import b64_pad, css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -134,11 +134,11 @@ def _file_path(url: AbsoluteHttpURL) -> str:
     if not url.query and len(url.parts) == 2:
         # https://<node>/<token>, token = urlsafe_b64("<expires>:<sig>:<n>/<path>") without padding
         try:
-            token = base64.urlsafe_b64decode(url.name + "=" * (-len(url.name) % 4)).decode()
-            expires, sig, path = token.split(":", 2)
+            token = base64.urlsafe_b64decode(b64_pad(url.name)).decode()
         except ValueError:
             pass
         else:
+            expires, sig, path = token.split(":", 2)
             if expires.isdecimal() and sig and "/" in path:
                 return "/" + path.partition("/")[-1]
 
