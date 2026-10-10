@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl import env
@@ -59,7 +60,7 @@ class FileditchCrawler(Crawler):
         url = super().transform_url(url)
         if url.name == "file.php" and (path := url.query.get("f")):
             return url.with_path(path)
-        return url
+        return url.without_query_params("fdrh")
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem) -> None:
@@ -67,11 +68,16 @@ class FileditchCrawler(Crawler):
             return
 
         src, thumb = await self.request_download(scrape_item.url)
-        if src.path == _HOMEPAGE_CATCH_ALL:
+        if _file_path(src) == _HOMEPAGE_CATCH_ALL:
             raise ScrapeError(422)
 
-        filename, ext = self.get_filename_and_ext(src.name)
-        await self.handle_file(src, scrape_item, filename, ext, thumbnail=thumb)
+        if src.query:
+            filename, ext = self.get_filename_and_ext(src.name)
+            await self.handle_file(src, scrape_item, filename, ext, thumbnail=thumb)
+            return
+
+        filename, ext = self.get_filename_and_ext(scrape_item.url.name)
+        await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=src, thumbnail=thumb)
 
     async def request_download(self, url: AbsoluteHttpURL) -> tuple[AbsoluteHttpURL, str | None]:
         resp = await self.flaresolverr_request(url, wait=env.FILEDITCH_WAIT)
@@ -81,7 +87,7 @@ class FileditchCrawler(Crawler):
         if soup.select_one("form#pow-form"):
             raise DDOSGuardError("Flaresolverr failed proof of work challenge")
         src = self.parse_url(css.select(soup, "a.btn[download]", "href"))
-        _check_url(src)
+        _ = _file_path(src)
         return src, _extr_thumb(soup)
 
 
@@ -120,8 +126,20 @@ def _extr_thumb(soup: bs4.Tag) -> str | None:
         pass
 
 
-def _check_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+def _file_path(url: AbsoluteHttpURL) -> str:
     for params in [("md5", "expires"), ("exp", "sig")]:
         if all(map(url.query.get, params)):
-            return url
+            return url.path
+
+    if not url.query and len(url.parts) == 2:
+        # https://<node>/<token>, token = urlsafe_b64("<expires>:<sig>:<n>/<path>") without padding
+        try:
+            token = base64.urlsafe_b64decode(url.name + "=" * (-len(url.name) % 4)).decode()
+            expires, sig, path = token.split(":", 2)
+        except ValueError:
+            pass
+        else:
+            if expires.isdecimal() and sig and "/" in path:
+                return "/" + path.partition("/")[-1]
+
     raise ScrapeError(422, f"Unable to extract a valid download URL. Found: {url}")
