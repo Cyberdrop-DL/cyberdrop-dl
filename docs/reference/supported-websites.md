@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.10.0
+List of sites supported by cyberdrop-dl-patched as of version 10.11.0
 
 ### 1fichier
 
@@ -2370,6 +2370,33 @@ List of sites supported by cyberdrop-dl-patched as of version 10.10.0
 
 ### Reddit
 
+**Primary URL**: [https://www.reddit.com](https://www.reddit.com)
+
+**Supported Domains**: `old.reddit.com`, `reddit.com`
+
+**Supported Paths**:
+
+- Media:
+  - `/link/...`
+- Redirects:
+  - `/gallery/<id>`
+  - `/r/<subreddit>/s/<share_id>`
+  - `/u/<user>/s/<share_id>`
+  - `/user/<user>/s/<share_id>`
+- Submission:
+  - `/comments/<id>`
+  - `/r/<subreddit>/comments/<id>/...`
+  - `/user/<user>/comments/<id>/...`
+- Subreddit::
+  - `/r/<subreddit>`
+- User submissions:
+  - `/u/<user>`
+  - `/u/<user>/submitted`
+  - `/user/<user>`
+  - `/user/<user>/submitted`
+
+### Reddit
+
 **Primary URL**: [https://v.redd.it](https://v.redd.it)
 
 **Supported Domains**: `v.redd.it`
@@ -2378,6 +2405,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.10.0
 
 - Video:
   - `v.redd.it/<video_id>`
+
+### Reddit
+
+**Primary URL**: [https://i.redd.it](https://i.redd.it)
+
+**Supported Domains**: `external-preview.redd.it`, `i.redd.it`, `i.redditmedia.com`, `i.reddituploads.com`, `preview.redd.it`
+
+**Supported Paths**:
+
+- Image:
+  - `i.redd.it/<id>.>ext>`
 
 ### RedGifs
 
@@ -3045,6 +3083,19 @@ List of sites supported by cyberdrop-dl-patched as of version 10.10.0
 
 - Video:
   - `/#<video_id>`
+
+### Vimeo
+
+**Primary URL**: [https://vimeo.com](https://vimeo.com)
+
+**Supported Domains**: `vimeo.*`
+
+**Supported Paths**:
+
+- Video:
+  - `/<video_id>`
+  - `/channels/<channel>/<video_id>`
+  - `https://player.vimeo.com/video/<id>`
 
 ### ViperGirls
 
