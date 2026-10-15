@@ -34,4 +34,22 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://smotrim.ru/video/1652696",
+        "description": "movie",
+        "results": [
+            {
+                "url": "https://smotrim.ru/video/1652696",
+                "filename": "Елена Прекрасная (2016) [1652696].mp4",
+                "debrid_url": None,
+                "original_filename": "Елена Прекрасная (2016)",
+                "referer": "https://smotrim.ru/video/1652696",
+                "album_id": None,
+                "uploaded_at": 1560588000,
+                "download_folder": "re:Елена Прекрасная (2016) (Smotrim.ru)",
+                "thumbnail": "https://cdn.smotrim.ru/photobank/prod/large/152/986/23.jpg",
+            }
+        ],
+        "count": 1,
+    },
 ]

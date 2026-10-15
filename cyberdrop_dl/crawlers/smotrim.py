@@ -18,6 +18,10 @@ class SmotrimCrawler(Crawler):
             "/video/<video_id>",
             "/brand/<brand>#playing_video=<video_id>",
         ),
+        "Audio": (
+            "/audio/<audio_id>",
+            "/brand/<brand>#playing_audio=<audio_id>",
+        ),
     }
     DOMAIN: ClassVar[str] = "smotrim.ru"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://smotrim.ru")
@@ -70,11 +74,15 @@ class SmotrimCrawler(Crawler):
             m3u8, debrid_link = None, media.src
             _, ext = self.get_filename_and_ext(media.src.name)
 
-        name = compose_ep_name(media.episode.season, media.episode.number, media.episode.title)
+        if media.series.type == "film":
+            name = media.series.name
+        else:
+            name = compose_ep_name(media.episode.season, media.episode.number, media.episode.title)
+
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            media.episode.title or name,
+            name,
             ext,
             custom_filename=self.create_custom_filename(name, ext, file_id=str(media.publicId)),
             metadata=Media,
@@ -108,6 +116,7 @@ class Media:
 class Series:
     id: int
     title: str
+    type: str
     yearReleasedFrom: int | None = None  # noqa: N815
 
     @property
