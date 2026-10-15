@@ -16,5 +16,22 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://disk.360.yandex.ru/i/TM2xsIVsgjY4uw",
+        "results": [
+            {
+                "url": "https://disk.yandex.com/i/TM2xsIVsgjY4uw",
+                "filename": "Cars для суперсет 18.07.2025 14-19-50 - запись.mp4",
+                "debrid_url": "re:https://downloader.disk.yandex.ru/disk/",
+                "original_filename": "Cars для суперсет 18.07.2025 14-19-50 - запись.mp4",
+                "referer": "https://disk.360.yandex.ru/i/TM2xsIVsgjY4uw",
+                "album_id": None,
+                "uploaded_at": 1753712643,
+                "download_folder": "re:Loose Files (YandexDisk)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
 ]

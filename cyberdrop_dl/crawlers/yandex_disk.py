@@ -47,7 +47,7 @@ def _raise_for_wrong_sk(resp: Any, _: AbstractResponse[Any] | None = None) -> No
 
 @HTTPConfig(json_check=_raise_for_wrong_sk)
 class YandexDiskCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "disk.yandex", "yadi.sk"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "disk.yandex", "yadi.sk", "disk.360.yandex"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Folder": "/d/<folder_id>",
         "File": (
@@ -144,10 +144,11 @@ class YandexDiskCrawler(Crawler):
         scrape_item.uploaded_at = file.modified
         src = await self.api.download(file)
         name = src.query.get("filename") or file.name
-        filename, ext = self.get_filename_and_ext(name)
+        filename, ext = self.get_filename_and_ext(name, mime_type=file.mimetype)
         await self.handle_file(url, scrape_item, name, ext, debrid_link=src, custom_filename=filename)
 
 
+@HTTPConfig(headers={"Accept-Language": "en-US,en;q=0.5"})
 class YandexDiskAPI(API):
     def __post_init__(self) -> None:
         self._host_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
@@ -156,7 +157,7 @@ class YandexDiskAPI(API):
     async def share(self, url: AbsoluteHttpURL) -> Share:
         html = await self._request_html(url)
         data = json.loads(css.select_text(await css.asoup(html, parse_only="script"), "script#store-prefetch"))
-        return deserialize(Share, data, sk=data["environment"]["sk"])
+        return deserialize(Share, data, sk=data["environment"]["sk"], path=url.path.removeprefix("/"))
 
     async def _request_html(self, url: AbsoluteHttpURL) -> str:
         # Yandex ties the sk embedded in a page to the session cookie it sets with that page.
@@ -238,9 +239,10 @@ class YandexDiskAPI(API):
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class Share:
-    currentResourceId: str  # noqa: N815
     resources: dict[str, dict[str, Any]]
     sk: str
+    currentResourceId: str | None = None  # noqa: N815
+    path: str
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -255,10 +257,6 @@ class YandexItem:
     def web_path(self) -> str:
         return self.path.partition(":/")[-1]
 
-    @property
-    def share_path(self) -> str:
-        return f"d/{SHARE_ID.get()}/{self.web_path}"
-
     def with_sk(self, new_sk: str) -> Self:
         return dataclasses.replace(self, sk=new_sk)
 
@@ -271,6 +269,7 @@ class YandexFolder(YandexItem):
 
     @classmethod
     def from_share(cls, share: Share) -> Self:
+        assert share.currentResourceId
         details = share.resources.pop(share.currentResourceId)
         return deserialize(
             cls,
@@ -285,13 +284,20 @@ class YandexFolder(YandexItem):
 class YandexFile(YandexItem):
     type: Literal["file"]
     mimetype: str
+    share_path: str = ""
+
+    def __post_init__(self):
+        if not self.share_path:
+            object.__setattr__(self, "share_path", f"d/{SHARE_ID.get()}/{self.web_path}")
 
     @classmethod
     def from_json(cls, details: dict[str, Any], sk: str) -> Self:
+
         return deserialize(cls, details, sk=sk, mimetype=details["meta"]["mimetype"])
 
     @classmethod
     def from_share(cls, share: Share) -> Self:
         assert len(share.resources) == 1
         details = next(iter(share.resources.values()))
+        details["share_path"] = share.path
         return cls.from_json(details, sk=share.sk)
