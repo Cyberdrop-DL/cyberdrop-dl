@@ -16,5 +16,22 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://smotrim.ru/brand/27427#playing_audio=2729929",
+        "results": [
+            {
+                "url": "https://smotrim.ru/audio/2729929",
+                "filename": "E001 - Часть 1 [2729929].mp3",
+                "debrid_url": "https://podcast.smotrim.ru/audio/001/165/634.mp3?entity=audio&id=1165634&sign=4561c08379b4921bc16dcedd66776082",
+                "original_filename": "Часть 1",
+                "referer": "https://smotrim.ru/audio/2729929",
+                "album_id": None,
+                "uploaded_at": 1697453042,
+                "download_folder": "re:Артур Конан Дойл. Этюд в багровых (Smotrim.ru)",
+                "thumbnail": "https://cdn.smotrim.ru/photobank/prod/large/902/083/3.jpg",
+            }
+        ],
+        "count": 1,
+    },
 ]

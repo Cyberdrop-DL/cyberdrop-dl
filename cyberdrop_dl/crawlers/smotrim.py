@@ -25,12 +25,18 @@ class SmotrimCrawler(Crawler):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        def frag_get(name: str) -> str | None:
+            if url.fragment.startswith(pf := f"{name}="):
+                return url.fragment.removeprefix(pf) or None
+
         url = super().transform_url(url)
         match url.parts[1:]:
-            case ["brand", _] if url.fragment.startswith(pf := "playing_video=") and (
-                video_id := url.fragment.removeprefix(pf)
-            ):
+            case ["brand", _] if video_id := frag_get("playing_video"):
                 return url.origin() / "video" / video_id
+            case ["brand", _] if audio_id := frag_get("playing_audio"):
+                return url.origin() / "audio" / audio_id
+            case ["iframe", "video", "id", video_id]:
+                return cls.PRIMARY_URL / "video" / video_id
             case _:
                 return url
 
@@ -39,41 +45,63 @@ class SmotrimCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["video", video_id]:
-                await self.video(scrape_item, video_id)
+            case ["video" | "audio" as kind, media_id]:
+                await self.media(scrape_item, kind, media_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+    async def media(self, scrape_item: ScrapeItem, kind: str, media_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
-        video = await self.api.video(video_id)
-        scrape_item.setup_as_album(self.create_title(video.series.name, str(video.series.id)))
-        scrape_item.uploaded_at = self.parse_iso_date(video.episode.airDate)
-        m3u8, _ = await self.request_m3u8(video.m3u8)
-        name = compose_ep_name(video.episode.season, video.episode.number, video.episode.title)
-        filename = self.create_custom_filename(name, ext := ".mp4", file_id=video_id)
+        media = await self.api.media(kind, media_id)
+        await self._media(scrape_item, media)
+
+    @error_handling_wrapper
+    async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
+        scrape_item.setup_as_album(self.create_title(media.series.name, str(media.series.id)))
+        scrape_item.uploaded_at = self.parse_iso_date(media.episode.airDate)
+
+        if media.src.suffix == ".m3u8":
+            m3u8, _ = await self.request_m3u8(media.src)
+            ext, debrid_link = ".mp4", None
+        else:
+            m3u8, debrid_link = None, media.src
+            _, ext = self.get_filename_and_ext(media.src.name)
+
+        name = compose_ep_name(media.episode.season, media.episode.number, media.episode.title)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            video.episode.title or name,
+            media.episode.title or name,
             ext,
+            custom_filename=self.create_custom_filename(name, ext, file_id=str(media.publicId)),
+            metadata=Media,
             m3u8=m3u8,
-            custom_filename=filename,
-            metadata=Video,
-            thumbnail=video.episode.thumb,
+            debrid_link=debrid_link,
+            thumbnail=media.episode.thumb,
         )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Video:
+class Media:
     id: int
     publicId: int  # noqa: N815
     episode: Episode
     series: Series
-    m3u8: AbsoluteHttpURL
+    src: AbsoluteHttpURL
+
+    @classmethod
+    def parse(cls, data: dict[str, Any]) -> Self:
+        streams = data["streams"]
+        return deserialize(
+            cls,
+            data,
+            series=deserialize(Series, data["brand"]),
+            episode=Episode.parse(data["episode"]),
+            src=SmotrimCrawler.parse_url(streams.get("m3u8") or streams["mp3"]),
+        )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -100,10 +128,11 @@ class Episode:
 
     @classmethod
     def parse(cls, ep: dict[str, Any]) -> Self:
+        season = ep.get("season")
         return deserialize(
             cls,
             ep,
-            season=ep["season"].get("number"),
+            season=season.get("number") if season else None,
             thumb=ep.get("splash", {}).get("large"),
         )
 
@@ -111,16 +140,7 @@ class Episode:
 class SmotrimAPI(API):
     PLAYER: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://player-api.smotrim.ru/api/v1")
 
-    async def player_data(self, kind: str, media_id: str) -> dict[str, Any]:
+    async def media(self, kind: str, media_id: str) -> Media:
         api_url = self.PLAYER / kind / media_id
-        return (await self.request_json(api_url))["data"]
-
-    async def video(self, video_id: str) -> Video:
-        data = await self.player_data("video", video_id)
-        return deserialize(
-            Video,
-            data,
-            series=deserialize(Series, data["brand"]),
-            episode=Episode.parse(data["episode"]),
-            m3u8=self.parse_url(data["streams"]["m3u8"]),
-        )
+        resp = await self.request_json(api_url)
+        return Media.parse(resp["data"])
