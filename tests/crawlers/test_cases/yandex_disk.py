@@ -21,7 +21,7 @@ TEST_CASES = [
         "url": "https://disk.360.yandex.ru/i/TM2xsIVsgjY4uw",
         "results": [
             {
-                "url": "https://disk.yandex.com/i/TM2xsIVsgjY4uw",
+                "url": "https://disk.360.yandex.ru/i/TM2xsIVsgjY4uw",
                 "filename": "Cars для суперсет 18.07.2025 14-19-50 - запись.mp4",
                 "debrid_url": "re:https://downloader.disk.yandex.ru/disk/",
                 "original_filename": "Cars для суперсет 18.07.2025 14-19-50 - запись.mp4",
