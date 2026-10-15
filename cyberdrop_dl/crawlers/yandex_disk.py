@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import dataclasses
 import json
 from collections import deque
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 
 from cyberdrop_dl import aio
@@ -12,8 +12,8 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -21,6 +21,9 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
+
+
+POSIX_ROOT = PurePosixPath("/")
 
 
 class _WrongSkError(ScrapeError):
@@ -49,7 +52,6 @@ class YandexDiskCrawler(Crawler):
             "/d/<folder_id>/<file_name>",
             "/i/<file_id>",
         ),
-        "**NOTE**": "Does NOT support nested folders",
     }
 
     DOMAIN: ClassVar[str] = "disk.yandex"
@@ -61,10 +63,8 @@ class YandexDiskCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["d", folder_id, file_name]:
-                await self.share(scrape_item, folder_id, file_name)
-            case ["d", folder_id]:
-                await self.share(scrape_item, folder_id)
+            case ["d", folder_id, *rest]:
+                await self.share(scrape_item, folder_id, subpath=POSIX_ROOT.joinpath(*rest))
             case ["i", _]:
                 await self.file(scrape_item)
             case _:
@@ -75,74 +75,61 @@ class YandexDiskCrawler(Crawler):
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
-        item_info = await self.api.node_info(scrape_item.url)
-        assert _is_single_item(item_info)
-        item_info["sk"] = item_info["environment"]["sk"]
-        item_info["file_url"] = scrape_item.url
-        file = YandexFile.from_json(item_info)
+        share = await self.api.share(scrape_item.url)
+        file = YandexFile.from_share(share)
         await self._file(scrape_item, file)
 
-    async def _walk_nodes(
-        self,
-        scrape_item: ScrapeItem,
-        folder: YandexFolder,
-        single_file_name: str | None = None,
-    ) -> None:
-
-        subfolders: deque[tuple[tuple[str, ...], str]] = deque()
-        path = ()
+    async def _walk_nodes(self, scrape_item: ScrapeItem, folder: YandexFolder, subpath: PurePosixPath | None) -> None:
+        subfolders: deque[tuple[PurePosixPath, str, str]] = deque()
+        current_path = POSIX_ROOT
+        subpath = subpath or POSIX_ROOT
         nodes = [folder.resources[child_id] for child_id in folder.children_ids]
 
         while True:
             for node in nodes:
                 if node["type"] == "dir":
-                    subfolders.append(((*path, node["name"]), node["id"]))
+                    inner_path = current_path / node["name"]
+                    if subpath.is_relative_to(inner_path) or inner_path.is_relative_to(subpath):
+                        subfolders.append((current_path / node["name"], node["id"], node["path"]))
                     continue
 
                 if node["type"] != "file":
                     self.log.warning("Unknown node type: %s", node)
                     continue
 
-                file = YandexFile.from_dict(
-                    YandexFile.filter_dict(node),
-                    parent_folder_public_id=folder.public_id,
-                    sk=folder.sk,
-                )
-
-                if single_file_name and file.name != single_file_name:
+                file = YandexFile.from_json(node, sk=folder.sk)
+                if not (current_path / file.name).is_relative_to(subpath):
                     continue
 
                 new_item = scrape_item.create_child(self.PRIMARY_URL / file.web_path)
-                new_item.append_folders(*path)
+                new_item.append_folders(*current_path.parts)
                 self.create_eager_task(self._file(new_item, file))
                 scrape_item.add_children()
-                if single_file_name:
-                    return
 
             if not subfolders:
                 return
 
-            path, next_folder_id = subfolders.popleft()
-            nodes = await self.api.list_folder(next_folder_id, sk=folder.sk)
+            current_path, node_id, node_path = subfolders.popleft()
+            nodes = await self.api.list_folder(node_id, node_path, sk=folder.sk)
 
     @error_handling_wrapper
-    async def share(self, scrape_item: ScrapeItem, folder_id: str, single_file_name: str | None = None) -> None:
+    async def share(self, scrape_item: ScrapeItem, folder_id: str, subpath: PurePosixPath | None = None) -> None:
         canonical_url = self.PRIMARY_URL / "d" / folder_id
         scrape_item.url = canonical_url
 
-        item_info = await self.api.node_info(scrape_item.url)
-        if _is_single_item(item_info):
-            file = YandexFile.from_json(item_info)
+        share = await self.api.share(scrape_item.url)
+        if len(share.resources) == 1 and not share.currentResourceId:
+            file = YandexFile.from_share(share)
             await self._file(scrape_item, file)
             return
 
-        folder = YandexFolder.from_json(item_info)
+        folder = YandexFolder.from_share(share)
         scrape_item.setup_as_album(self.create_title(folder.name, folder.id), album_id=folder.id)
-        await self._walk_nodes(scrape_item, folder, single_file_name)
+        await self._walk_nodes(scrape_item, folder, subpath)
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: YandexFile) -> None:
-        url = self.PRIMARY_URL / file.web_path
+        url = self.PRIMARY_URL / file.path
         if await self.check_complete(url):
             return
 
@@ -173,9 +160,10 @@ class YandexDiskAPI(API):
         self._host_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
         self._hosts_with_session: set[str] = set()
 
-    async def node_info(self, url: AbsoluteHttpURL) -> dict[str, Any]:
+    async def share(self, url: AbsoluteHttpURL) -> Share:
         html = await self._request_page(url)
-        return await asyncio.to_thread(_get_item_info, html)
+        data = json.loads(css.select_text(await css.asoup(html, parse_only="script"), "script#store-prefetch"))
+        return deserialize(Share, data, sk=data["environment"]["sk"])
 
     async def _request_page(self, url: AbsoluteHttpURL) -> str:
         # Yandex ties the sk embedded in a page to the session cookie it sets with that page.
@@ -240,7 +228,7 @@ class YandexDiskAPI(API):
             except _WrongSkError as e:
                 if not retry:
                     raise
-                self.log.debug("Yandex rejected the sk for %s, retrying with the one it sent back", file.web_path)
+                self.log.debug("Yandex rejected the sk for %s, retrying with the one it sent back", file.path)
                 file = file.with_sk(e.new_sk)
             else:
                 if resp.get("error"):
@@ -249,29 +237,30 @@ class YandexDiskAPI(API):
 
         raise RuntimeError
 
-    async def list_folder(self, path: str, sk: str) -> list[dict[str, Any]]:
+    async def list_folder(self, node_id: str, path: str, sk: str) -> list[dict[str, Any]]:
         url = self.origin / "public/api/fetch-list"
         resp = await self.post_json(url, params={"hash": path, "offset": 0, "withSizes": "true", "sk": sk})
-        return resp["resources"]
-
-
-def _get_item_info(html: str) -> dict[str, Any]:
-    data: dict[str, dict[str, Any]] = json.loads(
-        css.select_text(css.soup(html, parse_only="script"), "script#store-prefetch")
-    )
-    data = {k: data[k] for k in ("currentResourceId", "resources", "environment")}
-    data["environment"] = {"sk": data["environment"]["sk"]}  # We don't need any other info from env
-    return data
+        return [node for node in resp["resources"] if node.get("id") != node_id]
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
-class YandexItem(DictDataclass):
+class Share:
+    currentResourceId: str  # noqa: N815
+    resources: dict[str, dict[str, Any]]
+    sk: str
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class YandexItem:
     id: str
     name: str
     modified: int
     path: str
     sk: str
-    short_url: AbsoluteHttpURL  # https://yadi.sk/d/<id>
+
+    @property
+    def web_path(self) -> str:
+        return self.path.partition(":/")[-1]
 
     def with_sk(self, new_sk: str) -> Self:
         return dataclasses.replace(self, sk=new_sk)
@@ -283,37 +272,14 @@ class YandexFolder(YandexItem):
     resources: dict[str, dict[str, Any]]
     children_ids: list[str]
 
-    @property
-    def public_id(self) -> str:
-        return self.short_url.name
-
-    @property
-    def files(self) -> Generator[YandexFile]:
-        for child_id in self.children_ids:
-            item_info: dict[str, Any] = self.resources[child_id]
-            if item_info["type"] != "file":
-                continue  # TODO handle subfolders
-
-            yield YandexFile.from_dict(
-                YandexFile.filter_dict(item_info),
-                parent_folder_public_id=self.public_id,
-                sk=self.sk,
-            )
-
-    @property
-    def web_path(self) -> str:
-        return f"d/{self.id}"
-
     @classmethod
-    def from_json(cls, resp: dict[str, Any]) -> Self:
-        resources: dict[str, dict[str, Any]] = resp["resources"]
-        folder_id: str = resp["currentResourceId"]
-        details = resources[folder_id]
-        return cls.from_dict(
-            cls.filter_dict(details),
-            resources=resources,
-            sk=resp["environment"]["sk"],
-            short_url=parse_url(details["meta"]["short_url"]),
+    def from_share(cls, share: Share) -> Self:
+        details = share.resources.pop(share.currentResourceId)
+        return deserialize(
+            cls,
+            details,
+            resources=share.resources,
+            sk=share.sk,
             children_ids=details["children"],
         )
 
@@ -321,26 +287,14 @@ class YandexFolder(YandexItem):
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class YandexFile(YandexItem):
     type: Literal["file"]
-    parent_folder_public_id: str = ""
-
-    @property
-    def web_path(self) -> str:
-        # TODO: this is wrong
-        if self.parent_folder_public_id:
-            return f"d/{self.parent_folder_public_id}/{self.name}"
-        return str(self.short_url)
+    mimetype: str
 
     @classmethod
-    def from_json(cls, resp: dict[str, Any]) -> Self:
-        resources: dict[str, dict[str, Any]] = resp["resources"]
-        assert len(resources) == 1
-        details = next(iter(resources.values()))
-        return cls.from_dict(
-            cls.filter_dict(details),
-            sk=resp["environment"]["sk"],
-            short_url=parse_url(details["meta"]["short_url"]),
-        )
+    def from_json(cls, details: dict[str, Any], sk: str) -> Self:
+        return deserialize(cls, details, sk=sk, mimetype=details["meta"]["mimetype"])
 
-
-def _is_single_item(json_resp: dict[str, Any]) -> bool:
-    return len(json_resp["resources"]) == 1 and not bool(json_resp["currentResourceId"])
+    @classmethod
+    def from_share(cls, share: Share) -> Self:
+        assert len(share.resources) == 1
+        details = next(iter(share.resources.values()))
+        return cls.from_json(details, sk=share.sk)
