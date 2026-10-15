@@ -51,7 +51,7 @@ class YandexDiskCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Folder": "/d/<folder_id>",
         "File": (
-            "/d/<folder_id>/<file_name>",
+            "/d/<folder_id>/<sub_path>",
             "/i/<file_id>",
         ),
     }
