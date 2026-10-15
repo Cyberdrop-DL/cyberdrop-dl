@@ -4,6 +4,7 @@ import contextlib
 import dataclasses
 import json
 from collections import deque
+from contextvars import ContextVar
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
 
 
 POSIX_ROOT = PurePosixPath("/")
+SHARE_ID = ContextVar[str]("share_id")
 
 
 class _WrongSkError(ScrapeError):
@@ -79,7 +81,12 @@ class YandexDiskCrawler(Crawler):
         file = YandexFile.from_share(share)
         await self._file(scrape_item, file)
 
-    async def _walk_nodes(self, scrape_item: ScrapeItem, folder: YandexFolder, subpath: PurePosixPath | None) -> None:
+    async def _walk_nodes(
+        self,
+        scrape_item: ScrapeItem,
+        folder: YandexFolder,
+        subpath: PurePosixPath | None,
+    ) -> None:
         subfolders: deque[tuple[PurePosixPath, str, str]] = deque()
         current_path = POSIX_ROOT
         subpath = subpath or POSIX_ROOT
@@ -101,8 +108,8 @@ class YandexDiskCrawler(Crawler):
                 if not (current_path / file.name).is_relative_to(subpath):
                     continue
 
-                new_item = scrape_item.create_child(self.PRIMARY_URL / file.web_path)
-                new_item.append_folders(*current_path.parts)
+                new_item = scrape_item.create_child(self.PRIMARY_URL / file.share_path)
+                new_item.append_folders(*current_path.parts[1:])
                 self.create_eager_task(self._file(new_item, file))
                 scrape_item.add_children()
 
@@ -113,9 +120,10 @@ class YandexDiskCrawler(Crawler):
             nodes = await self.api.list_folder(node_id, node_path, sk=folder.sk)
 
     @error_handling_wrapper
-    async def share(self, scrape_item: ScrapeItem, folder_id: str, subpath: PurePosixPath | None = None) -> None:
-        canonical_url = self.PRIMARY_URL / "d" / folder_id
+    async def share(self, scrape_item: ScrapeItem, share_id: str, subpath: PurePosixPath | None = None) -> None:
+        canonical_url = self.PRIMARY_URL / "d" / share_id
         scrape_item.url = canonical_url
+        SHARE_ID.set(share_id)
 
         share = await self.api.share(scrape_item.url)
         if len(share.resources) == 1 and not share.currentResourceId:
@@ -129,7 +137,7 @@ class YandexDiskCrawler(Crawler):
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: YandexFile) -> None:
-        url = self.PRIMARY_URL / file.path
+        url = self.PRIMARY_URL / file.share_path
         if await self.check_complete(url):
             return
 
@@ -140,32 +148,17 @@ class YandexDiskCrawler(Crawler):
         await self.handle_file(url, scrape_item, name, ext, debrid_link=src, custom_filename=filename)
 
 
-@HTTPConfig(
-    headers={
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br, zstd",
-        "DNT": "1",
-        "Sec-GPC": "1",
-        "Connection": "keep-alive",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site: same-originPriority": "u=0",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache",
-    }
-)
 class YandexDiskAPI(API):
     def __post_init__(self) -> None:
         self._host_locks: aio.WeakAsyncLocks[str] = aio.WeakAsyncLocks()
         self._hosts_with_session: set[str] = set()
 
     async def share(self, url: AbsoluteHttpURL) -> Share:
-        html = await self._request_page(url)
+        html = await self._request_html(url)
         data = json.loads(css.select_text(await css.asoup(html, parse_only="script"), "script#store-prefetch"))
         return deserialize(Share, data, sk=data["environment"]["sk"])
 
-    async def _request_page(self, url: AbsoluteHttpURL) -> str:
+    async def _request_html(self, url: AbsoluteHttpURL) -> str:
         # Yandex ties the sk embedded in a page to the session cookie it sets with that page.
         # If the first pages of a host are requested concurrently, each one starts a new session and
         # overwrites the previous cookie, so only the sk of the last page stays valid.
@@ -173,11 +166,15 @@ class YandexDiskAPI(API):
         if url.host not in self._hosts_with_session:
             async with self._host_locks[url.host]:
                 if url.host not in self._hosts_with_session:
-                    html = await self._request_html(url)
+                    html = await self.__request_html(url)
                     self._hosts_with_session.add(url.host)
                     return html
 
-        return await self._request_html(url)
+        return await self.__request_html(url)
+
+    async def __request_html(self, url: AbsoluteHttpURL) -> str:
+        with self._request_context():
+            return await self.request_text(url)
 
     @contextlib.contextmanager
     def _request_context(self) -> Generator[None]:
@@ -188,20 +185,16 @@ class YandexDiskAPI(API):
                 raise DDOSGuardError from None
             raise
 
-    async def _request_html(self, url: AbsoluteHttpURL) -> str:
-        with self._request_context():
-            return await self.request_text(url)
-
     async def _download(self, file: YandexFile) -> dict[str, Any]:
-        api_url = self.origin / "public/api/download_url"
-        referer = self.origin / file.web_path
+        api_url = self.origin / "public/api/download-url"
+        referer = self.origin / file.share_path
         return await self.post_json(
             api_url,
             headers={
                 "Referer": str(referer),
                 "X-Retpath-Y": str(referer),
             },
-            params={"hash": file.path, "sk": file.sk},
+            params={"hash": file.path, "inline": False, "sk": file.sk},
         )
 
     async def post_json(
@@ -217,7 +210,7 @@ class YandexDiskAPI(API):
                     "Origin": str(self.origin),
                     **(headers or {}),
                 },
-                data=json.dumps(params),
+                data=json.dumps(params, separators=(",", ":")),
             )
 
     async def download(self, file: YandexFile) -> AbsoluteHttpURL:
@@ -261,6 +254,10 @@ class YandexItem:
     @property
     def web_path(self) -> str:
         return self.path.partition(":/")[-1]
+
+    @property
+    def share_path(self) -> str:
+        return f"d/{SHARE_ID.get()}/{self.web_path}"
 
     def with_sk(self, new_sk: str) -> Self:
         return dataclasses.replace(self, sk=new_sk)
