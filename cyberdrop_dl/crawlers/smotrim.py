@@ -85,7 +85,7 @@ class SmotrimCrawler(Crawler):
             name,
             ext,
             custom_filename=self.create_custom_filename(name, ext, file_id=str(media.publicId)),
-            metadata=Media,
+            metadata=media,
             m3u8=m3u8,
             debrid_link=debrid_link,
             thumbnail=media.episode.thumb,
