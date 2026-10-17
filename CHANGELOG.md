@@ -22,7 +22,7 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [10.12.0] - 2026-10-17
 
 ### Added
 
@@ -63,12 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - '401 Unauthorized' on all downloads (SendVid)
 - Do not download placeholder "unavailable" videos (SendVid)
 - Do not download placeholder "unavailable" images (ImgBox)
-- Download of encrypted (AES-128) segments with no IV (HLS)
+- Download of AES-128 segments with no IV (HLS)
 - Respect 'EXT-X-BYTERANGE' for HTTP requests (HLS)
 - Attachments detection (Discourse)
-- Some download errors always being reported as `TimeoutError`
 - Challenge detection (Fileditch)
-- Download of albums with 45+ items (Fileditch)
+- Download albums with 45+ items (Fileditch Albums)
+- Some download errors always being reported as `TimeoutError`
 
 ## [10.11.1] - 2026-10-11
 
