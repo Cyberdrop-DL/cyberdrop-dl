@@ -73,9 +73,8 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
-
 ```shell
-cyberdrop-dl v10.11.0
+cyberdrop-dl v10.12.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -107,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.11.0
+cyberdrop-dl v10.12.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -496,5 +495,4 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
-
 <!-- END_CLI_OVERVIEW -->

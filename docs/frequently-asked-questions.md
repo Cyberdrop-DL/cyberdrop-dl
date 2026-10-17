@@ -51,11 +51,6 @@ The only exception is `422 Unprocessable Entity`, which `cyberdrop-dl` uses to r
 "Unknown" errors are **definitely** bugs. Please report them on the issue tracker: <https://github.com/Cyberdrop-DL/cyberdrop-dl/issues>
 {% endhint %}
 
-## Why do Simpcity URLs show as "Unsupported"?
-
-Support for SimpCity was removed on v5.6.3 in response to a request by the site admins. The site could not keep up with the high amount of traffic generated
-by `cyberdrop-dl` on top of the constant DDOS attacks they receive.
-
 ## Why are all the files skipped?
 
 The program tracks your download history and will skip any files you've been previously downloaded to avoid duplicates.
