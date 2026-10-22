@@ -4,7 +4,7 @@ import base64
 import contextlib
 import dataclasses
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack, override
+from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
@@ -64,15 +64,19 @@ class VKCrawler(Crawler):
         query = scrape_item.url.query
         match scrape_item.url.parts[1:]:
             case ["video_ext.php"] if (oid := query.get("oid")) and (vid := query.get("id")):
-                video_id = f"{oid}_{vid}"
-                await self.video(scrape_item, video_id)
+                await self.video(scrape_item, oid, vid)
 
             case [] if redirect := query.get("to"):
                 self.redirect(scrape_item, redirect)
 
+            case [owner, "clips" | "all" | "donut" as kind]:
+                kind = "videos" if kind == "all" else kind
+                await self.owner_videos(scrape_item, owner.removeprefix("@"), kind)
+
             case [slug]:
-                if video_id := _extract_id(slug, "clip", "video", composed=True):
-                    await self.video(scrape_item, video_id)
+                if video := _extract_id(slug, "clip", "video", composed=True):
+                    owner_id, _, video_id = video.partition("_")
+                    await self.video(scrape_item, owner_id, video_id)
                 elif owner_id := _extract_id(slug, "albums", "photos", "id", "public", "@"):
                     await self.owner(scrape_item, owner_id)
                 elif album := _extract_id(slug, "album", composed=True):
@@ -94,14 +98,24 @@ class VKCrawler(Crawler):
         self.handle_external_links(scrape_item.create_child(self.parse_url(url)))
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if await self.check_complete_from_referer(scrape_item.url):
+    async def video(self, scrape_item: ScrapeItem, owner_id: str, video_id: str) -> None:
+        if await self.check_complete(scrape_item.url):
             return
 
-        video = await self.api.video(video_id, list_id=scrape_item.url.query.get("list"))
-        scrape_item.uploaded_at = video.uploaded_at
+        video = await self.api.get_video(owner_id, video_id, list_id=scrape_item.url.query.get("list"))
+        await self._video(scrape_item, video)
+
+    @error_handling_wrapper
+    async def video_task(self, scrape_item: ScrapeItem, video: Video) -> None:
+        if await self.check_complete(scrape_item.url):
+            return
+
+        await self._video(scrape_item, video)
+
+    async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
+        scrape_item.uploaded_at = video.date
         if video.embed:
-            new_item = scrape_item.create_child(video.embed)
+            new_item = scrape_item.create_child(self.parse_url(video.embed))
             new_item.setup_as_album(self.create_title(video.title))
             self.handle_embed(new_item)
             return
@@ -122,7 +136,7 @@ class VKCrawler(Crawler):
             custom_filename=self.create_custom_filename(
                 video.title,
                 ext,
-                file_id=video_id,
+                file_id=f"{video.owner_id}_{video.id}",
                 resolution=info.resolution if info else best_fmt.height,
             ),
             thumbnail=video.thumb,
@@ -132,10 +146,22 @@ class VKCrawler(Crawler):
 
     @error_handling_wrapper
     async def owner(self, scrape_item: ScrapeItem, owner_id: str) -> None:
-        user = await self.api.get_user(owner_id)
-        scrape_item.setup_as_profile(self.create_title(user.full_name))
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
         scrape_item.append_folders("photos")
-        await self._iter_photos(scrape_item, f"photos{user.id}")
+        await self._iter_photos(scrape_item, f"photos{owner.id}")
+
+    @error_handling_wrapper
+    async def owner_videos(self, scrape_item: ScrapeItem, owner_id: str, kind: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        scrape_item.append_folders(kind)
+        async with self.new_task_group() as tg:
+            async for video in self.api.videos(scrape_item.url):
+                prefix = "clip" if video.type == "short_video" else "video"
+                url = self.PRIMARY_URL / f"{prefix}{video.owner_id}_{video.id}"
+                tg.create_task(self.video_task(scrape_item.create_child(url), video))
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
@@ -206,11 +232,18 @@ class Format:
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Video:
+    id: int
+    owner_id: int
     title: str
     thumb: str | None
-    uploaded_at: int
-    embed: AbsoluteHttpURL | None
+    date: int
+    embed: str | None
     formats: tuple[Format, ...]
+    type: str = "video"
+
+    @property
+    def slug(self) -> str:
+        return f"{self.owner_id}_{self.id}"
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -235,42 +268,18 @@ class Photo:
     sources: tuple[PhotoSrc, ...]
     desc: str | None = None
 
-    @classmethod
-    def _parse_sources(cls, photo: dict[str, Any]) -> Iterable[PhotoSrc]:
-        origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
-
-        for name, src in photo.items():
-            if not name.endswith("_src"):
-                continue
-
-            try:
-                _url, width, height = photo[name.removesuffix("src")]
-            except ValueError:
-                res = Resolution.unknown()
-            else:
-                res = Resolution(width, height)
-
-            url = VKCrawler.parse_url(src, origin)
-            unblurred_url = url.with_path(
-                url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True
-            )
-
-            yield PhotoSrc(name=name.removesuffix("_src"), res=res, url=unblurred_url)
-
-    @classmethod
-    def parse(cls, photo: dict[str, Any]) -> Self:
-        return deserialize(
-            cls,
-            photo,
-            uploaded=int(css.select(css.soup(photo["date"]), "[data-date]", "data-date")),
-            sources=tuple(cls._parse_sources(photo)),
-        )
-
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class OwnerSolution:
     id: int
     type: str
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class CatalogSection:
+    id: str
+    next_from: str | None
+    videos: list[dict[str, Any]]
 
 
 @HTTPConfig(impersonate=True)
@@ -318,9 +327,10 @@ class VKAPI(API):
 
     async def get_group(self, screen_name_or_id: str | int) -> Owner:
         resp = await self.method("groups.getById", {"group_ids": str(screen_name_or_id)})
-        if not resp:
+        groups = resp.get("groups")
+        if not groups:
             raise ScrapeError(404, f"Group not found: {screen_name_or_id}")
-        return deserialize(Owner, resp[0])
+        return deserialize(Owner, groups[0])
 
     async def method(self, method: str, data: dict[str, Any]) -> Any:
         data["access_token"] = await self.access_token()
@@ -330,17 +340,29 @@ class VKAPI(API):
             raise ScrapeError(401, error.get("error_msg"))
         return resp["response"]
 
-    async def video(self, video_id: str, *, list_id: str | None = None) -> Video:
+    async def get_video(self, owner_id: str, video_id: str, *, list_id: str | None = None) -> Video:
+        full_id = f"{owner_id}_{video_id}"
+        data = {"videos": full_id}
+        if list_id:
+            data["album_id"] = list_id
+        resp = await self.method("video.get", data)
+        items = resp.get("items")
+        if not items:
+            raise ScrapeError(404)
+        return _parse_video_api(items[0])
+
+    async def get_video_legacy(self, owner_id: str, video_id: str, *, list_id: str | None = None) -> Video:
+        # This may trigger a JS bot check
         data = {
             "act": "show",
-            "video": video_id,
+            "video": f"{owner_id}-{video_id}",
             "al": 1,
         }
         if list_id:
             data["list"] = list_id
 
         payload = await self.request_payload("al_video.php", data)
-        return await _parse_video(payload)
+        return await _parse_video(payload, owner_id, video_id)
 
     async def request_payload(self, path: str, data: dict[str, Any]) -> list[Any]:
         url = self.PRIMARY_URL / path
@@ -363,14 +385,14 @@ class VKAPI(API):
 
     async def resolve_owner(self, screen_name: str) -> Owner:
         owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name})
-        owner_id, owner_type = owner["object_id"], owner["type"]
+        owner_id, owner_type = map(owner.get, ("object_id", "type"))
         match owner_type:
             case "group":
                 resolve = self.get_group
             case "user":
                 resolve = self.get_user
             case _:
-                raise ScrapeError(422, f"Unsuported owner type: {owner}")
+                raise ScrapeError(422, f"Unsupported owner type: {owner}")
 
         return await resolve(owner_id)
 
@@ -389,7 +411,7 @@ class VKAPI(API):
             total, photos = payload[1], payload[3]
             offset += len(photos)
             found_new_photos: bool = False
-            for photo in map(Photo.parse, photos):
+            for photo in map(_parse_photo, photos):
                 if photo.id not in seen:
                     seen.add(photo.id)
                     found_new_photos = True
@@ -400,31 +422,51 @@ class VKAPI(API):
 
             data["offset"] = offset
 
-    async def videos(self, owner_id: str, section: str, *, offset: int = 0):
-        data = {
-            "act": "load_videos_silent",
-            "offset": offset,
-            "oid": owner_id,
-            "section": section,
-        }
+    async def catalog_get_video(self, url: AbsoluteHttpURL) -> CatalogSection:
+        resp = await self.method(
+            "catalog.getVideo",
+            {
+                "url": str(url),
+                "ref": "",
+                "from_trackcode": "",
+                "need_blocks": "1",
+                "applied_toggles": "[]",
+                "enabled_features": "[]",
+            },
+        )
+        catalog = resp["catalog"]
+        section_id = catalog["default_section"]
+        section = next(s for s in catalog["sections"] if s["id"] == section_id)
+        return CatalogSection(section_id, next_from=section.get("next_from"), videos=resp["videos"])
+
+    async def catalog_get_section(self, section_id: str, start_from: str) -> CatalogSection:
+        resp = await self.method(
+            "catalog.getSection",
+            {
+                "section_id": section_id,
+                "start_from": start_from,
+                "from_trackcode": "",
+                "enabled_features": "[]",
+            },
+        )
+        next_from = resp["section"]["next_from"]
+        return CatalogSection(section_id, next_from, resp["videos"])
+
+    async def videos(self, url: AbsoluteHttpURL, *, count: int = 20) -> AsyncGenerator[Video]:
+        section = await self.catalog_get_video(url)
         seen: set[str] = set()
         while True:
-            payload = await self.request_payload("al_video.php", data)
-            resp = payload[0][section]
-            videos = resp["list"]
-            offset += len(videos)
-
             found_new_videos: bool = False
-            for oid, vid, *_ in videos:
-                if (video_id := f"{oid}_{vid}") not in seen:
-                    seen.add(video_id)
+            for video in map(_parse_video_api, section.videos):
+                if video.slug not in seen:
+                    seen.add(video.slug)
                     found_new_videos = True
-                    yield self.PRIMARY_URL / f"video{video_id}"
+                    yield video
 
-            if not found_new_videos or offset >= resp["total"]:
+            if not found_new_videos or len(section.videos) < count or not section.next_from:
                 break
 
-            data["offset"] = offset
+            section = await self.catalog_get_section(section.id, section.next_from)
 
 
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
@@ -454,7 +496,7 @@ def _extract_id(slug: str, *prefixes: str, composed: bool = False) -> str | None
 
 
 @aio.to_thread
-def _parse_video(payload: list[Any]) -> Video:
+def _parse_video(payload: list[Any], owner_id: str, video_id: str) -> Video:
     html, options = payload[1], payload[-1]
     params = options["player"]["params"][0]
     if params.get("live") == 2:
@@ -462,14 +504,72 @@ def _parse_video(payload: list[Any]) -> Video:
 
     def extract_embed():
         try:
-            return VKCrawler.parse_url(css.select(css.soup(html), "iframe[src]", "src"))
+            return css.select(css.soup(html), "iframe[src]", "src")
         except css.SelectorError:
             return None
 
     return Video(
+        id=int(video_id),
+        owner_id=int(owner_id),
         title=css.unescape(params.get("md_title") or options["mvData"]["title"]),
         thumb=params.get("jpg") or params.get("short_video_cover"),
-        uploaded_at=params["date"],
+        date=params["date"],
         formats=tuple(_extract_formats(params)),
         embed=extract_embed(),
+    )
+
+
+def _parse_video_api(video: dict[str, Any]) -> Video:
+    return deserialize(
+        Video,
+        video,
+        thumb=thumbs[-1]["url"] if (thumbs := video.get("image")) else None,
+        formats=tuple(_extract_api_formats(video)),
+        embed=video["files"].get("external"),
+    )
+
+
+def _extract_api_formats(data: dict[str, Any]) -> Generator[Format]:
+    for name, value in data["files"].items():
+        if not value or type(value) is not str or not value.startswith(("//", "http")):
+            continue
+
+        url = VKCrawler.parse_url(value)
+
+        match name.partition("_"):
+            case ["mp4", _, res]:
+                yield Format(name=name, url=url, height=int(res))
+            case ["hls", *_]:
+                yield Format(name=name, url=url, hls=True)
+            case _:
+                continue
+
+
+def _parse_photo(photo: dict[str, Any]) -> Photo:
+    def sources() -> Iterable[PhotoSrc]:
+        origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
+
+        for name, src in photo.items():
+            if not name.endswith("_src"):
+                continue
+
+            try:
+                _url, width, height = photo[name.removesuffix("src")]
+            except ValueError:
+                res = Resolution.unknown()
+            else:
+                res = Resolution(width, height)
+
+            url = VKCrawler.parse_url(src, origin)
+            unblurred_url = url.with_path(
+                url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True
+            )
+
+            yield PhotoSrc(name=name.removesuffix("_src"), res=res, url=unblurred_url)
+
+    return deserialize(
+        Photo,
+        photo,
+        uploaded=int(css.select(css.soup(photo["date"]), "[data-date]", "data-date")),
+        sources=tuple(sources()),
     )
