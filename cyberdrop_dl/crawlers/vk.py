@@ -77,6 +77,8 @@ class VKCrawler(Crawler):
                     await self.wall(scrape_item, owner_id, wall_id)
                 elif owner_id := _extract_id(slug, "tag"):
                     await self.tag(scrape_item, owner_id)
+                elif slug.startswith("photo"):
+                    raise ValueError
                 else:
                     await self.page(scrape_item, slug)
             case _:
@@ -162,14 +164,22 @@ class VKCrawler(Crawler):
     async def _iter_photos(self, scrape_item: ScrapeItem, list_id: str) -> None:
         async with self.new_task_group() as tg:
             async for photo in self.api.photos(list_id):
-                tg.create_task(self._photo(scrape_item, photo))
+                tg.create_task(self._photo(scrape_item.create_child(self.PRIMARY_URL / f"photo{photo.id}"), photo))
                 scrape_item.add_children()
 
+    @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
         best = max(photo.sources, key=lambda s: s.score)
-        with self.catch_errors(best.url):
-            filename, ext = self.get_filename_and_ext(best.url.name)
-            await self.handle_file(best.url, scrape_item, best.url.name, ext, custom_filename=filename, metadata=photo)
+        filename, ext = self.get_filename_and_ext(best.url.name, assume_ext=".jpg")
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            best.url.name,
+            ext,
+            custom_filename=self.create_custom_filename(filename, ext, file_id=photo.id),
+            metadata=photo,
+            debrid_link=best.url,
+        )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -215,6 +225,8 @@ class PhotoSrc:
 
     @property
     def score(self) -> int:
+        if self.name == "base":
+            return -1
         try:
             return self.SIZES.index(self.name)
         except ValueError:
