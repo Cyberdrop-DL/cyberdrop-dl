@@ -7,6 +7,8 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack, override
 
+from cyberdrop_dl import aio
+from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
@@ -54,6 +56,7 @@ class VKCrawler(Crawler):
         return url.with_query(sorted(url.query.items())).without_query_params("token").path_qs
 
     def __post_init__(self) -> None:
+        self.update_cookies({"remixlang": 3})
         self.api: VKAPI = VKAPI.from_crawler(self)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -274,6 +277,10 @@ class Photo:
 
 @HTTPConfig(impersonate=True)
 class VKAPI(API):
+    APP_ID: ClassVar[str] = "6287487"
+    APP_VERSION: ClassVar[str] = "1"
+    CLIENT_ID: ClassVar[str] = "52461373"
+
     @override
     @contextlib.asynccontextmanager
     async def request(
@@ -285,8 +292,25 @@ class VKAPI(API):
 
             yield resp
 
+    @disk_cached_method(ttl=86400)
+    async def access_token(self) -> str:
+        resp = await self.request_json(
+            AbsoluteHttpURL("https://login.vk.ru/?act=get_anonym_token"),
+            "POST",
+            data={
+                "app_id": self.APP_ID,
+                "version": self.APP_VERSION,
+                "client_id": self.CLIENT_ID,
+                "isApiOauthAnonymEnabled": "false",
+                "scopes": "audio_anonymous,video_anonymous,photos_anonymous,profile_anonymous",
+            },
+        )
+        if resp.get("type") != "okay":
+            raise ScrapeError(401, str(resp))
+
+        return resp["data"]["access_token"]
+
     async def video(self, video_id: str, *, list_id: str | None = None) -> Video:
-        url = self.PRIMARY_URL / "al_video.php"
         data = {
             "act": "show",
             "video": video_id,
@@ -295,17 +319,27 @@ class VKAPI(API):
         if list_id:
             data["list"] = list_id
 
+        payload = await self.request_payload("al_video.php", data)
+        return await _parse_video(payload)
+
+    async def request_payload(self, path: str, data: dict[str, Any]) -> list[Any]:
+        url = self.PRIMARY_URL / path
         resp = await self.request_json(
             url,
             data=data,
-            impersonate=True,
             headers={
                 "Referer": str(url),
                 "X-Requested-With": "XMLHttpRequest",
             },
         )
-
-        return _parse_video(_payload(resp))
+        code, payload = resp["payload"]
+        match code:
+            case "8":
+                raise ScrapeError(403, payload[0].strip('"'))
+            case "3":
+                raise ScrapeError(401)
+            case _:
+                return payload
 
     async def _prefetch(self, url: AbsoluteHttpURL) -> Any:
         html = await self.request_text(url)
@@ -328,12 +362,6 @@ class VKAPI(API):
         return deserialize(Owner, owner)
 
     async def photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
-        url = self.PRIMARY_URL / "al_photos.php"
-        headers = {
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": str(self.PRIMARY_URL / list_id),
-        }
-
         data = {
             "act": "show",
             "al": "1",
@@ -344,8 +372,7 @@ class VKAPI(API):
 
         seen: set[str] = set()
         while True:
-            resp = await self.request_json(url, "POST", headers=headers, data=data)
-            payload = _payload(resp)
+            payload = await self.request_payload("al_photos.php", data)
             total, photos = payload[1], payload[3]
             offset += len(photos)
             found_new_photos: bool = False
@@ -356,6 +383,32 @@ class VKAPI(API):
                     yield photo
 
             if not found_new_photos or offset >= total:
+                break
+
+            data["offset"] = offset
+
+    async def videos(self, owner_id: str, section: str, *, offset: int = 0):
+        data = {
+            "act": "load_videos_silent",
+            "offset": offset,
+            "oid": owner_id,
+            "section": section,
+        }
+        seen: set[str] = set()
+        while True:
+            payload = await self.request_payload("al_video.php", data)
+            resp = payload[0][section]
+            videos = resp["list"]
+            offset += len(videos)
+
+            found_new_videos: bool = False
+            for oid, vid, *_ in videos:
+                if (video_id := f"{oid}_{vid}") not in seen:
+                    seen.add(video_id)
+                    found_new_videos = True
+                    yield self.PRIMARY_URL / f"video{video_id}"
+
+            if not found_new_videos or offset >= resp["total"]:
                 break
 
             data["offset"] = offset
@@ -398,6 +451,7 @@ def _payload(resp: dict[str, Any]) -> list[Any]:
             return payload
 
 
+@aio.to_thread
 def _parse_video(payload: list[Any]) -> Video:
     html, options = payload[1], payload[-1]
     params = options["player"]["params"][0]
