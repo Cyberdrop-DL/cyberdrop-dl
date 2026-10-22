@@ -36,11 +36,13 @@ class VKCrawler(Crawler):
         ),
         "User photos": (
             "/id<user_id>",
+            "/public<user_id>",
             "/albums<user_id>",
             "/photos<user_id>",
-            "<username>",
         ),
         "Album": "/album<user_id>_<album_id>",
+        "Wall": "/wall<user_id>_<wall_id>",
+        "Tagged photos": "/tag<user_id>",
     }
     DOMAIN: ClassVar[str] = "vk"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
@@ -65,11 +67,16 @@ class VKCrawler(Crawler):
             case [slug] if not slug.startswith("@"):
                 if video_id := _extract_id(slug, "clip", "video", composed=True):
                     await self.video(scrape_item, video_id)
-                elif user_id := _extract_id(slug, "albums", "photos", "id"):
-                    await self.user_id(scrape_item, user_id)
+                elif user_id := _extract_id(slug, "albums", "photos", "id", "public"):
+                    await self.user(scrape_item, user_id)
                 elif album := _extract_id(slug, "album", composed=True):
                     user_id, _, album_id = album.partition("_")
                     await self.album(scrape_item, user_id, album_id)
+                elif wall := _extract_id(slug, "wall", composed=True):
+                    user_id, _, wall_id = wall.partition("_")
+                    await self.wall(scrape_item, user_id, wall_id)
+                elif user_id := _extract_id(slug, "tag"):
+                    await self.tag(scrape_item, user_id)
                 else:
                     await self.user(scrape_item, slug)
             case _:
@@ -82,6 +89,9 @@ class VKCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+
         video = await self.api.video(video_id, list_id=scrape_item.url.query.get("list"))
         best_fmt = max(video.formats, key=lambda f: f.score)
         scrape_item.uploaded_at = video.uploaded_at
@@ -109,31 +119,44 @@ class VKCrawler(Crawler):
         )
 
     @error_handling_wrapper
-    async def user(self, scrape_item: ScrapeItem, username: str) -> None: ...
-
-    @error_handling_wrapper
-    async def user_id(self, scrape_item: ScrapeItem, user_id: str) -> None:
+    async def user(self, scrape_item: ScrapeItem, user_id: str) -> None:
         user = await self.api.user(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
+        scrape_item.append_folders("photos")
         await self._iter_photos(scrape_item, f"photos{user.id}")
-
-    async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
-        best = max(photo.sources, key=lambda s: s.score)
-        with self.catch_errors(best.url):
-            filename, ext = self.get_filename_and_ext(best.url.name)
-            await self.handle_file(best.url, scrape_item, best.url.name, ext, custom_filename=filename, metadata=photo)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, user_id: str, album_id: str) -> None:
-        user = await self.api.user(album_id)
+        user = await self.api.user(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
+        scrape_item.append_folders(f"album_{album_id}")
         await self._iter_photos(scrape_item, f"album{user_id}_{album_id}")
+
+    @error_handling_wrapper
+    async def wall(self, scrape_item: ScrapeItem, user_id: str, wall_id: str) -> None:
+        user = await self.api.user(user_id)
+        scrape_item.setup_as_profile(self.create_title(user.full_name))
+        scrape_item.append_folders(f"wall_{wall_id}")
+        await self._iter_photos(scrape_item, f"wall{user_id}_{wall_id}")
+
+    @error_handling_wrapper
+    async def tag(self, scrape_item: ScrapeItem, user_id: str) -> None:
+        user = await self.api.user(user_id)
+        scrape_item.setup_as_profile(self.create_title(user.full_name))
+        scrape_item.append_folders("tagged")
+        await self._iter_photos(scrape_item, f"tag{user_id}")
 
     async def _iter_photos(self, scrape_item: ScrapeItem, list_id: str) -> None:
         async with self.new_task_group() as tg:
             async for photo in self.api.photos(list_id):
                 tg.create_task(self._photo(scrape_item, photo))
                 scrape_item.add_children()
+
+    async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
+        best = max(photo.sources, key=lambda s: s.score)
+        with self.catch_errors(best.url):
+            filename, ext = self.get_filename_and_ext(best.url.name)
+            await self.handle_file(best.url, scrape_item, best.url.name, ext, custom_filename=filename, metadata=photo)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -153,6 +176,18 @@ class User:
             or self.screen_name
             or self.domain
         )
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Format:
+    name: str
+    url: AbsoluteHttpURL
+    height: int | None = None
+    hls: bool = False
+
+    @property
+    def score(self) -> tuple[bool, int]:
+        return (not self.hls, self.height or 0)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -270,7 +305,10 @@ class VKAPI(API):
         return json.loads(content)
 
     async def user(self, user_id: str) -> User:
-        domain = user_id if user_id.startswith("id") else f"id{user_id}"
+        domain = user_id
+        if not domain.startswith(("id", "public")):
+            domain = f"public{user_id.lstrip('-')}" if user_id.startswith("-") else f"id{user_id}"
+
         pf_data = await self._prefetch(self.PRIMARY_URL / domain)
         _, user = traversal.find_obj(
             traversal.find_obj(pf_data, validate={"method": "users.get"}),
@@ -313,18 +351,6 @@ class VKAPI(API):
             data["offset"] = offset
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class Format:
-    name: str
-    url: AbsoluteHttpURL
-    height: int | None = None
-    hls: bool = False
-
-    @property
-    def score(self) -> tuple[bool, int]:
-        return (not self.hls, self.height or 0)
-
-
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
     for name, value in data.items():
         if not value or type(value) is not str or not value.startswith(("//", "http")):
@@ -334,23 +360,21 @@ def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
 
         if name.startswith("hls") and name != "hls_live_playback":
             yield Format(name=name, url=url, hls=True)
-            continue
 
-        if name in {"extra_data", "live_mp4", "postlive_mp4"}:
+        elif name in {"extra_data", "live_mp4", "postlive_mp4"}:
             yield Format(name=name, url=url)
-            continue
 
-        if m := re.search(r"^(?:url|cache)(\d+)", name):
+        elif m := re.search(r"^(?:url|cache)(\d+)", name):
             yield Format(name=name, url=url, height=int(m.group(1)))
 
 
 def _extract_id(slug: str, *prefixes: str, composed: bool = False) -> str | None:
     for prefix in prefixes:
         if slug.startswith(prefix):
-            _id = slug.removeprefix(prefix)
-            if composed != ("_" in _id):
-                raise ValueError(_id)
-            return _id
+            target = slug.removeprefix(prefix)
+            if composed != ("_" in target):
+                raise ValueError(target)
+            return target
 
 
 def _payload(resp: dict[str, Any]) -> list[Any]:
