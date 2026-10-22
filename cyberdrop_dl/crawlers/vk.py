@@ -26,83 +26,86 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@URLConfig(allow_empty_path=True)
-class VKCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vkvideo.ru", "vkvideo.com", "vk.ru", "vk.com"
+@Crawler.db_path_builder("path_qs")
+class VKBaseCrawler(Crawler, is_abc=True):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
             "/clip<owner_id>_<video_id>",
-            "/video<owner_id>_<video_id>",
+            "/video<owner_id>_<video_id>?list=<access_key>",
             "/video_ext.php?oid=<owner_id>&id=<video_id>",
         ),
-        "User / Group photos": (
-            "/id<owner_id>",
-            "/public<owner_id>",
-            "/albums<owner_id>",
-            "/photos<owner_id>",
-            "@<owner_screen_name>",
-            "<owner_screen_name>",
-        ),
-        "Album": "/album<owner_id>_<album_id>",
-        "Wall": "/wall<owner_id>_<wall_id>",
-        "Tagged photos": "/tag<owner_id>",
     }
     DOMAIN: ClassVar[str] = "vk"
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
     FOLDER_DOMAIN: ClassVar[str] = "VK"
 
-    @staticmethod
-    @override
-    def __db_path__(url: AbsoluteHttpURL, /) -> str:
-        return url.with_query(sorted(url.query.items())).without_query_params("token").path_qs
-
     def __post_init__(self) -> None:
-        self.update_cookies({"remixlang": 3})
+        for host in self.SUPPORTED_DOMAINS:
+            self.update_cookies(
+                {"remixlang": 3, "remixage18": 1},
+                self.PRIMARY_URL.with_host(host),
+            )
         self.api: VKAPI = VKAPI.from_crawler(self)
 
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        match url.parts[1:]:
+            case ["video_ext.php"] if (owner_id := url.query.get("oid")) and (vid := url.query.get("id")):
+                return VKVideoCrawler.PRIMARY_URL / f"video{owner_id}_{vid}"
+            case [slug]:
+                if slug.startswith("@") and "vkvideo" in url.host:
+                    return url / "all"
+                if slug.startswith(("video", "clip")):
+                    return url.with_host(VKVideoCrawler.PRIMARY_URL.host)
+                return url
+            case _:
+                return url
+
+
+class VKVideoCrawler(VKBaseCrawler):
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
+        "User / Group videos": (
+            "@<owner_screen_name>",
+            "@<owner_screen_name>/clips",
+            "@<owner_screen_name>/all",
+            "@<owner_screen_name>/donut",
+        ),
+    }
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vkvideo.ru", "vkvideo.com"
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vkvideo.com")
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        query = scrape_item.url.query
         match scrape_item.url.parts[1:]:
-            case ["video_ext.php"] if (oid := query.get("oid")) and (vid := query.get("id")):
-                await self.video(scrape_item, oid, vid)
-
-            case [] if redirect := query.get("to"):
-                self.redirect(scrape_item, redirect)
-
             case [owner, "clips" | "all" | "donut" as kind]:
                 kind = "videos" if kind == "all" else kind
                 await self.owner_videos(scrape_item, owner.removeprefix("@"), kind)
-
-            case [slug]:
-                if video := _extract_id(slug, "clip", "video", composed=True):
-                    owner_id, _, video_id = video.partition("_")
-                    await self.video(scrape_item, owner_id, video_id)
-                elif owner_id := _extract_id(slug, "albums", "photos", "id", "public", "@"):
-                    await self.owner(scrape_item, owner_id)
-                elif album := _extract_id(slug, "album", composed=True):
-                    owner_id, _, album_id = album.partition("_")
-                    await self.album(scrape_item, owner_id, album_id)
-                elif wall := _extract_id(slug, "wall", composed=True):
-                    owner_id, _, wall_id = wall.partition("_")
-                    await self.wall(scrape_item, owner_id, wall_id)
-                elif owner_id := _extract_id(slug, "tag"):
-                    await self.tag(scrape_item, owner_id)
-                else:
-                    raise ValueError
+            case [slug] if video := _extract_id(slug, "clip", "video", composed=True):
+                owner_id, _, video_id = video.partition("_")
+                await self.video(scrape_item, owner_id, video_id)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    def redirect(self, scrape_item: ScrapeItem, to: str) -> None:
-        url = base64.urlsafe_b64decode(b64_pad(to)).decode("utf8")
-        self.handle_external_links(scrape_item.create_child(self.parse_url(url)))
+    async def owner_videos(self, scrape_item: ScrapeItem, owner_id: str, kind: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        scrape_item.append_folders(kind)
+        async with self.new_task_group() as tg:
+            async for video in self.api.videos(scrape_item.url):
+                prefix = "clip" if video.type == "short_video" else "video"
+                url = self.PRIMARY_URL / f"{prefix}{video.owner_id}_{video.id}"
+                if video.access_key:
+                    url = url.update_query(list=video.access_key)
+                tg.create_task(self.video_task(scrape_item.create_child(url), video))
+                scrape_item.add_children()
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, owner_id: str, video_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
-        video = await self.api.get_video(owner_id, video_id, list_id=scrape_item.url.query.get("list"))
+        video = await self.api.get_video(owner_id, video_id, access_key=scrape_item.url.query.get("list"))
         await self._video(scrape_item, video)
 
     @error_handling_wrapper
@@ -144,50 +147,116 @@ class VKCrawler(Crawler):
             metadata=video,
         )
 
-    @error_handling_wrapper
-    async def owner(self, scrape_item: ScrapeItem, owner_id: str) -> None:
-        owner = await self.api.resolve_owner(owner_id)
-        scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders("photos")
-        await self._iter_photos(scrape_item, f"photos{owner.id}")
+
+@URLConfig(allow_empty_path=True)
+class VKCrawler(VKBaseCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vk.ru", "vk.com"
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
+        "User / Group (photos + videos + clips)": (
+            "/id<owner_id>",
+            "/public<owner_id>",
+            "/@<owner_screen_name>",
+        ),
+        "User / Group photos": (
+            "/albums<owner_id>",
+            "/photos<owner_id>",
+        ),
+        "Album": "/album<owner_id>_<album_id>",
+        "Wall": "/wall<owner_id>_<wall_id>",
+        "Tagged photos": "/tag<owner_id>",
+        "Redirect": "/?to=<base64_url>",
+    }
+
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
+
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        url = scrape_item.url
+        if "vkvideo" in url.host:
+            self.handle_external_links(scrape_item)
+            return
+
+        match url.parts[1:]:
+            case [] if redirect := url.query.get("to"):
+                self.redirect(scrape_item, redirect)
+            case [slug]:
+                if owner_id := _extract_id(slug, "id", "public", "@"):
+                    await self.everything(scrape_item, owner_id)
+                elif album := _extract_id(slug, "album", composed=True):
+                    owner_id, _, album_id = album.partition("_")
+                    await self.album(scrape_item, owner_id, album_id)
+                elif owner_id := _extract_id(slug, "albums", "photos"):
+                    await self.photos(scrape_item, owner_id)
+                elif wall := _extract_id(slug, "wall", composed=True):
+                    owner_id, _, wall_id = wall.partition("_")
+                    await self.wall(scrape_item, owner_id, wall_id)
+                elif owner_id := _extract_id(slug, "tag"):
+                    await self.tag(scrape_item, owner_id)
+                else:
+                    raise ValueError
+            case _:
+                raise ValueError
 
     @error_handling_wrapper
-    async def owner_videos(self, scrape_item: ScrapeItem, owner_id: str, kind: str) -> None:
+    def redirect(self, scrape_item: ScrapeItem, to: str) -> None:
+        url = base64.urlsafe_b64decode(b64_pad(to)).decode("utf8")
+        self.handle_external_links(scrape_item.create_child(self.parse_url(url)))
+
+    @error_handling_wrapper
+    async def photos(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders(kind)
-        async with self.new_task_group() as tg:
-            async for video in self.api.videos(scrape_item.url):
-                prefix = "clip" if video.type == "short_video" else "video"
-                url = self.PRIMARY_URL / f"{prefix}{video.owner_id}_{video.id}"
-                tg.create_task(self.video_task(scrape_item.create_child(url), video))
-                scrape_item.add_children()
+        await self._iter_photos(scrape_item, f"photos{owner.id}", "photos")
+
+    @error_handling_wrapper
+    async def everything(self, scrape_item: ScrapeItem, owner_id: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        clips = VKVideoCrawler.PRIMARY_URL / f"@{owner.screen_name}" / "clips"
+        videos = VKVideoCrawler.PRIMARY_URL / f"@{owner.screen_name}" / "all"
+        match scrape_item.url.fragment.partition("="):
+            case ["section", _, "short_videos"]:
+                url = videos
+            case ["section", _, "videos"]:
+                url = clips
+            case _:
+                url = None
+
+        if url:
+            with scrape_item.track_changes:
+                scrape_item.url = url
+                self.handle_external_links(scrape_item)
+                return
+
+        for url in (clips, videos):
+            self.handle_external_links(scrape_item.create_child(url))
+
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        await self._iter_photos(scrape_item, f"photos{owner.id}", "photos")
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders(f"album_{album_id}")
-        await self._iter_photos(scrape_item, f"album{owner_id}_{album_id}")
+        await self._iter_photos(scrape_item, f"album{owner_id}_{album_id}", f"album_{album_id}")
 
     @error_handling_wrapper
     async def wall(self, scrape_item: ScrapeItem, owner_id: str, wall_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders(f"wall_{wall_id}")
-        await self._iter_photos(scrape_item, f"wall{owner_id}_{wall_id}")
+        await self._iter_photos(scrape_item, f"wall{owner_id}_{wall_id}", f"wall_{wall_id}")
 
     @error_handling_wrapper
     async def tag(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders("tagged")
-        await self._iter_photos(scrape_item, f"tag{owner_id}")
+        await self._iter_photos(scrape_item, f"tag{owner_id}", "tagged")
 
-    async def _iter_photos(self, scrape_item: ScrapeItem, list_id: str) -> None:
+    async def _iter_photos(self, scrape_item: ScrapeItem, list_id: str, folder: str | None) -> None:
         async with self.new_task_group() as tg:
             async for photo in self.api.photos(list_id):
-                tg.create_task(self._photo(scrape_item.create_child(self.PRIMARY_URL / f"photo{photo.id}"), photo))
+                new_item = scrape_item.create_child(self.PRIMARY_URL / f"photo{photo.id}")
+                if folder:
+                    new_item.append_folders(folder)
+                tg.create_task(self._photo(new_item, photo))
                 scrape_item.add_children()
 
     @error_handling_wrapper
@@ -240,6 +309,7 @@ class Video:
     embed: str | None
     formats: tuple[Format, ...]
     type: str = "video"
+    access_key: str | None = None
 
     @property
     def slug(self) -> str:
@@ -267,12 +337,6 @@ class Photo:
     uploaded: int
     sources: tuple[PhotoSrc, ...]
     desc: str | None = None
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class OwnerSolution:
-    id: int
-    type: str
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -319,6 +383,14 @@ class VKAPI(API):
 
         return resp["data"]["access_token"]
 
+    async def method(self, method: str, data: dict[str, Any]) -> Any:
+        data["access_token"] = await self.access_token()
+        url = (self.ENTRYPOINT / "method" / method).with_query(v=self.VERSION, client_id=self.CLIENT_ID)
+        resp = await self.request_json(url, "POST", data=data)
+        if error := resp.get("error"):
+            raise ScrapeError(401, error.get("error_msg"))
+        return resp["response"]
+
     async def get_user(self, screen_name_or_id: str | int) -> Owner:
         resp = await self.method("users.get", {"user_ids": str(screen_name_or_id)})
         if not resp:
@@ -332,42 +404,35 @@ class VKAPI(API):
             raise ScrapeError(404, f"Group not found: {screen_name_or_id}")
         return deserialize(Owner, groups[0])
 
-    async def method(self, method: str, data: dict[str, Any]) -> Any:
-        data["access_token"] = await self.access_token()
-        url = (self.ENTRYPOINT / "method" / method).with_query(v=self.VERSION, client_id=self.CLIENT_ID)
-        resp = await self.request_json(url, "POST", data=data)
-        if error := resp.get("error"):
-            raise ScrapeError(401, error.get("error_msg"))
-        return resp["response"]
-
-    async def get_video(self, owner_id: str, video_id: str, *, list_id: str | None = None) -> Video:
+    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
+        # Access key is for private videos
         full_id = f"{owner_id}_{video_id}"
+        if access_key:
+            full_id += f"_{access_key}"
         data = {"videos": full_id}
-        if list_id:
-            data["album_id"] = list_id
+
         resp = await self.method("video.get", data)
         items = resp.get("items")
         if not items:
             raise ScrapeError(404)
-        return _parse_video_api(items[0])
+        return await _parse_video(items[0])
 
-    async def get_video_legacy(self, owner_id: str, video_id: str, *, list_id: str | None = None) -> Video:
+    async def get_video_legacy(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         # This may trigger a JS bot check
         data = {
             "act": "show",
             "video": f"{owner_id}-{video_id}",
             "al": 1,
         }
-        if list_id:
-            data["list"] = list_id
+        if access_key:
+            data["list"] = access_key
 
         payload = await self.request_payload("al_video.php", data)
-        return await _parse_video(payload, owner_id, video_id)
+        return await _parse_video_legacy(payload, owner_id, video_id)
 
     async def request_payload(self, path: str, data: dict[str, Any]) -> list[Any]:
-        url = self.PRIMARY_URL / path
         resp = await self.request_json(
-            url,
+            url := VKCrawler.PRIMARY_URL / path,
             data=data,
             headers={
                 "Referer": str(url),
@@ -385,7 +450,7 @@ class VKAPI(API):
 
     async def resolve_owner(self, screen_name: str) -> Owner:
         owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name})
-        owner_id, owner_type = map(owner.get, ("object_id", "type"))
+        owner_id, owner_type = owner["object_id"], owner["type"]
         match owner_type:
             case "group":
                 resolve = self.get_group
@@ -457,7 +522,8 @@ class VKAPI(API):
         seen: set[str] = set()
         while True:
             found_new_videos: bool = False
-            for video in map(_parse_video_api, section.videos):
+            for vid in section.videos:
+                video = await _parse_video(vid)
                 if video.slug not in seen:
                     seen.add(video.slug)
                     found_new_videos = True
@@ -469,7 +535,67 @@ class VKAPI(API):
             section = await self.catalog_get_section(section.id, section.next_from)
 
 
+def _extract_id(slug: str, *prefixes: str, composed: bool = False) -> str | None:
+    for prefix in prefixes:
+        if slug.startswith(prefix):
+            target = slug.removeprefix(prefix)
+            if composed != ("_" in target):
+                raise ValueError(target)
+            return target
+
+
+@aio.to_thread
+def _parse_video_legacy(payload: list[Any], owner_id: str, video_id: str) -> Video:
+    html, options = payload[1], payload[-1]
+    params = options["player"]["params"][0]
+    if params.get("live") == 2:
+        raise ScrapeError(422, "Live streams are not supported")
+
+    def extract_embed() -> str | None:
+        try:
+            return css.select(css.soup(html), "iframe[src]", "src")
+        except css.SelectorError:
+            return None
+
+    return Video(
+        id=int(video_id),
+        owner_id=int(owner_id),
+        title=css.unescape(params.get("md_title") or options["mvData"]["title"]),
+        thumb=params.get("jpg") or params.get("short_video_cover"),
+        date=params["date"],
+        formats=tuple(_extract_formats_legacy(params)),
+        embed=extract_embed(),
+    )
+
+
+@aio.to_thread
+def _parse_video(video: dict[str, Any]) -> Video:
+    return deserialize(
+        Video,
+        video,
+        thumb=thumbs[-1]["url"] if (thumbs := video.get("image")) else None,
+        formats=tuple(_extract_formats(video)),
+        embed=video["files"].get("external"),
+    )
+
+
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
+    for name, value in data["files"].items():
+        if not value or type(value) is not str or not value.startswith(("//", "http")):
+            continue
+
+        url = VKCrawler.parse_url(value)
+
+        match name.partition("_"):
+            case ["mp4", _, res]:
+                yield Format(name=name, url=url, height=int(res))
+            case ["hls", *_]:
+                yield Format(name=name, url=url, hls=True)
+            case _:
+                continue
+
+
+def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
     for name, value in data.items():
         if not value or type(value) is not str or not value.startswith(("//", "http")):
             continue
@@ -486,69 +612,10 @@ def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
             yield Format(name=name, url=url, height=int(m.group(1)))
 
 
-def _extract_id(slug: str, *prefixes: str, composed: bool = False) -> str | None:
-    for prefix in prefixes:
-        if slug.startswith(prefix):
-            target = slug.removeprefix(prefix)
-            if composed != ("_" in target):
-                raise ValueError(target)
-            return target
-
-
-@aio.to_thread
-def _parse_video(payload: list[Any], owner_id: str, video_id: str) -> Video:
-    html, options = payload[1], payload[-1]
-    params = options["player"]["params"][0]
-    if params.get("live") == 2:
-        raise ScrapeError(422, "Live streams are not supported")
-
-    def extract_embed():
-        try:
-            return css.select(css.soup(html), "iframe[src]", "src")
-        except css.SelectorError:
-            return None
-
-    return Video(
-        id=int(video_id),
-        owner_id=int(owner_id),
-        title=css.unescape(params.get("md_title") or options["mvData"]["title"]),
-        thumb=params.get("jpg") or params.get("short_video_cover"),
-        date=params["date"],
-        formats=tuple(_extract_formats(params)),
-        embed=extract_embed(),
-    )
-
-
-def _parse_video_api(video: dict[str, Any]) -> Video:
-    return deserialize(
-        Video,
-        video,
-        thumb=thumbs[-1]["url"] if (thumbs := video.get("image")) else None,
-        formats=tuple(_extract_api_formats(video)),
-        embed=video["files"].get("external"),
-    )
-
-
-def _extract_api_formats(data: dict[str, Any]) -> Generator[Format]:
-    for name, value in data["files"].items():
-        if not value or type(value) is not str or not value.startswith(("//", "http")):
-            continue
-
-        url = VKCrawler.parse_url(value)
-
-        match name.partition("_"):
-            case ["mp4", _, res]:
-                yield Format(name=name, url=url, height=int(res))
-            case ["hls", *_]:
-                yield Format(name=name, url=url, hls=True)
-            case _:
-                continue
-
-
 def _parse_photo(photo: dict[str, Any]) -> Photo:
-    def sources() -> Iterable[PhotoSrc]:
-        origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
+    origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
 
+    def sources() -> Iterable[PhotoSrc]:
         for name, src in photo.items():
             if not name.endswith("_src"):
                 continue
