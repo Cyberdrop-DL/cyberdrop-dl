@@ -30,19 +30,19 @@ class VKCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vkvideo.ru", "vkvideo.com", "vk.ru", "vk.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
-            "/clip<user_id>_<video_id>",
-            "/video<user_id>_<video_id>",
-            "/video_ext.php?oid=<user_id>&id=<video_id>",
+            "/clip<owner_id>_<video_id>",
+            "/video<owner_id>_<video_id>",
+            "/video_ext.php?oid=<owner_id>&id=<video_id>",
         ),
         "User photos": (
-            "/id<user_id>",
-            "/public<user_id>",
-            "/albums<user_id>",
-            "/photos<user_id>",
+            "/id<owner_id>",
+            "/public<owner_id>",
+            "/albums<owner_id>",
+            "/photos<owner_id>",
         ),
-        "Album": "/album<user_id>_<album_id>",
-        "Wall": "/wall<user_id>_<wall_id>",
-        "Tagged photos": "/tag<user_id>",
+        "Album": "/album<owner_id>_<album_id>",
+        "Wall": "/wall<owner_id>_<wall_id>",
+        "Tagged photos": "/tag<owner_id>",
     }
     DOMAIN: ClassVar[str] = "vk"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
@@ -67,18 +67,18 @@ class VKCrawler(Crawler):
             case [slug] if not slug.startswith("@"):
                 if video_id := _extract_id(slug, "clip", "video", composed=True):
                     await self.video(scrape_item, video_id)
-                elif user_id := _extract_id(slug, "albums", "photos", "id", "public"):
-                    await self.user(scrape_item, user_id)
+                elif owner_id := _extract_id(slug, "albums", "photos", "id", "public"):
+                    await self.user(scrape_item, owner_id)
                 elif album := _extract_id(slug, "album", composed=True):
-                    user_id, _, album_id = album.partition("_")
-                    await self.album(scrape_item, user_id, album_id)
+                    owner_id, _, album_id = album.partition("_")
+                    await self.album(scrape_item, owner_id, album_id)
                 elif wall := _extract_id(slug, "wall", composed=True):
-                    user_id, _, wall_id = wall.partition("_")
-                    await self.wall(scrape_item, user_id, wall_id)
-                elif user_id := _extract_id(slug, "tag"):
-                    await self.tag(scrape_item, user_id)
+                    owner_id, _, wall_id = wall.partition("_")
+                    await self.wall(scrape_item, owner_id, wall_id)
+                elif owner_id := _extract_id(slug, "tag"):
+                    await self.tag(scrape_item, owner_id)
                 else:
-                    await self.user(scrape_item, slug)
+                    await self.page(scrape_item, slug)
             case _:
                 raise ValueError
 
@@ -120,28 +120,35 @@ class VKCrawler(Crawler):
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, user_id: str) -> None:
-        user = await self.api.user(user_id)
+        user = await self.api.owner(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
         scrape_item.append_folders("photos")
         await self._iter_photos(scrape_item, f"photos{user.id}")
 
     @error_handling_wrapper
+    async def page(self, scrape_item: ScrapeItem, screen_name: str) -> None:
+        owner = await self.api.resolve_owner(screen_name)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        scrape_item.append_folders("photos")
+        await self._iter_photos(scrape_item, f"photos{owner.id}")
+
+    @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, user_id: str, album_id: str) -> None:
-        user = await self.api.user(user_id)
+        user = await self.api.owner(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
         scrape_item.append_folders(f"album_{album_id}")
         await self._iter_photos(scrape_item, f"album{user_id}_{album_id}")
 
     @error_handling_wrapper
     async def wall(self, scrape_item: ScrapeItem, user_id: str, wall_id: str) -> None:
-        user = await self.api.user(user_id)
+        user = await self.api.owner(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
         scrape_item.append_folders(f"wall_{wall_id}")
         await self._iter_photos(scrape_item, f"wall{user_id}_{wall_id}")
 
     @error_handling_wrapper
     async def tag(self, scrape_item: ScrapeItem, user_id: str) -> None:
-        user = await self.api.user(user_id)
+        user = await self.api.owner(user_id)
         scrape_item.setup_as_profile(self.create_title(user.full_name))
         scrape_item.append_folders("tagged")
         await self._iter_photos(scrape_item, f"tag{user_id}")
@@ -160,22 +167,16 @@ class VKCrawler(Crawler):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class User:
+class Owner:
     id: int
-    nickname: str | None
-    domain: str
-    first_name: str
-    last_name: str
     screen_name: str
+    name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
 
     @property
     def full_name(self) -> str:
-        return (
-            " ".join(filter(None, (self.first_name, self.last_name)))
-            or self.nickname
-            or self.screen_name
-            or self.domain
-        )
+        return " ".join(filter(None, (self.first_name, self.last_name))) or self.name or self.screen_name
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -304,18 +305,20 @@ class VKAPI(API):
         content = extr_text(html, '"apiPrefetchCache":', "});")
         return json.loads(content)
 
-    async def user(self, user_id: str) -> User:
-        domain = user_id
+    async def owner(self, owner_id: str) -> Owner:
+        domain = owner_id
+
         if not domain.startswith(("id", "public")):
-            domain = f"public{user_id.lstrip('-')}" if user_id.startswith("-") else f"id{user_id}"
+            domain = f"public{owner_id.lstrip('-')}" if owner_id.startswith("-") else f"id{owner_id}"
 
         pf_data = await self._prefetch(self.PRIMARY_URL / domain)
-        _, user = traversal.find_obj(
-            traversal.find_obj(pf_data, validate={"method": "users.get"}),
-            "first_name",
-            "last_name",
-        )
-        return deserialize(User, user)
+        _, owner = traversal.find_obj(pf_data, validate={"id": int(owner_id.lstrip("-"))})
+        return deserialize(Owner, owner)
+
+    async def resolve_owner(self, screen_name: str) -> Owner:
+        pf_data = await self._prefetch(self.PRIMARY_URL / screen_name)
+        _, owner = traversal.find_obj(pf_data, "id", validate={"screen_name": screen_name})
+        return deserialize(Owner, owner)
 
     async def photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
         url = self.PRIMARY_URL / "al_photos.php"
