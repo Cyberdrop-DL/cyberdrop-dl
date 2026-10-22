@@ -93,8 +93,14 @@ class VKCrawler(Crawler):
             return
 
         video = await self.api.video(video_id, list_id=scrape_item.url.query.get("list"))
-        best_fmt = max(video.formats, key=lambda f: f.score)
         scrape_item.uploaded_at = video.uploaded_at
+        if video.embed:
+            new_item = scrape_item.create_child(video.embed)
+            new_item.setup_as_album(self.create_title(video.title))
+            self.handle_embed(new_item)
+            return
+
+        best_fmt = max(video.formats, key=lambda f: f.score)
         m3u8 = info = debrid_url = None
         if best_fmt.hls:
             m3u8, info = await self.request_m3u8(best_fmt.url)
@@ -195,8 +201,8 @@ class Format:
 class Video:
     title: str
     thumb: str | None
-    embed_html: str
     uploaded_at: int
+    embed: AbsoluteHttpURL | None
     formats: tuple[Format, ...]
 
 
@@ -286,19 +292,8 @@ class VKAPI(API):
                 "X-Requested-With": "XMLHttpRequest",
             },
         )
-        payload = _payload(resp)
-        html, options = payload[1], payload[-1]
-        params = options["player"]["params"][0]
-        if params.get("live") == 2:
-            raise ScrapeError(422, "Live streams are not supported")
 
-        return Video(
-            title=css.unescape(params.get("md_title") or options["mvData"]["title"]),
-            thumb=params.get("jpg") or params.get("short_video_cover"),
-            uploaded_at=params["date"],
-            formats=tuple(_extract_formats(params)),
-            embed_html=html,
-        )
+        return _parse_video(_payload(resp))
 
     async def _prefetch(self, url: AbsoluteHttpURL) -> Any:
         html = await self.request_text(url)
@@ -389,3 +384,24 @@ def _payload(resp: dict[str, Any]) -> list[Any]:
             raise ScrapeError(401)
         case _:
             return payload
+
+
+def _parse_video(payload: list[Any]) -> Video:
+    html, options = payload[1], payload[-1]
+    params = options["player"]["params"][0]
+    if params.get("live") == 2:
+        raise ScrapeError(422, "Live streams are not supported")
+
+    def extract_embed():
+        try:
+            return VKCrawler.parse_url(css.select(css.soup(html), "iframe[src]", "src"))
+        except css.SelectorError:
+            return None
+
+    return Video(
+        title=css.unescape(params.get("md_title") or options["mvData"]["title"]),
+        thumb=params.get("jpg") or params.get("short_video_cover"),
+        uploaded_at=params["date"],
+        formats=tuple(_extract_formats(params)),
+        embed=extract_embed(),
+    )
