@@ -52,4 +52,21 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://vk.com/photo-164552494_457239671",
+        "results": [
+            {
+                "url": "https://vk.com/photo-164552494_457239671",
+                "filename": "photo-164552494_457239829 [w].jpg",
+                "debrid_url": "re:P2KdmJbd_4lRItWt_ekeCSMCehWh4khH3RzN3h6bilGsEfPW3lwoG5yyQUJP-WGFMPGFZT1cyJZ1tZ0CWUGp5Etb.jpg",
+                "original_filename": "P2KdmJbd_4lRItWt_ekeCSMCehWh4khH3RzN3h6bilGsEfPW3lwoG5yyQUJP-WGFMPGFZT1cyJZ1tZ0CWUGp5Etb.jpg",
+                "referer": "https://vk.com/photo-164552494_457239671",
+                "album_id": None,
+                "uploaded_at": 1729151221,
+                "download_folder": "re:.monikaphobia (VK)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
 ]

@@ -7,6 +7,8 @@ import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Unpack, override
 
+from typing_extensions import deprecated
+
 from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
@@ -14,7 +16,7 @@ from cyberdrop_dl.crawlers.vk import unblur
 from cyberdrop_dl.crawlers.vk.types import CatalogSection, Format, Owner, Photo, PhotoSize, Post, Video
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, parse_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -112,7 +114,9 @@ class VKAPI(API):
             if found.screen_name == screen_name:
                 return found
 
-        owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name})
+        if not (owner := await self.method("utils.resolveScreenName", {"screen_name": screen_name})):
+            raise ScrapeError(404, f"No user found with {screen_name = }")
+
         owner_id, owner_type = owner["object_id"], owner["type"]
         match owner_type:
             case "group":
@@ -205,6 +209,7 @@ class VKAPI(API):
 
             section = await self.catalog.get_section(section.id, section.next_from)
 
+    @deprecated("DO NOT USE. This endpoint works but all image src files are 404")
     async def get_photo(self, owner_id: str, photo_id: str, album_id: str | None = None) -> Photo:
         album_options = (album_id,) if album_id else ("profile", "wall")
         for aid in album_options:
@@ -291,7 +296,7 @@ class VKLegacy(API.Endpoint[VKAPI]):
     async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         data = {
             "act": "show",
-            "video": f"{owner_id}-{video_id}",
+            "video": f"{owner_id}_{video_id}",
             "al": 1,
         }
         if access_key:
@@ -303,13 +308,16 @@ class VKLegacy(API.Endpoint[VKAPI]):
     async def get_photo(self, owner_id: str, photo_id: str) -> Photo:
         data = {
             "act": "show",
-            "photo": f"{owner_id}-{photo_id}",
+            "photo": f"{owner_id}_{photo_id}",
             "list": owner_id,
             "al": 1,
         }
 
         payload = await self.request_payload("al_photos.php", data)
-        return await asyncio.to_thread(_parse_photo_legacy, payload[3])
+        photos = payload[3]
+        if not photos:
+            raise ScrapeError(404)
+        return await asyncio.to_thread(_parse_photo_legacy, photos[0])
 
     async def get_photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
         data = {
@@ -366,7 +374,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
         if not value or type(value) is not str or not value.startswith(("//", "http")):
             continue
 
-        url = VKAPI.parse_url(value)
+        url = parse_url(value)
 
         if name.startswith("hls") and name != "hls_live_playback":
             yield Format(name, url, hls=True)
@@ -379,7 +387,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
 
 
 def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
-    origin = VKAPI.parse_url(base) if (base := photo.get("base")) else None
+    origin = parse_url(base) if (base := photo.get("base")) else None
     owner_id, _, photo_id = photo["id"].partition("_")
 
     def sources() -> Iterable[PhotoSize]:
@@ -392,7 +400,7 @@ def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
             except ValueError:
                 width = height = None
 
-            url = VKAPI.parse_url(src, origin)
+            url = parse_url(src, origin)
 
             yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=unblur(url))
 

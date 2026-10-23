@@ -240,7 +240,7 @@ class VKCrawler(VKBaseCrawler):
             case [] if to := url.query.get("to"):
                 self.redirect(scrape_item, to)
             case [slug] if slug not in INNER_PAGES:
-                if page := _parse_vk_ids(scrape_item.url.path):
+                if page := _parse_vk_ids(slug):
                     await self._match_page(scrape_item, page)
                 else:
                     await self.wall(scrape_item, slug)
@@ -281,7 +281,7 @@ class VKCrawler(VKBaseCrawler):
 
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        photo = await self.api.get_photo(owner_id, photo_id)
+        photo = await self.api.legacy.get_photo(owner_id, photo_id)
         await self._photo(scrape_item, photo)
 
     @error_handling_wrapper
@@ -370,7 +370,7 @@ class VKCrawler(VKBaseCrawler):
     _post_task = auto_task_id(_post)
 
     async def _select_best_src(self, photo: Photo) -> PhotoSize:
-        for option in sorted(photo.sources, key=PhotoSize.score)[:3]:
+        for option in sorted(photo.sources, key=PhotoSize.score, reverse=True)[:3]:
             try:
                 async with self.request(option.url, "HEAD") as _:
                     ...
@@ -382,7 +382,7 @@ class VKCrawler(VKBaseCrawler):
             else:
                 return option
 
-        raise ScrapeError(404, "None of the image sourced are available")
+        raise ScrapeError(404, "None of the image sources are available")
 
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
