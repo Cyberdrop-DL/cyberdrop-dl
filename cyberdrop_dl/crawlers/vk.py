@@ -4,12 +4,12 @@ import base64
 import contextlib
 import dataclasses
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -161,7 +161,7 @@ class VKVideoCrawler(VKBaseCrawler):
 class VKCrawler(VKBaseCrawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vk.ru", "vk.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
-        "User / Group (photos + videos + clips)": (
+        "User / Group wall": (
             "/id<owner_id>",
             "/public<owner_id>",
             "/@<owner_screen_name>",
@@ -171,8 +171,7 @@ class VKCrawler(VKBaseCrawler):
             "/photos<owner_id>",
         ),
         "Album": "/album<owner_id>_<album_id>",
-        "Wall": "/wall<owner_id>_<wall_id>",
-        "Tagged photos": "/tag<owner_id>",
+        "Post": "/wall<owner_id>_<wall_id>",
         "Redirect": "/?to=<base64_url>",
     }
 
@@ -188,8 +187,10 @@ class VKCrawler(VKBaseCrawler):
             case [] if redirect := url.query.get("to"):
                 self.redirect(scrape_item, redirect)
             case [slug]:
-                if owner_id := _extract_id(slug, "id", "public", "@"):
-                    await self.everything(scrape_item, owner_id)
+                if owner_id := _extract_id(slug, "id", "@"):
+                    await self.wall(scrape_item, owner_id)
+                elif owner_id := _extract_id(slug, "public"):
+                    await self.wall(scrape_item, f"-{owner_id}")
                 elif album := _extract_id(slug, "album", composed=True):
                     owner_id, _, album_id = album.partition("_")
                     await self.album(scrape_item, owner_id, album_id)
@@ -197,9 +198,8 @@ class VKCrawler(VKBaseCrawler):
                     await self.photos(scrape_item, owner_id)
                 elif wall := _extract_id(slug, "wall", composed=True):
                     owner_id, _, wall_id = wall.partition("_")
-                    await self.wall(scrape_item, owner_id, wall_id)
-                elif owner_id := _extract_id(slug, "tag"):
-                    await self.tag(scrape_item, owner_id)
+                    await self.post(scrape_item, owner_id, wall_id)
+
                 else:
                     raise ValueError
             case _:
@@ -212,15 +212,16 @@ class VKCrawler(VKBaseCrawler):
 
     @error_handling_wrapper
     async def photos(self, scrape_item: ScrapeItem, owner_id: str) -> None:
-        owner = await self.api.resolve_owner(owner_id)
-        scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        await self._iter_photos(scrape_item, f"photos{owner.id}", "photos")
+        raise NotImplementedError
 
     @error_handling_wrapper
     async def everything(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
-        clips = VKVideoCrawler.PRIMARY_URL / f"@{owner.screen_name}" / "clips"
-        videos = VKVideoCrawler.PRIMARY_URL / f"@{owner.screen_name}" / "all"
+        domain = str(
+            f"@{owner.screen_name}" if owner.screen_name else 0 - owner.id if owner.type == "page" else owner.id
+        )
+        clips = VKVideoCrawler.PRIMARY_URL / domain / "clips"
+        videos = VKVideoCrawler.PRIMARY_URL / domain / "all"
         match scrape_item.url.fragment.partition("="):
             case ["section", _, "short_videos"]:
                 url = videos
@@ -239,33 +240,48 @@ class VKCrawler(VKBaseCrawler):
             self.handle_external_links(scrape_item.create_child(url))
 
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        await self._iter_photos(scrape_item, f"photos{owner.id}", "photos")
+        raise NotImplementedError
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
-        owner = await self.api.resolve_owner(owner_id)
-        scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        await self._iter_photos(scrape_item, f"album{owner_id}_{album_id}", f"album_{album_id}")
+        raise NotImplementedError
 
     @error_handling_wrapper
-    async def wall(self, scrape_item: ScrapeItem, owner_id: str, wall_id: str) -> None:
-        owner = await self.api.resolve_owner(owner_id)
-        scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        await self._iter_photos(scrape_item, f"wall{owner_id}_{wall_id}", f"wall_{wall_id}")
+    async def post(self, scrape_item: ScrapeItem, owner_id: str, wall_id: str) -> None:
+        raise NotImplementedError
 
     @error_handling_wrapper
-    async def tag(self, scrape_item: ScrapeItem, owner_id: str) -> None:
+    async def wall(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        await self._iter_photos(scrape_item, f"tag{owner_id}", "tagged")
-
-    async def _iter_photos(self, scrape_item: ScrapeItem, list_id: str, folder: str | None) -> None:
         async with self.new_task_group() as tg:
-            async for photo in self.api.photos(list_id):
-                new_item = scrape_item.create_child(self.PRIMARY_URL / f"photo{photo.id}")
-                if folder:
-                    new_item.append_folders(folder)
-                tg.create_task(self._photo(new_item, photo))
+            async for post in self.api.get_wall(owner_id):
+                url = self.PRIMARY_URL / f"wall{post.owner_id}_{post.id}"
+                tg.create_task(self._post(scrape_item.create_child(url), post))
+                scrape_item.add_children()
+
+    @auto_task_id
+    @error_handling_wrapper
+    async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
+        title = self.create_separate_post_title(None, str(post.id), post.date)
+        scrape_item.setup_as_post(title)
+        async with self.new_task_group() as tg:
+            for attach in post.attachments:
+                match attach["type"]:
+                    case "photo":
+                        photo = _parse_photo(attach["photo"])
+                        url = self.PRIMARY_URL / photo.web_path
+                        tg.create_task(self._photo(scrape_item.create_child(url), photo))
+
+                    case "video":
+                        vid = await _parse_video(attach["video"])
+                        url = VKVideoCrawler.PRIMARY_URL / vid.web_path
+                        self.handle_external_links(scrape_item.create_child(url))
+
+                    case _:
+                        self.log.warning("Unknown attachment type: %s", attach)
+                        continue
+
                 scrape_item.add_children()
 
     @error_handling_wrapper
@@ -284,16 +300,31 @@ class VKCrawler(VKBaseCrawler):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
+class Post:
+    date: int
+    id: int
+    from_id: int
+    owner_id: int
+    attachments: list[dict[str, Any]]
+    text: str | None = None
+
+    parse = classmethod(deserialize)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
 class Owner:
     id: int
-    screen_name: str
+    type: str
+    screen_name: str | None = None
     name: str | None = None
     first_name: str | None = None
     last_name: str | None = None
 
     @property
     def full_name(self) -> str:
-        return " ".join(filter(None, (self.first_name, self.last_name))) or self.name or self.screen_name
+        return (
+            " ".join(filter(None, (self.first_name, self.last_name))) or self.name or self.screen_name or str(self.id)
+        )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -324,10 +355,31 @@ class Video:
     def slug(self) -> str:
         return f"{self.owner_id}_{self.id}"
 
+    @property
+    def prefix(self) -> str:
+        return "clip" if self.type == "short_video" else "video"
+
+    @property
+    def web_path(self) -> str:
+        return f"{self.prefix}{self.slug}"
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class PhotoSrc:
-    SIZES: ClassVar[tuple[str, ...]] = ("base", "s", "m", "x", "o", "p", "q", "r", "y", "z", "w")  # worst to best
+    SIZES: ClassVar[tuple[str, ...]] = (
+        "base",
+        "s",
+        "m",
+        "o",
+        "p",
+        "q",
+        "r",
+        "x",
+        "y",
+        "z",
+        "w",
+        "orig",
+    )  # worst to best
     name: str
     res: Resolution
     url: AbsoluteHttpURL
@@ -343,9 +395,17 @@ class PhotoSrc:
 @dataclasses.dataclass(slots=True, frozen=True)
 class Photo:
     id: str
-    uploaded: int
+    owner_id: str
+    date: int
     sources: tuple[PhotoSrc, ...]
-    desc: str | None = None
+
+    @property
+    def slug(self) -> str:
+        return f"{self.owner_id}_{self.id}"
+
+    @property
+    def web_path(self) -> str:
+        return f"photo{self.slug}"
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -360,8 +420,9 @@ class VKAPI(API):
     # https://dev.vk.ru/en/reference
     APP_ID: ClassVar[str] = "6287487"
     VERSION: ClassVar[str] = "5.289"
-    CLIENT_ID: ClassVar[str] = "52461373"
-    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.vkvideo.ru")
+    CLIENT_ID: ClassVar[str] = "6287487"
+    VIDEO_ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.vkvideo.ru")
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://web.api.vk.ru")
 
     @override
     @contextlib.asynccontextmanager
@@ -374,7 +435,7 @@ class VKAPI(API):
 
             yield resp
 
-    @disk_cached_method(ttl=86400)
+    @disk_cached_method(ttl=3600)
     async def access_token(self) -> str:
         resp = await self.request_json(
             AbsoluteHttpURL("https://login.vk.ru/?act=get_anonym_token"),
@@ -404,7 +465,7 @@ class VKAPI(API):
         resp = await self.method("users.get", {"user_ids": str(screen_name_or_id)})
         if not resp:
             raise ScrapeError(404, f"User not found: {screen_name_or_id}")
-        return deserialize(Owner, resp[0])
+        return deserialize(Owner, resp[0], type="user")
 
     async def get_group(self, group_id: str | int) -> Owner:
         resp = await self.method("groups.getById", {"group_ids": str(group_id).lstrip("-")})
@@ -491,7 +552,7 @@ class VKAPI(API):
 
         return await resolve(owner_id)
 
-    async def photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
+    async def photos_legacy(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
         data = {
             "act": "show",
             "al": "1",
@@ -506,13 +567,45 @@ class VKAPI(API):
             total, photos = payload[1], payload[3]
             offset += len(photos)
             found_new_photos: bool = False
-            for photo in map(_parse_photo, photos):
+            for photo in map(_parse_photo_legacy, photos):
                 if photo.id not in seen:
                     seen.add(photo.id)
                     found_new_photos = True
                     yield photo
 
             if not found_new_photos or offset >= total:
+                break
+
+            data["offset"] = offset
+
+    async def get_wall(
+        self,
+        domain: str,
+        *,
+        count: int = 20,
+        offset: int = 0,
+        filter_: Literal["all", "others", "owner"] = "all",
+    ) -> AsyncGenerator[Post]:
+        data = {
+            "domain": domain,
+            "count": count,
+            "filter": filter_,
+            "offset": offset or "",
+        }
+
+        seen: set[int] = set()
+        resp = await self.method("wall.get", data)
+        total = resp["count"]
+        while True:
+            offset += len(posts := resp["items"])
+            found_new_posts: bool = False
+            for post in map(Post.parse, posts):
+                if post.id not in seen:
+                    seen.add(post.id)
+                    found_new_posts = True
+                    yield post
+
+            if not found_new_posts or offset >= total:
                 break
 
             data["offset"] = offset
@@ -605,12 +698,12 @@ def _parse_video(video: dict[str, Any]) -> Video:
         video,
         thumb=thumbs[-1]["url"] if (thumbs := video.get("image")) else None,
         formats=tuple(_extract_formats(video)),
-        embed=video["files"].get("external"),
+        embed=video.get("files", {}).get("external"),
     )
 
 
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
-    for name, value in data["files"].items():
+    for name, value in data.get("files", {}).items():
         if not value or type(value) is not str or not value.startswith(("//", "http")):
             continue
 
@@ -642,7 +735,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
             yield Format(name=name, url=url, height=int(m.group(1)))
 
 
-def _parse_photo(photo: dict[str, Any]) -> Photo:
+def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
     origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
 
     def sources() -> Iterable[PhotoSrc]:
@@ -670,3 +763,28 @@ def _parse_photo(photo: dict[str, Any]) -> Photo:
         uploaded=int(css.select(css.soup(photo["date"]), "[data-date]", "data-date")),
         sources=tuple(sources()),
     )
+
+
+def _parse_photo(photo: dict[str, Any]) -> Photo:
+    origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
+
+    def parse_src(orig: dict[str, Any], name: str | None = None):
+        url = VKCrawler.parse_url(orig["url"], origin)
+        try:
+            res = Resolution(orig["width"], orig["height"])
+        except LookupError:
+            res = Resolution.unknown()
+
+        unblurred_url = url.with_path(
+            url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True
+        )
+
+        return PhotoSrc(name=name or orig["type"], res=res, url=unblurred_url)
+
+    def sources() -> Iterable[PhotoSrc]:
+        if orig := photo.get("orig_photo"):
+            yield parse_src(orig, "orig")
+
+        yield from map(parse_src, photo["sizes"])
+
+    return deserialize(Photo, photo, sources=tuple(sources()))
