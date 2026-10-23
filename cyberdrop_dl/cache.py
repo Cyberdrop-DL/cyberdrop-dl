@@ -31,6 +31,13 @@ class CachedAsyncFunc[T](Protocol):
     def get(self) -> T | None: ...
 
 
+class LRUCachedAsyncFunc[T, R](Protocol):
+    def __call__(self, val: T, /) -> CoroutineType[Any, Any, R]: ...
+
+    @property
+    def cache(self) -> dict[T, R]: ...
+
+
 class _CachedValue[T](TypedDict):
     value: T
     ttl: float | None
@@ -216,11 +223,19 @@ class _CachedMethod[T, R]:
         return self._cached_fn
 
 
-def async_lru_cache[T: Callable[[Any], Awaitable[Any]]](fn: T) -> T:
+def async_lru_cache[T, R](fn: Callable[[T], Awaitable[R]]) -> LRUCachedAsyncFunc[T, R]:
     """Cache the first result.
 
     Only works with callables that take 1 single argument"""
-    return functools.wraps(fn)(aio.async_defaultdict(fn).get)  # pyright: ignore[reportReturnType]
+
+    acache = aio.async_defaultdict(fn)
+
+    @functools.wraps(fn)
+    def wrapper(val: T):
+        return acache.get(val)
+
+    wrapper.cache = acache.cache
+    return cast("LRUCachedAsyncFunc[T, R]", wrapper)  # pyright: ignore[reportInvalidCast]
 
 
 class _InMemoryCachedMethod[R](_CachedMethod[object, R]):
