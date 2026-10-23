@@ -168,6 +168,24 @@ class WeakAsyncLocks[T]:
         return lock
 
 
+@dataclasses.dataclass(frozen=True, slots=True, eq=False)
+class async_defaultdict[T, R]:  # noqa: N801
+    fn: Callable[[T], Awaitable[R]]
+    cache: dict[T, R] = dataclasses.field(default_factory=dict)
+    locks: WeakAsyncLocks[T] = dataclasses.field(default_factory=WeakAsyncLocks)
+
+    async def get(self, val: T) -> R:
+        with contextlib.suppress(LookupError):
+            return self.cache[val]
+
+        async with self.locks[val]:
+            with contextlib.suppress(LookupError):
+                return self.cache[val]
+
+            result = self.cache[val] = await self.fn(val)
+            return result
+
+
 class RateLimiter(AsyncLimiter):
     __slots__ = ()
 
