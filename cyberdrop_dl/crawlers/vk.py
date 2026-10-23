@@ -603,7 +603,7 @@ class VKAPI(API):
     instance: Self | None = None
 
     def __post_init__(self) -> None:
-        self.owner_by_id = async_lru_cache(self.owner_by_id)
+        self.owner_by_id = async_lru_cache(self._owner_by_id)
         self.legacy: VKLegacyAPI = VKLegacyAPI(self)
         self.instance = self
 
@@ -656,7 +656,7 @@ class VKAPI(API):
         else:
             return await self.owner_by_id(owner_id)
 
-    async def owner_by_id(self, owner_id: int) -> Owner:
+    async def _owner_by_id(self, owner_id: int) -> Owner:
         errors: list[Exception] = []
         for method in (self.get_user, self.get_group):
             try:
@@ -668,7 +668,8 @@ class VKAPI(API):
 
     async def owner_by_screen_name(self, screen_name: str) -> Owner:
         screen_name = screen_name.removeprefix("@")
-        for found in self._owners.values():
+        assert screen_name
+        for found in self.owner_by_id.cache.values():
             if found.screen_name == screen_name:
                 return found
 
