@@ -11,7 +11,6 @@ from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
-from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad, css
 from cyberdrop_dl.utils._url import remove_query_params
@@ -199,7 +198,6 @@ class VKCrawler(VKBaseCrawler):
                 elif wall := _extract_id(slug, "wall", composed=True):
                     owner_id, _, wall_id = wall.partition("_")
                     await self.post(scrape_item, owner_id, wall_id)
-
                 else:
                     raise ValueError
             case _:
@@ -247,8 +245,11 @@ class VKCrawler(VKBaseCrawler):
         raise NotImplementedError
 
     @error_handling_wrapper
-    async def post(self, scrape_item: ScrapeItem, owner_id: str, wall_id: str) -> None:
-        raise NotImplementedError
+    async def post(self, scrape_item: ScrapeItem, owner_id: str, post_id: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        post = await self.api.get_post(owner_id, post_id)
+        await self._post(scrape_item, post)
 
     @error_handling_wrapper
     async def wall(self, scrape_item: ScrapeItem, owner_id: str) -> None:
@@ -278,7 +279,25 @@ class VKCrawler(VKBaseCrawler):
                         url = VKVideoCrawler.PRIMARY_URL / vid.web_path
                         self.handle_external_links(scrape_item.create_child(url))
 
-                    case _:
+                    case "audio":
+                        _audio = Audio.parse(attach["audio"])
+
+                    case "doc":
+                        _file = File.parse(attach["doc"])
+
+                    case "graffiti":
+                        _file = Graffiti.parse(attach["graffiti"])
+
+                    case "link":
+                        _link = Link.parse(attach["link"])
+
+                    case "album":
+                        _link = Album.parse(attach["album"])
+
+                    case "app" | "pool" | "page" | "market" | "market_album" | "sticker":
+                        continue
+
+                    case _:  # TODO: support 'pretty_cards' and 'event'
                         self.log.warning("Unknown attachment type: %s", attach)
                         continue
 
@@ -300,7 +319,12 @@ class VKCrawler(VKBaseCrawler):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Post:
+class Object:
+    parse = classmethod(deserialize)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Post(Object):
     date: int
     id: int
     from_id: int
@@ -308,11 +332,9 @@ class Post:
     attachments: list[dict[str, Any]]
     text: str | None = None
 
-    parse = classmethod(deserialize)
-
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Owner:
+class Owner(Object):
     id: int
     type: str
     screen_name: str | None = None
@@ -328,7 +350,7 @@ class Owner:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Format:
+class Format(Object):
     name: str
     url: AbsoluteHttpURL
     height: int | None = None
@@ -340,7 +362,7 @@ class Format:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Video:
+class Video(Object):
     id: int
     owner_id: int
     title: str
@@ -365,8 +387,8 @@ class Video:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class PhotoSrc:
-    SIZES: ClassVar[tuple[str, ...]] = (
+class PhotoSize(Object):
+    TYPES: ClassVar[tuple[str, ...]] = (
         "base",
         "s",
         "m",
@@ -380,24 +402,25 @@ class PhotoSrc:
         "w",
         "orig",
     )  # worst to best
-    name: str
-    res: Resolution
+    type: str
     url: AbsoluteHttpURL
+    height: int | None = None
+    width: int | None = None
 
     @property
     def score(self) -> int:
         try:
-            return self.SIZES.index(self.name)
+            return self.TYPES.index(self.type)
         except ValueError:
             raise ScrapeError(422, f"Unknown size for {self}") from None
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Photo:
+class Photo(Object):
     id: str
     owner_id: str
     date: int
-    sources: tuple[PhotoSrc, ...]
+    sources: tuple[PhotoSize, ...]
 
     @property
     def slug(self) -> str:
@@ -409,7 +432,53 @@ class Photo:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class CatalogSection:
+class Audio(Object):
+    id: int
+    owner_id: int
+    artist: str
+    title: str
+    url: str
+    date: int
+    album_id: int | None = None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Graffiti(Object):
+    id: int
+    owner_id: int
+    photo_130: str
+    photo_604: str
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class File(Object):
+    id: int
+    owner_id: int
+    title: str
+    ext: str
+    url: str
+    date: int
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Link(Object):
+    url: str
+    title: str
+    description: str
+    caption: str | None = None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Album(Object):
+    id: int
+    owner_id: int
+    title: str
+    created: int
+    size: int
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class CatalogSection(Object):
     id: str
     next_from: str | None
     videos: list[dict[str, Any]]
@@ -486,6 +555,13 @@ class VKAPI(API):
         if not items:
             raise ScrapeError(404)
         return await _parse_video(items[0])
+
+    async def get_post(self, owner_id: str, post_id: str) -> Post:
+        resp = await self.method("wall.getById", {"posts": f"{owner_id}_{post_id}"})
+        items = resp.get("items")
+        if not items:
+            raise ScrapeError(404)
+        return Post.parse(items[0])
 
     async def get_video_legacy(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         # This may trigger a JS bot check
@@ -738,7 +814,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
 def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
     origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
 
-    def sources() -> Iterable[PhotoSrc]:
+    def sources() -> Iterable[PhotoSize]:
         for name, src in photo.items():
             if not name.endswith("_src"):
                 continue
@@ -746,45 +822,34 @@ def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
             try:
                 _url, width, height = photo[name.removesuffix("src")]
             except ValueError:
-                res = Resolution.unknown()
-            else:
-                res = Resolution(width, height)
+                width = height = None
 
             url = VKCrawler.parse_url(src, origin)
-            unblurred_url = url.with_path(
-                url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True
-            )
 
-            yield PhotoSrc(name=name.removesuffix("_src"), res=res, url=unblurred_url)
+            yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=_unblur(url))
 
-    return deserialize(
-        Photo,
+    return Photo.parse(
         photo,
-        uploaded=int(css.select(css.soup(photo["date"]), "[data-date]", "data-date")),
+        date=int(css.select(css.soup(photo["date"]), "[data-date]", "data-date")),
         sources=tuple(sources()),
     )
+
+
+def _unblur(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    return url.with_path(url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True)
 
 
 def _parse_photo(photo: dict[str, Any]) -> Photo:
     origin = VKCrawler.parse_url(base) if (base := photo.get("base")) else None
 
-    def parse_src(orig: dict[str, Any], name: str | None = None):
-        url = VKCrawler.parse_url(orig["url"], origin)
-        try:
-            res = Resolution(orig["width"], orig["height"])
-        except LookupError:
-            res = Resolution.unknown()
+    def parse_src(size: dict[str, Any], name: str | None = None):
+        url = VKCrawler.parse_url(size["url"], origin)
+        return PhotoSize.parse(size, type=name or size["type"], url=_unblur(url))
 
-        unblurred_url = url.with_path(
-            url.path.replace("/impf/", "/").replace("/impg/", "/"), keep_query=True, keep_fragment=True
-        )
-
-        return PhotoSrc(name=name or orig["type"], res=res, url=unblurred_url)
-
-    def sources() -> Iterable[PhotoSrc]:
+    def sources() -> Iterable[PhotoSize]:
         if orig := photo.get("orig_photo"):
             yield parse_src(orig, "orig")
 
         yield from map(parse_src, photo["sizes"])
 
-    return deserialize(Photo, photo, sources=tuple(sources()))
+    return Photo.parse(photo, sources=tuple(sources()))
