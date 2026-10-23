@@ -149,20 +149,9 @@ class VKAPI(API):
         return Post.parse(items[0])
 
     async def get_wall(
-        self,
-        domain: str,
-        *,
-        count: int = 20,
-        offset: int = 0,
-        filter_: Literal["all", "others", "owner"] = "all",
+        self, domain: str, *, offset: int = 0, filter_: Literal["all", "others", "owner"] = "all"
     ) -> AsyncGenerator[Post]:
-        data = {
-            "domain": domain,
-            "count": count,
-            "filter": filter_,
-            "offset": offset or "",
-        }
-
+        data = {"domain": domain, "filter": filter_, "offset": offset}
         seen: set[int] = set()
         resp = await self.method("wall.get", data)
         total = resp["count"]
@@ -193,7 +182,7 @@ class VKAPI(API):
             raise ScrapeError(404)
         return Video.parse(items[0])
 
-    async def get_videos(self, url: AbsoluteHttpURL, *, count: int = 20) -> AsyncGenerator[Video]:
+    async def get_videos(self, url: AbsoluteHttpURL) -> AsyncGenerator[Video]:
         section = await self.catalog.get_video(url)
         seen: set[str] = set()
         while True:
@@ -204,7 +193,7 @@ class VKAPI(API):
                     found_new_videos = True
                     yield video
 
-            if not found_new_videos or len(section.videos) < count or not section.next_from:
+            if not found_new_videos or not section.next_from:
                 break
 
             section = await self.catalog.get_section(section.id, section.next_from)

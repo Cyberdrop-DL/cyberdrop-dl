@@ -283,8 +283,10 @@ class VKCrawler(VKBaseCrawler):
                 await self.post(scrape_item, owner_id, post_id)
             case ["photo", str(owner_id), str(photo_id)]:
                 await self.photo(scrape_item, owner_id, photo_id)
-            case ["id" | "public", str(owner_id), None]:
+            case ["id", str(owner_id), None]:
                 await self.wall(scrape_item, owner_id)
+            case ["public" | "club", str(owner_id), None]:
+                await self.wall(scrape_item, f"-{owner_id.removeprefix('-')}")
             case ["videos", str(owner_id), None]:  # redirects to https://vkvideo.ru/@<username>
                 await self.follow_redirect(scrape_item)
             case ["album", str(owner_id), str(album_id)]:
@@ -369,8 +371,8 @@ class VKCrawler(VKBaseCrawler):
                         tg.create_task(self._photo(scrape_item.create_child(url), photo))
 
                     case "video":
-                        vid = Video.parse(attach["video"])
-                        url = VKVideoCrawler.PRIMARY_URL / vid.web_path
+                        # These videos have no "files" details
+                        url = VKVideoCrawler.PRIMARY_URL / Video.parse(attach["video"]).web_path
                         self.handle_external_links(scrape_item.create_child(url))
 
                     case "audio":
