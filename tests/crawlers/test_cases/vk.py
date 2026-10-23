@@ -35,4 +35,21 @@ TEST_CASES = [
         ],
         "count": 1,
     },
+    {
+        "url": "https://vk.ru/wall-165740836_83446",
+        "results": [
+            {
+                "url": "https://vk.com/photo-165740836_457362709",
+                "filename": "photo-165740836_457362709 [orig].jpg",
+                "debrid_url": "re:vkuserphoto",
+                "original_filename": "TAFEwy9PVP9lrZ6ShKjQXaFzy2OSBJ2r63R3eyAOK5F_xFVRy0Lqg_MWXhhb6O69LK1f5Ipl_mLhGGe1B_oymvJz.jpg",
+                "referer": "https://vk.com/photo-165740836_457362709",
+                "album_id": None,
+                "uploaded_at": 1792710016,
+                "download_folder": "re:Косплей - Cosplay 18+ (VK)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
 ]

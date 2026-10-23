@@ -196,8 +196,8 @@ class VKCrawler(VKBaseCrawler):
                 elif owner_id := _extract_id(slug, "albums", "photos"):
                     await self.photos(scrape_item, owner_id)
                 elif wall := _extract_id(slug, "wall", composed=True):
-                    owner_id, _, wall_id = wall.partition("_")
-                    await self.post(scrape_item, owner_id, wall_id)
+                    owner_id, _, post_id = wall.partition("_")
+                    await self.post(scrape_item, owner_id, post_id)
                 else:
                     raise ValueError
             case _:
@@ -258,15 +258,15 @@ class VKCrawler(VKBaseCrawler):
         async with self.new_task_group() as tg:
             async for post in self.api.get_wall(owner_id):
                 url = self.PRIMARY_URL / f"wall{post.owner_id}_{post.id}"
-                tg.create_task(self._post(scrape_item.create_child(url), post))
+                tg.create_task(self._post_task(scrape_item.create_child(url), post))
                 scrape_item.add_children()
 
-    @auto_task_id
     @error_handling_wrapper
     async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
         title = self.create_separate_post_title(None, str(post.id), post.date)
         scrape_item.setup_as_post(title)
         async with self.new_task_group() as tg:
+            tg.create_task(self.write_metadata(scrape_item, f"wall{post.owner_id}_{post.id}", post))
             for attach in post.attachments:
                 match attach["type"]:
                     case "photo":
@@ -303,18 +303,21 @@ class VKCrawler(VKBaseCrawler):
 
                 scrape_item.add_children()
 
+    _post_task = auto_task_id(_post)
+
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
         best = max(photo.sources, key=lambda s: s.score)
-        filename, ext = self.get_filename_and_ext(best.url.name, assume_ext=".jpg")
+        _, ext = self.get_filename_and_ext(best.url.name, assume_ext=".jpg")
         await self.handle_file(
             scrape_item.url,
             scrape_item,
             best.url.name,
             ext,
-            custom_filename=self.create_custom_filename(filename, ext, file_id=photo.id),
+            custom_filename=self.create_custom_filename(photo.web_path, ext, video_codec=best.type),
             metadata=photo,
             debrid_link=best.url,
+            uploaded_at=photo.date,
         )
 
 
