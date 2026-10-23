@@ -176,9 +176,10 @@ class VKVideoCrawler(VKBaseCrawler):
 
     async def _video(self, scrape_item: ScrapeItem, video: Video) -> None:
         scrape_item.uploaded_at = video.date
+        title = video.title or video.description or video.prefix
         if video.embed:
             new_item = scrape_item.create_child(self.parse_url(video.embed))
-            new_item.setup_as_album(self.create_title(video.title))
+            new_item.setup_as_album(self.create_title(title, video.slug, force_album_id=True))
             self.handle_embed(new_item)
             return
 
@@ -192,13 +193,13 @@ class VKVideoCrawler(VKBaseCrawler):
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            video.title,
+            title,
             ext := ".mp4",
             m3u8=m3u8,
             custom_filename=self.create_custom_filename(
-                video.title,
+                title,
                 ext,
-                file_id=f"{video.owner_id}_{video.id}",
+                file_id=video.slug,
                 resolution=info.resolution if info else best_fmt.height,
             ),
             thumbnail=video.thumb,

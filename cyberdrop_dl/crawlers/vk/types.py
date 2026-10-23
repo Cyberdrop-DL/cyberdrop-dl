@@ -60,21 +60,29 @@ class Format(APIObject):
 class Video(APIObject):
     id: int
     owner_id: int
-    title: str
+
     thumb: str | None
     date: int
     embed: str | None
     formats: tuple[Format, ...]
     type: str = "video"
+    title: str | None = None
     access_key: str | None = None
+    description: str | None = None
 
     @override
     @classmethod
     def parse(cls, video: dict[str, Any]) -> Video:
+        thumb = (
+            max((PhotoSize.parse(p, type="thumb") for p in thumbs), key=PhotoSize.res).url
+            if (thumbs := video.get("image"))
+            else None
+        )
+
         return deserialize(
             cls,
             video,
-            thumb=thumbs[-1]["url"] if (thumbs := video.get("image")) else None,
+            thumb=thumb,
             formats=tuple(_extract_formats(video)),
             embed=video.get("files", {}).get("external"),
         )
@@ -118,6 +126,9 @@ class PhotoSize(APIObject):
             return self.TYPES.index(self.type)
         except ValueError:
             raise ScrapeError(422, f"Unknown size for {self}") from None
+
+    def res(self) -> tuple[int, int]:
+        return (self.height or 0, self.width or 0)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

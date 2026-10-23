@@ -53,6 +53,23 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://vkvideo.ru/clip-16517666_456247806?fromTrackCode=video_7ad729",
+        "results": [
+            {
+                "url": "https://vkvideo.com/clip-16517666_456247806",
+                "filename": "Рецепт домашней пиццы в прок [-16517666_456247806][1080p].mp4",
+                "debrid_url": "NOT_NONE",
+                "original_filename": "Рецепт домашней пиццы в прок",
+                "referer": "https://vkvideo.com/clip-16517666_456247806",
+                "album_id": None,
+                "uploaded_at": 1788185380,
+                "download_folder": "re:Loose Files (VK)",
+                "thumbnail": "re:https://iv.okcdn.ru/videoPreview?id=19348535839452",
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://vk.ru/wall-165740836_83446",
         "results": [
             {
