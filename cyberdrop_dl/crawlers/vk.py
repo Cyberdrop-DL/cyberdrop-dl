@@ -4,7 +4,7 @@ import base64
 import contextlib
 import dataclasses
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, Unpack, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
@@ -18,7 +18,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterable
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable
 
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -44,7 +44,7 @@ class VKBaseCrawler(Crawler, is_abc=True):
                 {"remixlang": 3, "remixage18": 1},
                 self.PRIMARY_URL.with_host(host),
             )
-        self.api: VKAPI = VKAPI.from_crawler(self)
+        self.api: VKAPI = VKAPI.instance or VKAPI.from_crawler(self)
 
     @classmethod
     @override
@@ -495,6 +495,12 @@ class VKAPI(API):
     CLIENT_ID: ClassVar[str] = "6287487"
     VIDEO_ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.vkvideo.ru")
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://web.api.vk.ru")
+    instance: Self | None = None
+
+    def __post_init__(self) -> None:
+        self._owners: dict[str | int, Owner]
+        self._owners_locks: aio.WeakAsyncLocks[str | int] = aio.WeakAsyncLocks()
+        self.instance = self
 
     @override
     @contextlib.asynccontextmanager
@@ -602,13 +608,25 @@ class VKAPI(API):
         try:
             owner_id = int(screen_name)
         except ValueError:
-            return await self.owner_by_screen_name(screen_name)
+            return await self._cached_owner(screen_name, self.owner_by_screen_name)
         else:
-            return await self.owner_by_id(owner_id)
+            return await self._cached_owner(owner_id, self.owner_by_id)
+
+    async def _cached_owner(self, screen_name_or_id: str | int, fn: Callable[..., Awaitable[Owner]]) -> Owner:
+        with contextlib.suppress(LookupError):
+            return self._owners[screen_name_or_id]
+
+        async with self._owners_locks[screen_name_or_id]:
+            with contextlib.suppress(LookupError):
+                return self._owners[screen_name_or_id]
+
+            owner = await fn(screen_name_or_id)
+            for key in {owner.id, screen_name_or_id}:
+                self._owners[key] = owner
+            return owner
 
     async def owner_by_id(self, owner_id: str | int) -> Owner:
         owner_id = int(owner_id)
-
         errors: list[Exception] = []
         for method in (self.get_user, self.get_group):
             try:
