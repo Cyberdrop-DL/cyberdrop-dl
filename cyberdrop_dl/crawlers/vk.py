@@ -165,6 +165,7 @@ class VKCrawler(VKBaseCrawler):
             "/id<owner_id>",
             "/public<owner_id>",
             "/@<owner_screen_name>",
+            "/album<owner_id>_00",
         ),
         "User / Group photos": (
             "/albums<owner_id>",
@@ -203,7 +204,10 @@ class VKCrawler(VKBaseCrawler):
                     await self.wall(scrape_item, f"-{owner_id}")
                 elif album := _extract_id(slug, "album", composed=True):
                     owner_id, _, album_id = album.partition("_")
-                    await self.album(scrape_item, owner_id, album_id)
+                    if album_id == "00":
+                        await self.wall(scrape_item, owner_id)
+                    else:
+                        await self.album(scrape_item, owner_id, album_id)
                 elif owner_id := _extract_id(slug, "albums", "photos"):
                     await self.photos(scrape_item, owner_id)
                 elif wall := _extract_id(slug, "wall", composed=True):
