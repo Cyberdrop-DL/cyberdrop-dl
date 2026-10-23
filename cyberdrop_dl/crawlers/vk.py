@@ -19,7 +19,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable
+    from collections.abc import AsyncGenerator, Generator, Iterable
 
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
@@ -51,9 +51,31 @@ _PAGES_TYPES = (
     "wpt",
 )
 
-_parse_page_path = re.compile(
-    rf"^(?P<page_type>{'|'.join(_PAGES_TYPES)})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?"
-).match
+INNER_PAGES = {
+    "about",
+    "audio",
+    "away.php",
+    "blog",
+    "clips",
+    "games",
+    "groups",
+    "feed",
+    "jobs",
+    "join",
+    "legal",
+    "login",
+    "mobile",
+    "products",
+    "technology",
+    "services",
+    "terms",
+    "video",
+}
+
+
+def _parse_vk_ids(path: str | None) -> tuple[str | None, ...] | None:
+    if path and (m := re.match(rf"^(?P<type>{'|'.join(_PAGES_TYPES)})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?", path)):
+        return m.groups()
 
 
 @Crawler.db_path_builder("path_qs")
@@ -219,18 +241,24 @@ class VKCrawler(VKBaseCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "vkvideo" in scrape_item.url.host:
+        url = scrape_item.url
+        if "vkvideo" in url.host:
             self.handle_external_links(scrape_item)
-        elif scrape_item.url.path == "/" and (to := scrape_item.url.query.get("to")):
-            self.redirect(scrape_item, to)
-        else:
-            await self._fetch(scrape_item)
+            return
 
-    async def _fetch(self, scrape_item: ScrapeItem) -> None:
-        if not (m := _parse_page_path(scrape_item.url.path)):
-            raise ValueError
+        match url.parts[1:]:
+            case [] if to := url.query.get("to"):
+                self.redirect(scrape_item, to)
+            case [slug] if slug not in INNER_PAGES:
+                if page := _parse_vk_ids(scrape_item.url.path):
+                    await self._match_page(scrape_item, page)
+                else:
+                    await self.wall(scrape_item, slug)
+            case _:
+                raise ValueError
 
-        match m.groups():
+    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:
+        match page:
             case ["albums" | "photos", str(owner_id), None]:
                 await self.photos(scrape_item, owner_id)
             case ["wall", str(owner_id), str(post_id)]:
@@ -575,8 +603,9 @@ class VKAPI(API):
     instance: Self | None = None
 
     def __post_init__(self) -> None:
-        self._owners: dict[str | int, Owner] = {}
-        self._owners_locks: aio.WeakAsyncLocks[str | int] = aio.WeakAsyncLocks()
+        self._owners: dict[int, Owner] = {}
+        self._owners_locks: aio.WeakAsyncLocks[int] = aio.WeakAsyncLocks()
+        self.owner_by_id = aio.async_defaultdict(self._owner_by_id, self._owners).get
         self.legacy: VKLegacyAPI = VKLegacyAPI(self)
         self.instance = self
 
@@ -625,25 +654,11 @@ class VKAPI(API):
         try:
             owner_id = int(screen_name)
         except ValueError:
-            return await self._cached_owner(screen_name, self.owner_by_screen_name)
+            return await self.owner_by_screen_name(screen_name)
         else:
-            return await self._cached_owner(owner_id, self.owner_by_id)
+            return await self.owner_by_id(owner_id)
 
-    async def _cached_owner(self, screen_name_or_id: str | int, fn: Callable[..., Awaitable[Owner]]) -> Owner:
-        with contextlib.suppress(LookupError):
-            return self._owners[screen_name_or_id]
-
-        async with self._owners_locks[screen_name_or_id]:
-            with contextlib.suppress(LookupError):
-                return self._owners[screen_name_or_id]
-
-            owner = await fn(screen_name_or_id)
-            for key in {owner.id, screen_name_or_id}:
-                self._owners[key] = owner
-            return owner
-
-    async def owner_by_id(self, owner_id: str | int) -> Owner:
-        owner_id = int(owner_id)
+    async def _owner_by_id(self, owner_id: int) -> Owner:
         errors: list[Exception] = []
         for method in (self.get_user, self.get_group):
             try:
@@ -651,10 +666,15 @@ class VKAPI(API):
             except ScrapeError as e:
                 errors.append(e)
 
-        raise BaseExceptionGroup(f"Unable to resolve {owner_id = }", tuple(errors))
+        raise BaseExceptionGroup("", tuple(errors))
 
     async def owner_by_screen_name(self, screen_name: str) -> Owner:
-        owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name.removeprefix("@")})
+        screen_name = screen_name.removeprefix("@")
+        for found in self._owners.values():
+            if found.screen_name == screen_name:
+                return found
+
+        owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name})
         owner_id, owner_type = owner["object_id"], owner["type"]
         match owner_type:
             case "group":
