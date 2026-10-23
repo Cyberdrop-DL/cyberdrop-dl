@@ -8,7 +8,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Self, Unpack, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -603,9 +603,7 @@ class VKAPI(API):
     instance: Self | None = None
 
     def __post_init__(self) -> None:
-        self._owners: dict[int, Owner] = {}
-        self._owners_locks: aio.WeakAsyncLocks[int] = aio.WeakAsyncLocks()
-        self.owner_by_id = aio.async_defaultdict(self._owner_by_id, self._owners).get
+        self.owner_by_id = async_lru_cache(self.owner_by_id)
         self.legacy: VKLegacyAPI = VKLegacyAPI(self)
         self.instance = self
 
@@ -658,7 +656,7 @@ class VKAPI(API):
         else:
             return await self.owner_by_id(owner_id)
 
-    async def _owner_by_id(self, owner_id: int) -> Owner:
+    async def owner_by_id(self, owner_id: int) -> Owner:
         errors: list[Exception] = []
         for method in (self.get_user, self.get_group):
             try:
