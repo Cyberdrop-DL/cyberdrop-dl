@@ -9,7 +9,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Protocol, Self, TypedDict, cast, overload
 
-from cyberdrop_dl import __version__
+from cyberdrop_dl import __version__, aio
 from cyberdrop_dl.constants import MISSING
 
 if TYPE_CHECKING:
@@ -214,6 +214,13 @@ class _CachedMethod[T, R]:
 
             self._cached_fn = cached_fn(call_method, self._get_cache(inst), key=self.key, ttl=self.ttl)
         return self._cached_fn
+
+
+def async_lru_cache[T: Callable[[Any], Awaitable[Any]]](fn: T) -> T:
+    """Cache the first result.
+
+    Only works with callables that take 1 single argument"""
+    return functools.wraps(fn)(aio.async_defaultdict(fn).get)  # pyright: ignore[reportReturnType]
 
 
 class _InMemoryCachedMethod[R](_CachedMethod[object, R]):
