@@ -62,10 +62,7 @@ INNER_PAGES = {
     "video",
 }
 
-
-def _parse_vk_ids(path: str | None) -> tuple[str | None, ...] | None:
-    if path and (m := re.match(rf"^(?P<type>{'|'.join(_PAGES_TYPES)})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?", path)):
-        return m.groups()
+_PAGE_REGEX = rf"^(?P<type>{'|'.join(_PAGES_TYPES)})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?"
 
 
 @Crawler.db_path_builder("path_qs")
@@ -130,9 +127,12 @@ class VKVideoCrawler(VKBaseCrawler):
             case [owner, "clips" | "all" | "donut" as kind]:
                 kind = "videos" if kind == "all" else kind
                 await self.owner_videos(scrape_item, owner.removeprefix("@"), kind)
-            case [slug] if slug.startswith(("clip", "video")):
-                owner_id, _, video_id = slug.removesuffix("clip").removesuffix("video").partition("_")
-                await self.video(scrape_item, owner_id, video_id)
+            case [slug] if m := re.match(_PAGE_REGEX, slug):
+                match m.groups():
+                    case ["clip" | "video", str(owner_id), str(video_id)]:
+                        await self.video(scrape_item, owner_id, video_id)
+                    case _:
+                        raise ValueError
             case _:
                 raise ValueError
 
@@ -240,8 +240,8 @@ class VKCrawler(VKBaseCrawler):
             case [] if to := url.query.get("to"):
                 self.redirect(scrape_item, to)
             case [slug] if slug not in INNER_PAGES:
-                if page := _parse_vk_ids(slug):
-                    await self._match_page(scrape_item, page)
+                if m := re.match(_PAGE_REGEX, slug):
+                    await self._match_page(scrape_item, m.groups())
                 else:
                     await self.wall(scrape_item, slug)
             case _:
@@ -375,10 +375,9 @@ class VKCrawler(VKBaseCrawler):
                 async with self.request(option.url, "HEAD") as _:
                     ...
             except DownloadError as e:
-                if e.status == 404:
-                    self.log.warning("Unable to get image [type %s] for photo %s, skipping...", option.type, photo.slug)
-                    continue
-                raise
+                if e.status != 404:
+                    raise
+                self.log.warning("Unable to get image [type %s] for photo %s, skipping...", option.type, photo.slug)
             else:
                 return option
 
