@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -354,6 +355,7 @@ class CatalogSection:
     videos: list[dict[str, Any]]
 
 
+@HTTPConfig(rate_limit=(2, 1))
 class VKAPI(API):
     # https://dev.vk.ru/en/reference
     APP_ID: ClassVar[str] = "6287487"
@@ -404,11 +406,11 @@ class VKAPI(API):
             raise ScrapeError(404, f"User not found: {screen_name_or_id}")
         return deserialize(Owner, resp[0])
 
-    async def get_group(self, screen_name_or_id: str | int) -> Owner:
-        resp = await self.method("groups.getById", {"group_ids": str(screen_name_or_id)})
+    async def get_group(self, group_id: str | int) -> Owner:
+        resp = await self.method("groups.getById", {"group_ids": str(group_id).lstrip("-")})
         groups = resp.get("groups")
         if not groups:
-            raise ScrapeError(404, f"Group not found: {screen_name_or_id}")
+            raise ScrapeError(404, f"Group not found: {group_id}")
         return deserialize(Owner, groups[0])
 
     async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
@@ -441,6 +443,7 @@ class VKAPI(API):
         resp = await self.request_json(
             url := VKCrawler.PRIMARY_URL / path,
             data=data,
+            impersonate=True,
             headers={
                 "Referer": str(url),
                 "X-Requested-With": "XMLHttpRequest",
@@ -456,7 +459,27 @@ class VKAPI(API):
                 return payload
 
     async def resolve_owner(self, screen_name: str) -> Owner:
-        owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name})
+        try:
+            owner_id = int(screen_name)
+        except ValueError:
+            return await self.owner_by_screen_name(screen_name)
+        else:
+            return await self.owner_by_id(owner_id)
+
+    async def owner_by_id(self, owner_id: str | int) -> Owner:
+        owner_id = int(owner_id)
+
+        errors: list[Exception] = []
+        for method in (self.get_user, self.get_group):
+            try:
+                return await method(owner_id)
+            except ScrapeError as e:
+                errors.append(e)
+
+        raise BaseExceptionGroup(f"Unable to resolve {owner_id = }", tuple(errors))
+
+    async def owner_by_screen_name(self, screen_name: str) -> Owner:
+        owner = await self.method("utils.resolveScreenName", {"screen_name": screen_name.removeprefix("@")})
         owner_id, owner_type = owner["object_id"], owner["type"]
         match owner_type:
             case "group":

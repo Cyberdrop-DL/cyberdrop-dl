@@ -16,5 +16,23 @@ TEST_CASES = [
             }
         ],
         "count": 1,
-    }
+    },
+    {
+        "url": "https://vkvideo.com/video-93049196_456239755?list=ln-cBjJ7S4jYYx3ADnmDT",
+        "description": "Private video",
+        "results": [
+            {
+                "url": "https://vkvideo.com/video-93049196_456239755?list=ln-cBjJ7S4jYYx3ADnmDT",
+                "filename": "8 серия (озвучка) [-93049196_456239755][1080p].mp4",
+                "debrid_url": "NOT_NONE",
+                "original_filename": "8 серия (озвучка)",
+                "referer": "https://vkvideo.com/video-93049196_456239755?list=ln-cBjJ7S4jYYx3ADnmDT",
+                "album_id": None,
+                "uploaded_at": 1640162189,
+                "download_folder": "re:Loose Files (VK)",
+                "thumbnail": "NOT_NONE",
+            }
+        ],
+        "count": 1,
+    },
 ]
