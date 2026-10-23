@@ -1,11 +1,12 @@
+# https://dev.vk.ru/en/reference
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Unpack, override
 
-from cyberdrop_dl import aio
 from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
@@ -14,7 +15,6 @@ from cyberdrop_dl.crawlers.vk.types import CatalogSection, Format, Owner, Photo,
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
-from cyberdrop_dl.utils.dataclass import deserialize
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -34,7 +34,6 @@ ERROR_CODES: Final = (
 
 @HTTPConfig(rate_limit=(2, 1))
 class VKAPI(API):
-    # https://dev.vk.ru/en/reference
     APP_ID: ClassVar[str] = "6287487"
     VERSION: ClassVar[str] = "5.289"
     CLIENT_ID: ClassVar[str] = "6287487"
@@ -44,7 +43,8 @@ class VKAPI(API):
 
     def __post_init__(self) -> None:
         self.owner_by_id = async_lru_cache(self._owner_by_id)
-        self.legacy: VKLegacyAPI = VKLegacyAPI(self)
+        self.legacy: VKLegacy = VKLegacy(self)
+        self.catalog: VKCatalog = VKCatalog(self)
 
     @override
     @contextlib.asynccontextmanager
@@ -128,14 +128,14 @@ class VKAPI(API):
         resp = await self.method("users.get", {"user_ids": str(screen_name_or_id)})
         if not resp:
             raise ScrapeError(404, f"User not found: {screen_name_or_id}")
-        return deserialize(Owner, resp[0], type="user")
+        return Owner.parse(resp[0], type="user")
 
     async def get_group(self, group_id: str | int) -> Owner:
         resp = await self.method("groups.getById", {"group_ids": str(group_id).lstrip("-")})
         groups = resp.get("groups")
         if not groups:
             raise ScrapeError(404, f"Group not found: {group_id}")
-        return deserialize(Owner, groups[0])
+        return Owner.parse(groups[0])
 
     async def get_post(self, owner_id: str, post_id: str) -> Post:
         resp = await self.method("wall.getById", {"posts": f"{owner_id}_{post_id}"})
@@ -176,36 +176,6 @@ class VKAPI(API):
 
             data["offset"] = offset
 
-    async def get_catalog_video(self, url: AbsoluteHttpURL) -> CatalogSection:
-        resp = await self.method(
-            "catalog.getVideo",
-            {
-                "url": str(url),
-                "ref": "",
-                "from_trackcode": "",
-                "need_blocks": "1",
-                "applied_toggles": "[]",
-                "enabled_features": "[]",
-            },
-        )
-        catalog = resp["catalog"]
-        section_id = catalog["default_section"]
-        section = next(s for s in catalog["sections"] if s["id"] == section_id)
-        return CatalogSection(section_id, next_from=section.get("next_from"), videos=resp["videos"])
-
-    async def get_catalog_section(self, section_id: str, start_from: str) -> CatalogSection:
-        resp = await self.method(
-            "catalog.getSection",
-            {
-                "section_id": section_id,
-                "start_from": start_from,
-                "from_trackcode": "",
-                "enabled_features": "[]",
-            },
-        )
-        next_from = resp["section"]["next_from"]
-        return CatalogSection(section_id, next_from, resp["videos"])
-
     async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         # Access key is for private videos
         full_id = f"{owner_id}_{video_id}"
@@ -220,7 +190,7 @@ class VKAPI(API):
         return Video.parse(items[0])
 
     async def get_videos(self, url: AbsoluteHttpURL, *, count: int = 20) -> AsyncGenerator[Video]:
-        section = await self.get_catalog_video(url)
+        section = await self.catalog.get_video(url)
         seen: set[str] = set()
         while True:
             found_new_videos: bool = False
@@ -233,7 +203,7 @@ class VKAPI(API):
             if not found_new_videos or len(section.videos) < count or not section.next_from:
                 break
 
-            section = await self.get_catalog_section(section.id, section.next_from)
+            section = await self.catalog.get_section(section.id, section.next_from)
 
     async def get_photo(self, owner_id: str, photo_id: str, album_id: str | None = None) -> Photo:
         album_options = (album_id,) if album_id else ("profile", "wall")
@@ -265,11 +235,43 @@ class VKAPI(API):
         return Photo.parse(items[0])
 
 
-class VKLegacyAPI(API.Endpoint[VKAPI]):
-    # These may trigger a JS bot check
-    async def _payload(self, path: str, data: dict[str, Any]) -> list[Any]:
+class VKCatalog(API.Endpoint[VKAPI]):
+    async def get_video(self, url: AbsoluteHttpURL) -> CatalogSection:
+        resp = await self.api.method(
+            "catalog.getVideo",
+            {
+                "url": str(url),
+                "ref": "",
+                "from_trackcode": "",
+                "need_blocks": "1",
+                "applied_toggles": "[]",
+                "enabled_features": "[]",
+            },
+        )
+        catalog = resp["catalog"]
+        section_id = catalog["default_section"]
+        section = next(s for s in catalog["sections"] if s["id"] == section_id)
+        return CatalogSection(section_id, next_from=section.get("next_from"), videos=resp["videos"])
+
+    async def get_section(self, section_id: str, start_from: str) -> CatalogSection:
+        resp = await self.api.method(
+            "catalog.getSection",
+            {
+                "section_id": section_id,
+                "start_from": start_from,
+                "from_trackcode": "",
+                "enabled_features": "[]",
+            },
+        )
+        next_from = resp["section"]["next_from"]
+        return CatalogSection(section_id, next_from, resp["videos"])
+
+
+class VKLegacy(API.Endpoint[VKAPI]):
+    # These methods may trigger a JS bot check
+    async def request_payload(self, path: str, data: dict[str, Any]) -> list[Any]:
         resp = await self.api.request_json(
-            url := AbsoluteHttpURL("https://vk.com") / path,
+            url := self.api.VK / path,
             data=data,
             impersonate=True,
             headers={
@@ -295,10 +297,10 @@ class VKLegacyAPI(API.Endpoint[VKAPI]):
         if access_key:
             data["list"] = access_key
 
-        payload = await self._payload("al_video.php", data)
-        return await _parse_video_legacy(payload, owner_id, video_id)
+        payload = await self.request_payload("al_video.php", data)
+        return await asyncio.to_thread(_parse_video_legacy, payload, owner_id, video_id)
 
-    async def get_photo(self, owner_id: str, photo_id: str) -> Video:
+    async def get_photo(self, owner_id: str, photo_id: str) -> Photo:
         data = {
             "act": "show",
             "photo": f"{owner_id}-{photo_id}",
@@ -306,8 +308,8 @@ class VKLegacyAPI(API.Endpoint[VKAPI]):
             "al": 1,
         }
 
-        payload = await self._payload("al_photos.php", data)
-        return await _parse_video_legacy(payload, owner_id, photo_id)
+        payload = await self.request_payload("al_photos.php", data)
+        return await asyncio.to_thread(_parse_photo_legacy, payload[3])
 
     async def get_photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
         data = {
@@ -320,7 +322,7 @@ class VKLegacyAPI(API.Endpoint[VKAPI]):
 
         seen: set[int] = set()
         while True:
-            payload = await self._payload("al_photos.php", data)
+            payload = await self.request_payload("al_photos.php", data)
             total, photos = payload[1], payload[3]
             offset += len(photos)
             found_new_photos: bool = False
@@ -336,7 +338,6 @@ class VKLegacyAPI(API.Endpoint[VKAPI]):
             data["offset"] = offset
 
 
-@aio.to_thread
 def _parse_video_legacy(payload: list[Any], owner_id: str, video_id: str) -> Video:
     html, options = payload[1], payload[-1]
     params = options["player"]["params"][0]
@@ -379,6 +380,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
 
 def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
     origin = VKAPI.parse_url(base) if (base := photo.get("base")) else None
+    owner_id, _, photo_id = photo["id"].partition("_")
 
     def sources() -> Iterable[PhotoSize]:
         for name, src in photo.items():
@@ -394,7 +396,6 @@ def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
 
             yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=unblur(url))
 
-    owner_id, _, photo_id = photo["id"].partition("_")
     return Photo(
         owner_id=int(owner_id),
         id=int(photo_id),
