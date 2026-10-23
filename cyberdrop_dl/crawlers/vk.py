@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad, css
+from cyberdrop_dl.utils._url import remove_query_params
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -49,7 +49,7 @@ class VKBaseCrawler(Crawler, is_abc=True):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = super().transform_url(url)
+        url = super().transform_url(url).without_query_params("pl")  # TODO: support playlists
         match url.parts[1:]:
             case ["video_ext.php"] if (owner_id := url.query.get("oid")) and (vid := url.query.get("id")):
                 return VKVideoCrawler.PRIMARY_URL / f"video{owner_id}_{vid}"
@@ -74,6 +74,14 @@ class VKVideoCrawler(VKBaseCrawler):
     }
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vkvideo.ru", "vkvideo.com"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vkvideo.com")
+
+    @staticmethod
+    @override
+    def __db_path__(url: AbsoluteHttpURL, /) -> str:
+        url = url.without_query_params("tkn")
+        if url.parts[1].startswith(("video", "clip")):
+            url = remove_query_params(url, keep=("list",))
+        return url.path_qs
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -346,7 +354,6 @@ class CatalogSection:
     videos: list[dict[str, Any]]
 
 
-@HTTPConfig(impersonate=True)
 class VKAPI(API):
     # https://dev.vk.ru/en/reference
     APP_ID: ClassVar[str] = "6287487"
