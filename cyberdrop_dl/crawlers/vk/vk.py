@@ -89,19 +89,27 @@ class VKBaseCrawler(Crawler, is_abc=True):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = full_res_img(super().transform_url(url).without_query_params("pl"))  # TODO: support playlists
+        url = full_res_img(
+            super().transform_url(url).without_query_params("pl", "fromTrackCode")
+        )  # TODO: support playlists
 
         match url.parts[1:]:
             case ["video_ext.php"] if (owner_id := url.query.get("oid")) and (vid := url.query.get("id")):
-                return VKVideoCrawler.PRIMARY_URL / f"video{owner_id}_{vid}"
+                url = VKVideoCrawler.PRIMARY_URL / f"video{owner_id}_{vid}"
             case [slug]:
                 if slug.startswith("@") and "vkvideo" in url.host:
-                    return url / "all"
+                    url = url / "all"
                 if slug.startswith(("video", "clip")):
-                    return url.with_host(VKVideoCrawler.PRIMARY_URL.host)
-                return url
+                    url = url.with_host(VKVideoCrawler.PRIMARY_URL.host)
+
+            case ["clips", username]:
+                url = VKVideoCrawler.PRIMARY_URL / f"@{username}" / "clips"
+            case ["video", username] if username.startswith("@"):
+                url = VKVideoCrawler.PRIMARY_URL / username / "all"
             case _:
-                return url
+                pass
+
+        return url
 
 
 class VKVideoCrawler(VKBaseCrawler):
@@ -201,7 +209,14 @@ class VKVideoCrawler(VKBaseCrawler):
 
 @URLConfig(allow_empty_path=True)
 class VKCrawler(VKBaseCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vk.ru", "vk.com", "vkontakte.ru", ".userapi.com"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "vk.ru",
+        "vk.com",
+        "vkontakte.ru",
+        ".userapi.com",
+        "vk.me",
+        "mvk.com",
+    )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
         "User / Group wall": (
             "/id<owner_id>",
@@ -223,6 +238,8 @@ class VKCrawler(VKBaseCrawler):
             "/public<owner_id>#section=videos",
             "/@<owner_screen_name>#section=videos",
             "/videos<owner_id>",
+            "/videos/@username",
+            "/clips/username",
         ),
         "Album": "/album<owner_id>_<album_id>",
         "Post": "/wall<owner_id>_<wall_id>",
@@ -235,6 +252,7 @@ class VKCrawler(VKBaseCrawler):
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("vk.cc",)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         url = scrape_item.url

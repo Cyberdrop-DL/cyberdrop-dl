@@ -18,6 +18,23 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://sun6-22.userapi.com/impg/Y2CnE6t5b0OjEXAfKhXGVdrULCcBhzCqei8xFw/fJaaw1koXDo.jpg?size=2023x1138&quality=95&sign=423df1007f18a6860a322a2b1c9f2032b0",
+        "results": [
+            {
+                "url": "https://pp.userapi.com/Y2CnE6t5b0OjEXAfKhXGVdrULCcBhzCqei8xFw/fJaaw1koXDo.jpg",
+                "filename": "fJaaw1koXDo.jpg",
+                "debrid_url": None,
+                "original_filename": "fJaaw1koXDo.jpg",
+                "referer": "https://pp.userapi.com/Y2CnE6t5b0OjEXAfKhXGVdrULCcBhzCqei8xFw/fJaaw1koXDo.jpg",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (VK)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://vkvideo.com/video-93049196_456239755?list=ln-cBjJ7S4jYYx3ADnmDT",
         "description": "Private video",
         "results": [
