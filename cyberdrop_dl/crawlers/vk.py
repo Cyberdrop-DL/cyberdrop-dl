@@ -170,6 +170,16 @@ class VKCrawler(VKBaseCrawler):
             "/albums<owner_id>",
             "/photos<owner_id>",
         ),
+        "User / Group clips": (
+            "/id<owner_id>#section=short_videos",
+            "/public<owner_id>#section=short_videos",
+            "/@<owner_screen_name>#section=short_videos",
+        ),
+        "User / Group videos": (
+            "/id<owner_id>#section=videos",
+            "/public<owner_id>#section=videos",
+            "/@<owner_screen_name>#section=videos",
+        ),
         "Album": "/album<owner_id>_<album_id>",
         "Post": "/wall<owner_id>_<wall_id>",
         "Redirect": "/?to=<base64_url>",
@@ -214,34 +224,6 @@ class VKCrawler(VKBaseCrawler):
         raise NotImplementedError
 
     @error_handling_wrapper
-    async def everything(self, scrape_item: ScrapeItem, owner_id: str) -> None:
-        owner = await self.api.resolve_owner(owner_id)
-        domain = str(
-            f"@{owner.screen_name}" if owner.screen_name else 0 - owner.id if owner.type == "page" else owner.id
-        )
-        clips = VKVideoCrawler.PRIMARY_URL / domain / "clips"
-        videos = VKVideoCrawler.PRIMARY_URL / domain / "all"
-        match scrape_item.url.fragment.partition("="):
-            case ["section", _, "short_videos"]:
-                url = videos
-            case ["section", _, "videos"]:
-                url = clips
-            case _:
-                url = None
-
-        if url:
-            with scrape_item.track_changes:
-                scrape_item.url = url
-                self.handle_external_links(scrape_item)
-                return
-
-        for url in (clips, videos):
-            self.handle_external_links(scrape_item.create_child(url))
-
-        scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        raise NotImplementedError
-
-    @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
@@ -258,6 +240,23 @@ class VKCrawler(VKBaseCrawler):
     @error_handling_wrapper
     async def wall(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
+        domain = str(
+            f"@{owner.screen_name}" if owner.screen_name else 0 - owner.id if owner.type == "page" else owner.id
+        )
+        match scrape_item.url.fragment.partition("="):
+            case ["section", _, "short_videos"]:
+                url = VKVideoCrawler.PRIMARY_URL / domain / "all"
+            case ["section", _, "videos"]:
+                url = VKVideoCrawler.PRIMARY_URL / domain / "clips"
+            case _:
+                url = None
+
+        if url:
+            with scrape_item.track_changes:
+                scrape_item.url = url
+                self.handle_external_links(scrape_item)
+                return
+
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
         async with self.new_task_group() as tg:
             async for post in self.api.get_wall(owner_id):
