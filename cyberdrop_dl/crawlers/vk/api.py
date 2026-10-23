@@ -12,7 +12,7 @@ from typing_extensions import deprecated
 from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
-from cyberdrop_dl.crawlers.vk import unblur
+from cyberdrop_dl.crawlers.vk import full_res_img
 from cyberdrop_dl.crawlers.vk.types import CatalogSection, Format, Owner, Photo, PhotoSize, Post, Video
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -402,7 +402,7 @@ def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
 
             url = parse_url(src, origin)
 
-            yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=unblur(url))
+            yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=full_res_img(url))
 
     return Photo(
         owner_id=int(owner_id),

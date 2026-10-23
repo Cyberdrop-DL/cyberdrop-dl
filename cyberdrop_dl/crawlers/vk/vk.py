@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
+from cyberdrop_dl.crawlers.vk import full_res_img
 from cyberdrop_dl.crawlers.vk.api import VKAPI
 from cyberdrop_dl.crawlers.vk.types import Album, Audio, File, Graffiti, Link, Photo, PhotoSize, Post, Video
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
@@ -88,7 +89,8 @@ class VKBaseCrawler(Crawler, is_abc=True):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = super().transform_url(url).without_query_params("pl")  # TODO: support playlists
+        url = full_res_img(super().transform_url(url).without_query_params("pl"))  # TODO: support playlists
+
         match url.parts[1:]:
             case ["video_ext.php"] if (owner_id := url.query.get("oid")) and (vid := url.query.get("id")):
                 return VKVideoCrawler.PRIMARY_URL / f"video{owner_id}_{vid}"
@@ -143,8 +145,7 @@ class VKVideoCrawler(VKBaseCrawler):
         scrape_item.append_folders(kind)
         async with self.new_task_group() as tg:
             async for video in self.api.get_videos(scrape_item.url):
-                prefix = "clip" if video.type == "short_video" else "video"
-                url = self.PRIMARY_URL / f"{prefix}{video.owner_id}_{video.id}"
+                url = self.PRIMARY_URL / video.web_path
                 if video.access_key:
                     url = url.update_query(list=video.access_key)
                 tg.create_task(self.video_task(scrape_item.create_child(url), video))
@@ -200,7 +201,7 @@ class VKVideoCrawler(VKBaseCrawler):
 
 @URLConfig(allow_empty_path=True)
 class VKCrawler(VKBaseCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vk.ru", "vk.com", "vkontakte.ru"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "vk.ru", "vk.com", "vkontakte.ru", ".userapi.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
         "User / Group wall": (
             "/id<owner_id>",
@@ -221,11 +222,16 @@ class VKCrawler(VKBaseCrawler):
             "/id<owner_id>#section=videos",
             "/public<owner_id>#section=videos",
             "/@<owner_screen_name>#section=videos",
+            "/videos<owner_id>",
         ),
         "Album": "/album<owner_id>_<album_id>",
         "Post": "/wall<owner_id>_<wall_id>",
         "Photo": "/photo<owner_id>_<photo_id>",
-        "Redirect": "/?to=<base64_url>",
+        "Redirect": (
+            "/?to=<base64_url>",
+            "/away.php?to=<url>",
+        ),
+        "Direct images": ".userapi.com/...",
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
@@ -234,18 +240,21 @@ class VKCrawler(VKBaseCrawler):
         url = scrape_item.url
         if "vkvideo" in url.host:
             self.handle_external_links(scrape_item)
-            return
 
-        match url.parts[1:]:
-            case [] if to := url.query.get("to"):
-                self.redirect(scrape_item, to)
-            case [slug] if slug not in INNER_PAGES:
-                if m := re.match(_PAGE_REGEX, slug):
-                    await self._match_page(scrape_item, m.groups())
-                else:
-                    await self.wall(scrape_item, slug)
-            case _:
-                raise ValueError
+        elif url.host.endswith(".userapi.com"):
+            await self.direct_file(scrape_item)
+
+        else:
+            match url.parts[1:]:
+                case [] | ["away.php"] if to := url.query.get("to"):
+                    self.redirect(scrape_item, to)
+                case [slug] if slug not in INNER_PAGES:
+                    if m := re.match(_PAGE_REGEX, slug):
+                        await self._match_page(scrape_item, m.groups())
+                    else:
+                        await self.wall(scrape_item, slug)
+                case _:
+                    raise ValueError
 
     async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:
         match page:
@@ -257,6 +266,8 @@ class VKCrawler(VKBaseCrawler):
                 await self.photo(scrape_item, owner_id, photo_id)
             case ["id" | "public", str(owner_id), None]:
                 await self.wall(scrape_item, owner_id)
+            case ["videos", str(owner_id), None]:  # redirects to https://vkvideo.ru/@<username>
+                await self.follow_redirect(scrape_item)
             case ["album", str(owner_id), str(album_id)]:
                 if album_id == "00":
                     await self.wall(scrape_item, owner_id)
@@ -267,7 +278,7 @@ class VKCrawler(VKBaseCrawler):
 
     @error_handling_wrapper
     def redirect(self, scrape_item: ScrapeItem, to: str) -> None:
-        url = base64.urlsafe_b64decode(b64_pad(to)).decode("utf8")
+        url = to if to.startswith("http") else base64.urlsafe_b64decode(b64_pad(to)).decode("utf8")
         self.handle_external_links(scrape_item.create_child(self.parse_url(url)))
 
     @error_handling_wrapper

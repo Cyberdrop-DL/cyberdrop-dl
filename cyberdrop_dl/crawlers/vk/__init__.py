@@ -6,8 +6,17 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
-def unblur(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    clean_path = url.path.replace("/impf/", "/").replace("/impg/", "/")
-    if clean_path != url.path:
-        return url.with_path(clean_path, keep_query=False)
-    return url
+def full_res_img(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    match url.host.rsplit(".", 2):
+        case [subdomain, "userapi", "com"]:
+            match url.parts[1:]:
+                case ["impf" | "impg", *rest]:
+                    return url.origin().joinpath(*rest).with_host("pp.userapi.com")
+                case ["s", "v1", *_]:
+                    return url.update_query(cs="99999x99999")
+                case _:
+                    if subdomain.startswith(("sun", "psv")):
+                        return url.with_host("pp.userapi.com")
+                    return url
+        case _:
+            return url

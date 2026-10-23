@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
-from cyberdrop_dl.crawlers.vk import unblur
+from cyberdrop_dl.crawlers.vk import full_res_img
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -142,7 +142,7 @@ class Photo(APIObject):
 
         def parse_src(size: dict[str, Any], name: str | None = None) -> PhotoSize:
             url = parse_url(size["url"], origin)
-            return PhotoSize.parse(size, type=name or size["type"], url=unblur(url))
+            return PhotoSize.parse(size, type=name or size["type"], url=full_res_img(url))
 
         def sources() -> Iterable[PhotoSize]:
             if orig := photo.get("orig_photo"):
