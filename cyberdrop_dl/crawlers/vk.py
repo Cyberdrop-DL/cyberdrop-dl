@@ -189,11 +189,14 @@ class VKCrawler(VKBaseCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        url = scrape_item.url
-        if "vkvideo" in url.host:
+        if "vkvideo" in scrape_item.url.host:
             self.handle_external_links(scrape_item)
             return
 
+        await self._fetch(scrape_item)
+
+    async def _fetch(self, scrape_item: ScrapeItem) -> None:
+        url = scrape_item.url
         match url.parts[1:]:
             case [] if redirect := url.query.get("to"):
                 self.redirect(scrape_item, redirect)
@@ -213,6 +216,9 @@ class VKCrawler(VKBaseCrawler):
                 elif wall := _extract_id(slug, "wall", composed=True):
                     owner_id, _, post_id = wall.partition("_")
                     await self.post(scrape_item, owner_id, post_id)
+                elif photo := _extract_id(slug, "photo", composed=True):
+                    owner_id, _, photo_id = photo.partition("_")
+                    await self.photo(scrape_item, owner_id, photo_id)
                 else:
                     raise ValueError
             case _:
@@ -226,6 +232,13 @@ class VKCrawler(VKBaseCrawler):
     @error_handling_wrapper
     async def photos(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         raise NotImplementedError
+
+    @error_handling_wrapper
+    async def photo(self, scrape_item: ScrapeItem, owner_id: str, photo_id: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        post = await self.api.get_post(owner_id, photo_id)
+        await self._post(scrape_item, post)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
@@ -331,7 +344,7 @@ class VKCrawler(VKBaseCrawler):
 
     async def _iter_photos_legacy(self, scrape_item: ScrapeItem, list_id: str) -> None:
         async with self.new_task_group() as tg:
-            async for photo in self.api.get_photos_legacy(list_id):
+            async for photo in self.api.legacy.get_photos(list_id):
                 new_item = scrape_item.create_child(self.PRIMARY_URL / photo.web_path)
                 tg.create_task(self._photo_task(new_item, photo))
                 scrape_item.add_children()
@@ -524,6 +537,7 @@ class VKAPI(API):
     def __post_init__(self) -> None:
         self._owners: dict[str | int, Owner] = {}
         self._owners_locks: aio.WeakAsyncLocks[str | int] = aio.WeakAsyncLocks()
+        self.legacy: VKLegacyAPI = VKLegacyAPI(self)
         self.instance = self
 
     @override
@@ -580,57 +594,12 @@ class VKAPI(API):
             raise ScrapeError(404, f"Group not found: {group_id}")
         return deserialize(Owner, groups[0])
 
-    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
-        # Access key is for private videos
-        full_id = f"{owner_id}_{video_id}"
-        if access_key:
-            full_id += f"_{access_key}"
-        data = {"videos": full_id}
-
-        resp = await self.method("video.get", data)
-        items = resp.get("items")
-        if not items:
-            raise ScrapeError(404)
-        return await _parse_video(items[0])
-
     async def get_post(self, owner_id: str, post_id: str) -> Post:
         resp = await self.method("wall.getById", {"posts": f"{owner_id}_{post_id}"})
         items = resp.get("items")
         if not items:
             raise ScrapeError(404)
         return Post.parse(items[0])
-
-    async def get_video_legacy(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
-        # This may trigger a JS bot check
-        data = {
-            "act": "show",
-            "video": f"{owner_id}-{video_id}",
-            "al": 1,
-        }
-        if access_key:
-            data["list"] = access_key
-
-        payload = await self._payload("al_video.php", data)
-        return await _parse_video_legacy(payload, owner_id, video_id)
-
-    async def _payload(self, path: str, data: dict[str, Any]) -> list[Any]:
-        resp = await self.request_json(
-            url := VKCrawler.PRIMARY_URL / path,
-            data=data,
-            impersonate=True,
-            headers={
-                "Referer": str(url),
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        )
-        code, payload = resp["payload"]
-        match code:
-            case "8":
-                raise ScrapeError(403, payload[0].strip('"'))
-            case "3":
-                raise ScrapeError(401)
-            case _:
-                return payload
 
     async def resolve_owner(self, screen_name: str) -> Owner:
         try:
@@ -676,32 +645,6 @@ class VKAPI(API):
                 raise ScrapeError(422, f"Unsupported owner type: {owner}")
 
         return await resolve(owner_id)
-
-    async def get_photos_legacy(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
-        data = {
-            "act": "show",
-            "al": "1",
-            "direction": "1",
-            "list": list_id,
-            "offset": offset,
-        }
-
-        seen: set[int] = set()
-        while True:
-            payload = await self._payload("al_photos.php", data)
-            total, photos = payload[1], payload[3]
-            offset += len(photos)
-            found_new_photos: bool = False
-            for photo in map(_parse_photo_legacy, photos):
-                if photo.id not in seen:
-                    seen.add(photo.id)
-                    found_new_photos = True
-                    yield photo
-
-            if not found_new_photos or offset >= total:
-                break
-
-            data["offset"] = offset
 
     async def get_wall(
         self,
@@ -781,6 +724,79 @@ class VKAPI(API):
                 break
 
             section = await self.get_catalog_section(section.id, section.next_from)
+
+    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
+        # Access key is for private videos
+        full_id = f"{owner_id}_{video_id}"
+        if access_key:
+            full_id += f"_{access_key}"
+        data = {"videos": full_id}
+
+        resp = await self.method("video.get", data)
+        items = resp.get("items")
+        if not items:
+            raise ScrapeError(404)
+        return await _parse_video(items[0])
+
+
+class VKLegacyAPI(API.Endpoint[VKAPI]):
+    async def _payload(self, path: str, data: dict[str, Any]) -> list[Any]:
+        resp = await self.api.request_json(
+            url := VKCrawler.PRIMARY_URL / path,
+            data=data,
+            impersonate=True,
+            headers={
+                "Referer": str(url),
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        )
+        code, payload = resp["payload"]
+        match code:
+            case "8":
+                raise ScrapeError(403, payload[0].strip('"'))
+            case "3":
+                raise ScrapeError(401)
+            case _:
+                return payload
+
+    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
+        # This may trigger a JS bot check
+        data = {
+            "act": "show",
+            "video": f"{owner_id}-{video_id}",
+            "al": 1,
+        }
+        if access_key:
+            data["list"] = access_key
+
+        payload = await self._payload("al_video.php", data)
+        return await _parse_video_legacy(payload, owner_id, video_id)
+
+    async def get_photos(self, list_id: str, *, offset: int = 0) -> AsyncGenerator[Photo]:
+        data = {
+            "act": "show",
+            "al": "1",
+            "direction": "1",
+            "list": list_id,
+            "offset": offset,
+        }
+
+        seen: set[int] = set()
+        while True:
+            payload = await self._payload("al_photos.php", data)
+            total, photos = payload[1], payload[3]
+            offset += len(photos)
+            found_new_photos: bool = False
+            for photo in map(_parse_photo_legacy, photos):
+                if photo.id not in seen:
+                    seen.add(photo.id)
+                    found_new_photos = True
+                    yield photo
+
+            if not found_new_photos or offset >= total:
+                break
+
+            data["offset"] = offset
 
 
 def _extract_id(slug: str, *prefixes: str, composed: bool = False) -> str | None:
