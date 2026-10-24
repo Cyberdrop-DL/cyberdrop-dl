@@ -221,6 +221,10 @@ class File(Owned):
     url: str
     date: int
 
+    @property
+    def web_path(self) -> str:
+        return f"doc{self.slug}"
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Link(APIObject):

@@ -227,24 +227,13 @@ class VKVideoCrawler(VKBaseCrawler):
 
 @URLConfig(allow_empty_path=True)
 class VKCrawler(VKBaseCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
-        "vk.ru",
-        "vk.com",
-        "vkontakte.ru",
-        ".userapi.com",
-        "vk.me",
-        "mvk.com",
-    )
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("vk.ru", "vk.com", ".userapi.com", "vk.me")
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = VKBaseCrawler.SUPPORTED_PATHS | {
         "User / Group wall": (
             "/id<owner_id>",
             "/public<owner_id>",
             "/@<owner_screen_name>",
             "/album<owner_id>_00",
-        ),
-        "User / Group photos": (
-            "/albums<owner_id>",
-            "/photos<owner_id>",
         ),
         "User / Group clips": (
             "/id<owner_id>#section=short_videos",
@@ -272,7 +261,14 @@ class VKCrawler(VKBaseCrawler):
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("vk.cc", "m.vk.ru", "m.vk.com", "mkv.com")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
+        "vk.cc",
+        "m.vk.ru",
+        "m.vk.com",
+        "mkv.com",
+        "vkontakte.ru",
+        "vkontakte.com",
+    )
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         url = scrape_item.url
@@ -294,21 +290,11 @@ class VKCrawler(VKBaseCrawler):
                 case _:
                     raise ValueError
 
-    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:  # noqa: C901, PLR0912
+    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:
         match page:
-            case ["albums" | "photos", str(owner_id), None]:
-                await self.photos(scrape_item, owner_id)
-            case ["wall", str(owner_id), str(post_id)]:
-                await self.post(scrape_item, owner_id, post_id)
-            case ["photo", str(owner_id), str(photo_id)]:
-                await self.photo(scrape_item, owner_id, photo_id)
-            case ["audio", str(owner_id), str(audio_id)]:
-                await self.audio(scrape_item, owner_id, audio_id)
-            case ["doc", str(owner_id), str(doc_id)]:
-                await self.doc(scrape_item, owner_id, doc_id)
-            case ["audio_playlist", str(owner_id), str(playlist_id)]:
-                await self.audio_playlist(scrape_item, owner_id, playlist_id)
-            case ["id", str(owner_id), None]:
+            case ["doc" | "albums" | "photos", *_]:  # TODO: add support for these
+                raise ValueError
+            case ["id" | "wall", str(owner_id), None]:
                 await self.wall(scrape_item, owner_id)
             case ["public" | "club", str(owner_id), None]:
                 await self.wall(scrape_item, f"-{owner_id.removeprefix('-')}")
@@ -319,6 +305,13 @@ class VKCrawler(VKBaseCrawler):
                     await self.wall(scrape_item, owner_id)
                 else:
                     await self.album(scrape_item, owner_id, album_id)
+            case [str(kind), str(owner_id), str(post_id)] if fn := {
+                "photo": self.photo,
+                "audio": self.audio,
+                "audio_playlist": self.audio_playlist,
+                "wall": self.post,
+            }.get(kind):
+                await fn(scrape_item, owner_id, post_id)
             case _:
                 raise ValueError
 
@@ -326,14 +319,6 @@ class VKCrawler(VKBaseCrawler):
     def redirect(self, scrape_item: ScrapeItem, to: str) -> None:
         url = to if to.startswith("http") else base64.urlsafe_b64decode(b64_pad(to)).decode("utf8")
         self.handle_external_links(scrape_item.create_child(self.parse_url(url)))
-
-    @error_handling_wrapper
-    async def photos(self, scrape_item: ScrapeItem, owner_id: str) -> None:
-        raise NotImplementedError
-
-    @error_handling_wrapper
-    async def doc(self, scrape_item: ScrapeItem, owner_id: str, doc_id: str) -> None:
-        raise NotImplementedError
 
     @error_handling_wrapper
     async def audio(self, scrape_item: ScrapeItem, owner_id: str, audio_id: str) -> None:
@@ -434,7 +419,9 @@ class VKCrawler(VKBaseCrawler):
                         tg.create_task(self._audio_task(scrape_item.create_child(url), audio))
 
                     case "doc":
-                        _file = File.parse(data)
+                        file = File.parse(data)
+                        url = self.PRIMARY_URL / file.web_path
+                        tg.create_task(self._file_task(scrape_item.create_child(url), file))
 
                     case "graffiti":
                         url = Graffiti.parse(data).best()
@@ -472,6 +459,21 @@ class VKCrawler(VKBaseCrawler):
                 return option
 
         raise ScrapeError(404, "None of the image sources are available")
+
+    @error_handling_wrapper
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
+        src = self.parse_url(file.url)
+        _, ext = self.get_filename_and_ext(src.name)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            src.name,
+            ext,
+            custom_filename=self.create_custom_filename(file.web_path, ext),
+            metadata=file,
+            debrid_link=src,
+            uploaded_at=file.date,
+        )
 
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
@@ -543,6 +545,7 @@ class VKCrawler(VKBaseCrawler):
                 tg.create_task(self._photo_task(new_item, photo))
                 scrape_item.add_children()
 
+    _file_task = auto_task_id(_file)
     _post_task = auto_task_id(_post)
     _photo_task = auto_task_id(_photo)
     _album_task = auto_task_id(_album)
