@@ -170,15 +170,15 @@ class VKAPI(API):
         self, domain: str, *, offset: int = 0, filter_: Literal["all", "others", "owner"] = "all"
     ) -> AsyncGenerator[Post]:
         data = {"domain": domain, "filter": filter_, "offset": offset}
-        seen: set[int] = set()
+        seen: set[str] = set()
         resp = await self.method("wall.get", data)
         total = resp["count"]
         while True:
             offset += len(posts := resp["items"])
             found_new_posts: bool = False
             for post in map(Post.parse, posts):
-                if post.id not in seen:
-                    seen.add(post.id)
+                if post.slug not in seen:
+                    seen.add(post.slug)
                     found_new_posts = True
                     yield post
 
@@ -358,13 +358,13 @@ class VKLegacy(API.Endpoint[VKAPI]):
 
         payload = await self.request_payload("al_photos.php", data)
         total = payload[1]
-        seen: set[int] = set()
+        seen: set[str] = set()
         while True:
             offset += len(photos := payload[3])
             found_new_photos: bool = False
             for photo in map(_parse_photo_legacy, photos):
-                if photo.id not in seen:
-                    seen.add(photo.id)
+                if photo.slug not in seen:
+                    seen.add(photo.slug)
                     found_new_photos = True
                     yield photo
 
