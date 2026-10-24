@@ -352,8 +352,14 @@ class VKCrawler(VKBaseCrawler):
     async def album(self, scrape_item: ScrapeItem, owner_id: str, album_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        scrape_item.append_folders(f"album_{album_id}")
-        await self._iter_photos_legacy(scrape_item, f"album{owner_id}_{album_id}")
+        album = Album(int(album_id), int(owner_id))
+        await self._album(scrape_item, album)
+
+    @error_handling_wrapper
+    async def _album(self, scrape_item: ScrapeItem, album: Album) -> None:
+        title = self.create_title(album.title or album.web_path, album.slug)
+        scrape_item.append_folders(title)
+        await self._iter_photos_legacy(scrape_item, album.web_path)
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, owner_id: str, post_id: str) -> None:
@@ -428,10 +434,13 @@ class VKCrawler(VKBaseCrawler):
                         tg.create_task(self.direct_file(scrape_item, url))
 
                     case "link":
-                        _link = Link.parse(data)
+                        url = self.parse_url(Link.parse(data).url)
+                        self.handle_external_links(scrape_item.create_child(url))
 
                     case "album":
-                        _link = Album.parse(data)
+                        album = Album.parse(data)
+                        url = self.PRIMARY_URL / album.web_path
+                        tg.create_task(self._album_task(scrape_item.create_child(url), album))
 
                     case "app" | "pool" | "page" | "market" | "market_album" | "sticker":
                         continue
@@ -529,5 +538,6 @@ class VKCrawler(VKBaseCrawler):
 
     _post_task = auto_task_id(_post)
     _photo_task = auto_task_id(_photo)
+    _album_task = auto_task_id(_album)
     _audio_task = auto_task_id(_audio)
     _audio_playlist_task = auto_task_id(_audio_playlist)

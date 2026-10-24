@@ -232,9 +232,12 @@ class Link(APIObject):
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class Album(Owned):
-    title: str
-    created: int
-    size: int
+    title: str | None = None
+    created: int | None = None
+
+    @property
+    def web_path(self) -> str:
+        return f"album{self.slug}"
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
