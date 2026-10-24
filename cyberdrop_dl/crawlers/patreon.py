@@ -66,6 +66,12 @@ class Post(Included):
     url: str
 
 
+@dataclasses.dataclass(slots=True, frozen=True)
+class TipTapMedia:
+    links: list[str]
+    assets: list[Included]
+
+
 class PatreonCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": (
@@ -140,12 +146,14 @@ class PatreonCrawler(Crawler):
 
         async def dispatch_url(link: str, *, embed: bool) -> None:
             url = self.parse_url(link)
-            if url not in seen_urls:
-                new_item = scrape_item.create_child(url)
-                seen_urls.add(new_item.url)
-                self.handle_external_links(new_item, reset=not embed)
-                scrape_item.add_children()
-                await sleep()
+            if url in seen_urls:
+                return
+
+            new_item = scrape_item.create_child(url)
+            seen_urls.add(new_item.url)
+            self.handle_external_links(new_item, reset=not embed)
+            scrape_item.add_children()
+            await sleep()
 
         async with self.new_task_group() as tg:
             for media in unique_medias:
@@ -158,22 +166,21 @@ class PatreonCrawler(Crawler):
                 tg.create_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
                 await dispatch_url(embed["url"], embed=True)
 
-            for elem in _extract_json_tiptap_embeds(post):
-                attrs = elem["attrs"]
-                media_id: str = attrs.get("media_id")
-                match media_type := elem["type"]:
-                    case "link" if href := attrs.get("href"):
-                        self.log.debug("Found embeded TIPTAP url in post %s: %s", post["id"], href)
-                        await dispatch_url(href, embed=False)
-                    case "audio" | "video" | "image" if media_id and media_id not in seen_media_ids:
-                        seen_media_ids.add(media_id)
-                        self.log.debug("Found embeded TIPTAP media (%s) in post %s: %s", media_type, post["id"], elem)
-                        tg.create_task(self.media(scrape_item, media_id))
-                    case _:
-                        continue
+            tiptap = _extract_json_tiptap_media(post)
+            if not tiptap:
+                return
 
-                scrape_item.add_children()
-                await sleep()
+            self.log.debug("Found embeded TIPTAP media in post %s: %s", post["id"], tiptap)
+
+            for url in tiptap.links:
+                await dispatch_url(url, embed=False)
+
+            for asset in tiptap.assets:
+                if asset["id"] not in seen_media_ids:
+                    seen_media_ids.add(asset["id"])
+                    tg.create_task(self.media(scrape_item, asset["id"]))
+                    scrape_item.add_children()
+                    await sleep()
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
@@ -247,7 +254,7 @@ class LazyLogMedia:
     def __json__(self) -> dict[str, dict[str, Any]]:
         return {m.id: m.__json__() for m in self.media}
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__json__())
 
 
@@ -347,11 +354,24 @@ def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
         yield name, value
 
 
-def _extract_json_tiptap_embeds(post: Post) -> Generator[dict[str, Any]]:
+def _extract_json_tiptap_media(post: Post) -> TipTapMedia | None:
+    links: list[str] = []
+    assets: list[Included] = []
     for name, value in post.items():
         if value and name.endswith("_json_string"):
             for _, elem in traversal.traverse(value, _tiptap_media_visitor):
-                yield elem
+                attrs = elem["attrs"]
+                match media_type := elem["type"]:
+                    case "link" if href := attrs.get("href"):
+                        links.append(href)
+                    case "audio" | "video" | "image" if media_id := attrs.get("media_id"):
+                        assets.append({"id": media_id, "type": media_type, "attributes": attrs})
+                    case _:
+                        continue
+
+    if not (links or assets):
+        return None
+    return TipTapMedia(links, assets)
 
 
 def _flatten_post(post: dict[str, Any]) -> Post:
@@ -427,8 +447,10 @@ def _tiptap_media_visitor(_: object, obj: object) -> TypeGuard[dict[str, Any]]:
         "blockquote",
         "paragraph",
         "text",
+        "doc",
+        "bold",
     }:
-        PatreonCrawler.get_logger().warning("Unsupported TIPTAP element: %s", obj)
+        PatreonCrawler.get_logger().warning("Unknown TIPTAP element: %s", obj)
 
     return False
 
