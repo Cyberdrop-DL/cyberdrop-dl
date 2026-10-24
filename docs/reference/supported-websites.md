@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.12.0
+List of sites supported by cyberdrop-dl-patched as of version 10.13.0
 
 ### 1fichier
 
@@ -863,7 +863,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
 - Model:
   - `/<name>`
 
-### Fileditch
+### FileditchAlbums
 
 **Primary URL**: [https://fileditchalbums.st](https://fileditchalbums.st)
 
@@ -2118,6 +2118,19 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
   - `/w/<short_uuid>`
   - `/w/<video_uuid>`
 
+### Picdrop
+
+**Primary URL**: [https://www.picdrop.com](https://www.picdrop.com)
+
+**Supported Domains**: `picdrop.*`
+
+**Supported Paths**:
+
+- File:
+  - `/<user>/<gallery_id>?file=<file_key>`
+- Gallery:
+  - `/<user>/<gallery_id>`
+
 ### PillowCase
 
 **Primary URL**: [https://pillows.su](https://pillows.su)
@@ -2437,6 +2450,21 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
 - Image:
   - `/<image_id>/...`
 
+### Ppp.porn
+
+**Primary URL**: [https://ppp.porn](https://ppp.porn)
+
+**Supported Domains**: `ppp.porn`
+
+**Supported Paths**:
+
+- Model:
+  - `/s/<id>/`
+- Search:
+  - `/search/<query>/`
+- Video:
+  - `/v/<video_id>/`
+
 ### RealBooru
 
 **Primary URL**: [https://realbooru.com](https://realbooru.com)
@@ -2470,7 +2498,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
   - `/d/<video_id>`
   - `/e/<video_id>`
 
-### Reddit
+### RedditImages
 
 **Primary URL**: [https://i.redd.it](https://i.redd.it)
 
@@ -2481,7 +2509,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
 - Image:
   - `i.redd.it/<id>.>ext>`
 
-### Reddit
+### RedditVideos
 
 **Primary URL**: [https://v.redd.it](https://v.redd.it)
 
@@ -2662,6 +2690,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
 - Video:
   - `/play/embed/<id>`
   - `/video/<id>`
+
+### S9e.github.io
+
+**Primary URL**: [https://s9e.github.io](https://s9e.github.io)
+
+**Supported Domains**: `s9e.github.io`
+
+**Supported Paths**:
+
+- Embed:
+  - `/iframe/2/<name>.html#<id>`
 
 ### Scrolller
 
@@ -3175,6 +3214,19 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
+### Upfile.top
+
+**Primary URL**: [https://upfile.top](https://upfile.top)
+
+**Supported Domains**: `upfile.top`
+
+**Supported Paths**:
+
+- **NOTES**:
+  - `Does NOT support subfolders`
+- Share:
+  - `/public/<path>...`
+
 ### Upload.ee
 
 **Primary URL**: [https://www.upload.ee](https://www.upload.ee)
@@ -3273,6 +3325,72 @@ List of sites supported by cyberdrop-dl-patched as of version 10.12.0
 - Video:
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
+
+### VKVideo
+
+**Primary URL**: [https://vkvideo.com](https://vkvideo.com)
+
+**Supported Domains**: `vkvideo.com`, `vkvideo.ru`
+
+**Supported Paths**:
+
+- Playlist:
+  - `/playlist/<owner_id>_<playlist_id>`
+- User / Group videos:
+  - `@<owner_screen_name>`
+  - `@<owner_screen_name>/all`
+  - `@<owner_screen_name>/clips`
+  - `@<owner_screen_name>/donut`
+- Video:
+  - `/clip<owner_id>_<video_id>`
+  - `/playlist/<owner_id>_<playlist_id>/video<owner_id>_<video_id>`
+  - `/video<owner_id>_<video_id>?list=<access_key>`
+  - `/video_ext.php?oid=<owner_id>&id=<video_id>`
+
+### VK
+
+**Primary URL**: [https://vk.com](https://vk.com)
+
+**Supported Domains**: `.userapi.com`, `m.vk.com`, `m.vk.ru`, `mkv.com`, `vk.cc`, `vk.com`, `vk.me`, `vk.ru`, `vkontakte.com`, `vkontakte.ru`
+
+**Supported Paths**:
+
+- Album:
+  - `/album<owner_id>_<album_id>`
+- Audio:
+  - `/audio<owner_id>_<audio_id>`
+- Audio Playlist:
+  - `/audio_playlist<owner_id>_<playlist_id>`
+- Direct images:
+  - `.userapi.com/...`
+- Photo:
+  - `/photo<owner_id>_<photo_id>`
+- Post:
+  - `/wall<owner_id>_<wall_id>`
+- Redirect:
+  - `/?to=<base64_url>`
+  - `/away.php?to=<url>`
+- User / Group clips:
+  - `/@<owner_screen_name>#section=short_videos`
+  - `/id<owner_id>#section=short_videos`
+  - `/public<owner_id>#section=short_videos`
+- User / Group videos:
+  - `/@<owner_screen_name>#section=videos`
+  - `/clips/username`
+  - `/id<owner_id>#section=videos`
+  - `/public<owner_id>#section=videos`
+  - `/videos/@username`
+  - `/videos<owner_id>`
+- User / Group wall:
+  - `/@<owner_screen_name>`
+  - `/album<owner_id>_00`
+  - `/id<owner_id>`
+  - `/public<owner_id>`
+- Video:
+  - `/clip<owner_id>_<video_id>`
+  - `/playlist/<owner_id>_<playlist_id>/video<owner_id>_<video_id>`
+  - `/video<owner_id>_<video_id>?list=<access_key>`
+  - `/video_ext.php?oid=<owner_id>&id=<video_id>`
 
 ### Voe.sx
 
