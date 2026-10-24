@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl.crawlers.vk import full_res_img
 from cyberdrop_dl.exceptions import ScrapeError
@@ -19,11 +19,19 @@ class APIObject:
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Post(APIObject):
-    date: int
+class Owned(APIObject):
     id: int
-    from_id: int
     owner_id: int
+
+    @property
+    def slug(self) -> str:
+        return f"{self.owner_id}_{self.id}"
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class Post(Owned):
+    date: int
+    from_id: int
     attachments: list[dict[str, Any]]
     text: str | None = None
 
@@ -57,10 +65,7 @@ class Format(APIObject):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Video(APIObject):
-    id: int
-    owner_id: int
-
+class Video(Owned):
     thumb: str | None
     date: int
     embed: str | None
@@ -86,10 +91,6 @@ class Video(APIObject):
             formats=tuple(_extract_formats(video)),
             embed=video.get("files", {}).get("external"),
         )
-
-    @property
-    def slug(self) -> str:
-        return f"{self.owner_id}_{self.id}"
 
     @property
     def prefix(self) -> str:
@@ -132,15 +133,9 @@ class PhotoSize(APIObject):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Photo(APIObject):
-    id: int
-    owner_id: int
+class Photo(Owned):
     date: int
     sources: tuple[PhotoSize, ...]
-
-    @property
-    def slug(self) -> str:
-        return f"{self.owner_id}_{self.id}"
 
     @property
     def web_path(self) -> str:
@@ -165,28 +160,62 @@ class Photo(APIObject):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Audio(APIObject):
-    id: int
-    owner_id: int
-    artist: str
+class Audio(Owned):
     title: str
-    url: str
     date: int
+    artist: str | None = None
     album_id: int | None = None
+    access_key: str | None = None
+    url: str | None = None
+
+    @property
+    def web_path(self) -> str:
+        return f"audio{self.slug}"
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Graffiti(APIObject):
-    id: int
-    owner_id: int
-    photo_130: str
-    photo_604: str
+class AudioPlaylist(Owned):
+    title: str
+    count: int
+    type: str
+    thumb: Graffiti | None = None
+    access_key: str | None = None
+    description: str | None = None
+
+    @property
+    def web_path(self) -> str:
+        return f"audio_playlist{self.slug}"
+
+    @override
+    @classmethod
+    def parse(cls, playlist: dict[str, Any]) -> Self:
+        return deserialize(cls, playlist, thumb=Graffiti.parse(g) if (g := playlist.get("photo")) else None)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class File(APIObject):
-    id: int
-    owner_id: int
+class Graffiti(APIObject):  # Old photo format
+    sizes: dict[int, AbsoluteHttpURL]
+
+    @override
+    @classmethod
+    def parse(cls, photo: dict[str, Any]) -> Self:
+        def sizes():
+            for name, value in photo.items():
+                match name.partition("_"):
+                    case ["photo", _, size] if size and (url := _try_parse_url(value)):
+                        yield int(size), full_res_img(url)
+                    case _:
+                        pass
+
+        return deserialize(cls, photo, sizes=dict(sizes()))
+
+    def best(self) -> AbsoluteHttpURL:
+        _, url = max(self.sizes.items())
+        return url
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class File(Owned):
     title: str
     ext: str
     url: str
@@ -202,9 +231,7 @@ class Link(APIObject):
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Album(APIObject):
-    id: int
-    owner_id: int
+class Album(Owned):
     title: str
     created: int
     size: int
@@ -217,17 +244,18 @@ class CatalogSection(APIObject):
     videos: list[dict[str, Any]]
 
 
+def _try_parse_url(value: object):
+    if value and type(value) is str and value.startswith(("//", "http")):
+        return parse_url(value)
+
+
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
     for name, value in data.get("files", {}).items():
-        if not value or type(value) is not str or not value.startswith(("//", "http")):
-            continue
-
-        url = parse_url(value)
-
-        match name.partition("_"):
-            case ["mp4", _, res]:
-                yield Format(name=name, url=url, height=int(res))
-            case ["hls", *_]:
-                yield Format(name=name, url=url, hls=True)
-            case _:
-                continue
+        if url := _try_parse_url(value):
+            match name.partition("_"):
+                case ["mp4", _, res]:
+                    yield Format(name=name, url=url, height=int(res))
+                case ["hls", *_]:
+                    yield Format(name=name, url=url, hls=True)
+                case _:
+                    continue

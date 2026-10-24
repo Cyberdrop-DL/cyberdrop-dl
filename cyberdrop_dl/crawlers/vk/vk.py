@@ -1,13 +1,27 @@
 from __future__ import annotations
 
 import base64
+import itertools
 import re
+from http import HTTPStatus
 from typing import TYPE_CHECKING, ClassVar, override
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.crawlers.vk import full_res_img
 from cyberdrop_dl.crawlers.vk.api import VKAPI
-from cyberdrop_dl.crawlers.vk.types import Album, Audio, File, Graffiti, Link, Photo, PhotoSize, Post, Video
+from cyberdrop_dl.crawlers.vk.types import (
+    Album,
+    Audio,
+    AudioPlaylist,
+    File,
+    Graffiti,
+    Link,
+    Photo,
+    PhotoSize,
+    Post,
+    Video,
+)
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad
@@ -22,6 +36,7 @@ _PAGES_TYPES = (
     "album",
     "albums",
     "audio",
+    "audio_playlist",
     "audios",
     "clip",
     "club",
@@ -63,7 +78,7 @@ INNER_PAGES = {
     "video",
 }
 
-_PAGE_REGEX = rf"^(?P<type>{'|'.join(_PAGES_TYPES)})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?"
+_PAGE_REGEX = rf"^(?P<type>{'|'.join(map(re.escape, _PAGES_TYPES))})(?P<owner_id>-?\d+)(?:_(?P<item_id>\d+))?"
 
 
 @Crawler.db_path_builder("path_qs")
@@ -245,6 +260,8 @@ class VKCrawler(VKBaseCrawler):
         "Album": "/album<owner_id>_<album_id>",
         "Post": "/wall<owner_id>_<wall_id>",
         "Photo": "/photo<owner_id>_<photo_id>",
+        "Audio": "/audio<owner_id>_<audio_id>",
+        "Audio Playlist": "/audio_playlist<owner_id>_<playlist_id>",
         "Redirect": (
             "/?to=<base64_url>",
             "/away.php?to=<url>",
@@ -275,7 +292,7 @@ class VKCrawler(VKBaseCrawler):
                 case _:
                     raise ValueError
 
-    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:
+    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:  # noqa: C901
         match page:
             case ["albums" | "photos", str(owner_id), None]:
                 await self.photos(scrape_item, owner_id)
@@ -283,6 +300,10 @@ class VKCrawler(VKBaseCrawler):
                 await self.post(scrape_item, owner_id, post_id)
             case ["photo", str(owner_id), str(photo_id)]:
                 await self.photo(scrape_item, owner_id, photo_id)
+            case ["audio", str(owner_id), str(audio_id)]:
+                await self.audio(scrape_item, owner_id, audio_id)
+            case ["audio_playlist", str(owner_id), str(playlist_id)]:
+                await self.audio_playlist(scrape_item, owner_id, playlist_id)
             case ["id", str(owner_id), None]:
                 await self.wall(scrape_item, owner_id)
             case ["public" | "club", str(owner_id), None]:
@@ -305,6 +326,16 @@ class VKCrawler(VKBaseCrawler):
     @error_handling_wrapper
     async def photos(self, scrape_item: ScrapeItem, owner_id: str) -> None:
         raise NotImplementedError
+
+    @error_handling_wrapper
+    async def audio(self, scrape_item: ScrapeItem, owner_id: str, audio_id: str) -> None:
+        if await self.check_complete(scrape_item.url):
+            return
+
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        audio = await self.api.get_audio(owner_id, audio_id, access_key=scrape_item.url.query.get("list"))
+        await self._audio(scrape_item, audio)
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, owner_id: str, photo_id: str) -> None:
@@ -358,7 +389,7 @@ class VKCrawler(VKBaseCrawler):
                 scrape_item.add_children()
 
     @error_handling_wrapper
-    async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
+    async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:  # noqa: C901
         title = self.create_separate_post_title(None, str(post.id), post.date)
         scrape_item.setup_as_post(title)
         async with self.new_task_group() as tg:
@@ -368,21 +399,29 @@ class VKCrawler(VKBaseCrawler):
                     case "photo":
                         photo = Photo.parse(attach["photo"])
                         url = self.PRIMARY_URL / photo.web_path
-                        tg.create_task(self._photo(scrape_item.create_child(url), photo))
+                        tg.create_task(self._photo_task(scrape_item.create_child(url), photo))
 
                     case "video":
                         # These videos have no "files" details
                         url = VKVideoCrawler.PRIMARY_URL / Video.parse(attach["video"]).web_path
                         self.handle_external_links(scrape_item.create_child(url))
 
+                    case "audio_playlist":
+                        play = AudioPlaylist.parse(attach["audio_playlist"])
+                        url = self.PRIMARY_URL / play.web_path
+                        tg.create_task(self._audio_playlist_task(scrape_item.create_child(url), play))
+
                     case "audio":
-                        _audio = Audio.parse(attach["audio"])
+                        audio = Audio.parse(attach["audio"])
+                        url = self.PRIMARY_URL / audio.web_path
+                        tg.create_task(self._audio_task(scrape_item.create_child(url), audio))
 
                     case "doc":
                         _file = File.parse(attach["doc"])
 
                     case "graffiti":
-                        _file = Graffiti.parse(attach["graffiti"])
+                        url = Graffiti.parse(attach["graffiti"]).best()
+                        tg.create_task(self.direct_file(scrape_item, url))
 
                     case "link":
                         _link = Link.parse(attach["link"])
@@ -430,7 +469,53 @@ class VKCrawler(VKBaseCrawler):
             uploaded_at=photo.date,
         )
 
-    _photo_task = auto_task_id(_photo)
+    @error_handling_wrapper
+    async def audio_playlist(self, scrape_item: ScrapeItem, owner_id: str, playlist_id: str) -> None:
+        owner = await self.api.resolve_owner(owner_id)
+        scrape_item.setup_as_profile(self.create_title(owner.full_name))
+        play = await self.api.get_playlist(owner_id, playlist_id, access_key=scrape_item.url.query.get("list"))
+        await self._audio_playlist(scrape_item, play)
+
+    @error_handling_wrapper
+    async def _audio_playlist(self, scrape_item: ScrapeItem, play: AudioPlaylist) -> None:
+        title = self.create_title(play.title, play.slug, force_album_id=not play.title)
+        scrape_item.append_folders(f"{title} [playlist]")
+
+        async with self.new_task_group() as tg:
+            tg.create_task(self.write_metadata(scrape_item, play.web_path, play))
+            if play.thumb:
+                tg.create_task(self.direct_file(scrape_item, play.thumb.best()))
+
+            audio_ids = await self.api.get_playlist_audio_ids(play.owner_id, play.id, play.access_key)
+
+            sleep = aio.periodic_sleep(10)
+            for batch in itertools.batched(audio_ids, 50):
+                for audio in await self.api.get_audios(*batch):
+                    new_item = scrape_item.create_child(self.PRIMARY_URL / audio.web_path)
+                    tg.create_task(self._audio_task(new_item, audio))
+                    scrape_item.add_children()
+                    await sleep()
+
+    @error_handling_wrapper
+    async def _audio(self, scrape_item: ScrapeItem, audio: Audio) -> None:
+        if not audio.url:  # The msg is the VK error on their site.
+            raise ScrapeError(
+                HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+                "Track unavailable. This was the decision of the artist or their representative",
+            )
+        name = f"{audio.artist} - {audio.title}" if audio.artist else audio.title
+        src = self.parse_url(audio.url)
+        _, ext = self.get_filename_and_ext(src.name, assume_ext=".mp3")
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            name,
+            ext,
+            custom_filename=self.create_custom_filename(name, ext, file_id=audio.web_path),
+            metadata=audio,
+            debrid_link=src,
+            uploaded_at=audio.date,
+        )
 
     async def _iter_photos_legacy(self, scrape_item: ScrapeItem, list_id: str) -> None:
         async with self.new_task_group() as tg:
@@ -438,3 +523,7 @@ class VKCrawler(VKBaseCrawler):
                 new_item = scrape_item.create_child(self.PRIMARY_URL / photo.web_path)
                 tg.create_task(self._photo_task(new_item, photo))
                 scrape_item.add_children()
+
+    _photo_task = auto_task_id(_photo)
+    _audio_task = auto_task_id(_audio)
+    _audio_playlist_task = auto_task_id(_audio_playlist)

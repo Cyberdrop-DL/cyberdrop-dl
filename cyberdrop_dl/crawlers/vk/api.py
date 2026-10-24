@@ -13,7 +13,17 @@ from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
 from cyberdrop_dl.crawlers.vk import full_res_img
-from cyberdrop_dl.crawlers.vk.types import CatalogSection, Format, Owner, Photo, PhotoSize, Post, Video
+from cyberdrop_dl.crawlers.vk.types import (
+    Audio,
+    AudioPlaylist,
+    CatalogSection,
+    Format,
+    Owner,
+    Photo,
+    PhotoSize,
+    Post,
+    Video,
+)
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, parse_url
@@ -24,6 +34,15 @@ if TYPE_CHECKING:
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.constants import HttpMethod
+
+
+def _entity_id(owner_id: str | int, item_id: str | int, access_key: str | int | None = None) -> str:
+    # Access key is for private videos
+    entity = f"{owner_id}_{item_id}"
+    if access_key is not None:
+        entity += f"_{access_key}"
+
+    return entity
 
 
 ERROR_CODES: Final = (
@@ -169,14 +188,46 @@ class VKAPI(API):
 
             data["offset"] = offset
 
-    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
-        # Access key is for private videos
-        full_id = f"{owner_id}_{video_id}"
-        if access_key:
-            full_id += f"_{access_key}"
-        data = {"videos": full_id}
+    async def get_audio(self, owner_id: str, audio_id: str, *, access_key: str | None = None) -> Audio:
+        audios = await self.get_audios(_entity_id(owner_id, audio_id, access_key))
+        if not audios:
+            raise ScrapeError(404)
+        return audios[0]
 
-        resp = await self.method("video.get", data)
+    async def get_audios(self, *entity_ids: str) -> list[Audio]:
+        assert entity_ids
+        resp = await self.method(
+            "audio.getById",
+            {
+                "audios": ",".join(entity_ids),
+                "photo_sizes": 1,
+            },
+        )
+        return list(map(Audio.parse, resp))
+
+    async def get_playlist(self, owner_id: str, playlist_id: str, *, access_key: str | None = None) -> AudioPlaylist:
+        data = {"playlist_id": playlist_id, "owner_id": owner_id}
+        if access_key:
+            data["access_key"] = access_key
+        resp = await self.method("audio.getPlaylistById", data)
+        if not resp:
+            raise ScrapeError(404)
+        return AudioPlaylist.parse(resp)
+
+    async def get_playlist_audio_ids(
+        self, owner_id: str | int, playlist_id: str | int, access_key: str | None = None
+    ) -> list[str]:
+        resp = await self.method(
+            "audio.getIdsBySource",
+            {
+                "source": "playlist",
+                "entity_id": _entity_id(owner_id, playlist_id, access_key),
+            },
+        )
+        return [a["audio_id"] for a in resp["audios"]]
+
+    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
+        resp = await self.method("video.get", {"videos": _entity_id(owner_id, video_id, access_key)})
         items = resp.get("items")
         if not items:
             raise ScrapeError(404)
