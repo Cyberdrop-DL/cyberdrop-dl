@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New `--crawlers.patreon.content-urls` option
 - Upfile support
 - Picdrop support
 - PPP3 support
@@ -39,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - All tweets being skipped (Twitter)
+- Some files not being parsed while downloading a post (Patreon)
 - Do not download thumbnails from embedded images (Simpcity)
 - Do not disable Flaresolverr when a request for a specific site is blocked (ex: IP ban)
 
