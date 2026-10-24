@@ -182,6 +182,7 @@ class VKVideoCrawler(VKBaseCrawler):
         video = await self.api.get_video(owner_id, video_id, access_key=scrape_item.url.query.get("list"))
         await self._video(scrape_item, video)
 
+    @auto_task_id
     @error_handling_wrapper
     async def video_task(self, scrape_item: ScrapeItem, video: Video) -> None:
         if await self.check_complete(scrape_item.url):
@@ -334,7 +335,7 @@ class VKCrawler(VKBaseCrawler):
 
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        audio = await self.api.get_audio(owner_id, audio_id, access_key=scrape_item.url.query.get("list"))
+        audio = await self.api.audio.get(owner_id, audio_id, access_key=scrape_item.url.query.get("list"))
         await self._audio(scrape_item, audio)
 
     @error_handling_wrapper
@@ -438,8 +439,6 @@ class VKCrawler(VKBaseCrawler):
 
                 scrape_item.add_children()
 
-    _post_task = auto_task_id(_post)
-
     async def _select_best_src(self, photo: Photo) -> PhotoSize:
         for option in sorted(photo.sources, key=PhotoSize.score, reverse=True)[:3]:
             try:
@@ -473,7 +472,7 @@ class VKCrawler(VKBaseCrawler):
     async def audio_playlist(self, scrape_item: ScrapeItem, owner_id: str, playlist_id: str) -> None:
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        play = await self.api.get_playlist(owner_id, playlist_id, access_key=scrape_item.url.query.get("list"))
+        play = await self.api.audio.get_playlist(owner_id, playlist_id, access_key=scrape_item.url.query.get("list"))
         await self._audio_playlist(scrape_item, play)
 
     @error_handling_wrapper
@@ -486,11 +485,11 @@ class VKCrawler(VKBaseCrawler):
             if play.thumb:
                 tg.create_task(self.direct_file(scrape_item, play.thumb.best()))
 
-            audio_ids = await self.api.get_playlist_audio_ids(play.owner_id, play.id, play.access_key)
+            audio_ids = await self.api.audio.get_ids(play.owner_id, play.id, play.access_key)
 
             sleep = aio.periodic_sleep(10)
-            for batch in itertools.batched(audio_ids, 50):
-                for audio in await self.api.get_audios(*batch):
+            for entities in itertools.batched(audio_ids, 50):
+                for audio in await self.api.audio.get_by_entity(*entities):
                     new_item = scrape_item.create_child(self.PRIMARY_URL / audio.web_path)
                     tg.create_task(self._audio_task(new_item, audio))
                     scrape_item.add_children()
@@ -524,6 +523,7 @@ class VKCrawler(VKBaseCrawler):
                 tg.create_task(self._photo_task(new_item, photo))
                 scrape_item.add_children()
 
+    _post_task = auto_task_id(_post)
     _photo_task = auto_task_id(_photo)
     _audio_task = auto_task_id(_audio)
     _audio_playlist_task = auto_task_id(_audio_playlist)

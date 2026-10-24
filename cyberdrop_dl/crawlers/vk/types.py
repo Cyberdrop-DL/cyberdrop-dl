@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
-from cyberdrop_dl.crawlers.vk import full_res_img
+from cyberdrop_dl.crawlers.vk import full_res_img, try_parse_url
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -202,7 +202,7 @@ class Graffiti(APIObject):  # Old photo format
         def sizes():
             for name, value in photo.items():
                 match name.partition("_"):
-                    case ["photo", _, size] if size and (url := _try_parse_url(value)):
+                    case ["photo", _, size] if size and (url := try_parse_url(value)):
                         yield int(size), full_res_img(url)
                     case _:
                         pass
@@ -244,14 +244,9 @@ class CatalogSection(APIObject):
     videos: list[dict[str, Any]]
 
 
-def _try_parse_url(value: object):
-    if value and type(value) is str and value.startswith(("//", "http")):
-        return parse_url(value)
-
-
 def _extract_formats(data: dict[str, Any]) -> Generator[Format]:
     for name, value in data.get("files", {}).items():
-        if url := _try_parse_url(value):
+        if url := try_parse_url(value):
             match name.partition("_"):
                 case ["mp4", _, res]:
                     yield Format(name=name, url=url, height=int(res))

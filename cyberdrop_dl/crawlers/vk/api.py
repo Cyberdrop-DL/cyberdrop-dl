@@ -12,7 +12,7 @@ from typing_extensions import deprecated
 from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
-from cyberdrop_dl.crawlers.vk import full_res_img
+from cyberdrop_dl.crawlers.vk import full_res_img, try_parse_url
 from cyberdrop_dl.crawlers.vk.types import (
     Audio,
     AudioPlaylist,
@@ -66,6 +66,7 @@ class VKAPI(API):
         self.owner_by_id = async_lru_cache(self._owner_by_id)
         self.legacy: VKLegacy = VKLegacy(self)
         self.catalog: VKCatalog = VKCatalog(self)
+        self.audio: VKAudio = VKAudio(self)
 
     @override
     @contextlib.asynccontextmanager
@@ -188,44 +189,6 @@ class VKAPI(API):
 
             data["offset"] = offset
 
-    async def get_audio(self, owner_id: str, audio_id: str, *, access_key: str | None = None) -> Audio:
-        audios = await self.get_audios(_entity_id(owner_id, audio_id, access_key))
-        if not audios:
-            raise ScrapeError(404)
-        return audios[0]
-
-    async def get_audios(self, *entity_ids: str) -> list[Audio]:
-        assert entity_ids
-        resp = await self.method(
-            "audio.getById",
-            {
-                "audios": ",".join(entity_ids),
-                "photo_sizes": 1,
-            },
-        )
-        return list(map(Audio.parse, resp))
-
-    async def get_playlist(self, owner_id: str, playlist_id: str, *, access_key: str | None = None) -> AudioPlaylist:
-        data = {"playlist_id": playlist_id, "owner_id": owner_id}
-        if access_key:
-            data["access_key"] = access_key
-        resp = await self.method("audio.getPlaylistById", data)
-        if not resp:
-            raise ScrapeError(404)
-        return AudioPlaylist.parse(resp)
-
-    async def get_playlist_audio_ids(
-        self, owner_id: str | int, playlist_id: str | int, access_key: str | None = None
-    ) -> list[str]:
-        resp = await self.method(
-            "audio.getIdsBySource",
-            {
-                "source": "playlist",
-                "entity_id": _entity_id(owner_id, playlist_id, access_key),
-            },
-        )
-        return [a["audio_id"] for a in resp["audios"]]
-
     async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         resp = await self.method("video.get", {"videos": _entity_id(owner_id, video_id, access_key)})
         items = resp.get("items")
@@ -278,6 +241,44 @@ class VKAPI(API):
         if not items:
             raise ScrapeError(404)
         return Photo.parse(items[0])
+
+
+class VKAudio(API.Endpoint[VKAPI]):
+    async def get(self, owner_id: str, audio_id: str, *, access_key: str | None = None) -> Audio:
+        audios = await self.get_by_entity(_entity_id(owner_id, audio_id, access_key))
+        if not audios:
+            raise ScrapeError(404)
+        return audios[0]
+
+    async def get_by_entity(self, *entity_ids: str) -> list[Audio]:
+        assert entity_ids
+        resp = await self.api.method(
+            "audio.getById",
+            {
+                "audios": ",".join(entity_ids),
+                "photo_sizes": 1,
+            },
+        )
+        return list(map(Audio.parse, resp))
+
+    async def get_playlist(self, owner_id: str, playlist_id: str, *, access_key: str | None = None) -> AudioPlaylist:
+        data = {"playlist_id": playlist_id, "owner_id": owner_id}
+        if access_key:
+            data["access_key"] = access_key
+        resp = await self.api.method("audio.getPlaylistById", data)
+        if not resp:
+            raise ScrapeError(404)
+        return AudioPlaylist.parse(resp)
+
+    async def get_ids(self, owner_id: str | int, playlist_id: str | int, access_key: str | None = None) -> list[str]:
+        resp = await self.api.method(
+            "audio.getIdsBySource",
+            {
+                "source": "playlist",
+                "entity_id": _entity_id(owner_id, playlist_id, access_key),
+            },
+        )
+        return [a["audio_id"] for a in resp["audios"]]
 
 
 class VKCatalog(API.Endpoint[VKAPI]):
@@ -411,19 +412,15 @@ def _parse_video_legacy(payload: list[Any], owner_id: str, video_id: str) -> Vid
 
 def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
     for name, value in data.items():
-        if not value or type(value) is not str or not value.startswith(("//", "http")):
-            continue
+        if url := try_parse_url(value):
+            if name.startswith("hls") and name != "hls_live_playback":
+                yield Format(name, url, hls=True)
 
-        url = parse_url(value)
+            elif name in {"extra_data", "live_mp4", "postlive_mp4"}:
+                yield Format(name, url)
 
-        if name.startswith("hls") and name != "hls_live_playback":
-            yield Format(name, url, hls=True)
-
-        elif name in {"extra_data", "live_mp4", "postlive_mp4"}:
-            yield Format(name, url)
-
-        elif m := re.search(r"^(?:url|cache)(\d+)", name):
-            yield Format(name, url, height=int(m.group(1)))
+            elif m := re.search(r"^(?:url|cache)(\d+)", name):
+                yield Format(name, url, height=int(m.group(1)))
 
 
 def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
