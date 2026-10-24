@@ -70,6 +70,52 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://vk.com/audio452564293_456239044",
+        "results": [
+            {
+                "url": "https://vk.com/audio452564293_456239044",
+                "filename": "87 - Алэ [audio452564293_456239044].mp3",
+                "debrid_url": "NOT_NONE",
+                "original_filename": "87 - А'лэ",
+                "referer": "https://vk.com/audio452564293_456239044",
+                "album_id": None,
+                "uploaded_at": 1513873352,
+                "download_folder": "re:Audio-Perevod Korana (VK)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
+    {
+        "url": "https://vk.ru/audio_playlist452564293_1?list=22f16a3e66859f4a35",
+        "description": "115 tracks (+ cover image) but 26 are not available",
+        "results": [
+            {
+                "url": "re:vkuserphoto.ru/impg/c855432/v855432627/51dad/K3YspeS4iNk.jpg",
+                "filename": "K3YspeS4iNk.jpg",
+                "debrid_url": None,
+                "original_filename": "K3YspeS4iNk.jpg",
+                "referer": "https://vk.ru/audio_playlist452564293_1?list=22f16a3e66859f4a35",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Audio-Perevod Korana (VK)/ПЕРЕВОД КОРАНА НА РУССКОМ [playlist]",
+                "thumbnail": None,
+            },
+            {
+                "url": "https://vk.com/audio452564293_456239124",
+                "filename": "8 - Анфаль [audio452564293_456239124].mp3",
+                "debrid_url": "NOT_NONE",
+                "original_filename": "8 - Анфаль",
+                "referer": "https://vk.com/audio452564293_456239124",
+                "album_id": None,
+                "uploaded_at": 1513875426,
+                "download_folder": "re:Audio-Perevod Korana (VK)/ПЕРЕВОД КОРАНА НА РУССКОМ [playlist]",
+                "thumbnail": None,
+            },
+        ],
+        "count": 90,
+    },
+    {
         "url": "https://vk.ru/wall-165740836_83446",
         "results": [
             {

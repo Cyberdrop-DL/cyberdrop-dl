@@ -478,8 +478,8 @@ class VKCrawler(VKBaseCrawler):
 
     @error_handling_wrapper
     async def _audio_playlist(self, scrape_item: ScrapeItem, play: AudioPlaylist) -> None:
-        title = self.create_title(play.title, play.slug, force_album_id=not play.title)
-        scrape_item.append_folders(f"{title} [playlist]")
+        title = self.create_title(f"{play.title or play.slug} [playlist]", play.slug)
+        scrape_item.append_folders(title)
 
         async with self.new_task_group() as tg:
             tg.create_task(self.write_metadata(scrape_item, play.web_path, play))
