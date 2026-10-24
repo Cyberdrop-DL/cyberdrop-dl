@@ -138,12 +138,12 @@ class PatreonCrawler(Crawler):
         seen_media_ids: set[str] = {m.id for m in unique_medias}
         sleep = aio.periodic_sleep(10)
 
-        async def dispatch_embed(link: str) -> None:
+        async def dispatch_url(link: str, *, embed: bool) -> None:
             url = self.parse_url(link)
             if url not in seen_urls:
                 new_item = scrape_item.create_child(url)
                 seen_urls.add(new_item.url)
-                self.handle_embed(new_item)
+                self.handle_external_links(new_item, reset=not embed)
                 scrape_item.add_children()
                 await sleep()
 
@@ -155,16 +155,16 @@ class PatreonCrawler(Crawler):
 
             if embed := post.get("embed"):
                 self.log.debug("Found embed in post %s: %s", post["id"], embed)
-                self.create_eager_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
-                await dispatch_embed(embed["url"])
+                tg.create_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
+                await dispatch_url(embed["url"], embed=True)
 
-            for elem in _extract_media_from_json_tiptap(post):
+            for elem in _extract_json_tiptap_embeds(post):
                 attrs = elem["attrs"]
                 media_id: str = attrs.get("media_id")
                 match media_type := elem["type"]:
                     case "link" if href := attrs.get("href"):
                         self.log.debug("Found embeded TIPTAP url in post %s: %s", post["id"], href)
-                        await dispatch_embed(href)
+                        await dispatch_url(href, embed=False)
                     case "audio" | "video" | "image" if media_id and media_id not in seen_media_ids:
                         seen_media_ids.add(media_id)
                         self.log.debug("Found embeded TIPTAP media (%s) in post %s: %s", media_type, post["id"], elem)
@@ -177,7 +177,8 @@ class PatreonCrawler(Crawler):
 
     @error_handling_wrapper
     async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
-        raise NotImplementedError
+        media = await self.api.media(media_id)
+        await self._media(scrape_item, media)
 
     @error_handling_wrapper
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
@@ -260,6 +261,15 @@ class PatreonV1API(API):
         url = (self.ENTRYPOINT / "posts" / post_id).with_query(_API_PARAMS)
         return await self.request_json(url)
 
+    async def media(self, media_id: str) -> Media:
+        url = (self.ENTRYPOINT / "media" / media_id).with_query(_API_PARAMS)
+        resp = await self.request_json(url)
+        attrs = resp["data"]["attributes"]
+        if not (url := attrs.get("download_url")):
+            raise ScrapeError(403, f"No download URL found for {media_id}")
+
+        return Media(media_id, attrs.get("file_name"), self.parse_url(url), attrs)
+
     async def campaign_id(self, creator: str) -> str:
         async with self.request(self.PRIMARY_URL / creator, impersonate=True) as resp:
             soup = await resp.soup()
@@ -337,7 +347,7 @@ def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
         yield name, value
 
 
-def _extract_media_from_json_tiptap(post: Post) -> Generator[dict[str, Any]]:
+def _extract_json_tiptap_embeds(post: Post) -> Generator[dict[str, Any]]:
     for name, value in post.items():
         if value and name.endswith("_json_string"):
             for _, elem in traversal.traverse(value, _tiptap_media_visitor):
