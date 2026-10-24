@@ -116,6 +116,24 @@ TEST_CASES = [
         "count": 90,
     },
     {
+        "url": "https://m.vk.ru/photo-143305139_457245182?list=wall-143305139_11133",
+        "description": "403 forbidden without <list> param",
+        "results": [
+            {
+                "url": "https://m.vk.ru/photo-143305139_457245182?list=wall-143305139_11133",
+                "filename": "photo-143305139_457245182 [w].jpg",
+                "debrid_url": "NOT_NONE",
+                "original_filename": "AFxC0mg2RFaJNkKI-2SZI0MRJh7j3LPA3IxwyR3NWjv7c-ORpcoUAqPIRM-q1agdATTZAQDhKWosNajAOieOQG5O.jpg",
+                "referer": "https://vk.ru/photo-143305139_457245182?list=wall-143305139_11133",
+                "album_id": None,
+                "uploaded_at": 1644616072,
+                "download_folder": "re:◈Сансей - Zuomerika (VK)",
+                "thumbnail": None,
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://vk.ru/wall-165740836_83446",
         "results": [
             {

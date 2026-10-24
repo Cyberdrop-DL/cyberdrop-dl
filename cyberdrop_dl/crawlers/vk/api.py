@@ -346,11 +346,11 @@ class VKLegacy(API.Endpoint[VKAPI]):
         payload = await self.request_payload("al_video.php", data)
         return await asyncio.to_thread(_parse_video_legacy, payload, owner_id, video_id)
 
-    async def get_photo(self, owner_id: str, photo_id: str) -> Photo:
+    async def get_photo(self, owner_id: str, photo_id: str, *, list: str | None = None) -> Photo:  # noqa: A002
         data = {
             "act": "show",
             "photo": f"{owner_id}_{photo_id}",
-            "list": owner_id,
+            "list": list or owner_id,
             "al": 1,
         }
 

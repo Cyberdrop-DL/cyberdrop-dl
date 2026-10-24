@@ -92,6 +92,7 @@ class VKBaseCrawler(Crawler, is_abc=True):
     }
     DOMAIN: ClassVar[str] = "vk"
     FOLDER_DOMAIN: ClassVar[str] = "VK"
+    DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id}"
 
     def __post_init__(self) -> None:
         for host in self.SUPPORTED_DOMAINS:
@@ -143,7 +144,7 @@ class VKVideoCrawler(VKBaseCrawler):
     @override
     def __db_path__(url: AbsoluteHttpURL, /) -> str:
         url = url.without_query_params("tkn")
-        if url.parts[1].startswith(("video", "clip")):
+        if url.parts[1].startswith(("video", "clip", "photo")):
             url = remove_query_params(url, keep=("list",))
         return url.path_qs
 
@@ -271,7 +272,7 @@ class VKCrawler(VKBaseCrawler):
     }
 
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
-    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("vk.cc",)
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("vk.cc", "m.vk.ru", "m.vk.com", "mkv.com")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         url = scrape_item.url
@@ -293,7 +294,7 @@ class VKCrawler(VKBaseCrawler):
                 case _:
                     raise ValueError
 
-    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:  # noqa: C901
+    async def _match_page(self, scrape_item: ScrapeItem, page: tuple[str | None, ...]) -> None:  # noqa: C901, PLR0912
         match page:
             case ["albums" | "photos", str(owner_id), None]:
                 await self.photos(scrape_item, owner_id)
@@ -303,6 +304,8 @@ class VKCrawler(VKBaseCrawler):
                 await self.photo(scrape_item, owner_id, photo_id)
             case ["audio", str(owner_id), str(audio_id)]:
                 await self.audio(scrape_item, owner_id, audio_id)
+            case ["doc", str(owner_id), str(doc_id)]:
+                await self.doc(scrape_item, owner_id, doc_id)
             case ["audio_playlist", str(owner_id), str(playlist_id)]:
                 await self.audio_playlist(scrape_item, owner_id, playlist_id)
             case ["id", str(owner_id), None]:
@@ -329,6 +332,10 @@ class VKCrawler(VKBaseCrawler):
         raise NotImplementedError
 
     @error_handling_wrapper
+    async def doc(self, scrape_item: ScrapeItem, owner_id: str, doc_id: str) -> None:
+        raise NotImplementedError
+
+    @error_handling_wrapper
     async def audio(self, scrape_item: ScrapeItem, owner_id: str, audio_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
@@ -345,7 +352,7 @@ class VKCrawler(VKBaseCrawler):
 
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        photo = await self.api.legacy.get_photo(owner_id, photo_id)
+        photo = await self.api.legacy.get_photo(owner_id, photo_id, list=scrape_item.url.query.get("list"))
         await self._photo(scrape_item, photo)
 
     @error_handling_wrapper
@@ -397,7 +404,7 @@ class VKCrawler(VKBaseCrawler):
 
     @error_handling_wrapper
     async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:  # noqa: C901
-        title = self.create_separate_post_title(None, str(post.id), post.date)
+        title = self.create_separate_post_title(None, str(post.slug), post.date)
         scrape_item.setup_as_post(title)
         async with self.new_task_group() as tg:
             sleep = aio.periodic_sleep(10)
