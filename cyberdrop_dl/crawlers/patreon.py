@@ -3,15 +3,16 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast
 
 from typing_extensions import ReadOnly
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, next_js
+from cyberdrop_dl.utils import css, extr_text, next_js, traversal
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -101,14 +102,14 @@ class PatreonCrawler(Crawler):
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
         post = await self.api.post(post_id)
-        self._post(
+        await self._post(
             scrape_item,
             post=_flatten_post(post["data"]),
             included=_flatten_included(post["included"]),
         )
 
     @error_handling_wrapper
-    def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]) -> None:
+    async def _post(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]) -> None:
         if not post["current_user_can_view"]:
             raise ScrapeError(402, "You do not have access to this post")
 
@@ -119,9 +120,10 @@ class PatreonCrawler(Crawler):
         scrape_item.uploaded_at = date = self.parse_iso_date(post["published_at"])
         post_title = self.create_separate_post_title(post["title"], post["id"], date)
         scrape_item.append_folders(post_title)
-
         self.create_eager_task(self.write_metadata(scrape_item, f"post_{post['id']}", post))
+        await self._post_media(scrape_item, post, included)
 
+    async def _post_media(self, scrape_item: ScrapeItem, post: Post, included: dict[str, Included]) -> None:
         medias = tuple(_parse_media(post, included))
         unique_medias = tuple(_unique_media(medias))
         self.log.debug(
@@ -132,17 +134,51 @@ class PatreonCrawler(Crawler):
             LazyLogMedia(medias),
         )
 
-        for media in unique_medias:
-            self.create_task(self._media(scrape_item, media))
-            self.create_eager_task(self.write_metadata(scrape_item, f"media_{media.id}", media))
-            scrape_item.add_children()
+        seen_urls: set[AbsoluteHttpURL] = set()
+        seen_media_ids: set[str] = {m.id for m in unique_medias}
 
-        if embed := post.get("embed"):
-            self.log.debug("Found embed in post %s: %s", post["id"], embed)
-            new_item = scrape_item.create_child(self.parse_url(embed["url"]))
-            self.handle_embed(new_item)
-            self.create_eager_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
-            scrape_item.add_children()
+        def dispatch_embed(link: str) -> None:
+            url = self.parse_url(link)
+            if url not in seen_urls:
+                new_item = scrape_item.create_child(url)
+                seen_urls.add(new_item.url)
+                self.handle_embed(new_item)
+                scrape_item.add_children()
+
+        sleep = aio.periodic_sleep(10)
+        async with self.new_task_group() as tg:
+            for media in unique_medias:
+                tg.create_task(self._media(scrape_item, media))
+                self.create_eager_task(self.write_metadata(scrape_item, f"media_{media.id}", media))
+                scrape_item.add_children()
+                await sleep()
+
+            if embed := post.get("embed"):
+                self.log.debug("Found embed in post %s: %s", post["id"], embed)
+                self.create_eager_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
+                dispatch_embed(embed["url"])
+
+            for elem in _extract_media_from_json_tiptap(post):
+                type_: str = elem["type"]
+                attrs = elem["attrs"]
+                match type_:
+                    case "audio" | "video" | "image":
+                        if (media_id := attrs["media_id"]) not in seen_media_ids:
+                            seen_media_ids.add(media_id)
+                            self.log.debug("Found TIPTAP media in post %s: %s", post["id"], elem)
+                            tg.create_task(self.media(scrape_item, media_id))
+                    case "link":
+                        self.log.debug("Found embeded TIPTAP url in post %s: %s", post["id"], attrs["href"])
+                        dispatch_embed(attrs["href"])
+                    case _:
+                        raise RuntimeError
+
+                scrape_item.add_children()
+                await sleep()
+
+    @error_handling_wrapper
+    async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
+        raise NotImplementedError
 
     @error_handling_wrapper
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
@@ -191,13 +227,16 @@ class PatreonCrawler(Crawler):
     @error_handling_wrapper
     async def campaign(self, scrape_item: ScrapeItem, campaign_id: str) -> None:
         scrape_item.setup_as_profile("")
-        async for resp in self.api.posts(campaign_id):
-            included = _flatten_included(resp["included"])
-            for post in resp["data"]:
-                post = _flatten_post(post)
-                new_item = scrape_item.create_child(self.parse_url(post["url"]))
-                self._post(new_item, post, included)
-                scrape_item.add_children()
+        sleep = aio.periodic_sleep(10)
+        async with self.new_task_group() as tg:
+            async for resp in self.api.posts(campaign_id):
+                included = _flatten_included(resp["included"])
+                for post in resp["data"]:
+                    post = _flatten_post(post)
+                    new_item = scrape_item.create_child(self.parse_url(post["url"]))
+                    tg.create_task(self._post(new_item, post, included))
+                    scrape_item.add_children()
+                    await sleep()
 
 
 class LazyLogMedia:
@@ -291,20 +330,18 @@ def _parse_post(post: dict[str, Any]) -> Generator[tuple[str, Any]]:
 
 
 def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
-    json_string = "_json_string"
-    json_keys = tuple(key for key in attributes if key.endswith(json_string))
-
-    for json_key in json_keys:
-        name = json_key.removesuffix(json_string)
-        value = attributes.pop(name, None)
-        json_value = attributes.pop(json_key, None)
-        # TODO: convert to html
-        if not value and json_value:
-            value = json.loads(json_value)
+    for name, value in attributes.items():
+        if name.endswith("_json_string"):
+            value = json.loads(value)
 
         yield name, value
 
-    yield from attributes.items()
+
+def _extract_media_from_json_tiptap(post: Post) -> Generator[dict[str, Any]]:
+    for name, value in post.items():
+        if name.endswith("_json_string"):
+            for _, elem in traversal.traverse(value, _tiptap_media_visitor):
+                yield elem
 
 
 def _flatten_post(post: dict[str, Any]) -> Post:
@@ -366,6 +403,28 @@ def _parse_media(post: Post, included: dict[str, Included]) -> Generator[Media]:
     # TODO: convert tiptap JSON to HTML or extract media ids from tiptap
 
 
+def _tiptap_media_visitor(_: object, obj: object) -> TypeGuard[dict[str, Any]]:
+    if not (type(obj) is dict and (t_type := obj.get("type"))):
+        return False
+
+    if t_type in {"audio", "link", "video", "image"}:
+        return True
+
+    if t_type not in {
+        "hardBreak",
+        "horizontalRule",
+        "listItem",
+        "bulletList",
+        "orderedList",
+        "blockquote",
+        "paragraph",
+        "text",
+    }:
+        PatreonCrawler.get_logger().warning("Unsupported TIPTAP element: %s", obj)
+
+    return False
+
+
 _API_PARAMS = (
     (
         "include",
@@ -402,23 +461,24 @@ _API_PARAMS = (
         "fields[post]",
         ",".join(
             (
-                "content",
                 "content_json_string",
+                "content",
                 "current_user_can_view",
                 "embed",
                 "image",
                 "is_paid",
                 "meta_image_url",
+                "moderation_status",
                 "post_file",
                 "post_metadata",
-                "published_at",
                 "post_type",
-                "thumbnail",
-                "thumbnail_url",
+                "published_at",
+                "teaser_text_json_string",
                 "teaser_text",
+                "thumbnail_url",
+                "thumbnail",
                 "title",
                 "url",
-                "moderation_status",
             )
         ),
     ),
