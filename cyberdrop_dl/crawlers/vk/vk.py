@@ -394,41 +394,44 @@ class VKCrawler(VKBaseCrawler):
         title = self.create_separate_post_title(None, str(post.id), post.date)
         scrape_item.setup_as_post(title)
         async with self.new_task_group() as tg:
+            sleep = aio.periodic_sleep(10)
             tg.create_task(self.write_metadata(scrape_item, f"wall{post.owner_id}_{post.id}", post))
             for attach in post.attachments:
-                match attach["type"]:
+                type_ = attach["type"]
+                data = attach[type_]
+                match type_:
                     case "photo":
-                        photo = Photo.parse(attach["photo"])
+                        photo = Photo.parse(data)
                         url = self.PRIMARY_URL / photo.web_path
                         tg.create_task(self._photo_task(scrape_item.create_child(url), photo))
 
                     case "video":
                         # These videos have no "files" details
-                        url = VKVideoCrawler.PRIMARY_URL / Video.parse(attach["video"]).web_path
+                        url = VKVideoCrawler.PRIMARY_URL / Video.parse(data).web_path
                         self.handle_external_links(scrape_item.create_child(url))
 
                     case "audio_playlist":
-                        play = AudioPlaylist.parse(attach["audio_playlist"])
+                        play = AudioPlaylist.parse(data)
                         url = self.PRIMARY_URL / play.web_path
                         tg.create_task(self._audio_playlist_task(scrape_item.create_child(url), play))
 
                     case "audio":
-                        audio = Audio.parse(attach["audio"])
+                        audio = Audio.parse(data)
                         url = self.PRIMARY_URL / audio.web_path
                         tg.create_task(self._audio_task(scrape_item.create_child(url), audio))
 
                     case "doc":
-                        _file = File.parse(attach["doc"])
+                        _file = File.parse(data)
 
                     case "graffiti":
-                        url = Graffiti.parse(attach["graffiti"]).best()
+                        url = Graffiti.parse(data).best()
                         tg.create_task(self.direct_file(scrape_item, url))
 
                     case "link":
-                        _link = Link.parse(attach["link"])
+                        _link = Link.parse(data)
 
                     case "album":
-                        _link = Album.parse(attach["album"])
+                        _link = Album.parse(data)
 
                     case "app" | "pool" | "page" | "market" | "market_album" | "sticker":
                         continue
@@ -438,6 +441,7 @@ class VKCrawler(VKBaseCrawler):
                         continue
 
                 scrape_item.add_children()
+                await sleep()
 
     async def _select_best_src(self, photo: Photo) -> PhotoSize:
         for option in sorted(photo.sources, key=PhotoSize.score, reverse=True)[:3]:
