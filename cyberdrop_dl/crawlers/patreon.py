@@ -136,42 +136,41 @@ class PatreonCrawler(Crawler):
 
         seen_urls: set[AbsoluteHttpURL] = set()
         seen_media_ids: set[str] = {m.id for m in unique_medias}
+        sleep = aio.periodic_sleep(10)
 
-        def dispatch_embed(link: str) -> None:
+        async def dispatch_embed(link: str) -> None:
             url = self.parse_url(link)
             if url not in seen_urls:
                 new_item = scrape_item.create_child(url)
                 seen_urls.add(new_item.url)
                 self.handle_embed(new_item)
                 scrape_item.add_children()
+                await sleep()
 
-        sleep = aio.periodic_sleep(10)
         async with self.new_task_group() as tg:
             for media in unique_medias:
                 tg.create_task(self._media(scrape_item, media))
-                self.create_eager_task(self.write_metadata(scrape_item, f"media_{media.id}", media))
                 scrape_item.add_children()
                 await sleep()
 
             if embed := post.get("embed"):
                 self.log.debug("Found embed in post %s: %s", post["id"], embed)
                 self.create_eager_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
-                dispatch_embed(embed["url"])
+                await dispatch_embed(embed["url"])
 
             for elem in _extract_media_from_json_tiptap(post):
-                type_: str = elem["type"]
                 attrs = elem["attrs"]
-                match type_:
-                    case "audio" | "video" | "image":
-                        if (media_id := attrs["media_id"]) not in seen_media_ids:
-                            seen_media_ids.add(media_id)
-                            self.log.debug("Found TIPTAP media in post %s: %s", post["id"], elem)
-                            tg.create_task(self.media(scrape_item, media_id))
-                    case "link":
-                        self.log.debug("Found embeded TIPTAP url in post %s: %s", post["id"], attrs["href"])
-                        dispatch_embed(attrs["href"])
+                media_id: str = attrs.get("media_id")
+                match media_type := elem["type"]:
+                    case "link" if href := attrs.get("href"):
+                        self.log.debug("Found embeded TIPTAP url in post %s: %s", post["id"], href)
+                        await dispatch_embed(href)
+                    case "audio" | "video" | "image" if media_id and media_id not in seen_media_ids:
+                        seen_media_ids.add(media_id)
+                        self.log.debug("Found embeded TIPTAP media (%s) in post %s: %s", media_type, post["id"], elem)
+                        tg.create_task(self.media(scrape_item, media_id))
                     case _:
-                        raise RuntimeError
+                        continue
 
                 scrape_item.add_children()
                 await sleep()
@@ -182,6 +181,7 @@ class PatreonCrawler(Crawler):
 
     @error_handling_wrapper
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
+        self.create_eager_task(self.write_metadata(scrape_item, f"media_{media.id}", media))
         if media.url.suffix == ".m3u8":
             return await self._m3u8_media(scrape_item, media)
 
@@ -331,7 +331,7 @@ def _parse_post(post: dict[str, Any]) -> Generator[tuple[str, Any]]:
 
 def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
     for name, value in attributes.items():
-        if name.endswith("_json_string"):
+        if value and name.endswith("_json_string"):
             value = json.loads(value)
 
         yield name, value
@@ -339,7 +339,7 @@ def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
 
 def _extract_media_from_json_tiptap(post: Post) -> Generator[dict[str, Any]]:
     for name, value in post.items():
-        if name.endswith("_json_string"):
+        if value and name.endswith("_json_string"):
             for _, elem in traversal.traverse(value, _tiptap_media_visitor):
                 yield elem
 
@@ -400,15 +400,13 @@ def _parse_media(post: Post, included: dict[str, Included]) -> Generator[Media]:
         if m_hash := _md5_from_url(url):
             yield Media(m_hash, None, url, image)
 
-    # TODO: convert tiptap JSON to HTML or extract media ids from tiptap
-
 
 def _tiptap_media_visitor(_: object, obj: object) -> TypeGuard[dict[str, Any]]:
     if not (type(obj) is dict and (t_type := obj.get("type"))):
         return False
 
     if t_type in {"audio", "link", "video", "image"}:
-        return True
+        return bool(obj.get("attrs"))
 
     if t_type not in {
         "hardBreak",
