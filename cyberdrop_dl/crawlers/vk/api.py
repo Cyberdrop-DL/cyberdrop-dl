@@ -186,6 +186,7 @@ class VKAPI(API):
                 break
 
             data["offset"] = offset
+            resp = await self.method("wall.get", data)
 
     async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
         resp = await self.method("video.get", {"videos": _entity_id(owner_id, video_id, access_key)})
@@ -227,18 +228,6 @@ class VKAPI(API):
                 return Photo.parse(items[0])
 
         raise ScrapeError(404)
-
-    async def get_photo_auth(self, owner_id: str, photo_id: str) -> Photo:
-        # NOT supported with anonymous token
-        data = {
-            "photos": f"{owner_id}_{photo_id}",
-            "photo_sizes": 1,
-        }
-        resp = await self.method("photos.getById", data)
-        items = resp.get("items")
-        if not items:
-            raise ScrapeError(404)
-        return Photo.parse(items[0])
 
 
 class VKAudio(API.Endpoint[VKAPI]):
@@ -367,11 +356,11 @@ class VKLegacy(API.Endpoint[VKAPI]):
             "offset": offset,
         }
 
+        payload = await self.request_payload("al_photos.php", data)
+        total = payload[1]
         seen: set[int] = set()
         while True:
-            payload = await self.request_payload("al_photos.php", data)
-            total, photos = payload[1], payload[3]
-            offset += len(photos)
+            offset += len(photos := payload[3])
             found_new_photos: bool = False
             for photo in map(_parse_photo_legacy, photos):
                 if photo.id not in seen:
@@ -383,6 +372,7 @@ class VKLegacy(API.Endpoint[VKAPI]):
                 break
 
             data["offset"] = offset
+            payload = await self.request_payload("al_photos.php", data)
 
 
 def _parse_video_legacy(payload: list[Any], owner_id: str, video_id: str) -> Video:

@@ -35,8 +35,8 @@ if TYPE_CHECKING:
 _PAGES_TYPES = (
     "album",
     "albums",
-    "audio",
     "audio_playlist",
+    "audio",
     "audios",
     "clip",
     "club",
@@ -50,7 +50,6 @@ _PAGES_TYPES = (
     "product",
     "public",
     "topic",
-    "uslugi",
     "video",
     "videos",
     "wall",
@@ -63,17 +62,17 @@ INNER_PAGES = {
     "away.php",
     "blog",
     "clips",
+    "feed",
     "games",
     "groups",
-    "feed",
     "jobs",
     "join",
     "legal",
     "login",
     "mobile",
     "products",
-    "technology",
     "services",
+    "technology",
     "terms",
     "video",
 }
@@ -305,13 +304,13 @@ class VKCrawler(VKBaseCrawler):
                     await self.wall(scrape_item, owner_id)
                 else:
                     await self.album(scrape_item, owner_id, album_id)
-            case [str(kind), str(owner_id), str(post_id)] if fn := {
+            case [str(kind), str(owner_id), str(item_id)] if fn := {
                 "photo": self.photo,
                 "audio": self.audio,
                 "audio_playlist": self.audio_playlist,
                 "wall": self.post,
             }.get(kind):
-                await fn(scrape_item, owner_id, post_id)
+                await fn(scrape_item, owner_id, item_id)
             case _:
                 raise ValueError
 
