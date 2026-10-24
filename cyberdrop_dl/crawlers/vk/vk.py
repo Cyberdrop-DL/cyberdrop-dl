@@ -381,7 +381,7 @@ class VKCrawler(VKBaseCrawler):
 
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
         async with self.new_task_group() as tg:
-            async for post in self.api.get_wall(owner_id):
+            async for post in self.api.get_wall(owner_id, filter_=self.config.crawlers.vk.wall_filter):
                 url = self.PRIMARY_URL / f"wall{post.owner_id}_{post.id}"
                 tg.create_task(self._post_task(scrape_item.create_child(url), post))
                 scrape_item.add_children()

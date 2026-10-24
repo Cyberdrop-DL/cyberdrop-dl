@@ -87,6 +87,8 @@ crawlers:
     image_size: orig
     retweets: false
     threads: true
+  vk:
+    wall_filter: all
 deep_scrape: false
 delete_empty_folders: true
 delete_partial_files: false

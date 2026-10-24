@@ -217,14 +217,17 @@
         "pornhub": {
           "$ref": "#/$defs/PornHubConfig"
         },
+        "reddit": {
+          "$ref": "#/$defs/RedditConfig"
+        },
         "tiktok": {
           "$ref": "#/$defs/TikTokConfig"
         },
         "twitter": {
           "$ref": "#/$defs/TwitterConfig"
         },
-        "reddit": {
-          "$ref": "#/$defs/RedditConfig"
+        "vk": {
+          "$ref": "#/$defs/VKConfig"
         }
       },
       "title": "Crawlers",
@@ -1232,6 +1235,19 @@
         }
       },
       "title": "UIOptions",
+      "type": "object"
+    },
+    "VKConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "wall_filter": {
+          "default": "all",
+          "enum": ["all", "others", "owner"],
+          "title": "Wall Filter",
+          "type": "string"
+        }
+      },
+      "title": "VKConfig",
       "type": "object"
     },
     "_DurationLimit": {

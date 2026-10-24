@@ -15,6 +15,11 @@ class RedditConfig(ConfigModel):
     "Download any URL found inside the description (text) of a post"
 
 
+class VKConfig(ConfigModel):
+    wall_filter: Literal["all", "others", "owner"] = "all"
+    "Which posts to download while scraping an user's wall"
+
+
 class GoogleDriveFormats(ConfigModel):
     docs: Literal["docx", "odt", "rtf", "txt", "epub", "pdf", "md", "zip"] = "docx"
     "Default format for documents (can be overridden per URL with the 'format' query param)"
@@ -203,6 +208,7 @@ class Crawlers(ConfigGroup, name=None):
     only_haven: KemonoConfig = Field(default_factory=KemonoConfig)
     pawchive: KemonoConfig = Field(default_factory=KemonoConfig)
     pornhub: PornHubConfig = Field(default_factory=PornHubConfig)
+    reddit: RedditConfig = Field(default_factory=RedditConfig)
     tiktok: TikTokConfig = Field(default_factory=TikTokConfig)
     twitter: TwitterConfig = Field(default_factory=TwitterConfig)
-    reddit: RedditConfig = Field(default_factory=RedditConfig)
+    vk: VKConfig = Field(default_factory=VKConfig)
