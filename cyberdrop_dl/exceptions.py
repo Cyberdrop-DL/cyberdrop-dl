@@ -155,6 +155,13 @@ class DDOSGuardError(CDLBaseError):
         super().__init__(ui_failure, message=msg, origin=origin)
 
 
+class CloudflareBlockedError(DDOSGuardError):
+    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
+        """This error will be thrown when Cloudflare refuses a request outright (ex: IP banned)."""
+        super().__init__(message or "Cloudflare blocked the request", origin=origin)
+        self.ui_failure = "Cloudflare Blocked"
+
+
 class DownloadError(CDLBaseError):
     def __init__(
         self,

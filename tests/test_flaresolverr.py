@@ -11,9 +11,11 @@ from cyberdrop_dl.clients.flaresolverr import (
     Config,
     Request,
     RequestCommand,
+    Response,
     _cmd_from_http_method,
     _default_session_name,
 )
+from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
@@ -174,3 +176,36 @@ def test_request_build(
     assert req.command is expected.command
     assert req.payload == expected.payload
     assert req.aiohttp_params == expected.aiohttp_params
+
+
+_CF_BLOCKED = (
+    "Error: Error solving the challenge. Cloudflare has blocked this request. "
+    "Probably your IP is banned for this site, check in your web browser."
+)
+
+
+@pytest.mark.parametrize(
+    ("message", "expected_error", "disabled"),
+    [
+        (_CF_BLOCKED, CloudflareBlockedError, False),
+        ("Error: Error solving the challenge. Timeout after 60.0 seconds.", FlaresolverrError, True),
+    ],
+)
+async def test_request_error_response(
+    monkeypatch: pytest.MonkeyPatch, message: str, expected_error: type[Exception], *, disabled: bool
+) -> None:
+    async def fake_request(*_, **__) -> Response:
+        return Response.parse(1, {"status": "error", "message": message})
+
+    async with aiohttp.ClientSession() as session:
+        client = Client(session, _config(proxy=False, use_session=False))
+        monkeypatch.setattr(client, "_request", fake_request)
+        with pytest.raises(expected_error):
+            await client.request(AbsoluteHttpURL("https://example.com"))
+
+    assert client.is_down is disabled
+
+
+def test_cloudflare_blocked_is_ddos_guard_error() -> None:
+    assert issubclass(CloudflareBlockedError, DDOSGuardError)
+    assert CloudflareBlockedError().ui_failure == "Cloudflare Blocked"

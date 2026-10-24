@@ -15,7 +15,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 
 from cyberdrop_dl import ddos_guard
 from cyberdrop_dl.clients import HttpMethod, get_logger
-from cyberdrop_dl.exceptions import DDOSGuardError, FlaresolverrError
+from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import simple_repr
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -29,6 +29,7 @@ logger = get_logger(__name__)
 USER_AGENT: ContextVar[str] = ContextVar("USER_AGENT")
 
 MAX_TIMEOUT = 60_000
+_CF_BLOCKED_MSG = "Cloudflare has blocked this request"
 
 
 class Command(StrEnum):
@@ -206,6 +207,8 @@ class Client:
         except aiohttp.ClientError as e:
             self.disable()
             self.raise_conn_error(e)
+        except CloudflareBlockedError:
+            raise
         except Exception:
             self.disable()
             raise
@@ -259,6 +262,8 @@ class Client:
             req = build_request(url, self.config, params, self.session)
             resp = await self._request(req.command, req.payload, **req.aiohttp_params)
             if not resp.ok:
+                if _CF_BLOCKED_MSG in resp.message:
+                    raise CloudflareBlockedError(resp.message)
                 raise FlaresolverrError(f"Failed to resolve URL with Flaresolverr. {resp.message}")
 
             if not resp.solution:
