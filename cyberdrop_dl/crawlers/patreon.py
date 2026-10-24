@@ -66,12 +66,6 @@ class Post(Included):
     url: str
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class TipTapMedia:
-    links: list[str]
-    assets: list[Included]
-
-
 class PatreonCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": (
@@ -166,16 +160,16 @@ class PatreonCrawler(Crawler):
                 tg.create_task(self.write_metadata(scrape_item, f"embed_{post['id']}", embed))
                 await dispatch_url(embed["url"], embed=True)
 
-            tiptap = _extract_json_tiptap_media(post)
-            if not tiptap:
+            links, assets = _extract_json_tiptap_media(post)
+            if not (links or assets):
                 return
 
-            self.log.debug("Found embeded TIPTAP media in post %s: %s", post["id"], tiptap)
+            self.log.debug("Found embeded TIPTAP media in post %s: %s", post["id"], {"links": links, "assets": assets})
 
-            for url in tiptap.links:
+            for url in links:
                 await dispatch_url(url, embed=False)
 
-            for asset in tiptap.assets:
+            for asset in assets:
                 if asset["id"] not in seen_media_ids:
                     seen_media_ids.add(asset["id"])
                     tg.create_task(self.media(scrape_item, asset["id"]))
@@ -354,7 +348,7 @@ def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
         yield name, value
 
 
-def _extract_json_tiptap_media(post: Post) -> TipTapMedia | None:
+def _extract_json_tiptap_media(post: Post) -> tuple[list[str], list[Included]]:
     links: list[str] = []
     assets: list[Included] = []
     for name, value in post.items():
@@ -369,9 +363,7 @@ def _extract_json_tiptap_media(post: Post) -> TipTapMedia | None:
                     case _:
                         continue
 
-    if not (links or assets):
-        return None
-    return TipTapMedia(links, assets)
+    return links, assets
 
 
 def _flatten_post(post: dict[str, Any]) -> Post:
