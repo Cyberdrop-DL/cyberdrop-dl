@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.12.0
+cyberdrop-dl v10.13.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.12.0
+cyberdrop-dl v10.13.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -254,6 +254,11 @@ Download URLs
 │   STR...                             homepage                                                    │
 │                                      [default: ('photos/public', 'gifs/public', 'videos',        │
 │                                      'videos/upload')]                                           │
+│ --crawlers.reddit.api CHOICE         [choices: arctic_shift]                                     │
+│                                      [default: arctic_shift]                                     │
+│ --crawlers.reddit.content-urls       Download any URL found inside the description (text) of a   │
+│   --crawlers.reddit.no-content-urls  post                                                        │
+│                                      [default: True]                                             │
 │ --crawlers.tiktok.original           Download videos in original quality (slower)                │
 │   --crawlers.tiktok.no-original      [default: False]                                            │
 │ --crawlers.twitter.cards             Parse and download cards in a post (embeds from third-party │
@@ -275,11 +280,9 @@ Download URLs
 │   --crawlers.twitter.no-retweets     [default: False]                                            │
 │ --crawlers.twitter.image-size        [choices: orig, 4096x4096, large, medium, small, thumb]     │
 │   CHOICE                             [default: orig]                                             │
-│ --crawlers.reddit.api CHOICE         [choices: arctic_shift]                                     │
-│                                      [default: arctic_shift]                                     │
-│ --crawlers.reddit.content-urls       Download any URL found inside the description (text) of a   │
-│   --crawlers.reddit.no-content-urls  post                                                        │
-│                                      [default: True]                                             │
+│ --crawlers.vk.wall-filter CHOICE     Which posts to download while scraping an user's wall       │
+│                                      [choices: all, others, owner]                               │
+│                                      [default: all]                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Downloads ──────────────────────────────────────────────────────────────────────────────────────╮
 │ --downloads INT                     Max number of files to download simultaneously               │
