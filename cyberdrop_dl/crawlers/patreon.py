@@ -146,7 +146,7 @@ class PatreonCrawler(Crawler):
 
         async def dispatch_url(link: str, *, embed: bool) -> None:
             url = self.parse_url(link)
-            if url in seen_urls:
+            if url in seen_urls or url.host == self.PRIMARY_URL.host:
                 return
 
             new_item = scrape_item.create_child(url)
