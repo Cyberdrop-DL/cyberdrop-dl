@@ -352,7 +352,7 @@ class VKCrawler(VKBaseCrawler):
 
         owner = await self.api.resolve_owner(owner_id)
         scrape_item.setup_as_profile(self.create_title(owner.full_name))
-        photo = await self.api.legacy.get_photo(owner_id, photo_id, list=scrape_item.url.query.get("list"))
+        photo = await self.api.legacy.get_photo(owner_id, photo_id, list_id=scrape_item.url.query.get("list"))
         await self._photo(scrape_item, photo)
 
     @error_handling_wrapper
@@ -509,7 +509,7 @@ class VKCrawler(VKBaseCrawler):
 
             sleep = aio.periodic_sleep(10)
             for entities in itertools.batched(audio_ids, 50):
-                for audio in await self.api.audio.get_by_entity(*entities):
+                for audio in await self.api.audio.get_many(*entities):
                     new_item = scrape_item.create_child(self.PRIMARY_URL / audio.web_path)
                     tg.create_task(self._audio_task(new_item, audio))
                     scrape_item.add_children()

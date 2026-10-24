@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
 
 def _entity_id(owner_id: str | int, item_id: str | int, access_key: str | int | None = None) -> str:
-    # Access key is for private videos
     entity = f"{owner_id}_{item_id}"
     if access_key is not None:
         entity += f"_{access_key}"
@@ -58,9 +57,8 @@ class VKAPI(API):
     APP_ID: ClassVar[str] = "6287487"
     VERSION: ClassVar[str] = "5.289"
     CLIENT_ID: ClassVar[str] = "6287487"
-    VIDEO_ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.vkvideo.ru")
-    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://web.api.vk.ru")
     VK: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://vk.com")
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://web.api.vk.ru")
 
     def __post_init__(self) -> None:
         self.owner_by_id = async_lru_cache(self._owner_by_id)
@@ -212,7 +210,7 @@ class VKAPI(API):
 
             section = await self.catalog.get_section(section.id, section.next_from)
 
-    @deprecated("DO NOT USE. This endpoint works but all image src files are 404")
+    @deprecated("DO NOT USE. This endpoint works but all images sources return 404")
     async def get_photo(self, owner_id: str, photo_id: str, album_id: str | None = None) -> Photo:
         album_options = (album_id,) if album_id else ("profile", "wall")
         for aid in album_options:
@@ -245,12 +243,12 @@ class VKAPI(API):
 
 class VKAudio(API.Endpoint[VKAPI]):
     async def get(self, owner_id: str, audio_id: str, *, access_key: str | None = None) -> Audio:
-        audios = await self.get_by_entity(_entity_id(owner_id, audio_id, access_key))
+        audios = await self.get_many(_entity_id(owner_id, audio_id, access_key))
         if not audios:
             raise ScrapeError(404)
         return audios[0]
 
-    async def get_by_entity(self, *entity_ids: str) -> list[Audio]:
+    async def get_many(self, *entity_ids: str) -> list[Audio]:
         assert entity_ids
         resp = await self.api.method(
             "audio.getById",
@@ -334,23 +332,23 @@ class VKLegacy(API.Endpoint[VKAPI]):
             case _:
                 return payload
 
-    async def get_video(self, owner_id: str, video_id: str, *, access_key: str | None = None) -> Video:
+    async def get_video(self, owner_id: str, video_id: str, *, list_id: str | None = None) -> Video:
         data = {
             "act": "show",
             "video": f"{owner_id}_{video_id}",
             "al": 1,
         }
-        if access_key:
-            data["list"] = access_key
+        if list_id:
+            data["list"] = list_id
 
         payload = await self.request_payload("al_video.php", data)
         return await asyncio.to_thread(_parse_video_legacy, payload, owner_id, video_id)
 
-    async def get_photo(self, owner_id: str, photo_id: str, *, list: str | None = None) -> Photo:  # noqa: A002
+    async def get_photo(self, owner_id: str, photo_id: str, *, list_id: str | None = None) -> Photo:
         data = {
             "act": "show",
             "photo": f"{owner_id}_{photo_id}",
-            "list": list or owner_id,
+            "list": list_id or owner_id,
             "al": 1,
         }
 
