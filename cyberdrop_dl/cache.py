@@ -228,13 +228,9 @@ def async_lru_cache[T, R](fn: Callable[[T], Awaitable[R]]) -> LRUCachedAsyncFunc
 
     Only works with callables that take 1 single argument"""
 
-    acache = aio.async_defaultdict(fn)
-
-    @functools.wraps(fn)
-    def wrapper(val: T):
-        return acache.get(val)
-
-    wrapper.cache = acache.cache
+    cache: dict[T, R] = {}
+    wrapper = functools.wraps(fn)(aio.async_defaultdict(fn, cache).get)
+    wrapper.cache = cache  # pyright: ignore[reportAttributeAccessIssue]
     return cast("LRUCachedAsyncFunc[T, R]", wrapper)  # pyright: ignore[reportInvalidCast]
 
 
