@@ -68,24 +68,24 @@ def from_exception(exc: Exception, *, chain_traceback: bool = False) -> Tracebac
     return Traceback.from_exception(type(exc), exc, None if not chain_traceback else exc.__traceback__)
 
 
-def strip_tb_frames(tb: TracebackType | None) -> TracebackType | None:
+def strip_frames(tb: TracebackType | None) -> TracebackType | None:
     "Similar to pytest, hide anything with __tracebackhide__"
     if tb is None:
         return None
 
     for ns in (tb.tb_frame.f_locals, tb.tb_frame.f_globals):
         if ns.get("__tracebackhide__"):
-            return strip_tb_frames(tb.tb_next)
+            return strip_frames(tb.tb_next)
 
-    tb.tb_next = strip_tb_frames(tb.tb_next)
+    tb.tb_next = strip_frames(tb.tb_next)
     return tb
 
 
-def strip_tb_from_exc(exc: BaseException | None) -> None:
+def strip_frames_from_exc(exc: BaseException | None) -> None:
     if exc is None:
         return
 
-    exc.__traceback__ = strip_tb_frames(exc.__traceback__)
+    exc.__traceback__ = strip_frames(exc.__traceback__)
 
-    strip_tb_from_exc(exc.__cause__)
-    strip_tb_from_exc(exc.__context__)
+    strip_frames_from_exc(exc.__cause__)
+    strip_frames_from_exc(exc.__context__)
