@@ -5,12 +5,14 @@ from pathlib import Path
 import pytest
 
 from cyberdrop_dl import aio, scrape_mapper
+from cyberdrop_dl.config import Config
+from cyberdrop_dl.constants import USE_RETRY_PATH
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
 from cyberdrop_dl.database import Database, common, schema
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_source import _create_item_from_row
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
+from cyberdrop_dl.utils import enter_context, parse_url
 
 _MOCK_ROW = {
     "referer": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit",
@@ -72,27 +74,39 @@ def test_create_db_path(url: str, expected: str) -> None:
 
 
 class TestGetDownloadPath:
+    @staticmethod
+    def dl_path(item: ScrapeItem) -> Path:
+        return _prepare_download_path(item, "cyberdrop", Config())
+
     def test_loose_file(self, item: ScrapeItem) -> None:
         assert not item.folders
         assert not item.part_of_album
         assert item.path == Path()
-        download_path = _prepare_download_path(item, "cyberdrop")
-        assert download_path == Path("downloads/Loose Files (cyberdrop)")
+        assert self.dl_path(item) == Path("downloads/Loose Files (cyberdrop)")
 
     def test_loose_file_with_parent(self, item: ScrapeItem) -> None:
         item.append_folders("a/sub/folder")
-        download_path = _prepare_download_path(item, "cyberdrop")
-        assert download_path == Path("downloads/a-sub-folder/Loose Files (cyberdrop)")
+        assert self.dl_path(item) == Path("downloads/a-sub-folder/Loose Files (cyberdrop)")
 
     def test_album_file(self, item: ScrapeItem) -> None:
         item.append_folders("a/sub/folder")
         item.part_of_album = True
-        download_path = _prepare_download_path(item, "cyberdrop")
-        assert download_path == Path("downloads/a-sub-folder")
+        assert self.dl_path(item) == Path("downloads/a-sub-folder")
 
     def test_retry_path(self, item: ScrapeItem) -> None:
         item.append_folders("a/sub/folder")
         item.part_of_album = True
+        item.retry_info = retry = RetryInfo(
+            domain="example",
+            url_path="",
+            download_path=Path("/other_path/Loose Files (example)"),
+            download_filename="test_file",
+            referer=AbsoluteHttpURL("https://example.com"),
+        )
+        assert self.dl_path(item) == Path("downloads/a-sub-folder")
+
+        with enter_context(USE_RETRY_PATH, True):
+            assert self.dl_path(item) == retry.download_path
 
 
 async def test_database_creation(tmp_cwd: Path) -> None:
