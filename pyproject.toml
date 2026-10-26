@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.14.0dev0"
+version = "10.14.0dev1"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -26,13 +26,13 @@ dependencies = [
     "brotli >=1.2.1; implementation_name=='cpython' and sys_platform!='ios'",
     "certifi >=2026.10.23",
     "cffi == 2.1.1",
-    "curl-cffi ==0.16.3; implementation_name == 'cpython' ",
-    "cyclopts>=5.2.0",
+    "curl-cffi >=0.17.0,<0.18.0; implementation_name == 'cpython' ",
+    "cyclopts>=5.3.1,<6.0.0",
     "idna>=3.20",
     "imagesize >= 2.0.1",
     "m3u8 >=6.0.0",
     "markdown>=3.11.1",
-    "multidict>=7.2.0",
+    "multidict>=7.2.1",
     "propcache>=0.5.4",
     "psutil >=7.2.1; sys_platform != 'android'",
     "pycparser >= 3.12.0",
@@ -46,7 +46,7 @@ dependencies = [
     "soupsieve >=3.0.4",
     "typing-extensions>=4.16.0",
     "wassima>=2.1.5",
-    "wcwidth>=0.9.3",
+    "wcwidth>=0.9.4",
     "xxhash >=4.0.2"
 ]
 description = "Bulk downloader for multiple file hosts"
@@ -59,7 +59,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 apprise = [
-    "apprise >=2.0.1,<3.0.0",
+    "apprise >=2.1.0,<3.0.0",
     "click ==8.5.0",
     "oauthlib>=4.0.0",
     "urllib3>=2.8.0",  # Transient dep with CVE
@@ -87,7 +87,7 @@ requires = ["uv_build>=0.13.5,<0.14.0"]
 [dependency-groups]
 dev = [
     "prek>=0.5.7",
-    "pytest-asyncio>=1.4.0",
+    "pytest-asyncio>=1.4.1",
     "pytest>=9.1.1",
     "ruff>=0.17.2,<0.18.0"
 ]
