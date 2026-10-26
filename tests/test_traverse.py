@@ -79,7 +79,7 @@ def test_mixed_nested_structures() -> None:
             },
         ),
     ]
-    result = list(traverse(data, lambda _, value: type(value) is dict and value.get("name")))
+    result = list(traverse(data, lambda _, value: type(value) is dict and "name" in value))
     assert result == [
         (
             (3, "users", 0),
