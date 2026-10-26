@@ -37,7 +37,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, Scrap
 from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, parse_url, unique
 from cyberdrop_dl.utils._url import matches_any_host, remove_trailing_slash
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, frozen
-from cyberdrop_dl.utils.errors import OnExceptionCallback, async_error_handling_context
+from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -468,7 +468,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self.log.error(f"{msg}. Crawler has been disabled")
         self.disabled = True
 
-    catch_errors: Final = async_error_handling_context
+    catch_errors: Final = error_handling_context
 
     @final
     def was_scrapped_before(self, url: AbsoluteHttpURL) -> bool:

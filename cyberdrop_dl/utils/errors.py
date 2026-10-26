@@ -249,7 +249,7 @@ def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | ya
 
 
 @contextlib.contextmanager
-def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+def blocking_error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
     with _error_handling_context(self, item):
         try:
             with _combined_error_context():
@@ -260,9 +260,7 @@ def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yar
 
 
 @contextlib.asynccontextmanager
-async def async_error_handling_context(
-    self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL
-) -> AsyncGenerator[None]:
+async def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> AsyncGenerator[None]:
     with _error_handling_context(self, item):
         try:
             with _combined_error_context():
@@ -327,14 +325,14 @@ def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaI
 
         @functools.wraps(func)
         async def async_wrapper(self: HasManagerT, item: Origin, *args: P.args, **kwargs: P.kwargs) -> R:
-            async with async_error_handling_context(self, item):
+            async with error_handling_context(self, item):
                 return await func(self, item, *args, **kwargs)
 
         return _mark_as_safe(async_wrapper)
 
     @functools.wraps(func)
     def wrapper(self: HasManagerT, item: Origin, *args: P.args, **kwargs: P.kwargs) -> R:
-        with error_handling_context(self, item):
+        with blocking_error_handling_context(self, item):
             result = func(self, item, *args, **kwargs)
             assert not inspect.isawaitable(result)
             return result
