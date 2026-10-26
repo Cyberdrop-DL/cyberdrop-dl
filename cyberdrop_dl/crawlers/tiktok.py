@@ -38,6 +38,7 @@ class Post:
     music_info: MusicInfo
     play: str | None = None
     is_src_quality: bool = False
+    cover: str | None = None
     images: list[str] = dataclasses.field(default_factory=list)
 
     @property
@@ -114,7 +115,7 @@ class TikTokCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case [_, "video" | "photo" | "v" as kind, media_id]:
                 media_id = media_id.removesuffix(".html")
-                await self.media(scrape_item, kind, media_id)
+                await self.post(scrape_item, kind, media_id)
             case [profile] if profile.startswith("@"):
                 await self.profile(scrape_item, profile.removeprefix("@"))
             case _:
@@ -133,7 +134,7 @@ class TikTokCrawler(Crawler):
                 await sleep()
 
     @error_handling_wrapper
-    async def media(self, scrape_item: ScrapeItem, kind: str, media_id: str) -> None:
+    async def post(self, scrape_item: ScrapeItem, kind: str, media_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
@@ -210,10 +211,11 @@ class TikTokCrawler(Crawler):
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            name,
+            name + ext,
             ext,
             debrid_link=video_url,
             custom_filename=filename,
+            thumbnail=post.cover,
         )
 
     @override
@@ -235,31 +237,15 @@ def _check_json_resp(resp: dict[str, Any], _: Any) -> None:
 class TikWMAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tikwm.com/api")
 
-    async def _api_request(self, api_url: AbsoluteHttpURL) -> dict[str, Any]:
-        resp: dict[str, Any] = await self.request_json(api_url)
-        return resp["data"]
+    async def submit_task(self, media_id: str) -> str:
+        submit_url = (self.ENTRYPOINT / "video/task/submit").with_query(url=media_id)
+        resp = await self.request_json(submit_url)
+        return resp["data"]["task_id"]
 
     async def post(self, media_id: str) -> Post:
         api_url = self.ENTRYPOINT.with_query(url=media_id)
-        json_data = await self._api_request(api_url)
-        return Post.from_dict(json_data)
-
-    async def profile_posts(self, profile_id: str, cursor: int = 0) -> AsyncGenerator[Post]:
-        api_url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
-        while True:
-            resp = await self._api_request(api_url.update_query(cursor=cursor))
-            for post in resp["videos"]:
-                yield Post.from_dict(post)
-
-            if not resp["hasMore"]:
-                break
-
-            cursor = resp["cursor"]
-
-    async def submit_task(self, media_id: str) -> str:
-        submit_url = (self.ENTRYPOINT / "video/task/submit").with_query(url=media_id)
-        resp = await self._api_request(submit_url)
-        return resp["task_id"]
+        resp = await self.request_json(api_url)
+        return Post.from_dict(resp["data"])
 
     async def post_src_quality(self, media_id: str) -> Post:
         task_id: str = await self.submit_task(media_id)
@@ -272,13 +258,26 @@ class TikWMAPI(API):
         for delay in delays:
             try:
                 await asyncio.sleep(delay)
-                resp = await self._api_request(api_url)
+                resp = await self.request_json(api_url)
             except ScrapeError:
                 pass
             else:
-                return Post.from_dict(resp["detail"], is_src_quality=True)
+                return Post.from_dict(resp["data"]["detail"], is_src_quality=True)
 
         msg = (
             f"[tiktok] Download {task_id = } was not ready after {len(delays)} attempts. Total wait time: {sum(delays)}"
         )
         raise ScrapeError(503, msg)
+
+    async def profile_posts(self, profile_id: str, cursor: int = 0) -> AsyncGenerator[Post]:
+        api_url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
+        while True:
+            resp = await self.request_json(api_url.update_query(cursor=cursor), impersonate=True)
+            data: dict[str, Any] = resp["data"]
+            for post in data["videos"]:
+                yield Post.from_dict(post)
+
+            if not data["hasMore"]:
+                break
+
+            cursor = data["cursor"]
