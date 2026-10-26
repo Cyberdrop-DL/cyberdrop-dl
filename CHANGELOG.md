@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New `--subfolders.group-loose-files` option
 - Support subfolders (Upfile)
 - Support subtitles (VKVideo)
 
