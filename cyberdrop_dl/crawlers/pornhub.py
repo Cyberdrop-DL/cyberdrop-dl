@@ -238,7 +238,7 @@ class PornHubProfileCrawler:
                 case []:
                     await self.dispatch()
                 case _:
-                    raise ScrapeError.unsupported()
+                    raise ScrapeError.unknown_url()
 
     async def dispatch(self) -> None:
         await self._init()

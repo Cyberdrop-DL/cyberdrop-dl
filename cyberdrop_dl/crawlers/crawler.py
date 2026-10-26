@@ -37,7 +37,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, Scrap
 from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, parse_url, unique
 from cyberdrop_dl.utils._url import matches_any_host, remove_trailing_slash
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, frozen
-from cyberdrop_dl.utils.errors import OnExceptionCallback, async_error_handling_context, error_handling_context
+from cyberdrop_dl.utils.errors import OnExceptionCallback, async_error_handling_context
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -492,7 +492,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return
 
         if not self.__url_config__.allow_empty_path and url.path == "/":
-            self.raise_exc(scrape_item, ScrapeError.unsupported())
+            await self.raise_exc(scrape_item, ScrapeError.unknown_url())
             return
 
         if check_referer and await self.check_complete_from_referer(url):
@@ -503,9 +503,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
                 try:
                     await self.fetch(scrape_item)
                 except ValueError:
-                    self.raise_exc(scrape_item, ScrapeError.unsupported())
+                    await self.raise_exc(scrape_item, ScrapeError.unknown_url())
                 except MaxChildrenError as e:
-                    self.raise_exc(scrape_item, e)
+                    await self.raise_exc(scrape_item, e)
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -517,10 +517,8 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return url.with_host(new_host)
         return url
 
-    def raise_exc(
-        self, scrape_item: ScrapeItem | AbsoluteHttpURL, exc: type[Exception] | Exception | str | int
-    ) -> None:
-        with error_handling_context(self, scrape_item):
+    async def raise_exc(self, item: ScrapeItem | AbsoluteHttpURL, exc: type[Exception] | Exception | str | int) -> None:
+        async with self.catch_errors(item):
             if isinstance(exc, (str, int)):
                 exc = ScrapeError(exc)
             raise exc

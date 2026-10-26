@@ -143,7 +143,7 @@ class PatreonCrawler(Crawler):
 
             if url.host == self.PRIMARY_URL.host:
                 msg = f"Skipping nested thread URL: {url}, parent: {scrape_item.url}"
-                self.raise_exc(url, MaxChildrenError(msg))
+                await self.raise_exc(url, MaxChildrenError(msg))
                 return
 
             new_item = scrape_item.create_child(url)

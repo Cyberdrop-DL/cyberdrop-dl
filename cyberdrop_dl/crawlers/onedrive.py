@@ -213,7 +213,7 @@ def _parse_resource(url: AbsoluteHttpURL) -> tuple[str, str, Credentials]:
     get = url.query.get
     cred = Credentials(get("authkey") or "", get("redeem") or "")
     if not (cred.auth_key or cred.redeem):
-        raise ScrapeError.unsupported()
+        raise ScrapeError.unknown_url()
 
     resource_id = get("id") or ""
     resid = get("resid") or ""  # ex: ABCXYZ000!12345

@@ -89,7 +89,7 @@ class MegaNzCrawler(Crawler):
                 info = self.core.parse_url(scrape_item.url, check_key=False)
 
         if not info.public_key:
-            self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
+            await self.raise_exc(scrape_item, PasswordProtectedError("Public key missing from URL"))
             return
 
         if not info.is_folder:
