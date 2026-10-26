@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import functools
 import inspect
@@ -18,7 +17,6 @@ from cyberdrop_dl.exceptions import CDLAppError, CDLBaseError, ScrapeError, crea
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine, Generator
     from pathlib import Path
-    from types import TracebackType
 
     from cyberdrop_dl.downloader.http import Downloader
     from cyberdrop_dl.manager import Manager
@@ -41,29 +39,6 @@ def is_error_wrapped(method: object) -> bool:
 def _mark_as_safe[T](fn: T) -> T:
     setattr(fn, _ERROR_WRAPPER_ATTR, True)
     return fn
-
-
-def _strip_tb_frames(tb: TracebackType | None) -> TracebackType | None:
-    "Similar to pytest, hide anything with __tracebackhide__"
-    if tb is None:
-        return None
-
-    for ns in (tb.tb_frame.f_locals, tb.tb_frame.f_globals):
-        if ns.get("__tracebackhide__"):
-            return _strip_tb_frames(tb.tb_next)
-
-    tb.tb_next = _strip_tb_frames(tb.tb_next)
-    return tb
-
-
-def _clean_exception(exc: BaseException | None) -> None:
-    if exc is None:
-        return
-
-    exc.__traceback__ = _strip_tb_frames(exc.__traceback__)
-
-    _clean_exception(exc.__cause__)
-    _clean_exception(exc.__context__)
 
 
 def _clean_curl_error(e: object) -> str:
@@ -249,25 +224,16 @@ def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | ya
 
 
 @contextlib.contextmanager
-def blocking_error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
-    with _error_handling_context(self, item):
-        try:
-            with _combined_error_context():
-                yield
-        except Exception as e:
-            _clean_exception(e)
-            raise
+def _blocking_error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+    with _error_handling_context(self, item), _combined_error_context():
+        yield
 
 
 @contextlib.asynccontextmanager
 async def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> AsyncGenerator[None]:
-    with _error_handling_context(self, item):
-        try:
-            with _combined_error_context():
-                yield
-        except Exception as e:
-            await asyncio.to_thread(_clean_exception, e)
-            raise
+    # The same as _blocking_error_handling_context (for now)
+    with _error_handling_context(self, item), _combined_error_context():
+        yield
 
 
 def _log_scrape_error(
@@ -332,7 +298,7 @@ def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaI
 
     @functools.wraps(func)
     def wrapper(self: HasManagerT, item: Origin, *args: P.args, **kwargs: P.kwargs) -> R:
-        with blocking_error_handling_context(self, item):
+        with _blocking_error_handling_context(self, item):
             result = func(self, item, *args, **kwargs)
             assert not inspect.isawaitable(result)
             return result

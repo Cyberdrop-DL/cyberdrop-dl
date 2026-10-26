@@ -22,6 +22,7 @@ from rich.text import Text, TextType
 from cyberdrop_dl import env
 from cyberdrop_dl.constants import MAIN_LOG_FILE
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
+from cyberdrop_dl.tracebacks import strip_tb_frames, strip_tb_from_exc
 from cyberdrop_dl.utils import dates, enter_context, truncated_preview
 
 if TYPE_CHECKING:
@@ -130,6 +131,17 @@ class CDLFormater(logging.Formatter):
         return truncated_preview(content, env.MAX_LOG_MSG_LENGTH)
 
 
+def _strip_tracebacks(record: logging.LogRecord) -> None:
+    if not record.exc_info or record.exc_info == (None, None, None):
+        return
+    exc_type, exc_value, exc_traceback = record.exc_info
+    assert exc_type is not None
+    assert exc_value is not None
+    strip_tb_from_exc(exc_value)
+    exc_traceback = strip_tb_frames(exc_traceback)
+    record.exc_info = exc_type, exc_value, exc_traceback
+
+
 class LogHandler(RichHandler):
     """Rich Handler with default settings, custom log render to remove padding in files and `color` extra"""
 
@@ -182,8 +194,10 @@ class LogHandler(RichHandler):
 
         return message_text
 
+    @override
     def emit(self, record: logging.LogRecord) -> None:
         try:
+            _strip_tracebacks(record)
             return super().emit(record)
         except Exception as e:  # noqa: BLE001
             self.handleError(record, e)
