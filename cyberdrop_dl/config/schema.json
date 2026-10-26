@@ -1115,6 +1115,11 @@
           "title": "Create",
           "type": "boolean"
         },
+        "group_loose_files": {
+          "default": true,
+          "title": "Group Loose Files",
+          "type": "boolean"
+        },
         "include": {
           "$ref": "#/$defs/_SubFoldersInclude"
         },

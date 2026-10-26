@@ -216,6 +216,7 @@ sort:
   output_folder: downloads/cyberdrop-dl sorted
 subfolders:
   create: true
+  group_loose_files: true
   include:
     album_id: false
     domain: true

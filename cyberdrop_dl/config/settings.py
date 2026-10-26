@@ -56,10 +56,10 @@ class _SeparatePosts(ConfigModel):
 
 
 class SubFolders(ConfigGroup, name=None):
-    create: Annotated[bool, _alias("subfolders", flag="create")] = False
+    create: Annotated[bool, _alias("subfolders", flag="create")] = True
     "Enable/disable the creation of nested sub-folders"
 
-    group_loose_files: bool = False
+    group_loose_files: bool = True
     "Create a subfolder named 'Loose Files (<DOMAIN>)' for individual files not part of any album/thread"
 
     include: _SubFoldersInclude = Field(default_factory=_SubFoldersInclude)
