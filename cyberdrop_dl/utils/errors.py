@@ -308,7 +308,7 @@ def error_handling_wrapper[HasManagerT: _HasManager, Origin: ScrapeItem | MediaI
 
 @final
 class OnExceptionCallback:
-    def __init__(self, cb: Callable[[Exception], None]) -> None:
+    def __init__(self, cb: Callable[[BaseException], None]) -> None:
         self.cb = cb
 
     def __enter__(self) -> None:
@@ -320,7 +320,7 @@ class OnExceptionCallback:
         exc_val: BaseException | None,
         exc_tb: object,
     ) -> None:
-        if exc_val is not None and isinstance(exc_val, Exception):
+        if exc_val is not None:
             self.cb(exc_val)
 
     async def __aenter__(self) -> None:
@@ -332,5 +332,5 @@ class OnExceptionCallback:
         exc_val: BaseException | None,
         exc_tb: object,
     ) -> None:
-        if exc_val is not None and isinstance(exc_val, Exception):
+        if exc_val is not None:
             self.cb(exc_val)

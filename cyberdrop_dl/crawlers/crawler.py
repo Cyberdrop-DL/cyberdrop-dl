@@ -464,7 +464,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return OnExceptionCallback(lambda exc: self.disable_and_log(msg, exc))
 
     @final
-    def disable_and_log(self, msg: str, _exc: Exception | None = None) -> None:
+    def disable_and_log(self, msg: str, _exc: BaseException | None = None) -> None:
         self.log.error(f"{msg}. Crawler has been disabled")
         self.disabled = True
 
