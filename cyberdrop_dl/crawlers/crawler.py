@@ -540,7 +540,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         media_item = MediaItem(
             url=AbsoluteHttpURL(scrape_item.url.with_scheme("metadata")),
             domain=self.DOMAIN,
-            download_folder=_prepare_download_path(scrape_item, self.FOLDER_DOMAIN),
+            download_folder=_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config),
             filename=f"{name}.metadata",  # we won't write to fs, so we skip name sanitization
             db_path="",
             referer=scrape_item.url,
@@ -581,7 +581,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         media_item = MediaItem(
             url=url,
             domain=self.DOMAIN,
-            download_folder=_prepare_download_path(scrape_item, self.FOLDER_DOMAIN),
+            download_folder=_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config),
             filename=custom_filename or filename,
             db_path=self.__db_path__(url),
             referer=referer,
@@ -1327,12 +1327,13 @@ def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
     return False
 
 
-def _prepare_download_path(item: ScrapeItem, domain: str) -> Path:
+def _prepare_download_path(item: ScrapeItem, domain: str, config: Config) -> Path:
     if item.retry_info and USE_RETRY_PATH.get():
         return item.retry_info.download_path
     path = item.download_folder / item.path
-    if item.is_loose_file:
-        path = path / f"Loose Files ({domain})"
+    if item.is_loose_file and config.subfolders.create and config.subfolders.group_loose_files:
+        loose_files = f"Loose Files ({domain})" if domain else "Loose Files"
+        path = path / loose_files
     return path
 
 

@@ -27,15 +27,12 @@ class DirectHttpFileCrawler(Crawler, is_generic=True):
             filename, ext = get_filename_and_ext(scrape_item.url.name, xenforo=True)
 
         if ext == ".m3u8":
-            scrape_item.append_folders("Loose Files")
-            scrape_item.part_of_album = True
-            return await self.generic_m3u8(scrape_item)
+            await self.generic_m3u8(scrape_item)
+            return
 
         if ext not in FileExt.MEDIA:
             raise ValueError
 
-        scrape_item.append_folders("Loose Files")
-        scrape_item.part_of_album = True
         await self.handle_file(
             scrape_item.url,
             scrape_item,
