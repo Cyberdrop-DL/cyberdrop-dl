@@ -9,7 +9,7 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
-class Author(DictDataclass):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Author:
     id: str
     unique_id: str
     nickname: str
@@ -28,8 +28,8 @@ class Author(DictDataclass):
         return f"@{self.unique_id}"
 
 
-@dataclasses.dataclass(slots=True)
-class Post(DictDataclass):
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
+class Post:
     id: str
     title: str
     create_time: int
@@ -48,23 +48,22 @@ class Post(DictDataclass):
     def web_path(self) -> str:
         return f"{self.author}/{self.type}/{self.id}"
 
-    def __post_init__(self) -> None:
-        self.images = self.images or []
-
     @classmethod
-    def from_dict(cls, video: Mapping[str, Any], /, **overrides: Any) -> Self:
-        return super(Post, cls).from_dict(
+    def from_dict(cls, video: Mapping[str, Any], *, is_src_quality: bool = False) -> Self:
+        return deserialize(
+            cls,
             video,
-            author=Author.from_dict(video["author"]),
-            music_info=MusicInfo.from_dict(video["music_info"]),
+            images=video.get("images") or [],
+            author=deserialize(Author, (video["author"])),
+            music_info=deserialize(MusicInfo, (video["music_info"])),
             id=video.get("id") or video["video_id"],
             play=video.get("play") or video["play_url"],
-            **overrides,
+            is_src_quality=is_src_quality,
         )
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
-class MusicInfo(DictDataclass):
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class MusicInfo:
     title: str
     id: str
     original: bool
@@ -277,9 +276,7 @@ class TikWMAPI(API):
             except ScrapeError:
                 pass
             else:
-                post = Post.from_dict(resp["detail"])
-                post.is_src_quality = True
-                return post
+                return Post.from_dict(resp["detail"], is_src_quality=True)
 
         msg = (
             f"[tiktok] Download {task_id = } was not ready after {len(delays)} attempts. Total wait time: {sum(delays)}"
