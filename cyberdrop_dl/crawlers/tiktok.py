@@ -81,7 +81,10 @@ class MusicInfo:
 @HTTPConfig(rate_limit=(1, 2))
 class TikTokCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "User": "/@<user>",
+        "User": (
+            "/@<user>",
+            "/@<user>?cursor=<cursor>",
+        ),
         "Video": (
             "/@<user>/video/<video_id>",
             "/@/video/<video_id>",
@@ -92,6 +95,7 @@ class TikTokCrawler(Crawler):
             "/@/photo/<photo_id>",
             "/share/photo/<photo_id>",
         ),
+        "**NOTE**": "Use `cursor` query param to resume pagination from a previous profile scrape",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tiktok.com")
     DOMAIN: ClassVar[str] = "tiktok"
@@ -109,7 +113,7 @@ class TikTokCrawler(Crawler):
             self.log.info(f"Found {cookie_name} cookies")
             self.api.__http_ctx__.headers["x-proxy-cookie"] = f"{cookie_name}={value}"
 
-        self.client.cookies.clear_domain(self.PRIMARY_URL.host)
+        self.client.cookies.clear_domain("tiktok.com")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -126,7 +130,7 @@ class TikTokCrawler(Crawler):
         scrape_item.setup_as_profile("")
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            async for post in self.api.profile_posts(profile_id):
+            async for post in self.api.profile_posts(profile_id, cursor=scrape_item.url.query.get("cursour")):
                 url = self.PRIMARY_URL / post.web_path
                 new_item = scrape_item.create_child(url)
                 tg.create_task(self._post_task(new_item, post))
@@ -269,10 +273,13 @@ class TikWMAPI(API):
         )
         raise ScrapeError(503, msg)
 
-    async def profile_posts(self, profile_id: str, cursor: int = 0) -> AsyncGenerator[Post]:
-        api_url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
+    async def profile_posts(self, profile_id: str, cursor: str | None = None) -> AsyncGenerator[Post]:
+        url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
+        if cursor:
+            url = url.update_query(cursor=cursor)
+
         while True:
-            resp = await self.request_json(api_url.update_query(cursor=cursor), impersonate=True)
+            resp = await self.request_json(url, impersonate=True)
             data: dict[str, Any] = resp["data"]
             for post in data["videos"]:
                 yield Post.from_dict(post)
@@ -280,4 +287,4 @@ class TikWMAPI(API):
             if not data["hasMore"]:
                 break
 
-            cursor = data["cursor"]
+            url = url.update_query(cursor=data["cursor"])
