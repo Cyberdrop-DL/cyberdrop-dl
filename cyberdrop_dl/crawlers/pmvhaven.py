@@ -77,7 +77,7 @@ class PMVHavenCrawler(Crawler):
 
     async def _playlist(self, scrape_item: ScrapeItem, playlist: Playlist) -> None:
         self.create_eager_task(self.write_metadata(scrape_item, playlist.id, playlist))
-        with self.catch_errors(playlist.thumbnail):
+        async with self.catch_errors(playlist.thumbnail):
             _, ext = self.get_filename_and_ext(playlist.thumbnail.name)
             filename = self.create_custom_filename(playlist.name, ext)
             await self.handle_file(

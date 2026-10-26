@@ -42,7 +42,7 @@ class ImgurCrawler(Crawler):
             raise ScrapeError(json_resp["status"], data["error"])
 
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get client id"):
+        async with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get client id"):
             self.client_id = await self._get_client_id()
 
     @disk_cached_method("client_id", ttl=86400 * 90)

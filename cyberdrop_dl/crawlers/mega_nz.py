@@ -177,7 +177,7 @@ class MegaNzCrawler(Crawler):
         # This takes a really long time (dozens of seconds)
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
-        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
+        async with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
             try:
                 with show_msg("Login into mega.nz"):
                     await self.core.login(self.user, self.password)

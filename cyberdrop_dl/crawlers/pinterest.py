@@ -35,7 +35,7 @@ class PinterestCrawler(Crawler):
             self.api.csrf_token = csrf_token
             return
 
-        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get CSRF token"):
+        async with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get CSRF token"):
             self.api.csrf_token = await self._get_token()
 
     @disk_cached_method("csrftoken", ttl=86400 * 30 * 3)
@@ -95,7 +95,7 @@ class PinterestCrawler(Crawler):
             scrape_item.add_children()
 
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
-        with self.catch_errors(media.url):
+        async with self.catch_errors(media.url):
             if media.url.suffix == ".m3u8":
                 return await self._m3u8_media(scrape_item, media)
 

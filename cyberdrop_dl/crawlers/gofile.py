@@ -44,7 +44,7 @@ class GoFileCrawler(Crawler):
         self.api.check_resp(resp)
 
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.api.ENTRYPOINT), self.disable_on_error("Unable create temp account"):
+        async with self.catch_errors(self.api.ENTRYPOINT), self.disable_on_error("Unable create temp account"):
             self.api.key = self.config.auth.gofile.api_key or await self.api.create_temp_account()
             self.update_cookies({"accountToken": self.api.key})
 

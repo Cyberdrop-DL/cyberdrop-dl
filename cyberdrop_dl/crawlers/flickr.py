@@ -37,7 +37,7 @@ class FlickrCrawler(Crawler):
 
     async def __async_post_init__(self) -> None:
         self.api: FlickrAPI = FlickrAPI.from_crawler(self)
-        with self.catch_errors(self.api.ENDPOINT), self.disable_on_error("Unable to get public API key"):
+        async with self.catch_errors(self.api.ENDPOINT), self.disable_on_error("Unable to get public API key"):
             await self.api.get_site_key()
 
     @error_handling_wrapper

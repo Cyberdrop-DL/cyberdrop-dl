@@ -96,7 +96,10 @@ class RealDebridCrawler(Crawler):
         if self.disabled:
             return
 
-        with self.catch_errors(self.api.ENTRYPOINT), self.disable_on_error("Setup failed. Unable to get URL regex"):
+        async with (
+            self.catch_errors(self.api.ENTRYPOINT),
+            self.disable_on_error("Setup failed. Unable to get URL regex"),
+        ):
             await self.api.connect()
 
     @error_handling_wrapper

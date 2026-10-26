@@ -34,7 +34,10 @@ class LusciousCrawler(Crawler):
 
     @override
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.api.GRAPHQL_ENDPOINT), self.disable_on_error("Unable to get account credentials"):
+        async with (
+            self.catch_errors(self.api.GRAPHQL_ENDPOINT),
+            self.disable_on_error("Unable to get account credentials"),
+        ):
             try:
                 cookie_name = next(c for c in self.cookies.raw if c.startswith("sessionid"))
             except StopIteration:

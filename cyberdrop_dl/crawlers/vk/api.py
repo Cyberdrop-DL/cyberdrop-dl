@@ -45,12 +45,12 @@ def _entity_id(owner_id: str | int, item_id: str | int, access_key: str | int | 
     return entity
 
 
-ERROR_CODES: Final = (
-    dict.fromkeys((30, 200, 201, 202, 203), HTTPStatus.FORBIDDEN)
-    | dict.fromkeys((6, 9, 17, 18, 29), HTTPStatus.TOO_MANY_REQUESTS)
-    | dict.fromkeys((1, 10), HTTPStatus.INTERNAL_SERVER_ERROR)
-    | dict.fromkeys((5, 7), HTTPStatus.UNAUTHORIZED)
-)
+ERROR_CODES: Final = {
+    **dict.fromkeys((30, 200, 201, 202, 203), HTTPStatus.FORBIDDEN),
+    **dict.fromkeys((6, 9, 17, 18, 29), HTTPStatus.TOO_MANY_REQUESTS),
+    **dict.fromkeys((1, 10), HTTPStatus.INTERNAL_SERVER_ERROR),
+    **dict.fromkeys((5, 7), HTTPStatus.UNAUTHORIZED),
+}
 
 
 @HTTPConfig(rate_limit=(2, 1))

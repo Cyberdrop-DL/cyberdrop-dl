@@ -77,7 +77,7 @@ class CaraCrawler(Crawler):
 
     async def _image(self, scrape_item: ScrapeItem, image: Image) -> None:
         src = _CDN / image.src
-        with self.catch_errors(src):
+        async with self.catch_errors(src):
             filename, ext = self.get_filename_and_ext(src.name)
             await self.handle_file(
                 src,

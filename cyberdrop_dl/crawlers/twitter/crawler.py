@@ -207,7 +207,7 @@ class TwitterCrawler(Crawler):
             ),
         )
 
-        with self.catch_errors((self.PRIMARY_URL / "search").with_query(api_url.query)):
+        async with self.catch_errors((self.PRIMARY_URL / "search").with_query(api_url.query)):
             self.log.info(
                 "Starting manual search for posts of %s (feed: '%s', raw_query: '%s')",
                 user,

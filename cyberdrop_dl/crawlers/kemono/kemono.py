@@ -55,7 +55,10 @@ class KemonoBaseCrawler[T: KemonoAPI[Any]](Crawler, is_abc=True):
     def __kemono_config__(self) -> KemonoConfig: ...
 
     async def __async_post_init__(self) -> None:
-        with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to get list of creators from API"):
+        async with (
+            self.catch_errors(self.PRIMARY_URL),
+            self.disable_on_error("Unable to get list of creators from API"),
+        ):
             self.api.user_names = await self.api.creators()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:

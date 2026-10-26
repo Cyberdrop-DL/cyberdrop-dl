@@ -155,7 +155,7 @@ class PkmncardsCrawler(Crawler):
 
     async def _simple_card(self, scrape_item: ScrapeItem, simple_card: SimpleCard) -> None:
         async def get_card_set(scrape_item: ScrapeItem) -> CardSet:
-            with self.catch_errors(scrape_item.url):
+            async with self.catch_errors(scrape_item.url):
                 soup = await self.request_soup(scrape_item.url)
                 return await _create_set(soup)
 

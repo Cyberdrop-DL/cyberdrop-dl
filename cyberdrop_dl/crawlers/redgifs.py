@@ -67,7 +67,7 @@ class RedGifsCrawler(Crawler):
     async def __async_post_init__(self) -> None:
         token_url = API_ENTRYPOINT / "auth/temporary"
 
-        with self.catch_errors(token_url), self.disable_on_error("Unable to get API token"):
+        async with self.catch_errors(token_url), self.disable_on_error("Unable to get API token"):
             token: str = (await self.request_json(token_url))["token"]
             self.headers["Authorization"] = f"Bearer {token}"
 

@@ -101,7 +101,7 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
     ) -> None:
         src = src or scrape_item.url
         name = name or src.name
-        with self.catch_errors(src):
+        async with self.catch_errors(src):
             if src.suffix == ".m3u8":
                 await self._m3u8(scrape_item, src, name)
                 return

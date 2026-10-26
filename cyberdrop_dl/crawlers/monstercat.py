@@ -45,7 +45,7 @@ class MonstercatCrawler(Crawler):
             scrape_item.add_children()
 
     async def _track(self, scrape_item: ScrapeItem, track: Track) -> None:
-        with self.catch_errors(track.url):
+        async with self.catch_errors(track.url):
             filename = self.create_custom_filename(track.name, ext := ".mp3")
             await self.handle_file(track.url, scrape_item, track.name, ext, custom_filename=filename)
 

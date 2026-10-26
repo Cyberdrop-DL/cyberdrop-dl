@@ -47,7 +47,7 @@ class AdobeLightroomCrawler(Crawler):
 
     async def _image(self, scrape_item: ScrapeItem, image: Image, space_id: str) -> None:
         src = self.PRIMARY_URL / "v2c/spaces" / space_id / image.href
-        with self.catch_errors(src):
+        async with self.catch_errors(src):
             filename = self.create_custom_filename(image.id, ext := ".png")
             scrape_item.uploaded_at = self.parse_iso_date(image.created)
             await self.handle_file(src, scrape_item, image.id, ext, custom_filename=filename)
