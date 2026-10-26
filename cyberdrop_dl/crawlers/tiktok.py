@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 from cyberdrop_dl.utils.dataclass import DictDataclass
@@ -16,13 +16,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
-
-
-_PRIMARY_URL = AbsoluteHttpURL("https://www.tiktok.com/")
-_API_URL = AbsoluteHttpURL("https://www.tikwm.com/api/")
-_API_SUBMIT_TASK_URL = _API_URL / "video/task/submit"
-_API_TASK_RESULT_URL = _API_URL / "video/task/result"
-_API_USER_POST_URL = _API_URL / "user/posts"
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -46,11 +39,16 @@ class Post(DictDataclass):
     play: str | None = None
     is_src_quality: bool = False
     images: list[str] = dataclasses.field(default_factory=list)
-    canonical_url: AbsoluteHttpURL = dataclasses.field(default_factory=AbsoluteHttpURL)
+
+    @property
+    def type(self) -> str:
+        return "photo" if self.images else "video"
+
+    @property
+    def web_path(self) -> str:
+        return f"{self.author}/{self.type}/{self.id}"
 
     def __post_init__(self) -> None:
-        part = "photo" if self.images else "video"
-        self.canonical_url = _PRIMARY_URL / str(self.author) / part / self.id
         self.images = self.images or []
 
     @classmethod
@@ -73,11 +71,11 @@ class MusicInfo(DictDataclass):
     play: str | None = None
 
     @property
-    def canonical_url(self) -> AbsoluteHttpURL:
+    def web_path(self) -> str:
         safe_title = self.title.replace(" ", "-").lower()
         if "original-sound" in safe_title or "original-audio" in safe_title:
             safe_title = "original-audio"
-        return _PRIMARY_URL / "music" / f"{safe_title}-{self.id}"
+        return f"music/{safe_title}-{self.id}"
 
 
 @HTTPConfig(rate_limit=(1, 2))
@@ -95,118 +93,61 @@ class TikTokCrawler(Crawler):
             "/share/photo/<photo_id>",
         ),
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = _PRIMARY_URL
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tiktok.com")
     DOMAIN: ClassVar[str] = "tiktok"
     FOLDER_DOMAIN: ClassVar[str] = "TikTok"
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {id}"
 
     @property
-    def download_src_quality_videos(self) -> bool:
+    def original(self) -> bool:
         return self.config.crawlers.tiktok.original
 
     def __post_init__(self) -> None:
-        self._headers: dict[str, Any] = {"X-Requested-With": "XMLHttpRequest"}
-
-    async def __async_post_init__(self) -> None:
+        self.api: TikWMAPI = TikWMAPI.from_crawler(self)
         cookie_name = "sessionid"
         if value := self.cookies.get(cookie_name):
-            self._headers["x-proxy-cookie"] = f"{cookie_name}={value}"
             self.log.info(f"Found {cookie_name} cookies")
+            self.api.__http_ctx__.headers["x-proxy-cookie"] = f"{cookie_name}={value}"
+
         self.client.cookies.clear_domain(self.PRIMARY_URL.host)
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_, "video" | "photo" | "v" as type_, media_id]:
+            case [_, "video" | "photo" | "v" as kind, media_id]:
                 media_id = media_id.removesuffix(".html")
-                if type_ != "photo" and self.download_src_quality_videos:
-                    await self.src_quality_media(scrape_item, media_id)
-                    return
-                await self.media(scrape_item, media_id)
+                await self.media(scrape_item, kind, media_id)
             case [profile] if profile.startswith("@"):
                 await self.profile(scrape_item, profile.removeprefix("@"))
             case _:
                 raise ValueError
 
-    async def _api_request(self, api_url: AbsoluteHttpURL) -> dict[str, Any]:
-        resp: dict[str, Any] = await self.request_json(api_url, headers=self._headers)
-
-        if (code := resp["code"]) != 0:
-            msg = resp["msg"]
-            if "Url parsing is failed" in msg:
-                raise ScrapeError(410)
-            raise ScrapeError(422, message=f"{code = }, {msg}")
-
-        return resp["data"]
-
-    async def _profile_post_pager(self, unique_id: str) -> AsyncGenerator[list[Post]]:
-        cursor: int = 0
-        api_url = _API_USER_POST_URL.with_query(unique_id=unique_id, count=50)
-        while True:
-            resp = await self._api_request(api_url.update_query(cursor=cursor))
-            yield [Post.from_dict(post) for post in resp["videos"]]
-            if not resp["hasMore"]:
-                break
-
-            cursor = resp["cursor"]
-
     @error_handling_wrapper
-    async def profile(self, scrape_item: ScrapeItem, unique_id: str) -> None:
+    async def profile(self, scrape_item: ScrapeItem, profile_id: str) -> None:
         scrape_item.setup_as_profile("")
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            async for posts in self._profile_post_pager(unique_id):
-                for post in posts:
-                    new_item = scrape_item.create_child(post.canonical_url)
-                    if not post.images and self.download_src_quality_videos:
-                        tg.create_task(self.src_quality_media_task(new_item, post.id, post))
-                    else:
-                        tg.create_task(self._post_task(new_item, post))
-
-                    scrape_item.add_children()
-                    await sleep()
+            async for post in self.api.profile_posts(profile_id):
+                url = self.PRIMARY_URL / post.web_path
+                new_item = scrape_item.create_child(url)
+                tg.create_task(self._post_task(new_item, post))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
-    async def src_quality_media(self, scrape_item: ScrapeItem, media_id: str, post: Post | None = None) -> None:
-        if await self.check_complete(scrape_item.url, scrape_item.url):
+    async def media(self, scrape_item: ScrapeItem, kind: str, media_id: str) -> None:
+        if await self.check_complete(scrape_item.url):
             return
 
-        submit_url = _API_SUBMIT_TASK_URL.with_query(url=media_id)
-        task_id: str = (await self._api_request(submit_url))["task_id"]
-        self.log.info(f"trying to download {media_id = } with {task_id = }")
-        json_data = await self._get_task_result(task_id)
-        post = Post.from_dict(json_data["detail"])
-        post.is_src_quality = True
-        await self._post(scrape_item, post)
+        if kind != "photo" and self.original:
+            post = await self.api.post_src_quality(media_id)
+        else:
+            post = await self.api.post(media_id)
 
-    src_quality_media_task = auto_task_id(src_quality_media)
-
-    async def _get_task_result(self, task_id: str) -> dict[str, Any]:
-        result_url = _API_TASK_RESULT_URL.with_query(task_id=task_id)
-        delays = (0.5, 1.5, 4)
-        for delay in delays:
-            try:
-                await asyncio.sleep(delay)
-                return await self._api_request(result_url)
-            except ScrapeError:
-                pass
-
-        msg = (
-            f"[{self.FOLDER_DOMAIN}] Download {task_id = } was not ready "
-            f"after {len(delays)} attempts. Total wait time: {sum(delays)}"
-        )
-        raise ScrapeError(503, msg)
-
-    @error_handling_wrapper
-    async def media(self, scrape_item: ScrapeItem, media_id: str) -> None:
-        api_url = _API_URL.with_query(url=media_id)
-        json_data = await self._api_request(api_url)
-        post = Post.from_dict(json_data)
         await self._post(scrape_item, post)
 
     async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
-        scrape_item.url = post.canonical_url
-        title = self.create_title(post.author.unique_id, post.id)
-        scrape_item.append_folders(title)
+        scrape_item.url = self.PRIMARY_URL / post.web_path
+        scrape_item.append_folders(self.create_title(post.author.unique_id, post.id))
         post_title = self.create_separate_post_title(post.title, post.id, post.create_time)
         scrape_item.setup_as_album(post_title, album_id=post.id)
         scrape_item.uploaded_at = post.create_time
@@ -217,13 +158,22 @@ class TikTokCrawler(Crawler):
             fail_fast=False,
         )
 
-    _post_task = auto_task_id(error_handling_wrapper(_post))
+    @auto_task_id
+    @error_handling_wrapper
+    async def _post_task(self, scrape_item: ScrapeItem, post: Post) -> None:
+        if await self.check_complete(scrape_item.url):
+            return
+
+        if not post.images and self.original and not post.is_src_quality:
+            post = await self.api.post_src_quality(post.id)
+
+        await self._post(scrape_item, post)
 
     async def _handle_images(self, scrape_item: ScrapeItem, post: Post) -> None:
         async with aio.non_cancelling_taskgroup() as tg:
             for index, url in enumerate(post.images):
                 link = self.parse_url(url, trim=False)
-                img_url = post.canonical_url / str(index)
+                img_url = self.PRIMARY_URL / post.web_path / str(index)
                 filename = self.create_custom_filename(f"{post.id}_img{str(index).zfill(3)}", link.suffix)
                 tg.create_task(
                     self.handle_file(
@@ -243,7 +193,7 @@ class TikTokCrawler(Crawler):
         audio_url = self.parse_url(audio.play, trim=False)
         filename = self.create_custom_filename(audio.title, ext := ".mp3", file_id=audio.id)
         await self.handle_file(
-            audio.canonical_url,
+            self.PRIMARY_URL / audio.web_path,
             scrape_item,
             audio.title + ext,
             ext,
@@ -256,18 +206,82 @@ class TikTokCrawler(Crawler):
             return
 
         video_url = self.parse_url(post.play, trim=False)
-        ext = ".mp4"
-        custom_filename = f"{post.id}{'_original'}{ext}" if post.is_src_quality else None
+        name = f"{post.id}{'_original'}" if post.is_src_quality else post.id
+        filename, ext = self.get_filename_and_ext(f"{name}.mp4")
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            post.id + ext,
+            name,
             ext,
             debrid_link=video_url,
-            custom_filename=custom_filename,
+            custom_filename=filename,
         )
 
     @override
     def _prepare_media_item(self, media_item: MediaItem) -> None:
         if media_item.ext == ".mp3":
             media_item.download_folder /= "Audios"
+
+
+def _check_json_resp(resp: dict[str, Any], _: Any) -> None:
+    code = resp.get("code")
+    if code != 0:
+        msg = resp.get("msg", "")
+        if "Url parsing is failed" in msg:
+            raise ScrapeError(410)
+        raise ScrapeError(422, message=f"{code = }, {msg}")
+
+
+@HTTPConfig(headers={"X-Requested-With": "XMLHttpRequest"}, json_check=_check_json_resp)
+class TikWMAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tikwm.com/api")
+
+    async def _api_request(self, api_url: AbsoluteHttpURL) -> dict[str, Any]:
+        resp: dict[str, Any] = await self.request_json(api_url)
+        return resp["data"]
+
+    async def post(self, media_id: str) -> Post:
+        api_url = self.ENTRYPOINT.with_query(url=media_id)
+        json_data = await self._api_request(api_url)
+        return Post.from_dict(json_data)
+
+    async def profile_posts(self, profile_id: str, cursor: int = 0) -> AsyncGenerator[Post]:
+        api_url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
+        while True:
+            resp = await self._api_request(api_url.update_query(cursor=cursor))
+            for post in resp["videos"]:
+                yield Post.from_dict(post)
+
+            if not resp["hasMore"]:
+                break
+
+            cursor = resp["cursor"]
+
+    async def submit_task(self, media_id: str) -> str:
+        submit_url = (self.ENTRYPOINT / "video/task/submit").with_query(url=media_id)
+        resp = await self._api_request(submit_url)
+        return resp["task_id"]
+
+    async def post_src_quality(self, media_id: str) -> Post:
+        task_id: str = await self.submit_task(media_id)
+        self.log.info(f"trying to download {media_id = } with {task_id = }")
+        return await self.wait_for_task(task_id)
+
+    async def wait_for_task(self, task_id: str) -> Post:
+        api_url = (self.ENTRYPOINT / "video/task/result").with_query(task_id=task_id)
+        delays = (0.5, 1.5, 4)
+        for delay in delays:
+            try:
+                await asyncio.sleep(delay)
+                resp = await self._api_request(api_url)
+            except ScrapeError:
+                pass
+            else:
+                post = Post.from_dict(resp["detail"])
+                post.is_src_quality = True
+                return post
+
+        msg = (
+            f"[tiktok] Download {task_id = } was not ready after {len(delays)} attempts. Total wait time: {sum(delays)}"
+        )
+        raise ScrapeError(503, msg)
