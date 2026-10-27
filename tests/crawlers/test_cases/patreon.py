@@ -60,5 +60,22 @@ TEST_CASES = [
             },
         ],
         "count": 5,
-    }
+    },
+    {
+        "url": "https://www.patreon.com/media-u/v3/653116362",
+        "results": [
+            {
+                "url": "https://www.patreon.com/media-u/v3/653116362",
+                "filename": "653116362 [653116362].jpg",
+                "debrid_url": None,
+                "original_filename": "653116362",
+                "referer": "https://www.patreon.com/media-u/v3/653116362",
+                "album_id": None,
+                "uploaded_at": None,
+                "download_folder": "re:Loose Files (Patreon)",
+                "id": ["patreon", "/media-u/v3/653116362"],
+            }
+        ],
+        "count": 1,
+    },
 ]

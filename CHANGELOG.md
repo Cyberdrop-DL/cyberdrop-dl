@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support Patreon creators with custom domains. User must define the domains with the new `--crawlers.generic.patreon` option
+- Support direct media URLs (Patreon)
 
 ## [10.14.0] - 2026-10-27
 

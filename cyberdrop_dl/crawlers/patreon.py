@@ -3,13 +3,13 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast, final
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast, final, override
 
 from typing_extensions import ReadOnly
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, next_js, traversal
@@ -80,6 +80,11 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
             "/<creator>",
             "/cw/<creator>",
         ),
+        "Direct Media": (
+            "/media-u/v3/<media_id>",
+            ".patreonusercontent.com/...",
+            "stream.mux.com/...",
+        ),
     }
 
     DOMAIN: ClassVar[str] = "patreon"
@@ -109,6 +114,8 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
                 await self.creator(scrape_item)
             case [] | [""] | ["cw"] if self.is_custom_domain():
                 await self.creator(scrape_item)
+            case ["media-u", "v3", media_id]:
+                await self.media(scrape_item, media_id)
             case _:
                 raise ValueError
 
@@ -276,7 +283,20 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
 
 @URLConfig(allow_empty_path=False)
 class PatreonCrawler(PatreonGenericCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "patreon", "stream.mux.com", "patreonusercontent.com"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.patreon.com")
+
+    @override
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        if scrape_item.url.host.endswith((".patreonusercontent.com", "stream.mux.com")):
+            await self.loose_media(scrape_item)
+        else:
+            await super().fetch(scrape_item)
+
+    @error_handling_wrapper
+    async def loose_media(self, scrape_item: ScrapeItem) -> None:
+        media = Media(id="", name=None, url=scrape_item.url, attributes={})
+        await self._media(scrape_item, media)
 
 
 class LazyLogMedia:
@@ -290,7 +310,24 @@ class LazyLogMedia:
         return "\n".join(map(str, self.__json__()))
 
 
-@HTTPConfig(impersonate=True)
+def _check_json(resp: object, _: Any) -> None:
+    if type(resp) is not dict:
+        return
+
+    errors = resp.get("errors")
+    if not (errors and type(errors) is list):
+        return
+
+    error = errors[0]
+    try:
+        status = int(error.get("status", 422))
+    except ValueError:
+        return
+
+    raise ScrapeError(status, error.get("detail"))
+
+
+@HTTPConfig(impersonate=True, json_check=_check_json)
 class PatreonV1API(API):
     # Public API v1 is retiring on October 7, 2026.
     # https://docs.patreon.com/#apiv2-resource-endpoints
