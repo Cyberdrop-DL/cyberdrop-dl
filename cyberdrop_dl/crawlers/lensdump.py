@@ -27,6 +27,10 @@ etag.register(
 )
 
 
+def _id(slug: str) -> str:
+    return slug.partition(".")[0]
+
+
 class LensDumpCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ".l3n.co", "lensdump.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
@@ -47,8 +51,9 @@ class LensDumpCrawler(Crawler):
         url = super().transform_url(url)
         match url.parts[1:]:
             case [*_, name] if url.host.endswith(".l3n.co"):
-                image_id = name.partition(".")[0]
-                return cls.PRIMARY_URL / "i" / image_id
+                return cls.PRIMARY_URL / "i" / _id(name)
+            case ["i" | "a" as kind, name]:
+                return cls.PRIMARY_URL / kind / _id(name)
             case _:
                 return url
 
@@ -60,25 +65,50 @@ class LensDumpCrawler(Crawler):
                 await self.album(scrape_item, album_id)
             case ["404.png"]:
                 await self.raise_exc(scrape_item, 404)
+            case [username] if username not in {"upload", "login", "pricing", "signup", "api"}:
+                await self.user(scrape_item, username)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        album, downloaded = await aio.gather(
-            self.api.album(album_id), self.get_completed_by_album(album_id), fail_fast=False
-        )
+        album = await self.api.album(album_id)
+        await self._album(scrape_item, album)
+
+    @error_handling_wrapper
+    async def _album(self, scrape_item: ScrapeItem, album: FullAlbum) -> None:
         scrape_item.setup_as_album(self.create_title(album.name, album.id), album_id=album.id)
+        self.create_eager_task(self.write_metadata(scrape_item, f"album_{album.id}", album))
         if not album.files:
             raise ScrapeError(204, "Album has no files")
 
+        if album.sub_albums:
+            pass  # TODO: support this
+
+        downloaded = await self.get_completed_by_album(album.id)
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            async for image in self.api.album_files(album_id):
+            async for image in self.api.album_files(album.id):
                 web_url = self.PRIMARY_URL / "i" / image.id
                 if web_url in downloaded:
                     continue
                 tg.create_task(self._file(scrape_item.create_child(web_url), image))
+                scrape_item.add_children()
+                await sleep()
+
+    @error_handling_wrapper
+    async def user(self, scrape_item: ScrapeItem, username: str) -> None:
+        user = await self.api.user(username)
+        scrape_item.setup_as_profile(self.create_title(f"{user.username} [user]"))
+        self.create_eager_task(self.write_metadata(scrape_item, f"user_{user.username}", user))
+        if not user.albums:
+            raise ScrapeError(204, "User has no albums")
+
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for album in self.api.user_albums(user):
+                web_url = self.PRIMARY_URL / "a" / album.id
+                tg.create_task(self._album(scrape_item.create_child(web_url), album))
                 scrape_item.add_children()
                 await sleep()
 
@@ -115,7 +145,7 @@ class File:
     uploaded_at: str
     album: Album
     src: AbsoluteHttpURL | str
-    owner: Owner | None = None
+    owner: User | None = None
     description: str | None = None
 
     @classmethod
@@ -124,19 +154,27 @@ class File:
             cls,
             file,
             src=file.get("src_url") or file["urls"]["file"],
-            owner=Owner.parse(ow) if (ow := file.get("owner")) else None,
+            owner=User.parse(ow) if (ow := file.get("owner")) else None,
             album=Album.parse(file["album"]),
             uploaded_at=file.get("uploaded_at") or file["date"],
         )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Owner:
+class User:
     id: str
     username: str
-    name: str | None = None
+    name: str | None
 
     parse = classmethod(deserialize)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FullUser(User):
+    files: int
+    albums: int
+    bio: str | None
+    tier: str
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -151,9 +189,9 @@ class Album:
 class FullAlbum(Album):
     files: int
     sub_albums: int
-    owner: Owner | None
-    created_at: str
-    parent: str | None
+    owner: User | None
+    created_at: str | None = None
+    parent: str | None = None
 
 
 class LensDumpAPI(API):
@@ -170,21 +208,33 @@ class LensDumpAPI(API):
                 raise DownloadError(404, NOT_FOUND_MSG)
             return resp.url
 
+    async def user(self, username: str) -> FullUser:
+        url = self.ENTRYPOINT / "users" / username
+        resp = await self.request_json(url)
+        return FullUser.parse(resp)
+
     async def album(self, album_id: str) -> FullAlbum:
         url = self.ENTRYPOINT / "albums" / album_id
         resp = await self.request_json(url)
-        return FullAlbum.parse(
-            resp,
-            owner=Owner.parse(ow) if (ow := resp.get("owner")) else None,
-        )
+        owner = resp.get("owner")
+        return FullAlbum.parse(resp, owner=User.parse(owner) if owner else None)
+
+    async def user_albums(self, user: User) -> AsyncGenerator[FullAlbum]:
+        url = self.ENTRYPOINT / "users" / user.username / "albums"
+        async for album in self._pager(url):
+            yield FullAlbum.parse(album, owner=user)
 
     async def album_files(self, album_id: str) -> AsyncGenerator[File]:
         url = self.ENTRYPOINT / "albums" / album_id / "files"
+        async for file in self._pager(url):
+            file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
+            yield File.parse(file)
+
+    async def _pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
         while True:
             resp = await self.request_json(url)
-            for file in resp["items"]:
-                file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
-                yield File.parse(file)
+            for item in resp["items"]:
+                yield item
 
             cursor = resp.get("next_cursor")
             if not cursor:
@@ -193,5 +243,5 @@ class LensDumpAPI(API):
             url = url.update_query(cursor=cursor)
 
 
-def _thumb_to_src(url: AbsoluteHttpURL):
+def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.with_name(url.name.replace(".th.", ".").replace(".md.", "."))
