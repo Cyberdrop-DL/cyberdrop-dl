@@ -36,6 +36,7 @@ class LensDumpCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": "/i/<image_id>",
         "Album": "/a/<album_id>",
+        "User albums": "/<username>",
         "Direct Links": "https://<server>.l3n.co/.../<image_id>.<ext>",
     }
     DOMAIN: ClassVar[str] = "lensdump"
