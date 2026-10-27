@@ -179,7 +179,7 @@ def test_request_build(
     assert req.timeout == expected.timeout
 
 
-def test_request_always_overridaes_min_timeout() -> None:
+def test_request_always_overrides_min_timeout() -> None:
 
     for req in (
         Request(Command.GET_REQUEST, {}),
