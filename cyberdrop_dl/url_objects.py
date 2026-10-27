@@ -146,6 +146,42 @@ class MuxVideo:
 
 
 @final
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class FinishedDownload:
+    # Simplified version of media item w no metadata, bounded callables and some attributes removed, to reduce memory usage
+    url: AbsoluteHttpURL
+    referer: AbsoluteHttpURL
+    original_filename: str
+    ext: str
+    size: int
+    xxhash: str | None
+    path: Path
+    id: tuple[str, ...]
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    @property
+    def is_segment(self) -> Literal[False]:
+        return False
+
+    @classmethod
+    def from_item(cls, item: MediaItem) -> Self:
+        assert item.size is not None
+        assert item.is_segment is False
+        return cls(
+            url=item.url,
+            referer=item.referer,
+            original_filename=item.original_filename,
+            ext=item.ext,
+            size=item.size,
+            xxhash=item.xxhash,
+            path=item.path,
+            id=item.id,
+        )
+
+
+@final
 @signature.dataclass_repr("url", "id", "debrid_url", "uploaded_at_date")
 @dataclasses.dataclass(slots=True, kw_only=True, repr=False)
 class MediaItem:
