@@ -9,7 +9,7 @@ from typing_extensions import ReadOnly
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, next_js, traversal
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
+    from cyberdrop_dl.filepath import Filename
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -67,7 +68,9 @@ class Post(Included):
     url: str
 
 
-class PatreonCrawler(Crawler):
+@URLConfig(allow_empty_path=True)
+class PatreonGenericCrawler(Crawler, is_generic=True):
+    # generic cause Patreon allows creators to use a custom domain
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Post": (
             "/posts/<slug>-<post-id>",
@@ -83,6 +86,10 @@ class PatreonCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.patreon.com")
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title}"
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.DOMAIN = PatreonGenericCrawler.DOMAIN  # pyright: ignore[reportConstantRedefinition]
+
     def __post_init__(self) -> None:
         self.api: PatreonV1API = PatreonV1API.from_crawler(self)
 
@@ -90,13 +97,18 @@ class PatreonCrawler(Crawler):
     def separate_posts(self) -> bool:
         return True
 
+    def is_custom_domain(self) -> bool:
+        return self.PRIMARY_URL.host != PatreonCrawler.PRIMARY_URL.host
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["posts", slug] | [_, "posts", slug]:
                 post_id = slug.rpartition("-")[-1]
                 await self.post(scrape_item, post_id)
-            case [creator] | ["cw", creator]:
-                await self.creator(scrape_item, creator)
+            case [_creator] | ["cw", _creator]:
+                await self.creator(scrape_item)
+            case [] | [""] | ["cw"] if self.is_custom_domain():
+                await self.creator(scrape_item)
             case _:
                 raise ValueError
 
@@ -138,11 +150,11 @@ class PatreonCrawler(Crawler):
         sleep = aio.periodic_sleep(10)
 
         async def dispatch_url(link: str, *, embed: bool = False) -> None:
-            url = self.parse_url(link)
+            url = self.parse_url(link, self.origin)
             if url in seen_urls:
                 return
 
-            if url.host == self.PRIMARY_URL.host:
+            if url.host in (self.PRIMARY_URL.host, PatreonGenericCrawler.PRIMARY_URL.host):
                 msg = f"Skipping nested thread URL: {url}, parent: {scrape_item.url}"
                 await self.raise_exc(url, MaxChildrenError(msg))
                 return
@@ -201,27 +213,32 @@ class PatreonCrawler(Crawler):
         if media.url.suffix == ".m3u8":
             return await self._m3u8_media(scrape_item, media)
 
-        name = media.name
-        if not name:
-            async with self.request(media.url) as resp:
-                try:
-                    name = resp.content_disposition.filename
-                except ScrapeError:
-                    name = media.url.name or media.url.parent.name
-
-        try:
-            filename, ext = self.get_filename_and_ext(name)
-        except NoExtensionError:
-            name = media.url.name
-            filename, ext = self.get_filename_and_ext(name)
+        original_name, filename = await self._get_media_filename(media)
 
         await self.handle_file(
             media.url,
             scrape_item,
-            name,
-            ext,
-            custom_filename=self.create_custom_filename(filename, ext, file_id=media.id),
+            original_name,
+            filename.suffix,
+            custom_filename=self.create_custom_filename(filename.name, filename.suffix, file_id=media.id),
         )
+
+    async def _get_media_filename(self, media: Media) -> tuple[str, Filename]:
+        errors: list[Exception] = []
+        if media.name and not media.name.startswith(("http:", "https:")):
+            try:
+                return media.name, self.get_filename_and_ext(media.name)
+            except NoExtensionError as e:
+                errors.append(e)
+
+        async with self.request(media.url) as resp:
+            if name := resp.filename or media.name:
+                try:
+                    return name, self.get_filename_and_ext(name, mime_type=resp.content_type)
+                except NoExtensionError as e:
+                    errors.append(e)
+
+        raise ExceptionGroup("No File Extension", tuple(errors))
 
     async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media) -> None:
         m3u8, info = await self.request_m3u8_playlist(media.url)
@@ -236,8 +253,8 @@ class PatreonCrawler(Crawler):
         await self.handle_file(media.url, scrape_item, filename, ext, m3u8=m3u8)
 
     @error_handling_wrapper
-    async def creator(self, scrape_item: ScrapeItem, creator: str) -> None:
-        campaign_id = await self.api.campaign_id(creator)
+    async def creator(self, scrape_item: ScrapeItem) -> None:
+        campaign_id = await self.api.campaign_id(scrape_item.url)
         await self.campaign(scrape_item, campaign_id)
 
     @error_handling_wrapper
@@ -249,12 +266,17 @@ class PatreonCrawler(Crawler):
                 included = _flatten_included(resp["included"])
                 for post in resp["data"]:
                     post = _flatten_post(post)
-                    new_item = scrape_item.create_child(self.parse_url(post["url"]))
+                    new_item = scrape_item.create_child(self.parse_url(post["url"], self.origin))
                     tg.create_task(self._post_task(new_item, post, included))
                     scrape_item.add_children()
                     await sleep()
 
     _post_task = auto_task_id(_post)
+
+
+@URLConfig(allow_empty_path=False)
+class PatreonCrawler(PatreonGenericCrawler):
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.patreon.com")
 
 
 class LazyLogMedia:
@@ -285,10 +307,10 @@ class PatreonV1API(API):
         if not (url := attrs.get("download_url")):
             raise ScrapeError(403, f"No download URL found for {media_id}")
 
-        return Media(media_id, attrs.get("file_name"), self.parse_url(url), attrs)
+        return Media(media_id, attrs.get("file_name"), self.parse_url(url, self.origin), attrs)
 
-    async def campaign_id(self, creator: str) -> str:
-        async with self.request(self.PRIMARY_URL / creator, impersonate=True) as resp:
+    async def campaign_id(self, url: AbsoluteHttpURL) -> str:
+        async with self.request(url, impersonate=True) as resp:
             soup = await resp.soup()
             with contextlib.suppress(css.SelectorError):
                 bootstrap = _extract_bootstrap(soup)

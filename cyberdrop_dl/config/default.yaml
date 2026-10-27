@@ -41,6 +41,7 @@ crawlers:
     chevereto: []
     discourse: []
     kvs: []
+    patreon: []
     peertube: []
     video: []
     wordpress_html: []

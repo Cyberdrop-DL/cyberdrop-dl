@@ -223,6 +223,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     _FORUM: ClassVar[bool] = False
 
     disabled: bool = False
+    _generic_base_: str = ""
 
     def __repr__(self) -> str:
         fields = (
@@ -344,6 +345,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         if cls.IS_GENERIC:
             cls.INFO: CrawlerInfo = CrawlerInfo.abstract("GENERIC", cls.NAME, paths)
+            cls._generic_base_ = cls.NAME
             if add_to_registry:
                 Registry.generic.add(cls)
             return
