@@ -33,7 +33,7 @@ else:
 
 def _recursive_repr[T: Callable[[object], str]](fn: T) -> T:
     # Prevent positional only signature guess by type checkers
-    return reprlib.recursive_repr(fn)  # pyright: ignore[reportReturnType, reportArgumentType]
+    return reprlib.recursive_repr()(fn)  # pyright: ignore[reportReturnType]
 
 
 @_recursive_repr
