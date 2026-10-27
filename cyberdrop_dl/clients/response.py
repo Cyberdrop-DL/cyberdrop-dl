@@ -166,16 +166,31 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     @final
     @property
     def content_disposition(self) -> ContentDisposition:
+        if cd := self.parse_content_disposition():
+            return cd
+
+        msg = f"No content disposition header found in response from {self.url}"
+        raise ScrapeError(422, msg) from None
+
+    @final
+    def parse_content_disposition(self) -> ContentDisposition | None:
         try:
             header = self.headers[hdrs.CONTENT_DISPOSITION]
         except KeyError:
-            msg = f"No content disposition header found in response from {self.url}"
-            raise ScrapeError(422, msg) from None
+            return None
 
         disposition_type, params = aiohttp.multipart.parse_content_disposition(header)
         params = MappingProxyType(params)
         filename = aiohttp.multipart.content_disposition_filename(params)
         return ContentDisposition(disposition_type, params, filename)
+
+    @final
+    @property
+    def filename(self) -> str:
+        cd = self.parse_content_disposition()
+        if cd and cd.raw_filename:
+            return cd.raw_filename
+        return self.url.name or self.url.parent.name
 
     @final
     @property

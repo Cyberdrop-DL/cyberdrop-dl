@@ -646,7 +646,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return self.get_filename_and_ext(url.name).suffix
         except NoExtensionError:
             async with self.request(url, method or self.__http_ctx__.probe_method, **kwargs) as resp:
-                name = url.name or url.parent.name or "file"
+                name = resp.filename or "file"
                 return self.get_filename_and_ext(name, mime_type=resp.content_type).suffix
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
