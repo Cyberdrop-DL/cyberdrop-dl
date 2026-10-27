@@ -1,6 +1,40 @@
 DOMAIN = "lensdump"
 TEST_CASES = [
     {
+        "url": "https://lensdump.com/i/86Njhe",
+        "results": [
+            {
+                "url": "https://lensdump.com/i/86Njhe",
+                "filename": "Temple of Doom Gold Series Version 1 [86Njhe].jpg",
+                "debrid_url": None,
+                "original_filename": "Temple of Doom Gold Series Version 1",
+                "referer": "https://lensdump.com/i/86Njhe",
+                "album_id": "gAXLD",
+                "uploaded_at": 1522263221,
+                "download_folder": "re:Indiana Jones Collection (Lensdump)",
+                "thumbnail": None,
+                "size": None,
+                "duration": None,
+                "metadata": {
+                    "id": "86Njhe",
+                    "type": "image",
+                    "title": "Temple of Doom Gold Series Version 1",
+                    "uploaded_at": "2018-03-28T18:53:41Z",
+                    "album": {"id": "gAXLD", "name": "Indiana Jones Collection"},
+                    "src": "https://a.l3n.co/86Njhe.jpg",
+                    "owner": {
+                        "id": "nT93",
+                        "username": "nielslauridsen",
+                        "name": "tintacle",
+                    },
+                    "description": None,
+                },
+                "extra_info": {},
+                "id": ["lensdump", "/i/86Njhe"],
+            }
+        ],
+    },
+    {
         "url": "https://lensdump.com/i/PWb8q1",
         "results": [
             {
@@ -11,7 +45,7 @@ TEST_CASES = [
                 "referer": "https://lensdump.com/i/PWb8q1",
                 "album_id": "9wSLD99O",
                 "uploaded_at": 1757859018,
-                "download_folder": "re:Earlier uploads (Lensdump)",
+                "download_folder": "re:Earlier uploads 9wSLD99O (Lensdump)",
                 "thumbnail": None,
                 "size": None,
                 "duration": None,
@@ -20,10 +54,8 @@ TEST_CASES = [
                     "id": "PWb8q1",
                     "type": "image",
                     "title": "Video senza titolo Realizzato con Clipchamp (22)",
-                    "size": 55040668,
                     "uploaded_at": "2025-09-14T14:10:18Z",
                     "album": {"id": "9wSLD99O", "name": "Earlier uploads"},
-                    "filename": "PWb8q1.gif",
                     "src": "https://d.l3n.co/PWb8q1.gif",
                     "owner": None,
                     "description": None,
@@ -65,7 +97,6 @@ TEST_CASES = [
                 "thumbnail": None,
                 "size": None,
                 "duration": None,
-                "parents": ["https://lensdump.com/a/gAXLD"],
                 "metadata": {
                     "id": "86Njhe",
                     "type": "image",
@@ -73,7 +104,11 @@ TEST_CASES = [
                     "uploaded_at": "2018-03-28T18:53:41Z",
                     "album": {"id": "gAXLD", "name": "Indiana Jones Collection"},
                     "src": "https://a.l3n.co/86Njhe.jpg",
-                    "owner": None,
+                    "owner": {
+                        "id": "nT93",
+                        "username": "nielslauridsen",
+                        "name": "tintacle",
+                    },
                     "description": None,
                 },
                 "extra_info": {},

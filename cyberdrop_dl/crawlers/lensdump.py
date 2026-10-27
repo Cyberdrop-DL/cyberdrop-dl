@@ -75,9 +75,12 @@ class LensDumpCrawler(Crawler):
         album = await self.api.album(album_id)
         await self._album(scrape_item, album)
 
+    def _album_title(self, album: Album) -> str:
+        return self.create_title(album.name, album.id, force_album_id=album.name.lower() == "earlier uploads")
+
     @error_handling_wrapper
     async def _album(self, scrape_item: ScrapeItem, album: FullAlbum) -> None:
-        scrape_item.setup_as_album(self.create_title(album.name, album.id), album_id=album.id)
+        scrape_item.setup_as_album(self._album_title(album), album_id=album.id)
         self.create_eager_task(self.write_metadata(scrape_item, f"album_{album.id}", album))
         if not album.files:
             raise ScrapeError(204, "Album has no files")
@@ -88,7 +91,7 @@ class LensDumpCrawler(Crawler):
         downloaded = await self.get_completed_by_album(album.id)
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            async for image in self.api.album_files(album.id):
+            async for image in self.api.album_files(album):
                 web_url = self.PRIMARY_URL / "i" / image.id
                 if web_url in downloaded:
                     continue
@@ -118,7 +121,7 @@ class LensDumpCrawler(Crawler):
             return
 
         image = await self.api.file(image_id)
-        scrape_item.setup_as_album(self.create_title(image.album.name, image.album.id), album_id=image.album.id)
+        scrape_item.setup_as_album(self._album_title(image.album), album_id=image.album.id)
         await self._file(scrape_item, image)
 
     @error_handling_wrapper
@@ -149,12 +152,12 @@ class File:
     description: str | None = None
 
     @classmethod
-    def parse(cls, file: dict[str, Any]) -> Self:
+    def parse(cls, file: dict[str, Any], owner: User | None) -> Self:
         return deserialize(
             cls,
             file,
             src=file.get("src_url") or file["urls"]["file"],
-            owner=User.parse(ow) if (ow := file.get("owner")) else None,
+            owner=owner,
             album=Album.parse(file["album"]),
             uploaded_at=file.get("uploaded_at") or file["date"],
         )
@@ -200,7 +203,8 @@ class LensDumpAPI(API):
     async def file(self, image_id: str) -> File:
         url = self.ENTRYPOINT / "files" / image_id
         resp = await self.request_json(url)
-        return File.parse(resp)
+        owner = resp.get("owner")
+        return File.parse(resp, owner=User.parse(owner) if owner else None)
 
     async def probe(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         async with self.request(url) as resp:
@@ -224,11 +228,11 @@ class LensDumpAPI(API):
         async for album in self._pager(url):
             yield FullAlbum.parse(album, owner=user)
 
-    async def album_files(self, album_id: str) -> AsyncGenerator[File]:
-        url = self.ENTRYPOINT / "albums" / album_id / "files"
+    async def album_files(self, album: FullAlbum) -> AsyncGenerator[File]:
+        url = self.ENTRYPOINT / "albums" / album.id / "files"
         async for file in self._pager(url):
             file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
-            yield File.parse(file)
+            yield File.parse(file, album.owner)
 
     async def _pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
         while True:
