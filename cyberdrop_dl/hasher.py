@@ -217,23 +217,23 @@ class Hasher:
         self._hashes_map[hash_value][size].add(absolute_path)
         self._hashed_items.add(media_item.id)
 
-    async def run(self, downloads: Iterable[FinishedDownload]) -> FileHashes:
-        with self.tui():
-            return await self._get_file_hashes_dict(downloads)
+    async def run(self, downloads: Iterable[MediaItem | FinishedDownload]) -> FileHashes:
+        async def compute_hash(item: MediaItem | FinishedDownload) -> None:
+            if not await aio.is_file(item.path):
+                return
 
-    async def _get_file_hashes_dict(self, downloads: Iterable[MediaItem | FinishedDownload]) -> FileHashes:
-        pending = (item for item in downloads if item.id not in self._hashed_items)
-
-        async def exists(item: MediaItem | FinishedDownload) -> bool:
-            return await aio.is_file(item.path)
-
-        for media_item in await aio.afilter(exists, pending):
             try:
-                await self.hash_item(media_item)
+                await self.hash_item(item)
             except Exception:
-                logger.exception("Unable to hash '%s'", media_item.path)
+                logger.exception("Unable to compute hashes for '%s' [%s]", item.path, item.id)
 
-        return self._hashes_map
+        with self.tui():
+            async with aio.non_cancelling_taskgroup() as tg:
+                for item in downloads:
+                    if item.id not in self._hashed_items:
+                        tg.create_task(compute_hash(item))
+
+            return self._hashes_map
 
 
 async def compute_in_place_hash(hasher: Hasher, media_item: MediaItem) -> None:
