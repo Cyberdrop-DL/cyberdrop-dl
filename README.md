@@ -16,17 +16,55 @@ _Bulk asynchronous downloader for multiple file hosts_
 
 Brand new and improved! `cyberdrop-dl` now has an updated paint job, fantastic new look. It's now easier to use than ever before!
 
-![Cyberdrop-DL TUI Preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/cyberdrop-dl_tui_preview.png)
+![cyberdrop-dl TUI Preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/cyberdrop-dl_tui_preview.png)
 
 </div>
 
+## How to install
+
+With [`uv`](https://docs.astral.sh/uv/) (recommended) or `pipx`:
+
+```powershell
+uv tool install cyberdrop-dl-patched
+```
+
+Run `--help` to see all available commands and options:
+
+```powershell
+cyberdrop-dl --help
+```
+
+<div align="center">
+
+![cyberdrop-dl help preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/help.png)
+
+</div>
+
+`cyberdrop-dl` has an extensive list of configuration options. But if you don't care about that and just want to download a file, run:
+
+```powershell
+cyberdrop-dl download <URL>
+```
+
+or just run it without any arguments to start the interactive TUI:
+
+```powershell
+cyberdrop-dl
+```
+
+<div align="center">
+
+![cyberdrop-dl menu preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/main_menu.png)
+
+</div>
+
+From the [releases page](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest) you can download scripts to install, update and use `cyberdrop-dl` without ever writing any command in your terminal.
+
+Follow the [getting-started guide](https://script-ware.gitbook.io/cyberdrop-dl/getting-started) for additional instructions and configuration details.
+
 ## Supported Sites
 
-See the [list of supported sites](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites) on the official wiki
-
-## Getting Started
-
-Follow the [getting-started guide](https://script-ware.gitbook.io/cyberdrop-dl/getting-started) for instructions on how to install and configure Cyberdrop-DL
+See the [list of supported sites](https://script-ware.gitbook.io/cyberdrop-dl/reference/supported-websites) on the wiki.
 
 ## Contributing
 
