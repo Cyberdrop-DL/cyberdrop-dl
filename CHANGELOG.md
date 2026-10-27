@@ -27,8 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New `--subfolders.group-loose-files` option
+- Lensdump support
 - Support subfolders (Upfile)
 - Support subtitles (VKVideo)
+
+### Changed
+
+- Ignore low config timeouts values during Flaresolverr requests. Always wait at least 1 minute for a response
 
 ### Fixed
 
@@ -37,8 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handle videos with no thumbnails (Kick)
 - Respect `--rate-limit` values higher than 25req/s
 - Respect `--subfolders.include.domain` for `Loose Files` folders
-
-### Security
 
 ## [10.13.0] - 2026-10-24
 
