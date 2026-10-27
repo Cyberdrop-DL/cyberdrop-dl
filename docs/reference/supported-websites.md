@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.13.0
+List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 ### 1fichier
 
@@ -863,17 +863,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
 - Model:
   - `/<name>`
 
-### FileditchAlbums
-
-**Primary URL**: [https://fileditchalbums.st](https://fileditchalbums.st)
-
-**Supported Domains**: `fileditchalbums.*`
-
-**Supported Paths**:
-
-- Album:
-  - `/<album_id>`
-
 ### Fileditch
 
 **Primary URL**: [https://fileditchfiles.me](https://fileditchfiles.me)
@@ -889,6 +878,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/temp/<file_id>/<name>`
 - Short URL:
   - `https://theditch.st/<short_id>`
+
+### FileditchAlbums
+
+**Primary URL**: [https://fileditchalbums.st](https://fileditchalbums.st)
+
+**Supported Domains**: `fileditchalbums.*`
+
+**Supported Paths**:
+
+- Album:
+  - `/<album_id>`
 
 ### Filester
 
@@ -1550,6 +1550,23 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
 - Video:
   - `/<model_id>/video/<video_id>`
 
+### Lensdump
+
+**Primary URL**: [https://lensdump.com](https://lensdump.com)
+
+**Supported Domains**: `.l3n.co`, `lensdump.com`
+
+**Supported Paths**:
+
+- Album:
+  - `/a/<album_id>`
+- Direct Links:
+  - `https://<server>.l3n.co/.../<image_id>.<ext>`
+- Image:
+  - `/i/<image_id>`
+- User albums:
+  - `/<username>`
+
 ### LiveCamRips
 
 **Primary URL**: [https://livecamrips.to](https://livecamrips.to)
@@ -1730,13 +1747,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
 
 **Primary URL**: [https://mixdrop.sb](https://mixdrop.sb)
 
-**Supported Domains**: `m1xdrop.*`, `mixdrop.*`, `mxdrop.*`
+**Supported Domains**: `m1xdrop.*`, `miixdrop.*`, `mixdrop.*`, `mxdrop.*`
 
 **Supported Paths**:
 
 - File:
   - `/e/<file_id>`
   - `/f/<file_id>`
+
+**Notes**
+
+- Only video files are supported
 
 ### Monstercat
 
@@ -2498,28 +2519,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/d/<video_id>`
   - `/e/<video_id>`
 
-### RedditImages
-
-**Primary URL**: [https://i.redd.it](https://i.redd.it)
-
-**Supported Domains**: `external-preview.redd.it`, `i.redd.it`, `i.redditmedia.com`, `i.reddituploads.com`, `preview.redd.it`
-
-**Supported Paths**:
-
-- Image:
-  - `i.redd.it/<id>.>ext>`
-
-### RedditVideos
-
-**Primary URL**: [https://v.redd.it](https://v.redd.it)
-
-**Supported Domains**: `v.redd.it`
-
-**Supported Paths**:
-
-- Video:
-  - `v.redd.it/<video_id>`
-
 ### Reddit
 
 **Primary URL**: [https://www.reddit.com](https://www.reddit.com)
@@ -2546,6 +2545,28 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/u/<user>/submitted`
   - `/user/<user>`
   - `/user/<user>/submitted`
+
+### RedditImages
+
+**Primary URL**: [https://i.redd.it](https://i.redd.it)
+
+**Supported Domains**: `external-preview.redd.it`, `i.redd.it`, `i.redditmedia.com`, `i.reddituploads.com`, `preview.redd.it`
+
+**Supported Paths**:
+
+- Image:
+  - `i.redd.it/<id>.>ext>`
+
+### RedditVideos
+
+**Primary URL**: [https://v.redd.it](https://v.redd.it)
+
+**Supported Domains**: `v.redd.it`
+
+**Supported Paths**:
+
+- Video:
+  - `v.redd.it/<video_id>`
 
 ### RedGifs
 
@@ -2956,10 +2977,15 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/share/photo/<photo_id>`
 - User:
   - `/@<user>`
+  - `/@<user>?cursor=<cursor>`
 - Video:
   - `/@/video/<video_id>`
   - `/@<user>/video/<video_id>`
   - `/share/video/<video_id>`
+
+**Notes**
+
+- Use `cursor` query param to resume pagination from a previous profile scrape
 
 ### TitsInTops
 
@@ -3222,10 +3248,10 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
 
 **Supported Paths**:
 
-- **NOTES**:
-  - `Does NOT support subfolders`
 - Share:
   - `/public/<path>...`
+- Share subfolder:
+  - `/public/<path>...?f=<subfolder_id>`
 
 ### Upload.ee
 
@@ -3326,27 +3352,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/embed/<video_id>/...`
   - `/videos/<video_id>/...`
 
-### VKVideo
-
-**Primary URL**: [https://vkvideo.com](https://vkvideo.com)
-
-**Supported Domains**: `vkvideo.com`, `vkvideo.ru`
-
-**Supported Paths**:
-
-- Playlist:
-  - `/playlist/<owner_id>_<playlist_id>`
-- User / Group videos:
-  - `@<owner_screen_name>`
-  - `@<owner_screen_name>/all`
-  - `@<owner_screen_name>/clips`
-  - `@<owner_screen_name>/donut`
-- Video:
-  - `/clip<owner_id>_<video_id>`
-  - `/playlist/<owner_id>_<playlist_id>/video<owner_id>_<video_id>`
-  - `/video<owner_id>_<video_id>?list=<access_key>`
-  - `/video_ext.php?oid=<owner_id>&id=<video_id>`
-
 ### VK
 
 **Primary URL**: [https://vk.com](https://vk.com)
@@ -3386,6 +3391,27 @@ List of sites supported by cyberdrop-dl-patched as of version 10.13.0
   - `/album<owner_id>_00`
   - `/id<owner_id>`
   - `/public<owner_id>`
+- Video:
+  - `/clip<owner_id>_<video_id>`
+  - `/playlist/<owner_id>_<playlist_id>/video<owner_id>_<video_id>`
+  - `/video<owner_id>_<video_id>?list=<access_key>`
+  - `/video_ext.php?oid=<owner_id>&id=<video_id>`
+
+### VKVideo
+
+**Primary URL**: [https://vkvideo.ru](https://vkvideo.ru)
+
+**Supported Domains**: `vkvideo.com`, `vkvideo.ru`
+
+**Supported Paths**:
+
+- Playlist:
+  - `/playlist/<owner_id>_<playlist_id>`
+- User / Group videos:
+  - `@<owner_screen_name>`
+  - `@<owner_screen_name>/all`
+  - `@<owner_screen_name>/clips`
+  - `@<owner_screen_name>/donut`
 - Video:
   - `/clip<owner_id>_<video_id>`
   - `/playlist/<owner_id>_<playlist_id>/video<owner_id>_<video_id>`

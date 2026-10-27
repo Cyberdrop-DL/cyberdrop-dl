@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.13.0
+cyberdrop-dl v10.14.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -106,7 +106,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.13.0
+cyberdrop-dl v10.14.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -236,6 +236,9 @@ Download URLs
 │ --crawlers.only-haven.embed          Download the embedded file from third party sites (if       │
 │   --crawlers.only-haven.no-embed     any)(mega.nz, pcloud, dropbox, etc..)                       │
 │                                      [default: True]                                             │
+│ --crawlers.patreon.content-urls      Download any URL found inside the description (text) of a   │
+│   --crawlers.patreon                 post                                                        │
+│   .no-content-urls                   [default: True]                                             │
 │ --crawlers.pawchive.file             Download the main file in a post (if any)                   │
 │   --crawlers.pawchive.no-file        [default: True]                                             │
 │ --crawlers.pawchive.attachments      Download all attachments in a post (may or may not include  │
@@ -333,12 +336,11 @@ Download URLs
 │ --video.duration.max TIMEDELTA                                                                   │
 │ --audio.duration.min TIMEDELTA                                                                   │
 │ --audio.duration.max TIMEDELTA                                                                   │
-│ --before FALSYASNONE[DATE]           Only download files uploaded before this date               │
-│ --after FALSYASNONE[DATE]            Only download files uploaded after this date                │
-│ --filename-regex                     Only download files that match this regex                   │
-│   FALSYASNONE[PATTERN[STR]]                                                                      │
+│ --before DATE                        Only download files uploaded before this date               │
+│ --after DATE                         Only download files uploaded after this date                │
+│ --filename-regex PATTERN[STR]        Only download files that match this regex                   │
 │ --filename-regex-exclude             Do NOT download files that match this regex                 │
-│   FALSYASNONE[PATTERN[STR]]                                                                      │
+│   PATTERN[STR]                                                                                   │
 │ --only-hosts STR...                  Only scrape/download from these domains                     │
 │                                      [default: {}]                                               │
 │ --skip-hosts STR...                  Skip scrape/download from these domains                     │
@@ -369,8 +371,8 @@ Download URLs
 │                                      their deprecated API (insecure, default port=3128)          │
 │ --jdownloader.autostart              Immediately start downloads as soon as they are sent        │
 │   --jdownloader.no-autostart         [default: False]                                            │
-│ --jdownloader.download-folder        Output path for Jdownloader. Defaults to                    │
-│   FALSYASNONE[PATH]                  `--download-folder`                                         │
+│ --jdownloader.download-folder PATH   Output path for Jdownloader. Defaults to                    │
+│                                      `--download-folder`                                         │
 │ --jdownloader.whitelist STR...       Only send unsupported URLs from these domains to            │
 │                                      Jdownloader. An empty list means 'send all URLs'            │
 │                                      [default: {}]                                               │
@@ -380,9 +382,10 @@ Download URLs
 │                                      file                                                        │
 │                                      [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]            │
 │                                      [default: DEBUG]                                            │
-│ --logs.console-level                 Only log messages of this level or higher to the console.   │
-│   FALSYASNONE[CHOICE]                An empty or `None` value will use the same level as         │
+│ --logs.console-level CHOICE          Only log messages of this level or higher to the console.   │
+│                                      An empty or `None` value will use the same level as         │
 │                                      `log_level`                                                 │
+│                                      [choices: DEBUG, INFO, WARNING, ERROR, CRITICAL]            │
 │ --logs.http-traffic --print-traffic  Log HTTP requests and responses (at INFO level)             │
 │   --logs.no-http-traffic             [default: True]                                             │
 │   --no-print-traffic                                                                             │
@@ -400,10 +403,10 @@ Download URLs
 │ --logs.files.dedupe PATH             Save every duplicate deleted by the deduper, and the file   │
 │                                      it matched, to this file (MUST BE .csv)                     │
 │                                      [default: dedupe.csv]                                       │
-│ --logs.folder FALSYASNONE[PATH]      Base folder to prepend to log files paths (if they are not  │
+│ --logs.folder PATH                   Base folder to prepend to log files paths (if they are not  │
 │                                      absolute)                                                   │
-│ --logs.expire-after                  Delete all log files inside `--logs.folder` if they are     │
-│   FALSYASNONE[TIMEDELTA]             older that this                                             │
+│ --logs.expire-after TIMEDELTA        Delete all log files inside `--logs.folder` if they are     │
+│                                      older that this                                             │
 │ --logs.rotate --logs.no-rotate       Append current datetimme to every log file on each run      │
 │                                      [default: False]                                            │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -422,7 +425,7 @@ Download URLs
 │ --dump-responses                     Save text/HTML/JSON responses to disk (Flaresolverr         │
 │   --no-dump-responses                responses are excluded)                                     │
 │                                      [default: False]                                            │
-│ --flaresolverr FALSYASNONE[URL]      HTTP URL of an existing Flaresolverr instance               │
+│ --flaresolverr URL                   HTTP URL of an existing Flaresolverr instance               │
 │ --flaresolverr-use-session           Create a custom session before making any request with      │
 │   --no-flaresolverr-use-session      Flaresolverr                                                │
 │                                      [default: True]                                             │
@@ -432,44 +435,49 @@ Download URLs
 │                                      [default: 0]                                                │
 │ --flaresolverr-concurrency INT       Number of concurrent requests to make with Flaresolverr     │
 │                                      [default: 1]                                                │
-│ --proxy --http-proxy                 HTTP/HTTPS proxy                                            │
-│   FALSYASNONE[URL]                                                                               │
+│ --proxy --http-proxy URL             HTTP/HTTPS proxy                                            │
 │ --rate-limit FLOAT                   Max number of requests per second (only used while          │
 │                                      scraping)                                                   │
-│                                      [default: 25]                                               │
+│                                      [default: 25.0]                                             │
 │ --connection-timeout FLOAT           [default: 15]                                               │
-│ --read-timeout FALSYASNONE[FLOAT]    [default: 300]                                              │
-│ --ssl-context FALSYASNONE[CHOICE]    [default: truststore+certifi]                               │
+│ --read-timeout FLOAT                 [default: 300]                                              │
+│ --ssl-context CHOICE                 [choices: truststore, certifi, truststore+certifi]          │
+│                                      [default: truststore+certifi]                               │
 │ --verify --ssl --no-verify --no-ssl  [default: True]                                             │
 │ --tls.min-version CHOICE             [choices: 1.2, 1.3]                                         │
 │                                      [default: 1.2]                                              │
 │ --ca-certs PATH...                   [default: ()]                                               │
 │ --user-agent STR                     [default: Mozilla/5.0 (X11; Linux x86_64; rv:153.0)         │
 │                                      Gecko/20100101 Firefox/153.0]                               │
-│ --impersonate FALSYASNONE[CHOICE]    Use this target as impersonation for all scrape requests    │
+│ --impersonate CHOICE                 Use this target as impersonation for all scrape requests    │
+│                                      [choices: chrome, edge, safari, safari_ios, chrome_android, │
+│                                      firefox]                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Sort ───────────────────────────────────────────────────────────────────────────────────────────╮
 │ --sort.enabled --sort           Enable/Disable file sorting at the end of a run                  │
 │   --sort.no-enabled --no-sort   [default: False]                                                 │
-│ --sort.input-folder             Base folder to scan for files. Default to the same value as      │
-│   FALSYASNONE[PATH]             `--download-folder`                                              │
+│ --sort.input-folder PATH        Base folder to scan for files. Default to the same value as      │
+│                                 `--download-folder`                                              │
 │ --sort.output-folder PATH       Output path to place sorted files in                             │
 │                                 [default: downloads/cyberdrop-dl sorted]                         │
-│ --sort.formats.audio            Format to generate sorted audio file                             │
-│   FALSYASNONE[STR]              [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]           │
-│ --sort.formats.image            Format to generate sorted image file                             │
-│   FALSYASNONE[STR]              [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]          │
-│ --sort.formats.non-media        Format to generate sorted files of unknown type                  │
-│   FALSYASNONE[STR]              [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]           │
-│ --sort.formats.video            Format to generate sorted video file                             │
-│   FALSYASNONE[STR]              [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]          │
+│ --sort.formats.audio STR        Format to generate sorted audio file                             │
+│                                 [default: {sort_dir}/{base_dir}/Audio/{filename}{ext}]           │
+│ --sort.formats.image STR        Format to generate sorted image file                             │
+│                                 [default: {sort_dir}/{base_dir}/Images/{filename}{ext}]          │
+│ --sort.formats.non-media STR    Format to generate sorted files of unknown type                  │
+│                                 [default: {sort_dir}/{base_dir}/Other/{filename}{ext}]           │
+│ --sort.formats.video STR        Format to generate sorted video file                             │
+│                                 [default: {sort_dir}/{base_dir}/Videos/{filename}{ext}]          │
 │ --sort.formats.incrementer STR  Format for separator on name collisions                          │
 │                                 [default:  ({i})]                                                │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ SubFolders ─────────────────────────────────────────────────────────────────────────────────────╮
-│ --subfolders.create --subfolders     Enable/disable the createtion of nested sub-folders         │
+│ --subfolders.create --subfolders     Enable/disable the creation of nested sub-folders           │
 │   --subfolders.no-create             [default: True]                                             │
 │   --no-subfolders                                                                                │
+│ --subfolders.group-loose-files       Create a subfolder named 'Loose Files' for individual files │
+│   --subfolders.no-group-loose-files  not part of any album/thread                                │
+│                                      [default: True]                                             │
 │ --subfolders.include.album-id        [default: False]                                            │
 │   --subfolders.include.no-album-id                                                               │
 │ --subfolders.include.thread-id       [default: False]                                            │
