@@ -108,7 +108,9 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
     "Delete all log files inside `--logs.folder` if they are older that this"
 
     rotate: bool = False
-    "Append current datetimme to every log file on each run"
+    "Add current datetime to every log file on each run"
+
+    rotate_date_position: Literal["prefix", "suffix"] = "suffix"
 
     _created_at: dt.datetime = PrivateAttr(default_factory=dt.datetime.now)
 
@@ -130,10 +132,15 @@ class Logs(ConfigGroup, name=None):  # noqa: PLW1641
 
         def resolve(path: Path) -> Path:
             log_file = folder / path
-            if self.rotate:
-                file_name = f"{log_file.stem}_{now_file_iso}{log_file.suffix}"
-                log_file = log_file.parent / now_folder_iso / file_name
-            return log_file
+            if not self.rotate:
+                return log_file
+
+            stem = (
+                f"{now_file_iso}_{log_file.stem}"
+                if self.rotate_date_position == "prefix"
+                else f"{log_file.stem}_{now_file_iso}"
+            )
+            return log_file.parent / now_folder_iso / f"{stem}{log_file.suffix}"
 
         self.files = LogFiles.model_construct(
             None, **{name: resolve(value) for name, value in self.files.model_dump().items()}

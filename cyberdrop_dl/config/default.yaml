@@ -173,6 +173,7 @@ logs:
   http_traffic: true
   level: DEBUG
   rotate: false
+  rotate_date_position: suffix
 max_children:
   album: 0
   forum: 0

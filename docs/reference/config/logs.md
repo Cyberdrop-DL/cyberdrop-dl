@@ -102,7 +102,7 @@ logs:
 | ------ | ------- |
 | `bool` | `false` |
 
-If enabled, `cyberdrop-dl` will add the current date and time as a suffix to each log file, in the format `YYMMDD_HHMMSS`
+If enabled, `cyberdrop-dl` will add the current datetime to each log file, in the format `YYMMDD_HHMMSS`.
 
 Every log file will be created inside a sub folder with the current date
 
@@ -111,6 +111,19 @@ This will prevent overriding old log files
 ```yaml
 logs:
   rotate: false
+```
+
+# `rotate_date_position`
+
+| Type                 | Default  |
+| -------------------- | -------- |
+| `prefix` or `suffix` | `suffix` |
+
+Ignored unless `--logs.rotate` is enabled
+
+```yaml
+logs:
+  rotate_date_position: "suffix"
 ```
 
 # Files
