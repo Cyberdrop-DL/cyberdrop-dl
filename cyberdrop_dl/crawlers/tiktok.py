@@ -23,6 +23,7 @@ class Author:
     id: str
     unique_id: str
     nickname: str
+    avatar: str | None = None
 
     def __str__(self) -> str:
         return f"@{self.unique_id}"
@@ -33,13 +34,13 @@ class Post:
     id: str
     title: str
     create_time: int
-    size: int
     author: Author
     music_info: MusicInfo
-    play: str | None = None
-    is_src_quality: bool = False
+
+    region: str | None = None
     cover: str | None = None
     images: list[str] = dataclasses.field(default_factory=list)
+    sources: dict[str, VideoSrc] = dataclasses.field(default_factory=dict)
 
     @property
     def type(self) -> str:
@@ -50,7 +51,18 @@ class Post:
         return f"{self.author}/{self.type}/{self.id}"
 
     @classmethod
-    def from_dict(cls, video: Mapping[str, Any], *, is_src_quality: bool = False) -> Self:
+    def from_dict(cls, video: Mapping[str, Any]) -> Self:
+
+        def sources(video: Mapping[str, Any]):
+            for name, url_key, size_key in (
+                ("watermark", "wmplay", "wm_size"),
+                ("no_watermark_hd", "hdplay", "hd_size"),  # HD is 720P, no_watermark is better
+                ("no_watermark", "play", "size"),
+                ("original", "play_url", "size"),
+            ):
+                if url := video.get(url_key):
+                    yield name, VideoSrc(url=url, size=video[size_key])
+
         return deserialize(
             cls,
             video,
@@ -58,8 +70,7 @@ class Post:
             author=deserialize(Author, (video["author"])),
             music_info=deserialize(MusicInfo, (video["music_info"])),
             id=video.get("id") or video["video_id"],
-            play=video.get("play") or video["play_url"],
-            is_src_quality=is_src_quality,
+            sources=dict(sources(video)),
         )
 
 
@@ -76,6 +87,12 @@ class MusicInfo:
         if "original-sound" in safe_title or "original-audio" in safe_title:
             safe_title = "original-audio"
         return f"music/{safe_title}-{self.id}"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class VideoSrc:
+    url: str
+    size: int
 
 
 @HTTPConfig(rate_limit=(1, 2))
@@ -130,7 +147,7 @@ class TikTokCrawler(Crawler):
         scrape_item.setup_as_profile("")
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            async for post in self.api.profile_posts(profile_id, cursor=scrape_item.url.query.get("cursour")):
+            async for post in self.api.profile_posts(profile_id, cursor=scrape_item.url.query.get("cursor")):
                 url = self.PRIMARY_URL / post.web_path
                 new_item = scrape_item.create_child(url)
                 tg.create_task(self._post_task(new_item, post))
@@ -149,6 +166,17 @@ class TikTokCrawler(Crawler):
 
         await self._post(scrape_item, post)
 
+    @auto_task_id
+    @error_handling_wrapper
+    async def _post_task(self, scrape_item: ScrapeItem, post: Post) -> None:
+        if await self.check_complete(scrape_item.url):
+            return
+
+        if not post.images and self.original and "original" not in post.sources:
+            post = await self.api.post_src_quality(post.id)
+
+        await self._post(scrape_item, post)
+
     async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
         scrape_item.url = self.PRIMARY_URL / post.web_path
         scrape_item.append_folders(self.create_title(post.author.unique_id, post.id))
@@ -162,30 +190,21 @@ class TikTokCrawler(Crawler):
             fail_fast=False,
         )
 
-    @auto_task_id
-    @error_handling_wrapper
-    async def _post_task(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if await self.check_complete(scrape_item.url):
-            return
-
-        if not post.images and self.original and not post.is_src_quality:
-            post = await self.api.post_src_quality(post.id)
-
-        await self._post(scrape_item, post)
-
     async def _handle_images(self, scrape_item: ScrapeItem, post: Post) -> None:
         async with aio.non_cancelling_taskgroup() as tg:
             for index, url in enumerate(post.images):
-                link = self.parse_url(url, trim=False)
-                img_url = self.PRIMARY_URL / post.web_path / str(index)
-                filename = self.create_custom_filename(f"{post.id}_img{str(index).zfill(3)}", link.suffix)
+                src = self.parse_url(url, trim=False)
+                name = f"{post.id}_img{str(index).zfill(3)}{src.suffix}"
+                web_url = self.PRIMARY_URL / post.web_path / str(index)
+                filename, ext = self.get_filename_and_ext(name)
                 tg.create_task(
                     self.handle_file(
-                        img_url,
+                        web_url,
                         scrape_item,
-                        filename,
-                        link.suffix,
-                        debrid_link=link,
+                        name,
+                        ext,
+                        debrid_link=src,
+                        custom_filename=filename,
                     )
                 )
 
@@ -194,32 +213,44 @@ class TikTokCrawler(Crawler):
         if not audio.play:
             return
 
-        audio_url = self.parse_url(audio.play, trim=False)
         filename = self.create_custom_filename(audio.title, ext := ".mp3", file_id=audio.id)
         await self.handle_file(
             self.PRIMARY_URL / audio.web_path,
             scrape_item,
             audio.title + ext,
             ext,
-            debrid_link=audio_url,
+            debrid_link=self.parse_url(audio.play, trim=False),
             custom_filename=filename,
         )
 
     async def _handle_video(self, scrape_item: ScrapeItem, post: Post) -> None:
-        if not (post.size and post.play):
+        if src := post.sources.get("original"):
+            name = f"{post.id}_original"
+        elif src := post.sources.get("no_watermark"):
+            name = post.id
+        elif not post.images:
+            raise ScrapeError(422, f"No video or images found in post {post.id}")
+        else:
             return
 
-        video_url = self.parse_url(post.play, trim=False)
-        name = f"{post.id}{'_original'}" if post.is_src_quality else post.id
+        if not src.size:
+            self.log.warning(
+                "Ignoring video in post %s (no size info for best source: %s): All sources:\n%s",
+                post.id,
+                src,
+                post.sources,
+            )
+            return
+
         filename, ext = self.get_filename_and_ext(f"{name}.mp4")
         await self.handle_file(
             scrape_item.url,
             scrape_item,
             name + ext,
             ext,
-            debrid_link=video_url,
+            debrid_link=self.parse_url(src.url, trim=False),
             custom_filename=filename,
-            thumbnail=post.cover,
+            metadata=post,
         )
 
     @override
@@ -228,7 +259,7 @@ class TikTokCrawler(Crawler):
             media_item.download_folder /= "Audios"
 
 
-def _check_json_resp(resp: dict[str, Any], _: Any) -> None:
+def _check_json_resp(resp: dict[str, Any], _: Any = None) -> None:
     code = resp.get("code")
     if code != 0:
         msg = resp.get("msg", "")
@@ -237,36 +268,43 @@ def _check_json_resp(resp: dict[str, Any], _: Any) -> None:
         raise ScrapeError(422, message=f"{code = }, {msg}")
 
 
-@HTTPConfig(headers={"X-Requested-With": "XMLHttpRequest"}, json_check=_check_json_resp)
+@HTTPConfig(
+    headers={"X-Requested-With": "XMLHttpRequest", "Referer": "https://tikwm.com/"},
+    json_check=_check_json_resp,
+)
 class TikWMAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.tikwm.com/api")
 
-    async def submit_task(self, media_id: str) -> str:
-        submit_url = (self.ENTRYPOINT / "video/task/submit").with_query(url=media_id)
-        resp = await self.request_json(submit_url)
-        return resp["data"]["task_id"]
+    async def _request(self, url: AbsoluteHttpURL) -> dict[str, Any]:
+        resp = await self.request_json(url)
+        _check_json_resp(resp)
+        return resp["data"]
 
     async def post(self, media_id: str) -> Post:
-        api_url = self.ENTRYPOINT.with_query(url=media_id)
-        resp = await self.request_json(api_url)
-        return Post.from_dict(resp["data"])
+        data = await self._request(self.ENTRYPOINT.update_query(url=media_id, hd=1))
+        return Post.from_dict(data)
 
     async def post_src_quality(self, media_id: str) -> Post:
         task_id: str = await self.submit_task(media_id)
         self.log.info(f"trying to download {media_id = } with {task_id = }")
         return await self.wait_for_task(task_id)
 
+    async def submit_task(self, media_id: str) -> str:
+        url = (self.ENTRYPOINT / "video/task/submit").update_query(url=media_id)
+        data = await self._request(url)
+        return data["task_id"]
+
     async def wait_for_task(self, task_id: str) -> Post:
-        api_url = (self.ENTRYPOINT / "video/task/result").with_query(task_id=task_id)
+        url = (self.ENTRYPOINT / "video/task/result").with_query(task_id=task_id)
         delays = (0.5, 1.5, 4)
         for delay in delays:
             try:
                 await asyncio.sleep(delay)
-                resp = await self.request_json(api_url)
+                data = await self._request(url)
             except ScrapeError:
                 pass
             else:
-                return Post.from_dict(resp["data"]["detail"], is_src_quality=True)
+                return Post.from_dict(data["detail"])
 
         msg = (
             f"[tiktok] Download {task_id = } was not ready after {len(delays)} attempts. Total wait time: {sum(delays)}"
@@ -279,8 +317,7 @@ class TikWMAPI(API):
             url = url.update_query(cursor=cursor)
 
         while True:
-            resp = await self.request_json(url, impersonate=True)
-            data: dict[str, Any] = resp["data"]
+            data = await self._request(url)
             for post in data["videos"]:
                 yield Post.from_dict(post)
 
