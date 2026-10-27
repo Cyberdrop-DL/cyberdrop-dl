@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Self, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -13,7 +13,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Mapping
+    from collections.abc import AsyncGenerator, Generator, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -36,15 +36,18 @@ class Post:
     create_time: int
     author: Author
     music_info: MusicInfo
+    type: Literal["photo", "video"]
 
     region: str | None = None
     cover: str | None = None
+
     images: list[str] = dataclasses.field(default_factory=list)
+    content_desc: list[str] = dataclasses.field(default_factory=list)
     sources: dict[str, VideoSrc] = dataclasses.field(default_factory=dict)
 
     @property
-    def type(self) -> str:
-        return "photo" if self.images else "video"
+    def is_video(self) -> bool:
+        return self.type == "video" or bool(self.sources)
 
     @property
     def web_path(self) -> str:
@@ -52,17 +55,7 @@ class Post:
 
     @classmethod
     def from_dict(cls, video: Mapping[str, Any]) -> Self:
-
-        def sources(video: Mapping[str, Any]):
-            for name, url_key, size_key in (
-                ("watermark", "wmplay", "wm_size"),
-                ("no_watermark_hd", "hdplay", "hd_size"),  # HD is 720P, no_watermark is better
-                ("no_watermark", "play", "size"),
-                ("original", "play_url", "size"),
-            ):
-                if url := video.get(url_key):
-                    yield name, VideoSrc(url=url, size=video[size_key])
-
+        sources = dict(_parse_video_sources(video))
         return deserialize(
             cls,
             video,
@@ -70,7 +63,8 @@ class Post:
             author=deserialize(Author, (video["author"])),
             music_info=deserialize(MusicInfo, (video["music_info"])),
             id=video.get("id") or video["video_id"],
-            sources=dict(sources(video)),
+            sources=sources,
+            type="video" if sources else "photo",
         )
 
 
@@ -163,6 +157,8 @@ class TikTokCrawler(Crawler):
             post = await self.api.post_src_quality(media_id)
         else:
             post = await self.api.post(media_id)
+            if post.is_video and self.original:  # Actually a video with a wrong URL format
+                post = await self.api.post_src_quality(media_id)
 
         await self._post(scrape_item, post)
 
@@ -172,7 +168,7 @@ class TikTokCrawler(Crawler):
         if await self.check_complete(scrape_item.url):
             return
 
-        if not post.images and self.original and "original" not in post.sources:
+        if post.is_video and self.original and "original" not in post.sources:
             post = await self.api.post_src_quality(post.id)
 
         await self._post(scrape_item, post)
@@ -229,18 +225,18 @@ class TikTokCrawler(Crawler):
         elif src := post.sources.get("no_watermark"):
             name = post.id
         elif not post.images:
-            raise ScrapeError(422, f"No video or images found in post {post.id}")
+            raise ScrapeError(204, f"No video or images found in post {post.id}")
         else:
             return
 
         if not src.size:
             self.log.warning(
-                "Ignoring video in post %s (no size info for best source: %s): All sources:\n%s",
+                "No size info for best video source in post %s: %s): All sources:\n%s",
                 post.id,
                 src,
                 post.sources,
             )
-            return
+            raise ScrapeError(422, f"No video size in post {post.id}")
 
         filename, ext = self.get_filename_and_ext(f"{name}.mp4")
         await self.handle_file(
@@ -325,3 +321,16 @@ class TikWMAPI(API):
                 break
 
             url = url.update_query(cursor=data["cursor"])
+
+
+def _parse_video_sources(video: Mapping[str, Any]) -> Generator[tuple[str, VideoSrc]]:
+    for name, url_key, size_key in (
+        ("watermark", "wmplay", "wm_size"),
+        ("no_watermark_hd", "hdplay", "hd_size"),  # HD is 720P, no_watermark is better
+        ("no_watermark", "play", "size"),
+        ("original", "play_url", "size"),
+    ):
+        url = video.get(url_key)
+        size = video.get(size_key)
+        if url and size:
+            yield name, VideoSrc(url, size)
