@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, override
+from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients import etag
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
+NOT_FOUND_MSG = "You either don't have permission to access this image or it has been deleted"
 
 etag.register(
     etag.ETag(
-        "68d194f7-3574",
-        "You either don't have permission to access this image or it has been deleted",
+        "686157ae6e2b3d52f9bf5fb8f531da42",
+        NOT_FOUND_MSG,
         404,  # https://cdn.lensdump.com/404.png
     )
 )
@@ -25,7 +30,8 @@ etag.register(
 class LensDumpCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ".l3n.co", "lensdump.com"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
-        "Image": ("/i/<image_id>",),
+        "Image": "/i/<image_id>",
+        "Album": "/a/<album_id>",
         "Direct Links": "https://<server>.l3n.co/.../<image_id>.<ext>",
     }
     DOMAIN: ClassVar[str] = "lensdump"
@@ -49,56 +55,78 @@ class LensDumpCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["i", image_id]:
-                await self.image(scrape_item, image_id)
+                await self.file(scrape_item, image_id)
+            case ["a", album_id]:
+                await self.album(scrape_item, album_id)
             case ["404.png"]:
                 await self.raise_exc(scrape_item, 404)
             case _:
                 raise ValueError
 
     @error_handling_wrapper
-    async def image(self, scrape_item: ScrapeItem, image_id: str) -> None:
+    async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
+        album, downloaded = await aio.gather(
+            self.api.album(album_id), self.get_completed_by_album(album_id), fail_fast=False
+        )
+        scrape_item.setup_as_album(self.create_title(album.name, album.id), album_id=album.id)
+        if not album.files:
+            raise ScrapeError(204, "Album has no files")
+
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for image in self.api.album_files(album_id):
+                web_url = self.PRIMARY_URL / "i" / image.id
+                if web_url in downloaded:
+                    continue
+                tg.create_task(self._file(scrape_item.create_child(web_url), image))
+                scrape_item.add_children()
+                await sleep()
+
+    @error_handling_wrapper
+    async def file(self, scrape_item: ScrapeItem, image_id: str) -> None:
         if await self.check_complete(scrape_item.url):
             return
 
-        image = await self.api.image(image_id)
+        image = await self.api.file(image_id)
         scrape_item.setup_as_album(self.create_title(image.album.name, image.album.id), album_id=image.album.id)
-        await self._image(scrape_item, image)
+        await self._file(scrape_item, image)
 
-    async def _image(self, scrape_item: ScrapeItem, image: Image) -> None:
-        _, ext = self.get_filename_and_ext(image.filename)
+    @error_handling_wrapper
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
+        src = self.parse_url(file.src)
+        _, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            image.title,
+            file.title,
             ext,
-            custom_filename=self.create_custom_filename(image.title, ext, file_id=image.id),
-            metadata=image,
-            debrid_link=self.parse_url(image.src),
-            uploaded_at=int(self.parse_iso_date(image.uploaded_at)),
+            custom_filename=self.create_custom_filename(file.title, ext, file_id=file.id),
+            metadata=file,
+            debrid_link=lambda: self.api.probe(src),
+            uploaded_at=int(self.parse_iso_date(file.uploaded_at)),
         )
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
-class Image:
+class File:
     id: str
-    type: Literal["image"]
+    type: str
     title: str
-    size: int
     uploaded_at: str
     album: Album
-    filename: str
-    src: str
+    src: AbsoluteHttpURL | str
     owner: Owner | None = None
     description: str | None = None
 
     @classmethod
-    def parse(cls, image: dict[str, Any]) -> Self:
+    def parse(cls, file: dict[str, Any]) -> Self:
         return deserialize(
             cls,
-            image,
-            src=image["urls"]["file"],
-            owner=deserialize(Owner, ow) if (ow := image.get("owner")) else None,
-            album=deserialize(Album, image["album"]),
+            file,
+            src=file.get("src_url") or file["urls"]["file"],
+            owner=Owner.parse(ow) if (ow := file.get("owner")) else None,
+            album=Album.parse(file["album"]),
+            uploaded_at=file.get("uploaded_at") or file["date"],
         )
 
 
@@ -106,7 +134,9 @@ class Image:
 class Owner:
     id: str
     username: str
-    name: str
+    name: str | None = None
+
+    parse = classmethod(deserialize)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -114,11 +144,54 @@ class Album:
     id: str
     name: str
 
+    parse = classmethod(deserialize)
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class FullAlbum(Album):
+    files: int
+    sub_albums: int
+    owner: Owner | None
+    created_at: str
+    parent: str | None
+
 
 class LensDumpAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lensdump.com/api/2")
 
-    async def image(self, image_id: str) -> Image:
+    async def file(self, image_id: str) -> File:
         url = self.ENTRYPOINT / "files" / image_id
         resp = await self.request_json(url)
-        return Image.parse(resp)
+        return File.parse(resp)
+
+    async def probe(self, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        async with self.request(url) as resp:
+            if resp.url.name == "404.png":
+                raise DownloadError(404, NOT_FOUND_MSG)
+            return resp.url
+
+    async def album(self, album_id: str) -> FullAlbum:
+        url = self.ENTRYPOINT / "albums" / album_id
+        resp = await self.request_json(url)
+        return FullAlbum.parse(
+            resp,
+            owner=Owner.parse(ow) if (ow := resp.get("owner")) else None,
+        )
+
+    async def album_files(self, album_id: str) -> AsyncGenerator[File]:
+        url = self.ENTRYPOINT / "albums" / album_id / "files"
+        while True:
+            resp = await self.request_json(url)
+            for file in resp["items"]:
+                file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
+                yield File.parse(file)
+
+            cursor = resp.get("next_cursor")
+            if not cursor:
+                break
+
+            url = url.update_query(cursor=cursor)
+
+
+def _thumb_to_src(url: AbsoluteHttpURL):
+    return url.with_name(url.name.replace(".th.", ".").replace(".md.", "."))
