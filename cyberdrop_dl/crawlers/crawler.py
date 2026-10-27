@@ -885,13 +885,13 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return SiteCookies(self.client.cookies.filter_cookies(self.PRIMARY_URL))
 
     @final
-    def update_cookies(self, cookies: LooseCookies, url: yarl.URL | None = None) -> None:
+    def update_cookies(self, cookies: LooseCookies | Mapping[str, int | str], url: yarl.URL | None = None) -> None:
         """Update cookies for the provided URL
 
         If `url` is `None`, defaults to `self.PRIMARY_URL`
         """
         response_url = url or self.PRIMARY_URL
-        self.client.cookies.update_cookies(cookies, response_url)
+        self.client.cookies.update_cookies(cookies, response_url)  # pyright: ignore[reportArgumentType]
 
     @final
     @classmethod
