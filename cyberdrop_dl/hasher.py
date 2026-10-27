@@ -121,16 +121,6 @@ class Hasher:
             self._shutdown,
         )
 
-    async def hash_item(self, media_item: MediaItem | FinishedDownload) -> None:
-        if media_item.is_segment:
-            return
-        hash_value = await self.update_db_and_retrive_hash(
-            media_item.path,
-            media_item.original_filename,
-            referer=media_item.referer,
-        )
-        await self.save_hash_data(media_item, hash_value)
-
     async def update_db_and_retrive_hash(
         self,
         file: Path | str,
@@ -204,10 +194,7 @@ class Hasher:
         else:
             return hash_value
 
-    async def save_hash_data(self, media_item: MediaItem | FinishedDownload, hash_value: str | None) -> None:
-        if not hash_value:
-            return
-
+    async def _save_hash_result(self, media_item: MediaItem | FinishedDownload, hash_value: str) -> None:
         absolute_path = await aio.resolve(media_item.path)
         size = await aio.get_size(media_item.path)
         assert size
@@ -222,10 +209,7 @@ class Hasher:
             if not await aio.is_file(item.path):
                 return
 
-            try:
-                await self.hash_item(item)
-            except Exception:
-                logger.exception("Unable to compute hashes for '%s' [%s]", item.path, item.id)
+            await self.hash_item(item)
 
         with self.tui():
             async with aio.non_cancelling_taskgroup() as tg:
@@ -235,14 +219,19 @@ class Hasher:
 
             return self._hashes_map
 
+    async def hash_item(self, item: MediaItem | FinishedDownload) -> None:
+        try:
+            if item.is_segment:
+                return
 
-async def compute_in_place_hash(hasher: Hasher, media_item: MediaItem) -> None:
-    try:
-        with show_msg(f"Hashing {media_item.path.name}"):
-            assert media_item.original_filename
-            hash_value = await hasher.update_db_and_retrive_hash(
-                media_item.path, media_item.original_filename, media_item.referer
-            )
-            await hasher.save_hash_data(media_item, hash_value)
-    except Exception:
-        logger.exception("After hash processing failed: '%s'", media_item.path)
+            assert item.original_filename
+            with show_msg(f"Hashing {item.path.name}"):
+                hash_value = await self.update_db_and_retrive_hash(
+                    item.path,
+                    item.original_filename,
+                    referer=item.referer,
+                )
+                if hash_value:
+                    await self._save_hash_result(item, hash_value)
+        except Exception:
+            logger.exception("Unable to compute hashes for '%s' [%s]", item.path, item.id)

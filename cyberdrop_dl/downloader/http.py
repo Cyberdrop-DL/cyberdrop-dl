@@ -22,7 +22,6 @@ from cyberdrop_dl.exceptions import (
     RestrictedFiletypeError,
     SkipDownloadError,
 )
-from cyberdrop_dl.hasher import compute_in_place_hash
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import MuxVideo
@@ -367,10 +366,8 @@ class Downloader:
         # TODO: move this to the scrape_mapper as a post-download task
         if self.config.hashing.mode is not constants.HashMode.IN_PLACE:
             return
-        try:
-            await compute_in_place_hash(self.manager.hasher, media_item)
-        except Exception:
-            logger.exception("Unable to compute hashes of '%s'", media_item.path)
+
+        await self.manager.hasher.hash_item(media_item)
 
 
 async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
