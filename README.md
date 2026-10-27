@@ -34,29 +34,17 @@ Run `--help` to see all available commands and options:
 cyberdrop-dl --help
 ```
 
-<div align="center">
-
-![cyberdrop-dl help preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/help.png)
-
-</div>
-
-`cyberdrop-dl` has an extensive list of configuration options. But if you don't care about that and just want to download a file, run:
+If you don't care about any config option and just want to quickly download a file, run:
 
 ```powershell
 cyberdrop-dl download <URL>
 ```
 
-or just run it without any arguments to start the interactive TUI:
+or run it without any arguments to start the interactive TUI:
 
 ```powershell
 cyberdrop-dl
 ```
-
-<div align="center">
-
-![cyberdrop-dl menu preview](https://raw.githubusercontent.com/Cyberdrop-DL/cyberdrop-dl/refs/heads/main/docs/assets/main_menu.png)
-
-</div>
 
 From the [releases page](https://github.com/Cyberdrop-DL/cyberdrop-dl/releases/latest) you can download scripts to install, update and use `cyberdrop-dl` without ever writing any command in your terminal.
 
