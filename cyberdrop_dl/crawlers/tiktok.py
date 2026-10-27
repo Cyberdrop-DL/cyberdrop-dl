@@ -174,7 +174,8 @@ class TikTokCrawler(Crawler):
         await self._post(scrape_item, post)
 
     async def _post(self, scrape_item: ScrapeItem, post: Post) -> None:
-        scrape_item.url = self.PRIMARY_URL / post.web_path
+        with scrape_item.track_changes:
+            scrape_item.url = self.PRIMARY_URL / post.web_path
         scrape_item.append_folders(self.create_title(post.author.unique_id, post.id))
         post_title = self.create_separate_post_title(post.title, post.id, post.create_time)
         scrape_item.setup_as_album(post_title, album_id=post.id)
@@ -308,19 +309,28 @@ class TikWMAPI(API):
         raise ScrapeError(503, msg)
 
     async def profile_posts(self, profile_id: str, cursor: str | None = None) -> AsyncGenerator[Post]:
-        url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50)
+        url = (self.ENTRYPOINT / "user/posts").with_query(unique_id=profile_id, count=50, hd=1)
         if cursor:
             url = url.update_query(cursor=cursor)
 
+        seen: set[str] = set()
+        cursors: set[str] = set()
         while True:
             data = await self._request(url)
-            for post in data["videos"]:
-                yield Post.from_dict(post)
+            for post in map(Post.from_dict, data["videos"]):
+                if post.id not in seen:
+                    seen.add(post.id)
+                    yield post
 
             if not data["hasMore"]:
                 break
 
-            url = url.update_query(cursor=data["cursor"])
+            cursor = data["cursor"]
+            if not cursor or cursor in cursors:
+                break
+
+            cursors.add(cursor)
+            url = url.update_query(cursor=cursor)
 
 
 def _parse_video_sources(video: Mapping[str, Any]) -> Generator[tuple[str, VideoSrc]]:
