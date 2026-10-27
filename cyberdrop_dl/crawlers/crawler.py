@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     )
 
     import yarl
+    from aiohttp.typedefs import LooseCookies
     from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.clients.request import RequestParams
@@ -884,7 +885,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return SiteCookies(self.client.cookies.filter_cookies(self.PRIMARY_URL))
 
     @final
-    def update_cookies(self, cookies: dict[str, Any], url: yarl.URL | None = None) -> None:
+    def update_cookies(self, cookies: LooseCookies, url: yarl.URL | None = None) -> None:
         """Update cookies for the provided URL
 
         If `url` is `None`, defaults to `self.PRIMARY_URL`
