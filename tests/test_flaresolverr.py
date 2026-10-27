@@ -20,7 +20,7 @@ from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, Flar
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
-FLARESOLVER_URL = os.environ.get(ENV_NAME, "") or "http://localhost:8191"
+FLARESOLVER_URL = os.environ.get(ENV_NAME, "")  # or "http://localhost:8191"
 
 
 def needs_flaresolverr() -> pytest.MarkDecorator:
