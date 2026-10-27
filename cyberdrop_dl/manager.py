@@ -22,6 +22,7 @@ from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.sorter import Sorter
+from cyberdrop_dl.url_objects import FinishedDownload
 from cyberdrop_dl.utils import enter_context, get_system_information
 
 if TYPE_CHECKING:
@@ -52,7 +53,7 @@ class Manager:
         self.cli_args: CLIarguments = cli_args or CLIarguments()
         self._config: Config | None = config
 
-        self._completed_downloads: list[MediaItem] = []
+        self._completed_downloads: list[FinishedDownload] = []
         self._hasher: Hasher | None = None
 
         self.http_client = HTTPClient(self.config)
@@ -107,10 +108,11 @@ class Manager:
     def add_completed(self, media_item: MediaItem) -> None:
         if media_item.is_segment:
             return
-        self._completed_downloads.append(media_item)
+
+        self._completed_downloads.append(FinishedDownload.from_item(media_item))
 
     @property
-    def completed_downloads(self) -> list[MediaItem]:
+    def completed_downloads(self) -> list[FinishedDownload]:
         return self._completed_downloads
 
     def log_config_settings(self) -> None:
