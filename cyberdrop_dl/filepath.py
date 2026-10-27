@@ -98,7 +98,7 @@ def sanitize_filename(name: str, sub: str = "") -> str:
         _PATH_SANITIZER.set(clean)
 
     path = Path(clean(name, sub))
-    return path.stem.strip() + path.suffix
+    return path.stem.strip().lstrip(".") + path.suffix
 
 
 def sanitize_folder(title: str, max_len: int | None = None) -> str:

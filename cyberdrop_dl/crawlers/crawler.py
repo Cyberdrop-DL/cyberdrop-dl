@@ -581,7 +581,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         media_item = MediaItem(
             url=url,
             domain=self.DOMAIN,
-            download_folder=_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config),
+            download_folder=await aio.resolve(_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config)),
             filename=custom_filename or filename,
             db_path=self.__db_path__(url),
             referer=referer,
@@ -605,7 +605,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.metadata = metadata
 
         if not USE_RETRY_PATH.get():
-            check_path_traversal(self.config.download_folder, media_item.download_folder)
+            await asyncio.to_thread(check_path_traversal, self.config.download_folder, media_item.download_folder)
         check_dangerous_filename(media_item.download_filename or media_item.filename)
         await self.handle_media_item(media_item, m3u8)
         await self._handle_thumb(media_item, scrape_item)
