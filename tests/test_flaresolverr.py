@@ -6,6 +6,7 @@ import pytest
 
 from cyberdrop_dl.clients import HttpMethod
 from cyberdrop_dl.clients.flaresolverr import (
+    MAX_TIMEOUT,
     Client,
     Command,
     Config,
@@ -19,7 +20,7 @@ from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, Flar
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
-FLARESOLVER_URL = os.environ.get(ENV_NAME, "")  # or "http://localhost:8191"
+FLARESOLVER_URL = os.environ.get(ENV_NAME, "") or "http://localhost:8191"
 
 
 def needs_flaresolverr() -> pytest.MarkDecorator:
@@ -144,7 +145,7 @@ def _config(*, proxy: bool, use_session: bool) -> Config:
                     "waitInSeconds": 20,
                     "session": "sessionA",
                 },
-                {"timeout": aiohttp.ClientTimeout(sock_read=80, sock_connect=60)},
+                aiohttp.ClientTimeout(sock_read=80, sock_connect=60),
             ),
         ),
         (
@@ -163,7 +164,7 @@ def _config(*, proxy: bool, use_session: bool) -> Config:
                         "url": "https://example.com/proxy",
                     },
                 },
-                {"timeout": aiohttp.ClientTimeout(sock_read=80, sock_connect=60)},
+                aiohttp.ClientTimeout(sock_read=80, sock_connect=60),
             ),
         ),
     ],
@@ -175,7 +176,28 @@ def test_request_build(
     req = Request.build(command, AbsoluteHttpURL("https://example.com"), config, wait=wait, session=session)
     assert req.command is expected.command
     assert req.payload == expected.payload
-    assert req.aiohttp_params == expected.aiohttp_params
+    assert req.timeout == expected.timeout
+
+
+def test_request_always_overridaes_min_timeout() -> None:
+
+    for req in (
+        Request(Command.GET_REQUEST, {}),
+        Request(Command.GET_REQUEST, {}, aiohttp.ClientTimeout(sock_read=1, sock_connect=1)),
+    ):
+        assert req.timeout.sock_read
+        assert req.timeout.sock_read >= MAX_TIMEOUT
+        assert req.timeout.sock_connect
+        assert req.timeout.sock_connect >= MAX_TIMEOUT
+
+
+def test_wait_in_seconds_overrides_read() -> None:
+    wait = 120
+    req = Request(Command.GET_REQUEST, {"waitInSeconds": wait})
+    assert req.timeout.sock_read
+    assert req.timeout.sock_read >= MAX_TIMEOUT + wait
+    assert req.timeout.sock_connect
+    assert req.timeout.sock_connect >= MAX_TIMEOUT
 
 
 _CF_BLOCKED = (

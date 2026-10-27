@@ -28,7 +28,8 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 USER_AGENT: ContextVar[str] = ContextVar("USER_AGENT")
 
-MAX_TIMEOUT = 60_000
+MAX_TIMEOUT = 60
+MAX_TIMEOUT_MILIS = MAX_TIMEOUT * 1000
 _CF_BLOCKED_MSG = "Cloudflare has blocked this request"
 
 
@@ -102,16 +103,20 @@ class Response:
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+DEFAULT_TIMEOUT = aiohttp.ClientTimeout(sock_read=MAX_TIMEOUT, sock_connect=MAX_TIMEOUT)
+
+
+@dataclasses.dataclass(slots=True)
 class Request:
     command: RequestCommand
     payload: dict[str, Any]
-    aiohttp_params: dict[str, Any] = dataclasses.field(default_factory=dict)
+    timeout: aiohttp.ClientTimeout = dataclasses.field(default_factory=lambda: DEFAULT_TIMEOUT)
 
     def __post_init__(self) -> None:
-        wait: int | None = self.payload.get("waitInSeconds")
-        if wait and "timeout" not in self.aiohttp_params:
-            self.aiohttp_params["timeout"] = aiohttp.ClientTimeout(sock_read=wait + 60, sock_connect=60)
+        wait: int = self.payload.get("waitInSeconds") or 0
+        self.timeout = _merge_timeouts(
+            self.timeout, aiohttp.ClientTimeout(sock_read=wait + MAX_TIMEOUT, sock_connect=MAX_TIMEOUT)
+        )
 
     @classmethod
     def build(
@@ -124,7 +129,7 @@ class Request:
         wait: int | None,
         session: str | None,
     ) -> Self:
-        payload: dict[str, Any] = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT, "url": str(url)}
+        payload: dict[str, Any] = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT_MILIS, "url": str(url)}
         if wait := max(wait or 0, config.wait):
             payload["waitInSeconds"] = wait
 
@@ -133,7 +138,7 @@ class Request:
         elif config.proxy:
             payload["proxy"] = {"url": str(config.proxy)}
 
-        return cls(command, payload, {})
+        return cls(command, payload)
 
 
 @dataclass_repr("resp")
@@ -271,7 +276,7 @@ class Client:
             await self._ensure_session()
         with self._disable_on_error():
             req = build_request(url, self.config, params, self.session)
-            resp = await self._request(req.command, req.payload, **req.aiohttp_params)
+            resp = await self._request(req.command, req.payload, timeout=req.timeout)
             if not resp.ok:
                 if _CF_BLOCKED_MSG in resp.message:
                     raise CloudflareBlockedError(resp.message)
@@ -282,12 +287,20 @@ class Client:
 
             return resp.solution
 
-    async def _request(self, command: Command, /, json: dict[str, Any], **aiohttp_params: Any) -> Response:
-        payload = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT} | json
-
+    async def _request(
+        self,
+        command: Command,
+        /,
+        json: dict[str, Any],
+        *,
+        timeout: aiohttp.ClientTimeout = DEFAULT_TIMEOUT,  # noqa: ASYNC109
+    ) -> Response:
+        payload = {"cmd": str(command), "maxTimeout": MAX_TIMEOUT_MILIS} | json
         async with self._new_request(command) as request_id:
             logger.traffic("Making FlareSolverr request [id=%s]\n%s", request_id, payload)
-            async with self.http.post(self.config.url, json=payload, **aiohttp_params) as response:
+            async with self.http.post(
+                self.config.url, json=payload, timeout=_merge_timeouts(self.http.timeout, timeout)
+            ) as response:
                 data = await response.json()
                 try:
                     return Response.parse(request_id, data)
@@ -387,3 +400,19 @@ async def verify_solution(cdl_user_agent: str, solution: Solution) -> None:
 
     if not solution.cookies:
         logger.warning("Got empty cookies from Flaresolverr request %s", solution.id)
+
+
+def _merge_timeouts(a: aiohttp.ClientTimeout, b: aiohttp.ClientTimeout) -> aiohttp.ClientTimeout:
+    def max_or_none(val: float | None, val2: float | None) -> float | None:
+        if val is None and val2 is None:
+            return None
+
+        return max(val or 0, val2 or 0)
+
+    return aiohttp.ClientTimeout(
+        total=max_or_none(a.total, b.total),
+        connect=max_or_none(a.connect, b.connect),
+        sock_read=max_or_none(a.sock_read, b.sock_read),
+        sock_connect=max_or_none(a.sock_connect, b.sock_connect),
+        ceil_threshold=max(a.ceil_threshold, b.ceil_threshold),
+    )
