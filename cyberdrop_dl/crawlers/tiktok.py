@@ -246,7 +246,7 @@ class TikTokCrawler(Crawler):
             ext,
             debrid_link=self.parse_url(src.url, trim=False),
             custom_filename=filename,
-            metadata=post,
+            metadata=post,  # Do not download the cover, its a temp URL from tiktok and it will have random path in the database
         )
 
     @override
