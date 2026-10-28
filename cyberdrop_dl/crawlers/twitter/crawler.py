@@ -83,7 +83,8 @@ class TwimgCrawler(Crawler):
     def _prepare_media_item(self, media_item: MediaItem) -> None:
         if media_item.referer.path == media_item.url.path and media_item.parents:
             media_item.referer = media_item.parents[0]
-            media_item.headers["Referer"] = str(media_item.referer)
+
+        media_item.headers["Referer"] = "https://x.com/"
 
 
 class TwitterCrawler(Crawler):

@@ -68,12 +68,6 @@ class TwPornstarsCrawler(TwimgCrawler):
             return
         await self.photo(scrape_item, src)
 
-    def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
-        """Prepare headers with x.com referer for video.twimg.com URLs."""
-        headers = super()._prepare_headers(scrape_item)
-        headers["Referer"] = "https://x.com/"
-        return headers
-
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem) -> None:
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
