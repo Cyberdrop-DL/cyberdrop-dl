@@ -52,6 +52,9 @@ class TempExt(StrEnum):
     WRONG_CDL_HLS = ".cdl_hsl"  # used for a while in old versions, has a typo
     PART = ".part"
 
+    def append_to[T: Path](self, path: T) -> T:
+        return path.with_suffix(path.suffix + self)
+
 
 BLOCKED_DOMAINS = frozenset(
     (

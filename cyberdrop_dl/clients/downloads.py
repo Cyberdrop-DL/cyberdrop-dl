@@ -239,11 +239,11 @@ class DownloadClient:
 
     async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: C901, PLR0912, PLR0915
         """Complicated checker for if a file already exists, and was already downloaded."""
+        # TODO: This black magic needs a refactor + tests
         if not media_item.path:
             media_item.path = media_item.download_folder / media_item.filename
 
-        part_suffix = media_item.path.suffix + constants.TempExt.PART
-        media_item.partial_file = media_item.path.with_suffix(part_suffix)
+        media_item.partial_file = constants.TempExt.PART.append_to(media_item.path)
 
         expected_size = media_item.size
         proceed = True
@@ -283,7 +283,7 @@ class DownloadClient:
                     logger.info(f"Found {downloaded_filename} locally, trying to resume")
                     assert media_item.size
                     size = await aio.get_size(media_item.partial_file)
-                    if size is not None and size >= media_item.size:
+                    if size is not None and size > media_item.size:
                         logger.info(f"Deleting partial file {media_item.partial_file}. Size is out of bound")
                         await aio.unlink(media_item.partial_file)
 
@@ -322,25 +322,30 @@ class DownloadClient:
                 break
 
             media_item.filename = downloaded_filename
+            media_item.path = media_item.download_folder / media_item.filename
+            media_item.partial_file = constants.TempExt.PART.append_to(media_item.path)
+
         media_item.download_filename = media_item.path.name
         await self.manager.database.history.add_download_filename(domain, media_item)
         return proceed, skip
 
-    async def iterate_filename(self, complete_file: Path, media_item: MediaItem) -> tuple[Path, Path]:
+    async def iterate_filename(self, file: Path, media_item: MediaItem) -> tuple[Path, Path]:
         """Iterates the filename until it is unique."""
-        part_suffix = complete_file.suffix + constants.TempExt.PART
-        partial_file = complete_file.with_suffix(part_suffix)
+
+        partial_file = constants.TempExt.PART.append_to(file)
+
         for iteration in itertools.count(1):
-            filename = f"{complete_file.stem} ({iteration}){complete_file.suffix}"
-            temp_complete_file = media_item.download_folder / filename
-            if not await aio.exists(
-                temp_complete_file
-            ) and not await self.manager.database.history.check_filename_exists(filename):
+            filename = f"{file.stem} ({iteration}){file.suffix}"
+            temp_file = media_item.download_folder / filename
+            if not any(
+                await aio.gather(aio.exists(temp_file), self.manager.database.history.check_filename_exists(filename))
+            ):
                 media_item.filename = filename
-                complete_file = media_item.download_folder / media_item.filename
-                partial_file = complete_file.with_suffix(part_suffix)
+                file = media_item.download_folder / media_item.filename
+                partial_file = constants.TempExt.PART.append_to(file)
                 break
-        return complete_file, partial_file
+
+        return file, partial_file
 
 
 def _check_filesize_limits(media: MediaItem, config: Config) -> bool:
