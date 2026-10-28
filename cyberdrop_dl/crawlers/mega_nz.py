@@ -12,6 +12,7 @@ from mega.core import MegaCore
 from mega.crypto import b64_to_a32
 from mega.data_structures import Crypto
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
@@ -56,15 +57,12 @@ class MegaNzCrawler(Crawler):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        return AbsoluteHttpURL(MegaCore.ensure_v2_url(super().transform_url(url)))
-
-    @property
-    def user(self) -> str | None:
-        return self.config.auth.mega_nz.email
-
-    @property
-    def password(self) -> str | None:
-        return self.config.auth.mega_nz.password
+        url = super().transform_url(url)
+        try:
+            return AbsoluteHttpURL(MegaCore.ensure_v2_url(url))
+        except ValueError:
+            cls.get_logger().exception("Unable to transform %s to a proper v2 URL", url)
+            return url
 
     def __post_init__(self) -> None:
         self._decryption_keys: dict[AbsoluteHttpURL, tuple[Crypto, int]] = {}
@@ -76,7 +74,8 @@ class MegaNzCrawler(Crawler):
         self.downloader.client.speed_limiter = speed_limiter
 
     async def __async_post_init__(self) -> None:
-        await self._login()
+        async with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
+            await self._login()
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in:
@@ -127,8 +126,6 @@ class MegaNzCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(name)
         await self.handle_file(scrape_item.url, scrape_item, filename, ext, debrid_link=file_url)
 
-    _file_task = auto_task_id(_file)
-
     @error_handling_wrapper
     async def folder(
         self,
@@ -148,25 +145,32 @@ class MegaNzCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=handle)
         canonical_url = (self.PRIMARY_URL / "folder" / handle).with_fragment(public_key)
         scrape_item.url = canonical_url
-        await self._filesystem(scrape_item, fs, selected_node)
+        await self._walk_nodes(scrape_item, fs, selected_node)
 
-    async def _filesystem(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
-        folder_id, public_key = scrape_item.url.name, scrape_item.url.fragment
+    async def _walk_nodes(self, scrape_item: ScrapeItem, filesystem: FileSystem, selected_node_id: str | None) -> None:
+        folder_url = scrape_item.url
+        folder_id, public_key = folder_url.name, folder_url.fragment
 
-        for file in filesystem.files_from(selected_node_id):
-            path = filesystem.relative_path(file.id)
-            file_fragment = f"{public_key}/file/{file.id}"
-            canonical_url = scrape_item.url.with_fragment(file_fragment)
-            if await self.check_complete_from_referer(canonical_url):
-                continue
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for file in filesystem.files_from(selected_node_id):
+                path = filesystem.relative_path(file.id)
+                new_item = scrape_item.create_child(folder_url.with_fragment(f"{public_key}/file/{file.id}"))
+                new_item.uploaded_at = file.created_at
+                new_item.append_folders(*path.parent.parts[1:])
+                tg.create_task(self._file_task(new_item, file.id, file._crypto, folder_id=folder_id))
+                scrape_item.add_children()
+                await sleep()
 
-            child_item = scrape_item.create_child(canonical_url)
-            child_item.uploaded_at = file.created_at
-            for part in path.parent.parts[1:]:
-                child_item.append_folders(part)
+    @auto_task_id
+    @error_handling_wrapper
+    async def _file_task(
+        self, scrape_item: ScrapeItem, handle: str, crypto: Crypto, *, folder_id: str | None = None
+    ) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
 
-            self.create_eager_task(self._file_task(child_item, file.id, file._crypto, folder_id=folder_id))
-            scrape_item.add_children()
+        await self._file(scrape_item, handle, crypto, folder_id=folder_id)
 
     @override
     def _prepare_media_item(self, media_item: MediaItem) -> None:
@@ -177,14 +181,13 @@ class MegaNzCrawler(Crawler):
         # This takes a really long time (dozens of seconds)
         # TODO: Add a way to cache this login
         # TODO: Show some logging message / UI about login
-        async with self.catch_errors(self.PRIMARY_URL), self.disable_on_error("Unable to log into mega.nz"):
-            try:
-                with show_msg("Login into mega.nz"):
-                    await self.core.login(self.user, self.password)
-            except Exception as e:
-                raise LoginError(f"[MegaNZ] {e}") from e
-            else:
-                self._logged_in = True
+        try:
+            with show_msg("Login into mega.nz..."):
+                await self.core.login(self.config.auth.mega_nz.email, self.config.auth.mega_nz.password)
+        except Exception as e:
+            raise LoginError(f"[MegaNZ] {e}") from e
+        else:
+            self._logged_in = True
 
 
 def _add_password(url: AbsoluteHttpURL, password: str) -> AbsoluteHttpURL:

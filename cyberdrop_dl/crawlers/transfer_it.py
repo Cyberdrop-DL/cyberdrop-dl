@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 @HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
 @Crawler.db_path_builder("path_qs_frag")
 class TransferItCrawler(Crawler):
-    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Transfer": "/t/<transfer_id>"}
+    SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
+        "Transfer": "/t/<transfer_id>",
+    }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://transfer.it")
     DOMAIN: ClassVar[str] = "transfer.it"
 
@@ -42,27 +44,25 @@ class TransferItCrawler(Crawler):
         root = next(iter(fs))
         title = self.create_title(root.attributes.name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
-        await self._filesystem(scrape_item, fs, transfer_id)
+        await self._walk_nodes(scrape_item, fs, transfer_id)
 
-    async def _filesystem(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
+    async def _walk_nodes(self, scrape_item: ScrapeItem, fs: FileSystem, transfer_id: str) -> None:
         password = scrape_item.url.query.get("pw") or scrape_item.password
 
-        sleep = aio.periodic_sleep(50)
-        for file in fs.files:
-            path = fs.relative_path(file.id)
-            canonical_url = scrape_item.url.with_fragment(file.id)
-            new_scrape_item = scrape_item.create_child(canonical_url)
-            for part in path.parent.parts[1:]:
-                new_scrape_item.append_folders(part)
-
-            dl_link = self.core.create_download_url(transfer_id, file, password)
-            self.create_eager_task(self._file(new_scrape_item, file, dl_link))
-            scrape_item.add_children()
-            await sleep()
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for file in fs.files:
+                path = fs.relative_path(file.id)
+                new_item = scrape_item.create_child(scrape_item.url.with_fragment(file.id))
+                new_item.append_folders(*path.parent.parts[1:])
+                dl_link = self.core.create_download_url(transfer_id, file, password)
+                tg.create_task(self._file(new_item, file, dl_link))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, file: Node, dl_link: str) -> None:
-        link = self.parse_url(dl_link)
+        src = self.parse_url(dl_link)
         filename, ext = self.get_filename_and_ext(file.attributes.name)
         scrape_item.uploaded_at = file.created_at
-        await self.handle_file(link, scrape_item, file.attributes.name, ext, custom_filename=filename)
+        await self.handle_file(src, scrape_item, file.attributes.name, ext, custom_filename=filename)
