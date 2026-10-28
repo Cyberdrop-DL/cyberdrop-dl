@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients import etag
+from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -257,7 +258,7 @@ class LensDumpAPI(API):
     async def album_files(self, album: FullAlbum) -> AsyncGenerator[File]:
         url = self.ENTRYPOINT / "albums" / album.id / "files"
         async for file in self._pager(url):
-            file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
+            file["src_url"] = CheveretoCrawler.thumb_to_src(self.parse_url(file["preview"]))
             yield File.parse(file, album.owner)
 
     async def album_tree(self, album_id: str) -> AriaTree:
@@ -303,10 +304,6 @@ class LensDumpAPI(API):
                 break
 
             url = url.update_query(cursor=cursor)
-
-
-def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    return url.with_name(url.name.replace(".th.", ".").replace(".md.", "."))
 
 
 def _parse_aria_tree(html: str) -> AriaTree:

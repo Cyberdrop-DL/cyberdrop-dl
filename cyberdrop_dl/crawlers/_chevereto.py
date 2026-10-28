@@ -84,11 +84,13 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
     @final
     @staticmethod
-    def _thumbnail_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    def thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         new_name = url.name
         for trash in (".md.", ".th.", ".fr."):
-            new_name = new_name.replace(trash, ".")
-        return url.with_name(new_name)
+            new_name = new_name.replace(trash, ".", 1)
+        if new_name != url.name:
+            return url.with_name(new_name)
+        return url
 
     @classmethod
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
@@ -185,7 +187,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
     async def direct_file(
         self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
     ) -> None:
-        link = self._thumbnail_to_src(url or scrape_item.url)
+        link = self.thumb_to_src(url or scrape_item.url)
         await super().direct_file(scrape_item, link, assume_ext)
 
     @error_handling_wrapper

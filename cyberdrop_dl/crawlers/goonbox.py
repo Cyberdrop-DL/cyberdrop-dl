@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers import Registry
+from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import parse_url
@@ -60,7 +61,7 @@ class GoonBoxCrawler(Crawler):
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         if cls.is_subdomain(url):
-            return _fix_cdn(_thumb_to_src(url))
+            return _fix_cdn(CheveretoCrawler.thumb_to_src(url))
 
         match url.parts[1:]:
             case ["a" | "img" as part, slug, *_]:
@@ -233,10 +234,3 @@ def _fix_cdn(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 def _id(slug: str) -> str:
     return slug.rsplit(".", maxsplit=1)[-1]
-
-
-def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    new_name = url.name
-    for trash in (".md.", ".th.", ".fr."):
-        new_name = new_name.replace(trash, ".", 1)
-    return url.with_name(new_name)
