@@ -673,6 +673,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             await self.downloader.run(media_item, streams)
 
         finally:
+            await self.manager.post_download(media_item)
             await self.__write_to_jsonl(media_item)
 
     async def __write_to_jsonl(self, media_item: MediaItem) -> None:
@@ -1366,7 +1367,7 @@ def compose_title(  # noqa: PLR0913
         title = f"{title} ({domain})"
 
     # Remove double spaces
-    return " ".join(title.split(" "))
+    return " ".join(title.split())
 
 
 def compose_ep_name(season: int | None, ep: int | None, name: str | None) -> str:

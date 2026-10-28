@@ -288,9 +288,9 @@ class Downloader:
         await self.manager.database.history.add_download_filename(media_item.domain, media_item)
 
     @error_handling_wrapper
-    async def run(self, media_item: MediaItem, streams: Rendition | MuxVideo | None = None) -> None:
+    async def run(self, media_item: MediaItem, streams: Rendition | MuxVideo | None = None) -> bool:
         if media_item.db_path in self._processed_items and not self.config.ignore_history:
-            return
+            return False
 
         if streams is not None:
             assert ffmpeg.is_installed()
@@ -306,9 +306,7 @@ class Downloader:
                 case _:  # pyright: ignore[reportUnnecessaryComparison]
                     raise ValueError(f"Unsupported streams: {streams!r}")
 
-        if media_item.downloaded:
-            await self._compute_hashes(media_item)
-            self.manager.add_completed(media_item)
+        return media_item.downloaded
 
     async def _file(self, media_item: MediaItem) -> None:
         if not await self._download(media_item):
@@ -361,13 +359,6 @@ class Downloader:
         self.tui.files.stats.completed += 1
         logger.info(f"Download finished: {media_item.url}")
         await self.client.mark_completed(media_item, media_item.domain)
-
-    async def _compute_hashes(self, media_item: MediaItem) -> None:
-        # TODO: move this to the scrape_mapper as a post-download task
-        if self.config.hashing.mode is not constants.HashMode.IN_PLACE:
-            return
-
-        await self.manager.hasher.hash_item(media_item)
 
 
 async def _merge_streams(media_item: MediaItem, streams: hls.Streams) -> None:
