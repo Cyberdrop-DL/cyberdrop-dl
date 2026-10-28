@@ -69,6 +69,9 @@ def get_system_information() -> dict[str, Any]:
     import sqlite3
     import ssl
 
+    import certifi
+    import wassima
+
     def get_common_name() -> str:
         system = platform.system()
 
@@ -103,6 +106,8 @@ def get_system_information() -> dict[str, Any]:
             "python": f"{platform.python_version()} {platform.python_implementation()}",
             "common_name": get_common_name(),
             "sqlite": sqlite3.sqlite_version,
+            "certifi": certifi.__version__,
+            "wassima": wassima.__version__,
             "openSSL": ssl.OPENSSL_VERSION,
         }
     )
