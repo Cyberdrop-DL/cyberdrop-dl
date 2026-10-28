@@ -60,6 +60,8 @@ class ImgurCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["a", album_id]:
                 await self.album(scrape_item, album_id)
+            case ["removed.png"]:
+                await self.raise_exc(scrape_item, HTTPStatus.GONE)
             case [slug]:
                 image_id = slug.partition(".")[0]
                 await self.image(scrape_item, image_id)

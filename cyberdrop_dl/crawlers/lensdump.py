@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients import etag
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Mapping
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -83,11 +85,8 @@ class LensDumpCrawler(Crawler):
     async def _album(self, scrape_item: ScrapeItem, album: FullAlbum) -> None:
         scrape_item.setup_as_album(self._album_title(album), album_id=album.id)
         self.create_eager_task(self.write_metadata(scrape_item, f"album_{album.id}", album))
-        if not album.files:
-            raise ScrapeError(204, "Album has no files")
-
-        if album.sub_albums:
-            pass  # TODO: support this
+        if not album.files and not album.sub_albums:
+            raise ScrapeError(204, "Album has no files or sub albums")
 
         downloaded = await self.get_completed_by_album(album.id)
         sleep = aio.periodic_sleep(10)
@@ -99,6 +98,14 @@ class LensDumpCrawler(Crawler):
                 tg.create_task(self._file(scrape_item.create_child(web_url), image))
                 scrape_item.add_children()
                 await sleep()
+
+            async for sub_album in self.api.subalbums(album):
+                web_url = self.PRIMARY_URL / "a" / sub_album.id
+                tg.create_task(self._album_task(scrape_item.create_child(web_url), sub_album))
+                scrape_item.add_children()
+                await sleep()
+
+    _album_task = auto_task_id(_album)
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
@@ -112,7 +119,7 @@ class LensDumpCrawler(Crawler):
         async with aio.non_cancelling_taskgroup() as tg:
             async for album in self.api.user_albums(user):
                 web_url = self.PRIMARY_URL / "a" / album.id
-                tg.create_task(self._album(scrape_item.create_child(web_url), album))
+                tg.create_task(self._album_task(scrape_item.create_child(web_url), album))
                 scrape_item.add_children()
                 await sleep()
 
@@ -194,12 +201,30 @@ class FullAlbum(Album):
     files: int
     sub_albums: int
     owner: User | None
-    created_at: str | None = None
     parent: str | None = None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class AriaNode:
+    id: str
+    name: str
+    files: int
+    depth: int
+    parent: str | None
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class AriaTree:
+    nodes: Mapping[str, AriaNode]
+    children: Mapping[str, tuple[str, ...]]
+    truncated: bool
 
 
 class LensDumpAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lensdump.com/api/2")
+
+    def __post_init__(self) -> None:
+        self._album_trees: dict[str, AriaTree] = {}
 
     async def file(self, image_id: str) -> File:
         url = self.ENTRYPOINT / "files" / image_id
@@ -235,6 +260,38 @@ class LensDumpAPI(API):
             file["src_url"] = _thumb_to_src(self.parse_url(file["preview"]))
             yield File.parse(file, album.owner)
 
+    async def album_tree(self, album_id: str) -> AriaTree:
+        try:
+            return self._album_trees[album_id]
+        except LookupError:
+            pass
+
+        url = self.PRIMARY_URL / "a" / album_id
+        html = await self.request_text(url)
+        tree = await asyncio.to_thread(_parse_aria_tree, html)
+        self._album_trees.update(dict.fromkeys(tree.nodes, tree))
+
+        if tree.truncated:
+            self.log.warning("Album tree for %s is truncated. Some sub albums may be missing: %s", album_id, tree)
+
+        return tree
+
+    async def subalbums(self, album: FullAlbum) -> AsyncGenerator[FullAlbum]:
+        if not album.sub_albums:
+            return
+
+        tree = await self.album_tree(album.id)
+        for child_id in tree.children[album.id]:
+            child = tree.nodes[child_id]
+            yield FullAlbum(
+                id=child.id,
+                name=child.name,
+                files=child.files,
+                owner=album.owner,
+                sub_albums=len(tree.children.get(child.id, ())),
+                parent=album.id,
+            )
+
     async def _pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
         while True:
             resp = await self.request_json(url)
@@ -250,3 +307,19 @@ class LensDumpAPI(API):
 
 def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.with_name(url.name.replace(".th.", ".").replace(".md.", "."))
+
+
+def _parse_aria_tree(html: str) -> AriaTree:
+    data = css.select_text(css.soup(html, parse_only="script"), "[type='application/json'][data-tree-data]")
+    tree = json.loads(data)
+    nodes = {n["id"]: deserialize(AriaNode, n) for n in tree["nodes"]}
+    children: dict[str, list[str]] = {}
+    for node in nodes.values():
+        if node.parent:
+            children.setdefault(node.parent, []).append(node.id)
+
+    return AriaTree(
+        nodes,
+        children={k: tuple(v) for k, v in children.items()},
+        truncated=bool(tree.get("truncated")),
+    )
