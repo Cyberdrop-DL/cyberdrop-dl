@@ -43,7 +43,7 @@ from cyberdrop_dl.utils._url import (
     path_qs_frag,
     remove_trailing_slash,
 )
-from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, frozen
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
 from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
 
 if TYPE_CHECKING:
@@ -84,7 +84,7 @@ _CHECK_DL_CAPACITY: ContextVar[bool] = ContextVar("_CHECK_DL_CAPACITY")
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
 
 
-@frozen
+@struct
 class _PlaceHolderConfigInclude:
     file_id: bool = True
     video_codec: bool = True
@@ -112,7 +112,7 @@ _DB_PATH_BUILDERS: MappingProxyType[str, URLHasher] = MappingProxyType(
 )
 
 
-@frozen(order=False, kw_only=False)
+@struct(kw_only=False)
 class ContainerChecker[T: Container, R]:
     values: T
     check: Callable[[R], bool]
@@ -121,7 +121,7 @@ class ContainerChecker[T: Container, R]:
         return self.check(obj)
 
 
-@frozen(order=True, kw_only=False)
+@struct(order=True, kw_only=False)
 class CrawlerInfo:
     site: str
     primary_url: AbsoluteHttpURL
@@ -150,7 +150,7 @@ class CrawlerInfo:
         return me
 
 
-@frozen(kw_only=False)
+@struct(kw_only=False)
 class SiteCookies:
     raw: http.cookies.BaseCookie[str]
 
@@ -184,7 +184,7 @@ def _get_logger(crawler_name: str) -> _CrawlerLogger:
 
 
 @final
-@frozen
+@struct
 class URLConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__url_config__"
     trim: bool | None = None
@@ -193,7 +193,7 @@ class URLConfig(ConfigDataclass):
 
 
 @final
-@frozen
+@struct
 class DownloadConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__dl_config__"
     slots: int | None = None

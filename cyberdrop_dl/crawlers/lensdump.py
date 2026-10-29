@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl import aio
@@ -11,7 +10,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, Suppor
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json
-from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.dataclass import deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -149,7 +148,7 @@ class LensDumpCrawler(Crawler):
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class File:
     id: str
     type: str
@@ -172,7 +171,7 @@ class File:
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class User:
     id: str
     username: str
@@ -181,7 +180,7 @@ class User:
     parse = classmethod(deserialize)
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class FullUser(User):
     files: int
     albums: int
@@ -189,7 +188,7 @@ class FullUser(User):
     tier: str
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class Album:
     id: str
     name: str
@@ -197,7 +196,7 @@ class Album:
     parse = classmethod(deserialize)
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class FullAlbum(Album):
     files: int
     sub_albums: int
@@ -205,7 +204,7 @@ class FullAlbum(Album):
     parent: str | None = None
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class AriaNode:
     id: str
     name: str
@@ -214,7 +213,7 @@ class AriaNode:
     parent: str | None
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class AriaTree:
     nodes: Mapping[str, AriaNode]
     children: Mapping[str, tuple[str, ...]]

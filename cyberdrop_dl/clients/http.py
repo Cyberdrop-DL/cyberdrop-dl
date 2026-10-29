@@ -20,7 +20,7 @@ from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.utils import enter_context, truncated_preview
-from cyberdrop_dl.utils.dataclass import ConfigDataclass, frozen
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, struct
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -524,7 +524,7 @@ class HTTPMixin(HTTPController, Protocol):
 
 
 @final
-@frozen
+@struct
 class HTTPConfig(ConfigDataclass):
     __attr_name__: ClassVar[str] = "__http_config__"
     headers: dict[str, str] | None = None

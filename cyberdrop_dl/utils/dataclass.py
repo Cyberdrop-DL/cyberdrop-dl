@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, Self, dataclass_transform, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Protocol, Self, dataclass_transform, overload
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils import fast_cache
@@ -82,25 +82,68 @@ class DictDataclass(_DataClass, Protocol):
 
 
 @overload
-def frozen[T](cls: None = None, *, order: bool = False, kw_only: bool = True) -> Callable[[type[T]], type[T]]: ...
+def struct[T](
+    cls: None = None,
+    *,
+    order: bool = False,
+    kw_only: bool = True,
+    frozen: bool = True,
+    extras: Literal["forbid", "ignore"] = "forbid",
+) -> Callable[[type[T]], type[T]]: ...
 
 
 @overload
-def frozen[T](cls: type[T], *, order: bool = False, kw_only: bool = True) -> type[T]: ...
+def struct[T](
+    cls: type[T],
+    *,
+    order: bool = False,
+    kw_only: bool = True,
+    frozen: bool = True,
+    extras: Literal["forbid", "ignore"] = "forbid",
+) -> type[T]: ...
 
 
 @dataclass_transform(frozen_default=True, kw_only_default=True)
-def frozen[T](
-    cls: type[T] | None = None, *, order: bool = False, kw_only: bool = True
+def struct[T](
+    cls: type[T] | None = None,
+    *,
+    order: bool = False,
+    kw_only: bool = True,
+    frozen: bool = True,
+    extras: Literal["forbid", "ignore"] = "forbid",
 ) -> Callable[[type[T]], type[T]] | type[T]:
-    fn = dataclasses.dataclass(frozen=True, kw_only=kw_only, order=order, slots=True)
-    return fn if cls is None else fn(cls)
+
+    def wrap(cls: type[T]) -> type[T]:
+        dt_cls = dataclasses.dataclass(frozen=frozen, kw_only=kw_only, order=order, slots=True)(cls)
+        if extras == "ignore":
+            return filter_unknown_kwargs(dt_cls)  # pyright: ignore[reportUnknownVariableType, reportArgumentType]
+
+        return dt_cls
+
+    if cls is None:
+        return wrap
+
+    return wrap(cls)
+
+
+def filter_unknown_kwargs[**P, T: _DataClass](cls: type[T]) -> type[T]:
+    """Replace __init__ to filter out invalid kwargs.
+
+    Unknown keys are silently dropped before calling the original __init__.
+    """
+    original_init = cls.__init__
+
+    def init(self: T, *args: P.args, **kwargs: P.kwargs) -> None:
+        original_init(self, *args, **filter_data(type(self), kwargs))
+
+    cls.__init__ = init
+    return cls
 
 
 CONFIG_REGISTRY: dict[str, type[ConfigDataclass]] = {}
 
 
-@frozen
+@struct
 class ConfigDataclass:
     __attr_name__: ClassVar[str]
     __iter__: ClassVar[Final] = DictDataclass.__iter__

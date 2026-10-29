@@ -6,8 +6,8 @@ import dataclasses
 import itertools
 import json
 import re
-import struct
 from collections import defaultdict
+from struct import unpack as struct_unpack
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
@@ -285,7 +285,7 @@ def _re_int_or_none(pattern: str, string: str) -> int | None:
 
 
 def _decode_nozomi_resp(data: bytes) -> tuple[int, ...]:
-    return struct.unpack(f">{(len(data) / 4):.0f}I", data)
+    return struct_unpack(f">{(len(data) / 4):.0f}I", data)
 
 
 def _parse_search_query(query_string: str) -> Generator[SearchArgs]:

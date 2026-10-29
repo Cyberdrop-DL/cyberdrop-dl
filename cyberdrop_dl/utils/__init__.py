@@ -4,7 +4,7 @@ import contextlib
 import itertools
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Concatenate, cast
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils._url import parse_http_url as parse_url  # noqa: F401
@@ -147,7 +147,9 @@ def unique[T](itr: Iterable[T], /, key: Callable[[T], Any] | None = None) -> Gen
 
 
 def fast_cache[T, R](fn: Callable[[T], R]) -> Callable[[T], R]:
-    "Like functools.cache but for single argument function and without all the stats logic"
+    """Like functools.cache but for single argument function and without all the stats logic
+
+    cache never expires"""
     cache: dict[T, R] = {}
 
     def compute(obj: T) -> R:
@@ -165,3 +167,20 @@ def b64_pad(b64_string: str) -> str:
     if pad := len(b64_string) % 4:
         return b64_string + "=" * (4 - pad)
     return b64_string
+
+
+def bind_fn[T, **P, R](
+    func: Callable[Concatenate[T, P], R],
+    value: T,
+) -> Callable[P, R]:
+    """Bind `value` as the first positional argument of `func`.
+
+    The returned callable accepts the rest of `func`'s arguments.
+
+    Similiar to functools.partial but this preserves type annotations
+    """
+
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        return func(value, *args, **kwargs)
+
+    return wrapper
