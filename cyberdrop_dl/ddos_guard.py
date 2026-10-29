@@ -147,6 +147,16 @@ class BasedFlare(DDosGuard):
         return bool(soup.select_one(cls.SELECTOR))
 
 
+class Gandalf(DDosGuard):
+    # https://gandalf.nerdvpn.de/
+    # https://git.nerdvpn.de/NerdVPN.de/gandalf
+    TITLES = ("Gandalf",)
+    SELECTOR = "main#g-container " + css.where(
+        "form[action$='/.gandalf/confirm']",
+        "#g-title:-soup-contains('Gandalf is checking your connection')",
+    )
+
+
 class Anubis(DDosGuard):
     TITLES = ("Making sure you're not a bot!",)
     CHALLENGE = "script#anubis_challenge:-soup-contains(algorithm)"
