@@ -40,11 +40,7 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
         return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        match scrape_item.url.parts[1:]:
-            case [_]:
-                await self.image(scrape_item)
-            case _:
-                raise ValueError
+        await self.image(scrape_item)
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
@@ -57,6 +53,7 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
 
 @Crawler.db_path_builder("url")
 class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "v.redd.it", "packaged-media.redd.it"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Video": "v.redd.it/<video_id>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://v.redd.it")
     DOMAIN: ClassVar[str] = "v.redd.it"
@@ -74,7 +71,7 @@ class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [video_id]:
+            case [video_id, *_]:
                 await self.video(scrape_item, video_id)
             case _:
                 raise ValueError

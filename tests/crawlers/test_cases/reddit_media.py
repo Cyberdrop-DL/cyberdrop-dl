@@ -29,6 +29,27 @@ TEST_CASES = [
         "count": 2,
     },
     {
+        "url": "https://packaged-media.redd.it/6a475inb48yh1/pb/m2-res_480p.mp4?s=d861355cb1",
+        "results": [
+            {
+                "url": "https://v.redd.it/6a475inb48yh1/HLSPlaylist.m3u8",
+                "filename": "6a475inb48yh1 [avc1][mp4a][720p].mp4",
+                "debrid_url": None,
+                "original_filename": "6a475inb48yh1",
+                "referer": "https://packaged-media.redd.it/6a475inb48yh1/pb/m2-res_480p.mp4?s=d861355cb1",
+                "download_folder": "re:Loose Files (Reddit)",
+                "id": ["v.redd.it", "https://v.redd.it/6a475inb48yh1/HLSPlaylist.m3u8"],
+            },
+            {
+                "url": "https://v.redd.it/6a475inb48yh1/wh_ben_en.vtt",
+                "filename": "6a475inb48yh1 [avc1][mp4a][720p].en.vtt",
+                "debrid_url": None,
+                "original_filename": "wh_ben_en.vtt",
+                "id": ["v.redd.it", "https://v.redd.it/6a475inb48yh1/wh_ben_en.vtt"],
+            },
+        ],
+    },
+    {
         "url": "https://external-preview.redd.it/wolverine-is-already-running-in-game-on-pc-using-kytyps5-v0-anYwZWJvaTFlN3RoMdWKdXqKcdptEsrwcXv7X6s4U9t0oQGskmpWM4E03oM0.png?width=640&crop=smart&format=pjpg&auto=webp&s=6bd97cd797ba966cc43637a9bcd5627a7e48a909",
         "results": [
             {
