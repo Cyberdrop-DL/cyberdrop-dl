@@ -146,12 +146,11 @@ class HistoryTable(Table, name="media"):
             await db_conn.execute(query, (domain, media_item.db_path))
             await db_conn.commit()
 
-    async def add_filesize(self, domain: str, media_item: MediaItem) -> None:
-        url_path = media_item.db_path
-        file_size = media_item.path.stat().st_size
+    async def add_filesize(self, item: MediaItem) -> None:
+        assert item.size is not None
         query = """UPDATE media SET file_size=? WHERE domain = ? and url_path = ?"""
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (file_size, domain, url_path))
+            await db_conn.execute(query, (item.size, item.domain, item.db_path))
             await db_conn.commit()
 
     async def add_duration(self, domain: str, media_item: MediaItem) -> None:

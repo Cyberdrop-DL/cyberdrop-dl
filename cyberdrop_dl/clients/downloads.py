@@ -234,8 +234,9 @@ class DownloadClient:
         if not media_item.path:
             media_item.path = media_item.download_folder / media_item.filename
 
-        if await aio.is_file(media_item.path):
-            await self.manager.database.history.add_filesize(domain, media_item)
+        if size := await aio.get_size(media_item.path):
+            media_item.size = size
+            await self.manager.database.history.add_filesize(media_item)
 
     async def get_final_file_info(self, media_item: MediaItem, domain: str) -> tuple[bool, bool]:  # noqa: C901, PLR0912, PLR0915
         """Complicated checker for if a file already exists, and was already downloaded."""

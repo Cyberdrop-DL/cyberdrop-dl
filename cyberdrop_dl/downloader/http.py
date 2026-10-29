@@ -351,6 +351,8 @@ class Downloader:
     async def __finish_download(self, media_item: MediaItem) -> None:
         assert not media_item.is_segment
         media_item.downloaded = True
+        if not media_item.size:  # HLS / MuxVideo
+            media_item.size = await aio.get_size(media_item.path)
         if await self.__skip_by_duration(media_item):
             media_item.downloaded = False
             return
