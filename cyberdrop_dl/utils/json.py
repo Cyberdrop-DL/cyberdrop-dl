@@ -217,3 +217,13 @@ def looks_like_jwt(string: str) -> bool:
 
 def jwt_decode(jwt: str) -> dict[str, Any]:
     return JSONWebToken.decode(jwt).payload
+
+
+def fix_string_encode(string: str) -> str:
+    # Double-quoted page vars are JSON strings, so decode every escape, not just `\/`
+    if string.startswith(('"', "'")):
+        try:
+            return json.loads(string)
+        except ValueError:
+            pass
+    return string.replace(r"\/", "/")

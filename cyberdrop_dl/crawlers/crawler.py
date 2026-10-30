@@ -269,7 +269,8 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     def __init__(self, manager: Manager, task_mng: aio.TaskManager, tui: ScrapingUI) -> None:
         self.manager: Manager = manager
-        assert self.SUPPORTED_DOMAINS
+        if self.DOMAIN != "no_crawler":
+            assert self.SUPPORTED_DOMAINS
         self._startup_lock: asyncio.Lock = asyncio.Lock()
         self._ready: bool = False
         self._logged_in: bool = False

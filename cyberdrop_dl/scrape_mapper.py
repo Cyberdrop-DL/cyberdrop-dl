@@ -286,7 +286,7 @@ class ScrapeMapper:
             logger.exception("Failed to connect to jDownloader")
 
         await self._real_debrid.__async_init__()
-        await self._direct_http.__async_post_init__()
+        await self._direct_http.__async_init__()
         self._ready = True
 
     async def _wait_until_scrape_is_done(self, stats: ScrapeStats) -> None:
@@ -351,7 +351,7 @@ class ScrapeMapper:
             self.task_mngr.scrape.create_task(crawler.run(scrape_item), name=str(scrape_item.url))
             return
 
-        if not self._real_debrid.disabled and self._real_debrid.api.is_supported(scrape_item.url):
+        if not self._real_debrid.disabled and self._real_debrid.api.is_supported_domain(scrape_item.url):
             logger.info(f"Using RealDebrid for unsupported URL: {scrape_item.url}")
             self.task_mngr.scrape.create_task(self._real_debrid.run(scrape_item), name=str(scrape_item.url))
             return
