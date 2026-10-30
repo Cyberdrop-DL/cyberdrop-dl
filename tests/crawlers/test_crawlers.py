@@ -9,7 +9,7 @@ from unittest import mock
 import pytest
 
 import tests
-from cyberdrop_dl.crawlers.crawler import compose_ep_name
+from cyberdrop_dl.crawlers.crawler import CrawlerInfo, compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import json, parse_url
@@ -277,3 +277,27 @@ def test_compose_ep_name(season: int | None, ep: int | None, name: str | None, e
 def test_compose_ep_name_raise_value_error_if_empty() -> None:
     with pytest.raises(ValueError):
         compose_ep_name(None, None, "")
+
+
+def test_crawlers_supported_domains_do_not_overlap() -> None:
+    from cyberdrop_dl.crawlers import Registry
+
+    supported: dict[str, type[Crawler]] = {}
+
+    for crawler in Registry.get_crawlers():
+        for domain in crawler.SUPPORTED_DOMAINS:
+            other = supported.get(domain)
+            assert other is None, f"domain {domain!r} is supported by {other.NAME} and {crawler.NAME}"
+            supported[domain] = crawler
+
+
+def test_crawlers_wiki_sites_do_not_overlap() -> None:
+    from cyberdrop_dl.commands.supported_sites import _gen_crawlers_info
+
+    supported: dict[str, CrawlerInfo] = {}
+
+    for info in _gen_crawlers_info():
+        domain = info.wiki_site or info.site
+        other = supported.get(domain)
+        assert other is None, f"domain {domain!r} is supported by {other} and {info}"
+        supported[domain] = info

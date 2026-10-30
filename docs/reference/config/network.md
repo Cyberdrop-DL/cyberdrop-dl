@@ -237,7 +237,6 @@ These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/
 - E621
 - MegaNz
 - Pawchive
-- RealDebrid
 - Transfer.it
 <!-- END_CUSTOM_UA_CRAWLERS -->
 

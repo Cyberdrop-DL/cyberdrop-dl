@@ -205,6 +205,10 @@ class DownloadConfig(ConfigDataclass):
     delay: float = 0.0
 
 
+class _SupportedDomains(tuple[str, ...]):
+    __slots__ = ()
+
+
 @URLConfig(trim=True, allow_empty_path=False, ignore_fragment=True)
 @HTTPConfig(rate_limit=(MAX_RATE_LIMIT, 1), probe_method="HEAD")
 @DownloadConfig(slots=None, server_lock=False)
@@ -1233,12 +1237,16 @@ def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
 
 
 def _prepare_supported_domains(cls: type[Crawler]) -> None:
+    # remove supported domains from super classes
+    if type(cls.SUPPORTED_DOMAINS) is _SupportedDomains:
+        cls.SUPPORTED_DOMAINS = ()
+
     if not cls.OLD_DOMAINS:
         domains = cls.SUPPORTED_DOMAINS or (cls.DOMAIN,)
     else:
         domains = tuple(sorted({*cls.OLD_DOMAINS, *cls.SUPPORTED_DOMAINS, cls.PRIMARY_URL.host}))
 
-    cls.SUPPORTED_DOMAINS = domains
+    cls.SUPPORTED_DOMAINS = _SupportedDomains(domains)
 
 
 def _check_init_overrides(cls: type[Crawler]) -> None:

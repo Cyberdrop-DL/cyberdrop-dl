@@ -1081,7 +1081,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Primary URL**: [https://gofile.io](https://gofile.io)
 
-**Supported Domains**: `gofile.*`
+**Supported Domains**: `gofile.io`
 
 **Supported Paths**:
 
@@ -2052,13 +2052,36 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Primary URL**: [https://www.patreon.com](https://www.patreon.com)
 
-**Supported Domains**: `patreon.*`
+**Supported Domains**: `patreon.*`, `patreonusercontent.com`, `stream.mux.com`
 
 **Supported Paths**:
 
 - Creator:
   - `/<creator>`
   - `/cw/<creator>`
+- Direct Media:
+  - `.patreonusercontent.com/...`
+  - `/media-u/v3/<media_id>`
+  - `stream.mux.com/...`
+- Post:
+  - `/<creator>/posts/<slug>-<post-id>`
+  - `/posts/<slug>-<post-id>`
+
+### PatreonGeneric
+
+**Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)
+
+**Supported Domains**:
+
+**Supported Paths**:
+
+- Creator:
+  - `/<creator>`
+  - `/cw/<creator>`
+- Direct Media:
+  - `.patreonusercontent.com/...`
+  - `/media-u/v3/<media_id>`
+  - `stream.mux.com/...`
 - Post:
   - `/<creator>/posts/<slug>-<post-id>`
   - `/posts/<slug>-<post-id>`
@@ -2561,7 +2584,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Primary URL**: [https://v.redd.it](https://v.redd.it)
 
-**Supported Domains**: `v.redd.it`
+**Supported Domains**: `packaged-media.redd.it`, `v.redd.it`
 
 **Supported Paths**:
 
@@ -2889,17 +2912,6 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
   - `/e/<video_id>`
   - `/v/<video_id>`
 
-### T.co
-
-**Primary URL**: [https://t.co](https://t.co)
-
-**Supported Domains**: `t.co`
-
-**Supported Paths**:
-
-- Redirect:
-  - `t.co/<short_code>`
-
 ### TabooTube
 
 **Primary URL**: [https://www.tabootube.xxx](https://www.tabootube.xxx)
@@ -3212,6 +3224,17 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
   - `/media/<media_id>...`
 - Video:
   - `/amplify_video/<media_id>...`
+
+### TwitterShortURL
+
+**Primary URL**: [https://t.co](https://t.co)
+
+**Supported Domains**: `t.co`
+
+**Supported Paths**:
+
+- Redirect:
+  - `t.co/<short_code>`
 
 ### TWPornStars
 

@@ -86,7 +86,7 @@ class RealDebridCrawler(Crawler):
 
         async with (
             self.catch_errors(self.api.ENTRYPOINT),
-            self.disable_on_error("Setup failed. Unable to get suppoerted domains"),
+            self.disable_on_error("Setup failed. Unable to get supported domains"),
         ):
             await self.api.connect()
 

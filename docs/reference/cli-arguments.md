@@ -201,6 +201,7 @@ Download URLs
 │ --crawlers.generic.kvs URL...        [default: ()]                                               │
 │ --crawlers.generic.video URL...      [default: ()]                                               │
 │ --crawlers.generic.peertube URL...   [default: ()]                                               │
+│ --crawlers.generic.patreon URL...    [default: ()]                                               │
 │ --crawlers.google-drive              Default format for documents (can be overridden per URL     │
 │   .default-formats.docs CHOICE       with the 'format' query param)                              │
 │                                      [choices: docx, odt, rtf, txt, epub, pdf, md, zip]          │
@@ -407,8 +408,10 @@ Download URLs
 │                                      absolute)                                                   │
 │ --logs.expire-after TIMEDELTA        Delete all log files inside `--logs.folder` if they are     │
 │                                      older that this                                             │
-│ --logs.rotate --logs.no-rotate       Append current datetimme to every log file on each run      │
+│ --logs.rotate --logs.no-rotate       Add current datetime to every log file on each run          │
 │                                      [default: False]                                            │
+│ --logs.rotate-date-position CHOICE   [choices: prefix, suffix]                                   │
+│                                      [default: suffix]                                           │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ MaxChildren ────────────────────────────────────────────────────────────────────────────────────╮
 │ --max-children.forum INT       Do not scrape more that this number of URLs inside a forum thread │
