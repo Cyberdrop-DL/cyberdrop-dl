@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING, ClassVar, Unpack, override
 
@@ -35,6 +36,9 @@ class EromeCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "erome"
     csrf_token: str = ""
+
+    async def __async_post_init__(self) -> None:
+        self.csrf_token_lock: asyncio.Lock = asyncio.Lock()
 
     @classmethod
     @override
@@ -83,17 +87,20 @@ class EromeCrawler(Crawler):
                 yield resp
                 return
 
-            self.csrf_token = css.select(await resp.soup(), "meta[name='csrf-token']", "content")
-            async with self.request(
-                url.origin() / "user/disclaimer",
-                "POST",
-                headers={
-                    "X-CSRF-TOKEN": self.csrf_token,
-                    "Referer": str(url),
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-            ):
-                ...
+            async with self.csrf_token_lock:
+                if not self.csrf_token:
+                    token = css.select(await resp.soup(), "meta[name='csrf-token']", "content")
+                    async with super().request(
+                        url.origin() / "user/disclaimer",
+                        "POST",
+                        headers={
+                            "X-CSRF-TOKEN": token,
+                            "Referer": str(url),
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    ):
+                        ...
+                    self.csrf_token = token
 
             yield resp
 
