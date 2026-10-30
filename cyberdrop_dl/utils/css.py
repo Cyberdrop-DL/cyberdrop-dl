@@ -209,12 +209,14 @@ def parse_form(form: Tag, /) -> HTMLForm:
     return HTMLForm(cast("HttpMethod", method), action, inputs)
 
 
-def where(*selectors: str) -> str:
-    assert len(selectors) >= 2, ":where only makes sense combining 2 or more selectors"
+def where(selector1: str, selector2: str, *selectors: str) -> str:
+    selectors = selector1, selector2, *selectors
     return ":where(" + ", ".join(selectors) + ")"
 
 
 def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
+    if not content:
+        raise ScrapeError(204, "Received empty HTML response")
     return BeautifulSoup(content, HTML_PARSER, parse_only=SoupStrainer(parse_only) if parse_only is not None else None)
 
 

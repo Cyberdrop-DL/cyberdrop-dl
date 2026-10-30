@@ -89,7 +89,7 @@ class EromeCrawler(Crawler):
 
             async with self.csrf_token_lock:
                 if not self.csrf_token:
-                    token = css.select(await resp.soup(), "meta[name='csrf-token']", "content")
+                    token = css.select(await resp.soup(parse_only="meta"), "meta[name='csrf-token']", "content")
                     async with super().request(
                         url.origin() / "user/disclaimer",
                         "POST",

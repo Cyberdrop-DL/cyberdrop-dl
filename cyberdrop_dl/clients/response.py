@@ -223,12 +223,9 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
             return self._text
 
     @final
-    async def soup(self, encoding: str | None = None) -> BeautifulSoup:
+    async def soup(self, encoding: str | None = None, *, parse_only: tuple[str] | str | None = None) -> BeautifulSoup:
         self.__check_content_type("text", "html", expecting="HTML")
-        if content := await self.text(encoding):
-            return await css.asoup(content)
-
-        raise ScrapeError(204, "Received empty HTML response")
+        return await css.asoup(await self.text(encoding), parse_only=parse_only)
 
     async def json(
         self,
