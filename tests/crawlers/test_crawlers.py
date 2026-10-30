@@ -9,7 +9,7 @@ from unittest import mock
 import pytest
 
 import tests
-from cyberdrop_dl.crawlers.crawler import CrawlerInfo, compose_ep_name
+from cyberdrop_dl.crawlers.crawler import CrawlerInfo, _SupportedDomains, compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
 from cyberdrop_dl.utils import json, parse_url
@@ -277,6 +277,22 @@ def test_compose_ep_name(season: int | None, ep: int | None, name: str | None, e
 def test_compose_ep_name_raise_value_error_if_empty() -> None:
     with pytest.raises(ValueError):
         compose_ep_name(None, None, "")
+
+
+def test_generic_crawlers_have_no_supported_domains() -> None:
+    from cyberdrop_dl.crawlers import Registry
+
+    for crawler in Registry.get_crawlers(concrete=False, generic=True):
+        assert type(crawler.SUPPORTED_DOMAINS) is _SupportedDomains
+        assert not crawler.SUPPORTED_DOMAINS, f"Generic crawler {crawler.NAME} should not have supported domains"
+
+
+def test_concrete_crawlers_have_supported_domains() -> None:
+    from cyberdrop_dl.crawlers import Registry
+
+    for crawler in Registry.get_crawlers(concrete=True, generic=False):
+        assert type(crawler.SUPPORTED_DOMAINS) is _SupportedDomains
+        assert crawler.SUPPORTED_DOMAINS, f"Concrete crawler {crawler.NAME} should have supported domains"
 
 
 def test_crawlers_supported_domains_do_not_overlap() -> None:

@@ -219,7 +219,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     DOMAIN: ClassVar[str]
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ()
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = _SupportedDomains()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {}
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date} - {id} - {title}"
     NEXT_PAGE_SELECTOR: ClassVar[str] = ""
