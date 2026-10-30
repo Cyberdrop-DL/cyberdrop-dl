@@ -42,15 +42,17 @@ TEST_CASES = [
         ],
     },
     {
-        "url": "https://www.erome.com/a/osUNHQvy",
+        "url": "https://ru.erome.com/a/osUNHQvy",
         "results": [
             {
                 "url": "https://v19.erome.com/4075/osUNHQvy/wZcJpWWD_720p.mp4",
                 "filename": "wZcJpWWD_720p.mp4",
-                "referer": "https://www.erome.com/a/osUNHQvy",
-                "download_folder": "re:perfect gym outfit (Erome)",
+                "referer": "https://ru.erome.com/a/osUNHQvy",
                 "album_id": "osUNHQvy",
                 "uploaded_at": None,
+                "download_folder": "re:perfect gym outfit (Erome)",
+                "thumbnail": "https://s19.erome.com/4075/osUNHQvy/wZcJpWWD.jpg",
+                "id": ["erome", "/4075/osUNHQvy/wZcJpWWD_720p.mp4"],
             }
         ],
     },

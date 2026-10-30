@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class Selector:
     ALBUM = "a.album-link"
     MEDIA = ".media-group " + css.where("img.img-front", ".video video > source")
+    THUMB = "video[poster]"
     NEXT_PAGE = 'a[rel="next"]'
 
 
@@ -113,9 +114,22 @@ class EromeCrawler(Crawler):
                 if media in downloaded:
                     continue
 
-                tg.create_task(self.direct_file(scrape_item, media))
+                try:
+                    thumb = css.select(soup, "video[poster]", "poster")
+                except css.SelectorError:
+                    thumb = None
+
+                tg.create_task(self._file(scrape_item, media, thumb))
                 scrape_item.add_children()
                 await sleep()
+
+    async def _file(
+        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL, thumb: AbsoluteHttpURL | str | None = None
+    ) -> None:
+        async with self.catch_errors(url):
+            name = url.name or url.parent.name
+            filename, ext = self.get_filename_and_ext(name)
+            await self.handle_file(url, scrape_item, name, ext, thumbnail=thumb, custom_filename=filename)
 
 
 class EromeFanCrawler(EromeCrawler):
