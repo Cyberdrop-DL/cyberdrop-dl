@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 @HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
-@URLConfig(allow_empty_path=True)
+@URLConfig(allow_empty_path=True, strict_host_match=True)
 @Crawler.db_path_builder("path_qs_frag")
 class MegaNzCrawler(Crawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "mega.io", "mega.nz"

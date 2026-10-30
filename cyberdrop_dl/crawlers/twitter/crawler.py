@@ -6,7 +6,7 @@ import datetime as dt
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, final, override
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.crawlers.twitter.api import FXTwitterAPI, TwitterAPI, TwitterGQLSearchFilter
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
@@ -22,20 +22,13 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-class TwitterShortURLCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("t.co",)
+@URLConfig(strict_host_match=True)
+class TwitterShortURLCrawler(Crawler, wiki_site="TwitterShortURL"):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Redirect": "t.co/<short_code>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://t.co")
     DOMAIN: ClassVar[str] = "t.co"
 
-    @classmethod
-    @override
-    def check_host_match(cls, host: str) -> bool:
-        return super().check_host_match(host) and host == "t.co"
-
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if scrape_item.url.host != self.PRIMARY_URL.host:
-            raise ValueError
         await self._follow_redirect(scrape_item)
 
     @error_handling_wrapper
@@ -87,6 +80,7 @@ class TwimgCrawler(Crawler):
         media_item.headers["Referer"] = "https://x.com/"
 
 
+@URLConfig(strict_host_match=True)
 class TwitterCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Tweet/Thread/Article": (
@@ -121,11 +115,6 @@ class TwitterCrawler(Crawler):
             self._default_since = int(dt.datetime.combine(after, dt.time.min).timestamp())
         if before := self.config.filters.before:
             self._default_until = int(dt.datetime.combine(before, dt.time.min).timestamp())
-
-    @classmethod
-    @override
-    def check_host_match(cls, host: str) -> bool:
-        return super().check_host_match(host) and (host == "x.com" or not host.endswith("x.com"))
 
     @property
     @override

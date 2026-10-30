@@ -11,7 +11,7 @@ from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import file_browser, operators, text_editor
-from cyberdrop_dl.utils._url import fix_multi_slashes, matches_any_host, parse_http_url
+from cyberdrop_dl.utils._url import fix_multi_slashes, is_within_domain, matches_any_host, parse_http_url
 
 
 class TestGetFilenameAndExt:
@@ -245,3 +245,20 @@ def test_file_browser() -> None:
 )
 def test_matches_any_host(url: str, hosts: tuple[str, ...], *, expected: bool) -> None:
     assert matches_any_host(AbsoluteHttpURL(url), hosts) is expected
+
+
+@pytest.mark.parametrize(
+    ("root_domain", "domain", "expected"),
+    [
+        ("example.com", "example.com", True),
+        ("example.com", "api.example.com", True),
+        ("api.example.com", "example.com", False),
+        ("example.com", "apiexample.com", False),
+        ("example.com", "example.com.co", False),
+        ("example.com", "example.como", False),
+        ("sub1.sub2.example.com", "sub0.sub1.sub2.example.com", True),
+        ("sub1.sub2.example.com", "sub0.sub1.sub3.example.com", False),
+    ],
+)
+def test_is_within_domain(root_domain: str, domain: str, *, expected: bool) -> None:
+    assert is_within_domain(root_domain, domain) is expected

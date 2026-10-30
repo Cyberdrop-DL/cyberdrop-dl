@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
+from cyberdrop_dl.crawlers.crawler import URLConfig
 from cyberdrop_dl.crawlers.pixeldrain import PixelDrainAPI, PixelDrainCrawler
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import basic_auth
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@URLConfig(strict_host_match=True)
 class NovaStorageCrawler(PixelDrainCrawler):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ()
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {

@@ -145,6 +145,16 @@ def url_hash(url: yarl.URL) -> str:
     return str(sort_query(url))
 
 
+def reverse_dns_name(host: str) -> tuple[str, ...]:
+    return tuple(reversed(host.split(".")))
+
+
+def is_within_domain(root_domain: str, host: str) -> bool:
+    host = host.lower().removeprefix("www.")
+    root_domain = root_domain.lower().removeprefix("www.")
+    return (host == root_domain) or host.endswith("." + root_domain)
+
+
 DedupeT = TypeVar("DedupeT", default=str)
 
 

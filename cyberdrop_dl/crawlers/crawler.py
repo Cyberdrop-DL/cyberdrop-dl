@@ -37,6 +37,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, Scrap
 from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, parse_url, unique
 from cyberdrop_dl.utils._url import (
     URLDeduper,
+    is_within_domain,
     matches_any_host,
     path_frag,
     path_qs,
@@ -190,6 +191,7 @@ class URLConfig(ConfigDataclass):
     trim: bool | None = None
     allow_empty_path: bool | None = None
     ignore_fragment: bool | None = None
+    strict_host_match: bool | None = None
 
 
 @final
@@ -250,7 +252,10 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @classmethod
     def check_host_match(cls, host: str) -> bool:
-        return bool(host)
+        if not cls.__url_config__.strict_host_match:
+            return True
+
+        return any(is_within_domain(domain, host) for domain in cls.SUPPORTED_DOMAINS)
 
     def _build_downloader[T: Downloader](self, cls: type[T] = Downloader) -> T:
         assert self.__dl_config__.server_lock is not None
