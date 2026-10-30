@@ -7,8 +7,8 @@ on:
   pull_request:
 
 jobs:
-  ruff:
-    name: Lint and format
+  lint:
+    name: lint
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -22,3 +22,8 @@ jobs:
       - uses: astral-sh/ruff-action@v4.1.0
       - run: ruff format --check --diff --output-format github
         if: ${{ !cancelled() }}
+
+      - name: Check pre-commit hooks
+        uses: j178/prek-action@v3.1.0
+        with:
+          extra-args: "--all-files --verbose"

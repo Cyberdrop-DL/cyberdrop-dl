@@ -18,15 +18,23 @@ on:
       - ".github/workflows/ci.yaml"
   workflow_dispatch:
 
+# cancel any pending jobs of this action on new pushes to a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYYAML_FORCE_LIBYAML: "0"
+
 permissions: {}
 
 jobs:
   type_check:
-    name: Type check
+    timeout-minutes: 5
     permissions:
       contents: read
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout code
@@ -37,11 +45,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.2
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          uv sync --locked --all-extras
+          uv sync --locked --no-build --all-extras
 
       - run: uvx basedpyright cyberdrop_dl --level error
         timeout-minutes: 5
@@ -56,8 +64,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.12, 3.15]
-      fail-fast: true
+        python-version: [3.12, 3.14]
+        include:
+          - os: windows-11-arm
+            python-version: 3.14
+          - os: ubuntu-slim # Move to main matrix when pyyaml releases wheels
+            python-version: 3.15
+      fail-fast: false
 
     steps:
       - name: Checkout code
@@ -69,11 +82,11 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: false
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          uv sync --locked --all-extras
+          uv sync --locked --no-build --all-extras
 
       - name: Run pytest
         timeout-minutes: 10
