@@ -20,9 +20,7 @@ if TYPE_CHECKING:
 
 class Selector:
     ALBUM = "a.album-link"
-    IMAGES = ".media-group img.img-front"
-    VIDEOS = ".media-group .video video > source"
-    MEDIA = f"{IMAGES}, {VIDEOS}"
+    MEDIA = ".media-group " + css.where("img.img-front", ".video video > source")
     NEXT_PAGE = 'a[rel="next"]'
 
 
@@ -36,6 +34,14 @@ class EromeCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "erome"
     csrf_token: str = ""
+
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        url = super().transform_url(url)
+        if url.host == "erome.com":
+            return url.with_host("www.erome.com")
+        return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -92,7 +98,10 @@ class EromeCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
+        async with self.request(scrape_item.url) as resp:
+            soup = await resp.soup()
+            scrape_item.url = resp.url
+
         name = open_graph.title(soup).removesuffix("- EroMe")
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)

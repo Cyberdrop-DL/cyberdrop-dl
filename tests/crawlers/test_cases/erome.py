@@ -4,14 +4,41 @@ TEST_CASES = [
         "url": "https://www.erome.com/a/JSXnUS4Y",
         "results": [
             {
-                "url": "https://s51.erome.com/3982/JSXnUS4Y/TMXwTHuO.jpeg?v=1737273158",
+                "url": "re:https://s51.erome.com/3982/JSXnUS4Y/TMXwTHuO.jpeg",
+                "filename": "TMXwTHuO.jpeg",
+                "debrid_url": None,
+                "original_filename": "TMXwTHuO.jpeg",
+                "referer": "https://www.erome.com/a/JSXnUS4Y",
+                "album_id": "JSXnUS4Y",
+                "uploaded_at": None,
+                "download_folder": "re:who likes abs- (Erome)",
+                "thumbnail": None,
+                "size": None,
+                "duration": None,
+                "parents": [],
+                "metadata": {},
+                "extra_info": {},
+                "id": ["erome", "/3982/JSXnUS4Y/TMXwTHuO.jpeg"],
+            },
+            {
+                "url": "re:https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg",
+                "filename": "KtkQrRqf.jpeg",
+            },
+        ],
+    },
+    {
+        "url": "https://erome.com/a/JSXnUS4Y",
+        "description": "URL must be resolved to www.erome.com to pass CORS",
+        "results": [
+            {
+                "url": "re:https://s51.erome.com/3982/JSXnUS4Y/TMXwTHuO.jpeg",
                 "filename": "TMXwTHuO.jpeg",
                 "referer": "https://www.erome.com/a/JSXnUS4Y",
                 "download_folder": "re:who likes abs- (Erome)",
                 "album_id": "JSXnUS4Y",
                 "uploaded_at": None,
             },
-            {"url": "https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg?v=1737273168", "filename": "KtkQrRqf.jpeg"},
+            {"url": "re:https://s51.erome.com/3982/JSXnUS4Y/KtkQrRqf.jpeg", "filename": "KtkQrRqf.jpeg"},
         ],
     },
     {
