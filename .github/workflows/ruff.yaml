@@ -24,4 +24,6 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Check pre-commit hooks
-        run: uv run prek run --show-diff-on-failure --color=always --all-files --verbose
+        uses: j178/prek-action@v3.1.0
+        with:
+          extra-args: "--all-files --verbose"
