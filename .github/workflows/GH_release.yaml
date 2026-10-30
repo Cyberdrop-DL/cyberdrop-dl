@@ -56,10 +56,10 @@ jobs:
 
       - name: Create start scripts zip
         run: |
-          mkdir -p zip/Cyberdrop-DL.v${VERSION_NUMBER}
-          cp -r scripts/release/* zip/Cyberdrop-DL.v${VERSION_NUMBER}
+          mkdir -p zip/cyberdrop-dl.v${VERSION_NUMBER}
+          cp -r scripts/release/* zip/cyberdrop-dl.v${VERSION_NUMBER}
           cd zip
-          zip -r ../Cyberdrop-DL.v${TAG_NAME}.zip *
+          zip -r ../cyberdrop-dl.v${TAG_NAME}.zip *
 
       - name: Create GH release
         id: create_release
@@ -71,4 +71,4 @@ jobs:
             --title "$TAG_NAME" \
             --notes "$CHANGELOG_CONTENT" \
             --draft \
-            "Cyberdrop-DL.v${TAG_NAME}.zip"
+            "cyberdrop-dl.v${TAG_NAME}.zip"

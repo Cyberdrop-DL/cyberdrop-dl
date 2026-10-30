@@ -315,7 +315,7 @@ def _parse_aria_tree(html: str) -> AriaTree:
             children.setdefault(node.parent, []).append(node.id)
 
     return AriaTree(
-        nodes,
+        nodes=nodes,
         children={k: tuple(v) for k, v in children.items()},
         truncated=bool(tree.get("truncated")),
     )
