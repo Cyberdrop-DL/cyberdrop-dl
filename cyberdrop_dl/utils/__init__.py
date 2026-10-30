@@ -4,7 +4,7 @@ import contextlib
 import itertools
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, Concatenate, cast
+from typing import TYPE_CHECKING, Any, Concatenate, cast, overload
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.utils._url import parse_http_url as parse_url  # noqa: F401
@@ -184,3 +184,21 @@ def bind_fn[T, **P, R](
         return func(value, *args, **kwargs)
 
     return wrapper
+
+
+@overload
+def strict_variadic[T: str | int | list[Any] | dict[Any, Any] | set[Any] | bool](value: T) -> tuple[T, ...]: ...
+
+
+@overload
+def strict_variadic[T: str | int | list[Any] | dict[Any, Any] | set[Any] | bool](
+    value: tuple[T, ...],
+) -> tuple[T, ...]: ...
+
+
+def strict_variadic[T: str | int | list[Any] | dict[Any, Any] | set[Any] | bool](
+    value: T | tuple[T, ...],
+) -> tuple[T, ...]:
+    if type(value) is tuple:
+        return value
+    return (value,)  # pyright: ignore[reportReturnType]

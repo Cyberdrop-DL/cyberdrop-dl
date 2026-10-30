@@ -34,7 +34,7 @@ from cyberdrop_dl.filepath import (
 from cyberdrop_dl.mediaprops import Codecs, ISO639Subtitle, Resolution, ResolvedISO639Subtitle
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
-from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, parse_url, unique
+from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
 from cyberdrop_dl.utils._url import (
     URLDeduper,
     is_within_domain,
@@ -44,6 +44,7 @@ from cyberdrop_dl.utils._url import (
     path_qs_frag,
     remove_trailing_slash,
 )
+from cyberdrop_dl.utils._url import parse_http_url as parse_url
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
 from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
 
@@ -75,9 +76,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-type OneOrTuple[T] = T | tuple[T, ...]
-type SupportedPaths = dict[str, OneOrTuple[str]]
-type SupportedDomains = OneOrTuple[str]
+type SupportedPaths = dict[str, str | tuple[str, ...]]
+type SupportedDomains = tuple[str, ...]
 type DebridURL = Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None
 
 ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
@@ -269,7 +269,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     def __init__(self, manager: Manager, task_mng: aio.TaskManager, tui: ScrapingUI) -> None:
         self.manager: Manager = manager
-
+        assert self.SUPPORTED_DOMAINS
         self._startup_lock: asyncio.Lock = asyncio.Lock()
         self._ready: bool = False
         self._logged_in: bool = False
@@ -1228,20 +1228,16 @@ class API(HTTPMixin, ABC):
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
-    hosts = cls.SUPPORTED_DOMAINS or cls.DOMAIN
-    if isinstance(hosts, str):
-        hosts = (hosts,)
-    return tuple(sorted({host.removeprefix("www.") for host in hosts}))
+    return tuple(sorted({host.removeprefix("www.") for host in cls.SUPPORTED_DOMAINS}))
 
 
 def _prepare_supported_domains(cls: type[Crawler]) -> None:
     if not cls.OLD_DOMAINS:
-        return
-    supported_domains = cls.SUPPORTED_DOMAINS or ()
-    if isinstance(supported_domains, str):
-        supported_domains = (supported_domains,)
+        domains = cls.SUPPORTED_DOMAINS or (cls.DOMAIN,)
+    else:
+        domains = tuple(sorted({*cls.OLD_DOMAINS, *cls.SUPPORTED_DOMAINS, cls.PRIMARY_URL.host}))
 
-    cls.SUPPORTED_DOMAINS = tuple(sorted({*cls.OLD_DOMAINS, *supported_domains, cls.PRIMARY_URL.host}))
+    cls.SUPPORTED_DOMAINS = domains
 
 
 def _check_init_overrides(cls: type[Crawler]) -> None:
@@ -1258,17 +1254,14 @@ def _check_init_overrides(cls: type[Crawler]) -> None:
 def _validate_supported_paths(cls: type[Crawler]) -> None:
     for path_name, paths in cls.SUPPORTED_PATHS.items():
         assert path_name, f"{cls.__name__}, Invalid path: {path_name}"
-        assert isinstance(paths, str | tuple), f"{cls.__name__}, Invalid path {path_name}: {type(paths)}"
+        assert isinstance(paths, (str, tuple)), f"{cls.__name__}, Invalid path {path_name}: {type(paths)}"
         if path_name != "Direct links":
             assert paths, f"{cls.__name__} has not paths for {path_name}"
 
         if path_name.startswith("*"):  # note
             continue
 
-        if isinstance(paths, str):
-            paths = (paths,)
-
-        for path in paths:
+        for path in strict_variadic(paths):
             assert "`" not in path, f"{cls.__name__}, Invalid path {path_name}: {path}"
 
 
@@ -1281,13 +1274,8 @@ def _make_wiki_supported_domains(scrape_mapper_keys: tuple[str, ...]) -> tuple[s
     return tuple(sorted(generalize(domain) for domain in scrape_mapper_keys))
 
 
-def _sort_supported_paths(supported_paths: SupportedPaths) -> dict[str, tuple[str, ...]]:
-    def try_sort(value: OneOrTuple[str]) -> tuple[str, ...]:
-        if isinstance(value, tuple):
-            return tuple(sorted(value))
-        return (value,)
-
-    path_pairs = ((key, try_sort(value)) for key, value in supported_paths.items())
+def _sort_supported_paths(paths: SupportedPaths) -> dict[str, tuple[str, ...]]:
+    path_pairs = ((key, tuple(sorted(strict_variadic(value)))) for key, value in paths.items())
     return dict(sorted(path_pairs, key=lambda x: x[0].casefold()))
 
 

@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from bs4.filter import SoupStrainer
 
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils import strict_variadic
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -143,9 +144,7 @@ def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[
 
 
 def iselect_text(soup: Tag, /, selector: str, contains: tuple[str, ...] | str = ()) -> Generator[str]:
-    if isinstance(contains, str):
-        contains = (contains,)
-
+    contains = strict_variadic(contains)
     for tag in iselect(soup, selector):
         content = text(tag)
         for key in contains:

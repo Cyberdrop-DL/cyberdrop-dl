@@ -19,7 +19,7 @@ from cyberdrop_dl.clients import get_logger, wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url, truncated_preview
+from cyberdrop_dl.utils import css, parse_url, strict_variadic, truncated_preview
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -247,10 +247,8 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
         if not content_type:
             return
-        if isinstance(content_type, str):
-            content_type = (content_type,)
 
-        self.__check_content_type(*content_type, expecting="JSON")
+        self.__check_content_type(*strict_variadic(content_type), expecting="JSON")
 
     @final
     def create_report(self, exc: Exception | None = None, **extras: Any) -> str:

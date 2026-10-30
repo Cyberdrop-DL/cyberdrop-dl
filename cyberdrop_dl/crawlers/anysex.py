@@ -17,7 +17,7 @@ class Selector:
 
 
 class AnySexCrawler(FluidPlayerCrawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "anysex.com"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("anysex.com",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": "/video/<video_id>/...",
         "Album": "/photos/<album_id>/...",
