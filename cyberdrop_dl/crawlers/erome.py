@@ -1,13 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+import contextlib
+from typing import TYPE_CHECKING, ClassVar, Unpack, override
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import open_graph
+from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from cyberdrop_dl.clients.request import RequestParams
+    from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.constants import HttpMethod
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -28,6 +35,7 @@ class EromeCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.erome.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
     DOMAIN: ClassVar[str] = "erome"
+    csrf_token: str = ""
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -57,6 +65,31 @@ class EromeCrawler(Crawler):
             for new_item in self.iter_children(scrape_item, soup, Selector.ALBUM):
                 self.create_task(self.run(new_item))
 
+    @override
+    @contextlib.asynccontextmanager
+    async def request(
+        self, url: AbsoluteHttpURL, /, method: HttpMethod = "GET", **kwargs: Unpack[RequestParams]
+    ) -> AsyncGenerator[AbstractResponse]:
+
+        async with super().request(url, method, **kwargs) as resp:
+            if self.csrf_token:
+                yield resp
+                return
+
+            self.csrf_token = css.select(await resp.soup(), "meta[name='csrf-token']", "content")
+            async with self.request(
+                url.origin() / "user/disclaimer",
+                "POST",
+                headers={
+                    "X-CSRF-TOKEN": self.csrf_token,
+                    "Referer": str(url),
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            ):
+                ...
+
+            yield resp
+
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         soup = await self.request_soup(scrape_item.url)
@@ -64,14 +97,20 @@ class EromeCrawler(Crawler):
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
-        should_download = await self.make_album_checker(album_id)
-        images = filter(should_download, self.iter_urls(soup, Selector.MEDIA, "src"))
-        for link in images:
-            self.create_eager_task(self.direct_file(scrape_item, link))
-            scrape_item.add_children()
+        downloaded = await self.get_completed_by_album(album_id)
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for media in self.iter_urls(soup, Selector.MEDIA, "src"):
+                if media in downloaded:
+                    continue
+
+                tg.create_task(self.direct_file(scrape_item, media))
+                scrape_item.add_children()
+                await sleep()
 
 
 class EromeFanCrawler(EromeCrawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("erome.fan",)
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/a/<album_id>",
         "Profile": "/a/category/<name>",
@@ -87,8 +126,8 @@ class EromeFanCrawler(EromeCrawler):
             case ["a", "category", name, *_]:
                 await self.profile(scrape_item, name)
             case ["a", album_id, *_]:
-                return await self.album(scrape_item, album_id)
+                await self.album(scrape_item, album_id)
             case ["search", query, *_]:
-                return await self.search(scrape_item, query)
+                await self.search(scrape_item, query)
             case _:
                 raise ValueError
