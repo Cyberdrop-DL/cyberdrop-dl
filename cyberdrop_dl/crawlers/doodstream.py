@@ -40,6 +40,7 @@ class DoodStreamCrawler(Crawler):
             "/v/<video_id>",
             "/d/<video_id>",
         ),
+        "Folder": "/f/<folder_id>",
     }
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
         "all3do.com",

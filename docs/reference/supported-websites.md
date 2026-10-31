@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.14.0
+List of sites supported by cyberdrop-dl-patched as of version 10.15.0
 
 ### 1fichier
 
@@ -234,6 +234,19 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 - Video:
   - `/view/<video_id>/...`
+
+### Arte.tv
+
+**Primary URL**: [https://www.arte.tv](https://www.arte.tv)
+
+**Supported Domains**: `arte.tv`
+
+**Supported Paths**:
+
+- Playlist:
+  - `/<lang>/videos/RC-<id>/...`
+- Video:
+  - `/<lang>/videos/<id>/...`
 
 ### aShemaleTube
 
@@ -689,8 +702,12 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Supported Paths**:
 
+- Folder:
+  - `/f/<folder_id>`
 - Video:
+  - `/d/<video_id>`
   - `/e/<video_id>`
+  - `/v/<video_id>`
 
 ### Dropbox
 
@@ -867,7 +884,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Primary URL**: [https://fileditchfiles.me](https://fileditchfiles.me)
 
-**Supported Domains**: `embedditch.st`, `fileditch.*`, `fileditchfiles.me`, `theditch.st`
+**Supported Domains**: `embedditch.st`, `fileditch.*`, `fileditchfiles.me`, `fileditchhot.st`, `theditch.st`
 
 **Supported Paths**:
 
@@ -876,6 +893,8 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
   - `/beta123/<file_id>/<name>`
   - `/file.php?f=<file_id>`
   - `/temp/<file_id>/<name>`
+- Hotlink:
+  - `https://fileditchhot.st/<path>...`
 - Short URL:
   - `https://theditch.st/<short_id>`
 
@@ -1267,8 +1286,16 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Supported Paths**:
 
-- Model:
+- Model photos:
+  - `/<model_id>/photo`
+- Model shorts:
+  - `/<model_id>/short`
+- Model videos:
   - `/<model_id>`
+- Photo:
+  - `/<model_id>/photo/<short_id>`
+- Short:
+  - `/<model_id>/short/<short_id>`
 - Video:
   - `/<model_id>/video/<video_id>`
 
@@ -1545,8 +1572,16 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Supported Paths**:
 
-- Model:
+- Model photos:
+  - `/<model_id>/photo`
+- Model shorts:
+  - `/<model_id>/short`
+- Model videos:
   - `/<model_id>`
+- Photo:
+  - `/<model_id>/photo/<short_id>`
+- Short:
+  - `/<model_id>/short/<short_id>`
 - Video:
   - `/<model_id>/video/<video_id>`
 
@@ -2056,6 +2091,8 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Supported Paths**:
 
+- Collection:
+  - `/collection/<collection_id>`
 - Creator:
   - `/<creator>`
   - `/cw/<creator>`
@@ -2075,6 +2112,8 @@ List of sites supported by cyberdrop-dl-patched as of version 10.14.0
 
 **Supported Paths**:
 
+- Collection:
+  - `/collection/<collection_id>`
 - Creator:
   - `/<creator>`
   - `/cw/<creator>`
