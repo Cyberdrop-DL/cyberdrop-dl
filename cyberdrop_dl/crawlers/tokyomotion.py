@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     ALBUM = 'a[href^="/album/"]'
     ALBUM_NAME = ".panel-heading > .pull-left"
@@ -46,10 +47,14 @@ class TokioMotionCrawler(Crawler):
     NEXT_PAGE_SELECTOR: ClassVar[str] = "a.prevnext"
     DOMAIN: ClassVar[str] = "tokyomotion"
 
-    async def fetch(self, scrape_item: ScrapeItem) -> None:
-        scrape_item.url = scrape_item.url.without_query_params("page")
+    @classmethod
+    @override
+    def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        return super().transform_url(url).without_query_params("page")
 
-        match scrape_item.url.parts[1:]:
+    async def fetch(self, scrape_item: ScrapeItem) -> None:
+        url = scrape_item.url
+        match url.parts[1:]:
             case ["video", video_id, *_]:
                 await self.video(scrape_item, video_id)
             case ["photo", _]:
@@ -61,8 +66,8 @@ class TokioMotionCrawler(Crawler):
                 scrape_item.setup_as_profile(title)
                 await self.profile(scrape_item)
             case ["search"] if (
-                (query := scrape_item.url.query.get("search_query"))
-                and (query_type := scrape_item.url.query.get("search_type"))
+                (query := url.query.get("search_query"))
+                and (query_type := url.query.get("search_type"))
                 and query_type != "users"
             ):
                 await self.search(scrape_item, query, query_type)
@@ -80,11 +85,10 @@ class TokioMotionCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         _check_private(soup)
-        src = css.select(soup, Selector.VIDEO_SRC, "src")
-        link = self.parse_url(src)
+        src = self.parse_url(css.select(soup, Selector.VIDEO_SRC, "src"))
         title = open_graph.title(soup)
         filename = self.create_custom_filename(title, ext := ".mp4", file_id=video_id)
-        await self.handle_file(link, scrape_item, video_id + ext, ext, custom_filename=filename)
+        await self.handle_file(src, scrape_item, video_id + ext, ext, custom_filename=filename)
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem) -> None:
@@ -158,7 +162,7 @@ class TokioMotionCrawler(Crawler):
         title = f"{query} [{query_type} search]"
         scrape_item.setup_as_album(self.create_title(title))
         selector = Selector.ALBUM if query_type == "photos" else Selector.VIDEO
-        return await self.crawl_children(scrape_item, selector)
+        await self.crawl_children(scrape_item, selector)
 
     @error_handling_wrapper
     async def crawl_children(self, scrape_item: ScrapeItem, selector: str) -> None:

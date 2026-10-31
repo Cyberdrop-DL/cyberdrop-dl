@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, final, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     ALBUM_TITLE = "#title"
     ALBUM_DATE = ".level-item p:-soup-contains(Uploaded) + p"
@@ -33,7 +34,7 @@ class CyberdropCrawler(Crawler):
         ),
         "Direct links": "/api/file/d/<file_id>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cyberdrop.cr/")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cyberdrop.cr")
     DOMAIN: ClassVar[str] = "cyberdrop"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("cyberdrop.me", "cyberdrop.to")
 
@@ -66,14 +67,15 @@ class CyberdropCrawler(Crawler):
         scrape_item.url = scrape_item.url.with_query("nojs")
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.ALBUM_TITLE)
-        title = self.create_title(title, album_id)
-        scrape_item.setup_as_album(title, album_id=album_id)
 
-        date_str = css.select_text(soup, Selector.ALBUM_DATE)
-        scrape_item.uploaded_at = self.parse_date(date_str, "%d.%m.%Y")
+        scrape_item.setup_as_album(self.create_title(title, album_id), album_id=album_id)
+        date = css.select_text(soup, Selector.ALBUM_DATE)
+        scrape_item.uploaded_at = self.parse_date(date, "%d.%m.%Y")
 
-        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.ALBUM_ITEM):
-            self.create_task(self.run(new_scrape_item))
+        sleep = aio.periodic_sleep(10)
+        for new_item in self.iter_children(scrape_item, soup, Selector.ALBUM_ITEM):
+            self.create_task(self.run(new_item))
+            await sleep()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
@@ -85,9 +87,9 @@ class CyberdropCrawler(Crawler):
 
         name: str = info["name"]
         filename, ext = self.get_filename_and_ext(name)
-        link = self.parse_url(auth["url"])
+        src = self.parse_url(auth["url"])
         await self.handle_file(
-            link,
+            src,
             scrape_item,
             name,
             ext,

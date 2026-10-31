@@ -4,6 +4,7 @@ import dataclasses
 import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -70,16 +71,19 @@ class GooglePhotosCrawler(Crawler):
             title = self.create_title(album_name, album_id)
             scrape_item.setup_as_album(title, album_id=album_id)
 
-        for idx, image in enumerate(images, 1):
-            if photo_id and photo_id != image.display_id:
-                continue
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for idx, image in enumerate(images, 1):
+                if photo_id and photo_id != image.display_id:
+                    continue
 
-            web_url = self.PRIMARY_URL / type_ / album_id / "photo" / image.display_id
-            new_scrape_item = scrape_item.create_child(web_url)
-            self.create_eager_task(self._image(new_scrape_item, image, idx))
-            scrape_item.add_children()
-            if photo_id:
-                break
+                web_url = self.PRIMARY_URL / type_ / album_id / "photo" / image.display_id
+                new_item = scrape_item.create_child(web_url)
+                tg.create_task(self._image(new_item, image, idx))
+                scrape_item.add_children()
+                await sleep()
+                if photo_id:
+                    break
 
     @auto_task_id
     @error_handling_wrapper
@@ -90,14 +94,13 @@ class GooglePhotosCrawler(Crawler):
         async with self.request(link) as resp:
             filename, ext = self.get_filename_and_ext(image.id, mime_type=resp.content_type)
 
-        custom_filename = f"{str(idx).zfill(3)} - {filename}"
         await self.handle_file(
             scrape_item.url,
             scrape_item,
             filename,
             ext,
             metadata=image,
-            custom_filename=custom_filename,
+            custom_filename=f"{str(idx).zfill(3)} - {filename}",
             debrid_link=link,
         )
 

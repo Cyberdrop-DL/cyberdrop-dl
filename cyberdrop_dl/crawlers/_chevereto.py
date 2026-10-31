@@ -11,7 +11,7 @@ from cyberdrop_dl.utils import css, json, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping
+    from collections.abc import Generator
 
     from bs4 import BeautifulSoup
 
@@ -121,51 +121,49 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
         async for soup in pages:
             if albums:
-                for sub_album in scrape_item.create_children(self.iter_urls(soup, Selector.ITEM)):
+                for sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
                     self.create_task(self.run(sub_album))
 
                 continue
 
-            self._iter_album_files(scrape_item, soup)
+            await self._iter_album_files(scrape_item, soup)
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        results: dict[str, bool] = {}
-        title: str = ""
-
         scrape_item.url = await self._get_final_album_url(scrape_item.url)
-
         soup, pages = await aio.peek_first(self.web_pager(_sort_by_new(scrape_item.url), trim=False))
         if soup.select_one("form"):
+            await pages.aclose()
             await self._unlock_pw_protected_album(scrape_item, soup)
-            return await self.album(scrape_item, album_id)
+            scrape_item.url = await self._get_final_album_url(scrape_item.url)
+            soup, pages = await aio.peek_first(self.web_pager(_sort_by_new(scrape_item.url), trim=False))
 
-        results = await self.get_album_results(album_id)
         title = open_graph.get_title(soup) or open_graph.description(soup)
-        title = self.create_title(title, album_id)
-        scrape_item.setup_as_album(title, album_id=album_id)
+        scrape_item.setup_as_album(self.create_title(title, album_id), album_id=album_id)
 
         async for soup in pages:
-            self._iter_album_files(scrape_item, soup, results)
+            await self._iter_album_files(scrape_item, soup, album_id)
 
+        sleep = aio.periodic_sleep(10)
         async for soup in self.web_pager(_sort_by_new(scrape_item.url / "sub"), trim=False):
-            for sub_album in scrape_item.create_children(self.iter_urls(soup, Selector.ITEM)):
+            for sub_album in self.iter_children(scrape_item, soup, Selector.ITEM):
                 self.create_task(self.run(sub_album))
+                await sleep()
 
-    def _iter_album_files(
-        self,
-        scrape_item: ScrapeItem,
-        soup: BeautifulSoup,
-        results: Mapping[str, bool] | None = None,
+    async def _iter_album_files(
+        self, scrape_item: ScrapeItem, soup: BeautifulSoup, album_id: str | None = None
     ) -> None:
-        results = results or {}
-        for web_url, src_url in self._get_album_files(soup):
-            if self.check_album_results(src_url, results):
-                continue
+        downloaded = await self.get_completed_by_album(album_id) if album_id else None
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for web_url, src_url in self._extract_album_files(soup):
+                if downloaded and src_url in downloaded:
+                    continue
 
-            new_scrape_item = scrape_item.create_child(web_url)
-            self.create_eager_task(self.direct_file(new_scrape_item, src_url))
-            scrape_item.add_children()
+                new_item = scrape_item.create_child(web_url)
+                tg.create_task(self.direct_file(new_item, src_url))
+                scrape_item.add_children()
+                await sleep()
 
     async def _unlock_pw_protected_album(self, scrape_item: ScrapeItem, soup: BeautifulSoup) -> None:
         if not scrape_item.password:
@@ -200,11 +198,11 @@ class CheveretoCrawler(Crawler, is_generic=True):
         if not link_str or "loading.svg" in link_str:
             link_str = Selector.MAIN_IMAGE(soup)
 
-        source = self.parse_url(link_str)
+        src = self.parse_url(link_str)
         scrape_item.uploaded_at = self.parse_iso_date(Selector.DATE(soup))
-        await self.direct_file(scrape_item, source)
+        await self.direct_file(scrape_item, src)
 
-    def _get_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
+    def _extract_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:
         for item in css.iselect(soup, ".list-item[data-object]"):
             web_url = self.parse_url(css.select(item, "a.image-container", "href"))
             encoded_data = css.attr(item, "data-object")

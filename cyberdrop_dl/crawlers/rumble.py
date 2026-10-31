@@ -136,21 +136,25 @@ class RumbleCrawler(Crawler):
         await self._iter_videos(scrape_item)
 
     async def _iter_videos(self, scrape_item: ScrapeItem) -> None:
-        async for soup in self.pager(scrape_item.url):
-            found_videos: bool = False
-            for video in map(_parse_video_obj, _find_video_objs(soup)):
-                found_videos = True
-                new_item = scrape_item.create_child(video.permalink)
-                self.create_eager_task(self.video_task(new_item, video))
-                scrape_item.add_children()
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for soup in self.pager(scrape_item.url):
+                found_videos: bool = False
+                for video in map(_parse_video_obj, _find_video_objs(soup)):
+                    found_videos = True
+                    new_item = scrape_item.create_child(video.permalink)
+                    tg.create_task(self.video_task(new_item, video))
+                    scrape_item.add_children()
+                    await sleep()
 
-            if found_videos:
-                continue
+                if found_videos:
+                    continue
 
-            # Fallback if we made the request with Flaresolverr. Video objects in the HTML are destroyed after JS loads
-            for new_item in self.iter_children(scrape_item, soup, "rum-video-thumbnail a"):
-                self.create_task(self.run(new_item))
-                scrape_item.add_children()
+                # Fallback if we made the request with Flaresolverr. Video objects in the HTML are destroyed after JS loads
+                for new_item in self.iter_children(scrape_item, soup, "rum-video-thumbnail a"):
+                    self.create_task(self.run(new_item))
+                    scrape_item.add_children()
+                    await sleep()
 
     async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[BeautifulSoup]:
         current_page = int(url.query.get("page", 1))

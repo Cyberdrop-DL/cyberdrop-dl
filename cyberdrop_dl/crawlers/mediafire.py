@@ -9,6 +9,7 @@ import itertools
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -103,6 +104,7 @@ class MediaFireCrawler(Crawler):
         title = self.create_title(folder.name, folder_key)
         scrape_item.setup_as_album(title, album_id=folder_key)
 
+        sleep = aio.periodic_sleep(10)
         if folder.is_empty:
             # Make a request anyway to try to get a descriptive error from MediaFire
             async for _ in self.api.folder_content(folder_key, "folders"):
@@ -110,20 +112,23 @@ class MediaFireCrawler(Crawler):
             raise ScrapeError(204, "Folder is empty")
 
         if folder.has_files:
-            async for files in self.api.folder_content(folder_key, "files"):
-                for file in map(File.from_dict, files):
-                    url = self.PRIMARY_URL / "file" / file.quickkey
-                    new_scrape_item = scrape_item.create_child(url)
-                    self.create_eager_task(self._file_task(new_scrape_item, file))
-                    scrape_item.add_children()
+            async with aio.non_cancelling_taskgroup() as tg:
+                async for files in self.api.folder_content(folder_key, "files"):
+                    for file in map(File.from_dict, files):
+                        url = self.PRIMARY_URL / "file" / file.quickkey
+                        new_item = scrape_item.create_child(url)
+                        tg.create_task(self._file_task(new_item, file))
+                        scrape_item.add_children()
+                        await sleep()
 
         if folder.has_folders:
             async for folders in self.api.folder_content(folder_key, "folders"):
                 for folder in folders:
                     link = self.PRIMARY_URL / "folder" / folder["folderkey"]
-                    new_scrape_item = scrape_item.create_child(link)
-                    self.create_task(self.run(new_scrape_item))
+                    new_item = scrape_item.create_child(link)
+                    self.create_task(self.run(new_item))
                     scrape_item.add_children()
+                    await sleep()
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, quick_key: str) -> None:
@@ -132,13 +137,9 @@ class MediaFireCrawler(Crawler):
             return
         file = await self.api.file_info(quick_key)
         scrape_item.url = canonical_url
-        await self._file(scrape_item, file, check_referer=False)
+        await self._file(scrape_item, file)
 
-    @error_handling_wrapper
-    async def _file(self, scrape_item: ScrapeItem, file: File, *, check_referer: bool = True) -> None:
-        if check_referer and await self.check_complete_from_referer(scrape_item.url):
-            return
-
+    async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
         hash_algo = "sha256" if len(file.hash) == 64 else "md5"
         if await self.check_complete_by_hash(scrape_item.url, hash_algo, file.hash):
             return
@@ -149,7 +150,13 @@ class MediaFireCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(file.filename)
         await self.handle_file(link, scrape_item, file.filename, ext, custom_filename=filename)
 
-    _file_task = auto_task_id(_file)
+    @auto_task_id
+    @error_handling_wrapper
+    async def _file_task(self, scrape_item: ScrapeItem, file: File) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+
+        await self._file(scrape_item, file)
 
 
 class MediaFireAPI(API):

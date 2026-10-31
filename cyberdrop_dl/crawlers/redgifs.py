@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar, Final, override
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -89,11 +90,14 @@ class RedGifsCrawler(Crawler):
         scrape_item.setup_as_album(title)
         init_page = int(scrape_item.url.query.get("page", 1))
 
-        async for gifs in self._profile_pager(user_id, init_page):
-            for gif in gifs:
-                new_scrape_item = scrape_item.create_child(_canonical_url(gif.id))
-                await self._gif(new_scrape_item, gif)
-                scrape_item.add_children()
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for gifs in self._profile_pager(user_id, init_page):
+                for gif in gifs:
+                    new_item = scrape_item.create_child(_canonical_url(gif.id))
+                    tg.create_task(self._gif_task(new_item, gif))
+                    scrape_item.add_children()
+                    await sleep()
 
     async def _profile_pager(self, user_id: str, init_page: int = 1) -> AsyncGenerator[tuple[Gif, ...]]:
         gif_ids: set[str] = set()
@@ -149,6 +153,14 @@ class RedGifsCrawler(Crawler):
         scrape_item.uploaded_at = gif.create_date
         filename, ext = self.get_filename_and_ext(src.name)
         await self.handle_file(src, scrape_item, filename, ext, metadata=gif)
+
+    @auto_task_id
+    @error_handling_wrapper
+    async def _gif_task(self, scrape_item: ScrapeItem, gif: Gif) -> None:
+        if await self.check_complete_from_referer(scrape_item.url):
+            return
+
+        await self._gif(scrape_item, gif)
 
 
 def _id(name: str) -> str:

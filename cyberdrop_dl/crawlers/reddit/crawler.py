@@ -3,7 +3,8 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, ClassVar, override
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.crawlers.reddit.api import ArcticShiftAPI, SearchQuery
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.mediaprops import Subtitle
@@ -175,18 +176,20 @@ class RedditCrawler(Crawler):
         )
 
     async def _iter_posts(self, scrape_item: ScrapeItem, submissions: AsyncGenerator[Submission]) -> None:
-        async with contextlib.aclosing(submissions) as posts:
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg, contextlib.aclosing(submissions) as posts:
             async for post in posts:
                 new_item = scrape_item.create_child(self.parse_url(post["permalink"]))
-                self.post(new_item, post)
+                tg.create_task(self._post_task(new_item, post))
                 scrape_item.add_children()
+                await sleep()
 
-    @error_handling_wrapper
-    def post(self, scrape_item: ScrapeItem, post: Submission) -> None:
+    async def _post(self, scrape_item: ScrapeItem, post: Submission) -> None:
         scrape_item.uploaded_at = post["created_utc"]
-        scrape_item.setup_as_post(
-            self.create_title(self.create_separate_post_title(post["title"], post["id"], post["created_utc"]))
-        )
+        title = self.create_separate_post_title(post["title"], post["id"], post["created_utc"])
+        scrape_item.setup_as_post(self.create_title(title))
+
+        sleep = aio.periodic_sleep(10)
         self.create_eager_task(self.write_metadata(scrape_item, post["id"], post))
         for url in unique(_extract_urls(post, self.config.crawlers.reddit)):
             if url.host == self.PRIMARY_URL.host:
@@ -194,11 +197,14 @@ class RedditCrawler(Crawler):
 
             self.handle_embed(scrape_item.create_child(url))
             scrape_item.add_children()
+            await sleep()
+
+    _post_task = auto_task_id(error_handling_wrapper(_post))
 
     @error_handling_wrapper
     async def submission(self, scrape_item: ScrapeItem, post_id: str) -> None:
         post = await self.api.post(post_id)
-        self.post(scrape_item, post)
+        await self._post(scrape_item, post)
 
 
 def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteHttpURL]:

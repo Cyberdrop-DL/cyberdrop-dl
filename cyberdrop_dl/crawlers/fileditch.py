@@ -150,10 +150,12 @@ class FileditchAlbumsCrawler(Crawler, wiki_site="FileditchAlbums"):
         soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
         name = self.create_title(css.select_text(soup, "h1.title"))
         scrape_item.setup_as_album(name, album_id=album_id)
+        sleep = aio.periodic_sleep(10)
         async for soup in pages:
             for new_item in self.iter_children(scrape_item, soup, ".grid article.card > a.thumb[href]"):
                 self.handle_embed(new_item)
                 scrape_item.add_children()
+                await sleep()
 
 
 def _extr_thumb(soup: bs4.Tag) -> str | None:

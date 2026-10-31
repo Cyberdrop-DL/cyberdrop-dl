@@ -71,6 +71,7 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
     Class to represent common methods and attributes between:
         - `aiohttp.ClientResponse`
         - `curl_cffi.Response`
+        - `wreq.Response`
         - `FlareSolverrSolution`
     """
 

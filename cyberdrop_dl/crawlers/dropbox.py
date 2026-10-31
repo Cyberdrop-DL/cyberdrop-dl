@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -114,30 +115,33 @@ class DropboxCrawler(Crawler):
         rlkey: str,
         subpath: str = "",
     ) -> None:
-        async for resp in self._web_api_pager(link_key, secure_hash, rlkey, subpath):
-            if "folder" not in resp:
-                return await self.file(scrape_item)
-            folder_name: str = resp["folder"]["filename"]
-            scrape_item.append_folders(self.create_title(folder_name))
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for resp in self._web_api_pager(link_key, secure_hash, rlkey, subpath):
+                if "folder" not in resp:
+                    return await self.file(scrape_item)
+                folder_name: str = resp["folder"]["filename"]
+                scrape_item.append_folders(self.create_title(folder_name))
 
-            for entry, token in zip(resp["entries"], resp["share_tokens"], strict=True):
-                node = Node.from_dict(token | entry)
-                view_url = self.parse_url(node.href)
-                new_scrape_item = scrape_item.create_child(view_url)
-                if node.is_dir:
-                    self.create_task(
-                        self._walk_folder(
-                            new_scrape_item,
-                            link_key,
-                            node.secureHash,
-                            rlkey,
-                            f"{subpath}/{node.filename}",
+                for entry, token in zip(resp["entries"], resp["share_tokens"], strict=True):
+                    node = Node.from_dict(token | entry)
+                    view_url = self.parse_url(node.href)
+                    new_scrape_item = scrape_item.create_child(view_url)
+                    if node.is_dir:
+                        tg.create_lazy_task(
+                            self._walk_folder(
+                                new_scrape_item,
+                                link_key,
+                                node.secureHash,
+                                rlkey,
+                                f"{subpath}/{node.filename}",
+                            )
                         )
-                    )
-                    continue
+                    else:
+                        self.create_task(self._file(new_scrape_item, node.filename))
+                        scrape_item.add_children()
 
-                self.create_eager_task(self._file(new_scrape_item, node.filename))
-                scrape_item.add_children()
+                await sleep()
 
     async def _web_api_pager(
         self, link_key: str, secure_hash: str, rlkey: str, subpath: str = ""

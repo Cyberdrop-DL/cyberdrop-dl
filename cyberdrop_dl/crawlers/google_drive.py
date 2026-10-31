@@ -128,10 +128,8 @@ class GoogleDriveCrawler(Crawler):
         scrape_item.setup_as_album(title, album_id=folder_id)
 
         sleep = aio.periodic_sleep(100)
-        for child in self.iter_urls(soup, "div.flip-entry-info > a[href]"):
-            new_scrape_item = scrape_item.create_child(child)
-            self.create_task(self.run(new_scrape_item))
-            scrape_item.add_children()
+        for new_item in self.iter_children(scrape_item, soup, "div.flip-entry-info > a[href]"):
+            self.create_task(self.run(new_item))
             await sleep()
 
     @error_handling_wrapper

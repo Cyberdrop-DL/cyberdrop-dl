@@ -70,9 +70,11 @@ class PPPCrawler(KernelVideoSharingCrawler, ensure_trailing_slash=True):
             from_params = "from"
 
         ajax_url = KVSAjaxPagination(block_id=block_id, q=query)(scrape_item.url)
+        sleep = aio.periodic_sleep(10)
         async for soup in self._ajax_pager(ajax_url, from_params=from_params):
             for new_item in self.iter_children(scrape_item, soup, ".card-video__img a"):
                 self.create_task(self.run(new_item))
+                await sleep()
 
 
 @dataclasses.dataclass(slots=True, frozen=True, kw_only=True)

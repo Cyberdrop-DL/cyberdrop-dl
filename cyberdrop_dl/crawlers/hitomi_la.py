@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import cached_fn
 from cyberdrop_dl.clients.http import HTTPConfig
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -72,7 +72,7 @@ class HitomiLaCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["cg" | "doujinshi" | "galleries" | "gamecg" | "imageset" | "manga" | "reader" | "anime", slug]:
-                gallery_id = slug.split("-", 1)[-1].removesuffix(".html")
+                gallery_id = slug.rpartition("-")[-1].removesuffix(".html")
                 await self.gallery(scrape_item, gallery_id)
             case ["artist", "character", "group", "series", "tag", "type" as type_, slug]:
                 name, lang = _parse_slug(slug)
@@ -117,12 +117,13 @@ class HitomiLaCrawler(Crawler):
                 await self._iter_galleries(scrape_item, group)
 
     async def _iter_galleries(self, scrape_item: ScrapeItem, groups: Iterable[int]) -> None:
-        for idx, gallery_id in enumerate(groups, 1):
-            new_item = scrape_item.create_child(self.PRIMARY_URL / f"galleries/{gallery_id}.html")
-            self.create_task(self.run(new_item))
-            scrape_item.add_children()
-            if idx % 30:
-                await asyncio.sleep(0)
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for gallery_id in groups:
+                new_item = scrape_item.create_child(self.PRIMARY_URL / f"galleries/{gallery_id}.html")
+                tg.create_task(self._gallery_task(new_item, str(gallery_id)))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
@@ -133,32 +134,36 @@ class HitomiLaCrawler(Crawler):
         scrape_item.uploaded_at = self.parse_iso_date(gallery.datepublished or gallery.date)
         await self._gallery(scrape_item, gallery)
 
+    _gallery_task = auto_task_id(gallery)
+
     async def _gallery(self, scrape_item: ScrapeItem, gallery: Gallery) -> None:
         servers = await self.api.servers()
         reader_url = self.PRIMARY_URL / f"reader/{gallery.id}.html"
-        results = await self.get_album_results(gallery.id)
-        await self._video(scrape_item, gallery)
+        downloaded, _ = await aio.gather(self.get_completed_by_album(gallery.id), self._video(scrape_item, gallery))
 
-        for idx, image in enumerate(gallery.files, 1):
-            web_url = reader_url.with_fragment(str(idx))
-            if self.check_album_results(web_url, results):
-                continue
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for idx, image in enumerate(gallery.files, 1):
+                web_url = reader_url.with_fragment(str(idx))
+                if web_url in downloaded:
+                    continue
 
-            src = _build_src_url(servers, image)
-            filename, ext = self.get_filename_and_ext(image.name)
-            custom_filename = self.create_custom_filename(filename, src.suffix)
-            await self.handle_file(
-                web_url,
-                scrape_item,
-                filename,
-                ext,
-                custom_filename=custom_filename,
-                debrid_link=src,
-                referer=web_url,
-            )
-            scrape_item.add_children()
-            if idx % 30:
-                await asyncio.sleep(0.02)
+                src = _build_src_url(servers, image)
+                filename, ext = self.get_filename_and_ext(image.name)
+                custom_filename = self.create_custom_filename(filename, src.suffix)
+                tg.create_task(
+                    self.handle_file(
+                        web_url,
+                        scrape_item,
+                        filename,
+                        ext,
+                        custom_filename=custom_filename,
+                        debrid_link=src,
+                        referer=web_url,
+                    )
+                )
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def _video(self, scrape_item: ScrapeItem, gallery: Gallery) -> None:

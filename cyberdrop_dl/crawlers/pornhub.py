@@ -7,6 +7,7 @@ import json
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.cache import cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
@@ -139,15 +140,18 @@ class PornHubCrawler(Crawler):
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         album = await self.api.album(album_id)
         scrape_item.setup_as_album(self.create_title(album.name, album.id), album_id=album.id)
-        downloaded = await self.get_album_results(album.id)
+        downloaded = await self.get_completed_by_album(album.id)
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for photo in self.api.album_photos(album.id):
+                if photo.canonical_url in downloaded:
+                    continue
 
-        async for photo in self.api.album_photos(album.id):
-            if self.check_album_results(photo.canonical_url, downloaded):
-                continue
-            web_url = self.PRIMARY_URL / "photo" / photo.id
-            new_item = scrape_item.create_child(web_url)
-            self.create_eager_task(self._photo(new_item, photo))
-            scrape_item.add_children()
+                web_url = self.PRIMARY_URL / "photo" / photo.id
+                new_item = scrape_item.create_child(web_url)
+                tg.create_task(self._photo(new_item, photo))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
@@ -263,9 +267,11 @@ class PornHubProfileCrawler:
         self.item.markers.append(self.profile)
 
     async def _iter_pages(self, selector: str) -> None:
+        sleep = aio.periodic_sleep(10)
         async for soup in self.crawler.web_pager(self.item.url):
             for new_item in self.crawler.iter_children(self.item, soup, selector):
                 self.crawler.create_task(self.crawler.run(new_item))
+                await sleep()
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

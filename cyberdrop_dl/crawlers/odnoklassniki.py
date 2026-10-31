@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -60,8 +61,9 @@ class OdnoklassnikiCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["video", id_]:
                 if id_.startswith("c"):
-                    return await self.channel(scrape_item, id_)
-                await self.video(scrape_item, id_)
+                    await self.channel(scrape_item, id_)
+                else:
+                    await self.video(scrape_item, id_)
             case ["profile", _, channel] if channel.startswith("c"):
                 await self.channel(scrape_item, channel)
             case _:
@@ -93,6 +95,7 @@ class OdnoklassnikiCrawler(Crawler):
         seen: set[str] = set()
         content = str(soup)
         page = 1
+        sleep = aio.periodic_sleep(10)
         while True:
             page_had_new_videos = False
             for match in _find_video_ids(content):
@@ -103,6 +106,7 @@ class OdnoklassnikiCrawler(Crawler):
                     new_scrape_item = scrape_item.create_child(video_url)
                     self.create_task(self.run(new_scrape_item))
                     scrape_item.add_children()
+                    await sleep()
 
             if not page_had_new_videos or not last_element_id:
                 break
