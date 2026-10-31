@@ -139,7 +139,7 @@ class DailyMotionAPI(API):
     async def video(self, video_id: str) -> Video:
         metadata = await self.metadata(video_id)
         if metadata.get("isOnAir"):
-            raise ScrapeError(422, "Live streams are not supported")
+            raise ScrapeError.live_stream()
 
         # TODO: handle password protected videos
         if metadata.get("is_password_protected"):

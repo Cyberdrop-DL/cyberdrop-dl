@@ -206,7 +206,7 @@ class ArteTVAPI(API):
         resp = await self.request_json(url, headers={"x-validated-age": "18"})
         attrs = resp["data"]["attributes"]
         if attrs.get("live"):
-            raise ScrapeError(422, "Live streams are not supported")
+            raise ScrapeError.live_stream()
         try:
             geo = attrs["restriction"]["geoblocking"]
         except LookupError:

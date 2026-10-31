@@ -418,7 +418,7 @@ def _parse_video_legacy(payload: list[Any], owner_id: str, video_id: str) -> Vid
     html, options = payload[1], payload[-1]
     params = options["player"]["params"][0]
     if params.get("live") == 2:
-        raise ScrapeError(422, "Live streams are not supported")
+        raise ScrapeError.live_stream()
 
     def extract_embed() -> str | None:
         try:
