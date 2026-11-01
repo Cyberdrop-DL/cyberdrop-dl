@@ -11,8 +11,8 @@ from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
-from cyberdrop_dl.utils._url import remove_query_params
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import remove_query_params
 
 if TYPE_CHECKING:
     from collections.abc import Generator

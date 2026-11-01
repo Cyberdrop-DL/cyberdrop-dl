@@ -35,7 +35,9 @@ from cyberdrop_dl.mediaprops import Codecs, ISO639Subtitle, Resolution, Resolved
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
-from cyberdrop_dl.utils._url import (
+from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
+from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
+from cyberdrop_dl.utils.urls import (
     URLDeduper,
     is_within_domain,
     matches_any_host,
@@ -44,9 +46,7 @@ from cyberdrop_dl.utils._url import (
     path_qs_frag,
     remove_trailing_slash,
 )
-from cyberdrop_dl.utils._url import parse_http_url as parse_url
-from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
-from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
+from cyberdrop_dl.utils.urls import parse_http_url as parse_url
 
 if TYPE_CHECKING:
     import datetime as dt

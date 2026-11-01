@@ -9,8 +9,8 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Concatenate, Self, cast, overload
 
 from cyberdrop_dl.constants import MISSING
-from cyberdrop_dl.utils._url import parse_http_url as parse_url  # noqa: F401
-from cyberdrop_dl.utils._url import remove_trailing_slash  # noqa: F401
+from cyberdrop_dl.utils.urls import parse_http_url as parse_url  # noqa: F401
+from cyberdrop_dl.utils.urls import remove_trailing_slash  # noqa: F401
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator

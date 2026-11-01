@@ -12,8 +12,8 @@ from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, m3u8, parse_url, traversal
-from cyberdrop_dl.utils._url import remove_query_params
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import remove_query_params
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable

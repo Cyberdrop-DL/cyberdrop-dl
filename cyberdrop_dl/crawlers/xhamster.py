@@ -15,8 +15,8 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import extr_text, parse_url, traversal, xor_decrypt
-from cyberdrop_dl.utils._url import URLDeduper
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import URLDeduper
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable

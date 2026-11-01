@@ -26,8 +26,8 @@ from cyberdrop_dl.crawlers.vk.types import (
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad
-from cyberdrop_dl.utils._url import is_ip_address, remove_query_params
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import is_ip_address, remove_query_params
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable

@@ -9,8 +9,8 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, json_ld
-from cyberdrop_dl.utils._url import remove_trailing_slash
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import remove_trailing_slash
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag

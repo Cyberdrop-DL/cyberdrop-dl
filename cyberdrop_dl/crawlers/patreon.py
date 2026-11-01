@@ -14,9 +14,9 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, Suppor
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, next_js, traversal
-from cyberdrop_dl.utils._url import URLDeduper
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import URLDeduper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Mapping

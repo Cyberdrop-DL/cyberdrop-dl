@@ -29,7 +29,7 @@ def create_crawlers[CrawlerT: Crawler](
 
 
 def _create_subclass[CrawlerT: Crawler](url: AbsoluteHttpURL | str, base_class: type[CrawlerT]) -> type[CrawlerT]:
-    from cyberdrop_dl.utils._url import remove_trailing_slash
+    from cyberdrop_dl.utils.urls import remove_trailing_slash
 
     url = AbsoluteHttpURL(url)
     assert is_absolute_http_url(url)

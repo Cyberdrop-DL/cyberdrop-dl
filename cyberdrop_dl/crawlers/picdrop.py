@@ -12,9 +12,9 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import extr_text
-from cyberdrop_dl.utils._url import remove_query_params
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import remove_query_params
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
