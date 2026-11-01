@@ -11,9 +11,9 @@ from cyberdrop_dl.crawlers.crawler import Crawler, DownloadConfig, SupportedDoma
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, json_ld, parse_url
+from cyberdrop_dl.utils import css, extr_text, json_ld
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import URLDeduper
+from cyberdrop_dl.utils.urls import URLDeduper, parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -119,7 +119,7 @@ def _parse_video(soup: BeautifulSoup) -> Video:
     playlist = json.loads(extr_text(playlist_js, "window.playlist = ", ";\nwindow.ads"))
 
     resolution, src = max(_parse_sources(playlist["sources"]))
-    content_url = parse_url(props["contentUrl"])
+    content_url = parse_http_url(props["contentUrl"])
 
     return Video(
         title=props["name"],
@@ -134,4 +134,4 @@ def _parse_video(soup: BeautifulSoup) -> Video:
 def _parse_sources(sources: list[dict[str, str]]) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
     for source in sources:
         resolution = Resolution.parse(source["label"])
-        yield resolution, parse_url(source["file"])
+        yield resolution, parse_http_url(source["file"])

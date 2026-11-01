@@ -227,7 +227,7 @@ def _has_ads(post: PostProtocol[Any]) -> bool:
     return bool(ci_tags.intersection({"ad", "#ad", "ads", "#ads"}))
 
 
-def _extract_urls(content: str) -> Generator[str]:
+def _extract_urls(content: str) -> Iterable[str]:
     return unique(match.group() for match in _find_http_urls(content))
 
 

@@ -12,7 +12,8 @@ from cyberdrop_dl.database import Database, common, schema
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_source import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
-from cyberdrop_dl.utils import enter_context, parse_url
+from cyberdrop_dl.utils import enter_context
+from cyberdrop_dl.utils.urls import parse_http_url
 
 _MOCK_ROW = {
     "referer": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit",
@@ -66,7 +67,7 @@ def item() -> ScrapeItem:
 )
 def test_create_db_path(url: str, expected: str) -> None:
     crawlers = scrape_mapper.get_crawlers_mapping()
-    url_ = parse_url(url)
+    url_ = parse_http_url(url)
     crawler = scrape_mapper._best_match(crawlers, url_.host)
     assert crawler
     path = crawler.__db_path__(url_)

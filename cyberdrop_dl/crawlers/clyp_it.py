@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import extr_text, parse_url
+from cyberdrop_dl.utils import extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -142,7 +143,7 @@ def _parse_audio(audio: dict[str, Any]) -> Audio:
         id=audio["AudioFileId"],
         title=audio["Title"],
         created_at=audio["DateCreated"],
-        mp3=parse_url(audio.get("SecureMp3Url") or audio["Mp3Url"]),
+        mp3=parse_http_url(audio.get("SecureMp3Url") or audio["Mp3Url"]),
         user=_parse_user(audio["User"]),
     )
 

@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 from cyberdrop_dl import aio, constants, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.url_objects import ByteRange
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.cleanup import rm_partial_files
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
@@ -98,7 +98,7 @@ def _create_segments(segments: Iterable[Segment | InitializationSection], count:
         yield HLSSegment(
             idx=index - 1,
             name=f"{index:0{padding}d}{constants.TempExt.HLS}",
-            url=parse_url(segment.absolute_uri, trim=False),
+            url=parse_http_url(segment.absolute_uri, trim=False),
             decrypt_info=HLSKey.parse(segment, idx=index - 1),
             byte_range=byte_range,
         )
@@ -242,7 +242,7 @@ async def _merge_segments(results: Sequence[MediaItem], output: Path) -> None:
 
 
 def _prepare_output_path(m3u8: M3U8, output: Path) -> Path:
-    real_ext = parse_url(m3u8.segments[0].absolute_uri).suffix
+    real_ext = parse_http_url(m3u8.segments[0].absolute_uri).suffix
     if len(m3u8.segments) > 1:
         suffix = f".{m3u8.media_type}{real_ext}" if m3u8.media_type == "subtitle" else f".{m3u8.media_type}.ts"
     else:

@@ -11,7 +11,7 @@ from cyberdrop_dl.exceptions import InvalidExtensionError, NoExtensionError
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import file_browser, operators, text_editor
-from cyberdrop_dl.utils._url import fix_multi_slashes, is_within_domain, matches_any_host, parse_http_url
+from cyberdrop_dl.utils.urls import fix_multi_slashes, is_within_domain, matches_any_host, parse_http_url
 
 
 class TestGetFilenameAndExt:

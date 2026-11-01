@@ -14,9 +14,10 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
-from cyberdrop_dl.utils import css, extr_text, json_ld, open_graph, parse_url
+from cyberdrop_dl.utils import css, extr_text, json_ld, open_graph
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Generator, Sequence
@@ -358,7 +359,7 @@ def _get_license_token(license_code: str) -> tuple[int, ...]:
 
 def _deobfuscate_url(video_url_str: str, license_token: Sequence[int]) -> AbsoluteHttpURL:
     raw_url_str = video_url_str.removeprefix("function/0/")
-    url = parse_url(raw_url_str, trim=False)
+    url = parse_http_url(raw_url_str, trim=False)
     is_obfuscated = raw_url_str != video_url_str
     if not is_obfuscated:
         return url

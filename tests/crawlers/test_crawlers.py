@@ -12,7 +12,8 @@ import tests
 from cyberdrop_dl.crawlers.crawler import CrawlerInfo, _SupportedDomains, compose_ep_name
 from cyberdrop_dl.scrape_mapper import ScrapeMapper
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, ScrapeItem
-from cyberdrop_dl.utils import json, parse_url
+from cyberdrop_dl.utils import json
+from cyberdrop_dl.utils.urls import parse_http_url
 
 from . import test_cases
 
@@ -189,7 +190,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
             crawler = scrape_mapper._direct_http
             await scrape_mapper.run()
             item = ScrapeItem(
-                url=parse_url(test_case.url),
+                url=parse_http_url(test_case.url),
                 download_folder=running_manager.config.download_folder,
             )
             await crawler.fetch(item)

@@ -9,10 +9,11 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import extr_text, parse_url
+from cyberdrop_dl.utils import extr_text
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.json import JSONWebToken
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -186,13 +187,13 @@ def parse_streams(config: dict[str, Any]) -> Generator[Stream]:
         match kind:
             case "hls":
                 for name, opts in files["cdns"].items():
-                    yield Stream(name=name, url=parse_url(opts["url"]), res=Resolution.unknown(), is_hls=True)
+                    yield Stream(name=name, url=parse_http_url(opts["url"]), res=Resolution.unknown(), is_hls=True)
 
             case "progressive":
                 for file in files:
                     yield Stream(
                         name=file["cdn"] + "-" + file["id"],
-                        url=parse_url(file["url"]),
+                        url=parse_http_url(file["url"]),
                         fps=int(file["fps"]),
                         res=Resolution(file["width"], file["height"]),
                     )

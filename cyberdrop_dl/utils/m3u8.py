@@ -4,7 +4,7 @@ import dataclasses
 import datetime as dt
 import logging
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Self, final
 
 import m3u8.model
 from m3u8 import M3U8 as _M3U8
@@ -14,8 +14,8 @@ from m3u8.mixins import BasePathMixin, GroupedBasePathMixin
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Codecs, Resolution
 from cyberdrop_dl.signature import dataclass_repr, vars_repr
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping
@@ -93,6 +93,7 @@ class Rendition:
         yield from (self.video, self.audio, self.subtitle)
 
 
+@final
 @dataclasses.dataclass(frozen=True, slots=True, order=True)
 class StreamInfo:
     """Exactly the same as m3u8.model.StreamInfo but as a dataclass, to support sorting rendition groups with the same resolution but different bitrates (bandwidth)"""
@@ -133,7 +134,7 @@ class RenditionDetails:
         assert playlist.uri
 
         def get_url(m3u8_obj: Playlist | Media) -> AbsoluteHttpURL:
-            return parse_url(m3u8_obj.absolute_uri, trim=False)
+            return parse_http_url(m3u8_obj.absolute_uri, trim=False)
 
         video_url = get_url(playlist)
         subtitle_url = audio_url = None
@@ -202,7 +203,7 @@ class HLSKey:
             return cls(
                 method=Encryption(seg.key.method),
                 iv=iv,
-                uri=parse_url(seg.key.absolute_uri, trim=False),
+                uri=parse_http_url(seg.key.absolute_uri, trim=False),
             )
 
 
@@ -310,7 +311,7 @@ def select_best_rendition(
 
 def get_resolution_from_url(url: AbsoluteHttpURL | str) -> Resolution:
     if isinstance(url, str):
-        url = parse_url(url, trim=False)  # Raises Invalid URL error for relative URLs
+        url = parse_http_url(url, trim=False)  # Raises Invalid URL error for relative URLs
 
     try:
         return Resolution.parse(url)

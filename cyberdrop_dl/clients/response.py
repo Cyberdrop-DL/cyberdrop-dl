@@ -19,7 +19,8 @@ from cyberdrop_dl.clients import get_logger, wreq
 from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url, strict_variadic, truncated_preview
+from cyberdrop_dl.utils import css, strict_variadic, truncated_preview
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -484,7 +485,7 @@ class FlareSolverrResponse(AbstractResponse[FlaresolverrSolution]):
 
 
 def _parse_headers(url: AbsoluteHttpURL, headers: CIMultiDictProxy[str]) -> tuple[str, AbsoluteHttpURL | None]:
-    location = parse_url(location, url.origin(), trim=False) if (location := headers.get(hdrs.LOCATION)) else None
+    location = parse_http_url(location, url.origin(), trim=False) if (location := headers.get(hdrs.LOCATION)) else None
 
     content_type = (headers.get(hdrs.CONTENT_TYPE) or "").lower()
     return content_type, location

@@ -27,8 +27,7 @@ from cyberdrop_dl.scrape_source import (
     load_items_from_path,
 )
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem, ScrapeItemType
-from cyberdrop_dl.utils import remove_trailing_slash
-from cyberdrop_dl.utils.urls import URLDeduper, matches_any_host
+from cyberdrop_dl.utils.urls import URLDeduper, matches_any_host, remove_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator, Iterator, Mapping

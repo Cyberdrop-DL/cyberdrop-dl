@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import extr_text, parse_url
+from cyberdrop_dl.utils import extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
@@ -47,7 +48,7 @@ class XVideoSharingCrawler(XFSCrawler, is_abc=True):
     def extract_stream(cls, html: str) -> AbsoluteHttpURL:
         start = html.index("sources:", html.index('jwplayer("vplayer").setup'))
         url = extr_text(html[start:], "file:", "}]")
-        return parse_url(url.strip('"'))
+        return parse_http_url(url.strip('"'))
 
     @error_handling_wrapper
     async def embed(self, scrape_item: ScrapeItem, video_id: str) -> None:

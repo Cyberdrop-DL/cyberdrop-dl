@@ -7,8 +7,9 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, json_ld, parse_url
+from cyberdrop_dl.utils import css, json_ld
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -82,7 +83,7 @@ class DirtyShipCrawler(Crawler):
 def _parse_html5_formats(soup: BeautifulSoup) -> Generator[tuple[Resolution, AbsoluteHttpURL]]:
     for video in css.iselect(soup, Selector.VIDEO):
         res = Resolution.parse(css.attr(video, "title"))
-        link = parse_url(css.attr(video, "src"))
+        link = parse_http_url(css.attr(video, "src"))
         yield res, link
 
 
@@ -90,4 +91,4 @@ def _parse_flowplayer_sources(soup: BeautifulSoup) -> Generator[tuple[Resolution
     flow_player = css.select(soup, Selector.FLOWPLAYER, "data-item").replace(r"\/", "/")
     source: dict[str, str]
     for source in json.loads(flow_player)["sources"]:
-        yield Resolution.unknown(), parse_url(source["src"])
+        yield Resolution.unknown(), parse_http_url(source["src"])

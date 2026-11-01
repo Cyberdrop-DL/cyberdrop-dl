@@ -9,8 +9,9 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, extr_text, parse_url
+from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -236,7 +237,7 @@ async def _parse_video(html: str, video: dict[str, Any]) -> Video:
 def _parse_sources(sources: dict[str, dict[str, dict[str, Any]]]) -> Generator[VideoSource]:
     for fmt, formats in sources.items():
         for name, source in formats.items():
-            url = parse_url(source["src"])
+            url = parse_http_url(source["src"])
             if fmt == "hls":
                 resolution = _parse_hls_res(url)
                 fps = 0.0

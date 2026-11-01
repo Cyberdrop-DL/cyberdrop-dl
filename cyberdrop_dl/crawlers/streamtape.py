@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, open_graph, parse_url
+from cyberdrop_dl.utils import css, extr_text, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -62,4 +63,4 @@ def _extract_dl_url(soup: BeautifulSoup) -> AbsoluteHttpURL:
     script = css.select_text(soup, Selector.JS_TOKEN)
     token = extr_text(script, "&token=", "'")
     bait_url = css.select_text(soup, Selector.BAIT_LINK)
-    return parse_url(f"https:/{bait_url}").update_query(token=token)
+    return parse_http_url(f"https:/{bait_url}").update_query(token=token)

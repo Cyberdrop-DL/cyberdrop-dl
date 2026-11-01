@@ -50,9 +50,9 @@ def test_generic_crawlers_that_do_no_match_supported_crawlers_should_be_created(
 def test_skip_by_config() -> None:
     url = AbsoluteHttpURL("https://example.com")
     config = Config()
-    assert scrape_mapper._skip_by_config(url, config) is False
+    assert scrape_mapper._skip_url_by_config(url, config) is False
     config.filters.skip_hosts = {url.host}
-    assert scrape_mapper._skip_by_config(url, config) is True
+    assert scrape_mapper._skip_url_by_config(url, config) is True
     config.filters.skip_hosts.clear()
     config.filters.only_hosts = {"google.com"}
-    assert scrape_mapper._skip_by_config(url, config) is True
+    assert scrape_mapper._skip_url_by_config(url, config) is True

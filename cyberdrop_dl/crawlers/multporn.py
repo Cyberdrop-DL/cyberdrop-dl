@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -65,7 +66,7 @@ class MultPornCrawler(Crawler):
 def _extract_images(soup: BeautifulSoup) -> Generator[AbsoluteHttpURL]:
     subpath = "/styles/juicebox_medium/public/"
     for img in css.iselect(soup, ".content .jb-image img", "src"):
-        url = parse_url(img)
+        url = parse_http_url(img)
         path = url.path.replace(subpath, "/")
         yield url.with_path(path)
 

@@ -14,9 +14,9 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import extr_text, parse_url, traversal, xor_decrypt
+from cyberdrop_dl.utils import extr_text, traversal, xor_decrypt
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import URLDeduper
+from cyberdrop_dl.utils.urls import URLDeduper, parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -59,7 +59,7 @@ def _parse_url(b64_url: str) -> AbsoluteHttpURL:
     url = _decrypt_url(b64_url)
     if not url:
         raise ScrapeError(422, f"Unknown encrypted URL: {b64_url}")
-    return parse_url(url, relative_to=_PRIMARY_URL)
+    return parse_http_url(url, relative_to=_PRIMARY_URL)
 
 
 @HTTPConfig(rate_limit=(4, 1))

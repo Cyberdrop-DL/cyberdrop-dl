@@ -8,9 +8,9 @@ from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
@@ -165,7 +165,7 @@ class Image:
 
     @classmethod
     def parse(cls, img: dict[str, Any]) -> Self:
-        return deserialize(cls, img, src=parse_url(img["original_url"]))
+        return deserialize(cls, img, src=parse_http_url(img["original_url"]))
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

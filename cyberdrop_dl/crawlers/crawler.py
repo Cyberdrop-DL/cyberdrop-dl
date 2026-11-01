@@ -41,12 +41,12 @@ from cyberdrop_dl.utils.urls import (
     URLDeduper,
     is_within_domain,
     matches_any_host,
+    parse_http_url,
     path_frag,
     path_qs,
     path_qs_frag,
     remove_trailing_slash,
 )
-from cyberdrop_dl.utils.urls import parse_http_url as parse_url
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -894,7 +894,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             trim = cls.__url_config__.trim
         if trim is None:
             trim = True
-        return parse_url(url, base, trim=trim)
+        return parse_http_url(url, base, trim=trim)
 
     @final
     @property
@@ -1203,7 +1203,7 @@ class API(HTTPMixin, ABC):
         assert is_absolute_http_url(base)
         if trim is None:
             trim = True
-        return parse_url(url, base, trim=trim)
+        return parse_http_url(url, base, trim=trim)
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:

@@ -9,8 +9,8 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -271,7 +271,7 @@ class ClipFormat:
     def parse(assets: dict[str, Any]) -> Generator[ClipFormat]:
         for fmt in assets["videoQualities"]:
             yield ClipFormat(
-                url=parse_url(fmt["sourceURL"]),
+                url=parse_http_url(fmt["sourceURL"]),
                 fps=fmt["frameRate"],
                 resolution=Resolution.parse(fmt["quality"]),
                 aspect_ratio=assets["aspectRatio"],
@@ -279,7 +279,7 @@ class ClipFormat:
 
 
 def _parse_unavailable_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:
-    first_rendition = parse_url(m3u8.playlists[0].absolute_uri)
+    first_rendition = parse_http_url(m3u8.playlists[0].absolute_uri)
     base_url, filename = first_rendition.parent.parent, first_rendition.name
 
     for media in hidden_media:

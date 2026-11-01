@@ -10,9 +10,10 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import nuxt, parse_url, unique
+from cyberdrop_dl.utils import nuxt, unique
 from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterable, Iterable
@@ -143,10 +144,10 @@ class PMVHavenCrawler(Crawler):
 _deserialize = Deserializer(
     aliases={"id": "_id"},
     converters={
-        "thumbnail": parse_url,
-        "thumbnailUrl": parse_url,
-        "videoUrl": parse_url,
-        "hlsMasterPlaylistUrl": lambda url: url and parse_url(url),
+        "thumbnail": parse_http_url,
+        "thumbnailUrl": parse_http_url,
+        "videoUrl": parse_http_url,
+        "hlsMasterPlaylistUrl": lambda url: url and parse_http_url(url),
     },
 )
 

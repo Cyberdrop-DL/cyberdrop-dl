@@ -27,7 +27,8 @@ from cyberdrop_dl.crawlers.vk.types import (
 )
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, parse_url
+from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -451,7 +452,7 @@ def _extract_formats_legacy(data: dict[str, Any]) -> Generator[Format]:
 
 
 def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
-    origin = parse_url(base) if (base := photo.get("base")) else None
+    origin = parse_http_url(base) if (base := photo.get("base")) else None
     owner_id, _, photo_id = photo["id"].partition("_")
 
     def sources() -> Iterable[PhotoSize]:
@@ -464,7 +465,7 @@ def _parse_photo_legacy(photo: dict[str, Any]) -> Photo:
             except ValueError:
                 width = height = None
 
-            url = parse_url(src, origin)
+            url = parse_http_url(src, origin)
 
             yield PhotoSize(type=name.removesuffix("_src"), width=width, height=height, url=full_res_img(url))
 

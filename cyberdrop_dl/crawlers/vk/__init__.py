@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl.utils import parse_url
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -26,4 +26,4 @@ def full_res_img(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 def try_parse_url(value: object) -> AbsoluteHttpURL | None:
     if value and type(value) is str and value.startswith(("//", "http")):
-        return parse_url(value)
+        return parse_http_url(value)

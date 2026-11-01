@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 from cyberdrop_dl.crawlers.vk import full_res_img, try_parse_url
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle
-from cyberdrop_dl.utils import css, parse_url
+from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.dataclass import deserialize
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -159,10 +160,10 @@ class Photo(Owned):
     @override
     @classmethod
     def parse(cls, photo: dict[str, Any]) -> Photo:
-        origin = parse_url(base) if (base := photo.get("base")) else None
+        origin = parse_http_url(base) if (base := photo.get("base")) else None
 
         def parse_src(size: dict[str, Any], name: str | None = None) -> PhotoSize:
-            url = parse_url(size["url"], origin)
+            url = parse_http_url(size["url"], origin)
             return PhotoSize.parse(size, type=name or size["type"], url=full_res_img(url))
 
         def sources() -> Iterable[PhotoSize]:

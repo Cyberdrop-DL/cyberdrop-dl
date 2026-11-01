@@ -8,8 +8,9 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, open_graph, parse_url
+from cyberdrop_dl.utils import css, extr_text, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -87,7 +88,7 @@ def _parse_formats(data_encodings: list[dict[str, Any]]) -> Generator[tuple[Reso
         if "/_hls/" in fmt["filename"]:
             continue
 
-        url = parse_url(fmt["filename"])
+        url = parse_http_url(fmt["filename"])
         if url.suffix == ".m3u8":
             continue
 

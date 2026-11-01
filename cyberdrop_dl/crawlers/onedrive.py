@@ -13,9 +13,10 @@ from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import dates, parse_url
+from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -199,11 +200,11 @@ def normalize_resource(resp: dict[str, Any]) -> File | Folder:
     data = {
         "id": resp["id"],
         "drive_id": resp["parentReference"]["driveId"],
-        "web_url": parse_url(resp["webUrl"]),
+        "web_url": parse_http_url(resp["webUrl"]),
         "name": resp["name"],
         "type": "folder" if is_folder else "file",
         "date": dates.parse_iso(resp["fileSystemInfo"]["lastModifiedDateTime"]).timestamp(),
-        "download_url": parse_url(dl_url) if dl_url else None,
+        "download_url": parse_http_url(dl_url) if dl_url else None,
         "sha256": sha256,
     }
     return deserialize(Folder if is_folder else File, data)

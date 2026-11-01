@@ -78,8 +78,6 @@ def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
 
 
 def matches_any_host(url: yarl.URL, hosts: Iterable[str]) -> bool:
-    import yarl
-
     if not url.host:
         return False
 
@@ -154,7 +152,7 @@ def reverse_dns_name(host: str) -> tuple[str, ...]:
 def is_within_domain(root_domain: str, host: str) -> bool:
     host = host.lower().removeprefix("www.")
     root_domain = root_domain.lower().removeprefix("www.")
-    return (host == root_domain) or host.endswith("." + root_domain)
+    return (host == root_domain) or host.endswith("." + root_domain.removeprefix("."))
 
 
 class URLDeduper(Deduper[str]):

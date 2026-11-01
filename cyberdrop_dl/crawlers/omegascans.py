@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, override
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -86,7 +86,7 @@ class OmegaScansAPI(API):
             name=chapter["chapter_name"],
             slug=chapter["chapter_slug"],
             created_at=chapter["created_at"],
-            images=tuple(map(parse_url, chapter["chapter_data"]["images"])),
+            images=tuple(map(parse_http_url, chapter["chapter_data"]["images"])),
             series_title=chapter["series"]["title"],
         )
 

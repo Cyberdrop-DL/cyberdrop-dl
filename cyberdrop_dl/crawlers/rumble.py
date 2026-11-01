@@ -11,9 +11,9 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_tas
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, m3u8, parse_url, traversal
+from cyberdrop_dl.utils import css, m3u8, traversal
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import remove_query_params
+from cyberdrop_dl.utils.urls import parse_http_url, remove_query_params
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
@@ -336,7 +336,7 @@ def _parse_video_obj_formats(formats: Iterable[dict[str, Any]]) -> Generator[For
             bitrate=fmt.get("bitrate_kbps", 0),
             size=0,
             type=type_,
-            url=parse_url(fmt["url"]),
+            url=parse_http_url(fmt["url"]),
         )
 
 
@@ -360,7 +360,7 @@ def _parse_embed_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dic
                 bitrate=meta.bitrate,
                 size=meta.size,
                 type=type_,
-                url=parse_url(fmt["url"]),
+                url=parse_http_url(fmt["url"]),
             )
 
 

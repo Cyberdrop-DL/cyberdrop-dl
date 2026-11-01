@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, ClassVar
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, json_ld, open_graph, parse_url
+from cyberdrop_dl.utils import css, json_ld, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -63,11 +64,11 @@ class NaughtyMachinimaCrawler(Crawler):
 def _extract_sources(soup: BeautifulSoup) -> Generator[tuple[int, AbsoluteHttpURL]]:
     for src in css.iselect(soup, "video#vjsplayer source"):
         res = int(css.attr(src, "res"))
-        url = parse_url(css.attr(src, "src"))
+        url = parse_http_url(css.attr(src, "src"))
         yield res, url
 
 
 def _extract_photos(soup: BeautifulSoup) -> Generator[AbsoluteHttpURL]:
     for thumb in css.iselect(soup, "img[id^='album_photo_']", "src"):
         url = thumb.replace("/tmb/", "/")
-        yield parse_url(url)
+        yield parse_http_url(url)

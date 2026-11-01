@@ -9,9 +9,9 @@ from cyberdrop_dl.crawlers.reddit.api import ArcticShiftAPI, SearchQuery
 from cyberdrop_dl.filepath import get_filename_and_ext
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
-from cyberdrop_dl.utils import css, parse_url, unique
+from cyberdrop_dl.utils import css, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import remove_query_params
+from cyberdrop_dl.utils.urls import parse_http_url, remove_query_params
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -223,8 +223,8 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
                 name, _ = get_filename_and_ext(media_id, mime_type=mimetype)
             yield RedditImagesCrawler.PRIMARY_URL / name
 
-    yield parse_url(post.get("url_overridden_by_dest") or post["url"])
+    yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
 
     if config.content_urls and (content := post.get("selftext_html")):
         soup = css.soup(content, parse_only="a")
-        yield from map(parse_url, css.iselect(soup, "a[href]", "href"))
+        yield from map(parse_http_url, css.iselect(soup, "a[href]", "href"))

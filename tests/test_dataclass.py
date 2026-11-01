@@ -4,7 +4,7 @@ import pytest
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import dataclass
-from cyberdrop_dl.utils._url import parse_http_url
+from cyberdrop_dl.utils.urls import parse_http_url
 
 
 @dataclasses.dataclass

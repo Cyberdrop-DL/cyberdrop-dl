@@ -8,9 +8,9 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import parse_url
 from cyberdrop_dl.utils.dataclass import Deserializer
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Mapping
@@ -88,9 +88,9 @@ class LusciousCrawler(Crawler):
 
 _deserialize = Deserializer(
     converters={
-        "url": lambda url: parse_url(url, LusciousCrawler.PRIMARY_URL),
-        "url_to_original": parse_url,
-        "url_to_video": lambda url: url and parse_url(url),
+        "url": lambda url: parse_http_url(url, LusciousCrawler.PRIMARY_URL),
+        "url_to_original": parse_http_url,
+        "url_to_video": lambda url: url and parse_http_url(url),
     },
 )
 

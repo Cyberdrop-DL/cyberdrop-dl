@@ -13,8 +13,9 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPa
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution, Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import b64_pad, m3u8, open_graph, parse_url
+from cyberdrop_dl.utils import b64_pad, m3u8, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -171,7 +172,7 @@ def extract_voe_video(soup: BeautifulSoup, origin: AbsoluteHttpURL) -> VoeVideo:
         resolution=res,
         url=src,
         subtitles=tuple(_parse_subs(video_info, origin)),
-        hls_url=parse_url(url, origin) if (url := video_info.get("source")) else None,
+        hls_url=parse_http_url(url, origin) if (url := video_info.get("source")) else None,
     )
 
 
@@ -219,11 +220,11 @@ def _extract_mp4_urls(
     for fallback in video_info.get("fallback", []):
         if fallback["type"] == "mp4":
             res = Resolution.parse(fallback["label"])
-            url = parse_url(fallback["file"], origin)
+            url = parse_http_url(fallback["file"], origin)
             yield res, url
 
     if url := video_info.get("direct_access_url"):
-        url = parse_url(url, origin)
+        url = parse_http_url(url, origin)
         yield Resolution.unknown(), url
 
 
@@ -232,7 +233,7 @@ def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generato
         if track["kind"] != "captions":
             continue
 
-        url = parse_url(track["file"], origin)
+        url = parse_http_url(track["file"], origin)
         label: str = track["label"]
         lang_code = _parse_lang_code(url.name, label)
         yield Subtitle(url, lang_code, label)
