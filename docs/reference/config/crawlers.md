@@ -31,6 +31,8 @@ Supported generic crawlers:
 - `kvs`: Works on any tube site using [Kernel Video Sharing](https://www.kernel-video-sharing.com/en/).
   Basically, any site that looks like one of these: <https://www.kernel-video-sharing.com/en/themes/>, ex: <https://www.kvs-demo.com/>
 
+- `patreon`: Patreon creators that use a custom domain [Patreon](https://www.patreon.com).
+
 - `wordpress_media`: This crawler should work on any [WordPress](https://wordpress.com/) site where content primarily consists of images or galleries. The images need to be hosted on the site itself. It requires sites to have a public WordPress REST API.
 
 - `wordpress_html`: This works on any WordPress site. It scrapes the actual HTML of the site, which means it works on sites that have embedded third-party media like videos or links to hosting sites. It is always slower than `wordpress_media`.
@@ -48,6 +50,12 @@ Supported generic crawlers:
 | `list[HttpURL]` | `[]`    |
 
 ## `kvs`
+
+| Type            | Default |
+| --------------- | ------- |
+| `list[HttpURL]` | `[]`    |
+
+## `patreon`
 
 | Type            | Default |
 | --------------- | ------- |
@@ -71,6 +79,7 @@ crawlers:
     chevereto: []
     discourse: []
     kvs: []
+    patreon: []
     wordpress_html: []
     wordpress_media: []
 ```
