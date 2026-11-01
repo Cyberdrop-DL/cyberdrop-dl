@@ -31,7 +31,7 @@ from cyberdrop_dl.utils import remove_trailing_slash
 from cyberdrop_dl.utils._url import URLDeduper, matches_any_host
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Generator, Iterator
+    from collections.abc import AsyncGenerator, Callable, Generator, Iterator, Mapping
 
     from cyberdrop_dl.clients.jd.client import JDownloader
     from cyberdrop_dl.config import Config
@@ -103,28 +103,29 @@ class ScrapeStats:
             self.groups.append("/".join(item.folders))
 
 
-@dataclasses.dataclass(slots=True)
 class ScrapeMapper:
     """This class maps links to their respective handlers, or JDownloader if they are unsupported."""
 
-    manager: Manager
-    crawlers: dict[str, type[Crawler]] = dataclasses.field(init=False, default_factory=dict)
+    def __init__(self, manager: Manager) -> None:
+        from cyberdrop_dl.clients.jd.client import JDownloader
+        from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
+        from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
 
-    task_mngr: aio.TaskManager = dataclasses.field(init=False, default_factory=aio.TaskManager)
-    tui: ScrapingUI = dataclasses.field(init=False, default_factory=ScrapingUI)
+        self.manager: Manager = manager
+        self.crawlers: dict[str, type[Crawler]] = {}
+        self.task_mngr: aio.TaskManager = aio.TaskManager()
+        self.tui: ScrapingUI = ScrapingUI()
+        self._seen_urls: URLDeduper = URLDeduper()
+        self._ready: bool = False
+        self._shutting_down: bool = False
 
-    logs: CSVLogsManager = dataclasses.field(init=False)
-    _direct_http: DirectHttpFileCrawler = dataclasses.field(init=False)
-    _jdownloader: JDownloader = dataclasses.field(init=False)
-    _real_debrid: RealDebridCrawler = dataclasses.field(init=False)
-    _seen_urls: URLDeduper = dataclasses.field(init=False, default_factory=URLDeduper, repr=False)
-    _factory: CrawlerFactory = dataclasses.field(init=False)
-    _ready: bool = dataclasses.field(init=False, default=False)
-    _shutting_down: bool = dataclasses.field(init=False, default=False)
-
-    def shutdown(self) -> None:
-        "Shutdown the scrape queue and setup handling of KeyboardInterrupt"
-        self._shutting_down = True
+        self._direct_http: DirectHttpFileCrawler = DirectHttpFileCrawler(self.manager, self.task_mngr, self.tui)
+        self._jdownloader: JDownloader = JDownloader.from_config(self.manager.config)
+        self._real_debrid: RealDebridCrawler = RealDebridCrawler(self.manager, self.task_mngr, self.tui)
+        self._factory: CrawlerFactory = CrawlerFactory(self.manager, self.task_mngr, self.tui)
+        self.logs: CSVLogsManager = CSVLogsManager.from_config(self.manager.config, self.task_mngr.logs)
+        self.tui.scrape.get_queue = self._scrape_queue
+        self.tui.downloads.get_queue = self._download_queue
 
     def __repr__(self) -> str:
         fields = (
@@ -135,6 +136,10 @@ class ScrapeMapper:
         )
         return f"<{type(self).__name__}>({', '.join(fields)})"
 
+    def shutdown(self) -> None:
+        "Shutdown the scrape queue and setup handling of KeyboardInterrupt"
+        self._shutting_down = True
+
     def _scrape_queue(self) -> int:
         return sum(crawler.waiting_items for crawler in self._factory)
 
@@ -142,19 +147,6 @@ class ScrapeMapper:
         total = sum(crawler.downloader.capacity.waiting for crawler in self._factory)
         self.tui.files.stats.queued = total
         return total
-
-    def __post_init__(self) -> None:
-        from cyberdrop_dl.clients.jd.client import JDownloader
-        from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
-        from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
-
-        self._direct_http = DirectHttpFileCrawler(self.manager, self.task_mngr, self.tui)
-        self._jdownloader = JDownloader.from_config(self.manager.config)
-        self._real_debrid = RealDebridCrawler(self.manager, self.task_mngr, self.tui)
-        self._factory = CrawlerFactory(self.manager, self.task_mngr, self.tui)
-        self.logs = CSVLogsManager.from_config(self.manager.config, self.task_mngr.logs)
-        self.tui.scrape.get_queue = self._scrape_queue
-        self.tui.downloads.get_queue = self._download_queue
 
     async def _init_crawlers(self) -> None:
         crawlers = get_crawlers_mapping()
@@ -202,7 +194,7 @@ class ScrapeMapper:
         from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
 
         assert not self.task_mngr.scrape.done.is_set()
-        self.logs.delete_old_logs()
+
         config = self.manager.config
 
         _ = CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
@@ -213,9 +205,11 @@ class ScrapeMapper:
         if config.ui.portrait:
             env.FORCE_PORTRAIT_MODE = True
 
-        config.download_folder.mkdir(parents=True, exist_ok=True)
-        if config.sort.enabled:
-            config.sort.output_folder.mkdir(parents=True, exist_ok=True)
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(asyncio.to_thread(self.logs.delete_old_logs))
+            tg.create_task(asyncio.to_thread(config.download_folder.mkdir, parents=True, exist_ok=True))
+            if config.sort.enabled:
+                tg.create_task(asyncio.to_thread(config.sort.output_folder.mkdir, parents=True, exist_ok=True))
 
         logger.debug("Using %s as chunk size", bytesize_to_str(self.manager.download_client.chunk_size))
         await self.manager.http_client.load_cookie_files(await self.manager.get_cookie_files())
@@ -388,7 +382,7 @@ class ScrapeMapper:
         if scrape_item.url in self._seen_urls:
             return False
 
-        if _skip_by_config(scrape_item.url, self.manager.config):
+        if _skip_url_by_config(scrape_item.url, self.manager.config):
             self.tui.files.stats.skipped += 1
             return False
         return True
@@ -444,39 +438,23 @@ def register_crawler(
 
 def _create_generic_crawlers(generics_config: GenericCrawlers) -> Generator[type[Crawler]]:
     from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
+    from cyberdrop_dl.crawlers._kvs import GenericKVSCrawler
+    from cyberdrop_dl.crawlers._video import GenericVideoCrawler
+    from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
+    from cyberdrop_dl.crawlers.patreon import PatreonGenericCrawler
+    from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler, WordPressMediaCrawler
 
-    if generics_config.chevereto:
-        yield from create_crawlers(generics_config.chevereto, CheveretoCrawler)
-
-    if generics_config.wordpress_html:
-        from cyberdrop_dl.crawlers.wordpress import WordPressHTMLCrawler
-
-        yield from create_crawlers(generics_config.wordpress_html, WordPressHTMLCrawler)
-
-    if generics_config.wordpress_media:
-        from cyberdrop_dl.crawlers.wordpress import WordPressMediaCrawler
-
-        yield from create_crawlers(generics_config.wordpress_media, WordPressMediaCrawler)
-
-    if generics_config.discourse:
-        from cyberdrop_dl.crawlers.discourse import DiscourseCrawler
-
-        yield from create_crawlers(generics_config.discourse, DiscourseCrawler)
-
-    if generics_config.kvs:
-        from cyberdrop_dl.crawlers._kvs import GenericKVSCrawler
-
-        yield from create_crawlers(generics_config.kvs, GenericKVSCrawler)
-
-    if generics_config.video:
-        from cyberdrop_dl.crawlers._video import GenericVideoCrawler
-
-        yield from create_crawlers(generics_config.video, GenericVideoCrawler)
-
-    if generics_config.patreon:
-        from cyberdrop_dl.crawlers.patreon import PatreonGenericCrawler
-
-        yield from create_crawlers(generics_config.patreon, PatreonGenericCrawler)
+    for urls, cls in (
+        (generics_config.chevereto, CheveretoCrawler),
+        (generics_config.wordpress_html, WordPressHTMLCrawler),
+        (generics_config.wordpress_media, WordPressMediaCrawler),
+        (generics_config.discourse, DiscourseCrawler),
+        (generics_config.kvs, GenericKVSCrawler),
+        (generics_config.video, GenericVideoCrawler),
+        (generics_config.patreon, PatreonGenericCrawler),
+    ):
+        if urls:
+            yield from create_crawlers(urls, cls)
 
 
 def _disable_crawlers_by_config(current_crawlers: dict[str, type[Crawler]], *crawlers_to_disable: str) -> None:
@@ -526,7 +504,7 @@ def _best_match[T: Crawler | type[Crawler]](crawlers: dict[str, T], domain: str)
         return found
 
 
-def _build_max_children_map(config: Config) -> dict[ScrapeItemType, int]:
+def _build_max_children_map(config: Config) -> Mapping[ScrapeItemType, int]:
     max_children = config.max_children
     return {
         ScrapeItemType.FORUM: max_children.forum,
@@ -559,7 +537,7 @@ def _parse_source(
     return ScrapeStats(source), items
 
 
-def _skip_by_config(url: AbsoluteHttpURL, config: Config) -> bool:
+def _skip_url_by_config(url: AbsoluteHttpURL, config: Config) -> bool:
     if matches_any_host(url, BLOCKED_DOMAINS):
         logger.info("Skipping %s as it is a blocked domain", url)
         return True
