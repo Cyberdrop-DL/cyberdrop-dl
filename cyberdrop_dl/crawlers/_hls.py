@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import logging
 import os
@@ -94,7 +95,7 @@ class HLSMixin(ABC):
     ) -> m3u8.M3U8:
         check_ffmpeg_is_installed()
         content = await self.request_text(url, method, **kwargs)
-        return m3u8.M3U8(content, url.parent, media_type, source=url)
+        return await asyncio.to_thread(m3u8.M3U8, content, url.parent, media_type, source=url)
 
     async def request_m3u8_playlist(
         self,
