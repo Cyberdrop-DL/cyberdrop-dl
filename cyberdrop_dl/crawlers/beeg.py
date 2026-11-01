@@ -106,7 +106,7 @@ class BeegComCrawler(Crawler):
                     new_item = scrape_item.create_child(self.PRIMARY_URL / _video_slug(video.id))
                     tg.create_task(self._video_task(new_item, video))
                     scrape_item.add_children()
-                    sleep()
+                    await sleep()
 
         if not found_videos:
             raise ScrapeError(404)
