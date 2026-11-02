@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import mimetypes
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.crawlers.reddit.api import ArcticShiftAPI, SearchQuery
-from cyberdrop_dl.filepath import get_filename_and_ext
+from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, unique
@@ -47,21 +48,26 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
         return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        await self.image(scrape_item)
+        if not scrape_item.url.suffix:
+            await self.resolve(scrape_item)
+        else:
+            await self.direct_file(scrape_item)
 
     @error_handling_wrapper
-    async def image(self, scrape_item: ScrapeItem) -> None:
-        ext = scrape_item.url.suffix
-        if not ext:
-            ext = await self.sniff_ext(scrape_item.url)
-
-        if ext == ".jpg":
-            ext = ".jpeg"
-
+    async def resolve(self, scrape_item: ScrapeItem) -> None:
+        new_url = await self._resolve(scrape_item.url)
+        if new_url == scrape_item.url:
+            raise ScrapeError(422, "Infinite redirect")
         with scrape_item.track_changes:
-            scrape_item.url = scrape_item.url.with_suffix(ext, keep_query=True)
+            scrape_item.url = new_url
 
-        await self.direct_file(scrape_item)
+        self.handle_embed(scrape_item)
+
+    async def _resolve(self, url: AbsoluteHttpURL | str) -> AbsoluteHttpURL:
+        url = (RedditCrawler.PRIMARY_URL / "media").update_query(url=str(url))
+        soup = await self.request_soup(url)
+        resolved = css.select(soup, "#canonical-url-updater", "value")
+        return self.parse_url(resolved)
 
     @override
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
@@ -243,20 +249,34 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
             meta = metadata[media_id]
             if meta.get("status", "valid") != "valid":
                 RedditCrawler.get_logger().warning("Invalid image (deleted?)\n%s\n%s", item, meta)
-            try:
-                mimetype = meta["m"]
-            except LookupError:
-                name = media_id
-            else:
-                name = get_filename_and_ext(media_id, mime_type=mimetype).name
 
-            url = RedditImagesCrawler.PRIMARY_URL / name
-            if url.suffix == ".jpg":
-                url = url.with_suffix(".jpeg", keep_query=True)
-            yield url
+            ext = None
+            if mime := meta.get("m"):
+                ext = _guess_ext(mime)
+
+            if not ext:
+                try:
+                    preview = meta["p"][-1]["u"]
+                except LookupError:
+                    pass
+                else:
+                    ext = RedditImagesCrawler.parse_url(preview).suffix
+
+            if not ext:
+                raise NoExtensionError(media_id)
+
+            yield RedditImagesCrawler.PRIMARY_URL / f"{media_id}{ext}"
 
     yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
 
     if config.content_urls and (content := post.get("selftext_html")):
         soup = css.soup(content, parse_only="a")
         yield from map(parse_http_url, css.iselect(soup, "a[href]", "href"))
+
+
+def _guess_ext(mime: str) -> str | None:
+    if mime == "image/jpg":
+        return ".jpg"
+    if mime == "image/jpeg":
+        return ".jpeg"
+    return mimetypes.guess_extension(mime)
