@@ -653,7 +653,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "10.15.0"
+version = "10.15.1"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [

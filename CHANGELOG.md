@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `404 - Not Found` downloading gallery images (Reddit)
+- Update CDN (Onlyhaven)
 
 ## [10.15.0] - 2026-11-01
 
