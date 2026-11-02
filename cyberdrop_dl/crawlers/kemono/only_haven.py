@@ -90,7 +90,7 @@ class UserPostModel(PostModel):
 
 class OnlyHavenAPI(KemonoAPI[UserPostModel]):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cum.st/api/v1")
-    CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://e1.cum.st")
+    CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cdn.cum.st")
     VALID_QUERY_PARAMS: ClassVar[set[str]] = KemonoAPI.VALID_QUERY_PARAMS | {"type"}
     __post__: type[UserPostModel] = UserPostModel
 
