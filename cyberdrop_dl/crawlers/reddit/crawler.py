@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@Crawler.db_path_builder("url")
 class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
     SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "preview.redd.it", "external-preview.redd.it", "i.redd.it"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Image": "i.redd.it/<id>.>ext>"}
@@ -30,14 +29,21 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
     FOLDER_DOMAIN: ClassVar[str] = "Reddit"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = "i.reddituploads.com", "i.redditmedia.com"
 
+    @staticmethod
+    @override
+    def __db_path__(url: AbsoluteHttpURL, /) -> str:
+        if url.host == "i.redd.it":
+            url = url.update_query(None)
+        return str(url)
+
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
         if "external" not in url.host:
             url = remove_query_params(url, keep=("s",))
-        if url.host == "preview.redd.it":
-            return url.with_host(cls.PRIMARY_URL.host)
+        if url.host in {"preview.redd.it", "cf.preview.redd.it"}:
+            return url.with_host(cls.PRIMARY_URL.host).with_name(url.name.rpartition("-")[-1], keep_query=True)
         return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -49,11 +55,15 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
             ext = await self.sniff_ext(scrape_item.url)
             with scrape_item.track_changes:
                 scrape_item.url = scrape_item.url.with_suffix(ext)
+
         await self.direct_file(scrape_item)
 
     @override
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
-        return super()._prepare_headers(scrape_item) | {"Accept": "image/*"}
+        return super()._prepare_headers(scrape_item) | {
+            "Accept": "image/*",
+            "Referer": "https://www.reddit.com",
+        }
 
 
 @Crawler.db_path_builder("url")
@@ -233,8 +243,12 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
             except LookupError:
                 name = media_id
             else:
-                name, _ = get_filename_and_ext(media_id, mime_type=mimetype)
-            yield RedditImagesCrawler.PRIMARY_URL / name
+                name = get_filename_and_ext(media_id, mime_type=mimetype).name
+
+            url = RedditImagesCrawler.PRIMARY_URL / name
+            if url.suffix == ".jpg":
+                url = url.with_suffix(".jpeg", keep_query=True)
+            yield url
 
     yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
 
