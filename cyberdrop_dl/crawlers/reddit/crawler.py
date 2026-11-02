@@ -51,10 +51,15 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
 
     @error_handling_wrapper
     async def image(self, scrape_item: ScrapeItem) -> None:
-        if not scrape_item.url.suffix:
+        ext = scrape_item.url.suffix
+        if not ext:
             ext = await self.sniff_ext(scrape_item.url)
-            with scrape_item.track_changes:
-                scrape_item.url = scrape_item.url.with_suffix(ext)
+
+        if ext == ".jpg":
+            ext = ".jpeg"
+
+        with scrape_item.track_changes:
+            scrape_item.url = scrape_item.url.with_suffix(ext, keep_query=True)
 
         await self.direct_file(scrape_item)
 
