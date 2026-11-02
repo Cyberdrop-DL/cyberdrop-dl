@@ -51,6 +51,10 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
                 scrape_item.url = scrape_item.url.with_suffix(ext)
         await self.direct_file(scrape_item)
 
+    @override
+    def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
+        return super()._prepare_headers(scrape_item) | {"Accept": "image/*"}
+
 
 @Crawler.db_path_builder("url")
 class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
@@ -115,6 +119,7 @@ class RedditCrawler(Crawler):
             "/r/<subreddit>/s/<share_id>",
             "/u/<user>/s/<share_id>",
             "/user/<user>/s/<share_id>",
+            "/media?url=<url>",
         ),
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{title} - {id}"
@@ -140,12 +145,20 @@ class RedditCrawler(Crawler):
                 await self.submission(scrape_item, post_id)
             case ["gallery", _] | ["r" | "u" | "user", _, "s", _, *_]:
                 await self.follow_redirect(scrape_item)
+            case ["media"] if url := scrape_item.url.query.get("url"):
+                self.redirect(scrape_item, url)
             case ["link", _, "video", video_id, *_]:
                 with scrape_item.track_changes:
                     scrape_item.url = RedditVideoCrawler.PRIMARY_URL / video_id
                 self.handle_embed(scrape_item)
             case _:
                 raise ValueError
+
+    @error_handling_wrapper
+    def redirect(self, scrape_item: ScrapeItem, url: str) -> None:
+        with scrape_item.track_changes:
+            scrape_item.url = self.parse_url(url)
+        self.handle_embed(scrape_item)
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
