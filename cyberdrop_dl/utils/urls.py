@@ -126,7 +126,7 @@ def sort_query[T: yarl.URL](item: Mapping[str, str] | T) -> list[tuple[str, str]
     if is_url(item):
         return item.with_query(sort_query(item.query))
 
-    return [(k, v) for k, v in item.items()]
+    return sorted(item.items())
 
 
 def path_qs(url: yarl.URL) -> str:
@@ -139,10 +139,6 @@ def path_qs_frag(url: yarl.URL) -> str:
 
 def path_frag(url: yarl.URL) -> str:
     return f"{url.path}#{url.fragment}" if url.fragment else url.path
-
-
-def url_hash(url: yarl.URL) -> str:
-    return str(sort_query(url))
 
 
 def reverse_dns_name(host: str) -> tuple[str, ...]:
