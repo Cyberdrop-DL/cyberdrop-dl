@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
@@ -42,7 +42,16 @@ class SearchQuery:
         return {k: str(v) for k, v in self if v}
 
 
-@HTTPConfig(rate_limit=(1, 2), headers={"User-Agent": CDL_USER_AGENT})
+def _json_check(resp: Any, _: object = None) -> None:
+    if not (type(resp) is dict and (data := resp.get("data")) and type(data) is dict):
+        return
+
+    if error := data.get("error"):
+        code = 429 if "Maybe slow down a bit" in error else 503
+        raise ScrapeError(code, error)
+
+
+@HTTPConfig(rate_limit=(1, 3), headers={"User-Agent": CDL_USER_AGENT}, json_check=_json_check)
 class ArcticShiftAPI(API):
     ENTRYPOINT: Final = AbsoluteHttpURL("https://arctic-shift.photon-reddit.com/api")
 
@@ -50,6 +59,7 @@ class ArcticShiftAPI(API):
         assert 0 < len(ids) < 500
         url = (self.ENTRYPOINT / "posts/ids").with_query(ids=",".join(ids), md2html="true")
         resp = await self.request_json(url)
+        _json_check(resp)
         return map(_parse_post, resp["data"])
 
     async def post(self, id: str) -> Submission:  # noqa: A002
@@ -66,6 +76,7 @@ class ArcticShiftAPI(API):
         url = (self.ENTRYPOINT / path.removeprefix("/")).with_query(query.__json__()).update_query(md2html="true")
         while True:
             resp = await self.request_json(url)
+            _json_check(resp)
             for post in resp["data"]:
                 yield _parse_post(post)
 
