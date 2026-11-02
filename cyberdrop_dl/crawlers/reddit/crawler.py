@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.crawlers.reddit.api import ArcticShiftAPI, SearchQuery
-from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, unique
@@ -58,16 +58,22 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
         new_url = await self._resolve(scrape_item.url)
         if new_url == scrape_item.url:
             raise ScrapeError(422, "Infinite redirect")
+
+        if not new_url.suffix:
+            raise ScrapeError(404, f"Unable to resolve media for {scrape_item.url} ({new_url})")
         with scrape_item.track_changes:
             scrape_item.url = new_url
 
-        self.handle_embed(scrape_item)
+        await self.direct_file(scrape_item)
 
-    async def _resolve(self, url: AbsoluteHttpURL | str) -> AbsoluteHttpURL:
-        url = (RedditCrawler.PRIMARY_URL / "media").update_query(url=str(url))
-        soup = await self.request_soup(url)
-        resolved = css.select(soup, "#canonical-url-updater", "value")
-        return self.parse_url(resolved)
+    async def _resolve(self, media_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        soup = await self.request_soup((RedditCrawler.PRIMARY_URL / "media").update_query(url=str(media_url)))
+        gallery = css.select(soup, "#canonical-url-updater", "value")
+        media_id = media_url.name
+        media_resolved = css.select(soup, f"img[src*='/{media_id}.']", "src")
+        media_resolved_url = self.transform_url(self.parse_url(media_resolved))
+        self.log.debug("Resolved %s to %s [%s]", media_url, media_resolved_url, gallery)
+        return media_resolved_url
 
     @override
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
@@ -263,9 +269,12 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
                     ext = RedditImagesCrawler.parse_url(preview).suffix
 
             if not ext:
-                raise NoExtensionError(media_id)
+                RedditImagesCrawler.get_logger().warning(
+                    f"Unable to identify extension for {media_id = }. Download may fail"
+                )
 
-            yield RedditImagesCrawler.PRIMARY_URL / f"{media_id}{ext}"
+            slug = f"{media_id}{ext}" if ext else media_id
+            yield RedditImagesCrawler.PRIMARY_URL / slug
 
     yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
 
