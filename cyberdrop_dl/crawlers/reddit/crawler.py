@@ -149,6 +149,7 @@ class RedditCrawler(Crawler):
             "/u/<user>/s/<share_id>",
             "/user/<user>/s/<share_id>",
             "/media?url=<url>",
+            "out.reddit.com/?url=<url>",
         ),
     }
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{title} - {id}"
@@ -181,7 +182,10 @@ class RedditCrawler(Crawler):
                     scrape_item.url = RedditVideoCrawler.PRIMARY_URL / video_id
                 self.handle_embed(scrape_item)
             case _:
-                raise ValueError
+                if scrape_item.url.host == "out.reddit.com" and (url := scrape_item.url.query.get("url")):
+                    self.redirect(scrape_item, url)
+                else:
+                    raise ValueError
 
     @error_handling_wrapper
     def redirect(self, scrape_item: ScrapeItem, url: str) -> None:
@@ -274,15 +278,20 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
 
             slug = f"{media_id}{ext}" if ext else media_id
             yield RedditImagesCrawler.PRIMARY_URL / slug
-            for url in filter(None, map(src.get, "mp4", "gif")):
-                yield RedditCrawler.parse_url(url)
+            for url in (src.get("mp4"), src.get("gif")):
+                if url:
+                    yield RedditCrawler.parse_url(url)
 
     if media := post.get("media") or post.get("secure_media"):
         if video := media.get("reddit_video"):
             yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
 
-        if (oembed := media.get("oembed")) and (url := oembed.get("thumbnail_url")):
-            yield RedditVideoCrawler.parse_url(url)
+        if oembed := media.get("oembed"):
+            if url := oembed.get("thumbnail_url"):
+                yield RedditVideoCrawler.parse_url(url)
+            if html := oembed.get("html"):
+                for src in css.iselect(css.soup(html, parse_only="iframe"), "iframe", "src"):
+                    yield parse_http_url(src)
 
     if preview := post.get("preview"):
         try:
