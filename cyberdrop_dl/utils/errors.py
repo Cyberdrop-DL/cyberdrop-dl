@@ -220,7 +220,7 @@ def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | ya
         self, item = cast("Downloader", self), cast("MediaItem", item)
         _log_dl_error(self, item, app_error, exc, origin)
     else:
-        _log_scrape_error(self, real_url or url, app_error, exc, origin)
+        _log_scrape_error(self, item, real_url or url, app_error, exc, origin)
 
 
 @contextlib.contextmanager
@@ -236,15 +236,22 @@ async def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem
         yield
 
 
-def _log_scrape_error(
+def _log_scrape_error(  # noqa: PLR0913, PLR0917
     self: _HasManager,
+    item: MediaItem | ScrapeItem | yarl.URL,
     url: yarl.URL | str,
     app_error: CDLAppError,
     exc: BaseException | None,
     origin: yarl.URL | Path | None,
 ) -> None:
     logger.error(f"Scrape Failed: {url} ({app_error.msg})", exc_info=exc)
-    self.manager.scrape_mapper.logs.write_scrape_error(url, app_error.csv_msg, origin)
+    parents = getattr(item, "parents", None)
+    self.manager.scrape_mapper.logs.write_scrape_error(
+        url,
+        app_error.csv_msg,
+        origin,
+        parent=parents[-1] if parents else None,
+    )
     self.manager.scrape_mapper.tui.scrape_errors.add(app_error.ui_error)
 
 
