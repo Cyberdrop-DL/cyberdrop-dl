@@ -79,6 +79,8 @@ crawlers:
   reddit:
     api: arctic_shift
     content_urls: true
+    crossposts: true
+    video_previews: false
   tiktok:
     original: false
   twitter:

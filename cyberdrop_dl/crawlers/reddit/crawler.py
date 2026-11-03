@@ -234,12 +234,18 @@ class RedditCrawler(Crawler):
         scrape_item.uploaded_at = post["created_utc"]
         title = self.create_separate_post_title(post["title"], post["id"], post["created_utc"])
         scrape_item.setup_as_post(self.create_title(title))
+        self.create_eager_task(self.write_metadata(scrape_item, post["id"], post))
+
+        conf = self.config.crawlers.reddit
+        if not conf.crossposts and (c_parent := post.get("crosspost_parent")):
+            self.log.warning("Skipping post %s (crossposts are disabled). Crosspost from %s", post["id"], c_parent)
+            self.tui.files.stats.skipped += 1
+            return
 
         sleep = aio.periodic_sleep(10)
-        self.create_eager_task(self.write_metadata(scrape_item, post["id"], post))
-        for url in unique(_extract_urls(post, self.config.crawlers.reddit)):
+        for url in unique(_extract_urls(post, conf)):
             if url.host == self.PRIMARY_URL.host:
-                self.log.warning("Skipping nested reddit URL found in post #%s: %s", post["id"], url)
+                self.log.warning("Skipping nested reddit URL found in post %s: %s", post["id"], url)
                 continue
 
             self.handle_embed(scrape_item.create_child(url))
@@ -301,6 +307,9 @@ def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteH
         else:
             if preview:
                 yield parse_http_url(preview_url)
+
+        if (video := preview.get("reddit_video_preview")) and config.video_previews:
+            yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
 
     yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
 
