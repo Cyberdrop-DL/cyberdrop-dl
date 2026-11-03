@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, ClassVar, Literal, NotRequired, Self, TypedDict
+from typing import ClassVar, Literal, NotRequired, Self, TypedDict
 
 from cyberdrop_dl.utils.dataclass import fields_names
 
@@ -91,6 +91,41 @@ class Author(RedditObj):
     premium: bool | None
 
 
+class AlbumEntry(TypedDict):
+    x: int
+    y: int
+    u: str
+    gif: NotRequired[str]
+    mpg: NotRequired[str]
+
+
+class MediaMetadata(TypedDict):
+    status: str
+    e: str
+    m: str  # mimetype
+    p: list[AlbumEntry]  # previews
+    s: AlbumEntry  # source
+    id: str
+
+
+class MediaMetadataMissing(TypedDict):
+    status: Literal["unprocessed"]
+
+
+class ImageEntry(TypedDict):
+    url: str
+    width: int
+    height: int
+
+
+class ImagePreview(TypedDict):
+    source: ImageEntry
+
+
+class Preview(TypedDict):
+    images: list[ImagePreview]
+
+
 class Submission(TypedDict):
     _meta: Meta
     author: Author
@@ -103,7 +138,8 @@ class Submission(TypedDict):
     name: str
     over_18: bool
     permalink: str
-    media_metadata: NotRequired[dict[str, dict[str, Any]]]
+    preview: NotRequired[Preview]
+    media_metadata: NotRequired[dict[str, MediaMetadata | MediaMetadataMissing]]
     post_hint: NotRequired[Literal["image", "link", "rich:video", "self", "hosted:video"]]
     score: int
     secure_media: NotRequired[Oembed | RedditVideo | None]
