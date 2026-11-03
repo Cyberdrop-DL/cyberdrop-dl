@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import dataclasses
 import sys
+from collections.abc import AsyncIterable
 from pathlib import Path
 from stat import S_ISREG
 from typing import IO, TYPE_CHECKING, Any, Self, TypeVar, cast, overload, override
@@ -19,7 +20,6 @@ from cyberdrop_dl.constants import MISSING
 if TYPE_CHECKING:
     from collections.abc import (
         AsyncGenerator,
-        AsyncIterable,
         AsyncIterator,
         Awaitable,
         Callable,
@@ -567,6 +567,18 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
 
     with asyncio.Runner(loop_factory=loop_factory) as runner:
         return runner.run(coro)
+
+
+class maybe_aclosing[T](contextlib.AbstractAsyncContextManager[AsyncIterable[T], None]):  # noqa: N801
+    def __init__(self, thing: AsyncIterable[T]) -> None:
+        self.thing: AsyncIterable[T] = thing
+
+    async def __aenter__(self) -> AsyncIterable[T]:
+        return self.thing
+
+    async def __aexit__(self, *exc_info) -> None:
+        if callable(aclose := getattr(self.thing, "aclose", None)):
+            await aclose()  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def to_thread[**P, R](fn: Callable[P, R]) -> Callable[P, Coroutine[None, None, R]]:

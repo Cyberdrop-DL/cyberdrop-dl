@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import mimetypes
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -15,7 +14,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import parse_http_url, remove_query_params
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncIterable, Generator
 
     from cyberdrop_dl.config.crawlers import RedditConfig
     from cyberdrop_dl.crawlers.reddit.types import Submission
@@ -67,8 +66,13 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
         await self.direct_file(scrape_item)
 
     async def _resolve(self, media_url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+        # This only works for images in a gallery (multi images post)
         soup = await self.request_soup((RedditCrawler.PRIMARY_URL / "media").update_query(url=str(media_url)))
-        gallery = css.select(soup, "#canonical-url-updater", "value")
+        try:
+            gallery = css.select(soup, "#canonical-url-updater", "value")
+        except css.SelectorError:
+            raise ScrapeError(422, f"Unable to get extension for {media_url}") from None
+
         media_id = media_url.name
         media_resolved = css.select(soup, f"img[src*='/{media_id}.']", "src")
         media_resolved_url = self.transform_url(self.parse_url(media_resolved))
@@ -215,9 +219,9 @@ class RedditCrawler(Crawler):
             ),
         )
 
-    async def _iter_posts(self, scrape_item: ScrapeItem, submissions: AsyncGenerator[Submission]) -> None:
+    async def _iter_posts(self, scrape_item: ScrapeItem, submissions: AsyncIterable[Submission]) -> None:
         sleep = aio.periodic_sleep(10)
-        async with aio.non_cancelling_taskgroup() as tg, contextlib.aclosing(submissions) as posts:
+        async with aio.non_cancelling_taskgroup() as tg, aio.maybe_aclosing(submissions) as posts:
             async for post in posts:
                 new_item = scrape_item.create_child(self.parse_url(post["permalink"]))
                 tg.create_task(self._post_task(new_item, post))
