@@ -127,7 +127,7 @@ class Preview(TypedDict):
 
 
 class Submission(TypedDict):
-    _meta: Meta
+    _meta: NotRequired[Meta]
     author: Author
     created_utc: int
     domain: str

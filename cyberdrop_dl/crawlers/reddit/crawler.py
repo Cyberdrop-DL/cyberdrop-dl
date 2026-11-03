@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import mimetypes
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -98,7 +99,12 @@ class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        return remove_query_params(super().transform_url(url), keep=("s",))
+        url = remove_query_params(super().transform_url(url), keep=("s",))
+        match url.parts[1:]:
+            case [video_id, *_]:
+                return cls.PRIMARY_URL / video_id
+            case _:
+                return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -242,13 +248,36 @@ class RedditCrawler(Crawler):
             self.tui.files.stats.skipped += 1
             return
 
+        deleted_post = bool(post.get("_meta", {}).get("removal_type"))
         sleep = aio.periodic_sleep(10)
-        for url in unique(_extract_urls(post, conf)):
-            if url.host == self.PRIMARY_URL.host:
-                self.log.warning("Skipping nested reddit URL found in post %s: %s", post["id"], url)
-                continue
 
-            self.handle_embed(scrape_item.create_child(url))
+        for url in unique(
+            itertools.chain(
+                _extract_gallery_urls(post, conf),
+                _extract_media_urls(post, conf),
+                _extract_preview_urls(post, conf),
+                _extract_content_urls(post, conf),
+            )
+        ):
+            if url.host == self.PRIMARY_URL.host:
+                match url.parts[1:]:
+                    case ["gallery", media_id] if media_id == post["id"]:
+                        continue
+                    case ["r" | "u" | "user" | "gallery", *_]:
+                        self.log.warning("Skipping nested reddit URL found in post %s: %s", post["id"], url)
+                        continue
+                    case _:
+                        pass
+
+            new_item = scrape_item.create_child(url)
+            if url.host == RedditImagesCrawler.PRIMARY_URL.host and not url.suffix:
+                if deleted_post:
+                    await self.raise_exc(new_item, 410)
+                    continue
+
+                self.log.warning("Unable to identify extension for %s. Download may fail", url.name)
+
+            self.handle_embed(new_item)
             scrape_item.add_children()
             await sleep()
 
@@ -260,62 +289,72 @@ class RedditCrawler(Crawler):
         await self._post(scrape_item, post)
 
 
-def _extract_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteHttpURL]:  # noqa: C901, PLR0912
-    if gallery := post.get("gallery_data"):
-        metadata = post.get("media_metadata") or {}
-        for item in gallery["items"]:
-            media_id = item["media_id"]
-            meta = metadata[media_id]
-            if meta.get("status", "valid") != "valid":
-                RedditCrawler.get_logger().warning("Invalid image (deleted?)\n%s\n%s", item, meta)
+def _extract_gallery_urls(post: Submission, _config: RedditConfig) -> Generator[AbsoluteHttpURL]:
+    gallery = post.get("gallery_data")
+    if not gallery:
+        return
 
-            ext = None
-            src = meta.get("s") or {}
+    metadata = post.get("media_metadata") or {}
+    for item in gallery["items"]:
+        media_id = item["media_id"]
+        meta = metadata[media_id]
+        if meta.get("status", "valid") != "valid":
+            RedditCrawler.get_logger().warning("Invalid image (deleted?)\n%s\n%s", item, meta)
 
-            if src_url := src.get("u"):
-                ext = RedditImagesCrawler.parse_url(src_url).suffix
+        ext = None
+        src = meta.get("s") or {}
 
-            if not ext and (mime := meta.get("m")):
-                ext = _guess_ext(mime)
+        if src_url := src.get("u"):
+            ext = RedditImagesCrawler.parse_url(src_url).suffix
 
-            if not ext:
-                msg = f"Unable to identify extension for {media_id = }. Download may fail"
-                RedditImagesCrawler.get_logger().warning(msg)
+        if not ext and (mime := meta.get("m")):
+            ext = _guess_ext(mime)
 
-            slug = f"{media_id}{ext}" if ext else media_id
-            yield RedditImagesCrawler.PRIMARY_URL / slug
-            for url in (src.get("mp4"), src.get("gif")):
-                if url:
-                    yield RedditCrawler.parse_url(url)
+        slug = f"{media_id}{ext}" if ext else media_id
+        yield RedditImagesCrawler.PRIMARY_URL / slug
+        for url in (src.get("mp4"), src.get("gif")):
+            if url:
+                yield RedditCrawler.parse_url(url)
 
-    if media := post.get("media") or post.get("secure_media"):
-        if video := media.get("reddit_video"):
-            yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
 
-        if oembed := media.get("oembed"):
-            if url := oembed.get("thumbnail_url"):
-                yield RedditVideoCrawler.parse_url(url)
-            if html := oembed.get("html"):
-                for src in css.iselect(css.soup(html, parse_only="iframe"), "iframe", "src"):
-                    yield parse_http_url(src)
+def _extract_media_urls(post: Submission, _config: RedditConfig) -> Generator[AbsoluteHttpURL]:
+    media = post.get("media") or post.get("secure_media")
+    if not media:
+        return
 
-    if preview := post.get("preview"):
-        try:
-            preview_url = preview["images"][0]["source"]["url"]
-        except LookupError:
-            pass
-        else:
-            if preview:
-                yield parse_http_url(preview_url)
+    if video := media.get("reddit_video"):
+        yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
 
-        if (video := preview.get("reddit_video_preview")) and config.video_previews:
-            yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
+    if oembed := media.get("oembed"):
+        if url := oembed.get("thumbnail_url"):
+            yield RedditVideoCrawler.parse_url(url)
+        if html := oembed.get("html"):
+            for src in css.iselect(css.soup(html, parse_only="iframe"), "iframe", "src"):
+                yield parse_http_url(src)
 
+
+def _extract_content_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteHttpURL]:
     yield parse_http_url(post.get("url_overridden_by_dest") or post["url"])
-
     if config.content_urls and (content := post.get("selftext_html")):
         soup = css.soup(content, parse_only="a")
         yield from map(parse_http_url, css.iselect(soup, "a[href]", "href"))
+
+
+def _extract_preview_urls(post: Submission, config: RedditConfig) -> Generator[AbsoluteHttpURL]:
+    preview = post.get("preview")
+    if not preview:
+        return
+
+    try:
+        preview_url = preview["images"][0]["source"]["url"]
+    except LookupError:
+        pass
+    else:
+        if preview:
+            yield parse_http_url(preview_url)
+
+    if (video := preview.get("reddit_video_preview")) and config.video_previews:
+        yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
 
 
 def _guess_ext(mime: str) -> str | None:
