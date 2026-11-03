@@ -69,16 +69,15 @@ class ArcticShiftAPI(API):
         except StopIteration:
             raise ScrapeError(404) from None
 
-    def posts_search(self, query: SearchQuery) -> AsyncGenerator[Submission]:
+    def posts_search(self, query: SearchQuery) -> AsyncGenerator[map[Submission]]:
         return self.search("posts/search", query)
 
-    async def search(self, path: str, query: SearchQuery) -> AsyncGenerator[Submission]:
+    async def search(self, path: str, query: SearchQuery) -> AsyncGenerator[map[Submission]]:
         url = (self.ENTRYPOINT / path.removeprefix("/")).with_query(query.__json__()).update_query(md2html="true")
         while True:
             resp = await self.request_json(url)
             _json_check(resp)
-            for post in resp["data"]:
-                yield _parse_post(post)
+            yield map(_parse_post, resp["data"])
 
             if len(resp["data"]) < query.limit:
                 break

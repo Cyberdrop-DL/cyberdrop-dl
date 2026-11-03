@@ -12,10 +12,10 @@ from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import parse_http_url, remove_query_params
+from cyberdrop_dl.utils.urls import is_within_domain, parse_http_url, remove_query_params
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, Generator
+    from collections.abc import AsyncIterable, Generator, Iterable
 
     from cyberdrop_dl.config.crawlers import RedditConfig
     from cyberdrop_dl.crawlers.reddit.types import Submission
@@ -23,7 +23,12 @@ if TYPE_CHECKING:
 
 
 class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "preview.redd.it", "external-preview.redd.it", "i.redd.it"
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+        "preview.redd.it",
+        "cf.preview.redd.it",
+        "external-preview.redd.it",
+        "i.redd.it",
+    )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {"Image": "i.redd.it/<id>.>ext>"}
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://i.redd.it")
     DOMAIN: ClassVar[str] = "i.redd.it"
@@ -41,10 +46,15 @@ class RedditImagesCrawler(Crawler, wiki_site="RedditImages"):
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = super().transform_url(url)
-        if "external" not in url.host:
-            url = remove_query_params(url, keep=("s",))
         if url.host in {"preview.redd.it", "cf.preview.redd.it"}:
-            return url.with_host(cls.PRIMARY_URL.host).with_name(url.name.rpartition("-")[-1], keep_query=True)
+            url = url.with_host(cls.PRIMARY_URL.host).with_name(url.name.rpartition("-")[-1], keep_query=False)
+
+        if url.host == cls.PRIMARY_URL.host:
+            url = url.with_query(None)
+
+        elif "external" not in url.host:
+            url = remove_query_params(url, keep=("s",))
+
         return url
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
@@ -99,7 +109,7 @@ class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = remove_query_params(super().transform_url(url), keep=("s",))
+        url = super().transform_url(url).with_query(None)
         match url.parts[1:]:
             case [video_id, *_]:
                 return cls.PRIMARY_URL / video_id
@@ -227,14 +237,16 @@ class RedditCrawler(Crawler):
             ),
         )
 
-    async def _iter_posts(self, scrape_item: ScrapeItem, submissions: AsyncIterable[Submission]) -> None:
+    async def _iter_posts(self, scrape_item: ScrapeItem, submissions: AsyncIterable[Iterable[Submission]]) -> None:
         sleep = aio.periodic_sleep(10)
-        async with aio.non_cancelling_taskgroup() as tg, aio.maybe_aclosing(submissions) as posts:
-            async for post in posts:
-                new_item = scrape_item.create_child(self.parse_url(post["permalink"]))
-                tg.create_task(self._post_task(new_item, post))
-                scrape_item.add_children()
-                await sleep()
+        async with aio.maybe_aclosing(submissions) as pages:
+            async for posts in pages:
+                async with aio.non_cancelling_taskgroup() as tg:
+                    for post in posts:
+                        new_item = scrape_item.create_child(self.parse_url(post["permalink"]))
+                        tg.create_task(self._post_task(new_item, post))
+                        scrape_item.add_children()
+                        await sleep()
 
     async def _post(self, scrape_item: ScrapeItem, post: Submission) -> None:
         scrape_item.uploaded_at = post["created_utc"]
@@ -252,11 +264,14 @@ class RedditCrawler(Crawler):
         sleep = aio.periodic_sleep(10)
 
         for url in unique(
-            itertools.chain(
-                _extract_gallery_urls(post, conf),
-                _extract_media_urls(post, conf),
-                _extract_preview_urls(post, conf),
-                _extract_content_urls(post, conf),
+            map(
+                _transform_media_url,
+                itertools.chain(
+                    _extract_gallery_urls(post, conf),
+                    _extract_media_urls(post, conf),
+                    _extract_preview_urls(post, conf),
+                    _extract_content_urls(post, conf),
+                ),
             )
         ):
             if url.host == self.PRIMARY_URL.host:
@@ -289,6 +304,14 @@ class RedditCrawler(Crawler):
         await self._post(scrape_item, post)
 
 
+def _transform_media_url(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    for cls in (RedditImagesCrawler, RedditVideoCrawler):
+        for domain in cls.SUPPORTED_DOMAINS:
+            if is_within_domain(domain, url.host):
+                return cls.transform_url(url)
+    return url
+
+
 def _extract_gallery_urls(post: Submission, _config: RedditConfig) -> Generator[AbsoluteHttpURL]:
     gallery = post.get("gallery_data")
     if not gallery:
@@ -305,7 +328,7 @@ def _extract_gallery_urls(post: Submission, _config: RedditConfig) -> Generator[
         src = meta.get("s") or {}
 
         if src_url := src.get("u"):
-            ext = RedditImagesCrawler.parse_url(src_url).suffix
+            ext = parse_http_url(src_url).suffix
 
         if not ext and (mime := meta.get("m")):
             ext = _guess_ext(mime)
@@ -314,7 +337,7 @@ def _extract_gallery_urls(post: Submission, _config: RedditConfig) -> Generator[
         yield RedditImagesCrawler.PRIMARY_URL / slug
         for url in (src.get("mp4"), src.get("gif")):
             if url:
-                yield RedditCrawler.parse_url(url)
+                yield parse_http_url(url)
 
 
 def _extract_media_urls(post: Submission, _config: RedditConfig) -> Generator[AbsoluteHttpURL]:
@@ -323,11 +346,11 @@ def _extract_media_urls(post: Submission, _config: RedditConfig) -> Generator[Ab
         return
 
     if video := media.get("reddit_video"):
-        yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
+        yield parse_http_url(video["dash_url"])
 
     if oembed := media.get("oembed"):
         if url := oembed.get("thumbnail_url"):
-            yield RedditVideoCrawler.parse_url(url)
+            yield parse_http_url(url)
         if html := oembed.get("html"):
             for src in css.iselect(css.soup(html, parse_only="iframe"), "iframe", "src"):
                 yield parse_http_url(src)
@@ -354,7 +377,7 @@ def _extract_preview_urls(post: Submission, config: RedditConfig) -> Generator[A
             yield parse_http_url(preview_url)
 
     if (video := preview.get("reddit_video_preview")) and config.video_previews:
-        yield RedditVideoCrawler.transform_url(RedditVideoCrawler.parse_url(video["dash_url"]))
+        yield parse_http_url(video["dash_url"])
 
 
 def _guess_ext(mime: str) -> str | None:
