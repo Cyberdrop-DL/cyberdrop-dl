@@ -283,7 +283,7 @@ class PixelDrainCrawler(Crawler):
             return
 
         if type(file) is File:
-            _check_file_is_available(file)
+            self.api.check_is_available(file)
 
         filename, ext = self.get_filename_and_ext(file.name, mime_type=file.mime_type)
         scrape_item.uploaded_at = self.parse_iso_date(file.date_upload)
@@ -309,18 +309,21 @@ class PixelDrainCrawler(Crawler):
     _file_task = auto_task_id(error_handling_wrapper(_file))
 
 
-def _check_file_is_available(file: File) -> None:
-    if file.availability == "unavailable_for_legal_reasons":
-        raise ScrapeError(451, file.availability_message or file.availability)
-    if file.availability.endswith(("_captcha_required", "_limit_exceeded")):
-        raise ScrapeError(403, file.availability_message or file.availability)
-
-
 class PixelDrainAPI(API):
     def __post_init__(self) -> None:
         self.headers: dict[str, str] = {}
         if api_key := self.config.auth.pixeldrain.api_key:
             self.headers["Authorization"] = basic_auth("Cyberdrop-DL", api_key)
+
+    def check_is_available(self, file: File) -> None:
+        if file.availability == "unavailable_for_legal_reasons":
+            raise ScrapeError(451, file.availability_message or file.availability)
+
+        if self.logged_in:
+            return
+
+        if file.availability.endswith(("_captcha_required", "_limit_exceeded")):
+            raise ScrapeError(403, file.availability_message or file.availability)
 
     @property
     def logged_in(self) -> bool:
