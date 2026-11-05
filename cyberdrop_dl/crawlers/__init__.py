@@ -4,9 +4,11 @@ import importlib
 import pkgutil
 import re
 import weakref
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, ClassVar
+
+import aiosqlite
 
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, is_absolute_http_url
 
@@ -57,6 +59,7 @@ def _make_crawler_name(input_string: str) -> str:
 
 
 type DBFix = Callable[[str], str]
+type DBCustomFix = Callable[[aiosqlite.Connection], Awaitable[None]]
 
 
 class Registry:
@@ -64,6 +67,7 @@ class Registry:
     concrete: ClassVar[weakref.WeakSet[type[Crawler]]] = weakref.WeakSet()
     generic: ClassVar[weakref.WeakSet[type[Crawler]]] = weakref.WeakSet()
     _db_fixes: ClassVar[weakref.WeakKeyDictionary[type[Crawler], DBFix | None]] = weakref.WeakKeyDictionary()
+    _db_custom_fixes: ClassVar[weakref.WeakKeyDictionary[type[Crawler], DBCustomFix]] = weakref.WeakKeyDictionary()
     names: ClassVar[set[str]] = set()
     # generics are concrete crawlers that are not bound to any specific site
     # They can be mapped to a site by just subclassing and setting a PRIMARY URL. ex: Chevereto
@@ -135,7 +139,24 @@ class Registry:
 
             return register
 
+        @staticmethod
+        def custom_fix_for[T: DBCustomFix](crawler: type[Crawler]) -> Callable[[T], T]:
+            """Register a custom fix for database entries of this crawler
+
+            The registered callable MUST NOT raise any exception"""
+
+            def register(fn: T) -> T:
+                Registry._db_custom_fixes[crawler] = fn
+                return fn
+
+            return register
+
     @classmethod
-    def db_fixes(cls) -> list[tuple[type[Crawler], DBFix | None]]:
+    def db_referer_fixes(cls) -> list[tuple[type[Crawler], DBFix | None]]:
         cls.import_all()
         return sorted(cls._db_fixes.items(), key=lambda x: x[0].DOMAIN.casefold())
+
+    @classmethod
+    def db_custom_fixes(cls) -> list[tuple[type[Crawler], DBCustomFix]]:
+        cls.import_all()
+        return sorted(cls._db_custom_fixes.items(), key=lambda x: x[0].DOMAIN.casefold())

@@ -200,6 +200,7 @@ class HistoryTable(Table, name="media"):
 async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
     await _fix_domains(db_conn)
     await _fix_referers(db_conn)
+    await _custom_fixes(db_conn)
 
 
 async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
@@ -218,22 +219,23 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
         await db_conn.commit()
 
 
+def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
+    def call(*args: Any, **kwargs: Any) -> T:
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            logger.exception(f"{fn.__name__} failed")
+            raise
+
+    return call
+
+
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import Registry
 
-    def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
-        def call(*args: Any, **kwargs: Any) -> T:
-            try:
-                return fn(*args, **kwargs)
-            except Exception:
-                logger.exception(f"{fn.__name__} failed")
-                raise
-
-        return call
-
     updates = ""
     with _timed_update("old database referers"):
-        for crawler, fix in Registry.db_fixes():
+        for crawler, fix in Registry.db_referer_fixes():
             fix = fix or _generic_fix_referer(crawler)
             fn_name = f"FIX_{crawler.DOMAIN.upper()}_REFERER"
             await db_conn.create_function(fn_name, 1, try_wrap(fix), deterministic=True)
@@ -241,6 +243,19 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
 
         await db_conn.executescript(updates)
         await db_conn.commit()
+
+
+async def _custom_fixes(db_conn: aiosqlite.Connection) -> None:
+    from cyberdrop_dl.crawlers import Registry
+
+    custom_fixes = Registry.db_custom_fixes()
+    if not custom_fixes:
+        return
+
+    with _timed_update("custom database fixes"):
+        for crawler, fix in custom_fixes:
+            logger.info("Applying %s fix (%s)", crawler.DOMAIN, fix.__name__)
+            await fix(db_conn)
 
 
 @contextlib.contextmanager
