@@ -22,6 +22,12 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+### Fixed
+
+- Some files being wrongly skipped as "previously downloaded" if they have same name as an old download (Mediafire)
+
 ## [10.15.2] - 2026-11-02
 
 ### Fixed

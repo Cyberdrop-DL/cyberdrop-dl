@@ -37,7 +37,7 @@ def item() -> ScrapeItem:
         ),
         (
             "https://www.mediafire.com/file/ctppmpm7giofsgv/ADOFAI.vpk",
-            "ADOFAI.vpk",
+            "ctppmpm7giofsgv",
         ),
         (
             "https://mega.nz/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F",
