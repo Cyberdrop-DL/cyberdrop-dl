@@ -987,13 +987,13 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
     @final
     @classmethod
-    def parse_date(cls, date_or_datetime: str, /, format: str) -> float:  # noqa: A002
-        return dates.parse_format(date_or_datetime, format).timestamp()
+    def parse_date(cls, date_or_datetime: str, /, format: str) -> int:  # noqa: A002
+        return int(dates.parse_format(date_or_datetime, format).timestamp())
 
     @final
     @classmethod
-    def parse_iso_date(cls, date_or_datetime: str, /) -> float:
-        return dates.parse_iso(date_or_datetime).timestamp()
+    def parse_iso_date(cls, date_or_datetime: str, /) -> int:
+        return dates.timestamp_from_iso(date_or_datetime)
 
     @final
     async def follow_redirect(self, scrape_item: ScrapeItem) -> None:

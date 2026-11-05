@@ -1,29 +1,27 @@
 from __future__ import annotations
 
 import base64
-import dataclasses
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack, overload
 
-from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import b64_pad
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Iterable, Mapping
 
     from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
     from cyberdrop_dl.utils import m3u8
     from cyberdrop_dl.utils.m3u8 import M3U8
-
-
-_CLIPS_URL = AbsoluteHttpURL("https://clips.twitch.tv")
-_M3U8_BASE = AbsoluteHttpURL("https://usher.ttvnw.net")
 
 
 class TwitchCrawler(Crawler):
@@ -44,12 +42,11 @@ class TwitchCrawler(Crawler):
 
     DOMAIN: ClassVar[str] = "twitch"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.twitch.tv")
+    CLIPS_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://clips.twitch.tv")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case [_, "v", video_id]:
-                await self.vod(scrape_item, video_id)
-            case ["video" | "videos", video_id]:
+            case [_, "v", video_id] | ["video" | "videos", video_id]:
                 await self.vod(scrape_item, video_id)
             case ["collections", collection_id]:
                 await self.collection(scrape_item, collection_id)
@@ -84,7 +81,7 @@ class TwitchCrawler(Crawler):
         # We can extract and parse them manually, bypassing the logging requirement
         for data in m3u8_obj.session_data:
             if data.data_id == "com.amazon.ivs.unavailable-media" and data.value:
-                unavailable_media = json.loads(base64.b64decode(data.value))
+                unavailable_media = json.loads(base64.b64decode(b64_pad(data.value)))
                 _parse_unavailable_media(m3u8_obj, unavailable_media)
                 break
 
@@ -100,24 +97,11 @@ class TwitchCrawler(Crawler):
         video = await self.api.video(video_id)
         date: str | None = video.get("publishedAt")
         if not date:
-            raise ScrapeError(422, "Lives are not supported")
+            raise ScrapeError.live_stream()
 
         scrape_item.uploaded_at = self.parse_iso_date(date)
         title = video.get("title") or "video"
-        access_token = await self.api.access_token(video_id)
-        m3u8_url = (_M3U8_BASE / f"vod/{video_id}.m3u8").with_query(
-            allow_source="true",
-            allow_spectre="true",
-            allow_audio_only="true",
-            include_unavailable="true",
-            platform="web",
-            player="twitchweb",
-            playlist_include_framerate="true",
-            sig=access_token["signature"],
-            supported_codecs="av1,h265,h264",
-            token=access_token["value"],
-        )
-
+        m3u8_url = await self.api.stream(video_id)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         fps = info.stream_info.frame_rate
         filename = self.create_custom_filename(
@@ -130,20 +114,26 @@ class TwitchCrawler(Crawler):
         )
         await self.handle_file(m3u8_url, scrape_item, title, m3u8=m3u8, custom_filename=filename)
 
+    _vod_task = auto_task_id(vod)
+
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_id: str) -> None:
         collection = await self.api.collection(collection_id)
         title = self.create_title(collection["title"], collection_id)
         scrape_item.setup_as_album(title, album_id=collection_id)
 
-        for edge in collection["items"]["edges"]:
-            web_url = self.PRIMARY_URL / "videos" / edge["node"]["id"]
-            self.create_task(self.run(scrape_item.create_child(web_url), check_referer=True))
-            scrape_item.add_children()
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for edge in collection["items"]["edges"]:
+                vod_id: str = edge["node"]["id"]
+                new_item = scrape_item.create_child(self.PRIMARY_URL / "videos" / vod_id)
+                tg.create_task(self._vod_task(new_item, vod_id))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def clip(self, scrape_item: ScrapeItem, slug: str) -> None:
-        scrape_item.url = _CLIPS_URL / slug
+        scrape_item.url = self.CLIPS_URL / slug
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
@@ -152,7 +142,7 @@ class TwitchCrawler(Crawler):
         scrape_item.uploaded_at = self.parse_iso_date(clip["createdAt"])
         access_token: dict[str, str] = clip["playbackAccessToken"]
 
-        best = max(ClipFormat.parse(clip["assets"][0]))
+        best = max(_parse_clips(clip["assets"][0]))
         filename = self.create_custom_filename(
             title,
             ".mp4",
@@ -167,23 +157,17 @@ class TwitchCrawler(Crawler):
 class TwitchAPI(API):
     """GraphQL API interface for twitch"""
 
-    GQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://gql.twitch.tv/gql")
     CLIENT_ID: ClassVar[str] = "kimne78kx3ncx6brgo4mv6wki5h1ko"
+    GQL_ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://gql.twitch.tv/gql")
+    M3U8_BASE: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://usher.ttvnw.net")
 
-    @classmethod
-    def _prepare_query(cls, name: str, variables: dict[str, Any], query_hash: str) -> dict[str, Any]:
-        return {
-            "operationName": name,
-            "variables": variables,
-            "extensions": {
-                "persistedQuery": {
-                    "version": 1,
-                    "sha256Hash": query_hash,
-                }
-            },
-        }
+    @overload
+    async def gql(self, queries: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
 
-    async def _request_many(self, queries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    @overload
+    async def gql(self, queries: dict[str, Any]) -> dict[str, Any]: ...
+
+    async def gql(self, queries: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
         return await self.request_json(
             self.GQL_ENDPOINT,
             method="POST",
@@ -194,13 +178,21 @@ class TwitchAPI(API):
             json=queries,
         )
 
-    async def _request(self, name: str, variables: dict[str, Any], query_hash: str) -> dict[str, Any]:
-        """Simplified version to make a single query request"""
-        query = self._prepare_query(name, variables, query_hash)
-        return (await self._request_many([query]))[0]
+    async def gql_persisted_query(self, name: str, /, variables: Mapping[str, Any], query_hash: str) -> dict[str, Any]:
+        query = {
+            "operationName": name,
+            "variables": variables,
+            "extensions": {
+                "persistedQuery": {
+                    "version": 1,
+                    "sha256Hash": query_hash,
+                }
+            },
+        }
+        return await self.gql(query)
 
     async def video(self, video_id: str) -> dict[str, Any]:
-        resp = await self._request(
+        resp = await self.gql_persisted_query(
             "VideoMetadata",
             {
                 "channelLogin": "",
@@ -214,7 +206,7 @@ class TwitchAPI(API):
         return video
 
     async def collection(self, collection_id: str) -> dict[str, Any]:
-        resp = await self._request(
+        resp = await self.gql_persisted_query(
             "CollectionSideBar",
             {
                 "collectionID": collection_id,
@@ -227,7 +219,7 @@ class TwitchAPI(API):
         return col
 
     async def clip(self, slug: str) -> dict[str, Any]:
-        resp = await self._request(
+        resp = await self.gql_persisted_query(
             "ShareClipRenderStatus",
             {
                 "slug": slug,
@@ -240,7 +232,7 @@ class TwitchAPI(API):
         return clip
 
     async def access_token(self, video_id: str) -> dict[str, str]:
-        resp = await self._request(
+        resp = await self.gql_persisted_query(
             "PlaybackAccessToken",
             {
                 "isLive": False,
@@ -259,23 +251,38 @@ class TwitchAPI(API):
             raise ScrapeError(403, token.get("reason"))
         return token
 
+    async def stream(self, video_id: str) -> AbsoluteHttpURL:
+        access_token = await self.access_token(video_id)
+        return (self.M3U8_BASE / f"vod/{video_id}.m3u8").with_query(
+            allow_source="true",
+            allow_spectre="true",
+            allow_audio_only="true",
+            include_unavailable="true",
+            platform="web",
+            player="twitchweb",
+            playlist_include_framerate="true",
+            sig=access_token["signature"],
+            supported_codecs="av1,h265,h264",
+            token=access_token["value"],
+        )
 
-@dataclasses.dataclass(slots=True, order=True, frozen=True)
+
+@struct(order=True)
 class ClipFormat:
     resolution: Resolution
     fps: float
     aspect_ratio: float
     url: AbsoluteHttpURL
 
-    @staticmethod
-    def parse(assets: dict[str, Any]) -> Generator[ClipFormat]:
-        for fmt in assets["videoQualities"]:
-            yield ClipFormat(
-                url=parse_http_url(fmt["sourceURL"]),
-                fps=fmt["frameRate"],
-                resolution=Resolution.parse(fmt["quality"]),
-                aspect_ratio=assets["aspectRatio"],
-            )
+
+def _parse_clips(assets: dict[str, Any]) -> Iterable[ClipFormat]:
+    for fmt in assets["videoQualities"]:
+        yield ClipFormat(
+            url=parse_http_url(fmt["sourceURL"]),
+            fps=fmt["frameRate"],
+            resolution=Resolution.parse(fmt["quality"]),
+            aspect_ratio=assets["aspectRatio"],
+        )
 
 
 def _parse_unavailable_media(m3u8: M3U8, hidden_media: list[dict[str, Any]]) -> None:

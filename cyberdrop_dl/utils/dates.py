@@ -111,6 +111,10 @@ def parse_http(date: str, /) -> dt.datetime:
     return _normalize(email.utils.parsedate_to_datetime(date))
 
 
+def timestamp_from_iso(date_or_datetime: str, /) -> int:
+    return int(parse_iso(date_or_datetime).timestamp())
+
+
 def from_timestamp(timestamp: float) -> dt.datetime:
     return _normalize(dt.datetime.fromtimestamp(timestamp, tz=dt.UTC))
 
