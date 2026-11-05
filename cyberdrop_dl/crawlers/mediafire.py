@@ -15,7 +15,7 @@ from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, is_blob_or_svg
+from cyberdrop_dl.utils import b64_pad, css, is_blob_or_svg
 from cyberdrop_dl.utils.dataclass import deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -149,11 +149,12 @@ class MediaFireCrawler(Crawler):
         await self._file(scrape_item, file)
 
     async def _file(self, scrape_item: ScrapeItem, file: File) -> None:
-        hash_algo = "sha256" if len(file.hash) == 64 else "md5"
-        if await self.check_complete_by_hash(scrape_item.url, hash_algo, file.hash):
+        checksum = "sha256" if len(file.hash) == 64 else "md5"
+        if await self.check_complete_by_hash(scrape_item.url, checksum, file.hash):
             return
 
         html = await self.request_text(scrape_item.url, impersonate=True)
+        src = self.parse_url(await asyncio.to_thread(_extract_dl, html))
         scrape_item.uploaded_at = self.parse_iso_date(file.created)
         filename, ext = self.get_filename_and_ext(file.filename)
         await self.handle_file(
@@ -162,7 +163,7 @@ class MediaFireCrawler(Crawler):
             file.filename,
             ext,
             custom_filename=filename,
-            debrid_link=self.parse_url(await asyncio.to_thread(_extract_dl, html)),
+            debrid_link=src,
         )
 
     @auto_task_id
@@ -230,10 +231,7 @@ class MediaFireAPI(API):
         )
 
     async def file_info(self, quick_key: str) -> File:
-        resp: dict[str, Any] = await self._request(
-            "file/get_info.php",
-            quick_key=quick_key,
-        )
+        resp: dict[str, Any] = await self._request("file/get_info.php", quick_key=quick_key)
         return File.from_dict(resp["file_info"])
 
 
@@ -241,16 +239,16 @@ def _extract_dl(html: str) -> str:
     soup = css.soup(html)
     download_button = soup.select_one("a#downloadButton")
     if not download_button:
-        if "Something appears to be missing" in soup.get_text():
+        if "Something appears to be missing" in html:
             raise ScrapeError(410)
         raise ScrapeError(422)
 
     if encoded_url := css.attr_or_none(download_button, "data-scrambled-url"):
-        return base64.b64decode(encoded_url).decode()
+        return base64.b64decode(b64_pad(encoded_url)).decode()
 
     url = css.attr(download_button, "href")
     if is_blob_or_svg(url):
-        raise ScrapeError(422)
+        raise ScrapeError(422, "Unable to extract download URL")
     return url
 
 
