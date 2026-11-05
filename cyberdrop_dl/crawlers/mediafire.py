@@ -114,9 +114,13 @@ class MediaFireCrawler(Crawler):
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
             if folder.has_files:
+                downloaded = await self.get_completed_by_album(folder_key)
                 async for files in self.api.folder_content(folder_key, "files"):
                     for file in map(File.from_dict, files):
                         url = self.PRIMARY_URL / "file" / file.quickkey
+                        if url in downloaded:
+                            continue
+
                         new_item = scrape_item.create_child(url)
                         tg.create_task(self._file_task(new_item, file))
                         scrape_item.add_children()
