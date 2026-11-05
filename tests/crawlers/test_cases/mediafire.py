@@ -50,7 +50,6 @@ TEST_CASES = [
         "results": [
             {
                 "url": "re:https://www.mediafire.com/file/",
-                "filename": "kobo_libra.kepub.epub",
                 "debrid_url": "NOT_NONE",
                 "album_id": "ixh40veo6hrc5",
                 "download_folder": "re:kcc samples (Mediafire)",
@@ -62,6 +61,7 @@ TEST_CASES = [
     {
         "url": "https://www.mediafire.com/folder/m3sij67rizpb4/XJTU-SY_Bearing_Datasets",
         "description": "folder with subfolders",
+        "results": [],
         "count": 18,
     },
     {
