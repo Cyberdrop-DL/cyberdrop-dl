@@ -49,11 +49,14 @@ class Folder:
 class File:
     quickkey: str
     filename: str
-    created: str
+    created_utc: str
     size: int
     hash: str
+    mimetype: str
 
-    from_dict = classmethod(deserialize)
+    @classmethod
+    def from_dict(cls, info: dict[str, Any]) -> Self:
+        return deserialize(cls, info, size=int(info["size"]))
 
 
 _API_ERRORS_OVERRIDES: Mapping[int, int] = MappingProxyType(
@@ -148,8 +151,9 @@ class MediaFireCrawler(Crawler):
 
                 if folder.has_folders:
                     async for subfolder in self.api.subfolders(folder.folderkey):
-                        subfolders.append(((*path, subfolder.name), subfolder.folderkey))
-                        await sleep()
+                        if subfolder.has_files or subfolder.has_folders:
+                            subfolders.append(((*path, subfolder.name), subfolder.folderkey))
+                            await sleep()
 
                 if not subfolders:
                     break
@@ -174,8 +178,8 @@ class MediaFireCrawler(Crawler):
 
         html = await self.request_text(scrape_item.url, impersonate=True)
         src = self.parse_url(await asyncio.to_thread(_extract_dl, html))
-        scrape_item.uploaded_at = self.parse_iso_date(file.created)
-        filename, ext = self.get_filename_and_ext(file.filename)
+        scrape_item.uploaded_at = self.parse_iso_date(file.created_utc)
+        filename, ext = self.get_filename_and_ext(file.filename, mime_type=file.mimetype)
         await self.handle_file(
             scrape_item.url,
             scrape_item,
