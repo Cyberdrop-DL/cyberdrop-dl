@@ -176,11 +176,11 @@ class MediaFireCrawler(Crawler):
     _folder_task = auto_task_id(folder)
 
 
-def _json_check(resp: Any, _: Any = None) -> None:
-    if type(resp) is not dict or "response" not in resp:
+def _json_check(json_resp: Any, _: Any = None) -> None:
+    if type(json_resp) is not dict or "response" not in json_resp:
         return
 
-    resp: dict[str, Any] = resp["response"]
+    resp: dict[str, Any] = json_resp["response"]
     if resp["result"] != "Success":
         code: int = resp["error"]
         if http_code := _API_ERRORS_OVERRIDES.get(code):
@@ -255,8 +255,8 @@ def _extract_dl(html: str) -> str:
 
 
 def fix_db_path(url_path: str, referer: str) -> str:
-    ref_url = MediaFireCrawler.transform_url(MediaFireCrawler.parse_url(referer, trim=False))
     try:
+        ref_url = MediaFireCrawler.transform_url(MediaFireCrawler.parse_url(referer, trim=False))
         return MediaFireCrawler.__db_path__(ref_url)
     except ValueError:
         return url_path
@@ -267,5 +267,5 @@ async def fix_db_paths(db_conn: aiosqlite.Connection) -> None:
     fn_name = f"FIX_{MediaFireCrawler.DOMAIN.upper()}_DB_PATH"
     await db_conn.create_function(fn_name, 2, fix_db_path, deterministic=True)
     updates = f"UPDATE OR REPLACE media SET url_path = {fn_name}(url_path, referer) WHERE domain = ?;"  # noqa: S608
-    await db_conn.execute(updates, MediaFireCrawler.DOMAIN)
+    await db_conn.execute(updates, (MediaFireCrawler.DOMAIN,))
     await db_conn.commit()

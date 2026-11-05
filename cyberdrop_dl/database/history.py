@@ -254,7 +254,7 @@ async def _custom_fixes(db_conn: aiosqlite.Connection) -> None:
 
     with _timed_update("custom database fixes"):
         for crawler, fix in custom_fixes:
-            logger.info("Applying %s fix (%s)", crawler.DOMAIN, fix.__name__)
+            logger.info("Applying '%s' fix (%s)", crawler.DOMAIN, fix.__name__)
             await fix(db_conn)
 
 
