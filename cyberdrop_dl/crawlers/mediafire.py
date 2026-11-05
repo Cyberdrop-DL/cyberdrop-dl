@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -20,6 +21,8 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
+
+    import aiosqlite
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -249,3 +252,20 @@ def _extract_dl(html: str) -> str:
     if is_blob_or_svg(url):
         raise ScrapeError(422)
     return url
+
+
+def fix_db_path(url_path: str, referer: str) -> str:
+    ref_url = MediaFireCrawler.transform_url(MediaFireCrawler.parse_url(referer, trim=False))
+    try:
+        return MediaFireCrawler.__db_path__(ref_url)
+    except ValueError:
+        return url_path
+
+
+@Registry.database.custom_fix_for(MediaFireCrawler)
+async def fix_db_paths(db_conn: aiosqlite.Connection) -> None:
+    fn_name = f"FIX_{MediaFireCrawler.DOMAIN.upper()}_DB_PATH"
+    await db_conn.create_function(fn_name, 2, fix_db_path, deterministic=True)
+    updates = f"UPDATE OR REPLACE media SET url_path = {fn_name}(url_path, referer) WHERE domain = ?;"  # noqa: S608
+    await db_conn.execute(updates, MediaFireCrawler.DOMAIN)
+    await db_conn.commit()
