@@ -65,11 +65,14 @@ class PCloudCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "pCloud"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
-        if "pc.cd" in scrape_item.url.host:
-            return await self.public_link(scrape_item, scrape_item.url.parts[1])
-        if code := scrape_item.url.query.get("code"):
-            return await self.public_link(scrape_item, code)
-        raise ValueError
+        match scrape_item.url.parts[1:]:
+            case [code, *_] if "pc.cd" in scrape_item.url.host:
+                await self.public_link(scrape_item, code)
+            case _:
+                if code := scrape_item.url.query.get("code"):
+                    await self.public_link(scrape_item, code)
+                else:
+                    raise ValueError
 
     @error_handling_wrapper
     async def public_link(self, scrape_item: ScrapeItem, code: str) -> None:

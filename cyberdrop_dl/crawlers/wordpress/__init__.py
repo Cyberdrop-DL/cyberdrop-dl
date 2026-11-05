@@ -68,18 +68,18 @@ class WordPressBaseCrawler(Crawler, is_abc=True):
         scrape_item.url = scrape_item.url.with_query(None)
         match scrape_item.url.parts[1:]:
             case ["posts"]:
-                return await self.all_posts(scrape_item)
+                await self.all_posts(scrape_item)
             case [ColletionType.CATEGORY.value, _]:
-                return await self.category_or_tag(scrape_item, ColletionType.CATEGORY)
+                await self.category_or_tag(scrape_item, ColletionType.CATEGORY)
             case [ColletionType.TAG.value, _]:
-                return await self.category_or_tag(scrape_item, ColletionType.TAG)
+                await self.category_or_tag(scrape_item, ColletionType.TAG)
             case ["wp-json", *_]:
                 raise ValueError
             case _:
                 if _match_date_from_path(scrape_item.url.parts[1:]):
                     # TODO: Handle this
                     raise ValueError
-                return await self.post(scrape_item)
+                await self.post(scrape_item)
 
     @property
     @final

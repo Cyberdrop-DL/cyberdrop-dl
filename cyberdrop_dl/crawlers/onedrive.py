@@ -46,10 +46,10 @@ class OneDriveCrawler(Crawler):
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         # ex: https://1drv.ms/t/s!ABCJKL-ABCJKL?e=ABC123 or  https://1drv.ms/t/c/a12345678/aTOKEN?e=ABC123
         if scrape_item.url.host == "1drv.ms":
-            return await self.share_link(scrape_item)
-
-        # ex: https://onedrive.live.com/?authkey=!AUTHXXX-12345&id=ABCXYZ!12345&cid=ABC0123BVC
-        await self.resource(scrape_item)
+            await self.share_link(scrape_item)
+        else:
+            # ex: https://onedrive.live.com/?authkey=!AUTHXXX-12345&id=ABCXYZ!12345&cid=ABC0123BVC
+            await self.resource(scrape_item)
 
     @error_handling_wrapper
     async def share_link(self, scrape_item: ScrapeItem) -> None:

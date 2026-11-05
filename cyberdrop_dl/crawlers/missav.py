@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
@@ -20,6 +20,7 @@ _M3U8_SERVER = AbsoluteHttpURL("https://surrit.com/")
 _COLLECTION_TYPES = "makers", "search", "genres", "labels", "tags"
 
 
+@final
 class Selector:
     UUID = "script:-soup-contains('m3u8|')"
     DATE = "div > span:-soup-contains('Release date:') + time"
@@ -64,8 +65,8 @@ class MissAVCrawler(Crawler):
         if await self.check_complete_from_referer(canonical_url):
             return
 
-        soup = await self.request_soup(scrape_item.url)
-        video = await asyncio.to_thread(_extract_video, soup)
+        html = await self.request_text(scrape_item.url)
+        video = await asyncio.to_thread(_extract_video, html)
         scrape_item.uploaded_at = self.parse_iso_date(video.release_date)
         m3u8_url = _M3U8_SERVER / video.m3u8_uuid / "playlist.m3u8"
         m3u8, info = await self.request_m3u8_playlist(m3u8_url, headers={"Referer": "https://missav.ws/"})
@@ -87,7 +88,8 @@ class Video:
     m3u8_uuid: str
 
 
-def _extract_video(soup: BeautifulSoup) -> Video:
+def _extract_video(html: str) -> Video:
+    soup = css.soup(html)
     title = open_graph.title(soup)
     dvd_code = None
     try:

@@ -191,14 +191,14 @@ class XenforoCrawler(Crawler, is_abc=True):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         if not self._logged_in and self.login_required is True:
-            return None
+            return
         scrape_item.url = self.parse_url(str(scrape_item.url))
         if self.is_attachment(scrape_item.url):
-            return await self.handle_internal_link(scrape_item)
-        if is_confirmation_link(scrape_item.url):
-            return await self._follow_confirmation_link(scrape_item)
-
-        await self._fetch_thread(scrape_item)
+            await self.handle_internal_link(scrape_item)
+        elif is_confirmation_link(scrape_item.url):
+            await self._follow_confirmation_link(scrape_item)
+        else:
+            await self._fetch_thread(scrape_item)
 
     async def _fetch_thread(self, scrape_item: ScrapeItem) -> None:
         thread_part_index = len(self.PRIMARY_URL.parts)
