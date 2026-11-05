@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import itertools
+from collections import deque
 from http import HTTPStatus
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -30,9 +31,18 @@ if TYPE_CHECKING:
 @struct
 class Folder:
     name: str
-    quickkey: str
+    folderkey: str
     has_files: bool
     has_folders: bool
+
+    @classmethod
+    def from_dict(cls, info: dict[str, Any]) -> Self:
+        return cls(
+            name=info["name"],
+            folderkey=info["folderkey"],
+            has_files=bool(int(info["file_count"])),
+            has_folders=bool(int(info["folder_count"])),
+        )
 
 
 @struct
@@ -110,33 +120,42 @@ class MediaFireCrawler(Crawler):
         is_empty = not (folder.has_files or folder.has_folders)
         if is_empty:
             # Make a request anyway to try to get a descriptive error from MediaFire
-            async for _ in self.api.folder_content(folder_key, "folders"):
+            async for _ in self.api.subfolders(folder_key):
                 break
             raise ScrapeError(204, "Folder is empty")
 
+        await self._walk_folder(scrape_item, folder)
+
+    async def _walk_folder(self, scrape_item: ScrapeItem, folder: Folder):
+        downloaded = await self.get_completed_by_album(folder.folderkey)
+        path: tuple[str, ...] = ()
+        subfolders: deque[tuple[tuple[str, ...], str]] = deque()
+
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            if folder.has_files:
-                downloaded = await self.get_completed_by_album(folder_key)
-                async for files in self.api.folder_content(folder_key, "files"):
-                    for file in map(File.from_dict, files):
+            while True:
+                if folder.has_files:
+                    async for file in self.api.files(folder.folderkey):
                         url = self.PRIMARY_URL / "file" / file.quickkey
                         if url in downloaded:
                             continue
 
                         new_item = scrape_item.create_child(url)
+                        new_item.append_folders(*path)
                         tg.create_task(self._file_task(new_item, file))
                         scrape_item.add_children()
                         await sleep()
 
-            if folder.has_folders:
-                async for folders in self.api.folder_content(folder_key, "folders"):
-                    for folder in folders:
-                        folder_key = folder["folderkey"]
-                        new_item = scrape_item.create_child(self.PRIMARY_URL / "folder" / folder_key)
-                        tg.create_lazy_task(self._folder_task(new_item, folder_key))
-                        scrape_item.add_children()
+                if folder.has_folders:
+                    async for subfolder in self.api.subfolders(folder.folderkey):
+                        subfolders.append(((*path, subfolder.name), subfolder.folderkey))
                         await sleep()
+
+                if not subfolders:
+                    break
+
+                path, subfolder_key = subfolders.popleft()
+                folder = await self.api.folder_info(subfolder_key)
 
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, kind: str, quick_key: str) -> None:
@@ -174,8 +193,6 @@ class MediaFireCrawler(Crawler):
 
         await self._file(scrape_item, file)
 
-    _folder_task = auto_task_id(folder)
-
 
 def _json_check(json_resp: Any, _: Any = None) -> None:
     if type(json_resp) is not dict or "response" not in json_resp:
@@ -202,7 +219,7 @@ class MediaFireAPI(API):
         _json_check(resp)
         return resp["response"]
 
-    async def folder_content(
+    async def _folder_content(
         self, folder_key: str, content_type: Literal["files", "folders"]
     ) -> AsyncGenerator[list[dict[str, Any]]]:
         for chunk in itertools.count(1):
@@ -219,16 +236,19 @@ class MediaFireAPI(API):
             if content["more_chunks"] != "yes":
                 break
 
+    async def subfolders(self, folder_key: str) -> AsyncGenerator[Folder]:
+        async for folders in self._folder_content(folder_key, "folders"):
+            for folder in folders:
+                yield Folder.from_dict(folder)
+
+    async def files(self, folder_key: str) -> AsyncGenerator[File]:
+        async for files in self._folder_content(folder_key, "files"):
+            for file in files:
+                yield File.from_dict(file)
+
     async def folder_info(self, folder_key: str) -> Folder:
         resp: dict[str, Any] = await self._request("folder/get_info.php", folder_key=folder_key)
-        info = resp["folder_info"]
-
-        return Folder(
-            name=info["name"],
-            quickkey=folder_key,
-            has_files=bool(int(info["file_count"])),
-            has_folders=bool(int(info["folder_count"])),
-        )
+        return Folder.from_dict(resp["folder_info"])
 
     async def file_info(self, quick_key: str) -> File:
         resp: dict[str, Any] = await self._request("file/get_info.php", quick_key=quick_key)
