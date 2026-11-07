@@ -419,9 +419,9 @@ class VKCrawler(VKBaseCrawler, wiki_site="VK"):
         )
         match scrape_item.url.fragment.partition("="):
             case ["section", _, "short_videos"]:
-                url = VKVideoCrawler.PRIMARY_URL / domain / "all"
-            case ["section", _, "videos"]:
                 url = VKVideoCrawler.PRIMARY_URL / domain / "clips"
+            case ["section", _, "videos"]:
+                url = VKVideoCrawler.PRIMARY_URL / domain / "all"
             case _:
                 url = None
 
