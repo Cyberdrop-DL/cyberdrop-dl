@@ -74,9 +74,9 @@ class HitomiLaCrawler(Crawler):
             case ["cg" | "doujinshi" | "galleries" | "gamecg" | "imageset" | "manga" | "reader" | "anime", slug]:
                 gallery_id = slug.rpartition("-")[-1].removesuffix(".html")
                 await self.gallery(scrape_item, gallery_id)
-            case ["artist", "character", "group", "series", "tag", "type" as type_, slug]:
+            case ["artist" | "character" | "group" | "series" | "tag" | "type" as kind, slug]:
                 name, lang = _parse_slug(slug)
-                await self.collection(scrape_item, name, lang, colletion_type=type_)
+                await self.collection(scrape_item, name, lang, colletion_type=kind)
             case ["search.html"] if scrape_item.url.query:
                 await self.search(scrape_item, scrape_item.url.query_string)
             case [slug]:
