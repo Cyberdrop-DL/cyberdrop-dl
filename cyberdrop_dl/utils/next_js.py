@@ -58,6 +58,8 @@ class _FlightChunk:
     def __post_init__(self) -> None:
         self.index = int(self.id, base=16)
         self.decoded_data = self.data
+        if self.marker == "T":
+            self.resolved = True
 
 
 @final
