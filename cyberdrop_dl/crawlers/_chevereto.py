@@ -108,7 +108,10 @@ class CheveretoCrawler(Crawler, is_generic=True):
             return url
 
         # We need the full URL (aka "/<name>.<id>") to fetch sub albums
-        while "." not in (url.name or url.parent.name):
+        for _ in range(3):
+            if "." in (url.name or url.parent.name):
+                break
+
             url = await self.request_redirect(url)
 
         return url
