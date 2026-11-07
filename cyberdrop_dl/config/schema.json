@@ -612,8 +612,8 @@
           "type": "string"
         },
         "sheets": {
-          "default": "xslx",
-          "enum": ["xslx", "ods", "html", "csv", "tsv"],
+          "default": "xlsx",
+          "enum": ["xlsx", "ods", "html", "csv", "tsv"],
           "title": "Sheets",
           "type": "string"
         },

@@ -1164,7 +1164,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.15.0
   - html
   - ods
   - tsv
-  - xslx (default)
+  - xlsx (default)
 
 ### GooglePhotos
 

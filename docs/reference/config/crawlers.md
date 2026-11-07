@@ -174,7 +174,7 @@ crawlers:
   google_drive:
     default_formats:
       docs: docx
-      sheets: xslx
+      sheets: xlsx
       slides: pptx
 ```
 
@@ -192,7 +192,7 @@ Default format for documents (can be overridden per URL with the 'format' query 
 
 | Type                                  | Default |
 | ------------------------------------- | ------- |
-| `xslx`, `ods`, `html`, `csv` or `tsv` | `xslx`  |
+| `xlsx`, `ods`, `html`, `csv` or `tsv` | `xlsx`  |
 
 Default format for spreedsheets (can be overridden per URL with the 'format' query param)
 

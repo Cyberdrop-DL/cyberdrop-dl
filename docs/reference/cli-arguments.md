@@ -73,6 +73,7 @@ If provided, this file _must_ exists already, but it can be empty
 ## Overview
 
 <!-- START_CLI_OVERVIEW -->
+
 ```shell
 cyberdrop-dl v10.15.0
 Bulk asynchronous downloader for multiple file hosts
@@ -208,8 +209,8 @@ Download URLs
 │                                      [default: docx]                                             │
 │ --crawlers.google-drive              Default format for spreedsheets (can be overridden per URL  │
 │   .default-formats.sheets CHOICE     with the 'format' query param)                              │
-│                                      [choices: xslx, ods, html, csv, tsv]                        │
-│                                      [default: xslx]                                             │
+│                                      [choices: xlsx, ods, html, csv, tsv]                        │
+│                                      [default: xlsx]                                             │
 │ --crawlers.google-drive              Default format for presentations (can be overridden per URL │
 │   .default-formats.slides CHOICE     with the 'format' query param)                              │
 │                                      [choices: pptx, odp]                                        │
@@ -509,4 +510,5 @@ Download URLs
 Github:      https://github.com/Cyberdrop-DL/cyberdrop-dl
 Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 ```
+
 <!-- END_CLI_OVERVIEW -->

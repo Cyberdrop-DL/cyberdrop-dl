@@ -61,7 +61,7 @@ requires-python = ">=3.12"
 apprise = [
     "apprise >=2.1.0,<3.0.0",
     "click ==8.5.0",
-    "oauthlib>=4.0.0",
+    "oauthlib>=4.0.1",
     "urllib3>=2.8.0",  # Transient dep with CVE
     'pywin32>=312; platform_system == "Windows"',
     'tzdata>=2026.5; platform_system == "Windows"'

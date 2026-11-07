@@ -54,7 +54,7 @@ _DRIVE_ID_LEN = 28  # v0 uses 28, v1 uses 33
 _DOCS_ID_LEN = 44  # v1 uses 44. I have not seen v0 doc URL
 _DOCS_URL = AbsoluteHttpURL("https://docs.google.com")
 _DOC_FORMATS: dict[str, tuple[str, ...]] = {
-    "spreadsheets": ("xslx", "ods", "html", "csv", "tsv"),
+    "spreadsheets": ("xlsx", "ods", "html", "csv", "tsv"),
     "presentation": ("pptx", "odp"),
     "document": ("docx", "odt", "rtf", "txt", "epub", "pdf", "md", "zip"),
 }

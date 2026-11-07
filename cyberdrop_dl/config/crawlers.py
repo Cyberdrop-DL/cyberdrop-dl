@@ -30,7 +30,7 @@ class GoogleDriveFormats(ConfigModel):
     docs: Literal["docx", "odt", "rtf", "txt", "epub", "pdf", "md", "zip"] = "docx"
     "Default format for documents (can be overridden per URL with the 'format' query param)"
 
-    sheets: Literal["xslx", "ods", "html", "csv", "tsv"] = "xslx"
+    sheets: Literal["xlsx", "ods", "html", "csv", "tsv"] = "xlsx"
     "Default format for spreedsheets (can be overridden per URL with the 'format' query param)"
 
     slides: Literal["pptx", "odp"] = "pptx"
@@ -40,7 +40,9 @@ class GoogleDriveFormats(ConfigModel):
     @classmethod
     def _remove_dots(cls, value: object) -> object:
         if isinstance(value, str):
-            return value.lstrip(".")
+            value = value.lstrip(".")
+            if value == "xslx":
+                value = "xlsx"
         return value
 
 
