@@ -175,10 +175,16 @@ def _parse_video(video: dict[str, Any]) -> Video:
     file: dict[str, Any] = video["file"]
     thumb: int = next(iter(facts["fc_thumbs"]), 0)
     video_id = int(file["id"])
+    for cd in file["data"]:
+        if cd.get("cd_file") == video_id:
+            title = cd["cd_value"]
+            break
+    else:
+        raise ScrapeError(422, "Unable to get video title")
 
     return Video(
         id=video_id,
-        title=next(d for d in file["data"] if d.get("cd_file") == video_id)["cd_value"],
+        title=title,
         created_at=int(Crawler.parse_iso_date(facts["fc_created"])),
         thumb=BeegAPI.THUMBS / f"videos/{video_id}/{thumb}.webp",
         tags=tuple(map(_normalize_tag, video.get("tags", ()))),

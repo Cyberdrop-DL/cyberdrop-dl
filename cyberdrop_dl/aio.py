@@ -166,10 +166,10 @@ chain = _AsyncChain()
 
 
 async def async_next[T](async_iterator: AsyncIterator[T]) -> T:
-    try:
-        return await anext(async_iterator)
-    except StopAsyncIteration as e:
-        raise e.__cause__ or e from None
+    async for item in async_iterator:
+        return item
+
+    raise RuntimeError("generator didn't yield")
 
 
 async def peek_first[T](async_iterable: AsyncIterable[T], /) -> tuple[T, AsyncGenerator[T, None]]:

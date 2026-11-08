@@ -6,6 +6,7 @@ from typing import Any, TypeGuard, overload
 
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.signature import dataclass_repr
+from cyberdrop_dl.utils import next_or_error
 
 type Path = tuple[str | int, ...]
 type Validator = Callable[[object], bool]
@@ -36,10 +37,7 @@ class TraverseResults[T, U]:
         if self._results > 0:
             raise RuntimeError("We already yielded the first result")
         name = name or self._name or "a required traverse attribute"
-        try:
-            return next(self.values())
-        except StopIteration as e:
-            raise ScrapeError(422, f"Unable to find {name}") from e
+        return next_or_error(self.values(), name)
 
 
 @overload

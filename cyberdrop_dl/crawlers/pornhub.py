@@ -13,7 +13,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, Supporte
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, dates, extr_text, json_ld
+from cyberdrop_dl.utils import css, dates, extr_text, json_ld, next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -171,8 +171,10 @@ class PornHubCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         gif = css.select(soup, Selector.GIF)
-        attrs = ("data-mp4", "data-fallback", "data-webm")
-        src = next(value for attr in attrs if (value := css.attr_or_none(gif, attr)))
+        src = next_or_error(
+            filter(None, (css.attr_or_none(gif, attr) for attr in ("data-mp4", "data-fallback", "data-webm"))),
+            "GIF source",
+        )
         scrape_item.uploaded_at = json_ld.upload_date(soup)
         await self._photo(scrape_item, Photo(gif_id, self.parse_url(src)))
 

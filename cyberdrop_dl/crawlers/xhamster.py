@@ -14,7 +14,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import extr_text, traversal, xor_decrypt
+from cyberdrop_dl.utils import extr_text, next_or_error, traversal, xor_decrypt
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import URLDeduper, parse_http_url
 
@@ -344,7 +344,7 @@ def _parse_xplayer_sources(xplayer_sources: dict[str, Any]) -> Iterable[Format]:
 
             res = Resolution.parse(quality)
             if res == Resolution.unknown() and (multi := next((p for p in url.parts if p.startswith("multi=")), None)):
-                best = next(reversed(multi.split(",")))
+                best = next_or_error(reversed(multi.split(",")), "multi stream")
                 res = Resolution.parse(best.partition(":")[0])
 
             yield Format(res, Codec[codec.upper()], url)

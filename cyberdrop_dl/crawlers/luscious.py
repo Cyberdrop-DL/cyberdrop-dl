@@ -38,12 +38,12 @@ class LusciousCrawler(Crawler):
             self.catch_errors(self.api.GRAPHQL_ENDPOINT),
             self.disable_on_error("Unable to get account credentials"),
         ):
-            try:
-                cookie_name = next(c for c in self.cookies.raw if c.startswith("sessionid"))
-            except StopIteration:
-                raise LoginError("No session ID found in cookies. Use --cookies to provide logged in cookies") from None
-            else:
-                self.log.debug("Session id cookie name: %s", cookie_name)
+            for cookie_name in self.cookies.raw:
+                if cookie_name.startswith("sessionid"):
+                    self.log.debug("Session id cookie name: %s", cookie_name)
+                    return
+
+            raise LoginError("No session ID found in cookies. Use --cookies to provide logged in cookies")
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:

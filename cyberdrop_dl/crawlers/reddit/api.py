@@ -63,11 +63,9 @@ class ArcticShiftAPI(API):
         return map(_parse_post, resp["data"])
 
     async def post(self, id: str) -> Submission:  # noqa: A002
-        posts = await self.posts(id)
-        try:
-            return next(posts)
-        except StopIteration:
-            raise ScrapeError(404) from None
+        for post in await self.posts(id):
+            return post
+        raise ScrapeError(404)
 
     def posts_search(self, query: SearchQuery) -> AsyncGenerator[map[Submission]]:
         return self.search("posts/search", query)

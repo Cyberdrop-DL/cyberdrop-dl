@@ -13,7 +13,7 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css
+from cyberdrop_dl.utils import css, next_or_error
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -291,6 +291,6 @@ class YandexFile(YandexItem):
     @classmethod
     def from_share(cls, share: Share) -> Self:
         assert len(share.resources) == 1
-        details = next(iter(share.resources.values()))
+        details = next_or_error(share.resources.values(), "node details")
         details["web_path"] = share.path
         return cls.from_json(details, sk=share.sk)

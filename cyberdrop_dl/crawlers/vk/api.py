@@ -323,8 +323,10 @@ class VKCatalog(API.Endpoint[VKAPI]):
         )
         catalog = resp["catalog"]
         section_id = catalog["default_section"]
-        section = next(s for s in catalog["sections"] if s["id"] == section_id)
-        return CatalogSection(section_id, next_from=section.get("next_from"), videos=resp["videos"])
+        for section in catalog["sections"]:
+            if section["id"] == section_id:
+                return CatalogSection(section_id, next_from=section.get("next_from"), videos=resp["videos"])
+        raise ScrapeError(404)
 
     async def get_section(self, section_id: str, start_from: str) -> CatalogSection:
         resp = await self.api.method(

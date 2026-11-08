@@ -5,9 +5,8 @@ import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
-from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, js_unpacker
+from cyberdrop_dl.utils import css, extr_text, js_unpacker, next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -81,10 +80,7 @@ class RecordPlayAPI(API):
 def _extract_src(soup: bs4.Tag) -> str:
     player = js_unpacker.unpack(js_unpacker.find(soup))
     sources = dict(sorted(_extract_sources(player), reverse=True))
-    if not sources:
-        raise ScrapeError(422, "No stream source found")
-
-    return next(iter(sources.values()))
+    return next_or_error(sources.values(), "stream source")
 
 
 def _extract_sources(player: str) -> Generator[tuple[str, str]]:

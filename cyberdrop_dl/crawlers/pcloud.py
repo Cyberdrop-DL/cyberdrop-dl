@@ -10,7 +10,7 @@ from pydantic import TypeAdapter
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import dates
+from cyberdrop_dl.utils import dates, next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -136,9 +136,9 @@ class PCloudCrawler(Crawler):
         )
         resp: dict[str, Any] = await self._api_request(api_url)
         if variants := resp.get("variants"):
-            resp = next(v for v in variants if v["transcodetype"] == "original")
+            resp = next_or_error((v for v in variants if v["transcodetype"] == "original"), "original stream")
 
-        host: str = next(iter(resp["hosts"]))
+        host: str = next_or_error(resp["hosts"], "stream host")
         path: str = resp["path"]
         return self.parse_url(f"https://{host}{path}")
 

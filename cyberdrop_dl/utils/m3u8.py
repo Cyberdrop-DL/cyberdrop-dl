@@ -14,6 +14,7 @@ from m3u8.mixins import BasePathMixin, GroupedBasePathMixin
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Codecs, Resolution
 from cyberdrop_dl.signature import dataclass_repr, vars_repr
+from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.urls import parse_http_url
 
@@ -145,11 +146,13 @@ class RenditionDetails:
         media = MediaList(playlist.media)
 
         if audio_group_id := playlist.stream_info.audio:
-            audio = next(media.filter_by(type=MediaType.audio, group_id=audio_group_id))
+            audio = next_or_error(media.filter_by(type=MediaType.audio, group_id=audio_group_id), "M3U8 audio group")
             audio_url: AbsoluteHttpURL | None = get_url(audio)
 
         if subtitle_group_id := playlist.stream_info.subtitles:
-            subtitle = next(media.filter_by(type=MediaType.subtitles, group_id=subtitle_group_id))
+            subtitle = next_or_error(
+                media.filter_by(type=MediaType.subtitles, group_id=subtitle_group_id), "M3U8 subtitle group"
+            )
             subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
 
         media_urls = MediaURLs(video_url, audio_url, subtitle_url)

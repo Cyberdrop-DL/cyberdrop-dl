@@ -11,6 +11,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import PasswordProtectedError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import parse_http_url
@@ -184,7 +185,10 @@ def _select_stream(video: Video) -> Stream:
             return video.streams[0]
         case _:
             logger.debug("Found multiple streams for video %s. Falling back to HLS auto", video.id)
-            return next(s for s in video.streams if s.url.suffix == ".m3u8" and s.resolution == Resolution.unknown())
+            auto_streams = (
+                s for s in video.streams if s.url.suffix == ".m3u8" and s.resolution == Resolution.unknown()
+            )
+            return next_or_error(auto_streams, "HLS auto stream")
 
 
 _VIDEO_ERRORS = {

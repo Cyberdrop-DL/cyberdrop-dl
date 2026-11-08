@@ -9,6 +9,7 @@ from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
+from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -41,7 +42,7 @@ class TransferItCrawler(Crawler):
     async def transfer(self, scrape_item: ScrapeItem, transfer_id: str) -> None:
         # TODO: handle expired links and password protected links
         fs = await self.core.get_filesystem(transfer_id)
-        root = next(iter(fs))
+        root = next_or_error(fs, "root node")
         title = self.create_title(root.attributes.name, transfer_id)
         scrape_item.setup_as_album(title, album_id=transfer_id)
         await self._walk_nodes(scrape_item, fs, transfer_id)

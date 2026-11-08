@@ -5,6 +5,7 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -86,8 +87,10 @@ class ClypItAPI(API):
             api_url = api_url.with_query(token=token)
 
         playlist = await self.request_json(api_url)
-        audios = map(_parse_audio, playlist["AudioFiles"])
-        return next(a for a in audios if a.id == audio_id)
+        for audio in map(_parse_audio, playlist["AudioFiles"]):
+            if audio.id == audio_id:
+                return audio
+        raise ScrapeError(404)
 
     async def wav(self, audio_id: str, token: str | None) -> AbsoluteHttpURL | None:
         if self.config.crawlers.clypit.prefer_mp3:

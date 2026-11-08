@@ -28,12 +28,12 @@ def ifind(
 
 def find(soup: Tag, *keys: str, validate: Mapping[str, Any] | None = None) -> tuple[traversal.Path, dict[str, Any]]:
     json_lds, visitor = _find(soup, keys, validate)
-    try:
-        return next(traversal.traverse(json_lds, visitor))
-    except StopIteration:
-        contains = tuple(sorted(visitor.target_keys))
-        details = f" with keys {contains}" if contains else ""
-        raise css.SelectorError(f"ld-json{details} not found") from None
+    for item in traversal.traverse(json_lds, visitor):
+        return item
+
+    contains = tuple(sorted(visitor.target_keys))
+    details = f" with keys {contains}" if contains else ""
+    raise css.SelectorError(f"ld-json{details} not found") from None
 
 
 def find_elem(soup: Tag, type: str, *keys: str) -> dict[str, Any]:  # noqa: A002

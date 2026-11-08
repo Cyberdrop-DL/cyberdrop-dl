@@ -20,6 +20,7 @@ from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
+from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -140,7 +141,7 @@ class MegaNzCrawler(Crawler):
 
         selected_node = root_id or single_file_id
         fs = await self.core.get_public_filesystem(handle, public_key)
-        root = next(iter(fs))
+        root = next_or_error(fs, "Root node")
         title = self.create_title(root.attributes.name, handle)
         scrape_item.setup_as_album(title, album_id=handle)
         canonical_url = (self.PRIMARY_URL / "folder" / handle).with_fragment(public_key)

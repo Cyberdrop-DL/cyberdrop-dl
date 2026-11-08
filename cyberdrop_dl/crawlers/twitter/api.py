@@ -194,7 +194,9 @@ class BroadcastEndpoint(API.Endpoint[TwitterAPI]):
         url = self.api.ENTRYPOINT / "live_event/1" / event_id / "timeline.json"
         resp = await self.api.request_json(url, auth=True)
         bds_entries: dict[str, dict[str, Any]] = resp["twitter_objects"]["broadcasts"]
-        return self._parse(next(iter(bds_entries.values())))
+        for bd in bds_entries.values():
+            return self._parse(bd)
+        raise ScrapeError(404)
 
     def _parse(self, bd: dict[str, Any]) -> Broadcast:
         if not bd:

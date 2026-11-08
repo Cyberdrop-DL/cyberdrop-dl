@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Concatenate, Self, cast, overload
 
 from cyberdrop_dl.constants import MISSING
+from cyberdrop_dl.exceptions import ScrapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
@@ -247,4 +248,12 @@ class Deduper[R]:
 
 
 def unique[T](itr: Iterable[T], /, key: Callable[[T], Any] | None = None) -> Iterable[T]:
+    if key is None:
+        return dict.fromkeys(itr)
     return Deduper(key).filter(itr)
+
+
+def next_or_error[T](itr: Iterable[T], name: str) -> T:
+    for item in itr:
+        return item
+    raise ScrapeError(422, f"Unable to find {name}")
