@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, ClassVar, Unpack, override
+import itertools
+from typing import TYPE_CHECKING, ClassVar, Unpack, final, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils import css, open_graph, unique
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -19,10 +22,11 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     ALBUM = "a.album-link"
-    MEDIA = ".media-group " + css.where("img.img-front", ".video video > source")
-    THUMB = "video[poster]"
+    IMAGES = ".media-group .img-front"
+    VIDEO = ".media-group .video video"
     NEXT_PAGE = 'a[rel="next"]'
 
 
@@ -107,26 +111,22 @@ class EromeCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
         async with self.request(scrape_item.url) as resp:
-            soup = await resp.soup()
+            html = await resp.text()
             scrape_item.url = resp.url
 
-        name = open_graph.title(soup).removesuffix("- EroMe")
-        title = self.create_title(name, album_id)
+        album = await _extract_album(html)
+        title = self.create_title(album.name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 
         downloaded = await self.get_completed_by_album(album_id)
         sleep = aio.periodic_sleep(10)
+
         async with aio.non_cancelling_taskgroup() as tg:
-            for media in self.iter_urls(soup, Selector.MEDIA, "src"):
-                if media in downloaded:
+            for media in itertools.chain(album.images, album.videos):
+                if media.src in downloaded:
                     continue
 
-                try:
-                    thumb = css.select(soup, "video[poster]", "poster")
-                except css.SelectorError:
-                    thumb = None
-
-                tg.create_task(self._file(scrape_item, media, thumb))
+                tg.create_task(self._file(scrape_item, media.src, media.thumb))
                 scrape_item.add_children()
                 await sleep()
 
@@ -161,3 +161,35 @@ class EromeFanCrawler(EromeCrawler):
                 await self.search(scrape_item, query)
             case _:
                 raise ValueError
+
+
+@struct
+class Media:
+    src: AbsoluteHttpURL
+    thumb: str | None = None
+
+
+@struct
+class Album:
+    name: str
+    images: tuple[Media, ...]
+    videos: tuple[Media, ...]
+
+
+@aio.to_thread
+def _extract_album(html: str) -> Album:
+    soup = css.soup(html)
+
+    def videos():
+        for video in css.iselect(soup, Selector.VIDEO):
+            yield Media(src=parse_http_url(css.select(video, "source", "src")), thumb=css.attr_or_none(video, "poster"))
+
+    def images():
+        for url in unique(css.iselect(soup, Selector.IMAGES, "src")):
+            yield Media(src=parse_http_url(url))
+
+    return Album(
+        name=open_graph.title(soup).removesuffix("- EroMe"),
+        images=tuple(images()),
+        videos=tuple(videos()),
+    )
