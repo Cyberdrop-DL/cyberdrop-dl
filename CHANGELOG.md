@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Some files being wrongly skipped as "previously downloaded" if they have the same name as an old download (Mediafire)
+- Collections (Hitomi)
+- Duplicated thumbs (Erome)
 
 ## [10.15.3] - 2026-11-02
 
