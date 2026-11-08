@@ -501,6 +501,16 @@ class HTTPMixin(HTTPController, Protocol):
         async with self.request(url, method, **kwargs) as resp:
             return await resp.text()
 
+    async def request_html(
+        self,
+        url: AbsoluteHttpURL,
+        /,
+        method: HttpMethod = "GET",
+        **kwargs: Unpack[RequestParams],
+    ) -> str:
+        async with self.request(url, method, **kwargs) as resp:
+            return await resp.html()
+
     async def request_location(
         self,
         url: AbsoluteHttpURL,

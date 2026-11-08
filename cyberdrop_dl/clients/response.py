@@ -226,8 +226,12 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
 
     @final
     async def soup(self, encoding: str | None = None, *, parse_only: tuple[str] | str | None = None) -> BeautifulSoup:
-        self.__check_content_type("text", "html", expecting="HTML")
-        return await css.asoup(await self.text(encoding), parse_only=parse_only)
+        return await css.asoup(await self.html(encoding), parse_only=parse_only)
+
+    @final
+    async def html(self, encoding: str | None = None) -> str:
+        self.expect_html()
+        return await self.text(encoding)
 
     async def json(
         self,
@@ -248,6 +252,13 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
             return
 
         self.__check_content_type(*strict_variadic(content_type), expecting="JSON")
+
+    @final
+    def expect_html(self) -> None:
+        if self.status == 204:
+            raise ScrapeError(204)
+
+        self.__check_content_type("text", "html", expecting="HTML")
 
     @final
     def create_report(self, exc: Exception | None = None, **extras: Any) -> str:
