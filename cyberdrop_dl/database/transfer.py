@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import LiteralString
 
 from cyberdrop_dl.database import Database, connect
+from cyberdrop_dl.database.migrations import transfer_legacy_media
 from cyberdrop_dl.database.tables.history import apply_fixes
 from cyberdrop_dl.database.tables.schema import CURRENT_APP_SCHEMA_VERSION, Version
 from cyberdrop_dl.logs import setup_console_logging
@@ -103,8 +104,6 @@ def _transfer_table(new_conn: sqlite3.Connection, table: str) -> None:
 
 
 def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
-    """Populate the new `files` table from `old.media`."""
-
     old_tables = _get_table_names(new_conn, schema="old")
     if "media" not in old_tables:
         logger.debug("_transfer_media_to_files: no old media table, skipping")
@@ -114,22 +113,7 @@ def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
     file_size_expr = '"file_size"' if "file_size" in old_media_cols else "NULL"
 
     logger.info("_transfer_media_to_files: old.media -> files")
-    # download_path is not absolute in older versions, but we can still use it to populate the folder column.
-    new_conn.execute(
-        f"""
-        INSERT OR IGNORE INTO "files"
-            ("folder", "download_filename", "original_filename", "file_size", "referer", "date")
-        SELECT
-            "download_path",
-            "download_filename",
-            "original_filename",
-            {file_size_expr},
-            "referer",
-            CAST(strftime('%s', "created_at") AS INTEGER)
-        FROM old."media"
-        WHERE "download_path" IS NOT NULL
-        """  # noqa: S608
-    )
+    transfer_legacy_media(new_conn, file_size_expr)
 
 
 # TransferManager
@@ -140,8 +124,8 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-def run(db_path: Path, *, force: bool = False) -> None:
-    if not db_path.exists():
+async def run_async(db_path: Path, *, force: bool = False) -> None:
+    if not await asyncio.to_thread(db_path.exists):
         raise FileNotFoundError(f"Database not found: {db_path}")
 
     with sqlite3.connect(db_path) as probe:
@@ -160,7 +144,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
     new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_APP_SCHEMA_VERSION}_{now}{db_path.suffix}")
 
     logger.debug("Creating new database at: %s", new_path)
-    _create_new_database(new_path)
+    await _create_new_database(new_path)
     with sqlite3.connect(new_path) as new_conn:
         new_conn.execute("PRAGMA foreign_keys=OFF")
         new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
@@ -170,38 +154,35 @@ def run(db_path: Path, *, force: bool = False) -> None:
             new_conn.rollback()
             new_conn.close()
             logger.exception("Transfer failed - original database has NOT been changed")
-            new_path.unlink()
+            await asyncio.to_thread(new_path.unlink)
             raise
         else:
             new_conn.commit()
 
-    _apply_fixes(new_path)
+    await _apply_fixes(new_path)
     backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
-    db_path.rename(backup_path)
-    new_path.rename(db_path)
+    await asyncio.to_thread(db_path.rename, backup_path)
+    await asyncio.to_thread(new_path.rename, db_path)
     logger.info("Transfer complete", extra={"color": "green"})
     logger.info("Backup at: '%s'", backup_path)
     logger.info("New schema version: %s", CURRENT_APP_SCHEMA_VERSION)
 
 
-def _create_new_database(path: Path) -> None:
-    async def connect() -> None:
-        async with Database(_db_path=path, ignore_history=True):
-            pass
-
-    asyncio.run(connect())
+async def _create_new_database(path: Path) -> None:
+    async with Database(_db_path=path, ignore_history=True, _auto_migrate=False) as database:
+        await database.schema.update()
 
 
-def _apply_fixes(db_path: Path) -> None:
+async def _apply_fixes(db_path: Path) -> None:
+    conn = await connect(db_path)
+    try:
+        await apply_fixes(conn)
+    finally:
+        await conn.close()
 
-    async def fix() -> None:
-        conn = await connect(db_path)
-        try:
-            await apply_fixes(conn)
-        finally:
-            await conn.close()
 
-    asyncio.run(fix())
+def run(db_path: Path, *, force: bool = False) -> None:
+    asyncio.run(run_async(db_path, force=force))
 
 
 def _transfer(new_conn: sqlite3.Connection) -> None:
