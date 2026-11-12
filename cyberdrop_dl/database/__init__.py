@@ -43,7 +43,9 @@ class Database:
                 import sqlite3
 
                 with sqlite3.connect(self._db_path) as probe:
-                    has_tables = bool(probe.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' LIMIT 1").fetchone())
+                    has_tables = bool(
+                        probe.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' LIMIT 1").fetchone()
+                    )
                     version = detect_version(probe)
 
                 if has_tables and version != CURRENT_APP_SCHEMA_VERSION:
