@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Self
 import aiosqlite
 
 from .tables import HashTable, HistoryTable, SchemaVersionTable
+from .tables.schema import CURRENT_APP_SCHEMA_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -22,6 +23,7 @@ async def connect(path: Path) -> aiosqlite.Connection:
 class Database:
     _db_path: Path
     ignore_history: bool
+    _auto_migrate: bool = True
 
     history: HistoryTable = dataclasses.field(init=False)
     hash: HashTable = dataclasses.field(init=False)
@@ -34,12 +36,27 @@ class Database:
         self.schema = SchemaVersionTable(self)
 
     async def __aenter__(self) -> Self:
+        if self._auto_migrate:
+            from .transfer import detect_version, run_async
+
+            if self._db_path.exists():
+                import sqlite3
+
+                with sqlite3.connect(self._db_path) as probe:
+                    has_tables = bool(
+                        probe.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' LIMIT 1").fetchone()
+                    )
+                    version = detect_version(probe)
+
+                if has_tables and version != CURRENT_APP_SCHEMA_VERSION:
+                    await run_async(self._db_path)
+
         self._db_conn = await connect(self._db_path)
         await self._pre_allocate()
         await self.schema.create()
         await self.history.create()
         await self.hash.create()
-        if not self.schema.up_to_date:
+        if not self.schema.up_to_date and self._auto_migrate:
             await self.history.apply_updates()
             await self.schema.update()
 
