@@ -30,6 +30,8 @@ class CachedAsyncFunc[T](Protocol):
 
     def get(self) -> T | None: ...
 
+    def save(self, val: T) -> None: ...
+
 
 class LRUCachedAsyncFunc[T, R](Protocol):
     def __call__(self, val: T, /) -> CoroutineType[Any, Any, R]: ...
@@ -286,6 +288,7 @@ def cached_fn[T](
 
     wrapper.clear = lambda: cache.discard(key)  # pyright: ignore[reportAttributeAccessIssue]
     wrapper.get = lambda: cache.get(key, ttl)  # pyright: ignore[reportAttributeAccessIssue]
+    wrapper.save = lambda val: cache.save(key, val, ttl=ttl)  # pyright: ignore[reportAttributeAccessIssue]
     return cast("CachedAsyncFunc[T]", cast("object", wrapper))
 
 

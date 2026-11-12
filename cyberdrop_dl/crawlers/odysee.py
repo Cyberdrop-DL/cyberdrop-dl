@@ -136,7 +136,7 @@ class LBRYAPI(API):
 
         stream_type = stream["value"].get("stream_type", "livestream")
         if stream_type != "video":
-            raise ScrapeError(422, f"{stream_type = } is not supported")
+            raise ScrapeError.live_stream(stream_type)
         return Video.parse(stream)
 
     async def stream(self, url: str, query: Mapping[str, str]) -> AbsoluteHttpURL:

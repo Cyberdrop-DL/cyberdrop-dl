@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
-import dataclasses
 import json
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, Unpack, final, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import cached_method
-from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, dates, extr_text, json_ld, next_or_error
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -21,6 +20,8 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
+    from cyberdrop_dl.clients.request import RequestParams
+    from cyberdrop_dl.constants import HttpMethod
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -162,7 +163,7 @@ class PornHubCrawler(Crawler):
         src = css.select(soup, Selector.PHOTO, "src")
         album = _extr_album(soup)
         scrape_item.setup_as_album(self.create_title(album.name, album.id), album_id=album.id)
-        await self._photo(scrape_item, Photo(photo_id, self.parse_url(src)))
+        await self._photo(scrape_item, Photo.from_src(photo_id, self.parse_url(src)))
 
     @error_handling_wrapper
     async def gif(self, scrape_item: ScrapeItem, gif_id: str) -> None:
@@ -176,7 +177,7 @@ class PornHubCrawler(Crawler):
             "GIF source",
         )
         scrape_item.uploaded_at = json_ld.upload_date(soup)
-        await self._photo(scrape_item, Photo(gif_id, self.parse_url(src)))
+        await self._photo(scrape_item, Photo.from_src(gif_id, self.parse_url(src)))
 
     @error_handling_wrapper
     async def _photo(self, scrape_item: ScrapeItem, photo: Photo) -> None:
@@ -192,12 +193,20 @@ class PornHubCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
-        title: str = css.select_text(soup, Selector.Playlist.TITLE)
-        title = self.create_title(title, playlist_id)
+        playlist, downloded = await aio.gather(self.api.playlist(playlist_id), self.get_completed_by_album(playlist_id))
+        title = self.create_title(playlist, playlist_id)
         scrape_item.setup_as_album(f"{title} [playlist]", album_id=playlist_id)
-        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.Playlist.VIDEOS):
-            self.create_task(self.run(new_scrape_item, check_referer=True))
+
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            for video_id in await self.api.playlist_videos(playlist_id):
+                url = self.PRIMARY_URL / "embed" / video_id
+                if url in downloded:
+                    continue
+
+                tg.create_task(self._video_task(scrape_item.create_child(url), video_id))
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
@@ -206,25 +215,29 @@ class PornHubCrawler(Crawler):
         if await self.check_complete(embed_url):
             return
 
+        await self._video(scrape_item, video_id)
+
+    async def _video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         video = await self.api.video(video_id)
         scrape_item.uploaded_at = video.uploaded_at
         src = max(f for f in video.formats if f.format == "hls")
         m3u8_url = self.parse_url(src.url)
-        headers = {"Referer": str(video.url)}
+        view_url = self.PRIMARY_URL.joinpath("view_video.php").with_query(viewkey=video_id)
+        headers = {"Referer": str(view_url)}
         for retry in (True, False):
             try:
                 m3u8, _ = await self.request_m3u8_playlist(m3u8_url, headers=headers, impersonate=True)
             except DownloadError as e:
-                if e.status == 410:
-                    if retry:
-                        continue
-                    raise ScrapeError(403, "HLS download blocked by site") from None
-                raise
+                if e.status != 410:
+                    raise
+                if retry:
+                    continue
+                raise ScrapeError(403, "HLS download blocked by site") from None
 
-        scrape_item.url = video.url
+        scrape_item.url = view_url
         filename = self.create_custom_filename(video.title, ext := ".mp4", file_id=video_id, resolution=src.resolution)
         await self.handle_file(
-            embed_url,
+            self.PRIMARY_URL / "embed" / video_id,
             scrape_item,
             video.title,
             ext,
@@ -233,8 +246,10 @@ class PornHubCrawler(Crawler):
             thumbnail=video.thumb,
         )
 
+    _video_task = auto_task_id(error_handling_wrapper(_video))
 
-@dataclasses.dataclass(frozen=True, slots=True)
+
+@struct(kw_only=False)
 class PornHubProfileCrawler:
     crawler: PornHubCrawler
     profile: Profile
@@ -284,7 +299,7 @@ class PornHubProfileCrawler:
                 await sleep()
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@struct(kw_only=False)
 class Profile:
     type: str
     name: str
@@ -294,22 +309,29 @@ class Profile:
         return PornHubCrawler.PRIMARY_URL / self.type / self.name
 
 
-@dataclasses.dataclass(slots=True, order=True)
+@struct(order=True)
 class Photo:
     id: str
     src: AbsoluteHttpURL
 
-    name: str = dataclasses.field(init=False)
-    original_name: str = dataclasses.field(init=False)
-    canonical_url: AbsoluteHttpURL = dataclasses.field(init=False)
+    name: str
+    original_name: str
+    canonical_url: AbsoluteHttpURL
 
-    def __post_init__(self) -> None:
-        self.original_name = self.src.name.rpartition(")")[-1]
-        self.name = self.original_name.removeprefix("original_")
-        self.canonical_url = self.src.with_name(self.name)
+    @classmethod
+    def from_src(cls, photo_id: str, src: AbsoluteHttpURL) -> Self:
+        original_name = src.name.rpartition(")")[-1]
+        name = original_name.removeprefix("original_")
+        return cls(
+            id=photo_id,
+            src=src,
+            original_name=original_name,
+            name=name,
+            canonical_url=src.with_name(name),
+        )
 
 
-@dataclasses.dataclass(order=True, slots=True, frozen=True)
+@struct(order=True)
 class Album:
     id: str
     name: str
@@ -323,21 +345,20 @@ class Media(TypedDict):
     quality: str | int | list[str]
 
 
-@dataclasses.dataclass(slots=True, order=True, frozen=True)
+@struct(order=True)
 class Format:
     resolution: Resolution
     format: Literal["hls", "mp4"]
     url: str
 
 
-@dataclasses.dataclass(slots=True, frozen=True, order=True)
+@struct(order=True)
 class Video:
     id: str
     title: str
     thumb: str | None
     uploaded_at: float | None
     formats: tuple[Format, ...]
-    url: AbsoluteHttpURL
 
 
 class PornHubAPI(API):
@@ -346,40 +367,45 @@ class PornHubAPI(API):
         soup = await self.request_soup(self.PRIMARY_URL)
         return css.select(soup, "input[data-token]", "data-token")
 
+    @override
+    async def request_soup(
+        self, url: AbsoluteHttpURL, /, method: HttpMethod = "GET", **kwargs: Unpack[RequestParams]
+    ) -> BeautifulSoup:
+        soup = await super().request_soup(url, method, **kwargs)
+        try:
+            token = css.select(soup, "input[data-token]", "data-token")
+        except css.SelectorError:
+            pass
+        else:
+            self.csrf_token.save(token)
+        return soup
+
     async def album(self, album_id: str) -> Album:
         url = self.PRIMARY_URL / "album" / album_id
         soup = await self.request_soup(url, impersonate="firefox")
-        return Album(album_id, name=css.select_text(soup, Selector.Album.TITLE))
+        return Album(id=album_id, name=css.select_text(soup, Selector.Album.TITLE))
 
     async def album_photos(self, album_id: str) -> AsyncGenerator[Photo]:
         url = self.PRIMARY_URL / "api/v1/album" / album_id / "show_album_json"
         resp: dict[str, Any] = await self.request_json(url.with_query(token=await self.csrf_token()))
         photos: dict[str, dict[str, Any]] = resp["photos"]
         for photo_id, photo in photos.items():
-            yield Photo(photo_id, self.parse_url(photo["img_large"]))
+            yield Photo.from_src(photo_id, self.parse_url(photo["img_large"]))
 
     async def video(self, video_id: str) -> Video:
         page_url = self.PRIMARY_URL.joinpath("view_video.php").with_query(viewkey=video_id)
-        async with self.request(page_url) as resp:
-            soup = await resp.soup()
-            html = await resp.text()
+        html = await self.request_html(page_url)
+        return await _extract_video(html, video_id)
 
-        def get_flashvars():
-            _check_video_is_available(soup, html)
-            return _extr_flashvars(soup)
+    async def playlist(self, playlist_id: str) -> str:
+        url = self.PRIMARY_URL / "playlist" / playlist_id
+        soup = await self.request_soup(url)
+        return css.select_text(soup, Selector.Playlist.TITLE)
 
-        flashvars = await asyncio.to_thread(get_flashvars)
-        if flashvars.get("video_unavailable_country", "false") != "false":
-            raise ScrapeError(HTTPStatus.FORBIDDEN, "Video is geo restricted")
-
-        return Video(
-            id=video_id,
-            title=flashvars["video_title"],
-            thumb=flashvars.get("image_url"),
-            formats=tuple(_parse_formats(flashvars["mediaDefinitions"])),
-            uploaded_at=_extr_upload_date(soup),
-            url=page_url,
-        )
+    async def playlist_videos(self, playlist_id: str) -> list[str]:
+        api_url = self.PRIMARY_URL / "api/v2/playlist" / playlist_id / "videos"
+        resp = await self.request_json(api_url.with_query(token=await self.csrf_token()))
+        return [video["vkey"] for video in resp["videos"]]
 
 
 def _extr_album(soup: BeautifulSoup) -> Album:
@@ -449,3 +475,20 @@ def _check_video_is_available(soup: BeautifulSoup, html: str) -> None:
         or "This video is currently unavailable" in html
     ):
         raise ScrapeError(HTTPStatus.GONE)
+
+
+@aio.to_thread
+def _extract_video(html: str, video_id: str) -> Video:
+    soup = css.soup(html)
+    _check_video_is_available(soup, html)
+    flashvars = _extr_flashvars(soup)
+    if flashvars.get("video_unavailable_country", "false") != "false":
+        raise ScrapeError(HTTPStatus.FORBIDDEN, "Video is geo restricted")
+
+    return Video(
+        id=video_id,
+        title=flashvars["video_title"],
+        thumb=flashvars.get("image_url"),
+        formats=tuple(_parse_formats(flashvars["mediaDefinitions"])),
+        uploaded_at=_extr_upload_date(soup),
+    )

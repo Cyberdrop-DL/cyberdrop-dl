@@ -428,9 +428,8 @@ def register_crawler(
                 continue
             logger.info("Successfully mapped %s to crawler %s", crawler.PRIMARY_URL, crawler._generic_base_)
 
-        elif other:
-            if domain in crawlers_map:
-                logger.warning("%s from %s already registered by %s", domain, crawler.NAME, other)
+        elif other and domain in crawlers_map:
+            logger.warning("%s from %s already registered by %s", domain, crawler.NAME, other)
 
         crawlers_map[domain] = crawler
 
