@@ -139,6 +139,11 @@ _MEGA_HTTP_CODES = Final = {
 def _mega_nz_context() -> Generator[None]:
     try:
         yield
+
+    except mega.errors.FileSystemError as e:
+        nodes = [{"id": node.id, "parent_id": node.parent_id} for node in e.nodes]
+        raise CDLAppError(create_error_msg(422), f"{e}\n{nodes}", csv_msg=str(e)) from None
+
     except mega.errors.RequestError as e:
         if e.code and (http_code := _MEGA_HTTP_CODES.get(e.code)):
             ui_failure = create_error_msg(http_code)
