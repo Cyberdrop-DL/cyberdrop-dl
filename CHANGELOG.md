@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Some files being wrongly skipped as "previously downloaded" if they have the same name as an old download (Mediafire)
 - `No file extension` errors due to empty filenames for some public files (Mega.nz)
 - Collections (Hitomi)
+- Image downloads (Imagebam)
 - Duplicated thumbs (Erome)
 
 ## [10.15.3] - 2026-11-02
