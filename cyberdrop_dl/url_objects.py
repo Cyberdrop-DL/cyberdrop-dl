@@ -203,6 +203,7 @@ class MediaItem:
     uploaded_at: int | None = None
     xxhash: str | None = None
     thumbnail: AbsoluteHttpURL | None = None
+    thumbnails: tuple[AbsoluteHttpURL, ...] = ()
 
     parents: tuple[AbsoluteHttpURL, ...] = dataclasses.field(default_factory=tuple)
     attempts: int = dataclasses.field(init=False, default=0)

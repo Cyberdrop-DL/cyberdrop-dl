@@ -587,41 +587,73 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         Referer is the referer to use for the db, not the actual HTTP referer"""
 
-        referer = referer or scrape_item.url
-        if frag:
-            referer = referer.with_fragment(f"{referer.fragment} - {frag}" if referer.fragment else frag)
+        await self.handle_file_v2(
+            scrape_item,
+            Download(
+                url=url,
+                filename=filename,
+                ext=ext,
+                custom_filename=custom_filename,
+                debrid_link=debrid_link,
+                m3u8=m3u8,
+                metadata=metadata,
+                referer=referer,
+                frag=frag,
+                thumbnails=(thumbnail,),
+                headers=headers,
+                uploaded_at=uploaded_at,
+            ),
+        )
+
+    @final
+    async def _create_media_item(self, scrape_item: ScrapeItem, dl: Download) -> MediaItem:
+        referer = dl.referer or scrape_item.url
+        if dl.frag:
+            referer = referer.with_fragment(f"{referer.fragment} - {dl.frag}" if referer.fragment else dl.frag)
 
         media_item = MediaItem(
-            url=url,
+            url=dl.url,
             domain=self.DOMAIN,
             download_folder=await aio.resolve(_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config)),
-            filename=custom_filename or filename,
-            db_path=self.__db_path__(url),
+            filename=dl.custom_filename or dl.filename,
+            db_path=self.__db_path__(dl.url),
             referer=referer,
             album_id=scrape_item.album_id,
-            ext=ext or Path(filename).suffix,
-            original_filename=filename,
+            ext=dl.ext or Path(dl.filename).suffix,
+            original_filename=dl.filename,
             parents=tuple(scrape_item.parents),
-            uploaded_at=uploaded_at or scrape_item.uploaded_at,
-            debrid_url=_prepare_debrid_url(debrid_link),
+            uploaded_at=dl.uploaded_at or scrape_item.uploaded_at,
+            debrid_url=_prepare_debrid_url(dl.debrid_link),
             json_check=self.__json_resp_check__,
         )
 
         if media_item.ext in FileExt.MEDIA:
-            media_item.thumbnail = self.normalize_url(thumbnail)
+            media_item.thumbnails = tuple(filter(None, map(self.normalize_url, dl.thumbnails)))
+            if media_item.thumbnails:
+                media_item.thumbnail = media_item.thumbnails[0]
 
         media_item.headers.update(self._prepare_headers(scrape_item))
-        if headers:
-            media_item.headers.update(headers)
+        if dl.headers:
+            media_item.headers.update(dl.headers)
 
-        if metadata:
-            media_item.metadata = metadata
+        if dl.metadata:
+            media_item.metadata = dl.metadata
 
+        return media_item
+
+    @final
+    async def handle_file_v2(self, scrape_item: ScrapeItem, dl: Download) -> None:
+        """Creates a MediaItem and hands it off to the downloader.
+
+        Referer is the referer to use for the db, not the actual HTTP referer"""
+
+        media_item = await self._create_media_item(scrape_item, dl)
         if not USE_RETRY_PATH.get():
             await asyncio.to_thread(check_path_traversal, self.config.download_folder, media_item.download_folder)
+
         check_dangerous_filename(media_item.download_filename or media_item.filename)
-        await self.handle_media_item(media_item, m3u8)
-        await self.handle_thumb(media_item.thumbnail, media_item.filename, scrape_item)
+        await self.handle_media_item(media_item, dl.m3u8)
+        await self.handle_thumbs(media_item.thumbnails, media_item.filename, scrape_item)
 
     @final
     @classmethod
@@ -635,12 +667,38 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return url
 
     @final
-    async def handle_thumb(
-        self, url: AbsoluteHttpURL | None, filename: str, scrape_item: ScrapeItem, suffix: str = "_thumb"
+    async def handle_thumbs(
+        self, urls: Iterable[AbsoluteHttpURL], filename: str, scrape_item: ScrapeItem, suffix: str = "_thumb"
     ) -> None:
+        if not self.config.filters.files.thumbnails:
+            return
+
+        async with asyncio.TaskGroup() as tg:
+            for idx, thumb in enumerate(urls):
+                i_suffix = suffix
+                if idx > 1:
+                    i_suffix += f"_{idx}"
+
+                tg.create_task(
+                    self.__handle_thumb(
+                        thumb,
+                        filename,
+                        scrape_item,
+                        suffix=i_suffix,
+                    )
+                )
+
+    @final
+    async def handle_thumb(
+        self, url: AbsoluteHttpURL | str | None, filename: str, scrape_item: ScrapeItem, suffix: str = "_thumb"
+    ) -> None:
+        url = self.normalize_url(url)
         if not (url and self.config.filters.files.thumbnails):
             return
 
+        await self.__handle_thumb(url, filename, scrape_item, suffix)
+
+    async def __handle_thumb(self, url: AbsoluteHttpURL, filename: str, scrape_item: ScrapeItem, suffix: str) -> None:
         suffix = suffix if suffix.startswith("_") else f"_{suffix}"
         async with self.catch_errors(url):
             ext = await self.sniff_ext(url)
@@ -977,13 +1035,20 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             page_url = self.parse_url(page_url_str, relative_to=relative_to, trim=trim)
 
     async def direct_file(
-        self, scrape_item: ScrapeItem, /, url: AbsoluteHttpURL | None = None, assume_ext: str | None = None
+        self,
+        scrape_item: ScrapeItem,
+        /,
+        url: AbsoluteHttpURL | None = None,
+        assume_ext: str | None = None,
+        *,
+        filename: str | None = None,
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
         url = url or scrape_item.url
+        name = filename or url.name or url.parent.name
         async with self.catch_errors(url):
-            filename, ext = self.get_filename_and_ext(url.name or url.parent.name, assume_ext=assume_ext)
-            await self.handle_file(url, scrape_item, filename, ext)
+            filename, ext = self.get_filename_and_ext(name, assume_ext=assume_ext)
+            await self.handle_file(url, scrape_item, name, ext, custom_filename=filename)
 
     @final
     @classmethod
@@ -1374,6 +1439,22 @@ def compose_title(  # noqa: PLR0913
 
     # Remove double spaces
     return " ".join(title.split())
+
+
+@struct
+class Download:
+    url: AbsoluteHttpURL
+    filename: str
+    ext: str | None = None
+    custom_filename: str | None = None
+    debrid_link: DebridURL = None
+    m3u8: m3u8.Rendition | MuxVideo | None = None
+    metadata: object = None
+    referer: AbsoluteHttpURL | None = None
+    frag: str | None = None
+    thumbnails: tuple[AbsoluteHttpURL | str | None, ...] = ()
+    headers: Mapping[str, str] | None = None
+    uploaded_at: int | None = None
 
 
 def compose_ep_name(season: int | None, ep: int | None, name: str | None) -> str:

@@ -117,19 +117,17 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
         self, scrape_item: ScrapeItem, src: AbsoluteHttpURL | None = None, name: str | None = None
     ) -> None:
         src = src or scrape_item.url
-        name = name or src.name
-        async with self.catch_errors(src):
-            if src.suffix == ".m3u8":
+        if src.suffix == ".m3u8":
+            async with self.catch_errors(src):
                 await self._m3u8(scrape_item, src, name)
-                return
+        else:
+            await self.direct_file(scrape_item, src, filename=name)
 
-            filename, ext = self.get_filename_and_ext(name)
-            await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
-
-    async def _m3u8(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, name: str) -> None:
+    async def _m3u8(self, scrape_item: ScrapeItem, url: AbsoluteHttpURL, name: str | None) -> None:
         if await self.check_complete(url):
             return
 
+        name = name or url.name or url.parent.name
         m3u8, info = await self.request_m3u8(url)
         await self.handle_file(
             url,

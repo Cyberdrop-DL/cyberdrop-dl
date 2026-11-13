@@ -106,7 +106,7 @@ class ArteTVCrawler(Crawler):
             if play.meta.thumb:
                 tg.create_task(
                     self.handle_thumb(
-                        self.parse_url(play.meta.thumb),
+                        play.meta.thumb,
                         provider_id,
                         scrape_item,
                         suffix="cover",
