@@ -587,43 +587,45 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         Referer is the referer to use for the db, not the actual HTTP referer"""
 
+        referer = referer or scrape_item.url
+        if frag:
+            referer = referer.with_fragment(f"{referer.fragment} - {frag}" if referer.fragment else frag)
+
         await self.handle_file_v2(
             scrape_item,
             Download(
                 url=url,
                 filename=filename,
                 ext=ext,
+                download_folder=await aio.resolve(_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config)),
                 custom_filename=custom_filename,
-                debrid_link=debrid_link,
+                temp_url=debrid_link,
                 m3u8=m3u8,
                 metadata=metadata,
                 referer=referer,
-                frag=frag,
                 thumbnails=(thumbnail,),
-                headers=headers,
-                uploaded_at=uploaded_at,
+                headers=self._prepare_headers(scrape_item) | dict(headers or {}),
+                uploaded_at=uploaded_at or scrape_item.uploaded_at,
+                album_id=scrape_item.album_id,
+                parents=tuple(scrape_item.parents),
             ),
         )
 
     @final
-    async def _create_media_item(self, scrape_item: ScrapeItem, dl: Download) -> MediaItem:
-        referer = dl.referer or scrape_item.url
-        if dl.frag:
-            referer = referer.with_fragment(f"{referer.fragment} - {dl.frag}" if referer.fragment else dl.frag)
-
+    def _create_media_item(self, dl: Download) -> MediaItem:
         media_item = MediaItem(
             url=dl.url,
             domain=self.DOMAIN,
-            download_folder=await aio.resolve(_prepare_download_path(scrape_item, self.FOLDER_DOMAIN, self.config)),
+            download_folder=dl.download_folder,
             filename=dl.custom_filename or dl.filename,
             db_path=self.__db_path__(dl.url),
-            referer=referer,
-            album_id=scrape_item.album_id,
+            referer=dl.referer,
+            album_id=dl.album_id,
             ext=dl.ext or Path(dl.filename).suffix,
             original_filename=dl.filename,
-            parents=tuple(scrape_item.parents),
-            uploaded_at=dl.uploaded_at or scrape_item.uploaded_at,
-            debrid_url=_prepare_debrid_url(dl.debrid_link),
+            parents=dl.parents,
+            uploaded_at=dl.uploaded_at,
+            debrid_url=_prepare_debrid_url(dl.temp_url),
             json_check=self.__json_resp_check__,
         )
 
@@ -631,10 +633,6 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.thumbnails = tuple(filter(None, map(self.normalize_url, dl.thumbnails)))
             if media_item.thumbnails:
                 media_item.thumbnail = media_item.thumbnails[0]
-
-        media_item.headers.update(self._prepare_headers(scrape_item))
-        if dl.headers:
-            media_item.headers.update(dl.headers)
 
         if dl.metadata:
             media_item.metadata = dl.metadata
@@ -647,7 +645,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
 
         Referer is the referer to use for the db, not the actual HTTP referer"""
 
-        media_item = await self._create_media_item(scrape_item, dl)
+        media_item = self._create_media_item(dl)
         if not USE_RETRY_PATH.get():
             await asyncio.to_thread(check_path_traversal, self.config.download_folder, media_item.download_folder)
 
@@ -674,7 +672,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             return
 
         async with asyncio.TaskGroup() as tg:
-            for idx, thumb in enumerate(urls):
+            for idx, thumb in enumerate(urls, 1):
                 i_suffix = suffix
                 if idx > 1:
                     i_suffix += f"_{idx}"
@@ -1445,13 +1443,15 @@ def compose_title(  # noqa: PLR0913
 class Download:
     url: AbsoluteHttpURL
     filename: str
+    referer: AbsoluteHttpURL
+    download_folder: Path
     ext: str | None = None
+    album_id: str | None = None
+    parents: tuple[AbsoluteHttpURL, ...]
     custom_filename: str | None = None
-    debrid_link: DebridURL = None
+    temp_url: DebridURL = None
     m3u8: m3u8.Rendition | MuxVideo | None = None
     metadata: object = None
-    referer: AbsoluteHttpURL | None = None
-    frag: str | None = None
     thumbnails: tuple[AbsoluteHttpURL | str | None, ...] = ()
     headers: Mapping[str, str] | None = None
     uploaded_at: int | None = None
