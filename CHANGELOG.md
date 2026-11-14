@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Added
+
+- New `config fill` command
+
 ### Fixed
 
 - Some files being wrongly skipped as "previously downloaded" if they have the same name as an old download (Mediafire)
