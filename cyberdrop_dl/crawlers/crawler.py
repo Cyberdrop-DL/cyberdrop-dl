@@ -629,6 +629,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             json_check=self.__json_resp_check__,
         )
 
+        if dl.headers:
+            media_item.headers.update(dl.headers)
+
         if media_item.ext in FileExt.MEDIA:
             media_item.thumbnails = tuple(filter(None, map(self.normalize_url, dl.thumbnails)))
             if media_item.thumbnails:
