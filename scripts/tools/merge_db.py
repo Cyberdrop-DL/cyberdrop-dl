@@ -43,6 +43,8 @@ def merge(main_db: SQLiteFile, /, attach_db: SQLiteFile) -> None:
                     f'INSERT OR IGNORE INTO main."{table}" ({column_list}) SELECT {column_list} FROM b."{table}";'  # noqa: S608
                 )
 
+                logger.info("Added %s rows to '%s' table", cursor.rowcount, table)
+
         conn.commit()
         cursor.execute("PRAGMA foreign_keys = ON;")
 
