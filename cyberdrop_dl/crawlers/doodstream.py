@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import string
 import time
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -42,24 +42,46 @@ class DoodStreamCrawler(Crawler):
         ),
         "Folder": "/f/<folder_id>",
     }
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = (
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("doodstream", "myvidplay.com", "playmogo.com")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://playmogo.com")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
         "all3do.com",
+        "d-s.io",
         "d000d.com",
+        "d0000d.com",
+        "d0o0d.com",
+        "do0od.com",
         "do7go.com",
+        "dood.cx",
+        "dood.la",
+        "dood.li",
+        "dood.pm",
         "dood.re",
+        "dood.sh",
+        "dood.so",
+        "dood.stream",
+        "dood.to",
+        "dood.watch",
+        "dood.wf",
+        "dood.work",
+        "dood.ws",
         "dood.yt",
-        "doodcdn",
-        "doodstream.co",
-        "doodstream",
-        "myvidplay.com",
-        "playmogo.com",
-        "vidply.com",
+        "doodcdn.io",
+        "doods.pro",
         "dooodster.com",
+        "dooood.com",
+        "doply.net",
+        "ds2play.com",
+        "ds2video.com",
+        "dsvplay.com",
+        "vide0.net",
+        "vidply.com",
+        "vvide0.com",
     )
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://doodstream.com/")
     DOMAIN: ClassVar[str] = "doodstream"
     FOLDER_DOMAIN: ClassVar[str] = "DoodStream"
 
+    @override
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["e" | "v" | "d", video_id, *_]:
