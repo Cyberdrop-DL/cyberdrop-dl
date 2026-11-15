@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.16.0dev0"
+version = "10.16.0"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -43,7 +43,7 @@ dependencies = [
     "rich >=15.0.0",
     "rich-rst==2.2.0",
     "send2trash >=2.0.0",
-    "soupsieve >=4.0.1",
+    "soupsieve >=4.1.1",
     "typing-extensions>=4.16.0",
     "wassima>=2.1.5",
     "wcwidth>=0.9.4",

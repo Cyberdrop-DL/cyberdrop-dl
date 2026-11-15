@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.15.0
+List of sites supported by cyberdrop-dl-patched as of version 10.16.0
 
 ### 1fichier
 
@@ -1356,9 +1356,9 @@ List of sites supported by cyberdrop-dl-patched as of version 10.15.0
 
 ### ImageBam
 
-**Primary URL**: [https://www.imagebam.com](https://www.imagebam.com)
+**Primary URL**: [https://imagebam.com](https://imagebam.com)
 
-**Supported Domains**: `imagebam.*`
+**Supported Domains**: `imagebam.com`
 
 **Supported Paths**:
 
@@ -1702,10 +1702,11 @@ List of sites supported by cyberdrop-dl-patched as of version 10.15.0
 **Supported Paths**:
 
 - File:
-  - `/file/<quick_key>`
+  - `/file/<quick_key>/...`
+  - `/file_premium/<quick_key>/...`
   - `?<quick_key>`
 - Folder:
-  - `/folder/<folder_key>`
+  - `/folder/<folder_key>/...`
 
 ### Megacloud
 
@@ -2593,9 +2594,11 @@ List of sites supported by cyberdrop-dl-patched as of version 10.15.0
   - `/link/...`
 - Redirects:
   - `/gallery/<id>`
+  - `/media?url=<url>`
   - `/r/<subreddit>/s/<share_id>`
   - `/u/<user>/s/<share_id>`
   - `/user/<user>/s/<share_id>`
+  - `out.reddit.com/?url=<url>`
 - Submission:
   - `/comments/<id>`
   - `/r/<subreddit>/comments/<id>/...`
@@ -2612,7 +2615,7 @@ List of sites supported by cyberdrop-dl-patched as of version 10.15.0
 
 **Primary URL**: [https://i.redd.it](https://i.redd.it)
 
-**Supported Domains**: `external-preview.redd.it`, `i.redd.it`, `i.redditmedia.com`, `i.reddituploads.com`, `preview.redd.it`
+**Supported Domains**: `cf.preview.redd.it`, `external-preview.redd.it`, `i.redd.it`, `i.redditmedia.com`, `i.reddituploads.com`, `preview.redd.it`
 
 **Supported Paths**:
 
