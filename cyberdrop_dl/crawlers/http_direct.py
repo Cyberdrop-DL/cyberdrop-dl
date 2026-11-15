@@ -31,7 +31,7 @@ class DirectHttpFileCrawler(Crawler, is_generic=True):
         if ext in FileExt.MEDIA:
             coro = self.file(scrape_item, filename, ext)
         elif ext == ".m3u8":
-            coro = self.m3u8(scrape_item)
+            coro = self._m3u8(scrape_item)
         else:
             raise ValueError
 
@@ -41,6 +41,6 @@ class DirectHttpFileCrawler(Crawler, is_generic=True):
     async def file(self, scrape_item: ScrapeItem, filename: str, ext: str) -> None:
         await self.handle_file(scrape_item.url, scrape_item, scrape_item.url.name, ext, custom_filename=filename)
 
-    async def m3u8(self, scrape_item: ScrapeItem) -> None:
+    async def _m3u8(self, scrape_item: ScrapeItem) -> None:
         with self.new_task_id(scrape_item.url):
             await self.generic_m3u8(scrape_item)
