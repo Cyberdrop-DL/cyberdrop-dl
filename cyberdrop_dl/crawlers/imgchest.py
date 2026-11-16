@@ -56,7 +56,7 @@ class ImgCrawler(Crawler):
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_slug: str) -> None:
         post, downloaded = await aio.gather(self.api.post(post_slug), self.get_completed_by_album(post_slug))
-        scrape_item.setup_as_album(self.create_title(post.title, post.slug), album_id=post.slug)
+        scrape_item.setup_as_album(self.create_title(post.title or f"post {post.slug}", post.slug), album_id=post.slug)
         if post.created_at:
             scrape_item.uploaded_at = self.parse_iso_date(post.created_at)
 
@@ -87,13 +87,13 @@ class ImgCrawler(Crawler):
 @struct
 class Post:
     slug: str
-    title: str
-    description: str | None = None
+    title: str | None
     nsfw: int
     files_total: int
     files: tuple[File, ...]
     tags: tuple[str, ...]
     created_at: str | None = None
+    description: str | None = None
 
 
 @struct
