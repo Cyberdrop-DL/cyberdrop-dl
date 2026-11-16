@@ -28,8 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Smugmug support
 - ImgChest support
-- Xerotica support
+- Bitchute support
 - Elitebabes support
+- xErotica support
 - Posts and users support (pimpandhost)
 
 ### Fixed
