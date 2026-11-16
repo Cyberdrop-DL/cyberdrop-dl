@@ -15,8 +15,10 @@ if TYPE_CHECKING:
 @final
 class Selector:
     ALBUM_TITLE = "h1.album-page-title"
+    POST_TITLE = "h2.p-title .post-title"
     DATE = "span.date-time"
     IMAGES = "#album-images .image-block[data-key]"
+    POST_IMAGES = ".post-expand-wrapper .post-block img"
     IMAGE = ".main-image-wrapper"
 
 
@@ -24,6 +26,7 @@ class PimpAndHostCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/album/<album_id>",
         "Image": "/image/<image_id>",
+        "Post": "/p/<slug>-<post-id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pimpandhost.com")
     NEXT_PAGE_SELECTOR: ClassVar[str] = "li[class=next] a"
@@ -36,6 +39,9 @@ class PimpAndHostCrawler(Crawler):
                 await self.album(scrape_item, album_id)
             case ["image", _]:
                 await self.image(scrape_item)
+            case ["p", slug] if "-" in slug:
+                post_id = slug.rpartition("-")[-1]
+                await self.post(scrape_item, post_id)
             case _:
                 raise ValueError
 
@@ -51,6 +57,20 @@ class PimpAndHostCrawler(Crawler):
                 for image_id in unique(css.iselect(soup, Selector.IMAGES, "data-key")):
                     new_item = scrape_item.create_child(self.PRIMARY_URL / "image" / image_id)
                     tg.create_task(self._image_task(new_item))
+                    scrape_item.add_children()
+                    await sleep()
+
+    @error_handling_wrapper
+    async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        title = self.create_title(css.select_text(soup, Selector.POST_TITLE), post_id)
+        scrape_item.setup_as_album(title, album_id=post_id)
+
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            async for soup in pages:
+                for image in self.iter_urls(soup, Selector.POST_IMAGES, "src"):
+                    tg.create_task(self.direct_file(scrape_item, image))
                     scrape_item.add_children()
                     await sleep()
 
