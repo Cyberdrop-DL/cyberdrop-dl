@@ -249,7 +249,7 @@ class Deduper[R]:
 
 def unique[T](itr: Iterable[T], /, key: Callable[[T], Any] | None = None) -> Iterable[T]:
     if key is None:
-        return dict.fromkeys(itr)
+        return dict.fromkeys(itr).keys()
     return Deduper(key).filter(itr)
 
 
