@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import cyclopts.validators
 from cyclopts import Parameter
@@ -18,6 +18,8 @@ from cyberdrop_dl.commands.retry import create_retry_src
 from cyberdrop_dl.commands.scrape import download, prepare_manager, scrape
 from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.progress import hyperlink
+
+COMMANDS_DOCS = Path(__file__).parent / "commands" / "commands"
 
 app = App(
     name="cyberdrop-dl",
@@ -87,3 +89,36 @@ for cmd in download, database_app, cleanup_app, config_app, cache_app, retry_app
 
 
 app.command(compute_hashes, name="hash")
+
+
+@app.command()
+def docs(
+    *,
+    format: Literal["markdown", "md", "html", "htm", "rst", "rest"] = "markdown",  # noqa: A002
+) -> None:
+    """Show documentation for every command"""
+    docs = _generate_docs(format)
+    app.console.print(docs, soft_wrap=True)
+
+
+def _generate_docs(format: Literal["markdown", "md", "html", "htm", "rst", "rest"]) -> str:  # noqa: A002
+    if format in {"markdown", "md"}:
+        ext = ".md"
+    elif format in {"rst", "rest"}:
+        ext = ".rst"
+    elif format in {"html", "htm"}:
+        ext = ".html"
+    else:
+        raise ValueError(format)
+
+    file = COMMANDS_DOCS.with_suffix(ext)
+    try:
+        return file.read_text(encoding="utf8")
+    except FileNotFoundError:
+        pass
+    content = app.generate_docs(format)
+    try:
+        file.write_text(content, encoding="utf8")
+    except OSError:
+        pass
+    return content

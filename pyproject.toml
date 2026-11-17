@@ -235,4 +235,4 @@ required-version = ">=0.13.5"
 [tool.uv.build-backend]
 module-name = ["cyberdrop_dl"]
 module-root = ""
-source-include = ["CHANGELOG.md"]
+source-include = ["CHANGELOG.md", "README.md"]
