@@ -11,7 +11,7 @@ from pydantic.functional_validators import AfterValidator
 from pydantic.main import BaseModel
 from pydantic.types import NonNegativeInt, PositiveInt  # noqa: TC002
 
-from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.constants import DEFAULT_PARAMETER
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, InvalidYamlError
 from cyberdrop_dl.models import AdditiveArg, ConfigModel, merge_dicts, merge_models
@@ -26,7 +26,6 @@ from .settings import ALIASES, Downloads, Hashing, Jdownloader, Logs, MaxChildre
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
 
 MIN_REQUIRED_FREE_SPACE = to_bytesize("512MiB")
 MODULE_PATH = Path(__file__).parent
@@ -170,12 +169,13 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
         return config
 
     @staticmethod
-    def parse_args(tokens: str | Iterable[str]) -> Config:
+    def parse_args(tokens: list[str] | tuple[str, ...] | str | None) -> Config:
         global _app  # noqa: PLW0603
         if _app is None:
             _app = App(print_error=False, exit_on_error=False, default_parameter=DEFAULT_PARAMETER)
             _ = _app.command(name="coerce")(_coerce)
-        fn, bound, *_ = _app.parse_args(["coerce", *parse_tokens(tokens)])
+
+        fn, bound, *_ = _app.parse_args(["coerce", *normalize_aliases(tokens)])
         assert fn is _coerce
         return _coerce(*bound.args, **bound.kwargs)
 
@@ -216,20 +216,6 @@ def _load_yaml(file: Path) -> dict[str, Any]:
         raise CDLConfigRuntimeErrorsGroup("Invalid YAML file", (InvalidYamlError(file, e),)) from None
 
 
-def parse_tokens(tokens: Iterable[str] | str | None) -> list[str]:
-    tokens = [ALIASES.get(token, token) for token in normalize_tokens(tokens)]
-    if not (tokens and tokens[0].startswith(("https://", "http://"))):
-        return tokens
-
-    cmd = "download"
-    logger.warning(
-        "URL provided as first argument. Assuming '%s' command. Run the proper command ('%s') to suppress this warning",
-        cmd,
-        "cyberdrop-dl download <URLS> [<OPTIONS>]",
-    )
-    return [cmd, *tokens]
-
-
 def _resolve_paths(model: BaseModel) -> None:
     for field_name, field_value in model:
         if isinstance(field_value, Path):
@@ -249,6 +235,10 @@ def _coerce(*, config: Config | None = None) -> Config:
     if config is None:
         return Config()
     return config
+
+
+def normalize_aliases(tokens: Iterable[str] | str | None = None) -> list[str]:
+    return [ALIASES.get(token, token) for token in normalize_tokens(tokens)]
 
 
 __all__ = ["Config", "Files"]

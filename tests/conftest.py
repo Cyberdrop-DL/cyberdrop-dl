@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from cyberdrop_dl.config.appdata import AppData, AppDirs
+from cyberdrop_dl.appdata import AppData, AppDirs
 from cyberdrop_dl.manager import Manager
 
 if TYPE_CHECKING:

@@ -44,8 +44,9 @@ def _replace_content(text: str, marker: str, new_content: str) -> str:
 def _get_help_message() -> str:
     from rich.console import Console
 
-    from cyberdrop_dl.cli import app
+    from cyberdrop_dl.cli import app, register_download
 
+    register_download(app)
     with Console(record=True, width=100) as console:
         app.help_print([], console=console)
         console.line()

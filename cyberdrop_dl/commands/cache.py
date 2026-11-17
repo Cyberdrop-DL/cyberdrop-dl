@@ -2,8 +2,8 @@ import logging
 
 from cyclopts import App
 
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.commands import CLIarguments, open_folder
-from cyberdrop_dl.config.appdata import AppData
 
 app = App(name="cache", help="Cache operations")
 logger = logging.getLogger(__name__)

@@ -13,8 +13,8 @@ from cyclopts.exceptions import UnknownOptionError
 from pydantic import BaseModel
 
 import cyberdrop_dl.commands.scrape
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.config import Config, Files, _resolve_paths, settings
-from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.config.auth import Authentication, Notifications
 from cyberdrop_dl.config.filters import Filters, _FileFilter
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup

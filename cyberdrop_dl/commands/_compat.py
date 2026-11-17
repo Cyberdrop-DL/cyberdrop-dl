@@ -2,7 +2,7 @@ import logging
 import time
 from pathlib import Path
 
-from cyberdrop_dl.config.appdata import AppData
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 
 logger = logging.getLogger(__name__)

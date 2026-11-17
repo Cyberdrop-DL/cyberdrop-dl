@@ -4,7 +4,6 @@ from cyclopts.types import ResolvedExistingDirectory
 
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands._compat import check_for_v9_files
-from cyberdrop_dl.config import Config
 
 
 async def compute_hashes(
@@ -17,7 +16,7 @@ async def compute_hashes(
     """Compute and save hashes of every file in a folder (recursively)"""
     check_for_v9_files()
     from cyberdrop_dl import stats
-    from cyberdrop_dl.config.appdata import AppData
+    from cyberdrop_dl.appdata import AppData
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.hasher import Hasher, hash_directory
 
@@ -36,5 +35,7 @@ def _choose_hash_algos(
     if hashes:
         return tuple(set(hashes) - {"xxh128"})
     if cli and cli.config_file:
+        from cyberdrop_dl.config import Config
+
         return Config.from_file(cli.config_file).hashing.extra_hashes
     return "md5", "sha256"

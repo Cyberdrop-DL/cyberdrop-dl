@@ -3,9 +3,8 @@ from typing import Any
 
 from cyclopts import App
 
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.commands import CLIarguments, open_folder
-from cyberdrop_dl.config import Config
-from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.prompts import ask_should_create_config
 
 app = App(name="config", help="Config file operations")
@@ -22,6 +21,7 @@ def file(*, cli: CLIarguments | None = None) -> None:
 @app.command()
 def edit(*, cli: CLIarguments | None = None) -> None:
     "Open the default config file on a text editor"
+    from cyberdrop_dl.config import Config
     from cyberdrop_dl.utils import text_editor
 
     file = cli and cli.config_file
@@ -40,6 +40,7 @@ def fill(*, cli: CLIarguments | None = None) -> None:
     """Add missing settings to the config file with their default values (comments will be deleted)
 
     Settings from config overrides will be merged into the main config file"""
+    from cyberdrop_dl.config import Config
 
     file = (cli and cli.config_file) or AppData.default().config_file
     if not file.exists():
@@ -79,6 +80,8 @@ def _compare_dict_keys(dict1: dict[str, Any], dict2: dict[str, Any], prefix: str
 @app.command()
 def new() -> None:
     "Create a new config with default options and print it"
+    from cyberdrop_dl.config import Config
+
     app.console.print(Config().dump_yaml(), soft_wrap=True)
 
 

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Annotated
 
 from cyclopts import App, Parameter
 
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.commands import CLIarguments, SQLiteFile, open_folder
-from cyberdrop_dl.config.appdata import AppData
 
 if TYPE_CHECKING:
     from cyberdrop_dl.database import Database

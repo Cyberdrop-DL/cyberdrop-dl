@@ -10,10 +10,10 @@ from cyclopts import Parameter, Token
 from cyclopts.group import Group
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands._compat import check_for_v9_files
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
 from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
 from cyberdrop_dl.models.validators import to_yarl_url

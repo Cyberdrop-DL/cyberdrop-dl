@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cyberdrop_dl.config.appdata import AppData, AppDirs
+from cyberdrop_dl.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import xenforo as crawlers
 from cyberdrop_dl.crawlers.xenforo import xenforo
 from cyberdrop_dl.crawlers.xenforo.celebforum import CelebForumCrawler

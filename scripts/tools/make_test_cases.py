@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 from cyclopts import App
 
 from cyberdrop_dl.__main__ import run_cdl
+from cyberdrop_dl.appdata import AppData, AppDirs
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.config.appdata import AppData, AppDirs
 from cyberdrop_dl.crawlers import SKIP_DOWNLOAD
 
 if TYPE_CHECKING:

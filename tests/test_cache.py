@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 
 from cyberdrop_dl import __version__
+from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.cache import (
     _IN_MEMORY_CACHE,
     TTLCacheAdapter,
@@ -16,7 +17,6 @@ from cyberdrop_dl.cache import (
     cached_fn,
     disk_cached_method,
 )
-from cyberdrop_dl.config.appdata import AppData
 from cyberdrop_dl.manager import Manager
 from cyberdrop_dl.utils import json
 

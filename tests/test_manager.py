@@ -15,7 +15,7 @@ from cyberdrop_dl.sorter import Sorter
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
-    from cyberdrop_dl.config.appdata import AppData
+    from cyberdrop_dl.appdata import AppData
 
 
 def update_model[M: BaseModel](model: M, **kwargs: Any) -> M:
