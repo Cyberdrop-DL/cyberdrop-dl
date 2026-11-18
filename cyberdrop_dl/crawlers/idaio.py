@@ -10,9 +10,11 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import Deduper, traversal, unique
 from cyberdrop_dl.utils.dataclass import deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import remove_query_params
+from cyberdrop_dl.utils.urls import parse_http_url, remove_query_params
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -22,6 +24,7 @@ class IdagioCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Track": "/<lang>/recordings/<rid>?trackId=<track_id>",
         "Recording": "/<lang>/recordings/<rid>",
+        "Album": "/<lang>/albumss/<slug>",
     }
     DOMAIN: ClassVar[str] = "idagio"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://app.idagio.com")
@@ -35,7 +38,7 @@ class IdagioCrawler(Crawler):
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
         url = remove_query_params(super().transform_url(url), keep=("trackId",))
         match url.parts[1:]:
-            case [_lang, "recordings" | "works" as kind, rid]:
+            case [_lang, "recordings" | "works" | "albums" as kind, rid]:
                 return (cls.PRIMARY_URL / kind / rid).with_query(url.query)
             case _:
                 return url
@@ -48,7 +51,8 @@ class IdagioCrawler(Crawler):
                     await self.track(scrape_item, track_id)
                 else:
                     await self.recording(scrape_item, rid)
-
+            case ["albums", slug]:
+                await self.album(scrape_item, slug)
             case _:
                 raise ValueError
 
@@ -59,12 +63,25 @@ class IdagioCrawler(Crawler):
         await super().write_metadata(scrape_item, name, metadata)
 
     @error_handling_wrapper
+    async def album(self, scrape_item: ScrapeItem, slug: str) -> None:
+        album, tracks = await self.api.album(slug)
+        scrape_item.setup_as_album(self.create_title(f"{album.title} [album]"))
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            tg.create_task(self.write_metadata(scrape_item, f"album_{album.slug}", album))
+            tg.create_task(self.handle_thumb(album.cover, album.slug + ".jpg", scrape_item, "cover"))
+            for track, recording in tracks:
+                url = (self.PRIMARY_URL / f"recordings/{recording.id}").with_query(trackId=track.id)
+                tg.create_task(self._track_task(scrape_item.create_child(url), track, recording))
+                scrape_item.add_children()
+                await sleep()
+
+    @error_handling_wrapper
     async def recording(self, scrape_item: ScrapeItem, recording_id: str) -> None:
         scrape_item.setup_as_album("")
         track_ids, completed = await aio.gather(
             self.api.recording_tracks(recording_id), self.get_completed_by_album(recording_id)
         )
-
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
             for track, recording in await self.api.tracks(track_ids):
@@ -104,6 +121,9 @@ class IdagioCrawler(Crawler):
     _track_task = auto_task_id(_track)
 
 
+type TrackResp = tuple[Track, Recording]
+
+
 @struct
 class Work:
     id: int
@@ -114,16 +134,11 @@ class Work:
 
     @classmethod
     def parse(cls, work: dict[str, Any]) -> Self:
-        def find_people(name: str):
-            for _, person in traversal.find_objs(work.get(name) or {}, "name"):
-                if name := person["name"]:
-                    yield name
-
         return deserialize(
             cls,
             work,
-            composer=next(find_people("composer"), None),
-            authors=tuple(find_people("authors")),
+            composer=next(_find_people(work, "composer"), None),
+            authors=tuple(_find_people(work, "authors")),
         )
 
 
@@ -144,18 +159,13 @@ class Recording:
 
     @classmethod
     def parse(cls, record: dict[str, Any]) -> Self:
-        def find_people(name: str):
-            for _, person in traversal.find_objs(record.get(name) or {}, "name"):
-                if name := person["name"]:
-                    yield name
-
         return deserialize(
             cls,
             record,
             albums=tuple(record.get("albums") or ()),
             created_at=record["created_at"] // 1000,
-            conductor=next(find_people("conductor"), None),
-            **{name: tuple(find_people(name)) for name in ("ensembles", "soloists")},
+            conductor=next(_find_people(record, "conductor"), None),
+            **{name: tuple(_find_people(record, name)) for name in ("ensembles", "soloists")},
         )
 
 
@@ -174,6 +184,26 @@ class Track:
     duration: int
     piece: Piece
     parse = classmethod(deserialize)
+
+
+@struct
+class Album:
+    slug: str
+    uuid: str
+    title: str
+    cover: AbsoluteHttpURL
+    description: str | None
+    lastModified: str  # noqa: N815
+    artists: tuple[str, ...]
+
+    @classmethod
+    def parse(cls, album: dict[str, Any]) -> Self:
+        return deserialize(
+            cls,
+            album,
+            artists=tuple(unique(_find_people(album, "participants"))),
+            cover=parse_http_url(album["imageUrl"]),
+        )
 
 
 class IdagioAPI(API):
@@ -209,7 +239,23 @@ class IdagioAPI(API):
         resp = await self.request_json(url, "POST", json={"ids": track_ids})
         return [_parse_track_resp(r) for r in resp["results"]]
 
+    async def album(self, slug: str) -> tuple[Album, list[tuple[Track, Recording]]]:
+        url = self.ENTRYPOINT / "v2.0/metadata/albums" / slug
+        resp = await self.request_json(url)
+        if (error := resp.get("error_code")) == "idagio.error.blocked.location":
+            raise ScrapeError(403, error)
+
+        album = resp["result"]
+        tracks = [_parse_track_resp(r) for r in album.get("tracks", ())]
+        return Album.parse(album), tracks
+
 
 def _parse_track_resp(result: dict[str, Any]) -> tuple[Track, Recording]:
     piece = Piece.parse(result["piece"], work=Work.parse(result["piece"]["workpart"]["work"]))
     return Track.parse(result, piece=piece), Recording.parse(result["recording"])
+
+
+def _find_people(data: dict[str, Any], name: str) -> Generator[str]:
+    for _, person in traversal.find_objs(data.get(name) or {}, "name"):
+        if name := person["name"]:
+            yield name

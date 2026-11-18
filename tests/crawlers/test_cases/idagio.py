@@ -57,4 +57,14 @@ TEST_CASES = [
             },
         ],
     },
+    {
+        "url": "https://app.idagio.com/albums/reverse-directions",
+        "results": [
+            {
+                "url": "ANY",
+                "download_folder": "re:Reverse Directions [album] (Idagio)/",
+            }
+        ],
+        "count": 8,
+    },
 ]
