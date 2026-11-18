@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bitchute support
 - Elitebabes support
 - Soundcloud support
+- Filmarchiv.at support
 - Untitled.stream support
 - xErotica support
 - Posts and users support (pimpandhost)
