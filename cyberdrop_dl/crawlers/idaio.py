@@ -24,7 +24,9 @@ class IdagioCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Track": "/<lang>/recordings/<rid>?trackId=<track_id>",
         "Recording": "/<lang>/recordings/<rid>",
-        "Album": "/<lang>/albumss/<slug>",
+        "Album": "/<lang>/albums/<slug>",
+        "Playlist": "/<lang>/playlists/<slug>",
+        "Personal playlist": "/<lang>/playlists/personal/<id>",
     }
     DOMAIN: ClassVar[str] = "idagio"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://app.idagio.com")
@@ -52,7 +54,11 @@ class IdagioCrawler(Crawler):
                 else:
                     await self.recording(scrape_item, rid)
             case ["albums", slug]:
-                await self.album(scrape_item, slug)
+                await self.playlist(scrape_item, slug, "album")
+            case ["playlists", slug]:
+                await self.playlist(scrape_item, slug, "playlist")
+            case ["playlists", "personal", pid]:
+                await self.playlist(scrape_item, pid, "personal")
             case _:
                 raise ValueError
 
@@ -63,13 +69,24 @@ class IdagioCrawler(Crawler):
         await super().write_metadata(scrape_item, name, metadata)
 
     @error_handling_wrapper
-    async def album(self, scrape_item: ScrapeItem, slug: str) -> None:
-        album, tracks = await self.api.album(slug)
-        scrape_item.setup_as_album(self.create_title(f"{album.title} [album]"))
+    async def playlist(
+        self, scrape_item: ScrapeItem, slug: str, kind: Literal["album", "playlist", "personal"]
+    ) -> None:
+        if kind == "album":
+            play, tracks = await self.api.album(slug)
+            name = play.slug
+        elif kind == "personal":
+            play, tracks = await self.api.personal_playlist(slug)
+            name = play.id
+        else:
+            play, tracks = await self.api.playlist(slug)
+            name = play.slug or play.id
+
+        scrape_item.setup_as_album(self.create_title(f"{play.title} [{kind}]"))
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            tg.create_task(self.write_metadata(scrape_item, f"album_{album.slug}", album))
-            tg.create_task(self.handle_thumb(album.cover, album.slug + ".jpg", scrape_item, "cover"))
+            tg.create_task(self.write_metadata(scrape_item, f"{kind}_{name}", play))
+            tg.create_task(self.handle_thumb(play.cover, f"{name}.jpg", scrape_item, "cover"))
             for track, recording in tracks:
                 url = (self.PRIMARY_URL / f"recordings/{recording.id}").with_query(trackId=track.id)
                 tg.create_task(self._track_task(scrape_item.create_child(url), track, recording))
@@ -206,6 +223,20 @@ class Album:
         )
 
 
+@struct
+class Playlist:
+    id: str
+    title: str
+    cover: AbsoluteHttpURL | None
+    slug: str | None = None
+    description: str | None = None
+
+    @classmethod
+    def parse(cls, play: dict[str, Any]) -> Self:
+        cover = play.get("imageUrl") or play.get("image_url") or None
+        return deserialize(cls, play, cover=cover and parse_http_url(cover))
+
+
 class IdagioAPI(API):
     ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.idagio.com")
 
@@ -218,7 +249,7 @@ class IdagioAPI(API):
         resp = await self.request_json(url)
         return self.parse_url(resp["url"])
 
-    async def track(self, track_id: str) -> tuple[Track, Recording]:
+    async def track(self, track_id: str) -> TrackResp:
         url = self.ENTRYPOINT / "v2.0/metadata/tracks" / track_id
         resp = await self.request_json(url)
         if (error := resp.get("error_code")) == "idagio.error.blocked.location":
@@ -231,7 +262,7 @@ class IdagioAPI(API):
         resp = await self.request_json(url)
         return [t["id"] for t in resp["result"].get("tracks", ())]
 
-    async def tracks(self, track_ids: list[str] | tuple[str, ...]) -> list[tuple[Track, Recording]]:
+    async def tracks(self, track_ids: list[str] | tuple[str, ...]) -> list[TrackResp]:
         if not track_ids:
             return []
 
@@ -239,15 +270,26 @@ class IdagioAPI(API):
         resp = await self.request_json(url, "POST", json={"ids": track_ids})
         return [_parse_track_resp(r) for r in resp["results"]]
 
-    async def album(self, slug: str) -> tuple[Album, list[tuple[Track, Recording]]]:
+    async def album(self, slug: str) -> tuple[Album, list[TrackResp]]:
         url = self.ENTRYPOINT / "v2.0/metadata/albums" / slug
-        resp = await self.request_json(url)
-        if (error := resp.get("error_code")) == "idagio.error.blocked.location":
-            raise ScrapeError(403, error)
+        data, tracks = await self._playlist(url)
+        return Album.parse(data), tracks
 
-        album = resp["result"]
-        tracks = [_parse_track_resp(r) for r in album.get("tracks", ())]
-        return Album.parse(album), tracks
+    async def playlist(self, slug: str) -> tuple[Playlist, list[TrackResp]]:
+        url = self.ENTRYPOINT / "v2.0/playlists" / slug
+        data, tracks = await self._playlist(url)
+        return Playlist.parse(data), tracks
+
+    async def personal_playlist(self, playlist_id: str) -> tuple[Playlist, list[TrackResp]]:
+        url = self.ENTRYPOINT / "v1.0/personal-playlists" / playlist_id
+        data, tracks = await self._playlist(url)
+        return Playlist.parse(data), tracks
+
+    async def _playlist(self, url: AbsoluteHttpURL) -> tuple[dict[str, Any], list[TrackResp]]:
+        resp = await self.request_json(url)
+        data = resp["result"]
+        tracks = [_parse_track_resp(r) for r in data.get("tracks", ())]
+        return data, tracks
 
 
 def _parse_track_resp(result: dict[str, Any]) -> tuple[Track, Recording]:
