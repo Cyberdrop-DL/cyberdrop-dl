@@ -103,7 +103,7 @@ def struct[T](
 ) -> type[T]: ...
 
 
-@dataclass_transform(frozen_default=True, kw_only_default=True)
+@dataclass_transform(frozen_default=True, kw_only_default=True, field_specifiers=(dataclasses.field,))
 def struct[T](
     cls: type[T] | None = None,
     *,

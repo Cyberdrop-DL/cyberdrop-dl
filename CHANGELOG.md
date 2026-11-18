@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smugmug support
 - ImgChest support
 - Vidsonic support
+- Idagio support
 - Bitchute support
 - Elitebabes support
 - Untitled.stream support
