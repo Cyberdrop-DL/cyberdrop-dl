@@ -17,6 +17,7 @@ from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, Supporte
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -96,8 +97,8 @@ class BunkrCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["file", file_id] if scrape_item.url.host == self.api.DL_ENDPOINT.host:
                 await self.file_by_id(scrape_item, file_id)
-            case ["f", slug]:
-                await self.file_by_slug(scrape_item, slug)
+            case ["f", _]:
+                await self.file(scrape_item)
             case ["a", album_id]:
                 await self.album(scrape_item, album_id)
             case ["v" | "d" | "i", _]:
@@ -161,10 +162,17 @@ class BunkrCrawler(Crawler):
             return
 
         dl = await self.api.download(file_id)
+        cdn_url = self.PRIMARY_URL / "f" / dl.src.name
+        if await self.check_complete_from_referer(cdn_url):
+            return
+
+        if self.config.filters.files.thumbnails:
+            dl = await self._download_from_html(cdn_url)
+
         await self._download_file(scrape_item, dl)
 
     @error_handling_wrapper
-    async def file_by_slug(self, scrape_item: ScrapeItem, _slug: str) -> None:
+    async def file(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
@@ -178,13 +186,12 @@ class BunkrCrawler(Crawler):
             return
 
         scrape_item.uploaded_at = self.parse_date(file.timestamp, "%H:%M:%S %d/%m/%Y")
-        is_video = file.extension.lower() == "video" or AbsoluteHttpURL(file.name).suffix in FileExt.VIDEO
+        is_video = file.extension.lower() == "video" or AbsoluteHttpURL(file.name).suffix.lower() in FileExt.VIDEO
         if is_video and self.config.filters.files.thumbnails:
             # Get proper 'grid' thumbnail of videos
             dl = await self._download_from_html(scrape_item.url)
         else:
-            dl = await self.api.download(file.id)
-            dl.thumbnail = self.parse_url(file.thumbnail)
+            dl = dataclasses.replace(await self.api.download(file.id), thumbnail=self.parse_url(file.thumbnail))
 
         await self._download_file(scrape_item, dl)
 
@@ -196,7 +203,7 @@ class BunkrCrawler(Crawler):
         thumb = open_graph.get_image(soup)
 
         try:
-            js_vars = await asyncio.to_thread(_extract_js_vars, soup)
+            js_vars = await asyncio.to_thread(_extract_cdn_vars, soup)
         except css.SelectorError:
             dl_url = css.select(soup, Selector.DOWNLOAD_BTN, "href")
             file_id = self.parse_url(dl_url).name
@@ -206,7 +213,7 @@ class BunkrCrawler(Crawler):
             dl = FileDownload(src=self.parse_url(js_vars["jsCDN"]), name=open_graph.title(soup))
 
         if thumb:
-            dl.thumbnail = self.parse_url(thumb)
+            dl = dataclasses.replace(dl, thumbnail=self.parse_url(thumb))
 
         return dl
 
@@ -286,27 +293,50 @@ class BunkrAPI(API):
         url = self.parse_url(resp["mediafiles"]).with_path(resp["path"])
         return FileDownload(src=url, name=resp.get("original"))
 
+    async def file(self, file_id: str) -> SimpleFile:
+        url = self.DL_ENDPOINT.origin() / "file" / file_id
+        soup = await self.request_soup(url)
+        name = css.select(soup, "script[data-v]", "data-v")
+        try:
+            script = css.select_text(soup, "script:-soup-contains-own(ogname)")
+        except css.SelectorError:
+            original = None
+        else:
+            original = _extract_js_vars(script)["ogname"] or None
+
+        return SimpleFile(
+            id=int(file_id),
+            name=name,
+            original=original,
+            extension=Path(name).suffix,
+            cdnEndpoint=f"/{name}",
+        )
+
     async def sign(self, src: AbsoluteHttpURL) -> AbsoluteHttpURL:
         api_url = self.SIGN_ENDPOINT.with_query(path=src.path)
         resp = await self.request_json(api_url)
         return src.with_query(token=resp["token"], ex=resp["ex"])
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class File:
+@struct
+class SimpleFile:
     id: int
     name: str
     original: str | None
-    slug: str
-    type: str
     extension: str
-    size: int
-    timestamp: str
-    thumbnail: str
     cdnEndpoint: str  # noqa: N815
 
 
-@dataclasses.dataclass(slots=True)
+@struct
+class File(SimpleFile):
+    slug: str
+    type: str
+    size: int
+    timestamp: str
+    thumbnail: str
+
+
+@struct
 class FileDownload:
     src: AbsoluteHttpURL
     name: str | None = None
@@ -352,8 +382,12 @@ def _is_stream_redirect(host: str) -> bool:
     return any(part in host for part in ("cdn12", "cdn-")) or host == "cdn.bunkr.ru"
 
 
-def _extract_js_vars(soup: BeautifulSoup) -> dict[str, str]:
+def _extract_cdn_vars(soup: BeautifulSoup) -> dict[str, str]:
     script = css.select_text(soup, Selector.JS_VARS)
+    return {k: _fix_encoding(v).strip("\"'") for k, v in _find_js_vars(script)}
+
+
+def _extract_js_vars(script: str) -> dict[str, str]:
     return {k: _fix_encoding(v).strip("\"'") for k, v in _find_js_vars(script)}
 
 
