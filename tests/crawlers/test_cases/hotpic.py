@@ -62,6 +62,29 @@ TEST_CASES = [
         "count": 1,
     },
     {
+        "url": "https://hotpic.cc/video/z3mtbi",
+        "results": [
+            {
+                "url": "https://videos.kiwi99.space/videos/Allie_Kat007/z3mtbi.mp4",
+                "filename": "Wait for the surprise. Gobble gobble.mp4",
+                "debrid_url": None,
+                "original_filename": "Wait for the surprise. Gobble gobble",
+                "referer": "https://hotpic.cc/video/z3mtbi",
+                "album_id": None,
+                "uploaded_at": 1669303765,
+                "download_folder": "re:Loose Files (HotPic)",
+                "thumbnail": "https://videos.kiwi99.space/videos/Allie_Kat007/thumb/z3mtbi.webp",
+                "size": None,
+                "duration": None,
+                "parents": [],
+                "metadata": {},
+                "extra_info": {},
+                "id": ["hotpic", "/videos/Allie_Kat007/z3mtbi.mp4"],
+            }
+        ],
+        "count": 1,
+    },
+    {
         "url": "https://hotpic.cc/album/oeNlKhNfXWdF7",
         "results": [
             {

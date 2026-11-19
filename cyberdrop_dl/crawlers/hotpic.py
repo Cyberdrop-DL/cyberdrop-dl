@@ -8,7 +8,7 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, next_or_error, traversal
+from cyberdrop_dl.utils import css, dates, next_or_error, traversal
 from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -32,6 +32,8 @@ class HotPicCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Album": "/album/<album_id>",
         "Image/Video": "/i/<file-id>",
+        "Reddit Image": "/ri/<image_id>",
+        "Reddit Video": "/video/<video_id>",
         "Direct files": (
             "/uploads/...",
             "/reddit/...",
@@ -43,6 +45,7 @@ class HotPicCrawler(Crawler):
     FOLDER_DOMAIN: ClassVar[str] = "HotPic"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = "2385290.xyz", "myhostdata.space"
     CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://cdn3.kiwi99.space")
+    VIDEO_CDN: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://videos.kiwi99.space")
 
     def __post_init__(self) -> None:
         self._dummy_referer: str = str(self.PRIMARY_URL / "i" / _random_id())
@@ -59,9 +62,11 @@ class HotPicCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["album", album_id]:
                 await self.album(scrape_item, album_id)
-            case ["i", post_id]:
-                await self.file(scrape_item, post_id)
-            case ["uploads" | "reddit", _, *_]:
+            case ["i" | "ri", post_id]:
+                await self.file(scrape_item, post_id, self.CDN)
+            case ["video", post_id]:
+                await self.file(scrape_item, post_id, self.VIDEO_CDN)
+            case ["uploads" | "reddit" | "videos", _, *_]:
                 await self.direct_file(scrape_item)
             case _:
                 raise ValueError
@@ -91,45 +96,59 @@ class HotPicCrawler(Crawler):
                 await sleep()
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem, post_id: str) -> None:
+    async def file(self, scrape_item: ScrapeItem, post_id: str, cdn: AbsoluteHttpURL) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        media = next_or_error(_extract_media_objs(_extr_json_ld(soup), post_id), "media")
+        media = next_or_error(_extract_media_objs(_extr_json_ld(soup), post_id, cdn), "media")
         await self._media(scrape_item, media)
 
     @error_handling_wrapper
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
         scrape_item.uploaded_at = media.uploaded_at
-        filename, ext = self.get_filename_and_ext(media.src.name)
-        await self.handle_file(media.src, scrape_item, filename, ext, thumbnail=media.thumb)
+        name = media.name or media.src.name
+        _, ext = self.get_filename_and_ext(media.src.name)
+        await self.handle_file(
+            media.src,
+            scrape_item,
+            name,
+            ext,
+            thumbnail=media.thumb,
+            custom_filename=self.create_custom_filename(name, ext),
+        )
 
 
 @struct
 class Media:
     id: str
+    name: str | None
     uploaded_at: int
     src: AbsoluteHttpURL
     thumb: AbsoluteHttpURL
 
 
-def _extract_media_objs(ld_json: dict[str, Any], post_id: str | None) -> Iterable[Media]:
+def _extract_media_objs(
+    ld_json: dict[str, Any], post_id: str | None, cdn: AbsoluteHttpURL = HotPicCrawler.CDN
+) -> Iterable[Media]:
     def parse_cdn_url(url: str):
-        return HotPicCrawler.parse_url(url).with_host(HotPicCrawler.CDN.host)
+        return HotPicCrawler.parse_url(url).with_host(cdn.host)
 
     for otype in ("VideoObject", "ImageObject"):
         for _, obj in traversal.find_objs(ld_json, validate={"@type": otype}):
             src = parse_cdn_url(obj["contentUrl"])
             if post_id:
                 media_id = post_id
+                name = (obj.get("name") or "").rpartition(" by ")[0] or None
             else:
                 post, _, index = Path(parse_cdn_url(obj["thumbnailUrl"]).name).stem.rpartition("T")
                 assert post
                 media_id = f"{post}{index}"
+                name = None
 
             yield Media(
                 id=media_id,
+                name=name,
                 src=src,
                 uploaded_at=HotPicCrawler.parse_iso_date(obj["uploadDate"]),
                 thumb=(src.parent / "thumb" / src.name).with_suffix(".webp"),
@@ -141,12 +160,24 @@ def _extr_json_ld(soup: BeautifulSoup, /, contains: tuple[str, ...] | str = ()) 
         # fix malformed description
         return json.loads(script.replace("\r\n", " "))
 
-    raise ScrapeError(422, "Unable to extract json-ld data")
+    try:
+        release_date = css.select(soup, "#exCount", "data-release")
+    except css.SelectorError:
+        raise ScrapeError(422, "Unable to extract json-ld data") from None
+
+    date = dates.from_timestamp(float(release_date)).replace(tzinfo=None)
+    raise ScrapeError(401, f"Locked album. It unlocks for everyone at {date} UTC")
 
 
 def _thumb_to_src(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-    if "uploads" in url.parts or "reddit" in url.parts:
-        url = url.with_host(HotPicCrawler.CDN.host)
+    match url.parts[1:]:
+        case ["uploads" | "reddit", _, *_]:
+            url = url.with_host(HotPicCrawler.CDN.host)
+        case ["videos", _, *_]:
+            url = url.with_host(HotPicCrawler.VIDEO_CDN.host)
+        case _:
+            pass
+
     if "thumb" not in url.parts:
         return url
 
