@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, ClassVar, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.downloader.bunny_cdn import BunnyCDNDownloader
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.mediaprops import Subtitle
@@ -24,10 +24,12 @@ if TYPE_CHECKING:
 
 @Crawler.db_path_builder("path_qs")
 class BunnyCDNCrawler(Crawler):
+    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = ("b-cdn.net", "iframe.mediadelivery.net")
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
             "/embed/<lib_id>/<video_uuid>",
             "/play/<lib_id>/<video_uuid>",
+            "/<video_uuid>/playlist.m3u8?token=<token>",
         ),
     }
     DOMAIN: ClassVar[str] = "bunnycdn"
@@ -43,7 +45,7 @@ class BunnyCDNCrawler(Crawler):
     @classmethod
     @override
     def transform_url(cls, url: AbsoluteHttpURL) -> AbsoluteHttpURL:
-        url = remove_query_params(super().transform_url(url), keep=("token", "secret"))
+        url = remove_query_params(super().transform_url(url), keep=("token", "secret", "token_path", "expires"))
         match url.parts[1:]:
             case ["play", _, _]:
                 return url.with_path(url.path.replace("/play/", "/embed/"), keep_query=True)
@@ -54,6 +56,8 @@ class BunnyCDNCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["embed", _, video_uuid]:
                 await self.video(scrape_item, video_uuid)
+            case [video_uuid, "playlist.m3u8"]:
+                await self.generic_m3u8(scrape_item, name=video_uuid, keep_query=True)
             case _:
                 raise ValueError
 
@@ -75,7 +79,7 @@ class BunnyCDNCrawler(Crawler):
                 src = video.original
 
         if src.suffix == ".m3u8":
-            m3u8, _ = await self.request_m3u8(src, headers=headers)
+            m3u8, _ = await self.request_m3u8(src, headers=headers, keep_query=True)
 
         filename = self.create_custom_filename(name := video.title or video_id, ext, file_id=video_id)
         await self.handle_file(
