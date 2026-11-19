@@ -1199,7 +1199,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         url: AbsoluteHttpURL | None = None,
         *,
         name: str | None = None,
-        keep_query: bool = False,
+        keep_query: bool = True,
     ) -> None:
         url = url or scrape_item.url
         referer = scrape_item.get_referer()
