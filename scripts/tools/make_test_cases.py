@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import operator
 import subprocess
 import tempfile
 from pathlib import Path
@@ -95,11 +96,12 @@ def create_test_files(file: Path) -> None:
         site_tests.setdefault(url, []).append(results)
 
     test_files: list[Path] = []
+    sort_key = operator.itemgetter("id")
     for domain, cases in all_results.items():
         test_cases = [
             {
                 "url": url,
-                "results": results,
+                "results": sorted(results, key=sort_key),
                 "count": len(results),
             }
             for url, results in cases.items()
