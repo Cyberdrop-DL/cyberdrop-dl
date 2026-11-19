@@ -707,7 +707,7 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.15.3"
+version = "9.15.4"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [

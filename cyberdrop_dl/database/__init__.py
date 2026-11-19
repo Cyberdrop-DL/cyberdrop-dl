@@ -35,7 +35,7 @@ class Database:
         self.hash = HashTable(self)
         self.schema = SchemaVersionTable(self)
 
-  async def migrate_files(self) -> None:
+    async def migrate_files(self) -> None:
         if not (self._auto_migrate and self._db_path.exists()):
             return
 
@@ -49,8 +49,8 @@ class Database:
 
         if has_tables and version != CURRENT_APP_SCHEMA_VERSION:
             await run_async(self._db_path)
-            
-async def __aenter__(self) -> Self:
+
+    async def __aenter__(self) -> Self:
         await self.migrate_files()
         self._db_conn = await connect(self._db_path)
         await self._pre_allocate()
