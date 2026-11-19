@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Elitebabes support
 - Mashable video article support
 - Untitled.stream support
+- Tinglr support
 - xErotica support
 - Posts and users support (pimpandhost)
 
