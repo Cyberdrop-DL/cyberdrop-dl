@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filmarchiv.at support
 - Imagetwist support
 - Elitebabes support
+- Mashable video article support
 - Untitled.stream support
 - xErotica support
 - Posts and users support (pimpandhost)
