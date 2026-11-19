@@ -1,4 +1,4 @@
-DOMAIN = "picstate.com"
+DOMAIN = "picstate"
 TEST_CASES = [
     {
         "url": "https://picstate.com/view/full/5391859_e3p1g",
