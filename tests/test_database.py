@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
+import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from cyberdrop_dl import scrape_mapper
+from cyberdrop_dl.database import Database
 from cyberdrop_dl.scrape_mapper import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import dates, parse_url
@@ -92,6 +95,54 @@ def test_invalid_date_format(row) -> None:
 
     with pytest.raises(ValueError):
         _create_item_from_row(row)
+
+
+async def test_automatic_database_migration_transfers_files(tmp_path: Path) -> None:
+    db_path = tmp_path / "database.db"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE media (
+                domain TEXT,
+                url_path TEXT,
+                referer TEXT,
+                album_id TEXT,
+                download_path TEXT,
+                download_filename TEXT,
+                original_filename TEXT,
+                completed INTEGER NOT NULL,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                PRIMARY KEY (domain, url_path, original_filename)
+            );
+            CREATE TABLE temp (value TEXT);
+            INSERT INTO media (
+                domain, url_path, referer, download_path, download_filename,
+                original_filename, completed, created_at
+            ) VALUES (
+                'example', '/file', 'https://example.com',
+                '/downloads', 'file.bin', 'original.bin', 1,
+                '2026-01-02 03:04:05'
+            );
+            """
+        )
+
+    async with Database(db_path, ignore_history=False) as database:
+        files = await database.fetchall("SELECT * FROM files")
+        temp = await database.fetchone("SELECT name FROM sqlite_master WHERE name = 'temp'")
+
+    assert len(files) == 1
+    assert tuple(files[0]) == (
+        "/downloads",
+        "file.bin",
+        "original.bin",
+        None,
+        "https://example.com",
+        1767323045,
+    )
+    assert temp is None
+    backups = await asyncio.to_thread(lambda: list(tmp_path.glob("database_*_*.backup.db")))
+    assert len(backups) == 1
 
 
 @pytest.mark.parametrize(
