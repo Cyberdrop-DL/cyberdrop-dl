@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.16.0"
+version = "10.17.0dev0"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -36,14 +36,14 @@ dependencies = [
     "propcache>=0.5.4",
     "psutil >=7.2.1; sys_platform != 'android'",
     "pycparser >= 3.12.0",
-    "pycryptodome >=4.4.0",
+    "pycryptodome >=4.5.0",
     "pydantic >= 2.14.1,<2.16.0",
     "pyyaml >=6.0.3",
     "questionary>=2.1.1",
     "rich >=15.0.0",
     "rich-rst==2.2.0",
     "send2trash >=2.0.0",
-    "soupsieve >=4.1.1",
+    "soupsieve >=4.1.2",
     "typing-extensions>=4.16.0",
     "wassima>=2.1.5",
     "wcwidth>=0.9.4",
