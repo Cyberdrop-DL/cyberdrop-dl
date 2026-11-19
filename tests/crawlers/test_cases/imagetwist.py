@@ -1,4 +1,4 @@
-DOMAIN = "imagetwist.com"
+DOMAIN = "imagetwist"
 TEST_CASES = [
     {
         "url": "https://imagetwist.com/uynrhb4lavce/Latoya14.jpg",
