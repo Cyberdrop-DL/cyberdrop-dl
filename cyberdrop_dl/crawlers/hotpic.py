@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, override
@@ -60,8 +59,8 @@ class HotPicCrawler(Crawler):
         match scrape_item.url.parts[1:]:
             case ["album", album_id]:
                 await self.album(scrape_item, album_id)
-            case ["i", _]:
-                await self.file(scrape_item)
+            case ["i", post_id]:
+                await self.file(scrape_item, post_id)
             case ["uploads" | "reddit", _, *_]:
                 await self.direct_file(scrape_item)
             case _:
@@ -82,7 +81,7 @@ class HotPicCrawler(Crawler):
 
         sleep = aio.periodic_sleep(10)
         async with aio.non_cancelling_taskgroup() as tg:
-            for media in _extract_media_objs(info):
+            for media in _extract_media_objs(info, None):
                 if media.src in completed:
                     continue
 
@@ -92,12 +91,12 @@ class HotPicCrawler(Crawler):
                 await sleep()
 
     @error_handling_wrapper
-    async def file(self, scrape_item: ScrapeItem) -> None:
+    async def file(self, scrape_item: ScrapeItem, post_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        media = next_or_error(_extract_media_objs(_extr_json_ld(soup)), "media")
+        media = next_or_error(_extract_media_objs(_extr_json_ld(soup), post_id), "media")
         await self._media(scrape_item, media)
 
     @error_handling_wrapper
@@ -115,24 +114,32 @@ class Media:
     thumb: AbsoluteHttpURL
 
 
-def _extract_media_objs(ld_json: dict[str, Any]) -> Iterable[Media]:
-    for _, obj in itertools.chain.from_iterable(
-        traversal.find_objs(ld_json, validate={"@type": t}) for t in ("VideoObject", "ImageObject")
-    ):
-        src = HotPicCrawler.parse_url(obj["contentUrl"]).with_host(HotPicCrawler.CDN.host)
-        mid, _, index = Path(HotPicCrawler.parse_url(obj["thumbnailUrl"]).name).stem.rpartition("T")
-        yield Media(
-            id=f"{mid}{index}",
-            src=HotPicCrawler.parse_url(obj["contentUrl"]).with_host(HotPicCrawler.CDN.host),
-            uploaded_at=HotPicCrawler.parse_iso_date(obj["uploadDate"]),
-            thumb=(src.parent / "thumb" / src.name).with_suffix(".webp"),
-        )
+def _extract_media_objs(ld_json: dict[str, Any], post_id: str | None) -> Iterable[Media]:
+    def parse_cdn_url(url: str):
+        return HotPicCrawler.parse_url(url).with_host(HotPicCrawler.CDN.host)
+
+    for otype in ("VideoObject", "ImageObject"):
+        for _, obj in traversal.find_objs(ld_json, validate={"@type": otype}):
+            src = parse_cdn_url(obj["contentUrl"])
+            if post_id:
+                media_id = post_id
+            else:
+                post, _, index = Path(parse_cdn_url(obj["thumbnailUrl"]).name).stem.rpartition("T")
+                assert post
+                media_id = f"{post}{index}"
+
+            yield Media(
+                id=media_id,
+                src=src,
+                uploaded_at=HotPicCrawler.parse_iso_date(obj["uploadDate"]),
+                thumb=(src.parent / "thumb" / src.name).with_suffix(".webp"),
+            )
 
 
 def _extr_json_ld(soup: BeautifulSoup, /, contains: tuple[str, ...] | str = ()) -> Any:
     for script in css.iselect_text(soup, "script[type='application/ld+json']", contains):
         # fix malformed description
-        return json.loads(script.replace("\r\n", ""))
+        return json.loads(script.replace("\r\n", " "))
 
     raise ScrapeError(422, "Unable to extract json-ld data")
 

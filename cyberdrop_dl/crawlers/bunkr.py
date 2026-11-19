@@ -383,8 +383,7 @@ def _is_stream_redirect(host: str) -> bool:
 
 
 def _extract_cdn_vars(soup: BeautifulSoup) -> dict[str, str]:
-    script = css.select_text(soup, Selector.JS_VARS)
-    return {k: _fix_encoding(v).strip("\"'") for k, v in _find_js_vars(script)}
+    return _extract_js_vars(css.select_text(soup, Selector.JS_VARS))
 
 
 def _extract_js_vars(script: str) -> dict[str, str]:
