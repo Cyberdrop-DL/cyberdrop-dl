@@ -77,7 +77,7 @@ async def test_crawler(running_manager: Manager, test_case: test_cases.CrawlerTe
     _assert_n_results(test_case, len(results))
     if count:
         func.assert_awaited()
-        _validate_results(crawler, test_case, results)
+        _validate_results(test_case, results)
 
 
 def _assert_n_results(test_case: test_cases.CrawlerTestCase, n_results: int) -> None:
@@ -111,46 +111,65 @@ def _sort_expected(test_case: test_cases.CrawlerTestCase):
     return sorted(gen(), key=lambda x: x[1][test_case.sort_by])
 
 
-def _validate_results(crawler: Crawler, test_case: test_cases.CrawlerTestCase, results: list[MediaItem]) -> None:  # noqa: C901
+def _validate_results(test_case: test_cases.CrawlerTestCase, results: list[MediaItem]) -> None:
     expected_results = _sort_expected(test_case)
     results = sorted(results, key=lambda x: getattr(x, test_case.sort_by))
-    origin = getattr(crawler, "PRIMARY_URL", AbsoluteHttpURL("https://google.com"))
     for (index, expected), media_item in zip(expected_results, results, strict=False):
         for attr_name, expected_value in expected.items():
             result_value = getattr(media_item, attr_name)
-            if isinstance(result_value, Path):
-                result_value = result_value.as_posix()
             if attr_name == "metadata" and result_value:
                 result_value = json.loads(json.dumps(result_value))
 
-            match expected_value:
-                case type():
-                    assert isinstance(result_value, expected_value), (
-                        f"{attr_name} for result#{index} is {type(result_value)!r}, expected {expected_value!r}"
-                    )
-                    continue
+            _compare_values(attr_name, index, _normalize_expected_value(expected_value), result_value)
 
-                case str():
-                    match expected_value:
-                        case "ANY":
-                            expected_value = mock.ANY
-                        case "NOT_NONE":
-                            expected_value = NOT_NONE
-                        case _:
-                            if expected_value.startswith("http"):
-                                expected_value = crawler.parse_url(expected_value, origin)
 
-                            elif expected_value.startswith("re:"):
-                                expected_value = expected_value.removeprefix("re:")
-                                assert re_search(expected_value, result_value), (
-                                    f"{attr_name} for result#{index} is different, "
-                                    f"{result_value = } does not match {expected_value!r}"
-                                )
-                                continue
+def _normalize_expected_value(expected_value: Any) -> Any:
+    match expected_value:
+        case "ANY":
+            return mock.ANY
+        case "NOT_NONE":
+            return NOT_NONE
+        case tuple() | list():
+            return type(expected_value)(map(_normalize_expected_value, expected_value))
+        case dict():
+            return {k: _normalize_expected_value(v) for k, v in expected_value.items()}
+        case str() if expected_value.startswith("http"):
+            return parse_http_url(expected_value)
+        case _:
+            return expected_value
 
-                            elif attr_name == "url":
-                                expected_value = AbsoluteHttpURL(expected_value)
 
+def _compare_values(attr_name: str, index: tuple[str, int], expected_value: Any, result_value: Any) -> None:
+    if isinstance(result_value, Path):
+        result_value = result_value.as_posix()
+
+    match expected_value:
+        case type():
+            msg = f"{attr_name} for result#{index} is {type(result_value)!r}, expected {expected_value!r}"
+            assert isinstance(result_value, expected_value), msg
+
+        case str() if expected_value.startswith("re:"):
+            expected_value = expected_value.removeprefix("re:")
+            msg = f"{attr_name} for result#{index} is different, {result_value = } does not match {expected_value!r}"
+            assert re_search(expected_value, result_value), msg
+
+        case dict():
+            assert isinstance(result_value, dict)
+            assert len(result_value) >= len(expected_value)
+            assert set(expected_value).issubset(result_value)
+
+            for key, item_a in expected_value.items():
+                item_b = result_value[key]
+                _compare_values(f"{attr_name}[{key}]", index, item_a, item_b)
+
+        case tuple() | list():
+            assert isinstance(result_value, (tuple, list))
+            assert len(result_value) == len(expected_value)
+
+            for idx, (item_a, item_b) in enumerate(zip(expected_value, result_value, strict=True)):
+                _compare_values(f"{attr_name}[{idx}]", index, item_a, item_b)
+
+        case _:
             assert expected_value == result_value, f"{attr_name} for result#{index} is different"
 
 
@@ -197,7 +216,7 @@ async def test_direct_http_crawler(running_manager: Manager, url: str, filename:
 
     results: list[MediaItem] = sorted((call.args[0] for call in func.call_args_list), key=lambda x: str(x.url))
     func.assert_awaited()
-    _validate_results(crawler, test_case, results)
+    _validate_results(test_case, results)
 
 
 def test_invalid_crawler_modules_should_raise_import_error() -> None:
