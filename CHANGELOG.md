@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Albums and single pictures (pimpandhost)
+- Downloads (Hotpic)
 
 ## [10.16.0] - 2026-11-15
 
