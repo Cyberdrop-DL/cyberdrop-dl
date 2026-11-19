@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -707,8 +707,9 @@ wheels = [
 
 [[package]]
 name = "cyberdrop-dl-patched"
-version = "9.15.2"
+version = "9.15.3"
 source = { editable = "." }
+default-groups = "all"
 dependencies = [
     { name = "aiodns", marker = "sys_platform != 'android' and sys_platform != 'win32'" },
     { name = "aiohappyeyeballs" },
@@ -725,7 +726,7 @@ dependencies = [
     { name = "idna" },
     { name = "imagesize" },
     { name = "inquirer" },
-    { name = "jeepney", marker = "'bsd' in sys_platform or sys_platform == 'linux'" },
+    { name = "jeepney", marker = "sys_platform == 'linux' or 'bsd' in sys_platform" },
     { name = "m3u8" },
     { name = "myjdapi" },
     { name = "propcache" },
@@ -780,7 +781,7 @@ requires-dist = [
     { name = "idna", specifier = ">=3.18" },
     { name = "imagesize", specifier = ">=2.0.0" },
     { name = "inquirer", specifier = ">=3.4.1" },
-    { name = "jeepney", marker = "'bsd' in sys_platform or sys_platform == 'linux'", specifier = ">=0.9.0" },
+    { name = "jeepney", marker = "sys_platform == 'linux' or 'bsd' in sys_platform", specifier = ">=0.9.0" },
     { name = "m3u8", specifier = ">=6.0.0" },
     { name = "myjdapi", specifier = ">=1.1.10" },
     { name = "propcache", specifier = ">=0.5.2" },
