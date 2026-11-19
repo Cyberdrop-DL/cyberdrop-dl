@@ -62,6 +62,9 @@
         },
         "real_debrid": {
           "$ref": "#/$defs/ApiKeyAuth"
+        },
+        "tinglr": {
+          "$ref": "#/$defs/ApiKeyAuth"
         }
       },
       "title": "Authentication",
@@ -1065,14 +1068,14 @@
           "title": "Content Urls",
           "type": "boolean"
         },
-        "video_previews": {
-          "default": false,
-          "title": "Video Previews",
-          "type": "boolean"
-        },
         "crossposts": {
           "default": true,
           "title": "Crossposts",
+          "type": "boolean"
+        },
+        "video_previews": {
+          "default": false,
+          "title": "Video Previews",
           "type": "boolean"
         }
       },

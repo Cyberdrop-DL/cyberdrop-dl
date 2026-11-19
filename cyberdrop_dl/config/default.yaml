@@ -14,6 +14,8 @@ auth:
     api_key: null
   real_debrid:
     api_key: null
+  tinglr:
+    api_key: null
 cookies: null
 crawlers:
   bandcamp:
