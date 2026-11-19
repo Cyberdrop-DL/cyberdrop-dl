@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Propagate manifest query params to segments (HLS)
 - Albums and single pictures (pimpandhost)
 - Downloads (Hotpic)
 

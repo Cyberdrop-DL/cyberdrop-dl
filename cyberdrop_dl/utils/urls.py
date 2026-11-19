@@ -77,6 +77,12 @@ def remove_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
     return url.parent.with_fragment(url.fragment).with_query(url.query)
 
 
+def ensure_trailing_slash(url: AbsoluteHttpURL) -> AbsoluteHttpURL:
+    if not url.name or url.path == "/":
+        return url
+    return url.with_path((url / "").path, keep_query=True, keep_fragment=True)
+
+
 def matches_any_host(url: yarl.URL, hosts: Iterable[str]) -> bool:
     if not url.host:
         return False

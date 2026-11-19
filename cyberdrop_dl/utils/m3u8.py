@@ -16,7 +16,7 @@ from cyberdrop_dl.mediaprops import Codecs, Resolution
 from cyberdrop_dl.signature import dataclass_repr, vars_repr
 from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.dataclass import DictDataclass
-from cyberdrop_dl.utils.urls import parse_http_url
+from cyberdrop_dl.utils.urls import ensure_trailing_slash, parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Iterator, Mapping
@@ -240,14 +240,27 @@ class M3U8(_M3U8):
         media_type: Literal["video", "audio", "subtitle"] | None = None,
         source: AbsoluteHttpURL | Path | None = None,
     ) -> None:
-        if base_uri and base_uri.suffix.casefold() == ".m3u8":
-            base_uri = base_uri.parent
+        if base_uri:
+            query = base_uri.query
+            if base_uri.suffix.casefold() == ".m3u8":
+                base_uri = base_uri.parent
+            base_uri = ensure_trailing_slash(base_uri.parent).with_query(query)
+
         self.media_type: Literal["video", "audio", "subtitle"] | None = media_type
         self.source: AbsoluteHttpURL | Path | None = source
         super().__init__(content, base_uri=str(base_uri) if base_uri else None)
         _validate_keys(self)
         if is_live_stream(self):
             raise ScrapeError.live_stream(source)
+
+        if base_uri and base_uri.query:
+            for seg in self.all_segments():
+                url = parse_http_url(seg.absolute_uri)
+                seg.uri = str(url.update_query(base_uri.query))
+
+    def all_segments(self):
+        yield from self.segment_map
+        yield from self.segments
 
     @property
     def total_segments(self) -> int:

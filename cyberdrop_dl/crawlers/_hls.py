@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal, Unpack
 from cyberdrop_dl import aio, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.utils import m3u8
+from cyberdrop_dl.utils.urls import ensure_trailing_slash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -55,7 +56,7 @@ class HLSMixin(ABC):
         keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails | None]:
-        m3u8_obj = await self._request_m3u8(url, method, **kwargs)
+        m3u8_obj = await self._request_m3u8(url, method, keep_query=keep_query, **kwargs)
         if m3u8_obj.is_variant:
             logger.info("Selecting best rendition from %s", url)
             rendition = m3u8.select_best_rendition(m3u8_obj, only=only, exclude=exclude)
@@ -63,7 +64,7 @@ class HLSMixin(ABC):
                 rendition = dataclasses.replace(rendition, urls=rendition.urls.with_query(url.query))
 
             logger.info("Selected best rendition for %s:\n%s", url, rendition)
-            return await self._resolve_rendition(rendition, method, **kwargs)
+            return await self._resolve_rendition(rendition, method, keep_query=keep_query, **kwargs)
         m3u8_obj.media_type = "video"
         return m3u8.Rendition(m3u8_obj, None, None), None
 
@@ -72,6 +73,7 @@ class HLSMixin(ABC):
         rendition: m3u8.RenditionDetails,
         /,
         method: HttpMethod = "GET",
+        keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> tuple[m3u8.Rendition, m3u8.RenditionDetails]:
 
@@ -79,7 +81,7 @@ class HLSMixin(ABC):
             url: AbsoluteHttpURL | None = getattr(rendition.urls, media_type)
             if not url:
                 return None
-            return await self._request_m3u8(url, method, media_type, **kwargs)
+            return await self._request_m3u8(url, method, media_type, keep_query=keep_query, **kwargs)
 
         video, audio, subs = await aio.gather(resolve("video"), resolve("audio"), resolve("subtitle"))
         assert video
@@ -91,11 +93,16 @@ class HLSMixin(ABC):
         /,
         method: HttpMethod = "GET",
         media_type: Literal["video", "audio", "subtitle"] | None = None,
+        keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> m3u8.M3U8:
         check_ffmpeg_is_installed()
         content = await self.request_text(url, method, **kwargs)
-        return await asyncio.to_thread(m3u8.M3U8, content, url.parent, media_type, source=url)
+        base_uri = url.parent
+        if keep_query:
+            base_uri = base_uri.with_query(url.query)
+        base_uri = ensure_trailing_slash(base_uri)
+        return await asyncio.to_thread(m3u8.M3U8, content, base_uri, media_type, source=url)
 
     async def request_m3u8_playlist(
         self,
