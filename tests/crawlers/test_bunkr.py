@@ -154,4 +154,4 @@ def test_fix_tumb(url: str, expected: str | None) -> None:
 )
 def test_extract_js_vars(js_value: str, expected: str) -> None:
     soup = css.soup(f"<script>var jsCDN = {js_value};</script>")
-    assert bunkr._extract_js_vars(soup)["jsCDN"] == expected
+    assert bunkr._extract_cdn_vars(soup)["jsCDN"] == expected

@@ -135,7 +135,7 @@ markers = [
 minversion = "9.1.1"
 strict_config = true
 strict_markers = true
-tmp_path_retention_count = "0"
+tmp_path_retention_count = "1"
 tmp_path_retention_policy = "failed"
 
 [tool.ruff]
