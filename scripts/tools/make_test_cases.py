@@ -79,6 +79,7 @@ def run_test(url_txt: Path, main_log: Path) -> None:
                 "--flaresolverr-concurrency",
                 "3",
                 "--dump-json",
+                "--no-update-check",
                 "--ui",
                 "simple",
             ]

@@ -21,6 +21,7 @@
       "--no-flaresolverr-use-session",
       "--input-file",
       "URLs.txt",
+      "--no-update-check",
       "--log-file",
       "debug_run.log",
     ],
