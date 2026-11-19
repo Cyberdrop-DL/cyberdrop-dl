@@ -77,6 +77,7 @@ class Authentication(ConfigModel):
     pixeldrain: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     nova: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     real_debrid: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
+    tinglr: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
 
     def censored_dump(self) -> dict[str, bool]:
         return {site: all(vars(credentials).values()) for site, credentials in self}

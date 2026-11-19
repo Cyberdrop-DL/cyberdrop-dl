@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import dataclasses
+import functools
 import re
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.json import JSONWebToken
 
 if TYPE_CHECKING:
+    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -24,8 +29,10 @@ class TinglrCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://tinglr.co")
     YT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.youtube.com/watch")
 
-    def __post_init__(self) -> None:
+    async def __async_post_init__(self) -> None:
         self.api: TinglrAPI = TinglrAPI.from_crawler(self)
+        if jwt := self.config.auth.tinglr.api_key:
+            self.api.auth_key = jwt
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -45,39 +52,91 @@ class TinglrCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         video = await self.api.video(video_id)
-
-        if not video["is_bunny"]:
-            raise ScrapeError(422, "Only bunny CDN videos are supported")
-
         title = video["title"]
         scrape_item.setup_as_album(self.create_title(title, video_id))
         thumb_name = self.create_custom_filename(video_id, ".jpg")
 
         headers = {"Referer": str(self.PRIMARY_URL.origin())}
-        async with aio.non_cancelling_taskgroup() as tg:
-            tg.create_task(self.handle_thumb(video.get("thumbnail_url"), thumb_name, scrape_item))
-            tg.create_task(self.write_metadata(scrape_item, f"video_{video_id}", video))
-            stream = await self.api.bunny_stream(video_id)
-            m3u8, info = await self.request_m3u8_playlist(stream, headers=headers, keep_query=True)
-            tg.create_task(
-                self.handle_file(
-                    scrape_item.url,
-                    scrape_item,
-                    title,
-                    ext := ".mp4",
-                    m3u8=m3u8,
-                    custom_filename=self.create_custom_filename(
-                        title, ext, resolution=info and info.resolution, file_id=video_id
-                    ),
-                    metadata=video,
-                    headers=headers,
-                )
-            )
+        if video["nsfw"]:
+            thumb = self.api.nsfw_thumb(video_id)
+            thumb_suffix = "_blur_thumb"
+        else:
+            thumb = video.get("thumbnail_url")
+            thumb_suffix = "_thumb"
+
+        self.create_eager_task(self.handle_thumb(thumb, thumb_name, scrape_item, thumb_suffix))
+        self.create_eager_task(self.write_metadata(scrape_item, f"video_{video_id}", video))
+        if not video["is_bunny"]:
+            raise ScrapeError(422, "Only bunny CDN videos are supported")
+
+        stream = await self.api.bunny_stream(video_id)
+        m3u8, info = await self.request_m3u8_playlist(stream, headers=headers, keep_query=True)
+        await self.handle_file(
+            scrape_item.url,
+            scrape_item,
+            title,
+            ext := ".mp4",
+            m3u8=m3u8,
+            custom_filename=self.create_custom_filename(
+                title, ext, resolution=info and info.resolution, file_id=video_id
+            ),
+            metadata=video,
+            headers=headers,
+        )
 
 
+def _json_check(data: Any, resp: AbstractResponse[Any], *, jwt: JSONWebToken | None = None) -> None:
+    if type(data) is not dict:
+        return
+
+    errors = tuple(map(data.get, ("error", "code", "message")))
+    if errors[0] == "Purchase required":
+        raise ScrapeError(HTTPStatus.PAYMENT_REQUIRED, errors[0])
+
+    if resp.status == 406:
+        if jwt is None:
+            msg = "NSFW videos require a logged in account. Provide a JWT in the config"
+        elif jwt.is_expired(300):
+            msg = "Account JWT has expired"
+        else:
+            msg = "NSFW videos are disabled on your account"
+        raise ScrapeError(HTTPStatus.UNAUTHORIZED, msg)
+
+    raise ScrapeError(resp.status, " - ".join(filter(None, errors)))
+
+
+@HTTPConfig(json_check=_json_check)
 class TinglrAPI(API):
-    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://xagsegkooqopnybovcou.supabase.co/rest/v1")
+    SUPA: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://xagsegkooqopnybovcou.supabase.co/rest/v1")
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://tinglr.co/api")
     CLIENT_VERSION: ClassVar[str] = "supabase-js-web/2.105.1"
+    _jwt: JSONWebToken | None = None
+
+    def nsfw_thumb(self, video_id: str) -> AbsoluteHttpURL:
+        # TODO: Implement proper sign workflow. These are blurred thumbnails
+        return (self.ENTRYPOINT / "nsfw-thumb").update_query(v=video_id)
+
+    @property
+    def auth_key(self) -> str | None:
+        if self._jwt is None:
+            return None
+        if self._jwt.is_expired(300):
+            raise ScrapeError(403, "API key has expired")
+        return self._jwt.encoded
+
+    @auth_key.setter
+    def auth_key(self, jwt: str | None) -> None:
+        if jwt:
+            self._jwt = JSONWebToken.decode(jwt)
+            if self._jwt.payload.get("is_anonymous"):
+                raise ScrapeError(
+                    HTTPStatus.UNAUTHORIZED, "Please provide a JWT of a logged in account (not anonymous)"
+                )
+            json_check = functools.partial(_json_check, jwt=self._jwt)
+        else:
+            self._jwt = None
+            json_check = _json_check
+        self.__http_ctx__ = dataclasses.replace(self.__http_ctx__, json_check=json_check)
 
     @disk_cached_method(ttl=86_400 * 30)
     async def supabase_anon_key(self) -> str:
@@ -102,13 +161,17 @@ class TinglrAPI(API):
 
         raise LoginError("Unable to get a valid supabase API key ")
 
+    async def auth_headers(self) -> dict[str, str]:
+        key = self.auth_key or await self.supabase_anon_key()
+        return {"Authorization": f"Bearer {key}"}
+
     async def bunny_stream(self, video_id: str) -> AbsoluteHttpURL:
-        url = (self.PRIMARY_URL / "api/bunny-video").with_query(stream=video_id)
-        resp = await self.request_json(url)
+        url = (self.ENTRYPOINT / "bunny-video").with_query(stream=video_id)
+        resp = await self.request_json(url, headers=await self.auth_headers())
         return self.parse_url(resp["streamUrl"])
 
     async def video(self, video_id: str) -> dict[str, Any]:
-        url = (self.ENTRYPOINT / "videos").with_query(
+        url = (self.SUPA / "videos").with_query(
             id=f"eq.{video_id}",
             select=",".join(
                 (
@@ -137,14 +200,14 @@ class TinglrAPI(API):
                 )
             ),
         )
-        key = await self.supabase_anon_key()
+
         return await self.request_json(
             url,
             headers={
                 "Accept": "application/vnd.pgrst.object+json",
-                "Authorization": f"Bearer {key}",
-                "apikey": key,
+                "apikey": await self.supabase_anon_key(),
                 "Referer": str(self.PRIMARY_URL),
                 "x-client-info": self.CLIENT_VERSION,
+                **(await self.auth_headers()),
             },
         )
