@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Downloads (Hotpic)
 - Video downloads (Desivideo)
 - Video downloads (Erome.fan)
+- Image and video extraction (Fsiblog)
 
 ## [10.16.0] - 2026-11-15
 

@@ -1,30 +1,32 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
+from cyberdrop_dl import aio
+from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig, auto_task_id
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import json_ld, open_graph
+from cyberdrop_dl.utils import css, json_ld
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
-    IMAGES = "a.elementor-gallery-item"
+    IMAGES = ".gallery a.gallery__item"
     NEXT_PAGE = "a.next"
     ARTICLE = ".elementor-post__title a"
 
 
 @URLConfig(allow_empty_path=True)
 class FSIBlogCrawler(Crawler):
-    SUPPORTED_DOMAINS: ClassVar[SupportedDomains] = "fsiblog5.com", "fsiblog5.club"
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Posts": "/<category>/<title>",
         "Search": "?s=<query>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.fsiblogxx.com")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.fsiblogmms.com")
     DOMAIN: ClassVar[str] = "fsiblog.com"
     FOLDER_DOMAIN: ClassVar[str] = "FSIBlog"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = (
@@ -39,6 +41,8 @@ class FSIBlogCrawler(Crawler):
         "fsiblog3.club",
         "fsiblog4.club",
         "fsiblog5.com",
+        "fsiblogxx.com",
+        "fsiblog5.club",
     )
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m-%d} - {title}"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
@@ -66,12 +70,23 @@ class FSIBlogCrawler(Crawler):
         title = self.create_separate_post_title(name, None, date)
         scrape_item.setup_as_album(self.create_title(title))
 
-        if video := open_graph.get("video", soup):
-            link = self.parse_url(video)
-            self.create_eager_task(self.direct_file(scrape_item, link))
+        found = False
+        async with aio.non_cancelling_taskgroup() as tg:
+            try:
+                video = json_ld.find(soup, validate={"@type": "VideoObject"})
+            except css.SelectorError:
+                pass
+            else:
+                link = self.parse_url(video[1]["contentUrl"])
+                tg.create_task(self.direct_file(scrape_item, link))
+                found = True
 
-        for image in self.iter_urls(soup, Selector.IMAGES):
-            self.create_eager_task(self.direct_file(scrape_item, image))
+            for image in self.iter_urls(soup, Selector.IMAGES):
+                tg.create_task(self.direct_file(scrape_item, image))
+                found = True
+
+            if not found:
+                raise ScrapeError(204, "Did not find any video or image on the page")
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
