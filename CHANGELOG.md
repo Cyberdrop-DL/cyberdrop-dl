@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Only the first 1000 images in a gallery being downloaded (Imx.to)
 - Downloads (Hotpic)
 - Video downloads (Desivideo)
+- Video downloads (Erome.fan)
 
 ## [10.16.0] - 2026-11-15
 

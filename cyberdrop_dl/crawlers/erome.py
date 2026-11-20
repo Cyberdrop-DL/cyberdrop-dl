@@ -151,6 +151,8 @@ class EromeFanCrawler(EromeCrawler):
     FOLDER_DOMAIN: ClassVar[str] = "Erome.fan"
     NEXT_PAGE_SELECTOR: ClassVar[str] = "a.next"
 
+    request = Crawler.request
+
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
             case ["a", "category", name, *_]:
