@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import itertools
 from typing import TYPE_CHECKING, ClassVar, override
-from xml.etree import ElementTree as ET
 
 from cyberdrop_dl.crawlers.xenforo.xenforo import XenforoCrawler
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.utils import xml
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -24,11 +24,11 @@ _N_POSTS_PER_PAGE = 15
 class Post:
     id: int
     title: str
-    xml: ET.Element[str]
+    xml: xml.Element
     date: dt.datetime | None = None
 
     @staticmethod
-    def new(element: ET.Element[str]) -> Post:
+    def new(element: xml.Element) -> Post:
         title, id_ = element.attrib["title"], int(element.attrib["id"])
         return Post(id_, title, element)
 
@@ -88,7 +88,7 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
 
         await self._posts(scrape_item, thread, root_xml)
 
-    async def _posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: ET.Element[str]) -> None:
+    async def _posts(self, scrape_item: ScrapeItem, thread: Thread, root_xml: xml.Element) -> None:
         if thread.page:
             posts = itertools.islice(root_xml.iter("post"), (thread.page - 1) * _N_POSTS_PER_PAGE, None)
         else:
@@ -115,8 +115,8 @@ class vBulletinCrawler(XenforoCrawler, is_abc=True):  # noqa: N801
             scrape_item.add_children()
 
 
-def _parse_xml(content: str) -> ET.Element[str]:
-    root_xml = ET.XML(content)
+def _parse_xml(content: str) -> xml.Element:
+    root_xml = xml.XML(content)
     if error := root_xml.find("error"):
         details = error.attrib["details"]
         error_code = 403 if error.attrib["type"] == "permissions" and "unknown" not in details.casefold() else 422

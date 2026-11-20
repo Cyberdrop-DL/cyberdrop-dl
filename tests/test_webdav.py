@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 from cyberdrop_dl import signature
-from cyberdrop_dl.utils import webdav
-
-if TYPE_CHECKING:
-    from xml.etree import ElementTree as ET
+from cyberdrop_dl.utils import webdav, xml
 
 XML = """<?xml version="1.0"?>
 <d:multistatus
@@ -53,12 +50,12 @@ def test_webdav_parse_propfind() -> None:
 class TestPropFind:
     @staticmethod
     @signature.copy(webdav.create_propfind_xml)
-    def create_propfind_xml(*args: Any, **kwargs: Any) -> ET.Element[str]:
+    def create_propfind_xml(*args: Any, **kwargs: Any) -> xml.Element:
         root = webdav.create_propfind_xml(*args, **kwargs)
         return webdav.update_tags_from_ns(root)
 
     @staticmethod
-    def prop(root: ET.Element[str]) -> ET.Element[str]:
+    def prop(root: xml.Element) -> xml.Element:
         prop = root.find("{DAV:}prop")
         assert prop is not None
         return prop
@@ -108,4 +105,4 @@ class TestPropFind:
                 assert root.find(f".//{prop}", extra_ns) is not None
 
     def test_to_bytes_has_xml_declaration(self) -> None:
-        assert webdav.xml_to_bytes(self.create_propfind_xml()).startswith(b"<?xml version=")
+        assert xml.to_bytes(self.create_propfind_xml()).startswith(b"<?xml version=")

@@ -13,7 +13,6 @@ from cyberdrop_dl.utils import strict_variadic
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from xml.etree import ElementTree as ET
 
     from bs4.element import Tag
 
@@ -122,21 +121,6 @@ def select(tag: Tag, selector: str, attribute: str | None = None) -> Tag | str:
     if not attribute:
         return inner_tag
     return attr(inner_tag, attribute)
-
-
-def xpath_select(xml: ET.Element, path: str) -> ET.Element:
-    result = xml.find(path)
-    if result is None:
-        raise SelectorError(f"XML {path = } not found")
-    return result
-
-
-def xpath_select_text(xml: ET.Element, path: str) -> str:
-    return xpath_text(xpath_select(xml, path))
-
-
-def xpath_text(xml: ET.Element) -> str:
-    return xml.text or ""
 
 
 @overload

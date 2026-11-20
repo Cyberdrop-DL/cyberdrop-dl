@@ -8,7 +8,8 @@ import email.utils
 from collections.abc import Generator
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
-from xml.etree import ElementTree as ET
+
+from cyberdrop_dl.utils import xml
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
@@ -25,7 +26,7 @@ _STD_PROPERTIES: Final = (
 )
 _NAMESPACE: Final = ("d", "DAV:")
 
-ET.register_namespace(*_NAMESPACE)
+xml.register_namespace(*_NAMESPACE)
 
 
 class Method(StrEnum):
@@ -61,15 +62,9 @@ class Resource:
 
 
 def parse_propfind(xml_resp: str) -> Generator[Resource]:
-    root = ET.fromstring(xml_resp)  # noqa: S314
-
-    for response in root.iterfind(".//{DAV:}response"):
-        href = response.find("{DAV:}href")
-        assert href is not None
-        assert href.text is not None
-
+    for response in xml.XML(xml_resp).iterfind(".//{DAV:}response"):
+        href = xml.select(response, "{DAV:}href")
         props = dict(_parse_properties(response))
-
         pop = props.pop
 
         yield Resource(
@@ -81,45 +76,40 @@ def parse_propfind(xml_resp: str) -> Generator[Resource]:
             last_modified=email.utils.parsedate_to_datetime(pop("{DAV:}getlastmodified")),
             content_length=int(pop("{DAV:}getcontentlength", 0)) or None,
             extra_props=props,
-            href=href.text,
+            href=xml.text(href),
         )
 
 
-def _parse_properties(response: ET.Element[str]) -> Generator[tuple[str, str]]:
+def _parse_properties(response: xml.Element) -> Generator[tuple[str, str]]:
     for propstat in response.iterfind(".//{DAV:}prop"):
         for ele in propstat:
-            if ele.text is not None:
-                yield ele.tag, ele.text
+            yield ele.tag, xml.text(ele)
 
 
 def create_propfind_xml(
     *extra_props: str,
     namespaces: Mapping[str, str] | Iterable[tuple[str, str]] | None = None,
-) -> ET.Element[str]:
+) -> xml.Element:
     ns: dict[str, str] = dict([_NAMESPACE])
     if namespaces is not None:
         ns.update(namespaces)
 
-    root = ET.Element(
+    root = xml.Element(
         "d:propfind",
         attrib={f"xmlns:{prefix}": uri for prefix, uri in ns.items()},
     )
 
     props = tuple(dict.fromkeys((*_STD_PROPERTIES, *extra_props)))
-    prop_element = ET.SubElement(root, "d:prop")
+    prop_element = xml.SubElement(root, "d:prop")
     for prop in props:
-        _ = ET.SubElement(prop_element, f"d:{prop}" if ":" not in prop else prop)
+        _ = xml.SubElement(prop_element, f"d:{prop}" if ":" not in prop else prop)
 
-    ET.indent(root, space="  ")
+    xml.indent(root, space="  ")
     return root
 
 
-def update_tags_from_ns(root: ET.Element[str]) -> ET.Element[str]:
-    return ET.fromstring(xml_to_bytes(root))  # noqa: S314
+def update_tags_from_ns(root: xml.Element) -> xml.Element:
+    return xml.XML(xml.to_bytes(root))
 
 
-def xml_to_bytes(root: ET.Element[str]) -> bytes:
-    return ET.tostring(root, xml_declaration=True, encoding="utf-8")
-
-
-DEFAULT_PROPFIND = xml_to_bytes(create_propfind_xml())
+DEFAULT_PROPFIND = xml.to_bytes(create_propfind_xml())

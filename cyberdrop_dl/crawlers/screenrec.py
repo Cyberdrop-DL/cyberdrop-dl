@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, ClassVar, override
-from xml.etree import ElementTree as ET
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, dates
+from cyberdrop_dl.utils import css, dates, xml
 from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import parse_http_url
@@ -121,10 +120,10 @@ def _extract_clip_id(html: str) -> str:
 
 
 @aio.to_thread
-def _parse_video(xml_content: str, clip_id: str, share_id: str) -> Video:
-    xml = ET.XML(xml_content)
-    m3u8_url = css.xpath_select_text(xml, "info/url")
-    meta = {ele.tag.removeprefix("clip_"): css.xpath_text(ele) for ele in css.xpath_select(xml, "info/meta")}
+def _parse_video(content: str, clip_id: str, share_id: str) -> Video:
+    xml_doc = xml.XML(content)
+    m3u8_url = xml.select_text(xml_doc, "info/url")
+    meta = {ele.tag.removeprefix("clip_"): xml.text(ele) for ele in xml.select(xml_doc, "info/meta")}
 
     return Video(
         id=clip_id,

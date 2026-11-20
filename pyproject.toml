@@ -202,7 +202,8 @@ banned-from = [
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"asyncio.gather".msg = "Use aio.gather or aio.safe_gather instead"
+"asyncio.gather".msg = "Use aio.gather instead"
+"xml.etree".msg = "Use utils.xml instead"
 
 [tool.ruff.lint.per-file-ignores]
 "**/{tests,docs,scripts}/*" = [
