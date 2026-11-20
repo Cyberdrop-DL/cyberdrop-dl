@@ -33,9 +33,6 @@ crawlers:
     external: true
     reposts: false
     threads: true
-  clonr:
-    use_source: false
-    zip: false
   clypit:
     prefer_mp3: false
   disabled: []
@@ -200,7 +197,6 @@ network:
   proxy: null
   rate_limit: 25.0
   read_timeout: 300.0
-  ssl_context: truststore+certifi
   tls:
     ca_certs: []
     min_version: "1.2"

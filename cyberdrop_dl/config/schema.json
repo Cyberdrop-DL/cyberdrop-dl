@@ -194,7 +194,8 @@
           "$ref": "#/$defs/BlueSkyConfig"
         },
         "clonr": {
-          "$ref": "#/$defs/ClonrConfig"
+          "$ref": "#/$defs/ClonrConfig",
+          "deprecated": true
         },
         "clypit": {
           "$ref": "#/$defs/ClypitConfig"
