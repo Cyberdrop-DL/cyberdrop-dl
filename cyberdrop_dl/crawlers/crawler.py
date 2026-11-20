@@ -861,6 +861,19 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         return ContainerChecker(completed, check)
 
     @final
+    async def get_completed_referer_by_album(self, album_id: str) -> ContainerChecker[set[str], AbsoluteHttpURL]:
+        completed = await self.database.history.query_completed_referer_by_album(self.DOMAIN, album_id)
+
+        def check(url: AbsoluteHttpURL) -> bool:
+            if completed and str(url) in completed:
+                logger.info("Skipping %s as it has already been downloaded", url)
+                self.tui.files.stats.prev_completed += 1
+                return True
+            return False
+
+        return ContainerChecker(completed, check)
+
+    @final
     def handle_external_links(self, scrape_item: ScrapeItem, *, reset: bool = True) -> None:
         """Maps external links to the scraper class."""
         if reset:
