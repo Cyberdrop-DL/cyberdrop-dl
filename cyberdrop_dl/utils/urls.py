@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast, overload
 import yarl
 from typing_extensions import TypeIs
 
-from cyberdrop_dl.utils import Deduper
+from cyberdrop_dl.utils import Deduper, is_blob_or_svg
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -31,6 +31,9 @@ def str_to_url(url: str) -> yarl.URL:
     if not url:
         raise ValueError("Empty URL", url)
 
+    if is_blob_or_svg(url):
+        raise ValueError(f"Invalid blob URL: {url}")
+
     clean_url = fix_multi_slashes(fix_query_params_encoding(url))
     return yarl.URL(clean_url, encoded="%" in clean_url)
 
@@ -43,7 +46,7 @@ def parse_http_url(
 ) -> AbsoluteHttpURL:
     """Parse a string into an absolute URL, handling relative URLs, encoding and optionally removes trailing slash (trimming)."""
 
-    url = str_to_url(link) if isinstance(link, str) else link
+    url = link if is_url(link) else str_to_url(link)
     if not _is_absolute_http_url(url):
         if not relative_to:
             raise ValueError("Relative URL with no known origin", url)
