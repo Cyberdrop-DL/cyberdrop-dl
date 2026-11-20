@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
@@ -12,16 +13,17 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
-    GALLERY_TITLE = "div.title"
-    GALLERY_IMAGES = "div.tooltip a"
-    IMAGES = "div#container a > img"
+    GALLERY_TITLE = "h1.gal-title"
+    GALLERY_IMAGES = ".gal-tiles > a"
+    IMAGE = "a.img-photo"
 
 
 class ImxToCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Image": (
-            "/i/...",
+            "/i/<image_id>",
             "/u/i/...",
         ),
         "Thumbnail": (
@@ -31,7 +33,9 @@ class ImxToCrawler(Crawler):
         "Gallery": "/g/<gallery_id>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://imx.to")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("imx.yt",)
     DOMAIN: ClassVar[str] = "imx.to"
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "nav a[rel=next]"
 
     async def __async_post_init__(self) -> None:
         self.update_cookies({"continue": 1})
@@ -61,20 +65,20 @@ class ImxToCrawler(Crawler):
         soup = await self.request_soup(
             scrape_item.url,
             method="POST",
-            data={"imgContinue": "Continue+to+image+...+"},
+            data={"imgContinue": "Continue to image ... "},
         )
-        image = css.select(soup, Selector.IMAGES)
-        name = css.attr(image, "alt")
-        link = self.parse_url(css.attr(image, "src"))
+        image = css.select(soup, Selector.IMAGE)
+        name = css.attr(image, "title")
+        src = self.parse_url(css.attr(image, "href"))
         filename, ext = self.get_filename_and_ext(name)
-        await self.handle_file(link, scrape_item, name, ext, custom_filename=filename)
+        await self.handle_file(src, scrape_item, name, ext, custom_filename=filename)
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup = await self.request_soup(scrape_item.url)
+        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
         name = css.select_text(soup, Selector.GALLERY_TITLE)
-        title = self.create_title(name, album_id)
-        scrape_item.setup_as_album(title, album_id=album_id)
+        scrape_item.setup_as_album(self.create_title(name, album_id), album_id=album_id)
 
-        for new_scrape_item in self.iter_children(scrape_item, soup, Selector.GALLERY_IMAGES):
-            self.create_task(self.run(new_scrape_item))
+        async for soup in pages:
+            for new_item in self.iter_children(scrape_item, soup, Selector.GALLERY_IMAGES):
+                self.create_task(self.run(new_item))
