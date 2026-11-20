@@ -244,7 +244,7 @@ class M3U8(_M3U8):
             query = base_uri.query
             if base_uri.suffix.casefold() == ".m3u8":
                 base_uri = base_uri.parent
-            base_uri = ensure_trailing_slash(base_uri.parent).with_query(query)
+            base_uri = ensure_trailing_slash(base_uri).with_query(query)
 
         self.media_type: Literal["video", "audio", "subtitle"] | None = media_type
         self.source: AbsoluteHttpURL | Path | None = source

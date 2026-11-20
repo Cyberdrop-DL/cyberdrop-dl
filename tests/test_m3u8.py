@@ -1,5 +1,4 @@
 import datetime as dt
-from typing import LiteralString
 
 import pytest
 
@@ -14,9 +13,7 @@ def _variant_parser(content: str, url: AbsoluteHttpURL | str | None = None) -> m
     return m3u8.VariantM3U8Parser(m3u8_obj)
 
 
-@pytest.fixture
-def m3u8_content() -> LiteralString:
-    return """
+m3u8_content = """
     #EXTM3U
     #EXT-X-VERSION:3
     #EXT-X-TARGETDURATION:10
@@ -32,9 +29,7 @@ def m3u8_content() -> LiteralString:
     """
 
 
-@pytest.fixture
-def m3u8_master_content() -> LiteralString:
-    return """
+m3u8_master_content = """
     #EXTM3U
     #EXT-X-VERSION:3
 
@@ -49,9 +44,7 @@ def m3u8_master_content() -> LiteralString:
     """
 
 
-@pytest.fixture
-def m3u8_master_content2() -> LiteralString:
-    return """
+m3u8_master_content2 = """
     #EXTM3U
     #EXT-X-VERSION:4
 
@@ -109,7 +102,7 @@ def test_get_resolution_from_url_invalid_url(url: str, exception: type[Exception
         m3u8.get_resolution_from_url(url)
 
 
-def test_m3u8(m3u8_content: str) -> None:
+def test_m3u8() -> None:
     m3u8_obj = m3u8.M3U8(m3u8_content)
     assert m3u8_obj.total_duration == dt.timedelta(seconds=28.5)
     assert not m3u8_obj.is_variant
@@ -117,7 +110,7 @@ def test_m3u8(m3u8_content: str) -> None:
         m3u8.VariantM3U8Parser(m3u8_obj)
 
 
-def test_m3u8_master(m3u8_master_content: str) -> None:
+def test_m3u8_master() -> None:
     variant = _variant_parser(m3u8_master_content)
     assert len(variant.groups) == 3
     best = variant.get_best_group()
@@ -128,7 +121,7 @@ def test_m3u8_master(m3u8_master_content: str) -> None:
     assert best.codecs == Codecs("avc1.4d402j", "mp4a.40.2")
 
 
-def test_m3u8_master_exclude_codec(m3u8_master_content: str) -> None:
+def test_m3u8_master_exclude_codec() -> None:
     variant = _variant_parser(m3u8_master_content)
     assert variant.get_best_group(exclude="hevc")
     with pytest.raises(StopIteration):
@@ -139,7 +132,7 @@ def test_m3u8_master_exclude_codec(m3u8_master_content: str) -> None:
         variant.get_best_group(only="vp9", exclude="avc1")
 
 
-def test_m3u8_master2(m3u8_master_content2: str) -> None:
+def test_m3u8_master2() -> None:
     variant = _variant_parser(m3u8_master_content2)
     assert len(variant.groups) == 10
     best = variant.get_best_group()
@@ -150,7 +143,7 @@ def test_m3u8_master2(m3u8_master_content2: str) -> None:
     assert best.codecs == Codecs("avc1.64002a", "mp4a.40.2")
 
 
-def test_m3u8_master2_exclude_codec(m3u8_master_content2: str) -> None:
+def test_m3u8_master2_exclude_codec() -> None:
     variant = _variant_parser(m3u8_master_content2)
     best = variant.get_best_group(exclude="vp9")
     assert best.codecs.video == "avc1.64002a"
@@ -166,7 +159,7 @@ def test_m3u8_master2_exclude_codec(m3u8_master_content2: str) -> None:
         best = variant.get_best_group(only="vp9", exclude="avc1")
 
 
-def test_m3u8_master2_audio(m3u8_master_content2: str) -> None:
+def test_m3u8_master2_audio() -> None:
     variant = _variant_parser(m3u8_master_content2)
     best = variant.get_best_group()
     assert best.media.filter(group_id="audio")
