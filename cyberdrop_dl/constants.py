@@ -90,9 +90,13 @@ class HashMode(CIStrEnum):
 class FileExt:
     IMAGE = frozenset(
         {
+            ".avif",
+            ".bmp",
             ".gif",
             ".gifv",
             ".heic",
+            ".heif",
+            ".ico",
             ".jfif",
             ".jif",
             ".jpe",
@@ -122,33 +126,51 @@ class FileExt:
             ".mp4",
             ".mpe",
             ".mpeg",
+            ".mpeg1",
+            ".mpeg2",
+            ".mpeg4",
             ".mpg",
             ".mpv",
             ".mts",
-            ".ogg",
             ".ogv",
             ".qt",
             ".swf",
             ".ts",
+            ".vob",
+            ".vp9",
             ".webm",
             ".wmv",
         }
     )
     AUDIO = frozenset(
         {
+            ".aac",
+            ".aiff",
+            ".alac",
+            ".dts",
+            ".f4a",
+            ".f4b",
             ".flac",
             ".m4a",
+            ".mid",
             ".mka",
             ".mp3",
+            ".mp4a",
+            ".mpa",
+            ".oga",
+            ".ogg",
+            ".vorbis",
             ".wav",
+            ".weba",
         }
     )
     SUBTITLES = frozenset(
         {
-            ".vtt",
-            ".sub",
-            ".srt",
             ".ass",
+            ".srt",
+            ".ssa",
+            ".sub",
+            ".vtt",
         }
     )
     TEXT = SUBTITLES | frozenset(
@@ -166,6 +188,7 @@ class FileExt:
             ".bz2",
             ".gz",
             ".tar",
+            ".lzma",
             ".zip",
         }
     )
