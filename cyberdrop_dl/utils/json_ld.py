@@ -11,6 +11,11 @@ if TYPE_CHECKING:
     from bs4.element import Tag
 
 
+def is_type(ele: Any, otype: str) -> bool:
+    elems = ele if type(ele) is list else [ele]
+    return any(type(ele) is str and otype in ele for ele in elems)
+
+
 def _find(
     soup: Tag, keys: tuple[str, ...], validate: Mapping[str, Any] | None = None
 ) -> tuple[tuple[Any, ...], traversal.DictVisitor]:
@@ -37,7 +42,7 @@ def find(soup: Tag, *keys: str, validate: Mapping[str, Any] | None = None) -> tu
 
 
 def find_elem(soup: Tag, type: str, *keys: str) -> dict[str, Any]:  # noqa: A002
-    return find(soup, type, *keys)[1]
+    return find(soup, *keys, validate={"@type": lambda x: is_type(x, type)})[1]
 
 
 @overload
