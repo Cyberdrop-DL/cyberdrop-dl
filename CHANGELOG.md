@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tinglr support
 - xErotica support
 - Blep support
+- Floofgens support
+- Danbooru support
+- E926 support
+- Hmofa support
+- Bleachbooru support
+- Borvarbooru support
 - Direct streams support (BunnyCDN)
 - Posts and users support (pimpandhost)
 
