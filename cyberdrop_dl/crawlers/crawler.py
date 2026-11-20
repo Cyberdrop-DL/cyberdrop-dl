@@ -1046,10 +1046,22 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
         url = url or scrape_item.url
-        name = filename or url.name or url.parent.name
         async with self.catch_errors(url):
-            filename, ext = self.get_filename_and_ext(name, assume_ext=assume_ext)
-            await self.handle_file(url, scrape_item, name, ext, custom_filename=filename)
+            if filename:
+                try:
+                    cfilename, ext = self.get_filename_and_ext(filename, assume_ext=assume_ext)
+                except NoExtensionError:
+                    cfilename, ext = self.get_filename_and_ext(filename + url.suffix, assume_ext=assume_ext)
+            else:
+                cfilename, ext = self.get_filename_and_ext(url.name or url.parent.name, assume_ext=assume_ext)
+
+            await self.handle_file(
+                url,
+                scrape_item,
+                filename or url.name or url.parent.name,
+                ext,
+                custom_filename=cfilename,
+            )
 
     @final
     @classmethod
