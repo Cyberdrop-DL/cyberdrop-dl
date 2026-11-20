@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Danbooru support
 - E926 support
 - Hmofa support
+- WhiteKitten support
 - Bleachbooru support
 - Borvarbooru support
 - Direct streams support (BunnyCDN)

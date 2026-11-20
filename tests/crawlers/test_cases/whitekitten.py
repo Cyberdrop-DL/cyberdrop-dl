@@ -1,0 +1,56 @@
+DOMAIN = "whitekitten"
+TEST_CASES = [
+    {
+        "url": "https://whitekitten.art/posts/1847",
+        "order_by": "id",
+        "results": [
+            {
+                "url": "https://dql0sduktnnev.cloudfront.net/media/6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.png",
+                "filename": "003 - 6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.png",
+                "debrid_url": None,
+                "original_filename": "6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.png",
+                "referer": "https://whitekitten.art/posts/1847",
+                "album_id": "1847",
+                "uploaded_at": 1788683895,
+                "download_folder": "re:2026-09-06 - 1847 (WhiteKitten)",
+                "thumbnail": None,
+                "size": None,
+                "duration": None,
+                "parents": [],
+                "metadata": {
+                    "id": 2620,
+                    "fileOrder": 2,
+                    "label": None,
+                    "mimeType": "image/avif",
+                    "width": 1280,
+                    "height": 1280,
+                    "fileSize": 326372,
+                    "durationInSeconds": None,
+                    "processingStatus": "complete",
+                    "duplicateOfPostId": None,
+                    "duplicateOfFileOrder": None,
+                    "rating": "explicit",
+                    "ratingLocked": False,
+                    "mediaUrl": "re:/media/6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.avif",
+                    "pngUrl": "re:/media/6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.png",
+                    "lossyPngUrl": None,
+                    "htmlUrl": None,
+                    "thumbnailUrl": "re:/thumbs/6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9/large.webp",
+                },
+                "extra_info": {},
+                "id": ["whitekitten", "/media/6e6a9459f0117473e7927b765d7d7b2f74bafcba234a26d0d1918174f013dcb9.png"],
+            },
+            {
+                "url": "https://dql0sduktnnev.cloudfront.net/media/79a08040326f176537fec77165ca2a6379949d441252a14d13f639cf64f24512.png",
+                "filename": "001 - 79a08040326f176537fec77165ca2a6379949d441252a14d13f639cf64f24512.png",
+                "id": ["whitekitten", "/media/79a08040326f176537fec77165ca2a6379949d441252a14d13f639cf64f24512.png"],
+            },
+            {
+                "url": "https://dql0sduktnnev.cloudfront.net/media/da6fcbf221fae8aaed5d67e63e195d33338b995df3c9773cd7c3d3d8b4d2a2d8.png",
+                "filename": "002 - da6fcbf221fae8aaed5d67e63e195d33338b995df3c9773cd7c3d3d8b4d2a2d8.png",
+                "id": ["whitekitten", "/media/da6fcbf221fae8aaed5d67e63e195d33338b995df3c9773cd7c3d3d8b4d2a2d8.png"],
+            },
+        ],
+        "count": 3,
+    }
+]
