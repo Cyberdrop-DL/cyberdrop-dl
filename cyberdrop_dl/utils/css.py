@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from bs4.filter import SoupStrainer
 
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import strict_variadic
+from cyberdrop_dl.utils import catch, strict_variadic
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -228,3 +228,6 @@ unescape = html.unescape
 iframes = CssAttributeSelector("iframe", "src")
 images = CssAttributeSelector("img", "srcset")
 links = CssAttributeSelector(":any-link", "href")
+
+select_or_none = catch(select, SelectorError)
+select_text_or_none = catch(select_text, SelectorError)

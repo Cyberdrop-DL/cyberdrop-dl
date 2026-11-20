@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
--- `--crawlers.clonr.use-source` and `--crawlers.clonr.zip` will be removed on the next major release
+- `--crawlers.clonr.use-source` and `--crawlers.clonr.zip` will be removed on the next major release
 
 ### Removed
 

@@ -73,9 +73,10 @@ class TwitchCrawler(Crawler):
         /,
         method: HttpMethod = "GET",
         media_type: Literal["video", "audio", "subtitle"] | None = None,
+        keep_query: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> m3u8.M3U8:
-        m3u8_obj = await super()._request_m3u8(url, method, media_type, **kwargs)
+        m3u8_obj = await super()._request_m3u8(url, method, media_type, keep_query=keep_query, **kwargs)
 
         # Some formats are "hidden" unless the user is logged in (1080p+ resolutions)
         # We can extract and parse them manually, bypassing the logging requirement

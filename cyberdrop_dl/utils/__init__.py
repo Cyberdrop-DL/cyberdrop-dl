@@ -6,7 +6,7 @@ import logging
 import operator
 import sys
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Concatenate, Self, cast, overload
+from typing import TYPE_CHECKING, Any, Self, cast, overload
 
 from cyberdrop_dl.constants import MISSING
 from cyberdrop_dl.exceptions import ScrapeError
@@ -161,23 +161,6 @@ def b64_pad(b64_string: str) -> str:
     return b64_string
 
 
-def bind_fn[T, **P, R](
-    func: Callable[Concatenate[T, P], R],
-    value: T,
-) -> Callable[P, R]:
-    """Bind `value` as the first positional argument of `func`.
-
-    The returned callable accepts the rest of `func`'s arguments.
-
-    Similiar to functools.partial but this preserves type annotations
-    """
-
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        return func(value, *args, **kwargs)
-
-    return wrapper
-
-
 type AnythingButTuple = (
     str
     | bytes
@@ -216,10 +199,10 @@ def strict_variadic(value: Any) -> tuple[Any, ...]:
 class Deduper[R]:
     def __init__(self, get_key: Callable[[Any], R] | None = None) -> None:
         self.seen: set[R] = set()
-        self.get_key: Callable[[Any], R] | None = get_key
+        self.get_key: Callable[[Any], R] = get_key if get_key is not None else lambda x: x
 
     def __contains__(self, obj: Any) -> bool:
-        lookup = obj if self.get_key is None else self.get_key(obj)
+        lookup = self.get_key(obj)
         if lookup in self.seen:
             return True
         self.seen.add(lookup)
@@ -257,3 +240,16 @@ def next_or_error[T](itr: Iterable[T], name: str) -> T:
     for item in itr:
         return item
     raise ScrapeError(422, f"Unable to find {name}")
+
+
+def catch[**P, R](
+    fn: Callable[P, R], exc: tuple[type[Exception], ...] | type[Exception] = Exception
+) -> Callable[P, R | None]:
+
+    def call(*args: P.args, **kwargs: P.kwargs) -> R | None:
+        try:
+            return fn(*args, **kwargs)
+        except exc:
+            return None
+
+    return call

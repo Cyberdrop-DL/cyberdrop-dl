@@ -1035,10 +1035,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             assert selector, f"No selector was provided and {self.DOMAIN} does define a next_page_selector"
 
             def get_next_page(soup: BeautifulSoup, /) -> yarl.URL | str | None:
-                try:
-                    return css.select(soup, selector, "href")
-                except css.SelectorError:
-                    return None
+                return css.select_or_none(soup, selector, "href")
 
         while True:
             soup = await self.request_soup(page_url, impersonate=impersonate)
