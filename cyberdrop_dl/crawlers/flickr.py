@@ -4,6 +4,7 @@ import itertools
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.cache import disk_cached_method
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -38,7 +39,7 @@ class FlickrCrawler(Crawler):
     async def __async_post_init__(self) -> None:
         self.api: FlickrAPI = FlickrAPI.from_crawler(self)
         async with self.catch_errors(self.api.ENDPOINT), self.disable_on_error("Unable to get public API key"):
-            await self.api.get_site_key()
+            await self.api.api_key()
 
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, user: str, photoset_id: str) -> None:
@@ -47,14 +48,17 @@ class FlickrCrawler(Crawler):
         name = first_page["title"]
         title = self.create_title(name["_content"] if isinstance(name, dict) else name, photoset_id)
         scrape_item.setup_as_album(title, album_id=photoset_id)
-        self.create_eager_task(self.write_metadata(scrape_item, photoset_id, first_page))
 
-        async for page in pages:
-            for photo in page["photo"]:
-                web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
-                new_scrape_item = scrape_item.create_child(web_url)
-                self.create_eager_task(self._photo(new_scrape_item, photo))
-                scrape_item.add_children()
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            tg.create_task(self.write_metadata(scrape_item, photoset_id, first_page))
+            async for page in pages:
+                for photo in page["photo"]:
+                    web_url = self.PRIMARY_URL / "photos" / user / photo["id"]
+                    new_item = scrape_item.create_child(web_url)
+                    tg.create_task(self._photo(new_item, photo))
+                    scrape_item.add_children()
+                    await sleep()
 
     @error_handling_wrapper
     async def photo(self, scrape_item: ScrapeItem, photo_id: str) -> None:
@@ -70,13 +74,12 @@ class FlickrCrawler(Crawler):
         title = photo["title"]
         name: str = (title["_content"] if isinstance(title, dict) else title) or photo["media"]
         source = await self._get_source(photo)
-        filename = self.create_custom_filename(name, source.suffix, file_id=photo["id"])
         await self.handle_file(
             source,
             scrape_item,
             name,
             source.suffix,
-            custom_filename=filename,
+            custom_filename=self.create_custom_filename(name, source.suffix, file_id=photo["id"]),
             metadata=photo,
         )
 
@@ -91,23 +94,21 @@ class FlickrCrawler(Crawler):
 class FlickrAPI(API):
     ENDPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://api.flickr.com/services/rest")
 
-    def __post_init__(self) -> None:
-        self.api_key: str = ""
-
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(api_key={self.api_key!r})"
+        return f"{type(self).__name__}(api_key={self.api_key.get()!r})"
 
-    async def get_site_key(self) -> None:
-        prints = self.PRIMARY_URL / "prints"
+    @disk_cached_method(ttl=86400 * 15)
+    async def api_key(self) -> str:
+        prints = self.PRIMARY_URL / "photos/jillblack33"
         text = await self.request_text(prints)
-        self.api_key = extr_text(text, 'flickr.api.site_key = "', '"')
+        return extr_text(text, 'flickr.api.site_key = "', '"')
 
     async def _request(self, method: str, **params: Any) -> dict[str, Any]:
         api_url = self.ENDPOINT.with_query(
             method="flickr." + method,
             format="json",
             nojsoncallback=1,
-            api_key=self.api_key,
+            api_key=await self.api_key(),
         )
         if params:
             api_url = api_url.update_query(params)

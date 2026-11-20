@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Single post downloads (Cara.app)
 - Single images and galleries (Imx.to)
 - Only the first 1000 images in a gallery being downloaded (Imx.to)
+- Update API key URL (Flickr)
 - Downloads (Hotpic)
 - Video downloads (Desivideo)
 - Video downloads (Erome.fan)
