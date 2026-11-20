@@ -134,7 +134,7 @@ class LeakedZoneCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         scrape_item.setup_as_profile("")
 
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         if soup.select_one(Selector.PREMIUM_OVERLAY):
             if not photos:
                 photos_url = self.PRIMARY_URL / model / "photo"

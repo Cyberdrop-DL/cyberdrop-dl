@@ -43,7 +43,7 @@ class FlickrCrawler(Crawler):
     @error_handling_wrapper
     async def photoset(self, scrape_item: ScrapeItem, user: str, photoset_id: str) -> None:
         title: str = ""
-        first_page, pages = await aio.peek_first(self.api.photoset(photoset_id))
+        first_page, pages = await aio.peek_next(self.api.photoset(photoset_id))
         name = first_page["title"]
         title = self.create_title(name["_content"] if isinstance(name, dict) else name, photoset_id)
         scrape_item.setup_as_album(title, album_id=photoset_id)

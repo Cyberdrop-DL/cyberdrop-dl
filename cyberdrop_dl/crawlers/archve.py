@@ -107,7 +107,7 @@ class ArchveCrawler(Crawler):
 
     @error_handling_wrapper
     async def user_videos(self, scrape_item: ScrapeItem, user_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(soup, "h1")
         scrape_item.setup_as_profile(self.create_title(f"{name} [user]", user_id))
 

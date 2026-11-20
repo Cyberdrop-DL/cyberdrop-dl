@@ -146,7 +146,7 @@ class PimpBunnyCrawler(Crawler):
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, name: str) -> None:
         album_url = scrape_item.url.origin() / "albums" / name / ""
-        soup, pages = await aio.peek_first(self.web_pager(album_url))
+        soup, pages = await aio.peek_next(self.web_pager(album_url))
         title = css.select_text(soup, Selector.ALBUM_TITLE)
         scrape_item.setup_as_album(self.create_title(f"{title} [album]"))
 

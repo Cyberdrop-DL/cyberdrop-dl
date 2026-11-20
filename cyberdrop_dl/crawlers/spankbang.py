@@ -129,7 +129,7 @@ class SpankBangCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, playlist_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(soup, Selector.PLAYLIST_TITLE)
         if (trash := name.casefold().rfind(" playlist")) != -1:
             name = name[:trash].strip()

@@ -168,7 +168,7 @@ class XVideosCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url, relative_to=scrape_item.url.origin()))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url, relative_to=scrape_item.url.origin()))
         name = css.select_text(soup, Selectors.GALLERY_TITLE, decompose="*")
         title = self.create_title(name.split(">", 1)[-1].strip(), album_id)
         scrape_item.setup_as_album(title, album_id=album_id)

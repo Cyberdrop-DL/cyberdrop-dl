@@ -47,7 +47,7 @@ class EHentaiCrawler(Crawler):
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem, gallery_id: str) -> None:
         scrape_item.url = scrape_item.url.with_query(None)
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = self.create_title(css.select_text(soup, Selector.TITLE))
         title = self.create_title(name, gallery_id)
         scrape_item.setup_as_album(title, album_id=gallery_id)

@@ -58,7 +58,7 @@ class PimpAndHostCrawler(Crawler):
 
     @error_handling_wrapper
     async def user_albums(self, scrape_item: ScrapeItem) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         user = css.select_text(soup, Selector.USERNAME)
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
 
@@ -72,7 +72,7 @@ class PimpAndHostCrawler(Crawler):
 
     @error_handling_wrapper
     async def user_posts(self, scrape_item: ScrapeItem) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         user = css.select_text(soup, Selector.USERNAME)
         scrape_item.setup_as_profile(self.create_title(f"{user} [user]"))
 
@@ -86,7 +86,7 @@ class PimpAndHostCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(soup, Selector.ALBUM_TITLE)
         title = self.create_title(name, album_id, force_album_id=name == "Untitled")
         scrape_item.setup_as_album(title, album_id=album_id)
@@ -102,7 +102,7 @@ class PimpAndHostCrawler(Crawler):
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         title = self.create_title(css.select_text(soup, Selector.POST_TITLE), post_id)
         scrape_item.setup_as_album(title, album_id=post_id)
 

@@ -73,7 +73,7 @@ class GoFileCrawler(Crawler):
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, content_id: str, selected_node_id: str | None = None) -> None:
-        first_node, pages = await aio.peek_first(self.api.content(content_id, scrape_item.password))
+        first_node, pages = await aio.peek_next(self.api.content(content_id, scrape_item.password))
         if _has_single_not_nested_file(scrape_item, first_node):
             title = ""
             part_of_album = False

@@ -57,7 +57,7 @@ class NHentaiCrawler(Crawler):
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_type: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url, impersonate=True))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url, impersonate=True))
         title = self.create_title(_get_title(soup, collection_type))
         scrape_item.setup_as_album(title)
 

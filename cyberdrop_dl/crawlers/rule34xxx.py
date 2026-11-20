@@ -43,7 +43,7 @@ class Rule34XXXCrawler(Crawler):
 
     @error_handling_wrapper
     async def tag(self, scrape_item: ScrapeItem, tags: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url, relative_to=scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url, relative_to=scrape_item.url))
         title = self.create_title(tags.strip())
         scrape_item.setup_as_album(title)
 

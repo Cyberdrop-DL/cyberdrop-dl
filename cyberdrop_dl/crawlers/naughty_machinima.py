@@ -49,7 +49,7 @@ class NaughtyMachinimaCrawler(Crawler):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        first_page, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        first_page, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(first_page, "title").rpartition(" Gallery - Naughty Machinima")[0]
         title = self.create_title(name, album_id)
         scrape_item.setup_as_album(title, album_id=album_id)

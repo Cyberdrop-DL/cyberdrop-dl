@@ -83,7 +83,7 @@ class EfuktCrawler(Crawler):
 
     @error_handling_wrapper
     async def series(self, scrape_item: ScrapeItem) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         title = css.select_text(soup, Selector.TITLE)
         scrape_item.setup_as_album(self.create_title(f"{title} [series]"))
 

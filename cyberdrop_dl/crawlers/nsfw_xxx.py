@@ -71,7 +71,7 @@ class NsfwXXXCrawler(Crawler):
 
     async def _collection(self, scrape_item: ScrapeItem, api_url: AbsoluteHttpURL, name: str | None = None) -> None:
         col_type = api_url.parts[3]
-        data, pages = await aio.peek_first(self._api_pager(api_url))
+        data, pages = await aio.peek_next(self._api_pager(api_url))
         name: str = name or data[col_type]["name"].removeprefix("/r/")
         title = name if col_type == "source" else f"{name} [{col_type}]"
         scrape_item.setup_as_profile(self.create_title(title))

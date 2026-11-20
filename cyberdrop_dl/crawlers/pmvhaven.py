@@ -197,7 +197,7 @@ class PMVAPI(API):
 
     async def playlist(self, playlist_id: str) -> tuple[Playlist, AsyncGenerator[map[Video]]]:
         api_url = self.PRIMARY_URL / "api/playlists" / playlist_id
-        data, pages = await aio.peek_first(self.pager(api_url))
+        data, pages = await aio.peek_next(self.pager(api_url))
         playlist = _deserialize(Playlist, data)
 
         async def video_pages():

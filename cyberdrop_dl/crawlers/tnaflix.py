@@ -70,7 +70,7 @@ class TNAFlixCrawler(Crawler):
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_type: str, name: str | None = None) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = name or css.select_text(soup, Selector.COLLECTION_TITLE)
         title = self.create_title(f"{name} - [{collection_type}]")
         scrape_item.setup_as_album(title)

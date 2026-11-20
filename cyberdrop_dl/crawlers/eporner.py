@@ -123,7 +123,7 @@ class EpornerCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, *, from_profile: bool = False) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         if not from_profile:
             title = css.select_text(soup, "title")
             title_trash = "Porn Star Videos", "Porn Videos", "Videos -", "EPORNER"
@@ -138,7 +138,7 @@ class EpornerCrawler(Crawler):
 
     @error_handling_wrapper
     async def gallery(self, scrape_item: ScrapeItem) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         title = css.select_text(soup, Selector.GALLERY_TITLE)
         scrape_item.setup_as_album(self.create_title(title))
 

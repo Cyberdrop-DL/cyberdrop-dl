@@ -173,7 +173,7 @@ class FileditchAlbumsCrawler(Crawler, wiki_site="FileditchAlbums"):
 
     @error_handling_wrapper
     async def album(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = self.create_title(css.select_text(soup, "h1.title"))
         scrape_item.setup_as_album(name, album_id=album_id)
         sleep = aio.periodic_sleep(10)

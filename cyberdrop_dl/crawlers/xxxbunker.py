@@ -74,7 +74,7 @@ class XXXBunkerCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, name: str, type_: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = name.replace("+", " ")
         category = {"search": "search", "categories": "category", "favoritevideos": "favorites"}[type_]
         title = self.create_title(f"{name} [{category}]")

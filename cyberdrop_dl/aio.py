@@ -172,7 +172,7 @@ async def async_next[T](async_iterator: AsyncIterator[T]) -> T:
     raise RuntimeError("generator didn't yield")
 
 
-async def peek_first[T](async_iterable: AsyncIterable[T], /) -> tuple[T, AsyncGenerator[T, None]]:
+async def peek_next[T](async_iterable: AsyncIterable[T], /) -> tuple[T, AsyncGenerator[T, None]]:
     async_iterator = aiter(async_iterable)
     first = await async_next(async_iterator)
 

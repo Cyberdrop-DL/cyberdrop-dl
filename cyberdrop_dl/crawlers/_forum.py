@@ -407,7 +407,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         await self._thread(scrape_item, thread)
 
     async def _thread(self, scrape_item: ScrapeItem, thread: ThreadProtocol) -> None:
-        first_page, pages = await aio.peek_first(self.web_pager(scrape_item.url, self.get_next_page))
+        first_page, pages = await aio.peek_next(self.web_pager(scrape_item.url, self.get_next_page))
         try:
             title = get_post_title(first_page, self.SELECTORS)
         except ScrapeError as e:

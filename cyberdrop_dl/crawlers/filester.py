@@ -84,7 +84,7 @@ class FilesterCrawler(Crawler):
 
     @error_handling_wrapper
     async def folder(self, scrape_item: ScrapeItem, album_id: str) -> None:
-        soup, pages = await aio.peek_first(self._folder_pager(scrape_item.url, scrape_item.password))
+        soup, pages = await aio.peek_next(self._folder_pager(scrape_item.url, scrape_item.password))
         title = self.create_title(open_graph.title(soup), album_id)
         scrape_item.setup_as_album(title, album_id=album_id)
 

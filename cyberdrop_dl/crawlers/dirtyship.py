@@ -47,7 +47,7 @@ class DirtyShipCrawler(Crawler):
 
     @error_handling_wrapper
     async def playlist(self, scrape_item: ScrapeItem, type_: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(soup, "title").split("Archives", 1)[0]
         title = self.create_title(f"{name} [{type_}]")
         scrape_item.setup_as_album(title)

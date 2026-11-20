@@ -61,7 +61,7 @@ class XeroticaCrawler(Crawler):
 
     @error_handling_wrapper
     async def model(self, scrape_item: ScrapeItem) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         name = css.select_text(soup, Selector.MODEL_NAME, decompose="span")
         scrape_item.setup_as_album(self.create_title(f"{name} [model]"))
 
@@ -71,7 +71,7 @@ class XeroticaCrawler(Crawler):
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
-        soup, pages = await aio.peek_first(self.web_pager(scrape_item.url))
+        soup, pages = await aio.peek_next(self.web_pager(scrape_item.url))
         scrape_item.setup_as_album(self.create_title(f"{query} [search]"))
 
         async for soup in pages:
