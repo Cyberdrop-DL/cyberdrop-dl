@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Propagate manifest query params to segments (HLS)
 - Albums and single pictures (pimpandhost)
+- Switch to v2 API (e621)
 - Downloads (Hotpic)
 
 ## [10.16.0] - 2026-11-15
