@@ -133,8 +133,6 @@ def _normalize_expected_value(expected_value: Any) -> Any:
             return type(expected_value)(map(_normalize_expected_value, expected_value))
         case dict():
             return {k: _normalize_expected_value(v) for k, v in expected_value.items()}
-        case str() if expected_value.startswith("http"):
-            return parse_http_url(expected_value)
         case _:
             return expected_value
 
@@ -142,6 +140,8 @@ def _normalize_expected_value(expected_value: Any) -> Any:
 def _compare_values(attr_name: str, index: tuple[str, int], expected_value: Any, result_value: Any) -> None:
     if isinstance(result_value, Path):
         result_value = result_value.as_posix()
+    if type(result_value) is AbsoluteHttpURL:
+        result_value = str(result_value)
 
     match expected_value:
         case type():
