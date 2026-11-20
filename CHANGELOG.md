@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Single images and galleries (Imx.to)
 - Only the first 1000 images in a gallery being downloaded (Imx.to)
 - Downloads (Hotpic)
+- Video downlaods (Desivideo)
 
 ## [10.16.0] - 2026-11-15
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -11,8 +11,9 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
-    VIDEO_SRC = css.CssAttributeSelector("video.fluid-player > source", "src")
+    VIDEO_SRC = css.CssAttributeSelector("video > source", "src")
     TITLE = "strong.bread-current"
     NEXT_PAGE = "li.page-item > a:-soup-contains('›')"  # noqa: RUF001
     VIDEOS = "div.videos-list > article > a"
@@ -45,11 +46,10 @@ class DesiVideoCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         video_url = self.parse_url(Selector.VIDEO_SRC(soup))
         title = css.select_text(soup, Selector.TITLE)
-        _, ext = self.get_filename_and_ext(video_url.name)
 
         scrape_item.uploaded_at = json_ld.upload_date(soup)
-        custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
-        await self.handle_file(video_url, scrape_item, video_url.name, ext, custom_filename=custom_filename)
+        custom_filename = self.create_custom_filename(title, ext := ".mp4", file_id=video_id)
+        await self.handle_file(video_url, scrape_item, title, ext, custom_filename=custom_filename)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
