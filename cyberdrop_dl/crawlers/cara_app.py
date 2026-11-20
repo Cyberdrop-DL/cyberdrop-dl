@@ -7,6 +7,7 @@ import itertools
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -76,7 +77,7 @@ class CaraCrawler(Crawler):
             scrape_item.add_children()
 
     async def _image(self, scrape_item: ScrapeItem, image: Image) -> None:
-        src = _CDN / image.src
+        src = self.parse_url(image.src, _CDN)
         async with self.catch_errors(src):
             filename, ext = self.get_filename_and_ext(src.name)
             await self.handle_file(
@@ -139,10 +140,12 @@ class CaraAPI(API):
 
     async def _pager(self, api_url: AbsoluteHttpURL) -> AsyncGenerator[map[Post]]:
         step_size = 50
-        for skip in itertools.count(0, step_size):
+        for page, skip in enumerate(itertools.count(0, step_size), 1):
             resp = await self.request_json(api_url.update_query(take=step_size, skip=skip))
             data = resp.get("data", ())
             n_posts = len(data)
             yield map(Post.parse, data)
             if n_posts < step_size:
+                if page == 2 and n_posts == 0:
+                    raise ScrapeError(401, "Pass logged in cookies to download more than 50 posts from this timeline")
                 break
