@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Untitled.stream support
 - Tinglr support
 - xErotica support
+- Blep support
 - Direct streams support (BunnyCDN)
 - Posts and users support (pimpandhost)
 
