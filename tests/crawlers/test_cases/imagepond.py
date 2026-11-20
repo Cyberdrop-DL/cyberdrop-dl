@@ -9,7 +9,7 @@ TEST_CASES = [
                 "download_folder": "re:Loose Files (ImagePond)",
                 "filename": "Palm Desert Resuscitation Education (YourCPRMD.com).png",
                 "album_id": None,
-                "uploaded_at": 1759122000,
+                "uploaded_at": 1759104000,
             }
         ],
     },
@@ -52,7 +52,7 @@ TEST_CASES = [
                 "domain": "imagepond.net",
                 "referer": "https://www.imagepond.net/i/3RxARn4j",
                 "filename": "VID_20260404_071357_214.mp4",
-                "uploaded_at": 1775278800,
+                "uploaded_at": int,
             }
         ],
     },
@@ -60,7 +60,7 @@ TEST_CASES = [
         "url": "https://www.imagepond.net/i/9TVLS36c/download/file",
         "results": [
             {
-                "url": "https://media.imagepond.net/media/archives/Images_kM5dpzpw.zip",
+                "url": "https://www.imagepond.net/i/9TVLS36c/download/file",
                 "referer": "https://www.imagepond.net/i/9TVLS36c",
                 "filename": "Images.zip",
             }

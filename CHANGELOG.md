@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Only the first 1000 images in a gallery being downloaded (Imx.to)
 - Update API key URL (Flickr)
 - Downloads (Hotpic)
+- Archive (`.zip`) downloads (Imagepond)
 - Video downloads (Desivideo)
 - Video downloads (Erome.fan)
 - Image and video extraction (Fsiblog)
