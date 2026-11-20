@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import aiohttp
 
 from cyberdrop_dl import __dist_name__, __version__
+from cyberdrop_dl.constants import CDL_USER_AGENT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -36,6 +37,7 @@ async def _request_pypi_info(session: aiohttp.ClientSession) -> dict[str, Any]:
             sock_read=30,
             sock_connect=20,
         ),
+        headers={"User-Agent": CDL_USER_AGENT},
     ) as response:
         return await response.json()
 
