@@ -117,7 +117,7 @@ class WhiteKittenAPI(API):
         return resp["data"]["post"]
 
     async def search(self, query: str) -> AsyncGenerator[list[int]]:
-        url = (self.ENTRYPOINT / "posts").update_query(query=query, maxRating="explicit")
+        url = (self.ENTRYPOINT / "posts").update_query(q=query, maxRating="explicit")
         while True:
             data = (await self.request_json(url))["data"]
             yield [p["id"] for p in data["posts"] if p["fileCount"] > 0]

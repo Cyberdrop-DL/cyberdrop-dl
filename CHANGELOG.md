@@ -52,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct streams support (BunnyCDN)
 - Posts and users support (pimpandhost)
 
+### Deprecated
+
+-- `--crawlers.clonr.use-source` and `--crawlers.clonr.zip` will be removed on the next major release
+
+### Removed
+
+- Clonr.co support (No longer exists)
+
 ### Fixed
 
 - Propagate manifest query params to segments (HLS)

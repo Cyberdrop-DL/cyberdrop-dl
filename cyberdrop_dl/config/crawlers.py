@@ -179,12 +179,6 @@ class ClonrConfig(ConfigModel):
     zip: bool = False
     "Download entire clone as a single ZIP file"
 
-    @override
-    def model_post_init(self, context: Any, /) -> None:
-        super().model_post_init(context)
-        if self.use_source and self.zip:
-            raise ValueError("'clonr.zip' and 'clonr.use_source' are mutually exclusive")
-
 
 class PornHubConfig(ConfigModel):
     profile_paths: tuple[NonEmptyStr, ...] = "photos/public", "gifs/public", "videos", "videos/upload"
@@ -213,7 +207,7 @@ class Crawlers(ConfigGroup, name=None):
 
     bandcamp: BandcampConfig = Field(default_factory=BandcampConfig)
     bluesky: BlueSkyConfig = Field(default_factory=BlueSkyConfig)
-    clonr: ClonrConfig = Field(default_factory=ClonrConfig)
+    clonr: ClonrConfig = Field(default_factory=ClonrConfig, deprecated=True, exclude=True)
     clypit: ClypitConfig = Field(default_factory=ClypitConfig)
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     google_drive: GoogleDriveConfig = Field(default_factory=GoogleDriveConfig)

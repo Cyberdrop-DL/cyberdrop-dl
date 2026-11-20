@@ -382,7 +382,7 @@ class Network(ConfigGroup):
             Literal["truststore", "certifi", "truststore+certifi"],
             strings.pre_validator(to_lower=True, strip=True),
         ]
-    ] = Field(default="truststore+certifi", deprecated=True)
+    ] = Field(default="truststore+certifi", deprecated=True, exclude=True)
     tls: TLS = Field(default_factory=TLS)
 
     user_agent: NonEmptyStr = "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0"
