@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.clients import etag
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -70,6 +71,9 @@ class ImageVenueCrawler(Crawler):
         try:
             return css.select(soup, "#main-image")
         except css.SelectorError:
+            if soup.select_one(".notice :-soup-contains('In the meantime, please visit our sponsor')"):
+                raise ScrapeError(503) from None
+
             if redirect := soup.select_one("a[data-target-url][title='Continue to ImageVenue']"):
                 url = self.parse_url(css.attr(redirect, "href"))
                 soup = await self.request_soup(url)
