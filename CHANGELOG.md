@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mashable video article support
 - Untitled.stream support
 - Tinglr support
+- Screenrec support
 - xErotica support
 - Blep support
 - Floofgens support
