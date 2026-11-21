@@ -727,9 +727,16 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         try:
             return self.get_filename_and_ext(url.name).suffix
         except NoExtensionError:
-            async with self.request(url, method or self.__http_ctx__.probe_method, **kwargs) as resp:
-                name = resp.filename or "file"
-                return self.get_filename_and_ext(name, mime_type=resp.content_type).suffix
+            return await self._sniff_ext(url, method, **kwargs)
+
+    async def _sniff_ext(
+        self, url: AbsoluteHttpURL, /, method: HttpMethod | None = None, **kwargs: Unpack[RequestParams]
+    ) -> str:
+        async with self.request(url, method or self.__http_ctx__.probe_method, **kwargs) as resp:
+            name = "file"
+            if cd := resp.parse_content_disposition():
+                name = cd.raw_filename or name
+            return self.get_filename_and_ext(name, mime_type=resp.content_type, assume_ext=None).suffix
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:
         return {

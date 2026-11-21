@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections import deque
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack, final, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.clients.http import HTTPConfig
@@ -26,7 +26,9 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.constants import HttpMethod
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -138,6 +140,13 @@ class PixelDrainCrawler(Crawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pixeldrain.com")
     DOMAIN: ClassVar[str] = "pixeldrain"
     FOLDER_DOMAIN: ClassVar[str] = "PixelDrain"
+
+    @override
+    @staticmethod
+    def __db_path__(url: AbsoluteHttpURL) -> str:
+        if url.query_string == "thumbnail":
+            return url.path_qs
+        return url.path
 
     def __post_init__(self) -> None:
         self.api: PixelDrainAPI = PixelDrainAPI.from_crawler(self)
@@ -307,6 +316,14 @@ class PixelDrainCrawler(Crawler):
             scrape_item.add_children()
 
     _file_task = auto_task_id(error_handling_wrapper(_file))
+
+    @override
+    async def sniff_ext(
+        self, url: AbsoluteHttpURL, /, method: HttpMethod | None = None, **kwargs: Unpack[RequestParams]
+    ) -> str:
+        if url.query_string == "thumbnail":
+            return await self._sniff_ext(url, method, **kwargs)
+        return await super().sniff_ext(url, method, **kwargs)
 
 
 class PixelDrainAPI(API):

@@ -82,6 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Episode extraction (OnePace)
 - Video extraction and search results (MyDesi)
 - Galleries (Pixhost)
+- Files from a filesystem URL being skipped if their thumbnail was already downloaded (PixelDrain/Nova)
+- Wrong file extension for thumbnails of filesystem files (PixelDrain/Nova)
 
 ## [10.16.0] - 2026-11-15
 
