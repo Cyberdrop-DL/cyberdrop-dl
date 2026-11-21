@@ -8,9 +8,9 @@ import time
 from typing import ClassVar, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import NoExtensionError, ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import b64_pad, css, extr_text
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad

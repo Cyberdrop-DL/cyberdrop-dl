@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 import yarl
 
 from cyberdrop_dl.cache import cached_method
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id, compose_ep_name
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, extr_text, next_js
 from cyberdrop_dl.utils.dataclass import Deserializer

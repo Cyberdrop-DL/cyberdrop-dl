@@ -4,8 +4,8 @@ import pytest
 from multidict import CIMultiDict
 
 from cyberdrop_dl import ddos_guard
-from cyberdrop_dl.clients.request import prepare_headers
 from cyberdrop_dl.exceptions import DDOSGuardError
+from cyberdrop_dl.network.request import prepare_headers
 from cyberdrop_dl.utils import css
 
 anubis_html = """

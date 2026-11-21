@@ -11,10 +11,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad, css, is_blob_or_svg
 from cyberdrop_dl.utils.dataclass import deserialize, struct

@@ -4,9 +4,9 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.cache import disk_cached_method
-from cyberdrop_dl.clients import etag
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network import etag
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper

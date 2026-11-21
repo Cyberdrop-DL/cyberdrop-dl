@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from wreq.wreq import Method
     from wreq.wreq import Response as Response  # noqa: PLC0414
 
-    from cyberdrop_dl.clients import HttpMethod
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.constants import ImpersonateTarget
+    from cyberdrop_dl.network import HttpMethod
 
 
 else:

@@ -16,9 +16,9 @@ from cyberdrop_dl.utils.urls import parse_http_url
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from cyberdrop_dl.clients.request import RequestParams
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.constants import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

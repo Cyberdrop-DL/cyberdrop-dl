@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, ClassVar, final
 from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 
 from cyberdrop_dl import aio, constants, env, ffmpeg, storage
-from cyberdrop_dl.clients.downloads import filter_by_duration, resolve_download_dir
 from cyberdrop_dl.downloader import hls
 from cyberdrop_dl.exceptions import (
     DownloadError,
@@ -22,6 +21,7 @@ from cyberdrop_dl.exceptions import (
     RestrictedFiletypeError,
     SkipDownloadError,
 )
+from cyberdrop_dl.network.downloads import filter_by_duration, resolve_download_dir
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import MuxVideo
@@ -33,9 +33,9 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import AsyncGenerator
 
-    from cyberdrop_dl.clients.downloads import DownloadClient
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.network.downloads import DownloadClient
     from cyberdrop_dl.progress.scraping import ScrapingUI
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 

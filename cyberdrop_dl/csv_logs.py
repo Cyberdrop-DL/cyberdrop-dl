@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
     import yarl
 
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 

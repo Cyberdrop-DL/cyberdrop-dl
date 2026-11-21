@@ -6,8 +6,9 @@ from unittest import mock
 
 import pytest
 
-from cyberdrop_dl.clients.downloads import _get_content_length, filter_by_duration
 from cyberdrop_dl.downloader.http import Downloader
+from cyberdrop_dl.network.downloads import filter_by_duration
+from cyberdrop_dl.network.headers import content_length
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:
@@ -57,5 +58,5 @@ async def test_probe_duration_is_skipped_on_default_config(manager: Manager) -> 
 
 
 def test_missing_content_lenght() -> None:
-    assert _get_content_length({"Content-Length": "200"}) == 200
-    assert _get_content_length({}) == 0
+    assert content_length({"Content-Length": "200"}) == 200
+    assert content_length({}) == 0

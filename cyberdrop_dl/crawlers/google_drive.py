@@ -36,9 +36,9 @@ import contextlib
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.headers import content_disposition_filename
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network.headers import content_disposition_filename
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper

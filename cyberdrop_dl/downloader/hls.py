@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from m3u8.model import InitializationSection, Segment
 
-    from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.network.http import HTTPClient
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
     from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 

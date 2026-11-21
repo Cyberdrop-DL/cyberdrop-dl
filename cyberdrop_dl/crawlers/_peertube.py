@@ -7,10 +7,10 @@ from pydantic import dataclasses
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import disk_cached_method
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MuxVideo, ScrapeItem
 from cyberdrop_dl.utils import unique
 from cyberdrop_dl.utils.dataclass import deserialize

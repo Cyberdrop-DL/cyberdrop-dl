@@ -5,17 +5,17 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Self
 
-from cyberdrop_dl.clients.jd.direct import DirectConnection
-from cyberdrop_dl.clients.jd.myjd import MyJDAPI, MyJDConnection
-from cyberdrop_dl.clients.jd.types import AddLinksQuery
 from cyberdrop_dl.exceptions import JDownloaderError
+from cyberdrop_dl.network.jd.direct import DirectConnection
+from cyberdrop_dl.network.jd.myjd import MyJDAPI, MyJDConnection
+from cyberdrop_dl.network.jd.types import AddLinksQuery
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
     import yarl
 
-    from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.config import Config
+    from cyberdrop_dl.network.http import HTTPClient
 
 
 logger = logging.getLogger(__name__)

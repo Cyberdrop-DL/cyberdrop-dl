@@ -4,10 +4,10 @@ import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients import etag
 from cyberdrop_dl.crawlers._chevereto import CheveretoCrawler
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
+from cyberdrop_dl.network import etag
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json
 from cyberdrop_dl.utils.dataclass import deserialize, struct

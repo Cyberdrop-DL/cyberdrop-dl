@@ -7,7 +7,6 @@ from collections import deque
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Unpack, final, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import (
     API,
     Crawler,
@@ -19,6 +18,7 @@ from cyberdrop_dl.crawlers.crawler import (
 )
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.models import type_adapter
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import basic_auth
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -26,9 +26,9 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from cyberdrop_dl.clients.request import RequestParams
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.constants import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

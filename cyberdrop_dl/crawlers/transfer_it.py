@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, ClassVar
 from mega.transfer_it import TransferItClient
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper

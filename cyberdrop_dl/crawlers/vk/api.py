@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Unpack, overrid
 from typing_extensions import deprecated
 
 from cyberdrop_dl.cache import async_lru_cache, disk_cached_method
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API
 from cyberdrop_dl.crawlers.vk import full_res_img, try_parse_url
 from cyberdrop_dl.crawlers.vk.types import (
@@ -26,6 +25,7 @@ from cyberdrop_dl.crawlers.vk.types import (
     VideoPlaylist,
 )
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.urls import parse_http_url
@@ -33,9 +33,9 @@ from cyberdrop_dl.utils.urls import parse_http_url
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterable
 
-    from cyberdrop_dl.clients.request import RequestParams
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.constants import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
+    from cyberdrop_dl.network.response import AbstractResponse
 
 
 def _entity_id(owner_id: str | int, item_id: str | int, access_key: str | int | None = None) -> str:

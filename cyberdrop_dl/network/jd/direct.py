@@ -5,13 +5,13 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
-from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice
 from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.network.jd import Params, check_resp, prepare_api_json
+from cyberdrop_dl.network.jd.types import AddLinksQuery, JDDevice
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.network.http import HTTPClient
 
 logger = logging.getLogger(__name__)
 

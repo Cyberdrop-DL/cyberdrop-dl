@@ -23,8 +23,8 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.m3u8 import M3U8, Rendition
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.constants import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 
 _PT = ContextVar[str]("_PT")

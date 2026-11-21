@@ -7,9 +7,9 @@ from unittest import mock
 import pytest
 from multidict import CIMultiDict, CIMultiDictProxy
 
-from cyberdrop_dl.clients.downloads import DownloadClient
-from cyberdrop_dl.clients.response import AbstractResponse
 from cyberdrop_dl.exceptions import DownloadError
+from cyberdrop_dl.network.downloads import DownloadClient
+from cyberdrop_dl.network.response import AbstractResponse
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 if TYPE_CHECKING:

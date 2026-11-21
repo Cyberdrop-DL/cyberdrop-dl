@@ -7,17 +7,17 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import __repo_url__
-from cyberdrop_dl.clients.jd import Params, check_resp, prepare_api_json
-from cyberdrop_dl.clients.jd.crypto import compose_token, create_token, decrypt, encrypt, sign_hmac_sha256
-from cyberdrop_dl.clients.jd.types import AddLinksQuery, JDDevice, MyJDSession
 from cyberdrop_dl.constants import CDL_USER_AGENT
+from cyberdrop_dl.network.jd import Params, check_resp, prepare_api_json
+from cyberdrop_dl.network.jd.crypto import compose_token, create_token, decrypt, encrypt, sign_hmac_sha256
+from cyberdrop_dl.network.jd.types import AddLinksQuery, JDDevice, MyJDSession
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-    from cyberdrop_dl.clients.http import HTTPClient
+    from cyberdrop_dl.network.http import HTTPClient
 
 
 logger = logging.getLogger(__name__)

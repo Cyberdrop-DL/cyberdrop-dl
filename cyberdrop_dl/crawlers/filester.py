@@ -6,9 +6,9 @@ import time
 from typing import TYPE_CHECKING, ClassVar, Literal, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import PasswordProtectedError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, open_graph, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper

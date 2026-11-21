@@ -14,8 +14,8 @@ import aiohttp
 from multidict import CIMultiDict, CIMultiDictProxy
 
 from cyberdrop_dl import ddos_guard
-from cyberdrop_dl.clients import HttpMethod, get_logger
 from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, FlaresolverrError
+from cyberdrop_dl.network import HttpMethod, get_logger
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import AbsoluteHttpURL

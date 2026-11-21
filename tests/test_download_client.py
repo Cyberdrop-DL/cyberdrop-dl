@@ -3,12 +3,12 @@ from pathlib import Path
 import pytest
 from multidict import CIMultiDict
 
-from cyberdrop_dl.clients.downloads import DownloadClient, _check_content_type, resolve_download_dir
-from cyberdrop_dl.clients.headers import get_content_type
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.constants import USE_RETRY_PATH
 from cyberdrop_dl.exceptions import InvalidContentTypeError
 from cyberdrop_dl.manager import Manager
+from cyberdrop_dl.network.downloads import DownloadClient, _check_content_type, resolve_download_dir
+from cyberdrop_dl.network.headers import get_content_type
 from cyberdrop_dl.utils import enter_context
 
 

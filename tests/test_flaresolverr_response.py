@@ -3,8 +3,8 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from cyberdrop_dl.clients.flaresolverr import Solution, _parse_cookies
-from cyberdrop_dl.clients.response import FlareSolverrResponse, _infer_content_type_from_body
+from cyberdrop_dl.network.flaresolverr import Solution, _parse_cookies
+from cyberdrop_dl.network.response import FlareSolverrResponse, _infer_content_type_from_body
 
 if TYPE_CHECKING:
     import pytest

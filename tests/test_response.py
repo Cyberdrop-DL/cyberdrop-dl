@@ -2,7 +2,7 @@ import datetime as dt
 
 from multidict import CIMultiDict, CIMultiDictProxy
 
-from cyberdrop_dl.clients.response import _AIOHTTPResponse
+from cyberdrop_dl.network.response import _AIOHTTPResponse
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 

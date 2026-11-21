@@ -13,9 +13,9 @@ from aiohttp import ClientResponse, hdrs
 from multidict import CIMultiDict, CIMultiDictProxy
 from typing_extensions import TypeVar
 
-from cyberdrop_dl.clients import get_logger, wreq
-from cyberdrop_dl.clients.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.exceptions import InvalidContentTypeError, ScrapeError
+from cyberdrop_dl.network import get_logger, wreq
+from cyberdrop_dl.network.flaresolverr import Solution as FlaresolverrSolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, strict_variadic, truncated_preview
 from cyberdrop_dl.utils.urls import parse_http_url

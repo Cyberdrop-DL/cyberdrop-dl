@@ -11,7 +11,7 @@ from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, fields_name
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from cyberdrop_dl.clients import HttpMethod
+    from cyberdrop_dl.network import HttpMethod
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 

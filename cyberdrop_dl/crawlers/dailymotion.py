@@ -19,7 +19,7 @@ from cyberdrop_dl.utils.urls import parse_http_url
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
-    from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 logger = logging.getLogger(__name__)

@@ -5,16 +5,16 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, ClassVar, Unpack, override
 
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedDomains, SupportedPaths, URLConfig
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.clients import HttpMethod
-    from cyberdrop_dl.clients.request import RequestParams
+    from cyberdrop_dl.network import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 
 logger = logging.getLogger(__name__)

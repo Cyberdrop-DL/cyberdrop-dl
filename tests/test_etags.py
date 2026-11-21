@@ -5,8 +5,8 @@ from http import HTTPStatus
 import pytest
 from multidict import CIMultiDict
 
-from cyberdrop_dl.clients.etag import check
 from cyberdrop_dl.exceptions import DownloadError
+from cyberdrop_dl.network.etag import check
 
 
 def test_missing_etag_header() -> None:

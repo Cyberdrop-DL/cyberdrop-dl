@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from multidict import CIMultiDict
 
-from cyberdrop_dl.clients.request import Request
+from cyberdrop_dl.network.request import Request
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, TypedDict, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, URLConfig
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper

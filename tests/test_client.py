@@ -4,9 +4,9 @@ import sys
 import aiohttp
 import pytest
 
-from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import ScrapeError
+from cyberdrop_dl.network.http import HTTPClient, HTTPConfig
 
 
 @pytest.fixture

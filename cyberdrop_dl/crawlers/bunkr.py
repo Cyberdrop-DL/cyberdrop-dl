@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Unpack, final, override
 from aiohttp import ClientConnectorError
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers.crawler import API, Crawler, DownloadConfig, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.dataclass import struct
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
-    from cyberdrop_dl.clients import HttpMethod
-    from cyberdrop_dl.clients.request import RequestParams
+    from cyberdrop_dl.network import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

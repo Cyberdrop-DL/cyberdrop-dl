@@ -9,9 +9,9 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, next_or_error
 from cyberdrop_dl.utils.dataclass import deserialize
@@ -20,7 +20,7 @@ from cyberdrop_dl.utils.errors import error_handling_wrapper
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

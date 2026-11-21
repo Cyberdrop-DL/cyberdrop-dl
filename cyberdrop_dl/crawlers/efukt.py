@@ -5,8 +5,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients import etag
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, URLConfig
+from cyberdrop_dl.network import etag
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper

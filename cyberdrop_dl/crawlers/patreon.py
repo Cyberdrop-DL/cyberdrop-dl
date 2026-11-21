@@ -9,10 +9,10 @@ from typing_extensions import ReadOnly
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import async_lru_cache
-from cyberdrop_dl.clients.headers import get_content_disposition_filename
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
+from cyberdrop_dl.network.headers import get_content_disposition_filename
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text, next_js, traversal
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, struct

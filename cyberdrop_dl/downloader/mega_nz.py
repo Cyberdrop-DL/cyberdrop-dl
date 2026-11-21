@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, final, override
 from mega.chunker import MegaChunker, get_chunks
 
 from cyberdrop_dl import aio, storage
-from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker
-from cyberdrop_dl.clients.headers import content_length
 from cyberdrop_dl.downloader.http import Downloader
+from cyberdrop_dl.network.downloads import DownloadClient, make_speed_checker
+from cyberdrop_dl.network.headers import content_length
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.clients.response import AbstractResponse
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.progress import ProgressHook
     from cyberdrop_dl.url_objects import MediaItem
 

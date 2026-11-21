@@ -4,8 +4,8 @@ import urllib.parse
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
+from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.dataclass import deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper

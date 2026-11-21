@@ -32,13 +32,13 @@ from cyberdrop_dl.utils.urls import URLDeduper, matches_any_host, remove_trailin
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator, Iterator, Mapping
 
-    from cyberdrop_dl.clients.jd.client import JDownloader
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.config.crawlers import GenericCrawlers
     from cyberdrop_dl.crawlers.crawler import Crawler
     from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
     from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.network.jd.client import JDownloader
 
 
 logger = logging.getLogger(__name__)
@@ -106,9 +106,9 @@ class ScrapeMapper:
     """This class maps links to their respective handlers, or JDownloader if they are unsupported."""
 
     def __init__(self, manager: Manager) -> None:
-        from cyberdrop_dl.clients.jd.client import JDownloader
         from cyberdrop_dl.crawlers.http_direct import DirectHttpFileCrawler
         from cyberdrop_dl.crawlers.realdebrid import RealDebridCrawler
+        from cyberdrop_dl.network.jd.client import JDownloader
 
         self.manager: Manager = manager
         self.crawlers: dict[str, type[Crawler]] = {}

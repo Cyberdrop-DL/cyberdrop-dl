@@ -13,11 +13,11 @@ import aiohttp
 from aiohttp import hdrs
 
 from cyberdrop_dl import aio, cookies, ddos_guard, env
-from cyberdrop_dl.clients import curl_cffi, flaresolverr, get_logger, tcp, wreq
-from cyberdrop_dl.clients.request import Request, RequestParams
-from cyberdrop_dl.clients.response import AbstractResponse, FlareSolverrResponse
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
+from cyberdrop_dl.network import curl_cffi, flaresolverr, get_logger, tcp, wreq
+from cyberdrop_dl.network.request import Request, RequestParams
+from cyberdrop_dl.network.response import AbstractResponse, FlareSolverrResponse
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.utils import enter_context, truncated_preview
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, struct
@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.models import Response as CurlResponse
 
-    from cyberdrop_dl.clients.wreq import WreqClient  # pyright: ignore[reportPrivateLocalImportUsage]
     from cyberdrop_dl.config import Config
+    from cyberdrop_dl.network.wreq import WreqClient  # pyright: ignore[reportPrivateLocalImportUsage]
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
     from . import HttpMethod

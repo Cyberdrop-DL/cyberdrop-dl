@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 from aiohttp import hdrs
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
-from cyberdrop_dl.clients import etag
-from cyberdrop_dl.clients.headers import content_length, get_content_type, get_last_modified
-from cyberdrop_dl.clients.http import JSON_CHECK, check_http_status
 from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
+from cyberdrop_dl.network import etag
+from cyberdrop_dl.network.headers import content_length, get_content_type, get_last_modified
+from cyberdrop_dl.network.http import JSON_CHECK, check_http_status
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import ByteRange
 from cyberdrop_dl.utils import enter_context
@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from cyberdrop_dl.clients.http import HTTPClient
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.network.http import HTTPClient
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.progress import ProgressHook
     from cyberdrop_dl.url_objects import MediaItem
 

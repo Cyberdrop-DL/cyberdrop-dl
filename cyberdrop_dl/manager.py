@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING, Any, Self, final
 from cyberdrop_dl import __version__, aio, constants, dependencies, env, ffmpeg, stats
 from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.cache import cache_context
-from cyberdrop_dl.clients.downloads import DownloadClient
-from cyberdrop_dl.clients.http import HTTPClient
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.database import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import LoggerAdapter, capture_logs, log_spacer
 from cyberdrop_dl.models.validators import bytesize_to_str
+from cyberdrop_dl.network.downloads import DownloadClient
+from cyberdrop_dl.network.http import HTTPClient
 from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.sorter import Sorter

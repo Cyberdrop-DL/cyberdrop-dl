@@ -16,9 +16,6 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import TTLCacheAdapter
-from cyberdrop_dl.clients.downloads import IGNORE_CONTENT_TYPE
-from cyberdrop_dl.clients.headers import get_content_disposition_filename
-from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.config.settings import MAX_RATE_LIMIT
 from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt, HttpMethod
 from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
@@ -34,6 +31,9 @@ from cyberdrop_dl.filepath import (
 )
 from cyberdrop_dl.mediaprops import Codecs, ISO639Subtitle, Resolution, ResolvedISO639Subtitle
 from cyberdrop_dl.models.validators import strings
+from cyberdrop_dl.network.downloads import IGNORE_CONTENT_TYPE
+from cyberdrop_dl.network.headers import get_content_disposition_filename
+from cyberdrop_dl.network.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
@@ -67,11 +67,11 @@ if TYPE_CHECKING:
     from aiohttp.typedefs import LooseCookies
     from bs4 import BeautifulSoup, Tag
 
-    from cyberdrop_dl.clients.request import RequestParams
-    from cyberdrop_dl.clients.response import AbstractResponse
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.manager import Manager
+    from cyberdrop_dl.network.request import RequestParams
+    from cyberdrop_dl.network.response import AbstractResponse
     from cyberdrop_dl.progress.scraping import ScrapingUI
 
 logger = logging.getLogger(__name__)

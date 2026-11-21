@@ -6,9 +6,9 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
-from cyberdrop_dl.clients.http import HTTPClient
-from cyberdrop_dl.clients.jd.client import JDConfig, JDDeprecatedAPI, JDownloader
 from cyberdrop_dl.logs import setup_console_logging
+from cyberdrop_dl.network.http import HTTPClient
+from cyberdrop_dl.network.jd.client import JDConfig, JDDeprecatedAPI, JDownloader
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 logger = logging.getLogger("cyberdrop_dl")
@@ -30,8 +30,8 @@ class MyJDAuth:
 
 
 def _http_client() -> HTTPClient:
-    from cyberdrop_dl.clients.http import HTTPClient
     from cyberdrop_dl.config import Config
+    from cyberdrop_dl.network.http import HTTPClient
 
     return HTTPClient(Config())
 

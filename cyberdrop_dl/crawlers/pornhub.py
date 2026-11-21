@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
     from bs4 import BeautifulSoup
 
-    from cyberdrop_dl.clients.request import RequestParams
     from cyberdrop_dl.constants import HttpMethod
+    from cyberdrop_dl.network.request import RequestParams
     from cyberdrop_dl.url_objects import ScrapeItem
 
 

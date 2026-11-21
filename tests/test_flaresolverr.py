@@ -4,8 +4,9 @@ from collections.abc import AsyncGenerator
 import aiohttp
 import pytest
 
-from cyberdrop_dl.clients import HttpMethod
-from cyberdrop_dl.clients.flaresolverr import (
+from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, FlaresolverrError
+from cyberdrop_dl.network import HttpMethod
+from cyberdrop_dl.network.flaresolverr import (
     MAX_TIMEOUT,
     Client,
     Command,
@@ -16,7 +17,6 @@ from cyberdrop_dl.clients.flaresolverr import (
     _cmd_from_http_method,
     _default_session_name,
 )
-from cyberdrop_dl.exceptions import CloudflareBlockedError, DDOSGuardError, FlaresolverrError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 ENV_NAME = "CDL_FLARESOLVERR"
