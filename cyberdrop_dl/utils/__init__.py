@@ -161,12 +161,11 @@ def b64_pad(b64_string: str) -> str:
     return b64_string
 
 
-type AnythingButTuple = (
+type AnythingButTupleOrList = (
     str
     | bytes
     | int
     | float
-    | list[Any]
     | Mapping[Any, Any]
     | set[Any]
     | frozenset[Any]
@@ -179,19 +178,23 @@ type AnythingButTuple = (
 
 
 @overload
-def strict_variadic[T: AnythingButTuple](value: T) -> tuple[T, ...]: ...
+def strict_variadic[T: AnythingButTupleOrList](value: T) -> tuple[T, ...]: ...
 
 
 @overload
-def strict_variadic[T: AnythingButTuple](value: tuple[T, ...]) -> tuple[T, ...]: ...
+def strict_variadic[T: AnythingButTupleOrList](value: tuple[T, ...]) -> tuple[T, ...]: ...
+
+
+@overload
+def strict_variadic[T: AnythingButTupleOrList](value: list[T]) -> list[T]: ...
 
 
 @overload
 def strict_variadic[T: tuple[Any, ...]](value: T) -> T: ...
 
 
-def strict_variadic(value: Any) -> tuple[Any, ...]:
-    if type(value) is tuple:
+def strict_variadic(value: Any) -> tuple[Any, ...] | list[Any]:
+    if type(value) in {tuple, list}:
         return value
     return (value,)
 
