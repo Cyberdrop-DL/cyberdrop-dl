@@ -1,37 +1,35 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import dataclasses
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import next_js
+from cyberdrop_dl.utils import css, next_js
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
-    from bs4 import BeautifulSoup
-
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class PlayGroup:
     sub: str | None
     dub: str
-    playlists: list[Playlist]
+    items: list[Playlist]
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class Playlist:
     id: str
     resolution: int
     url: AbsoluteHttpURL
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True, kw_only=True)
 class Episode:
     title: str
     slug: str
@@ -59,16 +57,18 @@ class OnePaceCrawler(Crawler):
 
     @error_handling_wrapper
     async def all_episodes(self, scrape_item: ScrapeItem) -> None:
-        soup = await self.request_soup(self.PRIMARY_URL / "en/watch")
-        episodes = tuple(_extract_episodes(soup))
-
-        await self.write_metadata(scrape_item, "one_pace_episodes", {"episodes": episodes})
+        html = await self.request_html(self.PRIMARY_URL / "en/watch")
+        episodes = await _extract_episodes(html)
         scrape_item.setup_as_profile(self.FOLDER_DOMAIN)
-        for episode in (Episode(**ep) for ep in episodes):
-            url = scrape_item.url.with_fragment(episode.slug)
-            new_item = scrape_item.create_child(url)
-            self._episode(new_item, episode)
-            scrape_item.add_children()
+
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg:
+            tg.create_task(self.write_metadata(scrape_item, "one_pace_episodes", {"episodes": episodes}))
+            for episode in (Episode(**ep) for ep in episodes):
+                url = scrape_item.url.with_fragment(episode.slug)
+                self._episode(scrape_item.create_child(url), episode)
+                scrape_item.add_children()
+                await sleep()
 
     @error_handling_wrapper
     def _episode(self, scrape_item: ScrapeItem, ep: Episode) -> None:
@@ -85,14 +85,13 @@ class OnePaceCrawler(Crawler):
             best_group.sub,
             best_group.dub,
         )
-        best_playlist = max(best_group.playlists, key=lambda x: x.resolution)
+        best_playlist = max(best_group.items, key=lambda x: x.resolution)
         self.handle_embed(scrape_item.create_child(best_playlist.url))
 
 
-def _extract_episodes(soup: BeautifulSoup) -> Generator[dict[str, Any]]:
-    next_data = next_js.extract(soup)
-    for ep in next_js.ifind(next_data, "slug", "title", "playlistGroups"):
-        yield _flatten_episode(ep)
+async def _extract_episodes(html: str) -> list[dict[str, Any]]:
+    next_data = await asyncio.to_thread(next_js.extract, await css.asoup(html, parse_only="script"))
+    return [_flatten_episode(ep) for ep in next_js.ifind(next_data, "slug", "title", "playlistGroups")]
 
 
 def _flatten_episode(ep: dict[str, Any]) -> dict[str, Any]:
@@ -100,7 +99,7 @@ def _flatten_episode(ep: dict[str, Any]) -> dict[str, Any]:
         {name: v for name, v in backdrop.items() if not name.startswith("blur")} for backdrop in ep["backdrops"]
     ]
     for group in ep["playlistGroups"]:
-        for playlist in group["playlists"]:
+        for playlist in group["items"]:
             playlist["url"] = _PD_BASE / playlist["id"]
 
     return ep
