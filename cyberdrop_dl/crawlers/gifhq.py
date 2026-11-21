@@ -44,9 +44,9 @@ class GifHQCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         try:
-            props = json_ld.find_elem(soup, "VideoObject")
+            props = json_ld.find_obj(soup, "VideoObject")
         except css.SelectorError:
-            props = json_ld.find_elem(soup, "ImageObject")
+            props = json_ld.find_obj(soup, "ImageObject")
 
         src = self.parse_url(props["contentUrl"])
         self.handle_embed(scrape_item.create_child(src))

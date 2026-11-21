@@ -41,7 +41,11 @@ def find(soup: Tag, *keys: str, validate: Mapping[str, Any] | None = None) -> tu
     raise css.SelectorError(f"ld-json{details} not found") from None
 
 
-def find_elem(soup: Tag, type: str, *keys: str) -> dict[str, Any]:  # noqa: A002
+def find_elem(soup: Tag, key: str, *keys: str) -> dict[str, Any]:
+    return find(soup, key, *keys)[1]
+
+
+def find_obj(soup: Tag, type: str, *keys: str) -> dict[str, Any]:  # noqa: A002
     return find(soup, *keys, validate={"@type": lambda x: is_type(x, type)})[1]
 
 

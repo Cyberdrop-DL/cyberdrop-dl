@@ -46,7 +46,7 @@ class MasahubCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        video = json_ld.find_elem(soup, "VideoObject")
+        video = json_ld.find_obj(soup, "VideoObject")
         src = self.parse_url(video["contentUrl"])
         _, ext = self.get_filename_and_ext(src.name)
         thumbs = strict_variadic(video["thumbnailUrl"])
