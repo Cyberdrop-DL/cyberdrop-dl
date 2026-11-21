@@ -79,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Videos and search results (Masahub)
 - `403 - Forbidden` on every post (nsfw.xxx)
 - Episode extraction (OnePace)
+- Video extraction and search results (MyDesi)
 
 ## [10.16.0] - 2026-11-15
 
