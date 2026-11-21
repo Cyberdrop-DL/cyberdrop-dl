@@ -7,10 +7,8 @@ import datetime as dt
 import json
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Generic, Literal, Self, final, override
 
-import aiohttp.multipart
 from aiohttp import ClientResponse, hdrs
 from multidict import CIMultiDict, CIMultiDictProxy
 from typing_extensions import TypeVar
@@ -49,21 +47,6 @@ class ContentPlaceHolder(StrEnum):
     EMPTY = ""
     ERROR = "<ERROR DECODING CONTENT>"
     PENDING = "<DID NOT AWAIT FOR CONTENT YET>"
-
-
-@dataclasses.dataclass(slots=True, frozen=True)
-class ContentDisposition:
-    type: str | None
-    parameters: MappingProxyType[str, str]
-    raw_filename: str | None
-
-    @property
-    def filename(self) -> str:
-        if self.raw_filename:
-            return self.raw_filename
-
-        msg = "Content disposition has no filename information"
-        raise ScrapeError(422, msg)
 
 
 @dataclasses.dataclass(slots=True)
@@ -164,35 +147,6 @@ class AbstractResponse(ABC, Generic[_ResponseT]):
             raise TypeError(resp) from None
 
         return cls_.create(resp)  # pyright: ignore[reportArgumentType]
-
-    @final
-    @property
-    def content_disposition(self) -> ContentDisposition:
-        if cd := self.parse_content_disposition():
-            return cd
-
-        msg = f"No content disposition header found in response from {self.url}"
-        raise ScrapeError(422, msg) from None
-
-    @final
-    def parse_content_disposition(self) -> ContentDisposition | None:
-        try:
-            header = self.headers[hdrs.CONTENT_DISPOSITION]
-        except KeyError:
-            return None
-
-        disposition_type, params = aiohttp.multipart.parse_content_disposition(header)
-        params = MappingProxyType(params)
-        filename = aiohttp.multipart.content_disposition_filename(params)
-        return ContentDisposition(disposition_type, params, filename)
-
-    @final
-    @property
-    def filename(self) -> str:
-        cd = self.parse_content_disposition()
-        if cd and cd.raw_filename:
-            return cd.raw_filename
-        return self.url.name or self.url.parent.name
 
     @final
     @property

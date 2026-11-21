@@ -9,6 +9,7 @@ from typing_extensions import ReadOnly
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import async_lru_cache
+from cyberdrop_dl.clients.headers import get_content_disposition_filename
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths, URLConfig, auto_task_id
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -237,14 +238,14 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
         errors: list[Exception] = []
         if media.name and not media.name.startswith(("http:", "https:")):
             try:
-                return media.name, self.get_filename_and_ext(media.name)
+                return media.name, self.get_filename_and_ext(media.name, assume_ext=None)
             except NoExtensionError as e:
                 errors.append(e)
 
         async with self.request(media.url) as resp:
-            if name := resp.filename or media.name:
+            if name := get_content_disposition_filename(resp.headers) or media.name:
                 try:
-                    return name, self.get_filename_and_ext(name, mime_type=resp.content_type)
+                    return name, self.get_filename_and_ext(name, mime_type=resp.content_type, assume_ext=None)
                 except NoExtensionError as e:
                     errors.append(e)
 

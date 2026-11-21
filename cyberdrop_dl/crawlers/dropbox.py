@@ -4,6 +4,7 @@ import dataclasses
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.clients.headers import content_disposition_filename
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import LoginError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -81,7 +82,7 @@ class DropboxCrawler(Crawler):
     async def file(self, scrape_item: ScrapeItem) -> None:
         scrape_item.url = await self._ensure_rlkey(scrape_item.url)
         async with self.request(scrape_item.url.update_query(dl=1)) as resp:
-            await self._file(scrape_item, resp.content_disposition.filename)
+            await self._file(scrape_item, content_disposition_filename(resp.headers))
 
     @error_handling_wrapper
     async def _file(self, scrape_item: ScrapeItem, filename: str) -> None:

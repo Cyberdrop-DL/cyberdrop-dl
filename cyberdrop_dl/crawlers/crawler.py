@@ -17,6 +17,7 @@ from aiohttp import hdrs
 from cyberdrop_dl import aio
 from cyberdrop_dl.cache import TTLCacheAdapter
 from cyberdrop_dl.clients.downloads import IGNORE_CONTENT_TYPE
+from cyberdrop_dl.clients.headers import get_content_disposition_filename
 from cyberdrop_dl.clients.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.config.settings import MAX_RATE_LIMIT
 from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt, HttpMethod
@@ -733,9 +734,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self, url: AbsoluteHttpURL, /, method: HttpMethod | None = None, **kwargs: Unpack[RequestParams]
     ) -> str:
         async with self.request(url, method or self.__http_ctx__.probe_method, **kwargs) as resp:
-            name = "file"
-            if cd := resp.parse_content_disposition():
-                name = cd.raw_filename or name
+            name = get_content_disposition_filename(resp.headers) or "file"
             return self.get_filename_and_ext(name, mime_type=resp.content_type, assume_ext=None).suffix
 
     def _prepare_headers(self, scrape_item: ScrapeItem) -> dict[str, str]:

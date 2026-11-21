@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NotRequired, Required, TypedDict, cast
 
 from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.clients.headers import get_content_disposition_filename
 from cyberdrop_dl.clients.http import HTTPConfig
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import DownloadError, LoginError, ScrapeError
@@ -182,10 +183,11 @@ class SoundCloudAPI(API):
         url = self.parse_url(resp["redirectUri"])
         try:
             async with self.request(url, "HEAD") as resp:
+                name = get_content_disposition_filename(resp.headers) or "file"
                 return AudioSource(
                     id="original",
                     url=resp.url,
-                    ext=get_filename_and_ext(resp.filename, mime_type=resp.content_type).suffix,
+                    ext=get_filename_and_ext(name, mime_type=resp.content_type).suffix,
                 )
 
         except DownloadError as e:
