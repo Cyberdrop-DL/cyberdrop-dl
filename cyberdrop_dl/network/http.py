@@ -411,7 +411,7 @@ class HTTPClient:
 
     @classmethod
     def json_ctx(cls, json_check: JSONCheck | None) -> contextlib.AbstractContextManager[None]:
-        return context.enter(_JSON_CHECK, json_check)
+        return context.setdefault(_JSON_CHECK, json_check)
 
 
 async def _check_json(response: AbstractResponse[Any]) -> None:

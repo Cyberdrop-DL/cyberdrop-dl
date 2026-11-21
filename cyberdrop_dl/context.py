@@ -38,3 +38,10 @@ def enter[T](context_var: ContextVar[T], value: T, /) -> Generator[None]:
         yield
     finally:
         context_var.reset(token)
+
+
+def setdefault[T](context_var: ContextVar[T], value: T, /) -> contextlib.AbstractContextManager[None]:
+    current = context_var.get(None)
+    if current is None:
+        return enter(context_var, value)
+    return contextlib.nullcontext()
