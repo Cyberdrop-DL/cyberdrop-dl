@@ -9,7 +9,6 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
@@ -23,8 +22,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig(rate_limit=(3, 1))
-@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+@HTTPConfig(rate_limit=(3, 1), headers=HTTPConfig.cdl_user_agent())
 class ArchiveOrgCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Item": (

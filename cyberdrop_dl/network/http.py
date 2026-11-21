@@ -13,6 +13,7 @@ import aiohttp
 from aiohttp import hdrs
 
 from cyberdrop_dl import aio, cookies, ddos_guard, env
+from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.network import curl_cffi, flaresolverr, get_logger, tcp, wreq
@@ -76,7 +77,7 @@ class RequestDoneCallback(Protocol):
     ) -> None: ...
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class HTTPLimiter:
     global_: aio.RateLimiter
     downloads: asyncio.Semaphore
@@ -96,8 +97,8 @@ class HTTPClient:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.limiter = HTTPLimiter(
-            aio.RateLimiter.w_no_burst(config.network.rate_limit),
-            asyncio.Semaphore(config.downloads.concurrency),
+            global_=aio.RateLimiter.w_no_burst(config.network.rate_limit),
+            downloads=asyncio.Semaphore(config.downloads.concurrency),
         )
 
         self._ssl_context = None
@@ -543,24 +544,9 @@ class HTTPConfig(ConfigDataclass):
     json_check: JSONCheck | None = None
     probe_method: HttpMethod | None = None
 
-    @classmethod
-    def default_headers(
-        cls,
-        user_agent: str | None = None,
-        referer: str | None = None,
-        host: str | None = None,
-        content_type: str | None = None,
-        accept: str | None = None,
-        **kwargs: str,
-    ) -> HTTPConfig:
-        headers = {
-            hdrs.USER_AGENT: user_agent,
-            hdrs.REFERER: referer,
-            hdrs.HOST: host,
-            hdrs.CONTENT_TYPE: content_type,
-            hdrs.ACCEPT: accept,
-        } | kwargs
-        return HTTPConfig(headers={k: v for k, v in headers.items() if v is not None})
+    @staticmethod
+    def cdl_user_agent() -> dict[str, str]:
+        return {"User-Agent": CDL_USER_AGENT}
 
     @override
     def __or__(self, other: Self) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -576,7 +562,7 @@ class HTTPConfig(ConfigDataclass):
 
 
 @final
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class HTTPContext:
     domain: str
     rate_limit: RateLimit

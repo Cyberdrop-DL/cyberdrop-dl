@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+@HTTPConfig(headers=HTTPConfig.cdl_user_agent())
 @URLConfig(allow_empty_path=True, strict_host_match=True)
 @Crawler.db_path_builder("path_qs_frag")
 class MegaNzCrawler(Crawler):

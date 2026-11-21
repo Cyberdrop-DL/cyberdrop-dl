@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@HTTPConfig.default_headers(user_agent=CDL_USER_AGENT)
+@HTTPConfig(headers=HTTPConfig.cdl_user_agent())
 @Crawler.db_path_builder("path_qs_frag")
 class TransferItCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {

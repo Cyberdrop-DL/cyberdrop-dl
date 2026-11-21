@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"
 
 
-@HTTPConfig.default_headers(user_agent=FIREFOX)
+@HTTPConfig(headers={"User-Agent": FIREFOX})
 class PlutoCrawler(Crawler):
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Episode": "<region>/shows/<show_id>/episode/<episode_id>",
@@ -133,7 +133,7 @@ class PlutoCrawler(Crawler):
         await self._media(scrape_item, movie)
 
 
-@HTTPConfig.default_headers(user_agent=FIREFOX)
+@HTTPConfig(headers={"User-Agent": FIREFOX})
 class PlutoAPI(API):
     GRAPHQL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://pluto.tv/api/tn/app-shell/graphql/")
     SERIES: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://service-vod.clusters.pluto.tv/v4/vod/series/")
