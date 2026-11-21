@@ -233,6 +233,14 @@ class ScrapeError(CDLBaseError):
         return ScrapeError("Unknown URL path")
 
     @staticmethod
+    def unsupported() -> ScrapeError:
+        return ScrapeError("Unsupported")
+
+    @staticmethod
+    def no_content(name: str) -> ScrapeError:
+        return ScrapeError(204, f"Did not find {name}")
+
+    @staticmethod
     def live_stream(source: object = None) -> ScrapeError:
         msg = "Live streams are not supported"
         if source is not None:

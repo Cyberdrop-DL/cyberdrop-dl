@@ -3,19 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, json_ld
+from cyberdrop_dl.utils import json_ld, strict_variadic
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
-
-
-class Selector:
-    VIDEO_SRC = css.CssAttributeSelector("a.video-btn, a.download-btn", "href")
-    TITLE = "div.posts > h1 > strong, div.video_page_toolbar > h1"
-    NEXT_PAGE = "div > a:-soup-contains('Next')"
-    VIDEOS = "a.title, div.title > a"
 
 
 class MasahubCrawler(Crawler):
@@ -29,19 +23,17 @@ class MasahubCrawler(Crawler):
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Videos": "/title",
-        "Search": "?s=<query>",
+        "Search": "/serarch/<query>",
     }
-    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lalamasa.mobi/")
+    PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lalamasa.mobi")
     DOMAIN: ClassVar[str] = "masahub.com"
     FOLDER_DOMAIN: ClassVar[str] = "Masahub"
     OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("masahub.com",)
-    NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
+    NEXT_PAGE_SELECTOR: ClassVar[str] = "nav > a[href]:-soup-contains('Next')"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["search", query]:
-                await self.search(scrape_item, query)
-            case [] if query := scrape_item.url.query.get("s"):
+            case ["search", query, *_]:
                 await self.search(scrape_item, query)
             case [_, *_]:
                 await self.video(scrape_item)
@@ -51,20 +43,33 @@ class MasahubCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
-        link = self.parse_url(Selector.VIDEO_SRC(soup))
-        title = css.select_text(soup, Selector.TITLE)
-        _, ext = self.get_filename_and_ext(link.name)
-        scrape_item.uploaded_at = json_ld.upload_date(soup)
-        custom_filename = self.create_custom_filename(title, ext)
-        return await self.handle_file(link, scrape_item, link.name, ext, custom_filename=custom_filename)
+        video = json_ld.find_elem(soup, "VideoObject")
+        src = self.parse_url(video["contentUrl"])
+        _, ext = self.get_filename_and_ext(src.name)
+        thumbs = strict_variadic(video["thumbnailUrl"])
+        scrape_item.uploaded_at = self.parse_iso_date(video["uploadDate"])
+        custom_filename = self.create_custom_filename(video["name"], ext)
+        await self.handle_file(
+            src,
+            scrape_item,
+            video["name"],
+            ext,
+            custom_filename=custom_filename,
+            thumbnail=thumbs[0] if thumbs else None,
+        )
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
         title = self.create_title(query)
         scrape_item.setup_as_album(title)
+        found = False
         async for soup in self.web_pager(scrape_item.url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.VIDEOS):
-                self.create_task(self.run(new_scrape_item))
+            for new_item in self.iter_children(scrape_item, soup, "article[data-vid] a"):
+                found = True
+                self.create_task(self.run(new_item))
+
+        if not found:
+            raise ScrapeError.no_content("videos")
