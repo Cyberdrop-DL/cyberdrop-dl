@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.17.0dev1"
+version = "10.17.0dev2"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -24,7 +24,7 @@ dependencies = [
     "backports.zstd >=1.8.0; implementation_name=='cpython' and python_version < '3.14'",
     "beautifulsoup4 >=4.15.0",
     "brotli >=1.2.1; implementation_name=='cpython' and sys_platform!='ios'",
-    "certifi >=2026.10.23",
+    "certifi >=2026.11.20",
     "cffi == 2.1.1",
     "curl-cffi >=0.17.0,<0.18.0; implementation_name == 'cpython' ",
     "cyclopts>=5.3.1,<6.0.0",
@@ -38,7 +38,7 @@ dependencies = [
     "pycparser >= 3.12.0",
     "pycryptodome >=4.5.0",
     "pydantic >= 2.14.1,<2.16.0",
-    "pyyaml >=6.0.3",
+    "pyyaml >=6.0.4",
     "questionary>=2.1.1",
     "rich >=15.0.0",
     "rich-rst==2.2.0",
