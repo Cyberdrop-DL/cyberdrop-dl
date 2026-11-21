@@ -371,6 +371,16 @@ max_thread_folder_depth: null
     └── thread_08
 ```
 
+# `preallocate`
+
+| Type   | Default |
+| ------ | ------- |
+| `bool` | `true`  |
+
+Preallocate 250MiB of space for the database
+
+Before each scrape run, if the number of prellocated free rows is lower than 20% (50MiB), an additional 250MiB will be preallocated
+
 # `update_check`
 
 | Type   | Default |

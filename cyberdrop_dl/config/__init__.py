@@ -121,6 +121,9 @@ class Config(ConfigModel, title="cyberdrop-dl config"):
     update_check: Annotated[bool, Parameter(alias=("-U"))] = True
     "Check for updates at the end of the session"
 
+    preallocate: bool = True
+    "Preallocate 250MiB of space for the database if the number of free rows is too low"
+
     _resolved: bool = False
     _sources: tuple[Path, ...] = ()
 
