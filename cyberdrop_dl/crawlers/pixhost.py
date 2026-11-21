@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 @final
 class Selector:
-    GALLERY_TITLE = "a.link h2"
+    GALLERY_TITLE = ".gallery-heading-row h1"
     GALLERY_IMAGES = "div.images a img"
     IMAGE = "img.image-img"
 
