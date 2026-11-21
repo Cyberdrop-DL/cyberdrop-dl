@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 from multidict import CIMultiDict
 
-from cyberdrop_dl.clients.downloads import DownloadClient, _check_content_type, _get_content_type, resolve_download_dir
+from cyberdrop_dl.clients.downloads import DownloadClient, _check_content_type, resolve_download_dir
+from cyberdrop_dl.clients.headers import get_content_type
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.constants import USE_RETRY_PATH
 from cyberdrop_dl.exceptions import InvalidContentTypeError
@@ -33,7 +34,7 @@ def test_chunk_size_is_never_greater_that_speed_limit(manager: Manager, limit: i
 
 def test_get_content_type() -> None:
     def get(value: str) -> str:
-        content_type = _get_content_type(CIMultiDict({"content-type": value}))
+        content_type = get_content_type(CIMultiDict({"content-type": value}))
         assert content_type
         return content_type
 
@@ -50,7 +51,7 @@ def test_check_content_type() -> None:
 
 
 def test_get_content_type_missing_headers() -> None:
-    assert _get_content_type({}) is None
+    assert get_content_type({}) is None
 
 
 class TestResolveDownloadDir:

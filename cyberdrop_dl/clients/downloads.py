@@ -12,12 +12,13 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, constants, ffmpeg, storage
 from cyberdrop_dl.clients import etag
+from cyberdrop_dl.clients.headers import content_length, get_content_type, get_last_modified
 from cyberdrop_dl.clients.http import JSON_CHECK, check_http_status
 from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import ByteRange
-from cyberdrop_dl.utils import dates, enter_context
+from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
-_CONTENT_TYPES_OVERRIDES: dict[str, str] = {"text/vnd.trolltech.linguist": "video/MP2T"}
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
 
 
@@ -136,7 +136,7 @@ class DownloadClient:
             media_item.size = resume_point
             return True
 
-        media_item.size = _get_content_length(resp.headers)
+        media_item.size = content_length(resp.headers)
         if resp.status == HTTPStatus.PARTIAL_CONTENT:
             # Content-Length of a ranged response only counts the bytes after resume_point.
             # Every check below (partial size, final size, filesize limits) needs the size of the whole file
@@ -178,7 +178,7 @@ class DownloadClient:
     async def _append_content(self, media_item: MediaItem, hook: ProgressHook, resp: AbstractResponse[Any]) -> None:
         check_free_space = storage.create_free_space_checker(media_item)
         check_download_speed = make_speed_checker(media_item, hook, self.download_speed_threshold)
-        await check_free_space(_get_content_length(resp.headers))
+        await check_free_space(content_length(resp.headers))
         await self._pre_download_check(media_item)
 
         async with self._track_speed(hook), aio.open(media_item.partial_file, mode="ab") as f:
@@ -371,20 +371,6 @@ def _check_content_type(content_type: str, ext: str) -> str | None:
         raise InvalidContentTypeError(message=msg)
 
 
-def _get_content_type(headers: Mapping[str, str]) -> str | None:
-    content_type = headers.get(hdrs.CONTENT_TYPE)
-    if not content_type:
-        return None
-
-    override_key = next((name for name in _CONTENT_TYPES_OVERRIDES if name in content_type), "<NO_OVERRIDE>")
-    return _CONTENT_TYPES_OVERRIDES.get(override_key) or content_type
-
-
-def _get_last_modified(headers: Mapping[str, str]) -> int | None:
-    if date_str := headers.get(hdrs.LAST_MODIFIED):
-        return int(dates.parse_http(date_str).timestamp())
-
-
 def _is_html_or_text(content_type: str) -> bool:
     return "html" in content_type or "text" in content_type
 
@@ -466,18 +452,8 @@ def make_speed_checker(media_item: MediaItem, hook: ProgressHook, speed_threshol
     return check_download_speed
 
 
-def _get_content_length(headers: Mapping[str, str], *, _required: bool = False) -> int:
-    try:
-        return int(headers[hdrs.CONTENT_LENGTH])
-    except KeyError:
-        if not _required:
-            return 0
-        msg = f"Download response has no `{hdrs.CONTENT_LENGTH}` header. Refusing to download"
-        raise DownloadError(HTTPStatus.LENGTH_REQUIRED, msg, retry=False) from None
-
-
 def _set_upload_date(media_item: MediaItem, headers: Mapping[str, str]) -> None:
-    if not media_item.is_segment and not media_item.uploaded_at and (last_modified := _get_last_modified(headers)):
+    if not media_item.is_segment and not media_item.uploaded_at and (last_modified := get_last_modified(headers)):
         logger.warning(
             "Unable to parse upload date for %s, using `%s` header as file datetime",
             media_item.url,
@@ -501,7 +477,7 @@ async def _check_response(media_item: MediaItem, resp: AbstractResponse[Any], re
     etag.check(resp.headers)
     await check_http_status(resp)
 
-    if not media_item.is_segment and (content_type := _get_content_type(resp.headers)):
+    if not media_item.is_segment and (content_type := get_content_type(resp.headers)):
         _check_content_type(content_type, media_item.ext)
 
     _check_for_placeholder_files(resp.headers)

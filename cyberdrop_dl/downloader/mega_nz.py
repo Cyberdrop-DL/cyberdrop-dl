@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, final, override
 from mega.chunker import MegaChunker, get_chunks
 
 from cyberdrop_dl import aio, storage
-from cyberdrop_dl.clients.downloads import DownloadClient, _get_content_length, make_speed_checker
+from cyberdrop_dl.clients.downloads import DownloadClient, make_speed_checker
+from cyberdrop_dl.clients.headers import content_length
 from cyberdrop_dl.downloader.http import Downloader
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIs
 
         check_free_space = storage.create_free_space_checker(media_item)
         check_download_speed = make_speed_checker(media_item, hook, self.download_speed_threshold)
-        await check_free_space(_get_content_length(resp.headers))
+        await check_free_space(content_length(resp.headers))
         await self._pre_download_check(media_item)
 
         crypto, file_size = media_item.extra_info[media_item.domain]["key"]
