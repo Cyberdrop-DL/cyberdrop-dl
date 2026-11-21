@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
+from cyberdrop_dl.cache import disk_cached_method
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, AsyncIterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
-
-_BASE_QUERY = "nsfw[]=0&nsfw[]=1&nsfw[]=2&nsfw[]=3&nsfw[]=4"
-_TYPES_QUERY = "types[]=image&types[]=video&types[]=gallery"
 
 
 class NsfwXXXCrawler(Crawler):
@@ -29,6 +27,15 @@ class NsfwXXXCrawler(Crawler):
     DOMAIN: ClassVar[str] = "nsfw.xxx"
     FOLDER_DOMAIN: ClassVar[str] = DOMAIN
     DEFAULT_POST_TITLE_FORMAT: ClassVar[str] = "{date:%Y-%m} - {title} [{id}]"
+
+    def __post_init__(self) -> None:
+        self.update_cookies({"auth.strategy": "custom"})
+        self.api: NsfwXXXAPI = NsfwXXXAPI.from_crawler(self)
+
+    @override
+    async def __async_post_init__(self) -> None:
+        with self.disable_on_error("Unable to get API token"):
+            await self.api.refresh_token()
 
     @property
     def separate_posts(self) -> bool:
@@ -51,74 +58,120 @@ class NsfwXXXCrawler(Crawler):
 
     @error_handling_wrapper
     async def subreddit(self, scrape_item: ScrapeItem, subreddit: str) -> None:
-        api_url = self.PRIMARY_URL / "api/v1/source/r" / subreddit
-        await self._collection(scrape_item, api_url)
+        data, pages = await aio.peek_next(self.api.subreddit(subreddit))
+        name = data["subreddit"]["name"].removeprefix("/r/")
+        scrape_item.setup_as_profile(self.create_title(name))
+        await self._iter_posts(scrape_item, pages)
 
     @error_handling_wrapper
     async def category(self, scrape_item: ScrapeItem, name: str) -> None:
-        api_url = self.PRIMARY_URL / "api/v1/category" / name
-        await self._collection(scrape_item, api_url)
+        data, pages = await aio.peek_next(self.api.category(name))
+        scrape_item.setup_as_profile(self.create_title(data["category"]["name"]))
+        await self._iter_posts(scrape_item, pages)
 
     @error_handling_wrapper
     async def search(self, scrape_item: ScrapeItem, query: str) -> None:
-        api_url = (self.PRIMARY_URL / "api/v1/search").with_query(q=query)
-        await self._collection(scrape_item, api_url, query)
+        scrape_item.setup_as_profile(self.create_title(f"{query} [search]"))
+        await self._iter_posts(scrape_item, self.api.search(query))
 
     @error_handling_wrapper
     async def user(self, scrape_item: ScrapeItem, username: str) -> None:
-        api_url = self.PRIMARY_URL / "api/v1/user" / username
-        await self._collection(scrape_item, api_url, f"@{username}")
+        data, pages = await aio.peek_next(self.api.user_posts(username))
+        name = data["user"]["name"]
+        scrape_item.setup_as_profile(self.create_title(f"@{name}"))
+        await self._iter_posts(scrape_item, pages)
 
-    async def _collection(self, scrape_item: ScrapeItem, api_url: AbsoluteHttpURL, name: str | None = None) -> None:
-        col_type = api_url.parts[3]
-        data, pages = await aio.peek_next(self._api_pager(api_url))
-        name: str = name or data[col_type]["name"].removeprefix("/r/")
-        title = name if col_type == "source" else f"{name} [{col_type}]"
-        scrape_item.setup_as_profile(self.create_title(title))
-
-        async for data in pages:
-            for post in data["posts"]:
-                web_url = self.PRIMARY_URL / "post" / str(post["content"]["id"])
-                new_scrape_item = scrape_item.create_child(web_url)
-                self.create_eager_task(self._post(new_scrape_item, post))
-                scrape_item.add_children()
-
-    async def _api_pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
-        api_url = url.update_query(page=1).update_query(_TYPES_QUERY).update_query(_BASE_QUERY)
-        while True:
-            resp = await self.request_json(api_url)
-            yield resp["data"]
-            next_page: str | None = resp["meta"].get("nextPage")
-            if not next_page:
-                break
-
-            api_url = self.parse_url(next_page)
+    async def _iter_posts(self, scrape_item: ScrapeItem, pages: AsyncIterable[dict[str, Any]]):
+        sleep = aio.periodic_sleep(10)
+        async with aio.non_cancelling_taskgroup() as tg, aio.maybe_aclosing(pages):
+            async for data in pages:
+                for post in data["posts"]:
+                    web_url = self.PRIMARY_URL / "post" / str(post["content"]["id"])
+                    tg.create_task(self._post_task(scrape_item.create_child(web_url), post))
+                    scrape_item.add_children()
+                    await sleep()
 
     @error_handling_wrapper
     async def post(self, scrape_item: ScrapeItem, post_id: str) -> None:
-        api_url = (self.PRIMARY_URL / "api/v1/post" / post_id).with_query(_BASE_QUERY)
-        post = (await self.request_json(api_url))["data"]["post"]
+        post = await self.api.post(post_id)
         await self._post(scrape_item, post)
 
     @error_handling_wrapper
     async def _post(self, scrape_item: ScrapeItem, post: dict[str, Any]) -> None:
         content: dict[str, Any] = post["content"]
         data: dict[str, Any] = post["data"]
-        type_: str = content["type"]
+        post_id = str(content["id"])
 
         scrape_item.uploaded_at = date = self.parse_date(post["publishedAt"], "%B %Y")
-        title = self.create_separate_post_title(content["title"], str(content["id"]), int(date))
-        scrape_item.setup_as_album(self.create_title(title), album_id=str(content["id"]))
+        title = self.create_separate_post_title(content["title"], post_id, date)
+        scrape_item.setup_as_album(self.create_title(title), album_id=post_id)
 
-        if type_ == "gallery":
-            files = data["urls"]
-        elif type_ == "video":
-            files = [data["videos"]["mp4"]]
-        elif type_ == "image":
-            files: list[str] = [data["url"]]
-        else:
-            raise ScrapeError(422, f"Unknown post type = {type_}")
+        match ctype := content["type"]:
+            case "gallery":
+                files = data["urls"]
+            case "video":
+                files = [data["videos"]["mp4"]]
+            case "image":
+                files: list[str] = [data["url"]]
+            case _:
+                raise ScrapeError(422, f"Unknown post type = {ctype}")
 
-        for url in files:
-            src = self.parse_url(url)
-            await self.direct_file(scrape_item, src)
+        async with aio.non_cancelling_taskgroup() as tg:
+            tg.create_task(self.write_metadata(scrape_item, f"post_{post_id}", post))
+            for url in files:
+                tg.create_task(self.direct_file(scrape_item, self.parse_url(url)))
+
+    _post_task = auto_task_id(_post)
+
+
+def _random_id(length: int = 8) -> str:
+    import secrets
+    import string
+
+    return "".join(secrets.choice(string.digits) for _ in range(length))
+
+
+class NsfwXXXAPI(API):
+    ENTRYPOINT: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://nsfw.xxx/api")
+    BASE_QUERY: ClassVar[dict[str, list[int]]] = {"nsfw[]": [0, 1, 2, 3, 4]}
+
+    def __post_init__(self) -> None:
+        self.__http_ctx__.headers["Referer"] = str(self.PRIMARY_URL / "post" / _random_id())
+
+    @disk_cached_method("service-token-passport", ttl=86_400 * 3)
+    async def refresh_token(self) -> str:
+        url = self.ENTRYPOINT / "v2/auth/refresh-passport-token"
+        async with self.request(url):
+            ...
+
+        cookies = self.client.cookies.filter_cookies(self.PRIMARY_URL)
+        return cookies["service-token-passport"].value
+
+    async def post(self, post_id: str) -> dict[str, Any]:
+        url = (self.ENTRYPOINT / "v1/post" / post_id).with_query(self.BASE_QUERY)
+        resp = await self.request_json(url, headers={"Referer": str(self.PRIMARY_URL / "post" / post_id)})
+        return resp["data"]["post"]
+
+    def user_posts(self, username: str) -> AsyncGenerator[dict[str, Any]]:
+        return self.pager(self.ENTRYPOINT / "v1/user" / username)
+
+    def search(self, query: str) -> AsyncGenerator[dict[str, Any]]:
+        return self.pager((self.ENTRYPOINT / "v1/search").with_query(q=query))
+
+    def subreddit(self, subreddit: str) -> AsyncGenerator[dict[str, Any]]:
+        return self.pager(self.ENTRYPOINT / "v1/source/r" / subreddit)
+
+    def category(self, subreddit: str) -> AsyncGenerator[dict[str, Any]]:
+        return self.pager(self.ENTRYPOINT / "v1/category" / subreddit)
+
+    async def pager(self, url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
+        query = {"page": 1, "types[]": ["image", "video", "gallery"]} | self.BASE_QUERY
+        url = url.update_query(query)
+        while True:
+            resp = await self.request_json(url)
+            yield resp["data"]
+            next_page: str | None = resp["meta"].get("nextPage")
+            if not next_page:
+                break
+
+            url = self.parse_url(next_page)

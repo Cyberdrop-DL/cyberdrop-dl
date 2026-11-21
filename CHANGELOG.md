@@ -77,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update crawler to new site design (Pimpbunny)
 - Image and video extraction (Fsiblog)
 - Videos and search results (Masahub)
+- `403 - Forbidden` on every post (nsfw.xxx)
 
 ## [10.16.0] - 2026-11-15
 

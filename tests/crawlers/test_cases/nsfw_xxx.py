@@ -10,9 +10,17 @@ TEST_CASES = [
                 "original_filename": "underwear-cherricali-picsjpg-YdJuVW.jpg",
                 "referer": "https://nsfw.xxx/post/17668088",
                 "album_id": "17668088",
-                "uploaded_at": 1651381200,
+                "uploaded_at": 1651363200,
                 "download_folder": "re:2022-05 - Barely covered [17668088] (nsfw.xxx)",
+                "thumbnail": None,
+                "size": None,
+                "duration": None,
+                "parents": [],
+                "metadata": {},
+                "extra_info": {},
+                "id": ["nsfw.xxx", "/uploads12/images/1/95/underwear-cherricali-picsjpg-YdJuVW.jpg"],
             }
         ],
+        "count": 1,
     }
 ]
