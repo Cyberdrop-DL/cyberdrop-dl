@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Borvarbooru support
 - Direct streams support (BunnyCDN)
 - Posts and users support (pimpandhost)
+- Support more URL formats (Vidara)
 
 ### Deprecated
 

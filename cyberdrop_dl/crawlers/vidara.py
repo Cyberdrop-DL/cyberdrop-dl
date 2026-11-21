@@ -26,11 +26,13 @@ class VidaraCrawler(Crawler):
         "vidwara",
         "viewdara",
         "xca.cymru",
+        "czzbgnw.com",
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
             "/e/<video_id>",
             "/v/<video_id>",
+            "/<video_id>",
         ),
     }
     DOMAIN: ClassVar[str] = "vidara"
@@ -41,7 +43,7 @@ class VidaraCrawler(Crawler):
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
-            case ["e" | "v", video_id]:
+            case ["e" | "v", video_id] | [video_id]:
                 await self.video(scrape_item, video_id)
             case _:
                 raise ValueError
