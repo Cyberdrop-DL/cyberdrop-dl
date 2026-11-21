@@ -55,13 +55,12 @@ def parse_jsonl(file: Path, keys: Sequence[str]) -> Generator[tuple[str, str, Te
 
 
 def run_test(url_txt: Path, main_log: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="cdl_test") as temp:
+    with tempfile.TemporaryDirectory(prefix="cdl_test") as temp, context.enter(context.SKIP_DOWNLOAD, True):
         appdata = AppData.from_dirs(AppDirs.from_path(Path(temp) / "test_appdata"))
         appdata.config_file.parent.mkdir(parents=True, exist_ok=True)
         appdata.config_file.touch()
         appdata.db_file.touch()
-        _ = context.SKIP_DOWNLOAD.set(True)
-        _ = run_cdl(
+        run_cdl(
             [
                 "download",
                 "--database-file",
@@ -115,10 +114,12 @@ def create_test_files(file: Path) -> None:
 
 
 app = App()
+def_log_file = Path("test_run.log")
+def_input = Path("URLs.txt")
 
 
 @app.default()
-def run(main_log: Path = Path("test_run.log"), url_txt: Path = Path("URLs.txt")) -> None:  # pyright: ignore[reportCallInDefaultInitializer]
+def run(main_log: Path = def_log_file, url_txt: Path = def_input) -> None:
     main_log, url_txt = map(Path.resolve, (main_log, url_txt))
     run_test(url_txt, main_log)
     json_l = main_log.with_suffix(".results.jsonl")

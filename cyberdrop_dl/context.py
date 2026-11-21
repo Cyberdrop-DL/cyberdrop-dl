@@ -3,7 +3,7 @@
 Only define contextvars here if the module that uses them is different from the module that sets them
 
 - They MUST be used across multiple modules
-- Their inner type NOT SHOULD be a custom CDL type
+- Their inner type SHOULD NOT be a custom CDL type (except objects in url_objects)
 - This module MUST NOT import any other CDL module
 """
 
