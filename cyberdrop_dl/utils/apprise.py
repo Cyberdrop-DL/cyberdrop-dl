@@ -6,8 +6,7 @@ import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl import aio, env
-from cyberdrop_dl.constants import MAIN_LOG_FILE
+from cyberdrop_dl import aio, context, env
 from cyberdrop_dl.logs import MAX_ATTACHMENT_SIZE, borrow_logger, export_logs, log_spacer
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ async def _notify(apprise_obj: apprise.Apprise, messages: Iterable[_AppriseMessa
 @contextlib.asynccontextmanager
 async def _temp_copy_of_main_log() -> AsyncGenerator[Path | None]:
     async with aio.temp_dir() as temp_dir:
-        temp_file = temp_dir / MAIN_LOG_FILE.get().name
+        temp_file = temp_dir / context.MAIN_LOG_FILE.get().name
         try:
             logs = await asyncio.to_thread(export_logs, size_limit=MAX_ATTACHMENT_SIZE)
         except Exception:

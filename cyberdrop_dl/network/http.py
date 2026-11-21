@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, Unpack, final, 
 import aiohttp
 from aiohttp import hdrs
 
-from cyberdrop_dl import aio, cookies, ddos_guard, env
+from cyberdrop_dl import aio, context, cookies, ddos_guard, env
 from cyberdrop_dl.constants import CDL_USER_AGENT
 from cyberdrop_dl.cookies import make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
@@ -20,7 +20,7 @@ from cyberdrop_dl.network import curl_cffi, flaresolverr, get_logger, tcp, wreq
 from cyberdrop_dl.network.request import Request, RequestParams
 from cyberdrop_dl.network.response import AbstractResponse, FlareSolverrResponse
 from cyberdrop_dl.signature import dataclass_repr
-from cyberdrop_dl.utils import enter_context, truncated_preview
+from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, struct
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ type RequestContext = contextlib.AbstractAsyncContextManager[AbstractResponse[An
 type RateLimit = tuple[float, float]
 type JSONCheck = Callable[[Any, AbstractResponse[Any]], None]
 
-JSON_CHECK: ContextVar[JSONCheck | None] = ContextVar("JSON_CHECK", default=None)
+_JSON_CHECK: ContextVar[JSONCheck | None] = ContextVar("_JSON_CHECK", default=None)
 
 logger = get_logger(__name__)
 
@@ -409,6 +409,10 @@ class HTTPClient:
         self._flaresolverr_ua = flaresolverr.USER_AGENT.get()
         return FlareSolverrResponse.create(solution)
 
+    @classmethod
+    def json_ctx(cls, json_check: JSONCheck | None) -> contextlib.AbstractContextManager[None]:
+        return context.enter(_JSON_CHECK, json_check)
+
 
 async def _check_json(response: AbstractResponse[Any]) -> None:
     if "json" not in response.content_type:
@@ -420,7 +424,7 @@ async def _check_json(response: AbstractResponse[Any]) -> None:
         logger.exception("Unable to decode JSON response from %s", response.url)
         return
 
-    if check := JSON_CHECK.get():
+    if check := _JSON_CHECK.get():
         check(data, response)
         return
 
@@ -441,7 +445,7 @@ class HTTPMixin(HTTPController, Protocol):
             await ctx.throttle()
 
         limiter = self.client.limiter.per_domain.get(ctx.domain, contextlib.nullcontext())
-        with enter_context(JSON_CHECK, ctx.json_check):
+        with self.client.json_ctx(ctx.json_check):
             async with limiter, self.client.limiter.global_:
                 yield
 

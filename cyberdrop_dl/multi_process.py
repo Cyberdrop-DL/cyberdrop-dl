@@ -10,8 +10,8 @@ import time
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Concatenate
 
+from cyberdrop_dl import context
 from cyberdrop_dl.constants import MISSING
-from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -51,9 +51,9 @@ def ctx(
 ) -> Generator[None]:
     with contextlib.ExitStack() as stack:
         if max_workers is not MISSING:
-            stack.enter_context(enter_context(MAX_WORKERS, max_workers))
+            stack.enter_context(context.enter(MAX_WORKERS, max_workers))
         if timeout is not MISSING:
-            stack.enter_context(enter_context(TIMEOUT, timeout))
+            stack.enter_context(context.enter(TIMEOUT, timeout))
         yield
 
 

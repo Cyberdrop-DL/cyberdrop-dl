@@ -15,14 +15,13 @@ import rich
 from rich.console import Group, RenderableType
 from rich.layout import Layout
 
-from cyberdrop_dl import env
+from cyberdrop_dl import context, env
 from cyberdrop_dl.config.settings import UIMode
 from cyberdrop_dl.progress import LiveUI, is_terminal_in_portrait
 from cyberdrop_dl.progress.scraping.downloads import DownloadsPanel
 from cyberdrop_dl.progress.scraping.errors import DownloadErrorsPanel, ScrapeErrorsPanel
 from cyberdrop_dl.progress.scraping.files import FileStatsPanel
 from cyberdrop_dl.progress.scraping.panel import ScrapingPanel, StatusMessage
-from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterator
@@ -101,7 +100,7 @@ class ScrapingUI(LiveUI):
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
         with (
-            enter_context(_STATUS, self.status),
+            context.enter(_STATUS, self.status),
             super(ScrapingUI, self).__call__(
                 transient=transient if self.mode is UIMode.FULLSCREEN else False, force=force
             ),

@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 from cyclopts import App
 
+from cyberdrop_dl import context
 from cyberdrop_dl.__main__ import run_cdl
 from cyberdrop_dl.appdata import AppData, AppDirs
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.crawlers import SKIP_DOWNLOAD
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
@@ -60,7 +60,7 @@ def run_test(url_txt: Path, main_log: Path) -> None:
         appdata.config_file.parent.mkdir(parents=True, exist_ok=True)
         appdata.config_file.touch()
         appdata.db_file.touch()
-        _ = SKIP_DOWNLOAD.set(True)
+        _ = context.SKIP_DOWNLOAD.set(True)
         _ = run_cdl(
             [
                 "download",

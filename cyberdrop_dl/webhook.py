@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-from cyberdrop_dl.constants import MAIN_LOG_FILE
+from cyberdrop_dl import context
 from cyberdrop_dl.logs import MAX_ATTACHMENT_SIZE, export_logs, log_spacer
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ async def _attach_logs(form: aiohttp.FormData, size_limit: float) -> None:
     except Exception:
         logger.exception("Unable to attach log for webhook notification")
     else:
-        form.add_field("file", logs, filename=MAIN_LOG_FILE.get().name)
+        form.add_field("file", logs, filename=context.MAIN_LOG_FILE.get().name)
 
 
 async def _send_notification(url: yarl.URL | str, form: aiohttp.FormData) -> None:

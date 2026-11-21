@@ -25,6 +25,7 @@ from rich.progress import (
 from rich.table import Column
 from rich.text import Text
 
+from cyberdrop_dl import context
 from cyberdrop_dl.progress import (
     Color,
     DictProgress,
@@ -35,7 +36,6 @@ from cyberdrop_dl.progress import (
     truncate_float,
 )
 from cyberdrop_dl.progress.overflow import OverFlowPanel
-from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -180,7 +180,7 @@ class DownloadsPanel(OverFlowPanel):
             },
         )
 
-        with enter_context(_current_hls_task, segments_task.id):
+        with context.enter(_current_hls_task, segments_task.id):
             try:
                 yield
             finally:

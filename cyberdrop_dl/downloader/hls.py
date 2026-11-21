@@ -9,7 +9,7 @@ from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
-from cyberdrop_dl import aio, constants, ffmpeg
+from cyberdrop_dl import aio, constants, context, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.url_objects import ByteRange
 from cyberdrop_dl.utils.cleanup import rm_partial_files
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
+
 _PLAYLIST_FILE = f"playlist{constants.TempExt.HLS}"
 _DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 
@@ -255,7 +255,7 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
     """Download a rendition group"""
     temp_dir = media_item.path.with_suffix(constants.TempExt.HLS)
 
-    sem = asyncio.BoundedSemaphore(CONCURRENT_SEGMENTS.get())
+    sem = asyncio.BoundedSemaphore(context.CONCURRENT_SEGMENTS.get())
 
     async def download(m3u8: M3U8) -> Path:
         _DECRYPTER.set(AESHLSDecrypter(client))

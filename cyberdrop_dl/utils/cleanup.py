@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from cyberdrop_dl.constants import MAIN_LOG_FILE, TempExt
+from cyberdrop_dl import context
+from cyberdrop_dl.constants import TempExt
 
 if TYPE_CHECKING:
     from collections.abc import Container, Generator
@@ -83,7 +84,7 @@ def rm_empty_dirs(path: Path) -> None:
     if not path.is_dir():
         return
 
-    exclude: set[str] = {str(log_file)} if (log_file := MAIN_LOG_FILE.get(None)) else set()
+    exclude: set[str] = {str(log_file)} if (log_file := context.MAIN_LOG_FILE.get(None)) else set()
     _ = _rm_empty_dirs(path, exclude=exclude)
 
 

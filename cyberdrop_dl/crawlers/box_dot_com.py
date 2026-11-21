@@ -7,10 +7,8 @@ from collections import deque
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, TypedDict, override
 
-from typing_extensions import AsyncGenerator
-
-from cyberdrop_dl import signature
-from cyberdrop_dl.crawlers.crawler import API, ORIGIN, Crawler, SupportedDomains, SupportedPaths
+from cyberdrop_dl import context, signature
+from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -18,7 +16,7 @@ from cyberdrop_dl.utils.dataclass import deserialize
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import AsyncGenerator, Iterable
 
     from cyberdrop_dl.url_objects import ScrapeItem
 
@@ -151,7 +149,7 @@ class BoxDotComAPI(API):
     @signature.copy(API.request_json)
     async def request_json(self, *args, **kwargs) -> dict[str, Any]:
         async with self.request(*args, **kwargs) as resp:
-            ORIGIN.set(resp.url.origin())
+            context.ORIGIN.set(resp.url.origin())
             content = await resp.text()
             if content.lstrip().startswith("<!DOCTYPE html>"):
                 resp.content_type = "text/html"

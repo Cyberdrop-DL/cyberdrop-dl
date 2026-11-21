@@ -7,18 +7,17 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from collections import Counter
-from contextvars import ContextVar
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Concatenate, Final, Literal, Self, Unpack, final
 
 from aiohttp import hdrs
 
-from cyberdrop_dl import aio
+from cyberdrop_dl import aio, context
 from cyberdrop_dl.cache import TTLCacheAdapter
 from cyberdrop_dl.config.settings import MAX_RATE_LIMIT
-from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt, HttpMethod
-from cyberdrop_dl.crawlers import ALLOW_NO_EXT, SKIP_DOWNLOAD, Registry
+from cyberdrop_dl.constants import FileExt, HttpMethod
+from cyberdrop_dl.crawlers import Registry
 from cyberdrop_dl.crawlers._hls import HLSMixin
 from cyberdrop_dl.downloader.http import Downloader
 from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeError
@@ -31,11 +30,10 @@ from cyberdrop_dl.filepath import (
 )
 from cyberdrop_dl.mediaprops import Codecs, ISO639Subtitle, Resolution, ResolvedISO639Subtitle
 from cyberdrop_dl.models.validators import strings
-from cyberdrop_dl.network.downloads import IGNORE_CONTENT_TYPE
 from cyberdrop_dl.network.headers import get_content_disposition_filename
 from cyberdrop_dl.network.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
-from cyberdrop_dl.utils import css, dates, enter_context, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
+from cyberdrop_dl.utils import css, dates, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
 from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
 from cyberdrop_dl.utils.urls import (
@@ -81,8 +79,7 @@ type SupportedPaths = dict[str, str | tuple[str, ...]]
 type SupportedDomains = tuple[str, ...]
 type DebridURL = Callable[[], Awaitable[AbsoluteHttpURL]] | AbsoluteHttpURL | None
 
-ORIGIN: ContextVar[AbsoluteHttpURL] = ContextVar("ORIGIN")
-_CHECK_DL_CAPACITY: ContextVar[bool] = ContextVar("_CHECK_DL_CAPACITY")
+
 _HASH_PREFIXES = "md5:", "sha1:", "sha256:", "xxh128:"
 
 
@@ -283,7 +280,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self._semaphore: asyncio.Semaphore = asyncio.Semaphore(40)
         self.config: Config = manager.config
         self.client: HTTPClient = manager.http_client
-        _CHECK_DL_CAPACITY.set(self.config.downloads.back_pressure)
+        context.CHECK_DL_CAPACITY.set(self.config.downloads.back_pressure)
 
         self.downloader: Downloader = self._build_downloader()
 
@@ -389,7 +386,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             Registry.concrete.add(cls)
 
     async def __throttle(self) -> None:
-        if _CHECK_DL_CAPACITY.get():
+        if context.CHECK_DL_CAPACITY.get():
             await self.downloader.capacity.wait()
 
     def __json_resp_check__(self, json_resp: Any, resp: AbstractResponse[Any], /) -> None:
@@ -468,7 +465,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     @property
     def origin(self) -> AbsoluteHttpURL:
-        return ORIGIN.get()
+        return context.ORIGIN.get()
 
     @property
     def separate_posts(self) -> bool:
@@ -546,7 +543,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     def new_task_id(self, url: AbsoluteHttpURL):
         """Creates a new task_id (shows the URL in the UI and logs)"""
         self.log.info(f"Scraping {url}")
-        _ = ORIGIN.set(url.origin())
+        context.ORIGIN.set(url.origin())
         return self.tui.scrape.new(url)
 
     @final
@@ -657,7 +654,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         Referer is the referer to use for the db, not the actual HTTP referer"""
 
         media_item = self._create_media_item(dl)
-        if not USE_RETRY_PATH.get():
+        if not context.USE_RETRY_PATH.get():
             await asyncio.to_thread(check_path_traversal, self.config.download_folder, media_item.download_folder)
 
         check_dangerous_filename(media_item.download_filename or media_item.filename)
@@ -753,7 +750,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             media_item.extra_info["delay"] = self.__dl_config__.delay
 
         try:
-            if skip or SKIP_DOWNLOAD.get():
+            if skip or context.SKIP_DOWNLOAD.get():
                 return
 
             await self.downloader.run(media_item, streams)
@@ -795,7 +792,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     async def handle_media_item(self, media_item: MediaItem, streams: m3u8.Rendition | MuxVideo | None = None) -> None:
         self._prepare_media_item(media_item)
         with (
-            enter_context(IGNORE_CONTENT_TYPE, True)
+            context.enter(context.IGNORE_CONTENT_TYPE, True)
             if self.__dl_config__.ignore_content_type
             else contextlib.nullcontext()
         ):
@@ -913,7 +910,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         try:
             return get_filename_and_ext(filename, mime_type, xenforo=cls._FORUM)
         except NoExtensionError:
-            if ALLOW_NO_EXT.get() and assume_ext:
+            if context.ALLOW_NO_EXT.get() and assume_ext:
                 return get_filename_and_ext(filename + assume_ext, mime_type, xenforo=cls._FORUM)
             raise
 
@@ -1340,7 +1337,7 @@ class API(HTTPMixin, ABC):
     @final
     @property
     def origin(self) -> AbsoluteHttpURL:
-        return ORIGIN.get()
+        return context.ORIGIN.get()
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:
@@ -1445,7 +1442,7 @@ def _should_skip_by_config(media_item: MediaItem, config: Config) -> bool:
 
 
 def _prepare_download_path(item: ScrapeItem, domain: str, config: Config) -> Path:
-    if item.retry_info and USE_RETRY_PATH.get():
+    if item.retry_info and context.USE_RETRY_PATH.get():
         return item.retry_info.download_path
 
     path = item.download_folder / item.path
@@ -1519,7 +1516,7 @@ def _prepare_debrid_url(debrid_url: DebridURL) -> DebridURL:
         request_dl_url = debrid_url
 
         async def debrid_url() -> AbsoluteHttpURL:
-            with enter_context(_CHECK_DL_CAPACITY, False):
+            with context.enter(context.CHECK_DL_CAPACITY, False):
                 return await request_dl_url()
 
     return debrid_url

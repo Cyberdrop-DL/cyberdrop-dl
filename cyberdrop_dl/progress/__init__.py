@@ -5,13 +5,12 @@ import dataclasses
 import shutil
 import sys
 from abc import ABC, abstractmethod
-from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from rich.progress import Progress, Task, TaskID
 from rich.text import Text
 
-from cyberdrop_dl import env
+from cyberdrop_dl import context, env
 from cyberdrop_dl.logs import disable_console_logging
 
 if TYPE_CHECKING:
@@ -21,8 +20,7 @@ if TYPE_CHECKING:
     from rich.console import RenderableType
     from rich.live import Live
 
-REFRESH_RATE: ContextVar[float] = ContextVar("REFRESH_RATE", default=10.0)
-TUI_DISABLED: ContextVar[bool] = ContextVar("TUI_DISABLED", default=False)
+
 _in_portrait: bool = False
 
 
@@ -137,11 +135,11 @@ class ProgressHook:
 class LiveUI(ABC):
     @property
     def disabled(self) -> bool:
-        return TUI_DISABLED.get()
+        return context.TUI_DISABLED.get()
 
     @disabled.setter
     def disabled(self, value: bool) -> None:
-        _ = TUI_DISABLED.set(value)
+        _ = context.TUI_DISABLED.set(value)
 
     @abstractmethod
     def __rich__(self) -> RenderableType: ...
@@ -160,7 +158,7 @@ class LiveUI(ABC):
                 return
 
             with Live(
-                refresh_per_second=REFRESH_RATE.get(),
+                refresh_per_second=context.REFRESH_RATE.get(),
                 auto_refresh=True,
                 screen=transient,
                 transient=transient,

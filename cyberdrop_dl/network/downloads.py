@@ -4,21 +4,19 @@ import asyncio
 import itertools
 import logging
 import time
-from contextvars import ContextVar
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from aiohttp import hdrs
 
-from cyberdrop_dl import aio, constants, ffmpeg, storage
-from cyberdrop_dl.constants import USE_RETRY_PATH, FileExt
+from cyberdrop_dl import aio, constants, context, ffmpeg, storage
+from cyberdrop_dl.constants import FileExt
 from cyberdrop_dl.exceptions import DownloadError, InvalidContentTypeError, SlowDownloadError
 from cyberdrop_dl.network import etag
 from cyberdrop_dl.network.headers import content_length, get_content_type, get_last_modified
-from cyberdrop_dl.network.http import JSON_CHECK, check_http_status
+from cyberdrop_dl.network.http import check_http_status
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.url_objects import ByteRange
-from cyberdrop_dl.utils import enter_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -35,7 +33,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
+
 _SLOW_DOWNLOAD_PERIOD: int = 10  # seconds
 
 
@@ -103,7 +101,7 @@ class DownloadClient:
         await asyncio.sleep(delay)
 
         download_url = await media_item.resolve()
-        with enter_context(JSON_CHECK, media_item.json_check):
+        with self.http_client.json_ctx(media_item.json_check):
             async with self.http_client.raw_request(
                 download_url,
                 headers=media_item.headers,
@@ -364,7 +362,7 @@ def _check_filesize_limits(media: MediaItem, config: Config) -> bool:
 
 
 def _check_content_type(content_type: str, ext: str) -> str | None:
-    if IGNORE_CONTENT_TYPE.get():
+    if context.IGNORE_CONTENT_TYPE.get():
         return
     if _is_html_or_text(content_type) and ext.lower() not in FileExt.TEXT:
         msg = f"Received '{content_type}', was expecting binary payload"
@@ -493,7 +491,7 @@ async def _check_response(media_item: MediaItem, resp: AbstractResponse[Any], re
 
 
 def resolve_download_dir(download_folder: Path, config: Config) -> Path:
-    if config.subfolders.create or USE_RETRY_PATH.get():
+    if config.subfolders.create or context.USE_RETRY_PATH.get():
         return download_folder
 
     # Only keep the fist subfolder (if any)

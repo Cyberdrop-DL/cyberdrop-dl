@@ -10,9 +10,9 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, override
 
-from cyberdrop_dl import aio, env, filepath, storage
+from cyberdrop_dl import aio, context, env, filepath, storage
 from cyberdrop_dl.constants import BLOCKED_DOMAINS
-from cyberdrop_dl.crawlers import ALLOW_NO_EXT, create_crawlers
+from cyberdrop_dl.crawlers import create_crawlers
 from cyberdrop_dl.csv_logs import CSVLogsManager
 from cyberdrop_dl.exceptions import JDownloaderError, NoExtensionError
 from cyberdrop_dl.logs import log_spacer
@@ -190,14 +190,12 @@ class ScrapeMapper:
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[Self]:
-        from cyberdrop_dl.downloader.hls import CONCURRENT_SEGMENTS
-
         assert not self.task_mngr.scrape.done.is_set()
 
         config = self.manager.config
 
-        _ = CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
-        _ = ALLOW_NO_EXT.set(config.filters.allow_files_with_no_extension)
+        context.CONCURRENT_SEGMENTS.set(config.downloads.concurrent_segments)
+        context.ALLOW_NO_EXT.set(config.filters.allow_files_with_no_extension)
 
         filepath.setup(config.max_file_name_length, config.max_folder_name_length, config.restrict_path)
 

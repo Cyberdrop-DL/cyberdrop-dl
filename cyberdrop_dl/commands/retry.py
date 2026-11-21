@@ -3,10 +3,10 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
+from cyberdrop_dl import context
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands.scrape import prepare_manager, scrape
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.constants import USE_RETRY_PATH
 from cyberdrop_dl.models import ConfigModel
 from cyberdrop_dl.scrape_source import RetryScrapeSource, RetrySource
 
@@ -35,7 +35,7 @@ def _tomorrow() -> dt.date:
 def create_retry_src(retry: RetrySource, args: RetryArgs | None = None) -> RetryScrapeSource:
     args = args or RetryArgs()
     if args.force_original_path:
-        USE_RETRY_PATH.set(True)
+        context.USE_RETRY_PATH.set(True)
 
     return RetryScrapeSource(retry, after=args.from_, before=args.to or _tomorrow())
 

@@ -4,15 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from cyberdrop_dl import aio, scrape_mapper
+from cyberdrop_dl import aio, context, scrape_mapper
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.constants import USE_RETRY_PATH
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
 from cyberdrop_dl.database import Database, common, schema
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_source import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
-from cyberdrop_dl.utils import enter_context
 from cyberdrop_dl.utils.urls import parse_http_url
 
 _MOCK_ROW = {
@@ -106,7 +104,7 @@ class TestGetDownloadPath:
         )
         assert self.dl_path(item) == Path("downloads/a-sub-folder")
 
-        with enter_context(USE_RETRY_PATH, True):
+        with context.enter(context.USE_RETRY_PATH, True):
             assert self.dl_path(item) == retry.download_path
 
     def test_loose_files_no_include_domain(self, item: ScrapeItem) -> None:

@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 import aiohttp
 from rich.markdown import Markdown
 
-from cyberdrop_dl import __version__, aio, stats
-from cyberdrop_dl.constants import USE_RETRY_PATH
+from cyberdrop_dl import __version__, aio, context, stats
 from cyberdrop_dl.hasher import Hasher, hash_directory
 from cyberdrop_dl.progress import hyperlink
 from cyberdrop_dl.prompts import (
@@ -68,7 +67,7 @@ def run(manager: Manager, input_file: Path) -> RetrySource | Path:
 
 
 def _retry_failed(_: object) -> RetrySource:
-    USE_RETRY_PATH.set(ask_should_use_retry_path())
+    context.USE_RETRY_PATH.set(ask_should_use_retry_path())
     return RetrySource.FAILED
 
 

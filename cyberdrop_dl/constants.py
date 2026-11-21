@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 import time
-from contextvars import ContextVar
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Any, Literal, final
 
@@ -26,8 +25,6 @@ CDL_USER_AGENT = f"cyberdrop-dl/{__version__}"
 MISSING: Any = Sentinel("MISSING")
 HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"]
 
-MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")
-USE_RETRY_PATH: ContextVar[bool] = ContextVar("USE_RETRY_PATH", default=False)
 
 DEFAULT_PARAMETER = Parameter(
     negative_iterable=[],

@@ -1,6 +1,6 @@
 [project]
 name = "cyberdrop-dl-patched"
-version = "10.17.0dev2"
+version = "10.17.0dev3"
 authors = [{name = "Jacob B", email = "admin@script-ware.net"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -177,12 +177,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.flake8-boolean-trap]
-extend-allowed-calls = ["cyberdrop_dl.utils.enter_context"]
+extend-allowed-calls = ["cyberdrop_dl.context.enter"]
 
 [tool.ruff.lint.flake8-import-conventions]
 banned-from = [
     "base64",
     "cyberdrop_dl.aio",
+    "cyberdrop_dl.context",
     "cyberdrop_dl.stats",
     "cyberdrop_dl.tracebacks",
     "dataclasses",

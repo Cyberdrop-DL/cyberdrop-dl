@@ -5,7 +5,6 @@ import pkgutil
 import re
 import weakref
 from collections.abc import Awaitable, Callable
-from contextvars import ContextVar
 from typing import TYPE_CHECKING, ClassVar
 
 import aiosqlite
@@ -17,10 +16,6 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from cyberdrop_dl.crawlers.crawler import Crawler
-
-
-ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
-SKIP_DOWNLOAD: ContextVar[bool] = ContextVar("SKIP_DOWNLOAD", default=False)
 
 
 def create_crawlers[CrawlerT: Crawler](

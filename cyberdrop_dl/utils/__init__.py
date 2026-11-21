@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import itertools
 import logging
 import operator
@@ -13,19 +12,9 @@ from cyberdrop_dl.exceptions import ScrapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
-    from contextvars import ContextVar
 
 
 logger = logging.getLogger(__name__)
-
-
-@contextlib.contextmanager
-def enter_context[T](context_var: ContextVar[T], value: T, /) -> Generator[None]:
-    token = context_var.set(value)
-    try:
-        yield
-    finally:
-        context_var.reset(token)
 
 
 def extract_text(text: str, /, start: str, end: str, pos: int | None = None) -> tuple[int, str]:

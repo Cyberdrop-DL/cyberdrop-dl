@@ -7,8 +7,8 @@ import shutil
 from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
+from cyberdrop_dl import context
 from cyberdrop_dl.exceptions import InsufficientFreeSpaceError
-from cyberdrop_dl.utils import enter_context
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ async def monitor(required_free_space: int) -> AsyncGenerator[None]:
         loop = asyncio.create_task(_psutil_loop(), name="storage monitor")
         await asyncio.sleep(0)
     try:
-        with enter_context(_REQUIRED_FREE_SPACE, required_free_space):
+        with context.enter(_REQUIRED_FREE_SPACE, required_free_space):
             yield
     finally:
         if loop is not None:

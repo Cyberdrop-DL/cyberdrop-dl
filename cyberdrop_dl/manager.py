@@ -8,7 +8,7 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any, Self, final
 
-from cyberdrop_dl import __version__, aio, constants, dependencies, env, ffmpeg, stats
+from cyberdrop_dl import __version__, aio, constants, context, dependencies, env, ffmpeg, stats
 from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.cache import cache_context
 from cyberdrop_dl.config import Config
@@ -19,11 +19,10 @@ from cyberdrop_dl.logs import LoggerAdapter, capture_logs, log_spacer
 from cyberdrop_dl.models.validators import bytesize_to_str
 from cyberdrop_dl.network.downloads import DownloadClient
 from cyberdrop_dl.network.http import HTTPClient
-from cyberdrop_dl.progress import REFRESH_RATE, TUI_DISABLED
 from cyberdrop_dl.signature import dataclass_repr
 from cyberdrop_dl.sorter import Sorter
 from cyberdrop_dl.url_objects import FinishedDownload
-from cyberdrop_dl.utils import enter_context, get_system_information
+from cyberdrop_dl.utils import get_system_information
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -96,8 +95,8 @@ class Manager:
         with (
             self.exit_stack,
             cache_context(self.appdata.cache_file, self.cache),
-            enter_context(REFRESH_RATE, self.config.ui.refresh_rate),
-            enter_context(TUI_DISABLED, self.config.ui.mode.is_disabled),
+            context.enter(context.REFRESH_RATE, self.config.ui.refresh_rate),
+            context.enter(context.TUI_DISABLED, self.config.ui.mode.is_disabled),
         ):
             try:
                 yield self
