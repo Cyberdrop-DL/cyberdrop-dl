@@ -257,6 +257,7 @@ TEST_CASES = [
     },
     {
         "url": "https://xhamster.com/photos/gallery/selfie-porn-pic-242-16043978",
+        "results": [],
         "description": "gallery w 2 pages, each page only has 60 images",
         "count": 62,
     },

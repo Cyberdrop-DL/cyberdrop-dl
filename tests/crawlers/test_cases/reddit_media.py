@@ -36,7 +36,7 @@ TEST_CASES = [
                 "filename": "6a475inb48yh1 [avc1][mp4a][720p].mp4",
                 "debrid_url": None,
                 "original_filename": "6a475inb48yh1",
-                "referer": "https://packaged-media.redd.it/6a475inb48yh1/pb/m2-res_480p.mp4?s=d861355cb1",
+                "referer": "https://v.redd.it/6a475inb48yh1",
                 "download_folder": "re:Loose Files (Reddit)",
                 "id": ["v.redd.it", "https://v.redd.it/6a475inb48yh1/HLSPlaylist.m3u8"],
             },

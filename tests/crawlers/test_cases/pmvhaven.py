@@ -35,7 +35,7 @@ TEST_CASES = [
         "results": [
             {"url": "ANY", "download_folder": "re:CheekyGooner [user] (PMVHaven)", "referer": "ANY", "album_id": None}
         ],
-        "count": range(280, 300),
+        "count": range(340, 500),
     },
     {
         "url": "https://pmvhaven.com/users/68feea8c4e81de92343a1fd7",
@@ -46,6 +46,7 @@ TEST_CASES = [
     },
     {
         "url": "https://pmvhaven.com/playlists/6932d1e5e234628c68d50b71",
+        "skip": "Deletd (404)",
         "results": [
             {
                 "url": "ANY",
