@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING, ClassVar
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import TextExtractor, css, js_unpacker
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -19,12 +19,9 @@ class LuluStreamCrawler(Crawler):
         "luluvdo",
         "luluvido",
         "luluvd",
-        "luluvid",
-        "lulu.st",
-        "luluvid.com",
         "cdn1.site",
         "streamhihi.com",
-        "luluvdoo.com",
+        "lplaygo.com",
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Video": (
@@ -35,6 +32,7 @@ class LuluStreamCrawler(Crawler):
     }
     DOMAIN: ClassVar[str] = "lulustream"
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lulustream.com")
+    OLD_DOMAINS: ClassVar[tuple[str, ...]] = ("luluvid.com", "luluvdoo.com", "lulu.st")
 
     def __post_init__(self) -> None:
         self.api: LuluStreamAPI = LuluStreamAPI.from_crawler(self)
@@ -65,7 +63,7 @@ class LuluStreamCrawler(Crawler):
         )
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@struct
 class Video:
     id: str
     title: str
