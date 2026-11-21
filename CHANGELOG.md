@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Archive (`.zip`) downloads (Imagepond)
 - Video downloads (Desivideo)
 - Video downloads (Erome.fan)
+- Update crawler to new site design (Pimpbunny)
 - Image and video extraction (Fsiblog)
 
 ## [10.16.0] - 2026-11-15
