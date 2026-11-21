@@ -54,6 +54,11 @@ async def _scrape(manager: Manager, source: URLsSource | RetryScrapeSource) -> N
     async with manager.database:
         log_spacer()
         logger.info("Starting CDL...")
+        if manager.config.preallocate:
+            from cyberdrop_dl.database.common import pre_allocate_250mb
+
+            await pre_allocate_250mb(manager.database.conn)
+
         async with ScrapeMapper(manager)() as scrape_mapper:
             stats = await scrape_mapper.run(source)
             scrape_mapper.shutdown()

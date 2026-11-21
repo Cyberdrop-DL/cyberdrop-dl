@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import logging
 import sqlite3
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
@@ -16,6 +17,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.database._db import Database
+
+logger = logging.getLogger(__name__)
+
+MIN_FREE_SPACE = 50e6
 
 
 @dataclass_repr("name", "_thread")
@@ -89,9 +94,10 @@ async def unused_space(db_conn: aiosqlite.Connection) -> int:
 async def pre_allocate_250mb(db_conn: aiosqlite.Connection) -> None:
     """Pre-allocate SQL file just in case the user runs out of disk space."""
 
-    if await unused_space(db_conn) > 50e6:
+    if await unused_space(db_conn) > MIN_FREE_SPACE:
         return
 
+    logger.debug("Database free rows are too low. Preallocating an additional 250MiB")
     script = "CREATE TABLE IF NOT EXISTS t(x);INSERT INTO t VALUES(zeroblob(250*1024*1024));DROP TABLE t;"
     await db_conn.executescript(script)
     await db_conn.commit()

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Self
 from cyberdrop_dl import aio
 from cyberdrop_dl.signature import dataclass_repr
 
-from .common import connect, pre_allocate_250mb, raw_connect
+from .common import connect, raw_connect
 from .hash import HashTable
 from .history import HistoryTable
 from .schema import SchemaTable
@@ -133,7 +133,6 @@ class Database:
         await self.schema.create()
         if not self.is_new:
             self.schema.check_version()
-        await pre_allocate_250mb(self.conn)
         await self.history.create()
         await self.hash.create()
         if self.is_new:

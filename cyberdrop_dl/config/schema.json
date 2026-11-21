@@ -1603,6 +1603,11 @@
       "default": true,
       "title": "Update Check",
       "type": "boolean"
+    },
+    "preallocate": {
+      "default": true,
+      "title": "Preallocate",
+      "type": "boolean"
     }
   },
   "title": "cyberdrop-dl config",
