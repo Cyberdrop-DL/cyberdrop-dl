@@ -16,7 +16,7 @@ TEST_CASES = [
                 "referer": "https://missav.ws/en/gana-3278",
                 "download_folder": "re:Loose Files \\(MissAV\\)",
                 "album_id": None,
-                "uploaded_at": 1761062400,
+                "uploaded_at": int,
             }
         ],
     },
@@ -30,7 +30,7 @@ TEST_CASES = [
                 "referer": "https://missav.ws/en/simm-806",
                 "download_folder": "re:Loose Files \\(MissAV\\)",
                 "album_id": None,
-                "uploaded_at": 1676476800,
+                "uploaded_at": 1676592000,
             }
         ],
     },

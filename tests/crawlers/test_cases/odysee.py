@@ -2,6 +2,7 @@ DOMAIN = "odysee"
 TEST_CASES = [
     {
         "url": "https://odysee.com/@fireship:6/robot-demos-have-a-dirty-little:c",
+        "args": ["--thumbnails"],
         "results": [
             {
                 "url": "lbry://fireship/#6/robot-demos-have-a-dirty-little%23c",
@@ -27,6 +28,7 @@ TEST_CASES = [
     },
     {
         "url": "https://odysee.com/$/embed/@wickedtruths:2/Biotechnological-Invasion-of-Skin-(April-2023):4",
+        "args": ["--thumbnails"],
         "results": [
             {
                 "url": "lbry://wickedtruths/#2/Biotechnological-Invasion-of-Skin-(April-2023)%234",

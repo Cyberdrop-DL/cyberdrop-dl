@@ -10,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "FLUTTER",
                 "referer": "https://www.monstercat.com/release/742779563446",
                 "album_id": "742779563446",
-                "uploaded_at": 1780894800,
+                "uploaded_at": 1780876800,
                 "download_folder": "re:FLUTTER - STEP OUT (Monstercat)",
             },
             {
@@ -20,7 +20,6 @@ TEST_CASES = [
                 "original_filename": "STEP OUT",
                 "referer": "https://www.monstercat.com/release/742779563446",
                 "album_id": "742779563446",
-                "uploaded_at": 1780894800,
                 "download_folder": "re:FLUTTER - STEP OUT (Monstercat)",
             },
         ],

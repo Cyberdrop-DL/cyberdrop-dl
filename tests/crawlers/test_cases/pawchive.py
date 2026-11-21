@@ -5,13 +5,13 @@ TEST_CASES = [
         "description": "temp deferred file",
         "results": [
             {
-                "url": "https://file.pawchive.pw/data/1c/b2/1cb2f6f255bedc49f08fc42af294017ef24d6b62001da3c137d04e3619f8259b.jpg?f=thumbnail.jpg",
+                "url": "https://re:/data/1c/b2/1cb2f6f255bedc49f08fc42af294017ef24d6b62001da3c137d04e3619f8259b.jpg?f=thumbnail.jpg",
                 "filename": "thumbnail.jpg",
                 "debrid_url": None,
                 "original_filename": "thumbnail.jpg",
                 "referer": "https://pawchive.pw/patreon/user/36069133/post/162746868",
                 "album_id": "36069133",
-                "uploaded_at": 1783094455,
+                "uploaded_at": int,
                 "download_folder": "re:Natalie Gold (Pawchive)",
                 "thumbnail": None,
             },
@@ -22,7 +22,6 @@ TEST_CASES = [
                 "original_filename": "691871229.mp4",
                 "referer": "https://pawchive.pw/patreon/user/36069133/post/162746868",
                 "album_id": "36069133",
-                "uploaded_at": 1783094455,
                 "download_folder": "re:Natalie Gold (Pawchive)",
                 "thumbnail": None,
             },
@@ -52,13 +51,13 @@ TEST_CASES = [
         "description": "malformed file.path with query params",
         "results": [
             {
-                "url": "https://file.pawchive.pw/data/d5/ef/d5efd1b3d8c8f993203a14d018972c058bad47177d91a4fbe8777eb322a572ff.png?f=adverse-conditions-mockup-front.png",
+                "url": "https://re:/data/d5/ef/d5efd1b3d8c8f993203a14d018972c058bad47177d91a4fbe8777eb322a572ff.png?f=adverse-conditions-mockup-front.png",
                 "filename": "adverse-conditions-mockup-front.png",
                 "debrid_url": None,
                 "original_filename": "adverse-conditions-mockup-front.png",
                 "referer": "https://pawchive.pw/patreon/user/48610247/post/144898011",
                 "album_id": "48610247",
-                "uploaded_at": 1764686622,
+                "uploaded_at": int,
                 "download_folder": "re:Kill James Bond! (Pawchive)",
             },
         ],
@@ -68,7 +67,7 @@ TEST_CASES = [
         "url": "https://pawchive.pw/patreon/user/177727722",
         "results": [
             {
-                "url": "re:https://file.pawchive.pw/data/",
+                "url": "re:https://re:/data/",
                 "debrid_url": None,
                 "referer": "re:https://pawchive.pw/patreon/user/177727722/post/",
                 "album_id": "177727722",

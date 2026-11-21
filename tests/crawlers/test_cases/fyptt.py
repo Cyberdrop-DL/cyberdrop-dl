@@ -2,6 +2,7 @@ DOMAIN = "fyptt"
 TEST_CASES = [
     {
         "url": "https://fyptt.to/14582/naughty-friends-get-naked-together-on-instagram-porn-and-have-fun/",
+        "args": ["--thumbnails"],
         "results": [
             {
                 "url": "re:https://stream.fyptt.to/fvJ38pD6.mp4?token",
@@ -27,6 +28,7 @@ TEST_CASES = [
     },
     {
         "url": "https://fyptt.to/23589/each-of-these-girls-flashes-her-angles-in-a-video-as-dark-haired-tattooed-girl-exposes-natural-tits-bounce/",
+        "args": ["--thumbnails"],
         "results": [
             {
                 "url": "re:https://stream.fyptt.to/hls/Gu8sJvVJ.m3u8?token=",

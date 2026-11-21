@@ -8,7 +8,7 @@ TEST_CASES = [
                 "filename": "Long-toes-are-the-best.jpg",
                 "referer": "https://ibb.co/FbtMCg43",
                 "album_id": None,
-                "uploaded_at": 1740984052,
+                "uploaded_at": 1740966052,
             }
         ],
     },

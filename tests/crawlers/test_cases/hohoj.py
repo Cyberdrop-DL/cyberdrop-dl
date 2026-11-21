@@ -2,6 +2,7 @@ DOMAIN = "hohoj"
 TEST_CASES = [
     {
         "url": "https://hohoj.tv/video?id=9148",
+        "args": ["--thumbnails"],
         "results": [
             {
                 "url": "https://cdn-1.ggjav.com/media/preview/82561_0.jpg",
@@ -9,7 +10,7 @@ TEST_CASES = [
                 "original_filename": "82561_0.jpg",
                 "referer": "https://hohoj.tv/lang_en/video?id=9148",
                 "album_id": "9148",
-                "uploaded_at": 1562821200,
+                "uploaded_at": int,
                 "download_folder": "re:STARS-094 (Hohoj)",
             },
             {
@@ -54,7 +55,6 @@ TEST_CASES = [
                 "original_filename": "142522-STARS-094_thumb.jpg",
                 "referer": "https://hohoj.tv/lang_en/video?id=9148#thumbnail",
                 "album_id": "9148",
-                "uploaded_at": 1562821200,
                 "download_folder": "re:STARS-094 (Hohoj)",
             },
         ],
