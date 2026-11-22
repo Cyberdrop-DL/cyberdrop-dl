@@ -10,6 +10,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -176,5 +177,5 @@ def _canonical_url(name_or_id: str) -> AbsoluteHttpURL:
 @Registry.database.referer_fix_for(RedGifsCrawler)
 def fix_redgifs_referer(referer: str) -> str:
     url = AbsoluteHttpURL(referer)
-    name = url.name or url.parent.name
+    name = name_from_url(url)
     return str(_canonical_url(name))

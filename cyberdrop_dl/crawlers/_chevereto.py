@@ -9,6 +9,7 @@ from cyberdrop_dl.exceptions import PasswordProtectedError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -109,7 +110,7 @@ class CheveretoCrawler(Crawler, is_generic=True):
 
         # We need the full URL (aka "/<name>.<id>") to fetch sub albums
         for _ in range(3):
-            if "." in (url.name or url.parent.name):
+            if "." in name_from_url(url):
                 break
 
             url = await self.request_redirect(url)

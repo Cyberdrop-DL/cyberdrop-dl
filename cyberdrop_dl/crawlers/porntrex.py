@@ -9,6 +9,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url, remove_trailing_slash
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -80,8 +81,7 @@ class PorntrexCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
-        if not scrape_item.url.name:
-            scrape_item.url = scrape_item.url.parent
+        scrape_item.url = remove_trailing_slash(scrape_item.url)
 
         canonical_url = self.PRIMARY_URL / "video" / video_id
         if await self.check_complete_from_referer(canonical_url):
@@ -90,7 +90,7 @@ class PorntrexCrawler(Crawler):
         soup = await self.request_soup(scrape_item.url)
         video = extract_kvs_video(self, soup)
         link = video.url
-        _, ext = self.get_filename_and_ext(video.url.name or video.url.parent.name)
+        _, ext = self.get_filename_and_ext(name_from_url(video.url))
         scrape_item.url = canonical_url
         # _,
         filename = self.create_custom_filename(video.title, ext, file_id=video.id, resolution=video.resolution)

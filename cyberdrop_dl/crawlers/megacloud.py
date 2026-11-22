@@ -9,6 +9,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.mediaprops import Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -90,7 +91,7 @@ class MegaCloudCrawler(Crawler):
         raise ScrapeError(422, "Unable to extract client key")
 
     async def _request_video_source(self: Crawler, embed_url: AbsoluteHttpURL) -> MegaCloudVideo:
-        video_id = embed_url.name or embed_url.parent.name
+        video_id = name_from_url(embed_url)
         # Explicitly use the unbound _get_client_key so we can call this method from other crawlers without inheritance
         client_key = await MegaCloudCrawler._get_client_key(self, embed_url)
         src_url = _V3_SOURCES_URL.with_query(id=video_id, _k=client_key)

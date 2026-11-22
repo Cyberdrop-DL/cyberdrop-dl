@@ -40,6 +40,7 @@ from cyberdrop_dl.utils.urls import (
     URLDeduper,
     is_within_domain,
     matches_any_host,
+    name_from_url,
     parse_http_url,
     path_frag,
     path_qs,
@@ -1047,6 +1048,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     ) -> None:
         """Download a direct link file. Filename will be the url slug"""
         url = url or scrape_item.url
+        url_name = name_from_url(url)
         async with self.catch_errors(url):
             if filename:
                 try:
@@ -1054,12 +1056,12 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
                 except NoExtensionError:
                     cfilename, ext = self.get_filename_and_ext(filename + url.suffix, assume_ext=assume_ext)
             else:
-                cfilename, ext = self.get_filename_and_ext(url.name or url.parent.name, assume_ext=assume_ext)
+                cfilename, ext = self.get_filename_and_ext(url_name, assume_ext=assume_ext)
 
             await self.handle_file(
                 url,
                 scrape_item,
-                filename or url.name or url.parent.name,
+                filename or url_name,
                 ext,
                 custom_filename=cfilename,
             )
@@ -1235,7 +1237,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
             await self.handle_file(
                 url,
                 scrape_item,
-                name or url.name or url.parent.name,
+                name or name_from_url(url),
                 ext,
                 m3u8=m3u8,
                 custom_filename=filename,

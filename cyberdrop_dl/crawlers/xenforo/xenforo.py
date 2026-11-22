@@ -26,7 +26,7 @@ from cyberdrop_dl.exceptions import LoginError, MaxChildrenError, ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad, css, extr_text, is_blob_or_svg
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import URLDeduper
+from cyberdrop_dl.utils.urls import URLDeduper, name_from_url
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Sequence
@@ -505,7 +505,7 @@ class XenforoCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def handle_internal_link(self, scrape_item: ScrapeItem, link: AbsoluteHttpURL | None = None) -> None:
         link = link or scrape_item.url
-        slug = link.name or link.parent.name
+        slug = name_from_url(link)
         if slug.isdigit():
             return await self.follow_redirect(scrape_item.create_new(link))
 

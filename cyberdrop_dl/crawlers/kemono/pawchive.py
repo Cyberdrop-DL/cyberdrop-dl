@@ -12,6 +12,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.config.crawlers import KemonoConfig
@@ -127,7 +128,7 @@ class PawchiveCrawler(KemonoBaseCrawler[PawchiveAPI]):
         if await self.check_complete(url):
             return
 
-        name = name or url.name or url.parent.name
+        name = name or name_from_url(url)
         m3u8, info = await self.request_m3u8(url)
         await self.handle_file(
             url,

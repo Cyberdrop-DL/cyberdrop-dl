@@ -7,6 +7,7 @@ from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import name_from_url
 
 if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
@@ -33,7 +34,7 @@ class StreamableCrawler(Crawler):
 
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem) -> None:
-        video_id = scrape_item.url.name or scrape_item.url.parent.name
+        video_id = name_from_url(scrape_item.url)
         canonical_url = self.PRIMARY_URL / video_id
         scrape_item.url = canonical_url
 

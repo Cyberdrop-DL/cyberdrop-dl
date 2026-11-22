@@ -163,6 +163,14 @@ def is_within_domain(root_domain: str, host: str) -> bool:
     return (host == root_domain) or host.endswith("." + root_domain.removeprefix("."))
 
 
+def _second_to_last_part(url: yarl.URL) -> str:
+    match url.parts:
+        case [_, *_, previous_part, _]:
+            return previous_part
+        case _:
+            return ""
+
+
 def name_from_url(url: yarl.URL) -> str:
     """Get the last part of the URL, ignoring a (single) trailing slash
 
@@ -172,11 +180,21 @@ def name_from_url(url: yarl.URL) -> str:
 
     if url.name:
         return url.name
-    match url.parts:
-        case [_, *_, previous_part, _]:
-            return previous_part
-        case _:
-            return ""
+    return _second_to_last_part(url)
+
+
+def suffix_from_url(url: yarl.URL) -> str:
+    """Get suffix of last part of the URL, ignoring a (single) trailing slash
+
+    NOTE: this could still return an empty string"""
+    if not url.absolute:
+        return ""
+
+    if url.name:
+        return url.suffix
+
+    stem, _, suffix = _second_to_last_part(url).rpartition(".")
+    return f".{suffix}" if stem and suffix else ""
 
 
 class URLDeduper(Deduper[str]):

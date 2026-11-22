@@ -17,7 +17,7 @@ from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.utils import css, extr_text, json_ld, open_graph
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import parse_http_url
+from cyberdrop_dl.utils.urls import name_from_url, parse_http_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Generator, Sequence
@@ -170,7 +170,7 @@ class KernelVideoSharingCrawler(Crawler, is_abc=True):
 
         soup = await self.request_soup(scrape_item.url)
         video = await asyncio.to_thread(extract_kvs_video, self, soup)
-        name = video.url.name or video.url.parent.name
+        name = name_from_url(video.url)
         filename, ext = self.get_filename_and_ext(name)
         scrape_item.uploaded_at = self._extract_upload_date(soup)
 

@@ -11,7 +11,7 @@ from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json_ld
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import URLDeduper
+from cyberdrop_dl.utils.urls import URLDeduper, suffix_from_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -159,7 +159,7 @@ class PimpBunnyCrawler(Crawler):
         video = extract_kvs_video(self, soup)
 
         custom_filename = self.create_custom_filename(
-            video.title, video.url.suffix or video.url.parent.suffix, file_id=video.id, resolution=video.resolution
+            video.title, suffix_from_url(video.url), file_id=video.id, resolution=video.resolution
         )
 
         scrape_item.uploaded_at = json_ld.upload_date(soup)
