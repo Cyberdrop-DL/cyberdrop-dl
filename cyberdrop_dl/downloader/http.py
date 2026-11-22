@@ -185,7 +185,7 @@ class Downloader:
         if not _is_allowed_date_range(media_item, self.config):
             raise RestrictedDateRangeError(origin=media_item)
         if not await storage.has_sufficient_space(media_item.download_folder):
-            raise InsufficientFreeSpaceError(media_item)
+            raise InsufficientFreeSpaceError(origin=media_item)
         if await filter_by_duration(media_item, self.config):
             await self.manager.database.history.add_duration(media_item.domain, media_item)
             raise DurationError(origin=media_item)

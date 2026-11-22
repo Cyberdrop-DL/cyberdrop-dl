@@ -53,7 +53,7 @@ def create_free_space_checker(media_item: MediaItem, *, frequency: int = 5) -> C
     async def checker(size: int | None = None) -> None:
         nonlocal current_chunk
         if current_chunk % frequency == 0 and not await has_sufficient_space(media_item.download_folder, size):
-            raise InsufficientFreeSpaceError(media_item)
+            raise InsufficientFreeSpaceError(origin=media_item)
 
         current_chunk += 1
 

@@ -28,10 +28,7 @@ class MediaItemLike(HasParents, Protocol):
 
 
 def _format_error(ui_failure: str, message: str, notes: Sequence[str] | None = None) -> str:
-    msg = message if ui_failure == message else f"{ui_failure} - {message}"
-    if notes:
-        msg = msg + "\n" + "\n".join(f"[NOTE]: {note}" for note in notes)
-    return msg
+    return append_notes(message if ui_failure == message else f"{ui_failure} - {message}", notes)
 
 
 # See: https://developers.cloudflare.com/support/troubleshooting/cloudflare-errors/troubleshooting-cloudflare-5xx-errors/
@@ -65,22 +62,30 @@ def _notes(e: BaseException) -> list[str] | tuple[()]:
     return getattr(e, "__notes__", ())
 
 
+def append_notes(msg: str, notes: Sequence[str] | None = None) -> str:
+    if notes:
+        return msg + "\n" + "\n".join(f"[NOTE]: {note}" for note in notes)
+    return msg
+
+
 class DatabaseError(RuntimeError): ...
 
 
 class CDLBaseError(Exception):
     """Base exception for cyberdrop-dl errors."""
 
+    UI_MSG: str = "Something went wrong"
+    DEFAULT_MSG: str | None = None
+
     def __init__(
         self,
-        ui_failure: str = "Something went wrong",
-        *,
+        ui_failure: str | None = None,
         message: str | None = None,
         status: str | int | None = None,
         origin: HasParents | yarl.URL | Path | None = None,
     ) -> None:
-        self.ui_failure: str = ui_failure
-        self.message: str = message or ui_failure
+        self.ui_failure: str = ui_failure or self.UI_MSG
+        self.message: str = message or self.DEFAULT_MSG or self.ui_failure
         self.origin: Path | yarl.URL | None = get_origin(origin)
         super().__init__(self.message)
         if status:
@@ -90,76 +95,71 @@ class CDLBaseError(Exception):
     def __str__(self) -> str:
         return _format_error(self.ui_failure, self.message, _notes(self))
 
-
-class FlaresolverrError(CDLBaseError):
-    def __init__(self, message: str | None = None) -> None:
-        ui_failure = "Flaresolverr Error"
-        super().__init__(ui_failure, message=message)
+    @classmethod
+    def group(cls, errors: tuple[Exception, ...], ui_failure: str | None = None) -> BaseExceptionGroup:
+        return BaseExceptionGroup(ui_failure or cls.UI_MSG, errors)
 
 
-class InvalidContentTypeError(CDLBaseError):
-    def __init__(self, *, message: str | None = None, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when the content type isn't as expected."""
-        ui_failure = "Invalid Content Type"
-        super().__init__(ui_failure, message=message, origin=origin)
+class _UIError(CDLBaseError):
+    def __init__(
+        self,
+        message: str | None = None,
+        status: str | int | None = None,
+        origin: HasParents | yarl.URL | Path | None = None,
+    ):
+        super().__init__(self.UI_MSG, message=message or self.DEFAULT_MSG, status=status, origin=origin)
 
 
-class FileNameError(CDLBaseError): ...
+class FlaresolverrError(_UIError):
+    UI_MSG: str = "Flaresolverr Error"
+
+
+class InvalidContentTypeError(_UIError):
+    UI_MSG: str = "Invalid Content Type"
+
+
+class FileNameError(CDLBaseError):
+    def __str__(self) -> str:
+        return append_notes(f"{self.ui_failure} ({self.message})", _notes(self))
 
 
 class NoExtensionError(FileNameError):
-    def __init__(self, filename: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when no extension is given for a file."""
-        ui_failure = "No File Extension"
-        super().__init__(ui_failure, message=filename, origin=origin)
+    UI_MSG: str = "No File Extension"
 
-    def __str__(self) -> str:
-        return f"{self.ui_failure} ({self.message})"
+    def __init__(self, filename: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
+        super().__init__(self.UI_MSG, message=filename, origin=origin)
 
 
 class InvalidExtensionError(NoExtensionError):
-    def __init__(self, filename: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when no extension is given for a file."""
-        super().__init__(filename=filename, origin=origin)
-        self.ui_failure = "Invalid File Extension"
+    UI_MSG: str = "Invalid File Extension"
 
 
 class PathTraversalError(CDLBaseError):
+    UI_MSG: str = "Path Traversal"
+
     def __init__(self, path: Path) -> None:
-        ui_failure = "Path Traversal"
         msg = f"Download path '{path}' is outside destination download path"
-        super().__init__(ui_failure, message=msg)
+        super().__init__(self.UI_MSG, message=msg)
 
 
-class PasswordProtectedError(CDLBaseError):
-    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when a file is password protected."""
-        ui_failure = "Password Protected"
-        msg = message or "File/Folder is password protected"
-        super().__init__(ui_failure, message=msg, origin=origin)
+class PasswordProtectedError(_UIError):
+    UI_MSG: str = "Password Protected"
+    DEFAULT_MSG: str | None = "File/Folder is password protected"
 
 
-class MaxChildrenError(CDLBaseError):
-    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when an scrape item reaches its max number or children."""
-        ui_failure = "Max Children Reached"
-        msg = message or "Max number of children reached"
-        super().__init__(ui_failure, message=msg, origin=origin)
+class MaxChildrenError(_UIError):
+    UI_MSG: str = "Max Children Reached"
+    DEFAULT_MSG: str | None = "Max number of children reached"
 
 
-class DDOSGuardError(CDLBaseError):
-    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when DDoS-Guard is detected."""
-        ui_failure = "DDoS-Guard"
-        msg = message or "DDoS-Guard detected"
-        super().__init__(ui_failure, message=msg, origin=origin)
+class DDOSGuardError(_UIError):
+    UI_MSG: str = "DDoS-Guard"
+    DEFAULT_MSG: str | None = "DDoS-Guard detected"
 
 
 class CloudflareBlockedError(DDOSGuardError):
-    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when Cloudflare refuses a request outright (ex: IP banned)."""
-        super().__init__(message or "Cloudflare blocked the request", origin=origin)
-        self.ui_failure = "Cloudflare Blocked"
+    UI_MSG: str = "Cloudflare Blocked"
+    DEFAULT_MSG: str | None = "Cloudflare blocked the request"
 
 
 class DownloadError(CDLBaseError):
@@ -179,45 +179,46 @@ class DownloadError(CDLBaseError):
 
 
 class SlowDownloadError(DownloadError):
+    UI_MSG: str = "Slow Download"
+
     def __init__(self, origin: HasParents | yarl.URL | None = None) -> None:
         """This error will be thrown when a file will be skipped do to a low download speed."""
-        ui_failure = "Slow Download"
-        super().__init__(ui_failure, origin=origin)
+        super().__init__(self.UI_MSG, origin=origin)
 
 
-class InsufficientFreeSpaceError(CDLBaseError):
-    def __init__(self, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when no enough storage is available."""
-        ui_failure = "Insufficient Free Space"
-        super().__init__(ui_failure, origin=origin)
+class InsufficientFreeSpaceError(_UIError):
+    UI_MSG: str = "Insufficient Free Space"
 
 
-class SkipDownloadError(CDLBaseError):
+class SkipDownloadError(_UIError):
     """Throw this when a download is not allowed by config options"""
 
 
 class RestrictedFiletypeError(SkipDownloadError):
+    UI_MSG: str = "Restricted File Ext"
+
     def __init__(self, origin: MediaItemLike) -> None:
         """This error will be thrown when has a filetype not allowed by config."""
-        ui_failure = "Restricted File Ext"
         message = f"File extension ({origin.ext}) ignored by config options"
-        super().__init__(ui_failure, message=message, origin=origin)
+        super().__init__(message=message, origin=origin)
 
 
 class DurationError(SkipDownloadError):
+    UI_MSG: str = "Duration Not Allowed"
+
     def __init__(self, origin: MediaItemLike) -> None:
         """This error will be thrown when the file duration is not allowed by the config."""
-        ui_failure = "Duration Not Allowed"
         message = f"File duration ({origin.duration}s) out of config range"
-        super().__init__(ui_failure, message=message, origin=origin)
+        super().__init__(message=message, origin=origin)
 
 
 class RestrictedDateRangeError(SkipDownloadError):
+    UI_MSG: str = "Restricted DateRange"
+
     def __init__(self, origin: MediaItemLike) -> None:
         """This error will be thrown when the publication date of the media item is not allowed by config."""
-        ui_failure = "Restricted DateRange"
         message = f"File upload date ({origin.uploaded_at_date}s) out of config range"
-        super().__init__(ui_failure, message=message, origin=origin)
+        super().__init__(message=message, origin=origin)
 
 
 class ScrapeError(CDLBaseError):
@@ -248,26 +249,20 @@ class ScrapeError(CDLBaseError):
         return ScrapeError("Live Stream", msg)
 
 
-class LoginError(CDLBaseError):
-    def __init__(self, message: str | None = None, *, origin: HasParents | yarl.URL | None = None) -> None:
-        """This error will be thrown when the login fails for a site."""
-        ui_failure = "Failed Login"
-        super().__init__(ui_failure, message=message, origin=origin)
+class LoginError(_UIError):
+    UI_MSG: str = "Failed Login"
 
 
-class JDownloaderError(CDLBaseError):
-    """This error will be thrown for any Jdownloader error."""
-
-    def __init__(self, message: str | None = None) -> None:
-        ui_failure = "JDownloader Error"
-        super().__init__(ui_failure, message=message)
+class JDownloaderError(_UIError):
+    UI_MSG: str = "JDownloader Error"
 
 
-class InvalidYamlError(CDLBaseError):
+class InvalidYamlError(_UIError):
+    UI_MSG: str = "Invalid YAML"
+
     def __init__(self, file: Path, e: YAMLError) -> None:
         """This error will be thrown when a yaml config file has invalid values."""
         file = file.resolve()
-        ui_failure = "Invalid YAML"
         msg = f"'{file}' is not a valid YAML file"
 
         if mark := getattr(e, "problem_mark", None):
@@ -275,7 +270,7 @@ class InvalidYamlError(CDLBaseError):
 
         problem = getattr(e, "problem", str(e)).capitalize()
         msg += f"\n\n{problem}\n\nPlease delete the file or fix the errors"
-        super().__init__(ui_failure, message=msg, origin=file)
+        super().__init__(message=msg, origin=file)
 
 
 def create_error_msg(error: int | str) -> str:
