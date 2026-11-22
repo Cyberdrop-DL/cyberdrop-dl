@@ -118,12 +118,17 @@ def _aiohttp_context() -> Generator[None]:
 def _exc_group_context() -> Generator[None]:
     try:
         yield
+
     except ExceptionGroup as e:
-        if e.message and "unhandled errors in a TaskGroup" not in e.message:
-            ui_error = e.message
-        else:
-            first = e.exceptions[0]
-            ui_error = getattr(first, "ui_failure", None) or str(first)
+        first = e.exceptions[0]
+        ui_error = None
+        if e.message:
+            if "unhandled errors in a TaskGroup" not in e.message:
+                ui_error = e.message
+            elif len(e.exceptions) == 1:
+                raise first from None
+
+        ui_error = ui_error or getattr(first, "ui_failure", None) or str(first)
         raise CDLAppError(ui_error, str(e)) from e.with_traceback(None)
 
 

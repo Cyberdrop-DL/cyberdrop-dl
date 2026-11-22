@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
 
 _T_co = TypeVar("_T_co", covariant=True)
+__tracebackhide__ = True
 
 
 class EagerTaskGroup(asyncio.TaskGroup):
