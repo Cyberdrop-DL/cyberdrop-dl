@@ -245,3 +245,11 @@ def catch[**P, R](
             return None
 
     return call
+
+
+def remove_quotes(string: str) -> str:
+    if len(string) > 1:
+        start, end = string[0], string[-1]
+        if start in {"'", '"'} and start == end:
+            return string[1:-1]
+    return string

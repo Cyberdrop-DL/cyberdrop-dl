@@ -12,7 +12,7 @@ from collections.abc import Generator
 from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING, Any, NewType, final
 
-from cyberdrop_dl.utils import css, json
+from cyberdrop_dl.utils import css, json, remove_quotes
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
@@ -96,20 +96,12 @@ def _extract_raw_pushes(soup: BeautifulSoup) -> Generator[str]:
             yield _dedent_push(content[start : content.rindex(")")])
 
 
-def _unquote(string: str) -> str:
-    if len(string) > 1:
-        for char in ("'", '"'):
-            if string.startswith(char) and string.endswith(char):
-                string = string[1:-1]
-    return string
-
-
 def _decode_push(raw_push: str) -> _Push:
     try:
         push: list[Any] = json.loads(raw_push)  # pyright: ignore[reportAny]
     except ValueError:
         f_type, _, data = raw_push.strip().partition(",")
-        push = [int(f_type[1:]), _unquote(data[:-1])]
+        push = [int(f_type[1:]), remove_quotes(data[:-1])]
 
     match push:
         case [_FlightType.BOOTSTRAP]:

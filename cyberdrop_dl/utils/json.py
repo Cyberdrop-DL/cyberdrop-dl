@@ -13,7 +13,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Protocol, Self, TypeGuard
 
-from cyberdrop_dl.utils import b64_pad
+from cyberdrop_dl.utils import b64_pad, remove_quotes
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -58,7 +58,7 @@ def default(obj: object, /) -> Any:  # noqa: PLR0911
     if _is_dataclass_instance(obj):
         return dataclasses.asdict(obj)
     if _is_pydantic_instance(obj):
-        return obj.model_dump()
+        return obj.model_dump(mode="json")
     return str(obj)
 
 
@@ -112,10 +112,7 @@ def _get_encoder(*, sort_keys: bool = False, indent: int | None = None) -> Lenie
 
 def _parse_js_string(*args: Any, **kwargs: Any) -> tuple[Any, int]:
     string, end = _scanstring(*args, **kwargs)
-    for quote in ("'", '"'):
-        if len(string) > 2 and string.startswith(quote) and string.endswith(quote):
-            string = string[1:-1]
-    return _literal_value(string), end
+    return _literal_value(remove_quotes(string)), end
 
 
 def _literal_value(string: str) -> Any:

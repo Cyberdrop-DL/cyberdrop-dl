@@ -87,15 +87,15 @@ class ScrapingUI(LiveUI):
             return
 
         now = time.monotonic()
-        if self._last_write is None:
-            self._last_write = now
-        elif now - self._last_write < env.WRITE_JSON_UI:
+        if self._last_write is not None and (now - self._last_write) < env.WRITE_JSON_UI:
             return
 
-        json.dump(self.__json__(), sys.stderr, ensure_ascii=False, separators=(",", ":"))
-        sys.stderr.write("\n")
-        sys.stderr.flush()
-        self._last_write = now
+        try:
+            json.dump(self.__json__(), sys.stderr, ensure_ascii=False, separators=(",", ":"))
+            sys.stderr.write("\n")
+            sys.stderr.flush()
+        finally:
+            self._last_write = now
 
     @contextlib.contextmanager
     def __call__(self, *, transient: bool = True, force: bool = False) -> Generator[None]:
