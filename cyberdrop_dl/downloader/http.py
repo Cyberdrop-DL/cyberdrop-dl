@@ -24,7 +24,7 @@ from cyberdrop_dl.exceptions import (
 from cyberdrop_dl.network.downloads import filter_by_duration, resolve_download_dir
 from cyberdrop_dl.progress.scraping import show_msg
 from cyberdrop_dl.signature import dataclass_repr
-from cyberdrop_dl.url_objects import MuxVideo
+from cyberdrop_dl.url_objects import ExtraInfo, MuxVideo
 from cyberdrop_dl.utils import dates
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.m3u8 import Rendition
@@ -321,7 +321,7 @@ class Downloader:
         def create_stream_item(name: str, url: AbsoluteHttpURL) -> MediaItem:
             filename = p_name.with_suffix(f".{name}{constants.TempExt.PART}").name
             seg_item = media_item.as_segment(filename, url)
-            seg_item.extra_info["MUX_STREAM"] = True
+            seg_item.extra_info[ExtraInfo.MUX_STREAM] = True
             return seg_item
 
         logger.info(f"{self.log_prefix} starting (multistream video): {media_item.url}\n %s", mux.__json__())

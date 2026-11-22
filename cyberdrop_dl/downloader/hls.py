@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from cyberdrop_dl import aio, constants, context, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
-from cyberdrop_dl.url_objects import ByteRange
+from cyberdrop_dl.url_objects import ByteRange, ExtraInfo
 from cyberdrop_dl.utils.cleanup import rm_partial_files
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
 from cyberdrop_dl.utils.m3u8 import HLSKey
@@ -111,9 +111,12 @@ def _create_media_segment(media_item: MediaItem, segment: HLSSegment, download_f
     new_item = media_item.as_segment(segment.name, segment.url)
     new_item.download_folder = download_folder
     if segment.decrypt_info:
-        segment.decrypt_info(new_item.extra_info)
+        key = new_item.extra_info.setdefault(ExtraInfo.HLS_DECRYPT_INFO, segment.decrypt_info)
+        if key is not segment.decrypt_info:
+            raise RuntimeError("Another key is already set")
+
     if segment.byte_range:
-        new_item.extra_info["byte_range"] = segment.byte_range
+        new_item.extra_info[ExtraInfo.BYTE_RANGE] = segment.byte_range
 
     return new_item
 

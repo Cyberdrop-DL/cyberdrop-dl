@@ -6,7 +6,7 @@ import hashlib
 import logging
 import random
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, cast, override
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.downloader.http import Downloader
@@ -56,7 +56,7 @@ class BunnyCDNDownloader(Downloader):
     @override
     async def _hls(self, media_item: MediaItem, rendition: Rendition) -> None:
         try:
-            ping: PingData = media_item.extra_info[media_item.domain]["ping_data"]
+            ping = cast("PingData", media_item.extra_info[media_item.domain]["ping_data"])
         except LookupError:
             background_ping = contextlib.nullcontext()
         else:

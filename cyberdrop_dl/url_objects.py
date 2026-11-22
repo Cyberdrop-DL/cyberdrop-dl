@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, final, overload
 
 import yarl
-from typing_extensions import TypeIs
+from typing_extensions import TypedDict, TypeIs
 
 from cyberdrop_dl import signature
 from cyberdrop_dl.exceptions import MaxChildrenError
@@ -182,6 +182,23 @@ class FinishedDownload:
 
 
 @final
+class ExtraInfo:
+    DELAY = "delay"
+    BYTE_RANGE = "byte_range"
+    IMPERSONATE = "impersonate"
+    MUX_STREAM = "mux_stream"
+    HLS_DECRYPT_INFO = "hls_decrypt_info"
+
+
+class _ExtraInfo(TypedDict, total=False, extra_items=dict[str, Any]):
+    delay: float
+    byte_range: ByteRange
+    impersonate: str | bool
+    hls_decrypt_info: Any
+    mux_stream: Literal[True]
+
+
+@final
 @signature.dataclass_repr("url", "id", "debrid_url", "uploaded_at_date")
 @dataclasses.dataclass(slots=True, kw_only=True, repr=False)
 class MediaItem:
@@ -214,7 +231,7 @@ class MediaItem:
     metadata: object = dataclasses.field(init=False, default_factory=dict)
 
     uploaded_at_date: dt.datetime | None = dataclasses.field(init=False, default=None)
-    extra_info: dict[str, Any] = dataclasses.field(init=False, default_factory=dict)
+    extra_info: _ExtraInfo = dataclasses.field(init=False, default_factory=_ExtraInfo)
 
     id: tuple[str, ...] = dataclasses.field(init=False)
     base64_id: str = dataclasses.field(init=False)

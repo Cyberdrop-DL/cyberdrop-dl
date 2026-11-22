@@ -4,7 +4,7 @@ import dataclasses
 import datetime as dt
 import logging
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Self, final
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, final
 
 import m3u8.model
 from m3u8 import M3U8 as _M3U8
@@ -14,6 +14,7 @@ from m3u8.mixins import BasePathMixin, GroupedBasePathMixin
 from cyberdrop_dl.exceptions import DownloadError, ScrapeError
 from cyberdrop_dl.mediaprops import Codecs, Resolution
 from cyberdrop_dl.signature import dataclass_repr, vars_repr
+from cyberdrop_dl.url_objects import ExtraInfo
 from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.dataclass import DictDataclass
 from cyberdrop_dl.utils.urls import ensure_trailing_slash, parse_http_url
@@ -177,21 +178,15 @@ class Encryption(StrEnum):
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class HLSKey:
-    __attr__: ClassVar[str] = "HLS_DECRYPT_INFO"
     method: Encryption
     uri: AbsoluteHttpURL
     iv: bytes
 
     @classmethod
     def get(cls, data: Mapping[str, Any]) -> Self | None:
-        key = data.get(cls.__attr__)
+        key = data.get(ExtraInfo.HLS_DECRYPT_INFO)
         if type(key) is cls:
             return key
-
-    def __call__(self, data: dict[str, Any]) -> Self | None:
-        key = data.setdefault(self.__attr__, self)
-        if key is not self:
-            raise RuntimeError("Another key is already set")
 
     @classmethod
     def parse(cls, seg: m3u8.model.Segment | m3u8.model.InitializationSection, idx: int) -> Self | None:

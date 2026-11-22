@@ -32,7 +32,7 @@ from cyberdrop_dl.mediaprops import Codecs, ISO639Subtitle, Resolution, Resolved
 from cyberdrop_dl.models.validators import strings
 from cyberdrop_dl.network.headers import get_content_disposition_filename
 from cyberdrop_dl.network.http import HTTPClient, HTTPConfig, HTTPContext, HTTPMixin
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, ExtraInfo, MediaItem, MuxVideo, ScrapeItem, is_absolute_http_url
 from cyberdrop_dl.utils import css, dates, fast_cache, is_blob_or_svg, m3u8, strict_variadic, unique
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, DictDataclass, struct
 from cyberdrop_dl.utils.errors import OnExceptionCallback, error_handling_context
@@ -726,9 +726,9 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
         self, media_item: MediaItem, streams: m3u8.Rendition | MuxVideo | None, *, skip: bool = False
     ) -> None:
         if self.__dl_config__.impersonate is not None:
-            media_item.extra_info["impersonate"] = self.__dl_config__.impersonate
+            media_item.extra_info[ExtraInfo.IMPERSONATE] = self.__dl_config__.impersonate
         if self.__dl_config__.delay:
-            media_item.extra_info["delay"] = self.__dl_config__.delay
+            media_item.extra_info[ExtraInfo.DELAY] = self.__dl_config__.delay
 
         try:
             if skip or context.SKIP_DOWNLOAD.get():

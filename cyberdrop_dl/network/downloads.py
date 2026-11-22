@@ -16,7 +16,7 @@ from cyberdrop_dl.network import etag
 from cyberdrop_dl.network.headers import content_length, get_content_type, get_last_modified
 from cyberdrop_dl.network.http import check_http_status
 from cyberdrop_dl.signature import dataclass_repr
-from cyberdrop_dl.url_objects import ByteRange
+from cyberdrop_dl.url_objects import ByteRange, ExtraInfo
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -76,7 +76,7 @@ class DownloadClient:
 
         bytes_downloaded = 0
         media_item.headers.pop(hdrs.RANGE, None)  # Delete ranges from previous attempts
-        byte_range: ByteRange | None = media_item.extra_info.get("byte_range")
+        byte_range: ByteRange | None = media_item.extra_info.get(ExtraInfo.BYTE_RANGE)
 
         if self.SUPPORTS_RANGES:
             if media_item.partial_file and (size := await aio.get_size(media_item.partial_file)):
@@ -96,7 +96,7 @@ class DownloadClient:
 
         delay = self.config.downloads.total_delay
         if not media_item.is_segment:
-            delay += media_item.extra_info.get("delay", 0)
+            delay += media_item.extra_info.get(ExtraInfo.DELAY, 0)
 
         await asyncio.sleep(delay)
 
@@ -105,7 +105,7 @@ class DownloadClient:
             async with self.http_client.raw_request(
                 download_url,
                 headers=media_item.headers,
-                impersonate=media_item.extra_info.get("impersonate"),
+                impersonate=media_item.extra_info.get(ExtraInfo.IMPERSONATE),
             ) as resp:
                 return await self._process_response(media_item, domain, bytes_downloaded, resp)
 
@@ -154,7 +154,7 @@ class DownloadClient:
             return True
 
     def _make_hook(self, media_item: MediaItem) -> ProgressHook:
-        if media_item.is_segment and not media_item.extra_info.get("MUX_STREAM"):
+        if media_item.is_segment and not media_item.extra_info.get(ExtraInfo.MUX_STREAM):
             return self.manager.scrape_mapper.tui.downloads.download_hls_seg()
 
         size = media_item.size

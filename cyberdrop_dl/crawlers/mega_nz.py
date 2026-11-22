@@ -19,7 +19,7 @@ from cyberdrop_dl.downloader.mega_nz import MegaDownloader
 from cyberdrop_dl.exceptions import LoginError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.progress.scraping import show_msg
-from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
+from cyberdrop_dl.url_objects import AbsoluteHttpURL, ExtraInfo, MediaItem
 from cyberdrop_dl.utils import next_or_error
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
@@ -175,8 +175,13 @@ class MegaNzCrawler(Crawler):
 
     @override
     def _prepare_media_item(self, media_item: MediaItem) -> None:
-        media_item.extra_info.setdefault(self.DOMAIN, {})["key"] = self._decryption_keys.pop(media_item.url)
-        media_item.extra_info["impersonate"] = False  # We need aiohttp for precise chunks reads
+        # basedpyright does not understand extra_items with setdefault
+        data = media_item.extra_info.get(self.DOMAIN)
+        if data is None:
+            media_item.extra_info[self.DOMAIN] = data = {}
+
+        data["key"] = self._decryption_keys.pop(media_item.url)
+        media_item.extra_info[ExtraInfo.IMPERSONATE] = False  # We need aiohttp for precise chunks reads
 
     async def _login(self) -> None:
         # This takes a really long time (dozens of seconds)
