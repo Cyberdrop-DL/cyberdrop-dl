@@ -249,12 +249,12 @@ class DanBooruCrawler(DanBooruGenericCrawler):
 class BleachBooruCrawler(DanBooruCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://bleachbooru.org")
     DOMAIN: ClassVar[str] = "bleachbooru"
-    FOLDER_DOMAIN: ClassVar[str] = "BleacBooru"
+    FOLDER_DOMAIN: ClassVar[str] = "BleachBooru"
     CDN: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
 
 
 class BorvarBooruCrawler(DanBooruCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://booru.borvar.art")
     DOMAIN: ClassVar[str] = "booru.borvar.art"
-    FOLDER_DOMAIN: ClassVar[str] = "booru.borvar.art"
+    FOLDER_DOMAIN: ClassVar[str] = "BorvarArt"
     CDN: ClassVar[AbsoluteHttpURL] = PRIMARY_URL

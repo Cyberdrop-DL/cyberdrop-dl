@@ -28,6 +28,7 @@ class XeroticaCrawler(Crawler):
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://www.xerotica.com")
     DOMAIN: ClassVar[str] = "xerotica"
+    FOLDER_DOMAIN: ClassVar[str] = "xErotica"
     NEXT_PAGE_SELECTOR: ClassVar[str] = Selector.NEXT_PAGE
 
     @override

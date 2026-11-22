@@ -66,8 +66,7 @@ def dataclass_repr[T](*field_names: str) -> Callable[[type[T]], type[T]]:
             if dataclasses.is_dataclass(cls):
                 # This prevents rich from rendering all fields in tracebacks
                 for field in dataclasses.fields(cls):
-                    if field.name not in field_names:
-                        field.repr = False
+                    field.repr = field.name in field_names
         return cls
 
     return apply

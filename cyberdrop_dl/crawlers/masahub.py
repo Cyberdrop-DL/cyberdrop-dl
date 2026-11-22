@@ -23,7 +23,7 @@ class MasahubCrawler(Crawler):
     )
     SUPPORTED_PATHS: ClassVar[SupportedPaths] = {
         "Videos": "/title",
-        "Search": "/serarch/<query>",
+        "Search": "/search/<query>",
     }
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://lalamasa.mobi")
     DOMAIN: ClassVar[str] = "masahub.com"

@@ -74,7 +74,7 @@ If provided, this file _must_ exists already, but it can be empty
 
 <!-- START_CLI_OVERVIEW -->
 ```shell
-cyberdrop-dl v10.16.0
+cyberdrop-dl v10.17.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl COMMAND [OPTIONS]
@@ -86,6 +86,7 @@ Run 'cyberdrop-dl' without arguments to start the interactive TUI
 │ cleanup    Perform maintenance tasks                                                             │
 │ config     Config file operations                                                                │
 │ database   Commands for managing the database                                                    │
+│ docs       Show documentation for every command                                                  │
 │ download   Download URLs                                                                         │
 │ hash       Compute and save hashes of every file in a folder (recursively)                       │
 │ report     Generate and display information about the system                                     │
@@ -106,7 +107,7 @@ Wiki (docs): https://script-ware.gitbook.io/cyberdrop-dl
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-cyberdrop-dl v10.16.0
+cyberdrop-dl v10.17.0
 Bulk asynchronous downloader for multiple file hosts
 
 Usage: cyberdrop-dl download [OPTIONS] [ARGS...]
@@ -164,6 +165,9 @@ Download URLs
 │ --restrict-path                      [choices: unix, windows, no_emoji, ascii]                   │
 │   --restrict-filenames CHOICE...     [default: ()]                                               │
 │ --update-check -U --no-update-check  Check for updates at the end of the session                 │
+│                                      [default: True]                                             │
+│ --preallocate --no-preallocate       Preallocate 250MiB of space for the database if the number  │
+│                                      of free rows is too low                                     │
 │                                      [default: True]                                             │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Crawlers ───────────────────────────────────────────────────────────────────────────────────────╮
