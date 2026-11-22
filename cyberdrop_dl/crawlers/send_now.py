@@ -52,5 +52,5 @@ class SendNowCrawler(Crawler):
 
             async with self.request(scrape_item.url, impersonate=True):
                 pass
-            cookies = self.client.cookies.filter_cookies(self.PRIMARY_URL)
-            self.got_cookies = bool(cookies)
+
+            self.got_cookies = bool(self.cookies)

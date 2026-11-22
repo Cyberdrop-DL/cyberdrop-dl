@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 from http.cookiejar import Cookie, MozillaCookieJar
-from http.cookies import CookieError, SimpleCookie
+from http.cookies import BaseCookie, CookieError, SimpleCookie
 from typing import TYPE_CHECKING
 
 from cyberdrop_dl import aio
@@ -24,6 +24,14 @@ if sys.version_info < (3, 14):
 
 
 logger = logging.getLogger(__name__)
+
+
+class SiteCookies(dict[str, str]):
+    "Simplified dict access to cookies values"
+
+    def __init__(self, cookies: BaseCookie[str]) -> None:
+        super().__init__((m.key, m.value) for m in cookies.values())
+        self.raw: BaseCookie[str] = cookies
 
 
 async def read_netscape_files(cookie_files: Sequence[Path]) -> AsyncGenerator[SimpleCookie]:

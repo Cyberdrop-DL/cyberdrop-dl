@@ -144,8 +144,7 @@ class NsfwXXXAPI(API):
         async with self.request(url):
             ...
 
-        cookies = self.client.cookies.filter_cookies(self.PRIMARY_URL)
-        return cookies["service-token-passport"].value
+        return self.client.get_cookies(self.PRIMARY_URL)["service-token-passport"]
 
     async def post(self, post_id: str) -> dict[str, Any]:
         url = (self.ENTRYPOINT / "v1/post" / post_id).with_query(self.BASE_QUERY)

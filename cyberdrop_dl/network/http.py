@@ -14,17 +14,18 @@ from aiohttp import hdrs
 
 from cyberdrop_dl import aio, context, cookies, ddos_guard, env
 from cyberdrop_dl.constants import CDL_USER_AGENT
-from cyberdrop_dl.cookies import make_simple_cookie
+from cyberdrop_dl.cookies import SiteCookies, make_simple_cookie
 from cyberdrop_dl.exceptions import DDOSGuardError, DownloadError, ScrapeError
 from cyberdrop_dl.network import curl_cffi, flaresolverr, get_logger, tcp, wreq
 from cyberdrop_dl.network.request import Request, RequestParams
 from cyberdrop_dl.network.response import AbstractResponse, FlareSolverrResponse
 from cyberdrop_dl.signature import dataclass_repr
+from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import truncated_preview
 from cyberdrop_dl.utils.dataclass import ConfigDataclass, struct
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Callable
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
     from pathlib import Path
 
     from bs4 import BeautifulSoup
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.network.wreq import WreqClient  # pyright: ignore[reportPrivateLocalImportUsage]
-    from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
     from . import HttpMethod
 
@@ -232,7 +232,13 @@ class HTTPClient:
             requote_redirect_url=False,
         )
 
-    async def load_cookie_files(self, cookie_files: list[Path]) -> None:
+    def get_cookies(self, url: AbsoluteHttpURL) -> SiteCookies:
+        return SiteCookies(self.cookies.filter_cookies(url))
+
+    def get_cookies_by_host(self, host: str) -> SiteCookies:
+        return self.get_cookies(AbsoluteHttpURL(f"https://{host.removeprefix('.')}"))
+
+    async def load_cookie_files(self, cookie_files: Sequence[Path]) -> None:
         if not cookie_files:
             return
 

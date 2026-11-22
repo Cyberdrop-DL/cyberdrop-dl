@@ -174,8 +174,8 @@ class TwitterAPI(API):
         auth: bool = False,  # noqa: FBT001, FBT002
         **kwargs: Unpack[RequestParams],
     ) -> Any:
-        if morsel := self.client.cookies.filter_cookies(self.PRIMARY_URL).get("ct0"):
-            self.__http_ctx__.headers["x-csrf-token"] = morsel.value
+        if token := self.cookies.get("ct0"):
+            self.__http_ctx__.headers["x-csrf-token"] = token
 
         if auth:
             kwargs.setdefault("headers", {})["x-guest-token"] = await self.auth_guest()

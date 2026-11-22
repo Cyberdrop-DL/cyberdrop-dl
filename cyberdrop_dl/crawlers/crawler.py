@@ -49,7 +49,6 @@ from cyberdrop_dl.utils.urls import (
 
 if TYPE_CHECKING:
     import datetime as dt
-    import http.cookies
     from collections.abc import (
         AsyncIterator,
         Awaitable,
@@ -66,6 +65,7 @@ if TYPE_CHECKING:
     from bs4 import BeautifulSoup, Tag
 
     from cyberdrop_dl.config import Config
+    from cyberdrop_dl.cookies import SiteCookies
     from cyberdrop_dl.database import Database
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.network.request import RequestParams
@@ -147,25 +147,6 @@ class CrawlerInfo:
         me = dict(self)
         me["primary_url"] = str(self.primary_url)
         return me
-
-
-@struct(kw_only=False)
-class SiteCookies:
-    raw: http.cookies.BaseCookie[str]
-
-    def get(self, name: str, /) -> str | None:
-        if morsel := self.raw.get(name):
-            return morsel.value
-
-    def __getitem__(self, name: str, /) -> str:
-        value = self.get(name)
-        if value is None:
-            raise KeyError(name)
-        return value
-
-    def keys(self) -> tuple[str, ...]:
-        # dict protocol
-        return tuple(self.raw.keys())
 
 
 class _CrawlerLogger(logging.LoggerAdapter[logging.Logger]):
@@ -981,7 +962,7 @@ class Crawler(HTTPMixin, HLSMixin, ABC):
     @final
     @property
     def cookies(self) -> SiteCookies:
-        return SiteCookies(self.client.cookies.filter_cookies(self.PRIMARY_URL))
+        return self.client.get_cookies(self.PRIMARY_URL)
 
     @final
     def update_cookies(self, cookies: LooseCookies | Mapping[str, int | str], url: yarl.URL | None = None) -> None:
@@ -1338,6 +1319,12 @@ class API(HTTPMixin, ABC):
     @property
     def origin(self) -> AbsoluteHttpURL:
         return context.ORIGIN.get()
+
+    @final
+    @property
+    def cookies(self) -> SiteCookies:
+        assert self.PRIMARY_URL != API.PRIMARY_URL
+        return self.client.get_cookies(self.PRIMARY_URL)
 
 
 def _make_scrape_mapper_keys(cls: type[Crawler] | Crawler) -> tuple[str, ...]:

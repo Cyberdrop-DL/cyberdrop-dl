@@ -38,7 +38,7 @@ class LusciousCrawler(Crawler):
             self.catch_errors(self.api.GRAPHQL_ENDPOINT),
             self.disable_on_error("Unable to get account credentials"),
         ):
-            for cookie_name in self.cookies.raw:
+            for cookie_name in self.cookies:
                 if cookie_name.startswith("sessionid"):
                     self.log.debug("Session id cookie name: %s", cookie_name)
                     return
