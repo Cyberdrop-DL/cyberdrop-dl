@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar, final, override
 
 from mega.chunker import MegaChunker, get_chunks
@@ -36,10 +37,8 @@ class MegaDownloadClient(DownloadClient):  # pyright: ignore[reportGeneralTypeIs
             for _, chunk_size in get_chunks(file_size):
                 raw_chunk = await aiohttp_resp.content.readexactly(chunk_size)
                 chunk = chunk_decryptor.read(raw_chunk)
-                await check_free_space()
                 chunk_size = len(chunk)
-
-                await self.speed_limiter.acquire(chunk_size)
+                await asyncio.gather(check_free_space(), self.speed_limiter.acquire(chunk_size))  # noqa: TID251
                 await f.write(chunk)
                 hook.advance(chunk_size)
                 check_download_speed()

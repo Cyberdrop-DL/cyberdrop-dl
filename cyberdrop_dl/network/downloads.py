@@ -182,8 +182,7 @@ class DownloadClient:
         async with self._track_speed(hook), aio.open(media_item.partial_file, mode="ab") as f:
             async for chunk in resp.iter_chunked(self.chunk_size):
                 n_bytes = len(chunk)
-                await self.speed_limiter.acquire(n_bytes)
-                await check_free_space()
+                await asyncio.gather(check_free_space(), self.speed_limiter.acquire(n_bytes))  # noqa: TID251
                 await f.write(chunk)
                 hook.advance(n_bytes)
                 check_download_speed()
