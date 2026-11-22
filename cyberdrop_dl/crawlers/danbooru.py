@@ -253,7 +253,7 @@ class BleachBooruCrawler(DanBooruCrawler):
     CDN: ClassVar[AbsoluteHttpURL] = PRIMARY_URL
 
 
-class BorvarBooruCrawler(DanBooruCrawler, wiki_site="BorvarArt"):
+class BorvarBooruCrawler(DanBooruCrawler):
     PRIMARY_URL: ClassVar[AbsoluteHttpURL] = AbsoluteHttpURL("https://booru.borvar.art")
     DOMAIN: ClassVar[str] = "booru.borvar.art"
     FOLDER_DOMAIN: ClassVar[str] = "BorvarArt"
