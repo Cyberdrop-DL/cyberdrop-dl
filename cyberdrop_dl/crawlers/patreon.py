@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast, final, override
@@ -16,6 +17,7 @@ from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import Deduper, css, extr_text, next_js, strict_variadic, traversal
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.operators import nested_itemgetter
 from cyberdrop_dl.utils.urls import URLDeduper, name_from_url
 
 if TYPE_CHECKING:
@@ -144,13 +146,9 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
         post_title = self.create_separate_post_title(post["title"], post["id"], date)
         scrape_item.append_folders(post_title)
         self.create_eager_task(self.write_metadata(scrape_item, f"post_{post['id']}", post))
-        medias = self._extract_media(post, included)
-        await self._post_media(scrape_item, post, medias)
-
-    def _extract_media(self, post: Post, included: dict[str, Included]) -> tuple[Media, ...]:
         medias = tuple(_parse_media(post, included))
         self.log.debug("Found %s media assets in post %s \n%s", len(medias), post["id"], LazyLogMedia(medias))
-        return medias
+        await self._post_media(scrape_item, post, medias)
 
     async def _post_media(self, scrape_item: ScrapeItem, post: Post, medias: tuple[Media, ...]) -> None:  # noqa: C901
         seen_urls: URLDeduper = URLDeduper()
@@ -385,17 +383,19 @@ class PatreonV1API(API):
 
     async def _campaign_id(self, url: AbsoluteHttpURL) -> str:
         async with self.request(url, impersonate=True) as resp:
+            html = await resp.text()
             soup = await resp.soup()
-            with contextlib.suppress(css.SelectorError):
-                bootstrap = _extract_bootstrap(soup)
-                return bootstrap["campaign"]["data"]["id"]
 
-            with contextlib.suppress(css.SelectorError):
-                url = self.parse_url(css.select(soup, "head link[href*='/campaign/']", "href"))
-                return url.parts[url.parts.index("campaign") + 1]
+        with contextlib.suppress(css.SelectorError):
+            bootstrap = await asyncio.to_thread(_extract_bootstrap, soup)
+            return bootstrap["campaign"]["data"]["id"]
 
-            # TODO: fix next_js chunk parsing
-            return _extract_campaign_id(await resp.text())
+        with contextlib.suppress(css.SelectorError):
+            url = self.parse_url(css.select(soup, "head link[href*='/campaign/']", "href"))
+            return url.parts[url.parts.index("campaign") + 1]
+
+        # TODO: fix next_js chunk parsing
+        return _extract_campaign_id(html)
 
     def posts(self, campaign_id: str, filter_query: Mapping[str, Any] | None = None) -> AsyncGenerator[dict[str, Any]]:
         url = (self.ENTRYPOINT / "posts").with_query(_API_PARAMS)
@@ -404,12 +404,13 @@ class PatreonV1API(API):
         return self.pager(url.update_query({"filter[campaign_id]": campaign_id}))
 
     async def pager(self, api_url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
+        get_cursor = nested_itemgetter("meta", "pagination", "cursors", "next")
         while True:
             resp = await self.request_json(api_url)
             yield resp
 
             try:
-                cursor = resp["meta"]["pagination"]["cursors"]["next"]
+                cursor = get_cursor(resp)
             except LookupError:
                 break
             if not cursor:
@@ -439,19 +440,6 @@ def _extract_bootstrap(soup: BeautifulSoup) -> dict[str, Any]:
     return envelope.get("pageBootstrap") or envelope["bootstrap"]
 
 
-def _parse_post(post: dict[str, Any]) -> Generator[tuple[str, Any]]:
-    yield "id", str(post["id"])
-
-    for name, value in post["attributes"].items():
-        if value and name.endswith("_json_string"):
-            value = json.loads(value)
-
-        yield name, value
-
-    yield "relationships", post["relationships"]
-    yield "campaign_id", post["relationships"]["campaign"]["data"]["id"]
-
-
 def _extract_json_tiptap_media(post: Post) -> tuple[list[str], list[Included]]:
     links: list[str] = []
     assets: list[Included] = []
@@ -471,7 +459,19 @@ def _extract_json_tiptap_media(post: Post) -> tuple[list[str], list[Included]]:
 
 
 def _flatten_post(post: dict[str, Any]) -> Post:
-    return cast("Post", dict(sorted(_parse_post(post))))  # pyright: ignore[reportInvalidCast]
+    def flatten() -> Generator[tuple[str, Any]]:
+        yield "id", str(post["id"])
+
+        for name, value in post["attributes"].items():
+            if value and name.endswith("_json_string"):
+                value = json.loads(value)
+
+            yield name, value
+
+        yield "relationships", post["relationships"]
+        yield "campaign_id", post["relationships"]["campaign"]["data"]["id"]
+
+    return cast("Post", dict(sorted(flatten())))  # pyright: ignore[reportInvalidCast]
 
 
 def _get_post_media(post: Post) -> Generator[str]:
@@ -591,15 +591,7 @@ _API_PARAMS = {
         )
     ),
     "fields[user]": ",".join(("image_url", "full_name", "url")),
-    "fields[media]": ",".join(
-        (
-            "id",
-            "image_urls",
-            "download_url",
-            "metadata",
-            "file_name",
-        )
-    ),
+    "fields[media]": ",".join(("id", "image_urls", "download_url", "metadata", "file_name")),
     "sort": "-published_at",
     "filter[is_draft]": "false",
     "json-api-version": "1.0",
