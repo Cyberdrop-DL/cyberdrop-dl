@@ -234,7 +234,14 @@ These crawlers will ignore custom user-agents and will always use `cyberdrop-dl/
 
 <!-- START_CUSTOM_UA_CRAWLERS -->
 - Archive.org
+- BleachBooru
+- BlepArt
+- BorvarArt
+- Danbooru
 - E621
+- E926
+- Floofgens
+- Hmofa
 - MegaNz
 - Pawchive
 - Transfer.it
