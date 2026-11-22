@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast, final, override
 
@@ -14,13 +13,13 @@ from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeEr
 from cyberdrop_dl.network.headers import get_content_disposition_filename
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import css, extr_text, next_js, traversal
+from cyberdrop_dl.utils import Deduper, css, extr_text, next_js, strict_variadic, traversal
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
-from cyberdrop_dl.utils.urls import URLDeduper
+from cyberdrop_dl.utils.urls import URLDeduper, name_from_url
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Mapping
+    from collections.abc import AsyncGenerator, AsyncIterable, Generator, Mapping
 
     from bs4 import BeautifulSoup
 
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
-@dataclasses.dataclass(frozen=True, slots=True, order=True)
+@struct(kw_only=False)
 class Media:
     id: str
     name: str | None
@@ -130,7 +129,7 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
         await self._post(
             scrape_item,
             post=_flatten_post(post["data"]),
-            included=_flatten_included(post["included"]),
+            included=_expand_included(post["included"]),
         )
 
     @error_handling_wrapper
@@ -155,8 +154,8 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
 
     async def _post_media(self, scrape_item: ScrapeItem, post: Post, medias: tuple[Media, ...]) -> None:  # noqa: C901
         seen_urls: URLDeduper = URLDeduper()
-        seen_media_ids: set[str] = set()
-        seen_media_hashes: set[str] = set()
+        seen_media_ids: Deduper[str] = Deduper()
+        seen_media_hashes: Deduper[str] = Deduper()
 
         sleep = aio.periodic_sleep(10)
 
@@ -179,11 +178,9 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
             for media in medias:
                 if media.id in seen_media_ids:
                     continue
-                seen_media_ids.add(media.id)
-                if media.hash:
-                    if media.hash in seen_media_hashes:
-                        continue
-                    seen_media_hashes.add(media.hash)
+
+                if media.hash and media.hash in seen_media_hashes:
+                    continue
 
                 tg.create_task(self._media(scrape_item, media))
                 scrape_item.add_children()
@@ -201,11 +198,11 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
             self.log.debug("Found embedded TIPTAP media in post %s: %s", post["id"], {"links": links, "assets": assets})
 
             for asset in assets:
-                if asset["id"] not in seen_media_ids:
-                    seen_media_ids.add(asset["id"])
-                    tg.create_task(self.media(scrape_item, asset["id"]))
-                    scrape_item.add_children()
-                    await sleep()
+                if asset["id"] in seen_media_ids:
+                    continue
+                tg.create_task(self.media(scrape_item, asset["id"]))
+                scrape_item.add_children()
+                await sleep()
 
             if not self.config.crawlers.patreon.content_urls:
                 return
@@ -222,7 +219,8 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
     async def _media(self, scrape_item: ScrapeItem, media: Media) -> None:
         self.create_eager_task(self.write_metadata(scrape_item, f"media_{media.id}", media))
         if media.url.suffix == ".m3u8":
-            return await self._m3u8_media(scrape_item, media)
+            await self._m3u8_media(scrape_item, media)
+            return
 
         original_name, filename = await self._get_media_filename(media)
 
@@ -236,25 +234,26 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
 
     async def _get_media_filename(self, media: Media) -> tuple[str, Filename]:
         errors: list[Exception] = []
-        if media.name and not media.name.startswith(("http:", "https:")):
+        media_name = media.name if (media.name and not media.name.startswith(("http:", "https:"))) else None
+        if media_name:
             try:
-                return media.name, self.get_filename_and_ext(media.name, assume_ext=None)
+                return media_name, self.get_filename_and_ext(media_name, assume_ext=None)
             except NoExtensionError as e:
                 errors.append(e)
 
         async with self.request(media.url) as resp:
-            if name := get_content_disposition_filename(resp.headers) or media.name:
+            if name := get_content_disposition_filename(resp.headers) or media_name or name_from_url(media.url):
                 try:
                     return name, self.get_filename_and_ext(name, mime_type=resp.content_type, assume_ext=None)
                 except NoExtensionError as e:
                     errors.append(e)
 
-        raise ExceptionGroup("No File Extension", tuple(errors))
+        raise NoExtensionError.group(tuple(errors))
 
     async def _m3u8_media(self, scrape_item: ScrapeItem, media: Media) -> None:
         m3u8, info = await self.request_m3u8_playlist(media.url)
         filename = self.create_custom_filename(
-            media.hash or media.url.name.removesuffix(".m3u8"),
+            media.hash or name_from_url(media.url).removesuffix(media.url.suffix),
             ext := ".mp4",
             file_id=media.id,
             resolution=info.resolution,
@@ -285,11 +284,11 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
         scrape_item.setup_as_profile("")
         await self._iter_posts(scrape_item, self.api.posts(campaign_id))
 
-    async def _iter_posts(self, scrape_item: ScrapeItem, raw_posts: AsyncGenerator[dict[str, Any]]) -> None:
+    async def _iter_posts(self, scrape_item: ScrapeItem, raw_posts: AsyncIterable[dict[str, Any]]) -> None:
         sleep = aio.periodic_sleep(10)
-        async with aio.non_cancelling_taskgroup() as tg:
+        async with aio.non_cancelling_taskgroup() as tg, aio.maybe_aclosing(raw_posts):
             async for resp in raw_posts:
-                included = _flatten_included(resp["included"])
+                included = _expand_included(resp["included"])
                 for post in resp["data"]:
                     post = _flatten_post(post)
                     new_item = scrape_item.create_child(self.parse_url(post["url"], self.origin))
@@ -300,7 +299,7 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
     _post_task = auto_task_id(_post)
 
 
-@struct(extras="ignore")
+@struct
 class Collection:
     id: str
     campaign_id: str
@@ -399,18 +398,10 @@ class PatreonV1API(API):
             return _extract_campaign_id(await resp.text())
 
     def posts(self, campaign_id: str, filter_query: Mapping[str, Any] | None = None) -> AsyncGenerator[dict[str, Any]]:
-        url = (
-            (self.ENTRYPOINT / "posts")
-            .with_query(_API_PARAMS)
-            .extend_query(
-                {
-                    "filter[campaign_id]": campaign_id,
-                }
-            )
-        )
+        url = (self.ENTRYPOINT / "posts").with_query(_API_PARAMS)
         if filter_query:
             url = url.update_query(filter_query)
-        return self.pager(url)
+        return self.pager(url.update_query({"filter[campaign_id]": campaign_id}))
 
     async def pager(self, api_url: AbsoluteHttpURL) -> AsyncGenerator[dict[str, Any]]:
         while True:
@@ -438,7 +429,7 @@ def _extract_campaign_id(content: str) -> str:
     raise ScrapeError(422, "Unable to extract campaign id")
 
 
-def _flatten_included(included: list[Included]) -> dict[str, Included]:
+def _expand_included(included: list[Included]) -> dict[str, Included]:
     return {incl["id"]: incl for incl in included}
 
 
@@ -450,17 +441,15 @@ def _extract_bootstrap(soup: BeautifulSoup) -> dict[str, Any]:
 
 def _parse_post(post: dict[str, Any]) -> Generator[tuple[str, Any]]:
     yield "id", str(post["id"])
-    yield from _parse_attributes(post["attributes"])
-    yield "relationships", post["relationships"]
-    yield "campaign_id", post["relationships"]["campaign"]["data"]["id"]
 
-
-def _parse_attributes(attributes: dict[str, Any]) -> Generator[tuple[str, Any]]:
-    for name, value in attributes.items():
+    for name, value in post["attributes"].items():
         if value and name.endswith("_json_string"):
             value = json.loads(value)
 
         yield name, value
+
+    yield "relationships", post["relationships"]
+    yield "campaign_id", post["relationships"]["campaign"]["data"]["id"]
 
 
 def _extract_json_tiptap_media(post: Post) -> tuple[list[str], list[Included]]:
@@ -491,10 +480,7 @@ def _get_post_media(post: Post) -> Generator[str]:
         if not relationships:
             continue
 
-        if type(relationships) is not list:
-            relationships = [relationships]
-
-        for asset in relationships:
+        for asset in strict_variadic(relationships):
             yield asset["id"]
 
 
@@ -556,86 +542,65 @@ def _tiptap_media_visitor(_: object, obj: object) -> TypeGuard[dict[str, Any]]:
     return False
 
 
-_API_PARAMS = (
-    (
-        "include",
-        ",".join(
-            (
-                "campaign",
-                "attachments",
-                "attachments_media",
-                "audio",
-                "video",
-                "images",
-                "media",
-                "native_video_insights",
-                "user",
-            )
-        ),
+_API_PARAMS = {
+    "include": ",".join(
+        (
+            "campaign",
+            "attachments",
+            "attachments_media",
+            "audio",
+            "video",
+            "images",
+            "media",
+            "native_video_insights",
+            "user",
+        )
     ),
-    (
-        "fields[campaign]",
-        ",".join(
-            (
-                "currency",
-                "show_audio_post_download_links",
-                "avatar_photo_url",
-                "avatar_photo_image_urls",
-                "is_nsfw",
-                "is_monthly",
-                "name",
-                "url",
-            )
-        ),
+    "fields[campaign]": ",".join(
+        (
+            "currency",
+            "show_audio_post_download_links",
+            "avatar_photo_url",
+            "avatar_photo_image_urls",
+            "is_nsfw",
+            "is_monthly",
+            "name",
+            "url",
+        )
     ),
-    (
-        "fields[post]",
-        ",".join(
-            (
-                "content_json_string",
-                "content",
-                "current_user_can_view",
-                "embed",
-                "image",
-                "is_paid",
-                "meta_image_url",
-                "moderation_status",
-                "post_file",
-                "post_metadata",
-                "post_type",
-                "published_at",
-                "teaser_text_json_string",
-                "teaser_text",
-                "thumbnail_url",
-                "thumbnail",
-                "title",
-                "url",
-            )
-        ),
+    "fields[post]": ",".join(
+        (
+            "content_json_string",
+            "content",
+            "current_user_can_view",
+            "embed",
+            "image",
+            "is_paid",
+            "meta_image_url",
+            "moderation_status",
+            "post_file",
+            "post_metadata",
+            "post_type",
+            "published_at",
+            "teaser_text_json_string",
+            "teaser_text",
+            "thumbnail_url",
+            "thumbnail",
+            "title",
+            "url",
+        )
     ),
-    (
-        "fields[user]",
-        ",".join(
-            (
-                "image_url",
-                "full_name",
-                "url",
-            )
-        ),
+    "fields[user]": ",".join(("image_url", "full_name", "url")),
+    "fields[media]": ",".join(
+        (
+            "id",
+            "image_urls",
+            "download_url",
+            "metadata",
+            "file_name",
+        )
     ),
-    (
-        "fields[media]",
-        ",".join(
-            (
-                "id",
-                "image_urls",
-                "download_url",
-                "metadata",
-                "file_name",
-            )
-        ),
-    ),
-    ("sort", "-published_at"),
-    ("filter[is_draft]", "false"),
-    ("json-api-version", "1.0"),
-)
+    "sort": "-published_at",
+    "filter[is_draft]": "false",
+    "json-api-version": "1.0",
+}
