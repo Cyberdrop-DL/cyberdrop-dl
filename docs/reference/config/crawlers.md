@@ -167,6 +167,40 @@ crawlers:
 
 Download audios as `.mp3` files even if WAV (high quality) versions are available
 
+# DeviantArt
+
+```yaml
+crawlers:
+  deviantart:
+    download_originals: true
+    include_mature: true
+    include_scraps: false
+```
+
+## `download_originals`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Download original files when available instead of preview images
+
+## `include_mature`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `true`  |
+
+Include mature content deviations when scraping
+
+## `include_scraps`
+
+| Type   | Default |
+| ------ | ------- |
+| `Bool` | `false` |
+
+Include deviations from the user's Scraps folder when scraping their gallery
+
 # Google Drive
 
 ```yaml

@@ -11,6 +11,37 @@ These settings allow you to provide login credentials for sites. All of them go 
 
 <details>
 
+<summary>DeviantArt</summary>
+
+DeviantArt requires OAuth2 application credentials to access its API. Register an application at <https://www.deviantart.com/developers/apps> to obtain your `client_id` and (for confidential apps) `client_secret`.
+
+**Option 1: App-only authentication (`client_credentials`)** — works for public galleries, deviations, and collections:
+
+```yaml
+auth:
+  deviantart:
+    client_id: <my_client_id>
+    client_secret: <my_client_secret>
+```
+
+**Option 2: User authentication (`refresh_token`)** — supports user-scoped/PKCE OAuth2 sessions (leave `client_secret` empty if using a public PKCE client, or include it for confidential clients):
+
+```yaml
+auth:
+  deviantart:
+    client_id: <my_client_id>
+    client_secret: <my_client_secret_optional>
+    refresh_token: <my_refresh_token>
+```
+
+{% hint style="info" %}
+Rotated refresh tokens are cached automatically in `cache.json` across runs. If you update `refresh_token` in `config.yaml`, the cached token is reset automatically.
+{% endhint %}
+
+</details>
+
+<details>
+
 <summary>Forums</summary>
 
 {% hint style="warning" %}

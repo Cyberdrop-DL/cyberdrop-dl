@@ -196,6 +196,18 @@ Download URLs
 │ --crawlers.clypit.prefer-mp3         Download audios as .mp3 files even if WAV (high quality)    │
 │   --crawlers.clypit.no-prefer-mp3    versions are available                                      │
 │                                      [default: False]                                            │
+│ --crawlers.deviantart                Include mature content deviations when scraping             │
+│   .include-mature                    [default: True]                                             │
+│   --crawlers.deviantart                                                                          │
+│   .no-include-mature                                                                             │
+│ --crawlers.deviantart                Download original files when available instead of preview   │
+│   .download-originals                images                                                      │
+│   --crawlers.deviantart              [default: True]                                             │
+│   .no-download-originals                                                                         │
+│ --crawlers.deviantart                Include deviations from the user's Scraps folder when       │
+│   .include-scraps                    scraping their gallery                                      │
+│   --crawlers.deviantart              [default: False]                                            │
+│   .no-include-scraps                                                                             │
 │ --crawlers.generic.wordpress-media   [default: ()]                                               │
 │   URL...                                                                                         │
 │ --crawlers.generic.wordpress-html    [default: ()]                                               │
