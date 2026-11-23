@@ -189,7 +189,7 @@ class Manager:
             return [path]
 
         if await aio.is_dir(path):
-            return [f async for f in aio.glob(path, "*.txt")]
+            return await aio.list_glob(path, "*.txt")
 
         return []
 

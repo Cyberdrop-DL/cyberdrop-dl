@@ -74,11 +74,10 @@ class Sorter:
         async with asyncio.TaskGroup() as tg:
 
             async def sort_subfolder(folder: Path) -> None:
-                async for path in aio.rglob(folder, "*"):
-                    if await aio.is_file(path):
-                        _ = tg.create_task(self._sort_file(folder.name, path))
+                async for path in aio.rglob(folder, "*", filter_fn=Path.is_file):
+                    tg.create_task(self._sort_file(folder.name, path))
 
-            async for path in aio.glob(self.input_dir, "*"):
+            for path in await aio.list_dir(self.input_dir):
                 if await aio.is_file(path):
                     _ = tg.create_task(self._sort_file(self.input_dir.name, path))
                 else:

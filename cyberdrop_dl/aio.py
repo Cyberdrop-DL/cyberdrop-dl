@@ -298,6 +298,14 @@ class AsyncIteratorWrapper[T]:
 
         return cast("T", value)
 
+    @classmethod
+    def wrap[**P, R](cls, fn: Callable[P, Awaitable[Iterable[R]]]) -> Callable[P, AsyncIteratorWrapper[R]]:
+
+        def async_iter(*args: P.args, **kwargs: P.kwargs) -> AsyncIteratorWrapper[R]:
+            return AsyncIteratorWrapper(fn(*args, **kwargs))
+
+        return async_iter
+
 
 @overload
 async def gather[T1](coro1: Awaitable[T1], /, *, fail_fast: bool = True) -> tuple[T1]: ...
@@ -598,6 +606,8 @@ def move(src: Path, dst: Path) -> None:
     shutil.move(src, dst)
 
 
+# TODO: move all path funtions to their own submodule
+
 chmod = to_thread(Path.chmod)
 exists = to_thread(Path.exists)
 is_dir = to_thread(Path.is_dir)
@@ -612,21 +622,40 @@ unlink = remove = to_thread(Path.unlink)
 write_bytes = to_thread(Path.write_bytes)
 write_text = to_thread(Path.write_text)
 rmdir = to_thread(Path.rmdir)
+walk = AsyncIteratorWrapper.wrap(to_thread(Path.walk))
 
 
-def glob(path: Path, pattern: str) -> AsyncIterator[Path]:
-    coro = asyncio.to_thread(path.glob, pattern)
-    return AsyncIteratorWrapper(coro)
+@AsyncIteratorWrapper.wrap
+@to_thread
+def glob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
+    return filter(filter_fn, path.glob(pattern))
 
 
-def rglob(path: Path, pattern: str) -> AsyncIterator[Path]:
-    coro = asyncio.to_thread(path.rglob, pattern)
-    return AsyncIteratorWrapper(coro)
+@AsyncIteratorWrapper.wrap
+@to_thread
+def rglob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
+    return filter(filter_fn, path.rglob(pattern))
 
 
-def iterdir(path: Path) -> AsyncIterator[Path]:
-    coro = asyncio.to_thread(path.iterdir)
-    return AsyncIteratorWrapper(coro)
+@AsyncIteratorWrapper.wrap
+@to_thread
+def iterdir(path: Path, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
+    return filter(filter_fn, path.iterdir())
+
+
+@to_thread
+def list_glob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> list[Path]:
+    return list(filter(filter_fn, path.glob(pattern)))
+
+
+@to_thread
+def list_rglob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> list[Path]:
+    return list(filter(filter_fn, path.rglob(pattern)))
+
+
+@to_thread
+def list_dir(path: Path, filter_fn: Callable[[Path], bool] | None = None) -> list[Path]:
+    return list(filter(filter_fn, path.iterdir()))
 
 
 @overload

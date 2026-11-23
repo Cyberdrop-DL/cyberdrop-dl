@@ -64,10 +64,11 @@ async def load_items_from_path(path: Path) -> AsyncGenerator[ScrapeItem]:
 
 
 async def load_items_from_folder(path: Path) -> AsyncGenerator[ScrapeItem]:
-    files = sorted(
-        [f async for f in aio.glob(path, "*.txt") if not f.name.startswith(".")], key=lambda x: str(x).casefold()
-    )
+    files = sorted(await aio.list_glob(path, "*.txt", filter_fn=Path.is_file), key=lambda x: str(x).casefold())
     for file in files:
+        if file.name.startswith("."):
+            continue
+
         async with contextlib.aclosing(_parse_input_file_groups(file)) as lines:
             async for group_name, urls in lines:
                 for url in urls:
