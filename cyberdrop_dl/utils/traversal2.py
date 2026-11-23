@@ -161,7 +161,7 @@ def _set_validator(obj: set[object]) -> _Validator[Any]:
         return _instance_validator(inner_obj)
     if callable(inner_obj):
         return _transform_validator(inner_obj)
-    return _equals_validator(obj)
+    return _equals_validator(inner_obj)
 
 
 def _instance_validator[T](obj: tuple[type[T], ...] | type[T]) -> _Validator[T]:

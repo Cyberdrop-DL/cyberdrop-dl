@@ -201,7 +201,7 @@ def test_does_not_mutate_traversed_objects() -> None:
     inner_data = {"a": "target", "b": -1, 3: [123, 321]}
     data = {1: "one", "my_key": {"another_key": [42, inner_data]}}
     sample = deepcopy(data)
-    result = list(traverse(data, ..., {"a": lambda x: x == "target"}))
+    result = list(traverse(data, ..., {"a": {"target"}}))
     assert result
     path, value = result[0]
     assert path == ("my_key", "another_key", 1)

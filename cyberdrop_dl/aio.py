@@ -7,7 +7,6 @@ import asyncio
 import contextlib
 import dataclasses
 import sys
-from collections.abc import AsyncIterable
 from pathlib import Path
 from stat import S_ISREG
 from typing import IO, TYPE_CHECKING, Any, Self, TypeVar, cast, overload, override
@@ -20,6 +19,7 @@ from cyberdrop_dl.constants import MISSING
 if TYPE_CHECKING:
     from collections.abc import (
         AsyncGenerator,
+        AsyncIterable,
         AsyncIterator,
         Awaitable,
         Callable,
@@ -30,13 +30,38 @@ if TYPE_CHECKING:
         Sequence,
     )
     from contextvars import Context
-    from types import TracebackType
+    from types import FrameType, TracebackType
 
     from _typeshed import OpenBinaryMode, OpenTextMode
 
 
 _T_co = TypeVar("_T_co", covariant=True)
 __tracebackhide__ = True
+
+
+def _get_coro_frame(coro: Coroutine[Any, Any, object]) -> FrameType | None:
+    try:
+        return coro.cr_frame  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAttributeAccessIssue]
+    except AttributeError:
+        return None
+
+
+def get_coro_name(coro: Coroutine[Any, Any, object]) -> str | None:
+    module = url = None
+    name = getattr(coro, "__qualname__", None) or getattr(coro, "__name__", None)
+    frame = _get_coro_frame(coro)
+    if frame is not None:
+        module = frame.f_globals.get("__name__") or None
+        get = frame.f_locals.get
+        if item := get("scrape_item") or get("media_item") or get("item"):
+            url = getattr(item, "url", None)
+        else:
+            url = get("url")
+
+    full_name = ".".join(filter(None, (module, name)))
+    if url:
+        full_name += f"('{url}')"
+    return full_name or None
 
 
 class EagerTaskGroup(asyncio.TaskGroup):
@@ -55,6 +80,7 @@ class EagerTaskGroup(asyncio.TaskGroup):
             context: Context | None = None,
             eager_start: bool | None = None,
         ) -> asyncio.Task[_T_co]:
+            name = name or get_coro_name(coro)
             if eager_start is False:
 
                 async def lazy() -> _T_co:
@@ -150,15 +176,16 @@ class _AsyncChain:
     @staticmethod
     async def from_iterable[T](async_iterables: Iterable[AsyncIterable[T]]) -> AsyncGenerator[T]:
         for a_iterable in async_iterables:
-            async for value in a_iterable:
-                yield value
+            async with maybe_aclosing(a_iterable):
+                async for value in a_iterable:
+                    yield value
 
     @staticmethod
-    def yield_this[T](*items: T) -> AsyncGenerator[T]:
+    def yield_this[T](*items: T) -> AsyncIterable[T]:
         return to_async_iterable(items)
 
 
-async def to_async_iterable[T](items: Iterable[T]) -> AsyncGenerator[T]:
+async def to_async_iterable[T](items: Iterable[T]) -> AsyncIterable[T]:
     for item in items:
         yield item
 
@@ -559,9 +586,9 @@ async def queue_consumer[T](queue: asyncio.Queue[T], stop_sentinel: Any = MISSIN
             queue.task_done()
 
 
-async def aenumerate[T](agen: AsyncGenerator[T], *, start: int = 0) -> AsyncGenerator[tuple[int, T]]:
+async def aenumerate[T](agen: AsyncIterable[T], *, start: int = 0) -> AsyncGenerator[tuple[int, T]]:
     index = start
-    async with contextlib.aclosing(agen) as items:
+    async with maybe_aclosing(agen) as items:
         async for item in items:
             yield index, item
             index += 1
@@ -578,7 +605,7 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
         return runner.run(coro)
 
 
-class maybe_aclosing[T](contextlib.AbstractAsyncContextManager[AsyncIterable[T], None]):  # noqa: N801
+class maybe_aclosing[T](contextlib.AbstractAsyncContextManager[Any, None]):  # noqa: N801
     def __init__(self, thing: AsyncIterable[T]) -> None:
         self.thing: AsyncIterable[T] = thing
 
