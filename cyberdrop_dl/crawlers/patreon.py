@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard, cast, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, cast, override
 
 from typing_extensions import ReadOnly
 
@@ -14,7 +14,7 @@ from cyberdrop_dl.exceptions import MaxChildrenError, NoExtensionError, ScrapeEr
 from cyberdrop_dl.network.headers import get_content_disposition_filename
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
-from cyberdrop_dl.utils import Deduper, css, extr_text, next_js, strict_variadic, traversal
+from cyberdrop_dl.utils import Deduper, css, extr_text, next_js, strict_variadic, traversal2
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.operators import nested_itemgetter
@@ -440,20 +440,44 @@ def _extract_bootstrap(soup: BeautifulSoup) -> dict[str, Any]:
     return envelope.get("pageBootstrap") or envelope["bootstrap"]
 
 
+IGNORED_TIPTAP_ELEMENTS = frozenset(
+    {
+        "heading",
+        "hardBreak",
+        "horizontalRule",
+        "listItem",
+        "bulletList",
+        "orderedList",
+        "blockquote",
+        "paragraph",
+        "text",
+        "doc",
+        "italic",
+        "underline",
+        "strike",
+        "bold",
+    }
+)
+
+
 def _extract_json_tiptap_media(post: Post) -> tuple[list[str], list[Included]]:
     links: list[str] = []
     assets: list[Included] = []
+
     for name, value in post.items():
-        if value and name.endswith("_json_string"):
-            for _, elem in traversal.traverse(value, _tiptap_media_visitor):
-                attrs = elem["attrs"]
-                match media_type := elem["type"]:
-                    case "link" if href := attrs.get("href"):
-                        links.append(href)
-                    case "audio" | "video" | "image" if media_id := attrs.get("media_id"):
-                        assets.append({"id": media_id, "type": media_type, "attributes": attrs})
-                    case _:
-                        continue
+        if not (value and name.endswith("_json_string")):
+            continue
+
+        for elem in traversal2.traverse(value, ..., {"type": {str}, "attrs": (filter, {dict})}).values():
+            attrs = elem["attrs"]
+            match media_type := elem["type"]:
+                case "link" if href := attrs.get("href"):
+                    links.append(href)
+                case "audio" | "video" | "image" if media_id := attrs.get("media_id"):
+                    assets.append({"id": media_id, "type": media_type, "attributes": attrs})
+                case _:
+                    if media_type not in IGNORED_TIPTAP_ELEMENTS:
+                        PatreonCrawler.get_logger().warning("Unknown TIPTAP element: %s", elem)
 
     return links, assets
 
@@ -507,39 +531,6 @@ def _parse_media(post: Post, included: dict[str, Included]) -> Generator[Media]:
         url = PatreonCrawler.parse_url(image.get("large_url") or image["url"])
         if m_hash := _md5_from_url(url):
             yield Media(m_hash, None, url, image)
-
-
-@final
-class TipTap:
-    ASSET = frozenset({"audio", "link", "video", "image"})
-    DOC = frozenset(
-        {
-            "heading",
-            "hardBreak",
-            "horizontalRule",
-            "listItem",
-            "bulletList",
-            "orderedList",
-            "blockquote",
-            "paragraph",
-            "text",
-            "doc",
-        }
-    )
-    TEXT = frozenset(("italic", "underline", "strike", "bold"))
-
-
-def _tiptap_media_visitor(_: object, obj: object) -> TypeGuard[dict[str, Any]]:
-    if not (type(obj) is dict and (t_type := obj.get("type"))):
-        return False
-
-    if t_type in TipTap.ASSET:
-        return bool(obj.get("attrs"))
-
-    if not (t_type in TipTap.DOC or t_type in TipTap.TEXT):
-        PatreonCrawler.get_logger().warning("Unknown TIPTAP element: %s", obj)
-
-    return False
 
 
 _API_PARAMS = {
