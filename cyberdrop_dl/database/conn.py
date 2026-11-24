@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import contextlib
 import functools
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, override
+from collections.abc import Generator, Sequence
+from typing import TYPE_CHECKING, Any, Self, override
 
 import aiosqlite
 from aiosqlite.context import Result
@@ -55,6 +55,9 @@ class DBConnection(aiosqlite.Connection):
         async def create_function(
             self, name: str, num_params: int, func: Callable[..., Any], deterministic: bool = False
         ) -> None: ...
+
+        @override
+        def __await__(self) -> Generator[Any, None, Self]: ...
 
     @override
     @_typed_contextmanager

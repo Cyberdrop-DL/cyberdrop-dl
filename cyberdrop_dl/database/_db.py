@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Self
 from cyberdrop_dl import aio
 from cyberdrop_dl.signature import dataclass_repr
 
-from .common import connect, raw_connect
+from .common import connect
 from .hash import HashTable
 from .history import HistoryTable
 from .schema import SchemaTable
@@ -22,23 +22,23 @@ if TYPE_CHECKING:
 READ_POOL_SIZE = 10
 
 
+@dataclass_repr("_queue", "_busy", "_stack")
 class DBReadConnPool:
     def __init__(self, path: Path, size: int) -> None:
         self.path: Path = path
-        self.max_size: int = size
         self._queue: asyncio.Queue[DBConnection] = asyncio.Queue(size)
         self._busy: dict[asyncio.Task[Any], DBConnection] = {}
         self._stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
 
     async def _new_conn(self, idx: int) -> None:
-        conn = await self._stack.enter_async_context(connect(self.path, name=f"db-reader-{idx}"))
-        await conn.execute_and_close("pragma query_only")
+        conn = await self._stack.enter_async_context(aio.closing(await connect(self.path, name=f"db-reader-{idx}")))
+        await conn.execute_and_close("PRAGMA query_only=ON")
         self._queue.put_nowait(conn)
 
     async def init(self) -> None:
         await self._stack.__aenter__()
         async with asyncio.TaskGroup() as tg:
-            for idx in range(self.max_size):
+            for idx in range(self._queue.maxsize):
                 tg.create_task(self._new_conn(idx))
 
     async def aclose(self) -> None:
@@ -89,7 +89,7 @@ class Database:
 
     async def _connect(self) -> None:
         self.is_new = not await aio.get_size(self.path)
-        self.conn = await raw_connect(self.path, "db-writer")
+        self.conn = await connect(self.path, "db-writer")
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncGenerator[DBConnection]:

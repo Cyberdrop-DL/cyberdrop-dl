@@ -669,7 +669,7 @@ class _HasAsyncClose(Protocol):
     def close(self) -> Awaitable[Any]: ...
 
 
-class closing[T: _HasAsyncClose](contextlib.AbstractAsyncContextManager[Any, None]):  # noqa: N801
+class closing[T: _HasAsyncClose](contextlib.AbstractAsyncContextManager[T, None]):  # noqa: N801
     def __init__(self, thing: T) -> None:
         self.thing: T = thing
 

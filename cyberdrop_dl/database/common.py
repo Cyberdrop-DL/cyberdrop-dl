@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import dataclasses
 import logging
 import sqlite3
@@ -12,7 +11,6 @@ from cyberdrop_dl import env
 from cyberdrop_dl.database.conn import DBConnection
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
     from pathlib import Path
 
     from cyberdrop_dl.database._db import Database
@@ -66,19 +64,8 @@ def _connect(path: Path, name: str | None) -> sqlite3.Connection:
     return db_conn
 
 
-async def raw_connect(path: Path, name: str | None = None) -> DBConnection:
-    db_conn = DBConnection(lambda: _connect(path, name), name=name)
-    await db_conn
-    return db_conn
-
-
-@contextlib.asynccontextmanager
-async def connect(path: Path, name: str | None = None) -> AsyncGenerator[DBConnection]:
-    db_conn = await raw_connect(path, name=name)
-    try:
-        yield db_conn
-    finally:
-        await db_conn.close()
+def connect(path: Path, name: str | None = None) -> DBConnection:
+    return DBConnection(lambda: _connect(path, name), name=name)
 
 
 async def unused_space(db_conn: DBConnection) -> int:

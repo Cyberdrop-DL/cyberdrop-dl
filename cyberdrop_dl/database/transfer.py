@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import LiteralString
 
-from cyberdrop_dl import database
+from cyberdrop_dl import aio, database
 from cyberdrop_dl.database import common
 from cyberdrop_dl.database.history import apply_fixes
 from cyberdrop_dl.database.schema import CURRENT_VERSION, Version
@@ -202,7 +202,7 @@ def _create_new_database(path: Path) -> None:
 def _apply_fixes(db_path: Path) -> None:
 
     async def fix() -> None:
-        async with common.connect(db_path) as conn:
+        async with aio.closing(await common.connect(db_path)) as conn:
             await apply_fixes(conn)
 
     asyncio.run(fix())
