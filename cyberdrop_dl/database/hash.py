@@ -5,7 +5,7 @@ import functools
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, override
 
 from cyberdrop_dl import aio
 
@@ -15,6 +15,7 @@ from .definitions import CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX
 if TYPE_CHECKING:
     import aiosqlite
 
+    from cyberdrop_dl.database.conn import DBConnection
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
 
@@ -37,10 +38,11 @@ class PruneStats:
 class HashTable(Table, name="hash"):
     cwd: Path = dataclasses.field(init=False, default_factory=lambda: Path.cwd().expanduser().resolve())
 
+    @override
     async def create(self) -> None:
-        async with self.db.writer() as db_conn:
+        async with self.db.writer() as db_conn, aio.closing(await db_conn.cursor()) as cursor:
             for query in (CREATE_FILES, CREATE_HASH, CREATE_HASH_INDEX):
-                await db_conn.execute(query)
+                await cursor.execute(query)
 
             await db_conn.commit()
 
@@ -51,8 +53,7 @@ class HashTable(Table, name="hash"):
         filename = path.name
 
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (folder, filename, hash_type))
-            if row := await cursor.fetchone():
+            if row := await db_conn.execute_fetchone(query, (folder, filename, hash_type)):
                 return row["hash"]
 
     async def get_files_with_hash_matches(
@@ -93,9 +94,7 @@ class HashTable(Table, name="hash"):
             """
 
         async with self.db.reader() as db_conn:
-            rows = await db_conn.execute_fetchall(query, (hash_value, size, hash_algo))
-
-        return cast("list[aiosqlite.Row]", rows)
+            return await db_conn.execute_fetchall(query, (hash_value, size, hash_algo))
 
     async def check_hash_exists(self, hash_type: str, hash_value: str) -> bool:
         if self.ignore_history:
@@ -103,8 +102,7 @@ class HashTable(Table, name="hash"):
 
         query = "SELECT 1 FROM hash WHERE hash.hash_type = ? AND hash.hash = ? LIMIT 1;"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (hash_type, hash_value))
-            return await cursor.fetchone() is not None
+            return await db_conn.execute_and_check(query, (hash_type, hash_value))
 
     async def prune_missing_files(self, *, dry_run: bool = False) -> PruneStats:
         """Delete every `hash` and `files` row whose file is no longer on disk."""
@@ -161,7 +159,7 @@ class HashTable(Table, name="hash"):
         download_filename = full_path.name
         folder = str(full_path.parent)
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (hash_value, hash_type, folder, download_filename, hash_value))
+            await db_conn.execute_and_close(query, (hash_value, hash_type, folder, download_filename, hash_value))
             await db_conn.commit()
 
     async def insert_or_update_file(
@@ -192,7 +190,7 @@ class HashTable(Table, name="hash"):
         file_size = stat.st_size
         file_date = int(stat.st_mtime)
         async with self.db.writer() as db_conn:
-            await db_conn.execute(
+            await db_conn.execute_and_close(
                 query,
                 (
                     folder,
@@ -232,19 +230,18 @@ def _path_exists_inner(path: str) -> bool:
     return True
 
 
-async def _register_path_exists(db_conn: aiosqlite.Connection) -> None:
+async def _register_path_exists(db_conn: DBConnection) -> None:
     # Deterministic does not memoize calls with different arguments, that is what the cache above is
     # for. It lets SQLite treat the call as a pure expression, which is what we want here
     await db_conn.create_function(_PATH_EXISTS, 2, _path_exists, deterministic=True)
 
 
-async def _delete_missing(db_conn: aiosqlite.Connection, table: str) -> int:
-    cursor = await db_conn.execute(f"DELETE FROM {table} {_WHERE_MISSING};")  # noqa: S608
+async def _delete_missing(db_conn: DBConnection, table: str) -> int:
+    cursor = await db_conn.execute_and_close(f"DELETE FROM {table} {_WHERE_MISSING};")  # noqa: S608
     return cursor.rowcount
 
 
-async def _count_missing(db_conn: aiosqlite.Connection, table: str) -> int:
-    cursor = await db_conn.execute(f"SELECT COUNT(*) AS count FROM {table} {_WHERE_MISSING};")  # noqa: S608
-    row = await cursor.fetchone()
+async def _count_missing(db_conn: DBConnection, table: str) -> int:
+    row = await db_conn.execute_fetchone(f"SELECT COUNT(*) AS count FROM {table} {_WHERE_MISSING};")  #  # noqa: S608
     assert row is not None
     return row["count"]

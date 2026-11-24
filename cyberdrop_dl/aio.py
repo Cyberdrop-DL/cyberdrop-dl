@@ -9,7 +9,7 @@ import dataclasses
 import sys
 from pathlib import Path
 from stat import S_ISREG
-from typing import IO, TYPE_CHECKING, Any, Self, TypeVar, cast, overload, override
+from typing import IO, TYPE_CHECKING, Any, Protocol, Self, TypeVar, cast, overload, override
 from weakref import WeakValueDictionary
 
 from aiolimiter.leakybucket import AsyncLimiter
@@ -663,6 +663,21 @@ class maybe_aclosing[T](contextlib.AbstractAsyncContextManager[Any, None]):  # n
     async def __aexit__(self, *exc_info) -> None:
         if callable(aclose := getattr(self.thing, "aclose", None)):
             await aclose()  # pyright: ignore[reportGeneralTypeIssues]
+
+
+class _HasAsyncClose(Protocol):
+    def close(self) -> Awaitable[Any]: ...
+
+
+class closing[T: _HasAsyncClose](contextlib.AbstractAsyncContextManager[Any, None]):  # noqa: N801
+    def __init__(self, thing: T) -> None:
+        self.thing: T = thing
+
+    async def __aenter__(self) -> T:
+        return self.thing
+
+    async def __aexit__(self, *_) -> None:
+        await self.thing.close()
 
 
 def to_thread[**P, R](fn: Callable[P, R]) -> Callable[P, Coroutine[None, None, R]]:

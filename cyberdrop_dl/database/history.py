@@ -4,7 +4,9 @@ import contextlib
 import logging
 import time
 from sqlite3 import IntegrityError
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
+
+from cyberdrop_dl import aio
 
 from .common import Table
 from .definitions import CREATE_HISTORY, CREATE_MEDIA_INDEX
@@ -23,10 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 class HistoryTable(Table, name="media"):
+    @override
     async def create(self) -> None:
         async with self.db.writer() as db_conn:
-            await db_conn.execute(CREATE_HISTORY)
-            await db_conn.executescript(CREATE_MEDIA_INDEX)
+            await db_conn.execute_and_close(CREATE_HISTORY)
+            await (await db_conn.executescript(CREATE_MEDIA_INDEX)).close()
             await db_conn.commit()
 
     async def apply_updates(self) -> None:
@@ -41,8 +44,7 @@ class HistoryTable(Table, name="media"):
 
         query = "SELECT referer, completed FROM media WHERE domain = ? and url_path = ? LIMIT 1;"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (domain, db_path))
-            row = await cursor.fetchone()
+            row = await db_conn.execute_fetchone(query, (domain, db_path))
 
         if row:
             return row["referer"], bool(row["completed"])
@@ -51,7 +53,7 @@ class HistoryTable(Table, name="media"):
     async def update_referer(self, domain: str, db_path: str, referer: AbsoluteHttpURL) -> None:
         query = "UPDATE media SET referer = ? WHERE domain = ? and url_path = ?"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (str(referer), domain, db_path))
+            await db_conn.execute_and_close(query, (str(referer), domain, db_path))
             await db_conn.commit()
 
     async def query_album(self, domain: str, album_id: str) -> dict[str, bool]:
@@ -87,7 +89,7 @@ class HistoryTable(Table, name="media"):
     async def set_album_id(self, domain: str, media_item: MediaItem) -> None:
         query = "UPDATE media SET album_id = ? WHERE domain = ? and url_path = ?"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (media_item.album_id, domain, media_item.db_path))
+            await db_conn.execute_and_close(query, (media_item.album_id, domain, media_item.db_path))
             await db_conn.commit()
 
     async def check_complete_by_referer(self, domain: str | None, referers: Sequence[AbsoluteHttpURL]) -> bool:
@@ -108,15 +110,13 @@ class HistoryTable(Table, name="media"):
             params = domain, *referer_list
 
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, params)
-            return await cursor.fetchone() is not None
+            return await db_conn.execute_and_check(query, params)
 
     async def insert_incompleted(self, domain: str, media_item: MediaItem) -> None:
         url_path = media_item.db_path
         download_filename = media_item.download_filename or ""
 
-        async with self.db.writer() as db_conn:
-            cursor = await db_conn.cursor()
+        async with self.db.writer() as db_conn, aio.closing(await db_conn.cursor()) as cursor:
             query = (
                 "UPDATE media SET domain = ?, album_id = ? WHERE domain = 'no_crawler' and url_path = ? and referer = ?"
             )
@@ -159,20 +159,20 @@ class HistoryTable(Table, name="media"):
     async def mark_complete(self, domain: str, media_item: MediaItem) -> None:
         query = "UPDATE media SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE domain = ? and url_path = ?"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (domain, media_item.db_path))
+            await db_conn.execute_and_close(query, (domain, media_item.db_path))
             await db_conn.commit()
 
     async def add_filesize(self, item: MediaItem) -> None:
         assert item.size is not None
         query = """UPDATE media SET file_size=? WHERE domain = ? and url_path = ?"""
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (item.size, item.domain, item.db_path))
+            await db_conn.execute_and_close(query, (item.size, item.domain, item.db_path))
             await db_conn.commit()
 
     async def add_duration(self, domain: str, media_item: MediaItem) -> None:
         query = "UPDATE media SET duration=? WHERE domain = ? and url_path = ?"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (media_item.duration, domain, media_item.db_path))
+            await db_conn.execute_and_close(query, (media_item.duration, domain, media_item.db_path))
             await db_conn.commit()
 
     async def get_duration(self, domain: str, media_item: MediaItem) -> float | None:
@@ -182,22 +182,20 @@ class HistoryTable(Table, name="media"):
         url_path = media_item.db_path
         query = "SELECT duration FROM media WHERE domain = ? and url_path = ? LIMIT 1"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (domain, url_path))
-            if row := await cursor.fetchone():
+            if row := await db_conn.execute_fetchone(query, (domain, url_path)):
                 return row["duration"]
 
     async def add_download_filename(self, domain: str, media_item: MediaItem) -> None:
         url_path = media_item.db_path
         query = "UPDATE media SET download_filename=? WHERE domain = ? and url_path = ? and download_filename = ''"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (media_item.download_filename, domain, url_path))
+            await db_conn.execute_and_close(query, (media_item.download_filename, domain, url_path))
             await db_conn.commit()
 
     async def check_filename_exists(self, filename: str) -> bool:
         query = "SELECT 1 FROM media WHERE download_filename = ? LIMIT 1"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (filename,))
-            return await cursor.fetchone() is not None
+            return await db_conn.execute_and_check(query, (filename,))
 
     async def get_downloaded_filename(self, domain: str, media_item: MediaItem) -> str | None:
         """Returns the downloaded filename from the database."""
@@ -208,8 +206,7 @@ class HistoryTable(Table, name="media"):
         url_path = media_item.db_path
         query = "SELECT download_filename FROM media WHERE domain = ? and url_path = ? LIMIT 1"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (domain, url_path))
-            if row := await cursor.fetchone():
+            if row := await db_conn.execute_fetchone(query, (domain, url_path)):
                 return row["download_filename"]
 
 
@@ -231,7 +228,7 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
                 ("goonbox", "jpg5.su"),
             ]
         )
-        await db_conn.executescript(updates)
+        await (await db_conn.executescript(updates)).close()
         await db_conn.commit()
 
 
@@ -257,7 +254,7 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
             await db_conn.create_function(fn_name, 1, try_wrap(fix), deterministic=True)
             updates += f"UPDATE OR REPLACE media SET referer = {fn_name}(referer) WHERE domain = '{crawler.DOMAIN}';"  # noqa: S608
 
-        await db_conn.executescript(updates)
+        await (await db_conn.executescript(updates)).close()
         await db_conn.commit()
 
 

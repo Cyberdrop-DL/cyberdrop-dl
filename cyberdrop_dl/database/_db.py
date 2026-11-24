@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from pathlib import Path
 
-    import aiosqlite
+    from cyberdrop_dl.database.conn import DBConnection
 
 
 READ_POOL_SIZE = 10
@@ -26,13 +26,13 @@ class DBReadConnPool:
     def __init__(self, path: Path, size: int) -> None:
         self.path: Path = path
         self.max_size: int = size
-        self._queue: asyncio.Queue[aiosqlite.Connection] = asyncio.Queue(size)
-        self._busy: dict[asyncio.Task[Any], aiosqlite.Connection] = {}
+        self._queue: asyncio.Queue[DBConnection] = asyncio.Queue(size)
+        self._busy: dict[asyncio.Task[Any], DBConnection] = {}
         self._stack: contextlib.AsyncExitStack = contextlib.AsyncExitStack()
 
     async def _new_conn(self, idx: int) -> None:
         conn = await self._stack.enter_async_context(connect(self.path, name=f"db-reader-{idx}"))
-        await conn.execute("pragma query_only")
+        await conn.execute_and_close("pragma query_only")
         self._queue.put_nowait(conn)
 
     async def init(self) -> None:
@@ -50,7 +50,7 @@ class DBReadConnPool:
                 break
 
     @contextlib.asynccontextmanager
-    async def __call__(self) -> AsyncGenerator[aiosqlite.Connection]:
+    async def __call__(self) -> AsyncGenerator[DBConnection]:
         task = aio.current_task()
         if (conn := self._busy.get(task)) is not None:
             yield conn
@@ -84,7 +84,7 @@ class Database:
         self.hash: HashTable = HashTable(self)
         self.schema: SchemaTable = SchemaTable(self)
 
-        self.conn: aiosqlite.Connection
+        self.conn: DBConnection
         self.is_new: bool
 
     async def _connect(self) -> None:
@@ -92,7 +92,7 @@ class Database:
         self.conn = await raw_connect(self.path, "db-writer")
 
     @contextlib.asynccontextmanager
-    async def writer(self) -> AsyncGenerator[aiosqlite.Connection]:
+    async def writer(self) -> AsyncGenerator[DBConnection]:
         task = aio.current_task()
         if self._writer_task == task:
             yield self.conn
@@ -106,7 +106,7 @@ class Database:
                 self._writer_task = None
 
     @contextlib.asynccontextmanager
-    async def reader(self) -> AsyncGenerator[aiosqlite.Connection]:
+    async def reader(self) -> AsyncGenerator[DBConnection]:
         if not self._pool or aio.current_task() == self._writer_task:
             yield self.conn
             return
@@ -162,8 +162,8 @@ class Database:
             await asyncio.to_thread(run, self.path)
 
         await self._connect()
-        await (await self.conn.execute("pragma journal_mode=WAL")).close()
-        await (await self.conn.execute("pragma synchronous=NORMAL")).close()
+        await self.conn.execute_and_close("pragma journal_mode=WAL")
+        await self.conn.execute_and_close("pragma synchronous=NORMAL")
         await self.create_tables()
         self._pool = DBReadConnPool(self.path, READ_POOL_SIZE)
         await self._pool.init()

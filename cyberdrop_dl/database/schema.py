@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, NamedTuple, final
-
-import aiosqlite
+from typing import TYPE_CHECKING, NamedTuple, final, override
 
 from cyberdrop_dl.exceptions import DatabaseError
 
@@ -12,7 +10,7 @@ from .common import Table
 from .definitions import CREATE_SCHEMA
 
 if TYPE_CHECKING:
-    import aiosqlite
+    from cyberdrop_dl.database.conn import DBConnection
 
 
 @final
@@ -48,38 +46,40 @@ class SchemaTable(Table, name="schema_version"):
             return None
         query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query)
-            if row := await cursor.fetchone():
+            if row := await db_conn.execute_fetchone(query):
                 return Version.parse(row["version"])
 
+    @override
     async def create(self) -> None:
         logger.info(f"Expected database schema: {CURRENT_VERSION!s}")
         self.version = await self.get_version()
         logger.info(f"Current database schema: {self.version!s}")
         async with self.db.writer() as db_conn:
-            await db_conn.execute(CREATE_SCHEMA)
+            await db_conn.execute_and_close(CREATE_SCHEMA)
             await db_conn.commit()
 
     def check_version(self) -> None:
         error = None
         if self.version is None:
-            error = DatabaseError(f"Database has no schema information. Minimum required version: {REQUIRED_VERSION}")
+            error = f"Database has no schema information. Minimum required version: {REQUIRED_VERSION}"
         elif self.version < REQUIRED_VERSION:
-            error = DatabaseError(
+            error = (
                 f"Incompatible database version detected. Current: {self.version!s} - Required: {REQUIRED_VERSION!s}"
             )
+
         elif self.version >= CURRENT_VERSION:
             self.up_to_date = True
 
         if error:
-            error.add_note("Run 'cyberdrop-dl database transfer' to upgrade the database to a new version")
-            error.add_note(f"Full command: 'cyberdrop-dl database transfer '{self.db.path}'")
-            raise error
+            exc = DatabaseError(error)
+            exc.add_note("Run 'cyberdrop-dl database transfer' to upgrade the database to a new version")
+            exc.add_note(f"Full command: 'cyberdrop-dl database transfer '{self.db.path}'")
+            raise exc
 
     async def update(self, version: Version = CURRENT_VERSION) -> None:
         query = "INSERT INTO schema_version (version) VALUES (?)"
         async with self.db.writer() as db_conn:
-            await db_conn.execute(query, (str(version),))
+            await db_conn.execute_and_close(query, (str(version),))
             await db_conn.commit()
 
         self.version = version
@@ -87,7 +87,7 @@ class SchemaTable(Table, name="schema_version"):
         logger.info(f"Updated database schema to {version!s}")
 
 
-async def dump(db_conn: aiosqlite.Connection) -> str:
+async def dump(db_conn: DBConnection) -> str:
     query = "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name"
     rows = await db_conn.execute_fetchall(query)
     index_queries: list[str] = []
