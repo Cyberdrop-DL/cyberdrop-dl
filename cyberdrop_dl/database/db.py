@@ -28,14 +28,18 @@ class Database:
         _auto_transfer: bool = True,
     ) -> None:
         self.path: Path = path
+        self._in_use: bool = False
         self._pool_mgr: PoolManager = PoolManager(path)
         self._auto_transfer: bool = _auto_transfer
         self.ignore_history: bool = ignore_history
         self.history: HistoryTable = HistoryTable(self._pool_mgr, ignore_history)
         self.hash: HashTable = HashTable(self._pool_mgr, ignore_history)
         self.schema: SchemaTable = SchemaTable(self._pool_mgr, ignore_history)
-        self.conn: DBConnection
         self.is_new: bool
+
+    @property
+    def conn(self) -> DBConnection:
+        return self._pool_mgr.get_writer()
 
     async def _create_tables(self) -> None:
         await self.schema.create()
@@ -76,19 +80,27 @@ class Database:
         "Connect to db with a single connection for simple operations"
         self = cls(path)
         self.is_new = not await aio.get_size(self.path)
-        self.conn = await self._pool_mgr.connect_writer()
+        await self._pool_mgr.connect_writer()
         try:
+            self._in_use = True
             yield self
         finally:
             await self.conn.close()
+            self._in_use = False
 
     async def __aenter__(self) -> Self:
+        if self._in_use:
+            raise RuntimeError("Database context was already entered by another task")
+
+        self._in_use = True
         self.is_new = not await aio.get_size(self.path)
         await self._transfer()
-        self.conn = await self._pool_mgr.connect_writer()
+        await self._pool_mgr.connect_writer()
         await self.create_tables()
         await self._pool_mgr.init_pool()
         return self
 
     async def __aexit__(self, *_) -> None:
+        assert self._in_use
         await self._pool_mgr.aclose()
+        self._in_use = False

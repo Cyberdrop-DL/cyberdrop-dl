@@ -31,7 +31,7 @@ class DBReadConnPool:
         await conn.execute_and_close("PRAGMA query_only=ON")
         self._queue.put_nowait(conn)
 
-    async def prime(self) -> None:
+    async def init(self) -> None:
         await self._stack.__aenter__()
         async with asyncio.TaskGroup() as tg:
             for idx in range(self._queue.maxsize):
@@ -67,35 +67,38 @@ class PoolManager:
         self._pool: DBReadConnPool | None = None
         self._writer_task: asyncio.Task[Any] | None = None
         self._write_lock: asyncio.Lock = asyncio.Lock()
-        self._writer: DBConnection
+        self._writer: DBConnection | None = None
 
-    async def connect_writer(self) -> DBConnection:
-        try:
-            if self._writer:
-                ...
-            raise RuntimeError("A writter connection is already available")
-        except AttributeError:
-            self._writer = await connect(self.path, "db-writer")
-            return self._writer
+    def get_writer(self) -> DBConnection:
+        if self._writer is None:
+            raise RuntimeError("There is no active connection")
+        return self._writer
+
+    async def connect_writer(self) -> None:
+        if self._writer is not None:
+            raise RuntimeError("A writer connection is already available")
+
+        self._writer = await connect(self.path, "db-writer")
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncGenerator[DBConnection]:
         task = aio.current_task()
+        writer = self.get_writer()
         if self._writer_task == task:
-            yield self._writer
+            yield writer
             return
 
         async with self._write_lock:
             self._writer_task = task
             try:
-                yield self._writer
+                yield writer
             finally:
                 self._writer_task = None
 
     @contextlib.asynccontextmanager
     async def reader(self) -> AsyncGenerator[DBConnection]:
         if self._pool is None or aio.current_task() == self._writer_task:
-            yield self._writer
+            yield self.get_writer()
             return
 
         async with self._pool() as conn:
@@ -110,16 +113,17 @@ class PoolManager:
                 await conn.rollback()
 
     async def init_pool(self) -> None:
-        await self._writer.execute_and_close("pragma journal_mode=WAL")
-        await self._writer.execute_and_close("pragma synchronous=NORMAL")
+        await self.get_writer().execute_and_close("PRAGMA journal_mode=WAL")
+        await self.get_writer().execute_and_close("PRAGMA synchronous=NORMAL")
         self._pool = DBReadConnPool(self.path, READ_POOL_SIZE)
-        await self._pool.prime()
+        await self._pool.init()
 
     async def aclose(self) -> None:
-        assert self._pool is not None
         try:
             async with asyncio.TaskGroup() as tg:
-                tg.create_task(self._pool.aclose())
-                tg.create_task(self._writer.close())
+                if self._writer is not None:
+                    tg.create_task(self._writer.close())
+                if self._pool is not None:
+                    tg.create_task(self._pool.aclose())
         finally:
-            self._pool = None
+            self._pool = self._writer = None
