@@ -73,7 +73,7 @@ def _retry_failed(_: object) -> RetrySource:
 
 def _scan_and_create_hashes(manager: Manager) -> None:
     path = ask_dir("Select the directory to scan", default=manager.config.download_folder)
-    with Hasher.create(manager.config, manager.database, path) as hasher:
+    with Hasher.create(manager.config, manager.new_db(), path) as hasher:
         hash_stats = aio.run(hash_directory(hasher))
         stats.print(hash_stats)
         enter_to_continue()
@@ -84,7 +84,7 @@ def _prune_hashes(manager: Manager) -> None:
         "You are about to delete the hashes of every file in the database that no longer exists on disk",
     )
     if ask_confirmation(explicit=True):
-        stats.print(aio.run(_prune(manager.database)))
+        stats.print(aio.run(_prune(manager.new_db())))
         enter_to_continue()
 
 
