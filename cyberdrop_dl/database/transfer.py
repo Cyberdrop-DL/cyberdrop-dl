@@ -53,7 +53,7 @@ def detect_version(conn: sqlite3.Connection) -> Version | None:
     if "schema_version" in tables:
         versions = _get_applied_versions(conn)
         if versions:
-            return Version.parse(max(versions))
+            return max(map(Version.parse, versions))
 
     if tables == {"media", "downloads_temp", "coomeno"}:
         return Version(4, 2, 231)
@@ -142,7 +142,7 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-def run(db_path: Path, *, force: bool = False) -> None:
+def run(db_path: Path, *, force: bool = False, cli: bool = True) -> None:
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
@@ -155,10 +155,11 @@ def run(db_path: Path, *, force: bool = False) -> None:
     logger.info("Detected schema version: %s", old_version)
 
     if not force and old_version is not None and old_version >= CURRENT_VERSION:
-        logger.info(
-            "Database is already at the latest schema (%s). Use --force to re-run.",
-            CURRENT_VERSION,
-        )
+        if cli:
+            logger.info(
+                "Database is already at the latest schema (%s). Use --force to re-run.",
+                CURRENT_VERSION,
+            )
         return
 
     now = sanitize_filename(str(dates.now()))
