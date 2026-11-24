@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from rich.pretty import Node
     from rich.traceback import Traceback
 
+__tracebackhide__ = True
 _original_traverse = None
 
 

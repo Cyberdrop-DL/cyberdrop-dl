@@ -170,7 +170,7 @@ class Database:
         return self
 
     async def __aexit__(self, *_) -> None:
-        assert self._pool
+        assert self._pool is not None
         try:
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._pool.aclose())

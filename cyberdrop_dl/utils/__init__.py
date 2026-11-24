@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
 
 
+__tracebackhide__ = True
 logger = logging.getLogger(__name__)
 
 

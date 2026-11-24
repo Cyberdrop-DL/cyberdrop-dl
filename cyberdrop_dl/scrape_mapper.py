@@ -316,12 +316,14 @@ class ScrapeMapper:
                 self.task_mngr.downloads.create_task(self._wait_until_scrape_is_done(stats))
                 max_children = _build_max_children_map(self.manager.config)
 
+                sleep = aio.periodic_sleep(10)
                 async for item in items:
                     item.max_children = max_children
                     item.download_folder = self.manager.config.download_folder
                     if self._should_scrape(item):
                         stats.update(item)
                         self.task_mngr.scrape.create_task(self._send_to_crawler(item))
+                    await sleep()
 
             if not stats.count:
                 logger.warning("No valid links found")

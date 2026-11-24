@@ -232,7 +232,7 @@ def _check_ffmpeg(config: Config) -> None:
         errors.append(exc)
 
     if errors:
-        raise CDLConfigRuntimeErrorsGroup("Some config options are impossible to fulfill", errors)
+        raise CDLConfigRuntimeErrorsGroup("Some config options are impossible to fulfill", tuple(errors))
 
 
 def _perform_cleanup(config: Config) -> None:

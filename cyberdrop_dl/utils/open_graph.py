@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     import bs4
 
+__tracebackhide__ = True
 _REQUIRED_ATTRS: Final = ("title", "type", "image", "url", "description")
 
 

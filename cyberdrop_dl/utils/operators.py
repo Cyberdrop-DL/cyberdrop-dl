@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, final
 
+__tracebackhide__ = True
+
 
 @final
 class nested_itemgetter:  # noqa: N801

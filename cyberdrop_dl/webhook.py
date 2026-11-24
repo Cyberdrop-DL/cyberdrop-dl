@@ -19,26 +19,28 @@ logger = logging.getLogger(__name__)
 
 
 async def notify(webhook: AppriseURL, body: str) -> None:
-    await _notify(
-        url=str(webhook.url.get_secret_value()),
+    url = str(webhook.url.get_secret_value())
+    form = await asyncio.to_thread(
+        _prepare_form,
         body=body,
         attach_logs=webhook.attach_logs,
     )
-
-
-async def _notify(url: str, body: str, *, attach_logs: bool) -> None:
-    log_spacer()
-    form = aiohttp.FormData()
-    if attach_logs:
-        await _attach_logs(form, size_limit=MAX_ATTACHMENT_SIZE - len(body.encode()))
-    form.add_field("username", "cyberdrop-dl")
-    form.add_field("content", body)
     await _send_notification(url, form)
 
 
-async def _attach_logs(form: aiohttp.FormData, size_limit: float) -> None:
+def _prepare_form(body: str, *, attach_logs: bool) -> aiohttp.FormData:
+    log_spacer()
+    form = aiohttp.FormData()
+    if attach_logs:
+        _attach_logs(form, size_limit=MAX_ATTACHMENT_SIZE - len(body.encode()))
+    form.add_field("username", "cyberdrop-dl")
+    form.add_field("content", body)
+    return form
+
+
+def _attach_logs(form: aiohttp.FormData, size_limit: float) -> None:
     try:
-        logs = await asyncio.to_thread(export_logs, size_limit=size_limit)
+        logs = export_logs(size_limit=size_limit)
     except Exception:
         logger.exception("Unable to attach log for webhook notification")
     else:

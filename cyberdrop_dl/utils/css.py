@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.constants import HttpMethod
 
+__tracebackhide__ = True
+
 
 def _choose_html_parser() -> str:
     try:
@@ -36,19 +38,16 @@ may_block = aio.may_block("select")
 
 @may_block
 def _soup_select(tag: Tag, selector: str) -> ResultSet[Tag]:
-    __tracebackhide__ = True
     return tag.select(selector)
 
 
 @may_block
 def _soup_select_one(tag: Tag, selector: str) -> Tag | None:
-    __tracebackhide__ = True
     return tag.select_one(selector)
 
 
 @may_block
 def _soup_iselect(tag: Tag, selector: str) -> Iterator[Tag]:
-    __tracebackhide__ = True
     return tag.css.iselect(selector)
 
 
@@ -123,7 +122,6 @@ def attr(tag: Tag, *attributes: str) -> str:
 
 @may_block
 def text(tag: Tag, *, strip: bool = True) -> str:
-    __tracebackhide__ = True
     return tag.get_text(strip=strip)
 
 

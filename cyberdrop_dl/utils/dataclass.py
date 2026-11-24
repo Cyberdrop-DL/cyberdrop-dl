@@ -15,6 +15,8 @@ class _DataClass(Protocol):
     __dataclass_fields__: ClassVar[dict[str, Any]]
 
 
+__tracebackhide__ = True
+
 _FIELDS_CACHE: dict[type, tuple[str, ...]] = {}
 
 

@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 else:
     Element = ET.Element
 
+__tracebackhide__ = True
+
 may_block = aio.may_block("XML")
 
 XML = may_block(ET.XML)

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
+__tracebackhide__ = True
 
 if sys.platform == "win32":
     # Try to import win32con for Windows constants, fallback to hardcoded values if unavailable

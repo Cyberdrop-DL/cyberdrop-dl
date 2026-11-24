@@ -12,6 +12,8 @@ type Path = tuple[str | int, ...]
 type Validator = Callable[[object], bool]
 type Visitor = Callable[[Path, Any], Any]
 
+__tracebackhide__ = True
+
 
 @dataclass_repr("_traverse_gen", "_results", "_name")
 class TraverseResults[T, U]:

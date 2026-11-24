@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.url_objects import AbsoluteHttpURL
 
+__tracebackhide__ = True
+
 
 def fix_query_params_encoding(link: str) -> str:
     if "?" not in link:

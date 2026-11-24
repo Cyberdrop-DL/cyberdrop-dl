@@ -18,6 +18,8 @@ type _Result[_T1] = tuple[bool, _T1]
 type _Validator[_T1] = Callable[[object], _Result[_T1]]
 type _VisitorCheck[_T1] = Callable[[_TPath, Any], _Result[_T1]]
 
+__tracebackhide__ = True
+
 
 @final
 @dataclasses.dataclass(slots=True, frozen=True, eq=False)

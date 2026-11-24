@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
     from bs4.element import Tag
 
+__tracebackhide__ = True
+
 
 def is_type(ele: Any, otype: str) -> bool:
     elems = ele if type(ele) is list else [ele]

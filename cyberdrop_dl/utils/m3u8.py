@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 BasePathMixin.__repr__ = GroupedBasePathMixin.__repr__ = vars_repr
 
+__tracebackhide__ = True
+
 
 class MediaType(StrEnum):
     audio = "AUDIO"

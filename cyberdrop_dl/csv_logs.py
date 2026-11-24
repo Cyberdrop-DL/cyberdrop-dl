@@ -124,7 +124,8 @@ class CSVLogsManager:
                 referer=referer,
                 parent=parent,
                 origin=origin,
-            )
+            ),
+            name=f"Errors from {url}",
         )
 
     def write_scrape_error(
@@ -141,7 +142,8 @@ class CSVLogsManager:
                 error=error_message,
                 origin=origin,
                 parent=parent,
-            )
+            ),
+            name=f"Errors from {url}",
         )
 
     def write_response(

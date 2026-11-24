@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import functools
 import inspect
@@ -197,8 +198,30 @@ def _combined_error_context() -> Generator[None]:
         yield
 
 
+class _AppError(Exception):
+    def __init__(self, exc: CDLAppError, origin: Path | yarl.URL | None, url: yarl.URL | str) -> None:
+        self.app: CDLAppError = exc
+        self.origin: Path | yarl.URL | None = origin
+        self.url: yarl.URL | str = url
+        super().__init__()
+
+
 @contextlib.contextmanager
-def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+def _app_error_ctx(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
+    try:
+        yield
+    except _AppError as e:
+        e.origin = e.origin or get_origin(item)
+        if getattr(self, "log_prefix", False):
+            self, item = cast("Downloader", self), cast("MediaItem", item)
+            _log_dl_error(self, e, item)
+        else:
+            item = cast("ScrapeItem | yarl.URL", item)
+            _log_scrape_error(self, e, item)
+
+
+@contextlib.contextmanager
+def _rewrite_exc_ctx(item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
     if getattr(item, "is_segment", False):
         with contextlib.suppress(Exception):
             yield
@@ -208,8 +231,8 @@ def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | ya
     app_error = origin = exc = None
     real_url: yarl.URL | str = ""
     try:
-        yield
-
+        with _combined_error_context():
+            yield
     except CDLBaseError as e:
         app_error = CDLAppError(e.ui_failure, str(e))
         origin = e.origin
@@ -222,69 +245,60 @@ def _error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | ya
         exc = e
         app_error = CDLAppError.from_unknown_exc(e)
 
-    if app_error is None:
-        return
-
-    origin = origin or get_origin(item)
-    if getattr(self, "log_prefix", False):
-        self, item = cast("Downloader", self), cast("MediaItem", item)
-        _log_dl_error(self, item, app_error, exc, origin)
-    else:
-        _log_scrape_error(self, item, real_url or url, app_error, exc, origin)
+    if app_error is not None:
+        raise _AppError(app_error, origin, real_url or url) from exc
 
 
 @contextlib.contextmanager
 def _blocking_error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> Generator[None]:
-    with _error_handling_context(self, item), _combined_error_context():
+    with _app_error_ctx(self, item), _rewrite_exc_ctx(item):
         yield
 
 
 @contextlib.asynccontextmanager
 async def error_handling_context(self: _HasManager, item: ScrapeItem | MediaItem | yarl.URL) -> AsyncGenerator[None]:
-    # The same as _blocking_error_handling_context (for now)
-    with _error_handling_context(self, item), _combined_error_context():
+    try:
         yield
+    except Exception as e:  # noqa: BLE001
+
+        def handle(e: Exception):
+            with _rewrite_exc_ctx(item):
+                raise e from e.__cause__
+
+        with _app_error_ctx(self, item):
+            await asyncio.to_thread(handle, e)
 
 
-def _log_scrape_error(  # noqa: PLR0913, PLR0917
-    self: _HasManager,
-    item: MediaItem | ScrapeItem | yarl.URL,
-    url: yarl.URL | str,
-    app_error: CDLAppError,
-    exc: BaseException | None,
-    origin: yarl.URL | Path | None,
-) -> None:
-    logger.error(f"Scrape Failed: {url} ({app_error.msg})", exc_info=exc)
+def _log_scrape_error(self: _HasManager, error: _AppError, item: ScrapeItem | yarl.URL) -> None:
+    logger.error("Scrape Failed: %s (%s)", error.url, error.app.msg, exc_info=error.__cause__)
     parents = getattr(item, "parents", None)
     self.manager.scrape_mapper.logs.write_scrape_error(
-        url,
-        app_error.csv_msg,
-        origin,
+        error.url,
+        error.app.csv_msg,
+        error.origin,
         parent=parents[-1] if parents else None,
     )
-    self.manager.scrape_mapper.tui.scrape_errors.add(app_error.ui_error)
+    self.manager.scrape_mapper.tui.scrape_errors.add(error.app.ui_error)
 
 
-def _log_dl_error(
-    self: Downloader,
-    item: MediaItem,
-    app_error: CDLAppError,
-    exc: BaseException | None,
-    origin: yarl.URL | Path | None,
-) -> None:
+def _log_dl_error(self: Downloader, error: _AppError, item: MediaItem) -> None:
     logger.error(
-        f"{self.log_prefix} Failed: {item.url} ({app_error.msg}) \n -> Referer: {item.referer}",
-        exc_info=exc,
+        "%s Failed: %s (%s) \n -> Referer: %",
+        self.log_prefix,
+        item.url,
+        error.app.msg,
+        item.referer,
+        exc_info=error.__cause__,
     )
     self.manager.scrape_mapper.logs.write_download_error(
         item.url,
         item.referer,
-        app_error.csv_msg,
-        origin,
+        error.app.csv_msg,
+        error.origin,
         parent=item.parents[-1] if item.parents else None,
     )
     self.manager.scrape_mapper.tui.files.stats.failed += 1
-    self.manager.scrape_mapper.tui.download_errors.add(app_error.ui_error)
+    self.manager.scrape_mapper.tui.download_errors.add(error.app.ui_error)
 
 
 @overload
