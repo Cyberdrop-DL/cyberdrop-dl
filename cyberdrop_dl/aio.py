@@ -93,6 +93,19 @@ class EagerTaskGroup(asyncio.TaskGroup):
 
             return super().create_task(run, name=name, context=context)
 
+    else:
+
+        @override
+        def create_task(
+            self,
+            coro: Coroutine[Any, Any, _T_co],
+            *,
+            name: str | None = None,
+            context: Context | None = None,
+            eager_start: bool | None = None,
+        ) -> asyncio.Task[_T_co]:
+            return super().create_task(coro, name=name or get_coro_name(coro), context=context, eager_start=eager_start)
+
     async def __aexit__(
         self,
         et: type[BaseException] | None,
