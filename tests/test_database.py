@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 from pathlib import Path
 
@@ -130,7 +131,7 @@ async def test_database_creation(tmp_cwd: Path) -> None:
 
 async def test_automatic_database_transfer_creates_backup(tmp_cwd: Path) -> None:
     db_file = tmp_cwd / "test_db.db"
-    with sqlite3.connect(db_file) as conn:
+    with contextlib.closing(sqlite3.connect(db_file)) as conn, conn:
         conn.executescript(
             """
             CREATE TABLE media (
