@@ -137,6 +137,6 @@ class Album:
 def _extract_album(html: str) -> Album:
     return Album(
         id=extr_text(html, 'const ALBUM_ENC_ID = "', '"'),
-        name=css.select_tag_text(html, "h1"),
+        name=css.select_text(css.soup(html, parse_only="h1"), "h1"),
         files=tuple(TextExtractor(extr_text(html, "const FILES = [", "],")).repeat('{ id:"', '"')),
     )

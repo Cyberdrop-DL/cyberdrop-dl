@@ -5,18 +5,36 @@ import dataclasses
 import html
 from typing import TYPE_CHECKING, NamedTuple, cast, overload
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, ResultSet
 from bs4.filter import SoupStrainer
 
+from cyberdrop_dl import context, env
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import catch, strict_variadic
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterator
 
     from bs4.element import Tag
 
     from cyberdrop_dl.constants import HttpMethod
+
+if env.DEBUG_MODE:
+
+    def _check_running_loop(name: str = "select") -> None:
+        if not context.CHECK_BLOCKING_OPERATION.get():
+            return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+
+        raise RuntimeError(f"A {name} operation is slow and should run on another thread to not block the event loop")
+
+else:
+
+    def _check_running_loop(name: str = "select") -> None:  # noqa: ARG001
+        return
 
 
 def _choose_html_parser() -> str:
@@ -31,11 +49,30 @@ def _choose_html_parser() -> str:
 HTML_PARSER = _choose_html_parser()
 
 
+def _soup_select(tag: Tag, selector: str) -> ResultSet[Tag]:
+    __tracebackhide__ = True
+    _check_running_loop()
+    return tag.select(selector)
+
+
+def _soup_select_one(tag: Tag, selector: str) -> Tag | None:
+    __tracebackhide__ = True
+    _check_running_loop()
+    return tag.select_one(selector)
+
+
+def _soup_iselect(tag: Tag, selector: str) -> Iterator[Tag]:
+    __tracebackhide__ = True
+    _check_running_loop()
+    return tag.css.iselect(selector)
+
+
 class SelectorError(ScrapeError):
     def __init__(self, message: str | None = None) -> None:
         super().__init__(422, message)
 
 
+# TODO: deprecate this class
 class CssAttributeSelector(NamedTuple):
     element: str
     attribute: str = ""
@@ -56,7 +93,7 @@ class HTMLForm:
 
 def _select_one(tag: Tag, selector: str) -> Tag:
     """Same as `tag.select_one` but asserts the result is not `None`"""
-    result = tag.select_one(selector)
+    result = _soup_select_one(tag, selector)
     if result is None:
         raise SelectorError(f"{selector} tag not found")
     return result
@@ -66,13 +103,8 @@ def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str |
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
     inner_tag = select(tag, selector)
     if decompose:
-        for trash in inner_tag.select(decompose):
-            trash.decompose()
+        _decompose(tag, decompose)
     return text(inner_tag, strip=strip)
-
-
-def select_tag_text(html: str, tag_name: str) -> str:
-    return select_text(soup(html, parse_only=tag_name), tag_name)
 
 
 def attr_or_none(tag: Tag, *attributes: str) -> str | None:
@@ -105,6 +137,7 @@ def attr(tag: Tag, *attributes: str) -> str:
 
 
 def text(tag: Tag, *, strip: bool = True) -> str:
+    _check_running_loop()
     return tag.get_text(strip=strip)
 
 
@@ -133,7 +166,7 @@ def iselect(tag: Tag, selector: str, attribute: str) -> Generator[str]: ...
 
 def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[Tag] | Generator[str]:
     """Same as `tag.select(selector)`, but it returns a generator instead of a list."""
-    tags = tag.css.iselect(selector)
+    tags = _soup_iselect(tag, selector)
     if not attribute:
         yield from tags
 
@@ -170,9 +203,12 @@ def best_from_srcset(srcset: str) -> str:
     return options[best]
 
 
-def decompose(tag: Tag, selector: str) -> None:
-    for inner_tag in tag.select(selector):
+def _decompose(tag: Tag, selector: str) -> None:
+    for inner_tag in _soup_select(tag, selector):
         inner_tag.decompose()
+
+
+decompose = _decompose
 
 
 def rstrip_domain(title: str, domain: str) -> str:
@@ -217,6 +253,7 @@ def where(selector1: str, selector2: str, *selectors: str) -> str:
 def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
     if not content:
         raise ScrapeError(204, "Received empty HTML response")
+    _check_running_loop()
     return BeautifulSoup(content, HTML_PARSER, parse_only=SoupStrainer(parse_only) if parse_only is not None else None)
 
 

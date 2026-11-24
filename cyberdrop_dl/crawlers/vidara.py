@@ -88,7 +88,7 @@ class VidaraAPI(API):
         title = resp.get("title")
         if not title:
             html = await self.request_text(self.PRIMARY_URL / "e" / video_id)
-            title = css.select_tag_text(html, "title")
+            title = css.select_text(css.soup(html, parse_only="title"), "title")
 
         return Video(
             id=video_id,

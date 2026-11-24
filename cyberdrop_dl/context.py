@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 ALLOW_NO_EXT: ContextVar[bool] = ContextVar("ALLOW_NO_EXT", default=False)
 CHECK_DL_CAPACITY: ContextVar[bool] = ContextVar("CHECK_DL_CAPACITY")
+CHECK_BLOCKING_OPERATION: ContextVar[bool] = ContextVar("CHECK_BLOCKING_OPERATION", default=True)
 CONCURRENT_SEGMENTS: ContextVar[int] = ContextVar("CONCURRENT_SEGMENTS")
 IGNORE_CONTENT_TYPE: ContextVar[bool] = ContextVar("IGNORE_CONTENT_TYPE", default=False)
 MAIN_LOG_FILE: ContextVar[Path] = ContextVar("MAIN_LOG_FILE")

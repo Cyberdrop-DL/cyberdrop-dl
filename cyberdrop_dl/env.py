@@ -27,6 +27,7 @@ def _cast_bool(value: bool | str | None) -> bool:  # noqa: FBT001
     return value.casefold() not in {"no", "0", "false"}
 
 
+IS_PYTEST = "pytest" in sys.modules
 RUNNING_IN_TERMUX = _cast_bool(os.getenv("TERMUX_VERSION") or "com.termux" in os.getenv("PREFIX", sys.prefix))
 FORCE_PORTRAIT_MODE = _cast_bool(_env("PORTRAIT_MODE") or RUNNING_IN_TERMUX)
 DEBUG_LOG_FOLDER = _env("DEBUG_LOG_FOLDER")
@@ -36,7 +37,7 @@ DEBUG_MODE = _cast_bool(
     or DEBUG_LOG_FOLDER
     or os.getenv("PYCHARM_HOSTED")
     or os.getenv("TERM_PROGRAM") in {"vscode", "zed"}
-    or "pytest" in sys.modules
+    or IS_PYTEST
 )
 
 APPDATA_FOLDER = _env("APPDATA_FOLDER")
@@ -59,5 +60,9 @@ TWITTER_MAX_EMPTY_PAGES = int(_env("TWITTER_MAX_EMPTY_PAGES") or 10)
 
 ALL_VARS = dict(sorted(ALL_VARS.items()))  # pyright: ignore[reportConstantRedefinition]
 ALL_VARS_RESOLVED = dict(
-    sorted((k, v) for k, v in globals().items() if k != "ALL_VARS" and not k.startswith("_") and k.upper() == k)
+    sorted(
+        (k, v)
+        for k, v in globals().items()
+        if k not in {"ALL_VARS", "IS_PYTEST"} and not k.startswith("_") and k.upper() == k
+    )
 )

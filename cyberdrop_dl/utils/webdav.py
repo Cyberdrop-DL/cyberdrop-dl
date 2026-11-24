@@ -9,6 +9,7 @@ from collections.abc import Generator
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
+from cyberdrop_dl import context
 from cyberdrop_dl.utils import xml
 
 if TYPE_CHECKING:
@@ -112,4 +113,5 @@ def update_tags_from_ns(root: xml.Element) -> xml.Element:
     return xml.XML(xml.to_bytes(root))
 
 
-DEFAULT_PROPFIND = xml.to_bytes(create_propfind_xml())
+with context.enter(context.CHECK_BLOCKING_OPERATION, False):
+    DEFAULT_PROPFIND = xml.to_bytes(create_propfind_xml())
