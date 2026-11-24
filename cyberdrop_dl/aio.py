@@ -14,6 +14,7 @@ from weakref import WeakValueDictionary
 
 from aiolimiter.leakybucket import AsyncLimiter
 
+from cyberdrop_dl import context, env
 from cyberdrop_dl.constants import MISSING
 
 if TYPE_CHECKING:
@@ -37,6 +38,40 @@ if TYPE_CHECKING:
 
 _T_co = TypeVar("_T_co", covariant=True)
 __tracebackhide__ = True
+
+
+if env.DEBUG_MODE:
+
+    def _check_running_loop(name: str | None = None) -> None:
+        if not context.CHECK_BLOCKING_OPERATION.get():
+            return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+
+        operation = f"A {name} operation" if name else "This operation"
+        raise RuntimeError(f"{operation} is slow and should run on another thread to not block the event loop")
+
+else:
+
+    def _check_running_loop(name: str | None = None) -> None:  # noqa: ARG001
+        return
+
+
+def may_block[**P, T](name: str | None = None) -> Callable[[Callable[P, T]], Callable[P, T]]:
+
+    def check_and_run(fn: Callable[P, T]) -> Callable[P, T]:
+
+        fname = name or getattr(fn, "__name__", None)
+
+        def run(*args: P.args, **kwargs: P.kwargs) -> T:
+            _check_running_loop(fname)
+            return fn(*args, **kwargs)
+
+        return run
+
+    return check_and_run
 
 
 def _get_coro_frame(coro: Coroutine[Any, Any, object]) -> FrameType | None:

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, NamedTuple, cast, overload
 from bs4 import BeautifulSoup, ResultSet
 from bs4.filter import SoupStrainer
 
-from cyberdrop_dl import context, env
+from cyberdrop_dl import aio
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import catch, strict_variadic
 
@@ -18,23 +18,6 @@ if TYPE_CHECKING:
     from bs4.element import Tag
 
     from cyberdrop_dl.constants import HttpMethod
-
-if env.DEBUG_MODE:
-
-    def _check_running_loop(name: str = "select") -> None:
-        if not context.CHECK_BLOCKING_OPERATION.get():
-            return
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return
-
-        raise RuntimeError(f"A {name} operation is slow and should run on another thread to not block the event loop")
-
-else:
-
-    def _check_running_loop(name: str = "select") -> None:  # noqa: ARG001
-        return
 
 
 def _choose_html_parser() -> str:
@@ -48,22 +31,24 @@ def _choose_html_parser() -> str:
 
 HTML_PARSER = _choose_html_parser()
 
+may_block = aio.may_block("select")
 
+
+@may_block
 def _soup_select(tag: Tag, selector: str) -> ResultSet[Tag]:
     __tracebackhide__ = True
-    _check_running_loop()
     return tag.select(selector)
 
 
+@may_block
 def _soup_select_one(tag: Tag, selector: str) -> Tag | None:
     __tracebackhide__ = True
-    _check_running_loop()
     return tag.select_one(selector)
 
 
+@may_block
 def _soup_iselect(tag: Tag, selector: str) -> Iterator[Tag]:
     __tracebackhide__ = True
-    _check_running_loop()
     return tag.css.iselect(selector)
 
 
@@ -136,8 +121,9 @@ def attr(tag: Tag, *attributes: str) -> str:
     raise SelectorError(f"{attributes = } not found")
 
 
+@may_block
 def text(tag: Tag, *, strip: bool = True) -> str:
-    _check_running_loop()
+    __tracebackhide__ = True
     return tag.get_text(strip=strip)
 
 
@@ -250,10 +236,10 @@ def where(selector1: str, selector2: str, *selectors: str) -> str:
     return ":where(" + ", ".join(selectors) + ")"
 
 
+@may_block
 def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
     if not content:
         raise ScrapeError(204, "Received empty HTML response")
-    _check_running_loop()
     return BeautifulSoup(content, HTML_PARSER, parse_only=SoupStrainer(parse_only) if parse_only is not None else None)
 
 
