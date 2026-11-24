@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import aiosqlite
 
+from cyberdrop_dl import env
 from cyberdrop_dl.signature import dataclass_repr
 
 if TYPE_CHECKING:
@@ -64,10 +65,27 @@ class Table(ABC):
             return await cursor.fetchone() is not None
 
 
+def _log_query(query: str, name: str | None = None) -> None:
+    query = query.strip()
+    if query.count("\n") > 1:
+        query = "\n" + query
+    if name:
+        name = f"[{name}]"
+
+    logger.debug("[SQL]%s executing: %s", name, query)
+
+
+def _connect(path: Path, name: str | None) -> sqlite3.Connection:
+    db_conn = sqlite3.connect(path, timeout=20)
+    db_conn.row_factory = sqlite3.Row
+    if env.DEBUG_MODE:
+        db_conn.set_trace_callback(lambda query: _log_query(query, name))
+    return db_conn
+
+
 async def raw_connect(path: Path, name: str | None = None) -> DBConnection:
-    db_conn = DBConnection(lambda: sqlite3.connect(path, timeout=20), name=name)
+    db_conn = DBConnection(lambda: _connect(path, name), name=name)
     await db_conn
-    db_conn.row_factory = aiosqlite.Row
     return db_conn
 
 

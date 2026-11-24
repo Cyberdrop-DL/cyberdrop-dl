@@ -10,7 +10,7 @@ from .common import Table
 from .definitions import CREATE_HISTORY, CREATE_MEDIA_INDEX
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Generator, Sequence
 
     import aiosqlite
 
@@ -90,16 +90,22 @@ class HistoryTable(Table, name="media"):
             await db_conn.execute(query, (media_item.album_id, domain, media_item.db_path))
             await db_conn.commit()
 
-    async def check_complete_by_referer(self, domain: str | None, referer: AbsoluteHttpURL) -> bool:
+    async def check_complete_by_referer(self, domain: str | None, referers: Sequence[AbsoluteHttpURL]) -> bool:
         if self.ignore_history:
             return False
 
+        if not referers:
+            raise ValueError("At least one referer must be provided")
+
+        placeholders = ",".join("?" for _ in referers)
+        referer_list = [str(r) for r in referers]
+
         if domain is None:
-            query = "SELECT 1 FROM media WHERE referer = ? AND completed != 0 LIMIT 1"
-            params = (str(referer),)
+            query = f"SELECT 1 FROM media WHERE referer IN ({placeholders}) AND completed = 1 LIMIT 1"  # noqa: S608
+            params = referer_list
         else:
-            query = "SELECT 1 FROM media WHERE domain = ? AND referer = ? AND completed != 0 LIMIT 1"
-            params = domain, str(referer)
+            query = f"SELECT 1 FROM media WHERE domain = ? AND referer IN ({placeholders}) AND completed = 1 LIMIT 1"  # noqa: S608
+            params = domain, *referer_list
 
         async with self.db.reader() as db_conn:
             cursor = await db_conn.execute(query, params)

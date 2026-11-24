@@ -148,13 +148,12 @@ class BunkrCrawler(Crawler):
                 await sleep()
 
     @override
-    async def check_complete_from_referer(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self, referer: AbsoluteHttpURL, *, any_crawler: bool = False
-    ) -> bool:
-        if not self.is_subdomain(referer):
-            referer = referer.with_host(self.PRIMARY_URL.host)
+    @classmethod
+    def _get_normalized_referers(cls, referer: AbsoluteHttpURL) -> list[AbsoluteHttpURL]:
+        if not cls.is_subdomain(referer):
+            referer = referer.with_host(cls.PRIMARY_URL.host)
 
-        return await super().check_complete_from_referer(referer, any_crawler=any_crawler)
+        return super()._get_normalized_referers(referer)
 
     @error_handling_wrapper
     async def file_by_id(self, scrape_item: ScrapeItem, file_id: str) -> None:
@@ -197,7 +196,7 @@ class BunkrCrawler(Crawler):
 
     async def _download_from_html(self, url: AbsoluteHttpURL) -> FileDownload:
         soup = await self._request_soup_lenient(url)
-        if soup.select_one(Selector.SERVER_UNDER_MAINTENANCE):
+        if css.select_or_none(soup, Selector.SERVER_UNDER_MAINTENANCE):
             raise ScrapeError("Bunkr Maintenance", "Server under maintenance")
 
         thumb = open_graph.get_image(soup)

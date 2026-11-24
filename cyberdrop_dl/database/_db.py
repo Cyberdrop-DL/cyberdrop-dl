@@ -22,12 +22,6 @@ if TYPE_CHECKING:
 READ_POOL_SIZE = 10
 
 
-def _current_task() -> asyncio.Task[Any]:
-    task = asyncio.current_task()
-    assert task is not None
-    return task
-
-
 class DBReadConnPool:
     def __init__(self, path: Path, size: int) -> None:
         self.path: Path = path
@@ -57,7 +51,7 @@ class DBReadConnPool:
 
     @contextlib.asynccontextmanager
     async def __call__(self) -> AsyncGenerator[aiosqlite.Connection]:
-        task = _current_task()
+        task = aio.current_task()
         if (conn := self._busy.get(task)) is not None:
             yield conn
             return
@@ -92,7 +86,7 @@ class Database:
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncGenerator[aiosqlite.Connection]:
-        task = _current_task()
+        task = aio.current_task()
         if self._writer_task == task:
             yield self.conn
             return
@@ -106,7 +100,7 @@ class Database:
 
     @contextlib.asynccontextmanager
     async def reader(self) -> AsyncGenerator[aiosqlite.Connection]:
-        if not self._pool or _current_task() == self._writer_task:
+        if not self._pool or aio.current_task() == self._writer_task:
             yield self.conn
             return
 
