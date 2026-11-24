@@ -9,7 +9,9 @@ import pytest
 from cyberdrop_dl import aio, context, scrape_mapper
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
-from cyberdrop_dl.database import Database, common, schema
+from cyberdrop_dl.database import common, schema
+from cyberdrop_dl.database.conn import connect
+from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_source import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
@@ -163,7 +165,7 @@ async def test_automatic_database_transfer_creates_backup(tmp_cwd: Path) -> None
     async with Database(db_file):
         pass
 
-    async with common.connect(db_file) as conn:
+    async with aio.closing(await connect(db_file)) as conn:
         files = await conn.execute_fetchall("SELECT * FROM files")
         cursor = await conn.execute("SELECT name FROM sqlite_master WHERE name = 'temp'")
         temp = await cursor.fetchone()
@@ -180,11 +182,11 @@ async def test_automatic_database_transfer_creates_backup(tmp_cwd: Path) -> None
 
 async def test_pre_allocation(tmp_cwd: Path) -> None:
     db_file = tmp_cwd / "test_db.db"
-    async with common.connect(db_file) as db:
+    async with aio.closing(await connect(db_file)) as db:
         size = await aio.get_size(db_file)
         assert size == 0
 
-    async with common.connect(db_file) as db:
+    async with aio.closing(await connect(db_file)) as db:
         await common.pre_allocate_250mb(db)
 
     size = await aio.get_size(db_file)
@@ -195,13 +197,13 @@ async def test_pre_allocation(tmp_cwd: Path) -> None:
 async def test_database_version_check(tmp_cwd: Path) -> None:
     db_file = tmp_cwd / "test_db.db"
     db_file.touch()
-    async with Database(db_file).connect() as db:
-        await db._create_tables()
+    async with Database.connect_w_no_pool(db_file) as db:
+        await db.create_tables()
         assert db.is_new
         await db.conn.execute("DROP TABLE 'schema_version'")
         await db.conn.commit()
 
-    async with Database(db_file).connect() as db:
+    async with Database.connect_w_no_pool(db_file) as db:
         assert not db.is_new
         assert not db.schema.up_to_date
         await db.schema.create()

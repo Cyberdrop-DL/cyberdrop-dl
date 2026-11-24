@@ -12,7 +12,7 @@ from cyberdrop_dl import __version__, aio, constants, context, dependencies, env
 from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.cache import cache_context
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.hasher import Hasher
 from cyberdrop_dl.logs import LoggerAdapter, capture_logs, log_spacer

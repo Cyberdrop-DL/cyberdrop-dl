@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.database.hash import PruneStats
     from cyberdrop_dl.manager import Manager
 

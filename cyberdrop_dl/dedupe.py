@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     import sqlite3
     from collections.abc import Generator, Iterable
 
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.hasher import FileHashes
     from cyberdrop_dl.manager import Manager
 

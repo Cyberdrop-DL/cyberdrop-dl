@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import logging
+import sqlite3
 from collections.abc import Generator, Sequence
 from typing import TYPE_CHECKING, Any, Self, override
 
@@ -9,15 +11,19 @@ import aiosqlite
 from aiosqlite.context import Result
 from aiosqlite.core import Cursor
 
+from cyberdrop_dl import env
 from cyberdrop_dl.signature import dataclass_repr
 
 if TYPE_CHECKING:
-    import sqlite3
     from collections.abc import Callable, Coroutine
+    from pathlib import Path
 
 
 type _SqliteData = str | int | float | None
 type _Parameters = Sequence[_SqliteData] | dict[str, _SqliteData]
+
+
+logger = logging.getLogger(__name__)
 
 
 def _typed_contextmanager[**P, T](method: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, Result[T]]:
@@ -111,3 +117,25 @@ class DBConnection(aiosqlite.Connection):
         if parameters is None:
             parameters = []
         return await self._execute(self._execute_and_check, sql, parameters)
+
+
+def _log_query(query: str, name: str | None = None) -> None:
+    query = query.strip()
+    if query.count("\n") > 1:
+        query = "\n" + query
+    if name:
+        name = f"[{name}]"
+
+    logger.debug("[SQL]%s executing: %s", name, query)
+
+
+def _connect(path: Path, name: str | None) -> sqlite3.Connection:
+    db_conn = sqlite3.connect(path, timeout=20)
+    db_conn.row_factory = sqlite3.Row
+    if env.DEBUG_MODE:
+        db_conn.set_trace_callback(lambda query: _log_query(query, name))
+    return db_conn
+
+
+def connect(path: Path, name: str | None = None) -> DBConnection:
+    return DBConnection(lambda: _connect(path, name), name=name)

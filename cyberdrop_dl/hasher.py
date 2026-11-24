@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from cyberdrop_dl.config import Config
-    from cyberdrop_dl.database._db import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.url_objects import AbsoluteHttpURL, MediaItem
 
 logger = logging.getLogger(__name__)

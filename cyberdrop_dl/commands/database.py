@@ -8,7 +8,7 @@ from cyberdrop_dl.appdata import AppData
 from cyberdrop_dl.commands import CLIarguments, SQLiteFile, open_folder
 
 if TYPE_CHECKING:
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.database.hash import PruneStats
 
 app = App(name="database", help="Commands for managing the database")
@@ -50,7 +50,7 @@ def hashes(
     Only affects the `hash` and `files` tables.
     """
     from cyberdrop_dl import aio, stats
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
 
     db_file = (cli and cli.database_file) or AppData.default().db_file
     stats.print(aio.run(_prune_hashes(Database(db_file), dry_run=dry_run)))

@@ -2,15 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.database.conn import connect
 from cyberdrop_dl.signature import dataclass_repr
-
-from .common import connect
-from .hash import HashTable
-from .history import HistoryTable
-from .schema import SchemaTable
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -35,7 +31,7 @@ class DBReadConnPool:
         await conn.execute_and_close("PRAGMA query_only=ON")
         self._queue.put_nowait(conn)
 
-    async def init(self) -> None:
+    async def prime(self) -> None:
         await self._stack.__aenter__()
         async with asyncio.TaskGroup() as tg:
             for idx in range(self._queue.maxsize):
@@ -64,51 +60,42 @@ class DBReadConnPool:
             self._queue.put_nowait(conn)
 
 
-@dataclass_repr("path", "ignore_history")
-class Database:
-    def __init__(
-        self,
-        path: Path,
-        ignore_history: bool = False,  # noqa: FBT001, FBT002
-        *,
-        _auto_transfer: bool = True,
-    ) -> None:
+@dataclass_repr("path", "_pool")
+class PoolManager:
+    def __init__(self, path: Path) -> None:
         self.path: Path = path
-        self.ignore_history: bool = ignore_history
-        self._auto_transfer: bool = _auto_transfer
         self._pool: DBReadConnPool | None = None
         self._writer_task: asyncio.Task[Any] | None = None
         self._write_lock: asyncio.Lock = asyncio.Lock()
+        self._writer: DBConnection
 
-        self.history: HistoryTable = HistoryTable(self)
-        self.hash: HashTable = HashTable(self)
-        self.schema: SchemaTable = SchemaTable(self)
-
-        self.conn: DBConnection
-        self.is_new: bool
-
-    async def _connect(self) -> None:
-        self.is_new = not await aio.get_size(self.path)
-        self.conn = await connect(self.path, "db-writer")
+    async def connect_writer(self) -> DBConnection:
+        try:
+            if self._writer:
+                ...
+            raise RuntimeError("A writter connection is already available")
+        except AttributeError:
+            self._writer = await connect(self.path, "db-writer")
+            return self._writer
 
     @contextlib.asynccontextmanager
     async def writer(self) -> AsyncGenerator[DBConnection]:
         task = aio.current_task()
         if self._writer_task == task:
-            yield self.conn
+            yield self._writer
             return
 
         async with self._write_lock:
             self._writer_task = task
             try:
-                yield self.conn
+                yield self._writer
             finally:
                 self._writer_task = None
 
     @contextlib.asynccontextmanager
     async def reader(self) -> AsyncGenerator[DBConnection]:
-        if not self._pool or aio.current_task() == self._writer_task:
-            yield self.conn
+        if self._pool is None or aio.current_task() == self._writer_task:
+            yield self._writer
             return
 
         async with self._pool() as conn:
@@ -122,58 +109,17 @@ class Database:
             finally:
                 await conn.rollback()
 
-    @contextlib.asynccontextmanager
-    async def connect(self) -> AsyncGenerator[Self]:
-        await self._connect()
-        try:
-            yield self
-        finally:
-            await self.conn.close()
-
-    async def _create_tables(self) -> None:
-        await self.schema.create()
-        if not self.is_new:
-            self.schema.check_version()
-        await self.history.create()
-        await self.hash.create()
-        if self.is_new:
-            await self.schema.update()
-
-    async def create_tables(self) -> None:
-        try:
-            await self._create_tables()
-        except Exception:
-            await self.conn.close()
-            if self.is_new:
-                try:
-                    await aio.unlink(self.path, missing_ok=True)
-                except OSError:
-                    pass
-            raise
-        else:
-            if not (self.is_new or self.schema.up_to_date):
-                await self.history.apply_updates()
-                await self.schema.update()
-
-    async def __aenter__(self) -> Self:
-        if self._auto_transfer and await aio.get_size(self.path):
-            from .transfer import run
-
-            await asyncio.to_thread(run, self.path)
-
-        await self._connect()
-        await self.conn.execute_and_close("pragma journal_mode=WAL")
-        await self.conn.execute_and_close("pragma synchronous=NORMAL")
-        await self.create_tables()
+    async def init_pool(self) -> None:
+        await self._writer.execute_and_close("pragma journal_mode=WAL")
+        await self._writer.execute_and_close("pragma synchronous=NORMAL")
         self._pool = DBReadConnPool(self.path, READ_POOL_SIZE)
-        await self._pool.init()
-        return self
+        await self._pool.prime()
 
-    async def __aexit__(self, *_) -> None:
+    async def aclose(self) -> None:
         assert self._pool is not None
         try:
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._pool.aclose())
-                tg.create_task(self.conn.close())
+                tg.create_task(self._writer.close())
         finally:
             self._pool = None

@@ -17,7 +17,7 @@ async def compute_hashes(
     check_for_v9_files()
     from cyberdrop_dl import stats
     from cyberdrop_dl.appdata import AppData
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.hasher import Hasher, hash_directory
 
     db_file = cli.database_file if cli else None

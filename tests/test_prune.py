@@ -10,7 +10,7 @@ import pytest
 
 from cyberdrop_dl import aio, program_ui
 from cyberdrop_dl.__main__ import run_cdl
-from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.database.hash import _path_exists, _path_exists_inner
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 

@@ -69,7 +69,7 @@ if TYPE_CHECKING:
 
     from cyberdrop_dl.config import Config
     from cyberdrop_dl.cookies import SiteCookies
-    from cyberdrop_dl.database import Database
+    from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.manager import Manager
     from cyberdrop_dl.network.request import RequestParams
     from cyberdrop_dl.network.response import AbstractResponse

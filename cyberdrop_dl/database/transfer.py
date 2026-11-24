@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 from typing import LiteralString
 
-from cyberdrop_dl import aio, database
-from cyberdrop_dl.database import common
+from cyberdrop_dl import aio
+from cyberdrop_dl.database.conn import connect
+from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.database.history import apply_fixes
 from cyberdrop_dl.database.schema import CURRENT_VERSION, Version
 from cyberdrop_dl.filepath import sanitize_filename
@@ -193,7 +194,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
 def _create_new_database(path: Path) -> None:
     async def connect() -> None:
-        async with database.Database(path, ignore_history=True, _auto_transfer=False):
+        async with Database(path, ignore_history=True, _auto_transfer=False):
             pass
 
     asyncio.run(connect())
@@ -202,7 +203,7 @@ def _create_new_database(path: Path) -> None:
 def _apply_fixes(db_path: Path) -> None:
 
     async def fix() -> None:
-        async with aio.closing(await common.connect(db_path)) as conn:
+        async with aio.closing(await connect(db_path)) as conn:
             await apply_fixes(conn)
 
     asyncio.run(fix())

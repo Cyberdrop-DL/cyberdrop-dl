@@ -6,7 +6,7 @@ import pytest
 
 from cyberdrop_dl import context
 from cyberdrop_dl.config import Config
-from cyberdrop_dl.database import Database
+from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.dedupe import Czkawka
 from cyberdrop_dl.manager import Manager
 from cyberdrop_dl.network.http import HTTPClient
