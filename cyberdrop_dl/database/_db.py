@@ -66,9 +66,16 @@ class DBReadConnPool:
 
 @dataclass_repr("path", "ignore_history")
 class Database:
-    def __init__(self, path: Path, ignore_history: bool = False) -> None:  # noqa: FBT001, FBT002
+    def __init__(
+        self,
+        path: Path,
+        ignore_history: bool = False,  # noqa: FBT001, FBT002
+        *,
+        _auto_transfer: bool = True,
+    ) -> None:
         self.path: Path = path
         self.ignore_history: bool = ignore_history
+        self._auto_transfer: bool = _auto_transfer
         self._pool: DBReadConnPool | None = None
         self._writer_task: asyncio.Task[Any] | None = None
         self._write_lock: asyncio.Lock = asyncio.Lock()
@@ -149,6 +156,11 @@ class Database:
                 await self.schema.update()
 
     async def __aenter__(self) -> Self:
+        if self._auto_transfer and await aio.get_size(self.path):
+            from .transfer import run
+
+            await asyncio.to_thread(run, self.path)
+
         await self._connect()
         await (await self.conn.execute("pragma journal_mode=WAL")).close()
         await (await self.conn.execute("pragma synchronous=NORMAL")).close()
