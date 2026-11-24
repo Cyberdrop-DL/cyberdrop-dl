@@ -153,7 +153,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
     logger.info("Detected schema version: %s", old_version)
 
-    if not force and old_version == CURRENT_VERSION:
+    if not force and old_version is not None and old_version >= CURRENT_VERSION:
         logger.info(
             "Database is already at the latest schema (%s). Use --force to re-run.",
             CURRENT_VERSION,
@@ -193,7 +193,7 @@ def run(db_path: Path, *, force: bool = False) -> None:
 
 def _create_new_database(path: Path) -> None:
     async def connect() -> None:
-        async with database.Database(path, ignore_history=True):
+        async with database.Database(path, ignore_history=True, _auto_transfer=False):
             pass
 
     asyncio.run(connect())

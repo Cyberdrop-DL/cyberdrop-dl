@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -125,6 +126,55 @@ async def test_database_creation(tmp_cwd: Path) -> None:
     size = await aio.get_size(db_file)
     assert size
     assert db.schema.up_to_date
+
+
+async def test_automatic_database_transfer_creates_backup(tmp_cwd: Path) -> None:
+    db_file = tmp_cwd / "test_db.db"
+    with sqlite3.connect(db_file) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE media (
+                domain TEXT,
+                url_path TEXT,
+                referer TEXT,
+                album_id TEXT,
+                download_path TEXT,
+                download_filename TEXT,
+                original_filename TEXT,
+                completed INTEGER NOT NULL,
+                created_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                PRIMARY KEY (domain, url_path, original_filename)
+            );
+            CREATE TABLE temp (value TEXT);
+            INSERT INTO media (
+                domain, url_path, referer, download_path, download_filename,
+                original_filename, completed, created_at
+            ) VALUES (
+                'example', '/file', 'https://example.com',
+                '/downloads', 'file.bin', 'original.bin', 1,
+                '2026-01-02 03:04:05'
+            );
+            INSERT INTO temp VALUES ('legacy');
+            """
+        )
+
+    async with Database(db_file):
+        pass
+
+    async with common.connect(db_file) as conn:
+        files = await conn.execute_fetchall("SELECT * FROM files")
+        cursor = await conn.execute("SELECT name FROM sqlite_master WHERE name = 'temp'")
+        temp = await cursor.fetchone()
+
+    assert len(files) == 1
+    assert files[0]["folder"] == "/downloads"
+    assert files[0]["download_filename"] == "file.bin"
+    assert files[0]["original_filename"] == "original.bin"
+    assert temp is None
+
+    backups = await aio.list_glob(tmp_cwd, "test_db_5.3.31_*.backup.db")
+    assert len(backups) == 1
 
 
 async def test_pre_allocation(tmp_cwd: Path) -> None:
