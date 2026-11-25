@@ -115,6 +115,8 @@ def _delete_journal_if_empty(db_path: Path, journal_file: Path) -> None:
         stat = journal_file.stat()
     except FileNotFoundError:
         return
+    except OSError as e:
+        raise _fail_wal_merge(db_path) from e
 
     # Only delete 0 byte files after the merge
     if stat.st_size > 0:
