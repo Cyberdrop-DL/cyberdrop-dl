@@ -72,7 +72,7 @@ class Database:
 
         from .transfer import run
 
-        await asyncio.to_thread(run, self.path, cli=False)
+        await asyncio.to_thread(run, self.path)
 
     @classmethod
     @contextlib.asynccontextmanager

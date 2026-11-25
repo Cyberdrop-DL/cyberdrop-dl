@@ -144,7 +144,8 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-def run(db_path: Path, *, force: bool = False, cli: bool = True) -> None:
+def run(db_path: Path, *, force: bool = False) -> bool:
+
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
@@ -156,9 +157,8 @@ def run(db_path: Path, *, force: bool = False, cli: bool = True) -> None:
     needs_update = version is None or version < CURRENT_VERSION
     if force or needs_update:
         _run(db_path, version)
-
-    elif cli:
-        logger.info("Database is already at the latest schema (%s). Use --force to re-run.", CURRENT_VERSION)
+        return True
+    return False
 
 
 def _run(db_path: Path, old_version: Version | None) -> None:
@@ -193,8 +193,7 @@ def _run(db_path: Path, old_version: Version | None) -> None:
     delete_database(db_path)
     merge_journal_files(new_path)
     new_path.rename(db_path)
-    logger.info("Transfer complete", extra={"color": "green"})
-    logger.info("Backup at: '%s'", backup_path)
+    logger.info("Transfer complete!", extra={"color": "green"})
     logger.info("New schema version: %s", CURRENT_VERSION)
 
 

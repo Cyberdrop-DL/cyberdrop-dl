@@ -93,7 +93,7 @@ def _backup(source: Path, destination: Path, *, show_progress: bool = True) -> N
         raise
 
     logger.info("Backup completed successfully!", extra={"color": "green"})
-    logger.info("Destination: '%s'", destination)
+    logger.info("Backup location: '%s'", destination)
 
 
 def _fail_wal_merge(db_path: Path) -> RuntimeError:
