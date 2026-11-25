@@ -89,22 +89,25 @@ def merge_journal_files(db_path: Path) -> None:
     """Merge all journal files (WAL mode) into the main database file
 
     This only works if there are no other connections to the database"""
-
+    db_path = db_path.resolve(strict=True)
     try:
-        with contextlib.closing(stdlib_connect(db_path, "WAL merge")) as conn:
-            # these pragmas are no-op if WAL is disabled so it is safe to use even for a v9 db
-            # 1. merge as much as possible without waiting for any other connection to finish
-            cursor = conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
-            # 2. now force a full merge, which blocks until all other connections are closed
-            cursor.execute("PRAGMA busy_timeout = 5000;")
-            with contextlib.closing(cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")):
-                row = cursor.fetchone()
-                assert row is not None
-            if row["busy"]:
-                raise _fail_wal_merge(db_path)
-
-    except sqlite3.Error as e:
+        _merge_journal_files(db_path)
+    except (sqlite3.Error, OSError) as e:
         raise _fail_wal_merge(db_path) from e
+
+
+def _merge_journal_files(db_path: Path) -> None:
+    with contextlib.closing(stdlib_connect(db_path, "WAL merge")) as conn:
+        # these pragmas are no-op if WAL is disabled so it is safe to use even for a v9 db
+        # 1. merge as much as possible without waiting for any other connection to finish
+        cursor = conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
+        # 2. now force a full merge, which blocks until all other connections are closed
+        cursor.execute("PRAGMA busy_timeout = 5000;")
+        with contextlib.closing(cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")):
+            row = cursor.fetchone()
+            assert row is not None
+        if row["busy"]:
+            raise _fail_wal_merge(db_path)
 
     for file in _journal_files(db_path):
         _delete_journal_if_empty(db_path, file)
