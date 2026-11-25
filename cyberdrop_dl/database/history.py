@@ -7,6 +7,7 @@ from sqlite3 import IntegrityError
 from typing import TYPE_CHECKING, Any, override
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.database import user_version
 
 from .common import Table
 from .definitions import CREATE_HISTORY, CREATE_MEDIA_INDEX
@@ -219,6 +220,10 @@ async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
 
 
 async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
+    version = await user_version.aget(db_conn)
+    if user_version.Marker.DOMAINS_FIXED in version:
+        return
+
     with _timed_update("old database domains"):
         updates = "\n".join(
             f"UPDATE OR REPLACE media SET domain = '{current}' WHERE domain = '{old}';"  # noqa: S608
@@ -232,6 +237,8 @@ async def _fix_domains(db_conn: aiosqlite.Connection) -> None:
         )
         await (await db_conn.executescript(updates)).close()
         await db_conn.commit()
+        new_user_version = version | user_version.Marker.DOMAINS_FIXED
+        await user_version.aupdate(db_conn, new_user_version)
 
 
 def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:

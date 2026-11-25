@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.database import user_version
 from cyberdrop_dl.database.backup import (
     backup_database,
     create_db_path_w_timestamp,
@@ -18,7 +19,7 @@ from cyberdrop_dl.database.common import get_column_names, get_table_names
 from cyberdrop_dl.database.conn import connect, stdlib_connect
 from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.database.history import apply_fixes
-from cyberdrop_dl.database.schema import CURRENT_VERSION, Version, detect_version
+from cyberdrop_dl.database.schema import CURRENT_VERSION, Version, get_schema
 from cyberdrop_dl.logs import setup_console_logging
 from cyberdrop_dl.utils import dates
 
@@ -110,30 +111,25 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-def _needs_update(version: Version | None) -> bool:
-    return version is None or version < CURRENT_VERSION
-
-
-def _get_version(db_path: Path) -> Version | None:
-    with contextlib.closing(stdlib_connect(db_path, "probe")) as probe:
-        return detect_version(probe)
+def _needs_update(db_path: Path) -> bool:
+    with contextlib.closing(stdlib_connect(db_path, "files transfer check")) as probe:
+        return user_version.Marker.FILES_TRANSFER_COMPLETED not in user_version.get(probe)
 
 
 def run(db_path: Path, *, force: bool = False) -> bool:
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
-    version = _get_version(db_path)
-    logger.info("Detected schema version: %s", version)
-    if force or _needs_update(version):
-        _run(db_path, version)
+    schema = get_schema(db_path)
+    schema.log()
+    if force or _needs_update(db_path):
+        _run(db_path, schema.version)
         return True
     return False
 
 
-def live_transfer(db_path: Path) -> bool:
-    version = _get_version(db_path)
-    if _needs_update(version):
+def live_transfer(db_path: Path, version: Version | None) -> bool:
+    if _needs_update(db_path):
         _run(db_path, version)
         return True
     return False
@@ -207,6 +203,9 @@ def _transfer(new_conn: sqlite3.Connection) -> None:
     covered = set(_DIRECT_TRANSFER_TABLES) | _SKIP_TABLES
     for table in sorted(new_tables - covered):
         _transfer_table(new_conn, table)
+
+    new_user_version = user_version.get(new_conn) | user_version.Marker.FILES_TRANSFER_COMPLETED
+    user_version.update(new_conn, new_user_version)
 
 
 if __name__ == "__main__":
