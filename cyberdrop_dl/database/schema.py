@@ -44,10 +44,11 @@ class SchemaTable(Table, name="schema_version"):
     async def get_version(self) -> Version | None:
         if not await self.exists():
             return None
-        query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
+        query = "SELECT version FROM schema_version;"
         async with self.db.reader() as db_conn:
-            if row := await db_conn.execute_fetchone(query):
-                return Version.parse(row["version"])
+            versions = [r["version"] for r in await db_conn.execute_fetchall(query)]
+            if versions:
+                return max(map(Version.parse, versions))
 
     @override
     async def create(self) -> None:

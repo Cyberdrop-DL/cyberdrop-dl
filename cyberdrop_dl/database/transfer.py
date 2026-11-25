@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import sqlite3
 import sys
@@ -8,7 +9,8 @@ from pathlib import Path
 from typing import LiteralString
 
 from cyberdrop_dl import aio
-from cyberdrop_dl.database.conn import connect
+from cyberdrop_dl.database.backup import backup_database, delete_database, merge_journal_files
+from cyberdrop_dl.database.conn import connect, stdlib_connect
 from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.database.history import apply_fixes
 from cyberdrop_dl.database.schema import CURRENT_VERSION, Version
@@ -20,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_table_names(conn: sqlite3.Connection, schema: LiteralString = "main") -> set[str]:
-    cursor = conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")  # noqa: S608
-    return {r[0] for r in cursor.fetchall()}
+    with contextlib.closing(conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")) as cursor:  # noqa: S608
+        return {r[0] for r in cursor.fetchall()}
 
 
 def _get_column_names(conn: sqlite3.Connection, table: str, schema: str = "main") -> set[str]:
-    rows = conn.execute(f"PRAGMA {schema}.table_info({table})").fetchall()
-    return {r[1] for r in rows}
+    with contextlib.closing(conn.execute(f"PRAGMA {schema}.table_info({table})")) as cursor:
+        return {r[1] for r in cursor.fetchall()}
 
 
 def _get_column_info(conn: sqlite3.Connection, table: str, schema: str = "main") -> list[tuple[str, str | None]]:
@@ -35,14 +37,14 @@ def _get_column_info(conn: sqlite3.Connection, table: str, schema: str = "main")
     *default_value* is the literal SQL default from the schema, or `None` when no default is declared."""
 
     # PRAGMA table_info columns: cid | name | type | notnull | dflt_value | pk
-    rows = conn.execute(f"PRAGMA {schema}.table_info({table})").fetchall()
-    return [(r[1], r[4]) for r in rows]
+    with contextlib.closing(conn.execute(f"PRAGMA {schema}.table_info({table})")) as cursor:
+        return [(r[1], r[4]) for r in cursor.fetchall()]
 
 
 def _get_applied_versions(conn: sqlite3.Connection) -> list[str]:
     try:
-        rows = conn.execute("SELECT version FROM schema_version").fetchall()
-        return [r[0] for r in rows]
+        with contextlib.closing(conn.execute("SELECT version FROM schema_version")) as cursor:
+            return [r[0] for r in cursor.fetchall()]
     except sqlite3.OperationalError:
         return []
 
@@ -101,7 +103,7 @@ def _transfer_table(new_conn: sqlite3.Connection, table: str) -> None:
     select_sql = ", ".join(select_exprs)
 
     logger.info("_transfer_table: old.%s -> %s", table, table)
-    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"')  # noqa: S608
+    new_conn.execute(f'INSERT OR IGNORE INTO "{table}" ({cols_sql}) SELECT {select_sql} FROM old."{table}"').close()  # noqa: S608
 
 
 def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
@@ -146,31 +148,29 @@ def run(db_path: Path, *, force: bool = False, cli: bool = True) -> None:
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
-    probe = sqlite3.connect(db_path)
-    try:
-        old_version = detect_version(probe)
-    finally:
-        probe.close()
+    with contextlib.closing(stdlib_connect(db_path, "probe")) as probe:
+        version = detect_version(probe)
 
-    logger.info("Detected schema version: %s", old_version)
+    logger.info("Detected schema version: %s", version)
 
-    if not force and old_version is not None and old_version >= CURRENT_VERSION:
-        if cli:
-            logger.info(
-                "Database is already at the latest schema (%s). Use --force to re-run.",
-                CURRENT_VERSION,
-            )
-        return
+    needs_update = version is None or version < CURRENT_VERSION
+    if force or needs_update:
+        _run(db_path, version)
 
+    elif cli:
+        logger.info("Database is already at the latest schema (%s). Use --force to re-run.", CURRENT_VERSION)
+
+
+def _run(db_path: Path, old_version: Version | None) -> None:
     now = sanitize_filename(str(dates.now()))
     new_path = db_path.with_name(f"{db_path.stem}_{CURRENT_VERSION}_{now}{db_path.suffix}")
 
     logger.debug("Creating new database at: %s", new_path)
     _create_new_database(new_path)
-    new_conn = sqlite3.connect(new_path)
-    try:
-        new_conn.execute("PRAGMA foreign_keys=OFF")
-        new_conn.execute(f"ATTACH DATABASE '{db_path}' AS old")
+
+    with contextlib.closing(stdlib_connect(new_path, "new database")) as new_conn:
+        cursor = new_conn.execute("PRAGMA foreign_keys=OFF")
+        cursor.execute(f"ATTACH DATABASE '{db_path}' AS old").close()
         try:
             _transfer(new_conn)
         except Exception:
@@ -181,12 +181,14 @@ def run(db_path: Path, *, force: bool = False, cli: bool = True) -> None:
             raise
         else:
             new_conn.commit()
-    finally:
-        new_conn.close()
 
     _apply_fixes(new_path)
-    backup_path = db_path.with_name(f"{db_path.stem}_{old_version}_{now}.backup{db_path.suffix}")
-    db_path.rename(backup_path)
+
+    version = "UNKNOWN_VERSION" if old_version is None else old_version
+    backup_path = db_path.with_name(f"{db_path.stem}_{version}_{now}.backup{db_path.suffix}")
+    backup_database(db_path, backup_path)
+    merge_journal_files(db_path)
+    delete_database(db_path)
     new_path.rename(db_path)
     logger.info("Transfer complete", extra={"color": "green"})
     logger.info("Backup at: '%s'", backup_path)
