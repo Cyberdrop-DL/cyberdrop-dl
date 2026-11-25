@@ -40,7 +40,7 @@ def _progress_tracker() -> Generator[_ProgressHook]:
         yield hook
 
 
-def backup_database(source: Path, /, destination: Path | None = None, *, pages: int = 1_000) -> Path:
+def _normalize_paths(source: Path, /, destination: Path | None = None) -> tuple[Path, Path]:
     source = source.resolve(strict=True)
 
     if destination is None:
@@ -58,11 +58,16 @@ def backup_database(source: Path, /, destination: Path | None = None, *, pages: 
 
         destination.parent.mkdir(parents=True, exist_ok=True)
 
-    _backup(source, destination, pages, show_progress=True)
+    return source, destination
+
+
+def backup_database(source: Path, /, destination: Path | None = None) -> Path:
+    source, destination = _normalize_paths(source, destination)
+    _backup(source, destination, show_progress=True)
     return destination
 
 
-def _backup(source: Path, destination: Path, pages: int = 1_000, *, show_progress: bool = True) -> None:
+def _backup(source: Path, destination: Path, *, show_progress: bool = True) -> None:
     logger.info("Backing up '%s'", source)
     try:
         with (
@@ -70,7 +75,12 @@ def _backup(source: Path, destination: Path, pages: int = 1_000, *, show_progres
             contextlib.closing(stdlib_connect(destination, "destination")) as dst,
             _progress_tracker() if show_progress else contextlib.nullcontext() as progress_hook,
         ):
-            src.backup(dst, pages=pages, progress=progress_hook, sleep=0.05)
+            src.backup(
+                dst,
+                pages=1_000 if show_progress else -1,
+                progress=progress_hook,
+                sleep=0.05,
+            )
     except Exception as exc:
         logger.error(f"Backup failed: {exc}", extra={"color": "red"})
         raise
