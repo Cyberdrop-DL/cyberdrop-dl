@@ -58,25 +58,24 @@ def backup_database(source: Path, /, destination: Path | None = None, *, pages: 
 
         destination.parent.mkdir(parents=True, exist_ok=True)
 
-    with _progress_tracker() as hook:
-        _backup(source, destination, pages, hook)
+    _backup(source, destination, pages, show_progress=True)
     return destination
 
 
-def _backup(source: Path, destination: Path, pages: int = 1_000, hook: _ProgressHook | None = None) -> None:
-    with (
-        contextlib.closing(stdlib_connect(source, "source")) as src,
-        contextlib.closing(stdlib_connect(destination, "destination")) as dst,
-    ):
-        try:
-            logger.info("Backing up '%s'", source)
-            src.backup(dst, pages=pages, progress=hook, sleep=0.05)
-        except Exception as exc:
-            logger.error(f"Backup failed: {exc}", extra={"color": "red"})
-            raise
-        else:
-            logger.info("Backup completed successfully!", extra={"color": "green"})
-            logger.info("Destination: '%s'", destination)
+def _backup(source: Path, destination: Path, pages: int = 1_000, *, show_progress: bool = True) -> None:
+    try:
+        with (
+            contextlib.closing(stdlib_connect(source, "source")) as src,
+            contextlib.closing(stdlib_connect(destination, "destination")) as dst,
+            _progress_tracker() if show_progress else contextlib.nullcontext() as progress_hook,
+        ):
+            src.backup(dst, pages=pages, progress=progress_hook, sleep=0.05)
+    except Exception as exc:
+        logger.error(f"Backup failed: {exc}", extra={"color": "red"})
+        raise
+
+    logger.info("Backup completed successfully!", extra={"color": "green"})
+    logger.info("Destination: '%s'", destination)
 
 
 def _fail_wal_merge(db_path: Path) -> RuntimeError:
@@ -129,7 +128,7 @@ def _delete_journal_if_empty(db_path: Path, journal_file: Path) -> None:
 
 
 def _journal_files(db_path: Path) -> list[Path]:
-    return [db_path.with_suffix(f"{db_path.suffix}-{suffix}") for suffix in ("journal", "wal", "shm")]
+    return [db_path.with_name(f"{db_path.name}-{suffix}") for suffix in ("journal", "wal", "shm")]
 
 
 def delete_database(db_path: Path) -> None:
