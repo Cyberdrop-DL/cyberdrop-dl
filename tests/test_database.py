@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import sqlite3
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -10,12 +11,16 @@ from cyberdrop_dl import aio, context, scrape_mapper
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
 from cyberdrop_dl.database import common, schema
+from cyberdrop_dl.database.backup import _delete_journal_if_empty, merge_journal_files
 from cyberdrop_dl.database.conn import connect
 from cyberdrop_dl.database.db import Database
 from cyberdrop_dl.exceptions import DatabaseError
 from cyberdrop_dl.scrape_source import _create_item_from_row
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, RetryInfo, ScrapeItem
 from cyberdrop_dl.utils.urls import parse_http_url
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 _MOCK_ROW = {
     "referer": "https://drive.google.com/file/d/1F0YBsnQRvrMbK0p9UlnyLu88kqQ0j_F6/edit",
@@ -245,3 +250,81 @@ def test_create_item_from_row() -> None:
     assert info.url_path == url_path
     assert info.download_path == Path(download_path)
     assert info.download_filename == download_filename
+
+
+@contextlib.contextmanager
+def create_test_stdlib_db(db_path: Path, *, WAL: bool = True) -> Generator[sqlite3.Connection]:  # noqa: N803
+    with contextlib.closing(sqlite3.connect(db_path)) as conn:
+        if WAL:
+            conn.execute("PRAGMA journal_mode=WAL").close()
+        conn.execute("CREATE TABLE test (value TEXT)").close()
+        conn.commit()
+        yield conn
+
+
+def test_merge_journal_files_merges_wal(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    with create_test_stdlib_db(db_path) as conn:
+        conn.execute("INSERT INTO test VALUES ('test')").close()
+        conn.commit()
+
+        assert Path(f"{db_path}-wal").exists()
+
+    merge_journal_files(db_path)
+    assert not Path(f"{db_path}-wal").exists()
+
+    with contextlib.closing(sqlite3.connect(db_path)) as check:
+        assert check.execute("SELECT value FROM test").fetchone() == ("test",)
+
+
+def test_merge_journal_files_without_wal(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    with create_test_stdlib_db(db_path, WAL=False) as conn:
+        conn.execute("INSERT INTO test VALUES ('test')").close()
+        conn.commit()
+
+        assert not Path(f"{db_path}-wal").exists()
+
+    merge_journal_files(db_path)
+    assert db_path.exists()
+
+
+def test_merge_journal_files_with_active_reader(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    with create_test_stdlib_db(db_path) as writer, contextlib.closing(sqlite3.connect(db_path)) as reader:
+        writer.execute("INSERT INTO test VALUES ('test')")
+        writer.commit()
+
+        assert reader.execute("SELECT * FROM test").fetchall() == [("test",)]
+
+        with pytest.raises(RuntimeError, match="Unable to merge WAL files"):
+            merge_journal_files(db_path)
+
+
+def test_merge_journal_files_removes_empty_journal_files(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+
+    with create_test_stdlib_db(db_path):
+        ...
+
+    journal_path = Path(f"{db_path}-wal")
+    journal_path.touch()
+
+    merge_journal_files(db_path)
+
+    assert not journal_path.exists()
+
+
+def test_delete_journal_if_empty_does_not_delete_nonempty_journal(tmp_path: Path) -> None:
+    db_path = tmp_path / "test.db"
+
+    journal = Path(f"{db_path}-wal")
+    journal.write_bytes(b"not empty")
+
+    with pytest.raises(RuntimeError, match="Unable to merge WAL files"):
+        _delete_journal_if_empty(db_path, journal)
+
+    assert journal.exists()

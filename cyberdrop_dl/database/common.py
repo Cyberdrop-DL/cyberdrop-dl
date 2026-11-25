@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, LiteralString
 
 if TYPE_CHECKING:
+    import sqlite3
+
     from cyberdrop_dl.database.conn import DBConnection
     from cyberdrop_dl.database.pool import PoolManager
 
@@ -58,3 +61,13 @@ async def pre_allocate_250mb(db_conn: DBConnection) -> None:
     script = "CREATE TABLE IF NOT EXISTS t(x);INSERT INTO t VALUES(zeroblob(250*1024*1024));DROP TABLE t;"
     await (await db_conn.executescript(script)).close()
     await db_conn.commit()
+
+
+def get_table_names(conn: sqlite3.Connection, schema: LiteralString = "main") -> set[str]:
+    with contextlib.closing(conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")) as cursor:  # noqa: S608
+        return {r[0] for r in cursor.fetchall()}
+
+
+def get_column_names(conn: sqlite3.Connection, table: str, schema: str = "main") -> set[str]:
+    with contextlib.closing(conn.execute(f"PRAGMA {schema}.table_info({table})")) as cursor:
+        return {r[1] for r in cursor.fetchall()}

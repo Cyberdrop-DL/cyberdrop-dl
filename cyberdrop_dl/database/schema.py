@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
+import sqlite3
 from typing import TYPE_CHECKING, NamedTuple, final, override
 
 from cyberdrop_dl.exceptions import DatabaseError
 
-from .common import Table
+from .common import Table, get_column_names, get_table_names
 from .definitions import CREATE_SCHEMA
 
 if TYPE_CHECKING:
@@ -44,10 +46,11 @@ class SchemaTable(Table, name="schema_version"):
     async def get_version(self) -> Version | None:
         if not await self.exists():
             return None
-        query = "SELECT version FROM schema_version ORDER BY ROWID DESC LIMIT 1;"
+        query = "SELECT version FROM schema_version;"
         async with self.db.reader() as db_conn:
-            if row := await db_conn.execute_fetchone(query):
-                return Version.parse(row["version"])
+            versions = [r["version"] for r in await db_conn.execute_fetchall(query)]
+            if versions:
+                return max(map(Version.parse, versions))
 
     @override
     async def create(self) -> None:
@@ -147,3 +150,34 @@ CREATE INDEX idx_media_domain_url_path_referer
 CREATE INDEX idx_media_referer_completed
     ON media (referer, completed);
 """.strip()
+
+
+def _get_applied_versions(conn: sqlite3.Connection) -> list[str]:
+    try:
+        with contextlib.closing(conn.execute("SELECT version FROM schema_version")) as cursor:
+            return [r[0] for r in cursor.fetchall()]
+    except sqlite3.OperationalError:
+        return []
+
+
+def detect_version(conn: sqlite3.Connection) -> Version | None:
+    tables = get_table_names(conn)
+
+    if "schema_version" in tables:
+        versions = _get_applied_versions(conn)
+        if versions:
+            return max(map(Version.parse, versions))
+
+    if tables == {"media", "downloads_temp", "coomeno"}:
+        return Version(4, 2, 231)
+
+    if tables == {"media", "temp"}:
+        return Version(5, 3, 31)
+
+    if tables == {"media", "files", "hash"}:
+        media_cols = get_column_names(conn, "media")
+        if "duration" in media_cols:
+            return Version(6, 10, 1)  # v6.10.1 - v7.5.0
+        return Version(6, 5, 0)
+
+    return None

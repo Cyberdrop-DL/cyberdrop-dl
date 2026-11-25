@@ -211,6 +211,8 @@ class HistoryTable(Table, name="media"):
 
 
 async def apply_fixes(db_conn: aiosqlite.Connection) -> None:
+    cursor = await db_conn.execute("PRAGMA busy_timeout = 100;")
+    await (await cursor.execute("PRAGMA locking_mode = EXCLUSIVE;")).close()
     await _fix_domains(db_conn)
     await _fix_referers(db_conn)
     await _custom_fixes(db_conn)

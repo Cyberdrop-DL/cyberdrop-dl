@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Annotated
 
 from cyclopts import App, Parameter
@@ -10,6 +11,8 @@ from cyberdrop_dl.commands import CLIarguments, SQLiteFile, open_folder
 if TYPE_CHECKING:
     from cyberdrop_dl.database.db import Database
     from cyberdrop_dl.database.hash import PruneStats
+
+logger = logging.getLogger(__name__)
 
 app = App(name="database", help="Commands for managing the database")
 prune_app = App(name="prune", help="Delete database entries that are no longer useful")
@@ -31,9 +34,12 @@ def transfer(
     ] = False,
 ) -> None:
     """Migrate an old database to the latest schema version."""
+    from cyberdrop_dl.database.schema import CURRENT_VERSION
     from cyberdrop_dl.database.transfer import run as transfer_db
 
-    transfer_db(database_file, force=force)
+    updated = transfer_db(database_file, force=force)
+    if updated:
+        logger.info("Database is already at the latest schema (%s). Use --force to re-run.", CURRENT_VERSION)
 
 
 @prune_app.command()
@@ -74,3 +80,15 @@ def folder(*, cli: CLIarguments | None = None) -> None:
     file = (cli and cli.database_file) or AppData.default().db_file
 
     open_folder(file.parent)
+
+
+@app.command(show=False)
+def backup(*, cli: CLIarguments | None = None) -> None:
+    """Make a backup of the database
+
+    Backup will be created on the same folder as the current database and its name will include the current schema version and timestamp
+    """
+    from cyberdrop_dl.database.backup import backup_database
+
+    file = (cli and cli.database_file) or AppData.default().db_file
+    backup_database(file)

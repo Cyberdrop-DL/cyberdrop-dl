@@ -1,0 +1,186 @@
+from __future__ import annotations
+
+import contextlib
+import errno
+import logging
+import sqlite3
+from collections.abc import Callable, Generator
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
+
+from cyberdrop_dl.database.conn import stdlib_connect
+from cyberdrop_dl.database.schema import Version, detect_version
+from cyberdrop_dl.filepath import sanitize_filename
+from cyberdrop_dl.utils import dates
+
+if TYPE_CHECKING:
+    import datetime as dt
+
+logger = logging.getLogger(__name__)
+
+type _ProgressHook = Callable[[int, int, int], object]
+
+
+@contextlib.contextmanager
+def _progress_tracker() -> Generator[_ProgressHook]:
+    with Progress(
+        TextColumn("[bold cyan]Backing up database..."),
+        BarColumn(bar_width=None),
+        TaskProgressColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn(compact=True, elapsed_when_finished=True),
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Backing up database...", total=100)
+
+        def hook(_: object, remaining: int, total: int) -> None:
+            progress.update(
+                task,
+                completed=total - remaining,
+                total=total,
+            )
+
+        yield hook
+
+
+def create_db_path_w_timestamp(source: Path, db_version: Version | None = None, now: dt.datetime | None = None) -> Path:
+    version = "UNKNOWN_VERSION" if db_version is None else db_version
+    now_str = sanitize_filename(str(now or dates.now()))
+    return source.with_name(f"{source.stem}_{version}_{now_str}{source.suffix}")
+
+
+def _normalize_paths(source: Path, /, destination: Path | None = None) -> tuple[Path, Path]:
+    source = source.resolve(strict=True)
+
+    if destination is None:
+        with contextlib.closing(stdlib_connect(source, "detect version")) as conn:
+            db_version = detect_version(conn)
+
+        destination = create_db_path_w_timestamp(source, db_version).with_suffix(f".backup{source.suffix}")
+
+    else:
+        destination = destination.resolve().absolute()
+
+        if source == destination:
+            raise OSError(errno.EINVAL, "Source and target are the same file")
+
+        if destination.exists():
+            raise FileExistsError(errno.EEXIST, f"The destination already exists: '{destination}'")
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+    return source, destination
+
+
+def backup_database(source: Path, /, destination: Path | None = None, *, exclusive: bool = False) -> Path:
+    source, destination = _normalize_paths(source, destination)
+    logger.info("Backing up '%s'", source)
+    try:
+        _merge_journal_files(source)
+    except sqlite3.OperationalError as e:
+        if exclusive:
+            raise _fail_wal_merge(source) from e
+        msg = "Unable to get an exclusive lock on the database. Changes from other live connections from this point forward won't be reflected on the backup"
+        logger.warning(msg)
+    _backup(source, destination, show_progress=True)
+    return destination
+
+
+def _backup(source: Path, destination: Path, *, show_progress: bool = True) -> None:
+    try:
+        with (
+            contextlib.closing(stdlib_connect(source, "source")) as src,
+            contextlib.closing(stdlib_connect(destination, "destination")) as dst,
+            _progress_tracker() if show_progress else contextlib.nullcontext() as progress_hook,
+        ):
+            src.backup(
+                dst,
+                pages=1_000 if show_progress else -1,
+                progress=progress_hook,
+                sleep=0.05,
+            )
+    except Exception as exc:
+        logger.error(f"Backup failed: {exc}", extra={"color": "red"})
+        raise
+
+    logger.info("Backup completed successfully!", extra={"color": "green"})
+    logger.info("Backup location: '%s'", destination)
+
+
+def _fail_wal_merge(db_path: Path) -> RuntimeError:
+    exc = RuntimeError(f"Unable to merge WAL files into database '{db_path.name}'")
+    exc.add_note("Make sure to close all connections to the database from any other process")
+    return exc
+
+
+def merge_journal_files(db_path: Path) -> None:
+    """Merge all journal files (WAL mode) into the main database file
+
+    This only works if there are no other connections to the database"""
+    db_path = db_path.resolve(strict=True)
+    try:
+        _merge_journal_files(db_path)
+    except (sqlite3.Error, OSError) as e:
+        raise _fail_wal_merge(db_path) from e
+
+
+def _merge_journal_files(db_path: Path) -> None:
+    with contextlib.closing(stdlib_connect(db_path, "WAL merge")) as conn:
+        cursor = conn.execute("PRAGMA busy_timeout = 100;")
+        cursor.execute("PRAGMA locking_mode = EXCLUSIVE;")
+        # this pragma is no-op if WAL is disabled so it is safe to use even for a v9 db
+        with contextlib.closing(cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")):
+            row = cursor.fetchone()
+            assert row is not None
+
+        if row["busy"]:  # This should never happend
+            raise _fail_wal_merge(db_path)
+
+        if row["log"] != row["checkpointed"]:
+            exc = _fail_wal_merge(db_path)
+            exc.add_note(f"Not all pages where checkpointed: {dict(row)}")
+            raise exc
+
+    for file in _journal_files(db_path):
+        _delete_journal_if_empty(db_path, file)
+
+
+def _delete_journal_if_empty(db_path: Path, journal_file: Path) -> None:
+    try:
+        stat = journal_file.stat()
+    except FileNotFoundError:
+        return
+    except OSError as e:
+        raise _fail_wal_merge(db_path) from e
+
+    # Only delete 0 byte files after the merge
+    if stat.st_size > 0:
+        raise _fail_wal_merge(db_path)
+
+    journal_file.unlink()
+
+
+def _journal_files(db_path: Path) -> list[Path]:
+    return [db_path.with_name(f"{db_path.name}-{suffix}") for suffix in ("journal", "wal", "shm")]
+
+
+def delete_database(db_path: Path) -> None:
+    "Force delete database and all of its journal files (WAL mode)"
+    db_path.unlink()
+    for file in _journal_files(db_path):
+        file.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    import sys
+
+    from cyberdrop_dl import tracebacks
+    from cyberdrop_dl.logs import setup_console_logging
+
+    tracebacks.install_exception_hook()
+
+    with setup_console_logging():
+        database = Path(sys.argv[1])
+        backup_database(database, exclusive=True)

@@ -129,7 +129,7 @@ def _log_query(query: str, name: str | None = None) -> None:
     logger.debug("[SQL]%s executing: %s", name, query)
 
 
-def _connect(path: Path, name: str | None) -> sqlite3.Connection:
+def stdlib_connect(path: Path, name: str | None = None) -> sqlite3.Connection:
     db_conn = sqlite3.connect(path, timeout=20)
     db_conn.row_factory = sqlite3.Row
     if env.DEBUG_MODE:
@@ -138,4 +138,4 @@ def _connect(path: Path, name: str | None) -> sqlite3.Connection:
 
 
 def connect(path: Path, name: str | None = None) -> DBConnection:
-    return DBConnection(lambda: _connect(path, name), name=name)
+    return DBConnection(lambda: stdlib_connect(path, name), name=name)
