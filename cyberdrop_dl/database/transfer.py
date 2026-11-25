@@ -110,18 +110,30 @@ _DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
 _SKIP_TABLES = {"schema_version"}
 
 
-def run(db_path: Path, *, force: bool = False) -> bool:
+def _needs_update(version: Version | None) -> bool:
+    return version is None or version < CURRENT_VERSION
 
+
+def _get_version(db_path: Path) -> Version | None:
+    with contextlib.closing(stdlib_connect(db_path, "probe")) as probe:
+        return detect_version(probe)
+
+
+def run(db_path: Path, *, force: bool = False) -> bool:
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found: {db_path}")
 
-    with contextlib.closing(stdlib_connect(db_path, "probe")) as probe:
-        version = detect_version(probe)
-
+    version = _get_version(db_path)
     logger.info("Detected schema version: %s", version)
+    if force or _needs_update(version):
+        _run(db_path, version)
+        return True
+    return False
 
-    needs_update = version is None or version < CURRENT_VERSION
-    if force or needs_update:
+
+def live_transfer(db_path: Path) -> bool:
+    version = _get_version(db_path)
+    if _needs_update(version):
         _run(db_path, version)
         return True
     return False

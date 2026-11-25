@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.database.conn import DBConnection
 
 
-@dataclass_repr("path", "ignore_history")
+@dataclass_repr("path", "ignore_history", "has_backup")
 class Database:
     def __init__(
         self,
@@ -35,6 +35,7 @@ class Database:
         self.history: HistoryTable = HistoryTable(self._pool_mgr, ignore_history)
         self.hash: HashTable = HashTable(self._pool_mgr, ignore_history)
         self.schema: SchemaTable = SchemaTable(self._pool_mgr, ignore_history)
+        self.has_backup: bool = False
         self.is_new: bool
 
     @property
@@ -61,18 +62,26 @@ class Database:
                 except OSError:
                     pass
             raise
-        else:
-            if not (self.is_new or self.schema.up_to_date):
-                await self.history.apply_updates()
-                await self.schema.update()
+
+        if self.is_new or self.schema.up_to_date:
+            return
+
+        if not self.has_backup:
+            from cyberdrop_dl.database.backup import live_backup
+
+            await asyncio.to_thread(live_backup, self.path, self.schema.version)
+            self.has_backup = True
+
+        await self.history.apply_updates()
+        await self.schema.update()
 
     async def _transfer(self) -> None:
         if self.is_new or not self._auto_transfer:
             return
 
-        from .transfer import run
+        from cyberdrop_dl.database.transfer import live_transfer
 
-        await asyncio.to_thread(run, self.path)
+        self.has_backup = await asyncio.to_thread(live_transfer, self.path)
 
     @classmethod
     @contextlib.asynccontextmanager

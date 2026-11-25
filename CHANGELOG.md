@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
+### Changed:
+
+- Create a backup of the entire database before any auto update
+
 ### Fixed
 
 - Handle media with malformed/no names (Patreon)

@@ -88,6 +88,13 @@ def backup_database(source: Path, /, destination: Path | None = None, *, exclusi
     return destination
 
 
+def live_backup(source: Path, db_version: Version | None) -> Path:
+    destination = create_db_path_w_timestamp(source, db_version).with_suffix(f".backup{source.suffix}")
+    logger.info("Backing up '%s'", source)
+    _backup(source, destination, show_progress=True)
+    return destination
+
+
 def _backup(source: Path, destination: Path, *, show_progress: bool = True) -> None:
     try:
         with (
