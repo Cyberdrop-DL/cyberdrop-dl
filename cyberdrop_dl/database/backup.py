@@ -6,12 +6,17 @@ import logging
 import sqlite3
 from collections.abc import Callable, Generator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
 from cyberdrop_dl.database.conn import stdlib_connect
+from cyberdrop_dl.database.schema import Version, detect_version
 from cyberdrop_dl.filepath import sanitize_filename
 from cyberdrop_dl.utils import dates
+
+if TYPE_CHECKING:
+    import datetime as dt
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +45,20 @@ def _progress_tracker() -> Generator[_ProgressHook]:
         yield hook
 
 
+def create_db_path_w_timestamp(source: Path, db_version: Version | None = None, now: dt.datetime | None = None) -> Path:
+    version = "UNKNOWN_VERSION" if db_version is None else db_version
+    now_str = sanitize_filename(str(now or dates.now()))
+    return source.with_name(f"{source.stem}_{version}_{now_str}{source.suffix}")
+
+
 def _normalize_paths(source: Path, /, destination: Path | None = None) -> tuple[Path, Path]:
     source = source.resolve(strict=True)
 
     if destination is None:
-        now = sanitize_filename(str(dates.now()))
-        destination = source.with_suffix(f".backup_{now}{source.suffix}")
+        with contextlib.closing(stdlib_connect(source, "detect version")) as conn:
+            db_version = detect_version(conn)
+
+        destination = create_db_path_w_timestamp(source, db_version).with_suffix(f".backup{source.suffix}")
 
     else:
         destination = destination.resolve().absolute()
