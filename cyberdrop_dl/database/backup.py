@@ -63,6 +63,7 @@ def backup_database(source: Path, /, destination: Path | None = None, *, pages: 
 
 
 def _backup(source: Path, destination: Path, pages: int = 1_000, *, show_progress: bool = True) -> None:
+    logger.info("Backing up '%s'", source)
     try:
         with (
             contextlib.closing(stdlib_connect(source, "source")) as src,
@@ -100,13 +101,19 @@ def _merge_journal_files(db_path: Path) -> None:
         # these pragmas are no-op if WAL is disabled so it is safe to use even for a v9 db
         # 1. merge as much as possible without waiting for any other connection to finish
         cursor = conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
-        # 2. now force a full merge, which blocks until all other connections are closed
+        # 2. now force a full merge, waiting up to 5s for all other connections to close (if any)
         cursor.execute("PRAGMA busy_timeout = 5000;")
         with contextlib.closing(cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")):
             row = cursor.fetchone()
             assert row is not None
+
         if row["busy"]:
             raise _fail_wal_merge(db_path)
+
+        if row["log"] != row["checkpointed"]:
+            exc = _fail_wal_merge(db_path)
+            exc.add_note(f"Not all pages where checkpointed: {dict(row)}")
+            raise exc
 
     for file in _journal_files(db_path):
         _delete_journal_if_empty(db_path, file)
