@@ -169,8 +169,11 @@ def _run(db_path: Path, old_version: Version | None) -> None:
     _create_new_database(new_path)
 
     with contextlib.closing(stdlib_connect(new_path, "new database")) as new_conn:
-        cursor = new_conn.execute("PRAGMA foreign_keys=OFF")
-        cursor.execute(f"ATTACH DATABASE '{db_path}' AS old").close()
+        cursor = new_conn.execute("PRAGMA busy_timeout = 100;")
+        cursor.execute("PRAGMA main.locking_mode = EXCLUSIVE;")
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.execute("ATTACH DATABASE ? AS old", (str(db_path),))
+        cursor.execute("PRAGMA old.locking_mode = EXCLUSIVE;").close()
         try:
             _transfer(new_conn)
         except Exception:
@@ -187,8 +190,8 @@ def _run(db_path: Path, old_version: Version | None) -> None:
     version = "UNKNOWN_VERSION" if old_version is None else old_version
     backup_path = db_path.with_name(f"{db_path.stem}_{version}_{now}.backup{db_path.suffix}")
     backup_database(db_path, backup_path)
-    merge_journal_files(db_path)
     delete_database(db_path)
+    merge_journal_files(new_path)
     new_path.rename(db_path)
     logger.info("Transfer complete", extra={"color": "green"})
     logger.info("Backup at: '%s'", backup_path)

@@ -61,14 +61,21 @@ def _normalize_paths(source: Path, /, destination: Path | None = None) -> tuple[
     return source, destination
 
 
-def backup_database(source: Path, /, destination: Path | None = None) -> Path:
+def backup_database(source: Path, /, destination: Path | None = None, *, exclusive: bool = False) -> Path:
     source, destination = _normalize_paths(source, destination)
+    logger.info("Backing up '%s'", source)
+    try:
+        _merge_journal_files(source)
+    except sqlite3.OperationalError as e:
+        if exclusive:
+            raise _fail_wal_merge(source) from e
+        msg = "Unable to get an exclusive lock on the database. Changes from other live connections from this point forward won't be reflected on the backup"
+        logger.warning(msg)
     _backup(source, destination, show_progress=True)
     return destination
 
 
 def _backup(source: Path, destination: Path, *, show_progress: bool = True) -> None:
-    logger.info("Backing up '%s'", source)
     try:
         with (
             contextlib.closing(stdlib_connect(source, "source")) as src,
@@ -108,16 +115,14 @@ def merge_journal_files(db_path: Path) -> None:
 
 def _merge_journal_files(db_path: Path) -> None:
     with contextlib.closing(stdlib_connect(db_path, "WAL merge")) as conn:
-        # these pragmas are no-op if WAL is disabled so it is safe to use even for a v9 db
-        # 1. merge as much as possible without waiting for any other connection to finish
-        cursor = conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
-        # 2. now force a full merge, waiting up to 5s for all other connections to close (if any)
-        cursor.execute("PRAGMA busy_timeout = 5000;")
+        cursor = conn.execute("PRAGMA busy_timeout = 100;")
+        cursor.execute("PRAGMA locking_mode = EXCLUSIVE;")
+        # this pragma is no-op if WAL is disabled so it is safe to use even for a v9 db
         with contextlib.closing(cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")):
             row = cursor.fetchone()
             assert row is not None
 
-        if row["busy"]:
+        if row["busy"]:  # This should never happend
             raise _fail_wal_merge(db_path)
 
         if row["log"] != row["checkpointed"]:
@@ -165,4 +170,4 @@ if __name__ == "__main__":
 
     with setup_console_logging():
         database = Path(sys.argv[1])
-        backup_database(database)
+        backup_database(database, exclusive=True)
