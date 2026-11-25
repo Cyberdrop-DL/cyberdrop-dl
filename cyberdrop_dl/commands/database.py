@@ -80,3 +80,15 @@ def folder(*, cli: CLIarguments | None = None) -> None:
     file = (cli and cli.database_file) or AppData.default().db_file
 
     open_folder(file.parent)
+
+
+@app.command(show=False)
+def backup(*, cli: CLIarguments | None = None) -> None:
+    """Make a backup of the database
+
+    Backup will be created on the same folder as the current database and its name will include the current schema version and timestamp
+    """
+    from cyberdrop_dl.database.backup import backup_database
+
+    file = (cli and cli.database_file) or AppData.default().db_file
+    backup_database(file)
