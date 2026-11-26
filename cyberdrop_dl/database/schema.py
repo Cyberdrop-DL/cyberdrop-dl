@@ -6,12 +6,16 @@ import logging
 import sqlite3
 from typing import TYPE_CHECKING, NamedTuple, final, override
 
+from cyberdrop_dl.database import user_version
+from cyberdrop_dl.database.conn import stdlib_connect
 from cyberdrop_dl.exceptions import DatabaseError
 
 from .common import Table, get_column_names, get_table_names
 from .definitions import CREATE_SCHEMA
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from cyberdrop_dl.database.conn import DBConnection
 
 
@@ -32,46 +36,55 @@ class Version(NamedTuple):
         return ".".join(map(str, self))
 
 
-CURRENT_VERSION = Version(10, 15, 4)
+CURRENT_VERSION = Version(10, 17, 1)
 REQUIRED_VERSION = Version(9, 15, 0)
 
 logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True)
-class SchemaTable(Table, name="schema_version"):
-    up_to_date: bool = False
+class Schema:
     version: Version | None = None
+    user_ver: user_version.Marker = user_version.Marker.BRAND_NEW
 
-    async def get_version(self) -> Version | None:
-        if not await self.exists():
-            return None
-        query = "SELECT version FROM schema_version;"
-        async with self.db.reader() as db_conn:
-            versions = [r["version"] for r in await db_conn.execute_fetchall(query)]
-            if versions:
-                return max(map(Version.parse, versions))
+    @property
+    def up_to_date(self) -> bool:
+        return self.version is not None and self.version >= CURRENT_VERSION and user_version.UP_TO_DATE in self.user_ver
+
+    def log(self) -> None:
+        logger.info("Current database schema:  %s", self.version)
+        logger.info("Expected database schema: %s", CURRENT_VERSION)
+        logger.info("Current user_version:  %s (%s)", f"{self.user_ver:08b}", self.user_ver)
+        logger.info(
+            "Expected user_version: %s (%s)",
+            f"{user_version.UP_TO_DATE:08b}",
+            user_version.UP_TO_DATE,
+        )
+
+
+def get_schema(db_path: Path) -> Schema:
+    with contextlib.closing(stdlib_connect(db_path, "get schema")) as probe:
+        return Schema(version=detect_version(probe), user_ver=user_version.get(probe))
+
+
+@dataclasses.dataclass(slots=True)
+class SchemaTable(Table, name="schema_version"):
+    info: Schema = dataclasses.field(default_factory=Schema)
+    log_updates: bool = False
 
     @override
     async def create(self) -> None:
-        logger.info(f"Expected database schema: {CURRENT_VERSION!s}")
-        self.version = await self.get_version()
-        logger.info(f"Current database schema: {self.version!s}")
         async with self.db.writer() as db_conn:
             await db_conn.execute_and_close(CREATE_SCHEMA)
             await db_conn.commit()
 
     def check_version(self) -> None:
         error = None
-        if self.version is None:
+        if self.info.version is None:
             error = f"Database has no schema information. Minimum required version: {REQUIRED_VERSION}"
-        elif self.version < REQUIRED_VERSION:
-            error = (
-                f"Incompatible database version detected. Current: {self.version!s} - Required: {REQUIRED_VERSION!s}"
-            )
 
-        elif self.version >= CURRENT_VERSION:
-            self.up_to_date = True
+        elif self.info.version < REQUIRED_VERSION:
+            error = f"Incompatible database version detected. Current: {self.info.version!s} - Required: {REQUIRED_VERSION!s}"
 
         if error:
             exc = DatabaseError(error)
@@ -80,14 +93,17 @@ class SchemaTable(Table, name="schema_version"):
             raise exc
 
     async def update(self, version: Version = CURRENT_VERSION) -> None:
-        query = "INSERT INTO schema_version (version) VALUES (?)"
+        if self.info.version == version:
+            return
+
+        query = "INSERT OR IGNORE INTO schema_version (version) VALUES (?)"
         async with self.db.writer() as db_conn:
             await db_conn.execute_and_close(query, (str(version),))
             await db_conn.commit()
 
-        self.version = version
-        self.up_to_date = version >= CURRENT_VERSION
-        logger.info(f"Updated database schema to {version!s}")
+        self.info.version = version
+        if self.log_updates:
+            logger.info(f"Updated database schema to {version!s}")
 
 
 async def dump(db_conn: DBConnection) -> str:

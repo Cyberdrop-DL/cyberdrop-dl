@@ -5,10 +5,11 @@ import contextlib
 from typing import TYPE_CHECKING, Self
 
 from cyberdrop_dl import aio
+from cyberdrop_dl.database import user_version
 from cyberdrop_dl.database.hash import HashTable
 from cyberdrop_dl.database.history import HistoryTable
 from cyberdrop_dl.database.pool import PoolManager
-from cyberdrop_dl.database.schema import SchemaTable
+from cyberdrop_dl.database.schema import SchemaTable, get_schema
 from cyberdrop_dl.signature import dataclass_repr
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class Database:
         self.history: HistoryTable = HistoryTable(self._pool_mgr, ignore_history)
         self.hash: HashTable = HashTable(self._pool_mgr, ignore_history)
         self.schema: SchemaTable = SchemaTable(self._pool_mgr, ignore_history)
+        self.schema.log_updates = self._auto_transfer
         self.has_backup: bool = False
         self.is_new: bool
 
@@ -44,12 +46,16 @@ class Database:
 
     async def _create_tables(self) -> None:
         await self.schema.create()
+        if self.has_backup or self.is_new:
+            await self.schema.update()
+            await user_version.aupdate(self.conn, user_version.UP_TO_DATE)
+
+        self.schema.info = await asyncio.to_thread(get_schema, self.path)
         if not self.is_new:
             self.schema.check_version()
+
         await self.history.create()
         await self.hash.create()
-        if self.is_new:
-            await self.schema.update()
 
     async def create_tables(self) -> None:
         try:
@@ -63,25 +69,31 @@ class Database:
                     pass
             raise
 
-        if self.is_new or self.schema.up_to_date:
+        if self.is_new or self.schema.info.up_to_date:
             return
 
         if not self.has_backup:
             from cyberdrop_dl.database.backup import live_backup
 
-            await asyncio.to_thread(live_backup, self.path, self.schema.version)
+            await asyncio.to_thread(live_backup, self.path, self.schema.info.version)
             self.has_backup = True
 
         await self.history.apply_updates()
         await self.schema.update()
 
     async def _transfer(self) -> None:
-        if self.is_new or not self._auto_transfer:
+        if not self._auto_transfer:
+            return
+
+        self.schema.info = await asyncio.to_thread(get_schema, self.path)
+        self.schema.log_updates = True
+        self.schema.info.log()
+        if self.is_new:
             return
 
         from cyberdrop_dl.database.transfer import live_transfer
 
-        self.has_backup = await asyncio.to_thread(live_transfer, self.path)
+        self.has_backup = await asyncio.to_thread(live_transfer, self.path, self.schema.info.version)
 
     @classmethod
     @contextlib.asynccontextmanager

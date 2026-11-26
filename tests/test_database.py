@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import sqlite3
 from pathlib import Path
@@ -133,7 +134,7 @@ async def test_database_creation(tmp_cwd: Path) -> None:
     assert db.is_new
     size = await aio.get_size(db_file)
     assert size
-    assert db.schema.up_to_date
+    assert db.schema.info.up_to_date
 
 
 async def test_automatic_database_transfer_creates_backup(tmp_cwd: Path) -> None:
@@ -210,15 +211,15 @@ async def test_database_version_check(tmp_cwd: Path) -> None:
 
     async with Database.connect_w_no_pool(db_file) as db:
         assert not db.is_new
-        assert not db.schema.up_to_date
+        assert not db.schema.info.up_to_date
         await db.schema.create()
-        assert db.schema.version is None
-        assert await db.schema.get_version() is None
+        assert db.schema.info.version is None
+        assert (await asyncio.to_thread(schema.get_schema, db.path)).version is None
         version = schema.Version(8, 8, 8)
         await db.schema.update(version)
-        assert not db.schema.up_to_date
-        assert await db.schema.get_version() == version
-        assert db.schema.version == version
+        assert not db.schema.info.up_to_date
+        assert (await asyncio.to_thread(schema.get_schema, db.path)).version == version
+        assert db.schema.info.version == version
         with pytest.raises(DatabaseError):
             db.schema.check_version()
 
