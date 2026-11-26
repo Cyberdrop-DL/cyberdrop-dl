@@ -86,6 +86,7 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
         "Collection": "/collection/<collection_id>",
         "Direct Media": (
             "/media-u/v3/<media_id>",
+            "/api/media/<media_id>",
             ".patreonusercontent.com/...",
             "stream.mux.com/...",
         ),
@@ -120,7 +121,7 @@ class PatreonGenericCrawler(Crawler, is_generic=True):
                 await self.creator(scrape_item)
             case [] | [""] | ["cw"] if self.is_custom_domain():
                 await self.creator(scrape_item)
-            case ["media-u", "v3", media_id]:
+            case ["media-u", "v3", media_id] | ["api", "media", media_id]:
                 await self.media(scrape_item, media_id)
             case _:
                 raise ValueError
@@ -337,19 +338,11 @@ class LazyLogMedia:
 
 
 def _check_json(resp: object, _: Any) -> None:
-    if type(resp) is not dict:
+    error = traversal2.traverse(resp, "errors", 0, {}).get_value()
+    if not error:
         return
 
-    errors = resp.get("errors")
-    if not (errors and type(errors) is list):
-        return
-
-    error = errors[0]
-    try:
-        status = int(error.get("status", 422))
-    except ValueError:
-        return
-
+    status = int(error.get("status", 422))
     raise ScrapeError(status, error.get("detail"))
 
 
@@ -391,7 +384,7 @@ class PatreonV1API(API):
             return bootstrap["campaign"]["data"]["id"]
 
         with contextlib.suppress(css.SelectorError):
-            url = self.parse_url(css.select(soup, "head link[href*='/campaign/']", "href"))
+            url = self.parse_url(await css.aselect(soup, "head link[href*='/campaign/']", "href"))
             return url.parts[url.parts.index("campaign") + 1]
 
         # TODO: fix next_js chunk parsing
