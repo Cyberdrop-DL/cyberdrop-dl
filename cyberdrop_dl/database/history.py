@@ -255,6 +255,10 @@ def try_wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
 async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
     from cyberdrop_dl.crawlers import Registry
 
+    version = await user_version.aget(db_conn)
+    if user_version.Marker.REFERERS_FIXED_AT_10_15_4 in version:
+        return
+
     updates = ""
     with _timed_update("old database referers"):
         for crawler, fix in Registry.db_referer_fixes():
@@ -265,6 +269,8 @@ async def _fix_referers(db_conn: aiosqlite.Connection) -> None:
 
         await (await db_conn.executescript(updates)).close()
         await db_conn.commit()
+        new_user_version = version | user_version.Marker.REFERERS_FIXED_AT_10_15_4
+        await user_version.aupdate(db_conn, new_user_version)
 
 
 async def _custom_fixes(db_conn: aiosqlite.Connection) -> None:
@@ -274,10 +280,17 @@ async def _custom_fixes(db_conn: aiosqlite.Connection) -> None:
     if not custom_fixes:
         return
 
+    version = await user_version.aget(db_conn)
+    if user_version.Marker.CUSTOM_FIXES_AT_10_15_4 in version:
+        return
+
     with _timed_update("custom database fixes"):
         for crawler, fix in custom_fixes:
             logger.info("Applying '%s' fix (%s)", crawler.DOMAIN, fix.__name__)
             await fix(db_conn)
+
+        new_user_version = version | user_version.Marker.CUSTOM_FIXES_AT_10_15_4
+        await user_version.aupdate(db_conn, new_user_version)
 
 
 @contextlib.contextmanager

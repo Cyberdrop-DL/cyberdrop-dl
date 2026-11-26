@@ -18,9 +18,17 @@ class Marker(enum.IntFlag):
     BRAND_NEW = 0
     DOMAINS_FIXED = 1
     FILES_TRANSFER_COMPLETED = 2
+    REFERERS_FIXED_AT_10_15_4 = 4
+    CUSTOM_FIXES_AT_10_15_4 = 8
 
 
-UP_TO_DATE = Marker.BRAND_NEW | Marker.DOMAINS_FIXED | Marker.FILES_TRANSFER_COMPLETED
+UP_TO_DATE = (
+    Marker.BRAND_NEW
+    | Marker.DOMAINS_FIXED
+    | Marker.FILES_TRANSFER_COMPLETED
+    | Marker.REFERERS_FIXED_AT_10_15_4
+    | Marker.CUSTOM_FIXES_AT_10_15_4
+)
 
 
 def get(conn: sqlite3.Connection) -> Marker:

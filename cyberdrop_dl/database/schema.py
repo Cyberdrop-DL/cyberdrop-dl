@@ -49,7 +49,7 @@ class Schema:
 
     @property
     def up_to_date(self) -> bool:
-        return self.version is not None and self.version >= CURRENT_VERSION and self.user_ver in user_version.UP_TO_DATE
+        return self.version is not None and self.version >= CURRENT_VERSION and user_version.UP_TO_DATE in self.user_ver
 
     def log(self) -> None:
         logger.info("Current database schema:  %s", self.version)
