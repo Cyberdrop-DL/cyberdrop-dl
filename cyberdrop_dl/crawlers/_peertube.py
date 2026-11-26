@@ -164,7 +164,14 @@ class PeerTubeAPI(API):
     async def captions(self, video_id: str, password: str | None) -> list[ISO639Subtitle]:
         url = self.origin / "api/v1/videos" / video_id / "captions"
         resp = await self.request_json(url, headers=self.headers(password))
-        return [ISO639Subtitle(sub["fileUrl"], sub["language"]["id"], sub["language"]["label"]) for sub in resp["data"]]
+        return [
+            ISO639Subtitle(
+                url=sub["fileUrl"],
+                lang_code=sub["language"]["id"],
+                name=sub["language"]["label"],
+            )
+            for sub in resp["data"]
+        ]
 
     async def playlist(self, playlist_id: str, kind: str) -> dict[str, Any]:
         url = self.origin / "api/v1" / kind / playlist_id

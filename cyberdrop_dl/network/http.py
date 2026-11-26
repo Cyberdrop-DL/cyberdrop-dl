@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from curl_cffi.requests.models import Response as CurlResponse
 
     from cyberdrop_dl.config import Config
-    from cyberdrop_dl.network.wreq import WreqClient  # pyright: ignore[reportPrivateLocalImportUsage]
+    from cyberdrop_dl.network.wreq import WreqClient
 
     from . import HttpMethod
 
