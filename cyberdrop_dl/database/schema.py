@@ -54,8 +54,12 @@ class Schema:
     def log(self) -> None:
         logger.info("Current database schema:  %s", self.version)
         logger.info("Expected database schema: %s", CURRENT_VERSION)
-        logger.info("Current user_version:  %s (%s)", self.user_ver, f"{self.user_ver:08b}")
-        logger.info("Expected user_version: %s (%s)", user_version.UP_TO_DATE, f"{user_version.UP_TO_DATE:08b}")
+        logger.info("Current user_version:  %s (%s)", f"{self.user_ver:08b}", self.user_ver)
+        logger.info(
+            "Expected user_version: %s (%s)",
+            f"{user_version.UP_TO_DATE:08b}",
+            user_version.UP_TO_DATE,
+        )
 
 
 def get_schema(db_path: Path) -> Schema:

@@ -46,8 +46,9 @@ class Database:
 
     async def _create_tables(self) -> None:
         await self.schema.create()
-        if self.has_backup:
+        if self.has_backup or self.is_new:
             await self.schema.update()
+            await user_version.aupdate(self.conn, user_version.UP_TO_DATE)
 
         self.schema.info = await asyncio.to_thread(get_schema, self.path)
         if not self.is_new:
@@ -55,11 +56,6 @@ class Database:
 
         await self.history.create()
         await self.hash.create()
-        if not self.is_new:
-            return
-
-        await self.schema.update()
-        await user_version.aupdate(self.conn, user_version.UP_TO_DATE)
 
     async def create_tables(self) -> None:
         try:
