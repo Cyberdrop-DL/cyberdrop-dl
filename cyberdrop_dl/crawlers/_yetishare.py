@@ -1,34 +1,45 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
-from typing import TYPE_CHECKING, Any, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, PasswordProtectedError, ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
-from cyberdrop_dl.utils import css, extr_text
+from cyberdrop_dl.utils import css, dates, extr_text
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
+from cyberdrop_dl.utils.urls import parse_http_url
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from bs4 import BeautifulSoup
 
-    from cyberdrop_dl.url_objects import ScrapeItem
+    from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 
 
 @final
 class Selector:
-    DOWNLOAD_BUTTON = ".btn-group.responsiveMobileMargin button:-soup-contains('Download')[onclick*='download_token']"
-    DROPDOWN_MENU = ".dropdown-menu.dropdown-info a[onclick*='download_token']"
+    DOWNLOAD = css.Selector(
+        ", ".join(
+            (
+                ".btn-group.responsiveMobileMargin button:-soup-contains('Download')[onclick*='download_token']",
+                ".dropdown-menu.dropdown-info a[onclick*='download_token']",
+            )
+        ),
+        attribute="onclick",
+    )
     FILE_NAME = ".image-name-title"
     FILE_UPLOAD_DATE = "td:-soup-contains('Uploaded:') + td"
     FILE_INFO = "script:-soup-contains('showFileInformation')"
 
     LOAD_IMAGES = "div[class*='page-container'] script:-soup-contains('loadImages')"
-    FOLDER_ID = "#folderId"
-    _FOLDER_ITEM = "#fileListing [class*=fileItem]"
-    FILES = f"{_FOLDER_ITEM}[fileid]"
-    SUBFOLDERS = f"{_FOLDER_ITEM}[folderid]"
-    FOLDER_TOTAL_PAGES = "input#rspTotalPages"
+    FOLDER_ID = css.Selector("#folderId", "value")
+    FOLDER_ITEM = "#fileListing [class*=fileItem]"
+    FOLDER_TOTAL_PAGES = css.Selector("input#rspTotalPages", "value")
 
     LOGIN_FORM = "form#form_login"
     PASSWORD_PROTECTED = "#folderPasswordForm, #filePassword"  # noqa: S105
@@ -51,9 +62,9 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        cls.FOLDERS_API_URL = cls.PRIMARY_URL / "account/ajax/load_files"
-        cls.FILE_API_URL = cls.PRIMARY_URL / "account/ajax/file_details"
-        cls.FOLDER_PASSWORD_API_URL = cls.PRIMARY_URL / "ajax/folder_password_process"
+        cls.FOLDERS_API_URL: AbsoluteHttpURL = cls.PRIMARY_URL / "account/ajax/load_files"
+        cls.FILE_API_URL: AbsoluteHttpURL = cls.PRIMARY_URL / "account/ajax/file_details"
+        cls.FOLDER_PASSWORD_API_URL: AbsoluteHttpURL = cls.PRIMARY_URL / "ajax/folder_password_process"
 
     async def fetch(self, scrape_item: ScrapeItem) -> None:
         match scrape_item.url.parts[1:]:
@@ -83,8 +94,7 @@ class YetiShareCrawler(Crawler, is_abc=True):
         else:
             # this looks like:  loadImages('folder', '12345', 1, 0, '', {'searchTerm': "", 'filterUploadedDateRange': ""});
             page_type = "folder"
-            load_images = extr_text(soup.select(Selector.LOAD_IMAGES)[-1].text, "loadImages(", ");")
-            node_id = load_images.replace("'", "").split(",")[1].strip()
+            node_id = await _extr_node_id(soup)
 
         page = 1
         total_pages = None
@@ -92,9 +102,10 @@ class YetiShareCrawler(Crawler, is_abc=True):
             scrape_item.setup_as_album("", album_id=folder_id)
 
         if not is_shared:
-            title = css.page_title(soup, self.DOMAIN).removesuffix("Folder").strip()
+            title = (await aio.to_thread(css.page_title)(soup, self.DOMAIN)).removesuffix("Folder").strip()
             scrape_item.append_folders(self.create_title(title, folder_id))
 
+        sleep = aio.periodic_sleep(10)
         for page in itertools.count(1):
             ajax_soup = await self._get_soup_from_ajax_api(
                 scrape_item,
@@ -108,20 +119,19 @@ class YetiShareCrawler(Crawler, is_abc=True):
             )
 
             if total_pages is None:
-                total_pages = int(css.select(ajax_soup, Selector.FOLDER_TOTAL_PAGES, "value"))
+                total_pages = int(await asyncio.to_thread(css.select, ajax_soup, Selector.FOLDER_TOTAL_PAGES))
 
-            for file in ajax_soup.select(Selector.FILES):
-                file_url = self.parse_url(css.attr(file, "dtfullurl"))
-                content_id = int(css.attr(file, "fileid"))
-                new_scrape_item = scrape_item.create_child(file_url)
-                new_scrape_item.part_of_album = not is_shared
-                self.create_task(self._handle_content_id_task(new_scrape_item, content_id))
-                scrape_item.add_children()
-
-            for new_scrape_item in self.iter_children(
-                scrape_item, ajax_soup, Selector.SUBFOLDERS, attribute="sharing-url"
-            ):
-                self.create_task(self.run(new_scrape_item))
+            async with aio.non_cancelling_taskgroup() as tg:
+                async for item in _extr_items(ajax_soup):
+                    new_item = scrape_item.create_child(self.parse_url(item.url))
+                    if item.type == "file":
+                        content_id = int(item.id)
+                        new_item.part_of_album = not is_shared
+                        tg.create_task(self._handle_content_id_task(new_item, content_id))
+                        scrape_item.add_children()
+                    else:
+                        self.create_task(self.run(new_item))
+                    await sleep()
 
             if page >= total_pages:
                 break
@@ -129,23 +139,15 @@ class YetiShareCrawler(Crawler, is_abc=True):
     @error_handling_wrapper
     async def file(self, scrape_item: ScrapeItem, file_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
         if soup.select_one(Selector.PASSWORD_PROTECTED):
             soup = await self._unlock_password_protected_file(scrape_item, file_id)
 
-        _check_is_available(soup)
-
-        content_id = int(
-            extr_text(
-                css.select_text(soup, Selector.FILE_INFO),
-                "showFileInformation(",
-                ");",
-            )
-        )
-
-        return await self._handle_content_id(scrape_item, content_id)
+        await _check_is_available(soup)
+        content_id = await _extr_content_id(soup)
+        await self._handle_content_id(scrape_item, content_id)
 
     @error_handling_wrapper
     async def _handle_content_id(self, scrape_item: ScrapeItem, content_id: int) -> None:
@@ -154,23 +156,10 @@ class YetiShareCrawler(Crawler, is_abc=True):
             data={"u": content_id},
             is_file=True,
         )
-
-        download_tag = soup.select_one(Selector.DROPDOWN_MENU) or css.select(soup, Selector.DOWNLOAD_BUTTON)
-
-        # Manually parse link. Some URLs are invalid. ex: https://cyberfile.me/7cfu
-        # For the download URL, the slug does not actually matter. It can be anything
-        raw_link = extr_text(css.attr(download_tag, "onclick"), "('", "');")
-        token = raw_link.rpartition("?download_token=")[-1]
-        link = self.parse_url(raw_link).with_query(download_token=token)
-
-        scrape_item.uploaded_at = self.parse_date(
-            css.select_text(soup, Selector.FILE_UPLOAD_DATE),
-            "%d/%m/%Y %H:%M:%S",
-        )
-
-        filename = css.select_text(soup, Selector.FILE_NAME)
-        custom_filename, ext = self.get_filename_and_ext(filename)
-        await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        file = await _extr_download(soup)
+        scrape_item.uploaded_at = file.uploaded_at
+        custom_filename, ext = self.get_filename_and_ext(file.name)
+        await self.handle_file(file.src, scrape_item, file.name, ext, custom_filename=custom_filename)
 
     _handle_content_id_task = auto_task_id(_handle_content_id)
 
@@ -190,11 +179,11 @@ class YetiShareCrawler(Crawler, is_abc=True):
 
         soup = await ajax_api_request()
         if soup.select_one(Selector.PASSWORD_PROTECTED):
-            node_id: str = data.get("nodeId") or css.select(soup, Selector.FOLDER_ID, "value")
+            node_id = data.get("nodeId") or await css.aselect(soup, Selector.FOLDER_ID)
             await self._unlock_password_protected_folder(scrape_item, node_id)
             soup = await ajax_api_request()
 
-        _check_is_available(soup)
+        await _check_is_available(soup)
         return soup
 
     async def _unlock_password_protected_file(self, scrape_item: ScrapeItem, file_id: str) -> BeautifulSoup:
@@ -234,8 +223,65 @@ class YetiShareCrawler(Crawler, is_abc=True):
             raise PasswordProtectedError(message="Incorrect password")
 
 
+@aio.to_thread
+def _extr_node_id(soup: BeautifulSoup) -> str:
+    load_images = extr_text(soup.select(Selector.LOAD_IMAGES)[-1].text, "loadImages(", ");")
+    return load_images.replace("'", "").split(",")[1].strip()
+
+
+@aio.to_thread
+def _extr_content_id(soup: BeautifulSoup) -> int:
+    return int(extr_text(css.select_text(soup, Selector.FILE_INFO), "showFileInformation(", ");"))
+
+
+@struct
+class FileDownload:
+    name: str
+    uploaded_at: int
+    src: AbsoluteHttpURL
+
+
+@aio.to_thread
+def _extr_download(soup: BeautifulSoup) -> FileDownload:
+    uploaded = dates.parse_format(css.select_text(soup, Selector.FILE_UPLOAD_DATE), "%d/%m/%Y %H:%M:%S")
+    on_click = css.select(soup, Selector.DOWNLOAD)
+    # Manually parse link. Some URLs are invalid. ex: https://cyberfile.me/7cfu
+    # For the download URL, the slug does not actually matter. It can be anything
+    src = extr_text(on_click, "('", "');")
+    token = src.rpartition("download_token=")[-1]
+    return FileDownload(
+        src=parse_http_url(src).with_query(download_token=token),
+        uploaded_at=int(uploaded.timestamp()),
+        name=css.select_text(soup, Selector.FILE_NAME),
+    )
+
+
+@struct
+class Item:
+    id: str
+    url: str
+    type: Literal["file", "folder"]
+
+
+@aio.iterable_to_thread
+def _extr_items(soup: BeautifulSoup) -> Iterable[Item]:
+    for item in css.iselect(soup, Selector.FOLDER_ITEM):
+        try:
+            content_id = css.attr(item, "fileid")
+        except css.SelectorError:
+            kind = "folder"
+            content_id = css.attr(item, "folderid")
+            url = css.attr(item, "sharing-url")
+        else:
+            kind = "file"
+            url = css.attr(item, "dtfullurl")
+
+        yield Item(id=content_id, url=url, type=kind)
+
+
+@aio.to_thread
 def _check_is_available(soup: BeautifulSoup) -> None:
-    if soup.select(Selector.RECAPTCHA):
+    if soup.select_one(Selector.RECAPTCHA):
         raise DDOSGuardError("Google recaptcha found")
 
     content = soup.get_text()

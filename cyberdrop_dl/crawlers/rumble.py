@@ -161,11 +161,11 @@ class RumbleCrawler(Crawler):
         while True:
             soup = await self.request_soup(url)
             yield soup
-            pagination = tuple(soup.select(self.NEXT_PAGE_SELECTOR))
+            pagination = await css.aiselect(soup, self.NEXT_PAGE_SELECTOR, "href")
             if not pagination:
                 return
 
-            url = self.parse_url(css.attr(pagination[-1], "href"))
+            url = self.parse_url(pagination[-1])
             new_page = int(url.query["page"])
             if new_page <= current_page:
                 return

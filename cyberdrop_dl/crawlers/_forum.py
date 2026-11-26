@@ -414,14 +414,17 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
             scrape_item.append_folders(self.create_title(title, thread_id=thread.id))
 
         post_url = None
+        sleep = aio.periodic_sleep(10)
         try:
-            async for soup in pages:
-                for post in self._iter_posts(thread, soup):
-                    post_url = self.make_post_url(thread, post.id)
-                    new_scrape_item = scrape_item.create_new(thread.url, add_parent=post_url)
-                    new_scrape_item.uploaded_at = post.timestamp
-                    self.create_task(self.post(new_scrape_item, post))
-                    scrape_item.add_children()
+            async with aio.non_cancelling_taskgroup() as tg, aio.maybe_aclosing(pages):
+                async for soup in pages:
+                    async for post in self._iter_posts(thread, soup):
+                        post_url = self.make_post_url(thread, post.id)
+                        new_item = scrape_item.create_new(thread.url, add_parent=post_url)
+                        new_item.uploaded_at = post.timestamp
+                        tg.create_task(self.post(new_item, post))
+                        scrape_item.add_children()
+                        await sleep()
         finally:
             if post_url and post_url != thread.url:
                 self.manager.scrape_mapper.logs.write_last_forum_post(post_url)
@@ -430,7 +433,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     def _resolve_spoiler_iframes(cls, soup: BeautifulSoup) -> None:
         for name in ("data-s9e-mediaembed",):
             attr = f"{name}-iframe"
-            for span_iframe in soup.select(f"span[{name}]"):
+            for span_iframe in css.select_all(soup, f"span[{name}]"):
                 try:
                     data = json.loads(css.select(span_iframe, f"span[{attr}]", attr))
                 except (css.SelectorError, ValueError):
@@ -442,9 +445,10 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
                 span_iframe.replace_with(soup.new_tag("iframe", attrs=dict(itertools.batched(data, 2))))
 
+    @aio.iterable_to_thread
     def _iter_posts(self, thread: ThreadProtocol, soup: BeautifulSoup) -> Generator[ForumPost]:
         self._resolve_spoiler_iframes(soup)
-        for article in soup.select(self.SELECTORS.posts.article):
+        for article in css.iselect(soup, self.SELECTORS.posts.article):
             post = ForumPost.new(article, self.SELECTORS.posts)
             if thread.post_id and post.id < thread.post_id:
                 continue

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -9,6 +10,8 @@ from cyberdrop_dl.utils import css, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
@@ -41,20 +44,18 @@ class FilmArchivCrawler(Crawler):
             m3u8_url = self.CDN / f"{cdn_path}_sv1/playlist.m3u8"
             thumb = self.CDN / cdn_path / "poster.jpg"
 
-        meta: dict[str, Any] = {
-            css.text(css.select(row, "strong").extract()).removesuffix(":"): css.text(row)
-            for row in soup.select("div.ce-video_detail .space-y-2 div.leading-tight")
-        }
-        name = meta.get("Originaltitel") or css.select_text(soup, "title-div")
+        meta = await _extr_meta(soup)
         m3u8, info = await self.request_m3u8_playlist(m3u8_url)
         meta["rendition"] = info
         await self.handle_file(
             scrape_item.url,
             scrape_item,
-            name,
+            meta["name"],
             ext := ".mp4",
             m3u8=m3u8,
-            custom_filename=self.create_custom_filename(name, ext, file_id=video_id, resolution=info.resolution),
+            custom_filename=self.create_custom_filename(
+                meta["name"], ext, file_id=video_id, resolution=info.resolution
+            ),
             thumbnail=thumb,
             metadata=meta,
         )
@@ -66,3 +67,17 @@ def _extr_cdn_path(thumb: AbsoluteHttpURL) -> str:
             return f"{a}/{b}"
         case _:
             raise ValueError
+
+
+@aio.to_thread
+def _extr_meta(soup: BeautifulSoup) -> dict[str, Any]:
+
+    def parse():
+        for row in soup.select("div.ce-video_detail .space-y-2 div.leading-tight"):
+            bold_title = css.select(row, "strong").extract()
+            name = css.text(bold_title).removesuffix(":")
+            yield name, css.text(row)
+
+    meta: dict[str, Any] = dict(parse())
+    meta["name"] = meta.get("Originaltitel") or css.select_text(soup, "title-div")
+    return meta

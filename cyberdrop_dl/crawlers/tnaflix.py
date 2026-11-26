@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
@@ -63,7 +64,7 @@ class TNAFlixCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        best_format = max(_parse_formats(soup))
+        best_format = await asyncio.to_thread(lambda: max(_parse_formats(soup)))
         link = self.parse_url(best_format.link_str)
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.title(soup)
@@ -91,7 +92,7 @@ class TNAFlixCrawler(Crawler):
 
 
 def _parse_formats(soup: BeautifulSoup) -> Generator[Format]:
-    for src in soup.select(Selector.VIDEO_SRC):
+    for src in css.iselect(soup, Selector.VIDEO_SRC):
         url = css.attr(src, "src")
         resolution = Resolution.parse(css.attr(src, "size"))
         yield Format(resolution, url)
