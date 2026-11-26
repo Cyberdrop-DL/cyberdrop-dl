@@ -91,6 +91,7 @@ class SchemaTable(Table, name="schema_version"):
     async def update(self, version: Version = CURRENT_VERSION) -> None:
         if self.info.version == version:
             return
+
         query = "INSERT OR IGNORE INTO schema_version (version) VALUES (?)"
         async with self.db.writer() as db_conn:
             await db_conn.execute_and_close(query, (str(version),))

@@ -106,9 +106,9 @@ def _transfer_media_to_files(new_conn: sqlite3.Connection) -> None:
 # TransferManager
 
 # Tables whose rows are transferred column-by-column, in dependency order.
-_DIRECT_TRANSFER_TABLES = ["media", "hash", "files"]
+_DIRECT_TRANSFER_TABLES = ["media", "hash", "files", "schema_version"]
 
-_SKIP_TABLES = {"schema_version"}
+_SKIP_TABLES = set()
 
 
 def _needs_update(db_path: Path) -> bool:
