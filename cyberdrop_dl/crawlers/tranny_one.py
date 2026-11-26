@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.network.http import HTTPConfig
@@ -13,11 +13,11 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
-    VIDEO_SRC = css.CssAttributeSelector("#placeVideo #videoContainer", "data-high")
+    VIDEO_SRC = css.Selector("#placeVideo #videoContainer", "data-high")
     VIDEO_TITLE = "span.movie-title-text"
     ITEM_THUMBS = "div.thumbs-container a.pp"
-
     MODEL_NAME = "h1.ps-heading-name"
     ALBUM_TITLE = "h1.top"
     IMAGES = "div.pic-list a"
@@ -60,7 +60,7 @@ class TrannyOneCrawler(Crawler):
 
         soup = await self.request_soup(scrape_item.url)
         title = css.select_text(soup, Selector.VIDEO_TITLE)
-        link = self.parse_url(Selector.VIDEO_SRC(soup))
+        link = self.parse_url(css.select(soup, Selector.VIDEO_SRC))
         filename, ext = self.get_filename_and_ext(link.name)
         custom_filename = self.create_custom_filename(title, ext, file_id=video_id)
         return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)

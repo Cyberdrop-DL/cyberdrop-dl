@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 @final
 class Selector:
-    VIDEO_SRC = css.CssAttributeSelector("video > source", "src")
     TITLE = "strong.bread-current"
     NEXT_PAGE = "li.page-item > a:-soup-contains('›')"  # noqa: RUF001
     VIDEOS = "div.videos-list > article > a"
@@ -44,7 +43,7 @@ class DesiVideoCrawler(Crawler):
             return
 
         soup = await self.request_soup(scrape_item.url)
-        video_url = self.parse_url(Selector.VIDEO_SRC(soup))
+        video_url = self.parse_url(css.select(soup, css.VIDEO_SOURCE))
         title = css.select_text(soup, Selector.TITLE)
 
         scrape_item.uploaded_at = json_ld.upload_date(soup)

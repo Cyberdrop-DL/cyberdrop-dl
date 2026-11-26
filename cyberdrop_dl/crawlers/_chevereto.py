@@ -24,11 +24,18 @@ class Selector:
     ITEM_DESCRIPTION = "p[class*=description-meta]"
     ITEM = "a.image-container"
     NEXT_PAGE = "a[data-pagination=next]"
+    DATE = css.Selector(
+        ", ".join(
+            f"p[class*=description-meta]:-soup-contains('{name}') span"
+            for name in (
+                "Uploaded",
+                "Added to",
+            )
+        ),
+        attribute="title",
+    )
 
-    DATE_SINGLE_ITEM = f"{ITEM_DESCRIPTION}:-soup-contains('Uploaded') span"
-    DATE_ALBUM_ITEM = f"{ITEM_DESCRIPTION}:-soup-contains('Added to') span"
-    DATE = css.CssAttributeSelector(f"{DATE_SINGLE_ITEM}, {DATE_ALBUM_ITEM}", "title")
-    MAIN_IMAGE = css.CssAttributeSelector("div#image-viewer img", "src")
+    MAIN_IMAGE = css.Selector("div#image-viewer img", "src")
 
 
 @URLConfig(trim=False)
@@ -206,10 +213,10 @@ class CheveretoCrawler(Crawler, is_generic=True):
         soup = await self.request_soup(scrape_item.url)
         link_str = open_graph.get_video(soup) or open_graph.get_image(soup)
         if not link_str or "loading.svg" in link_str:
-            link_str = Selector.MAIN_IMAGE(soup)
+            link_str = css.select(soup, Selector.MAIN_IMAGE)
 
         src = self.parse_url(link_str)
-        scrape_item.uploaded_at = self.parse_iso_date(Selector.DATE(soup))
+        scrape_item.uploaded_at = self.parse_iso_date(css.select(soup, Selector.DATE))
         await self.direct_file(scrape_item, src)
 
     def _extract_album_files(self, soup: BeautifulSoup) -> Generator[tuple[AbsoluteHttpURL, AbsoluteHttpURL]]:

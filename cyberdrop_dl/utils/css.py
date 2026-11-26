@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import html
-from typing import TYPE_CHECKING, NamedTuple, cast, overload
+from typing import TYPE_CHECKING, cast, final, overload
 
 from bs4 import BeautifulSoup, ResultSet
 from bs4.filter import SoupStrainer
@@ -56,16 +56,11 @@ class SelectorError(ScrapeError):
         super().__init__(422, message)
 
 
-# TODO: deprecate this class
-class CssAttributeSelector(NamedTuple):
-    element: str
+@final
+@dataclasses.dataclass(slots=True, frozen=True)
+class Selector:
+    css: str
     attribute: str = ""
-
-    def __call__(self, soup: Tag) -> str:
-        return select(soup, self.element, self.attribute)
-
-    def text(self, tag: Tag) -> str:
-        return select_text(tag, self.element)
 
 
 @dataclasses.dataclass(slots=True)
@@ -73,6 +68,12 @@ class HTMLForm:
     method: HttpMethod
     action: str
     inputs: dict[str, str | None]
+
+
+def _normalize_selector(selector: Selector | str, attribute: str | None = None) -> tuple[str, str | None]:
+    if type(selector) is Selector:
+        return selector.css, selector.attribute
+    return selector, attribute
 
 
 def _select_one(tag: Tag, selector: str) -> Tag:
@@ -83,8 +84,9 @@ def _select_one(tag: Tag, selector: str) -> Tag:
     return result
 
 
-def select_text(tag: Tag, selector: str, *, strip: bool = True, decompose: str | None = None) -> str:
+def select_text(tag: Tag, selector: Selector | str, *, strip: bool = True, decompose: str | None = None) -> str:
     """Same as `tag.select_one.get_text(strip=strip)` but asserts the result is not `None`"""
+    selector, _ = _normalize_selector(selector, None)
     inner_tag = select(tag, selector)
     if decompose:
         _decompose(tag, decompose)
@@ -133,7 +135,12 @@ def select(tag: Tag, selector: str) -> Tag: ...
 def select(tag: Tag, selector: str, attribute: str) -> str: ...
 
 
-def select(tag: Tag, selector: str, attribute: str | None = None) -> Tag | str:
+@overload
+def select(tag: Tag, selector: Selector) -> str: ...
+
+
+def select(tag: Tag, selector: Selector | str, attribute: str | None = None) -> Tag | str:
+    selector, attribute = _normalize_selector(selector, attribute)
     inner_tag = _select_one(tag, selector)
     if not attribute:
         return inner_tag
@@ -145,11 +152,16 @@ def iselect(tag: Tag, selector: str) -> Generator[Tag]: ...
 
 
 @overload
+def iselect(tag: Tag, selector: Selector) -> Generator[str]: ...
+
+
+@overload
 def iselect(tag: Tag, selector: str, attribute: str) -> Generator[str]: ...
 
 
-def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[Tag] | Generator[str]:
+def iselect(tag: Tag, selector: Selector | str, attribute: str | None = None) -> Generator[Tag] | Generator[str]:
     """Same as `tag.select(selector)`, but it returns a generator instead of a list."""
+    selector, attribute = _normalize_selector(selector, attribute)
     tags = _soup_iselect(tag, selector)
     if not attribute:
         yield from tags
@@ -160,7 +172,8 @@ def iselect(tag: Tag, selector: str, attribute: str | None = None) -> Generator[
                 yield attr
 
 
-def iselect_text(soup: Tag, /, selector: str, contains: tuple[str, ...] | str = ()) -> Generator[str]:
+def iselect_text(soup: Tag, /, selector: Selector | str, contains: tuple[str, ...] | str = ()) -> Generator[str]:
+    selector, _ = _normalize_selector(selector, None)
     contains = strict_variadic(contains)
     for tag in iselect(soup, selector):
         content = text(tag)
@@ -187,7 +200,8 @@ def best_from_srcset(srcset: str) -> str:
     return options[best]
 
 
-def _decompose(tag: Tag, selector: str) -> None:
+def _decompose(tag: Tag, selector: Selector | str) -> None:
+    selector, _ = _normalize_selector(selector, None)
     for inner_tag in _soup_select(tag, selector):
         inner_tag.decompose()
 
@@ -246,9 +260,11 @@ async def asoup(content: str, parse_only: tuple[str, ...] | str | None = None) -
 
 
 unescape = html.unescape
-iframes = CssAttributeSelector("iframe", "src")
-images = CssAttributeSelector("img", "srcset")
-links = CssAttributeSelector(":any-link", "href")
+
+IFRAME = Selector("iframe", "src")
+IMAGE = Selector("img", "srcset")
+ANY_LINK = Selector(":any-link", "href")
+VIDEO_SOURCE = Selector("video source", "src")
 
 select_or_none = catch(select, SelectorError)
 select_text_or_none = catch(select_text, SelectorError)

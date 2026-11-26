@@ -39,36 +39,33 @@ HTTP_REGEX_LINKS = re.compile(
 )
 
 
-Selector = css.CssAttributeSelector
-
-
 @dataclasses.dataclass(frozen=True, slots=True)
 class PostSelectors:
     article: str  # the entire html of the post (comments, attachments, user avatar, signature, etc...)
     content: str  # text, links and images (NO attachments)
-    id: Selector
-    attachments: Selector
+    id: css.Selector
+    attachments: css.Selector
     article_trash: Sequence[str] = ("signature", "footer")
     content_trash: Sequence[str] = ("blockquote", "fauxBlockLink")
 
     # Most sites should only need to overwrite the attributes above
-    date: Selector = Selector("time", "datetime")
-    embeds: Selector = Selector("iframe", "src")
-    images: Selector = Selector("img.bbImage", "src")
-    a_tag_w_image: Selector = Selector("a:has(img.bbImage)[href]", "href")
-    lazy_load_embeds: Selector = Selector('[class*=iframe][onclick*="loadMedia(this, \'//"]', "onclick")
-    links: Selector = Selector("a:not(:has(img))", "href")
-    videos: Selector = Selector("video source", "src")
+    date: css.Selector = css.Selector("time", "datetime")
+    embeds: css.Selector = css.Selector("iframe", "src")
+    images: css.Selector = css.Selector("img.bbImage", "src")
+    a_tag_w_image: css.Selector = css.Selector("a:has(img.bbImage)[href]", "href")
+    lazy_load_embeds: css.Selector = css.Selector('[class*=iframe][onclick*="loadMedia(this, \'//"]', "onclick")
+    links: css.Selector = css.Selector("a:not(:has(img))", "href")
+    videos: css.Selector = css.Selector("video source", "src")
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class MessageBoardSelectors:
     posts: PostSelectors
-    confirmation_button: Selector
-    next_page: Selector
-    last_page: Selector
-    current_page: Selector
-    title: Selector
+    confirmation_button: css.Selector
+    next_page: css.Selector
+    last_page: css.Selector
+    current_page: css.Selector
+    title: css.Selector
     title_trash: Sequence[str] = ("span",)
 
 
@@ -87,7 +84,7 @@ class ForumPost:
         for trash in selectors.content_trash:
             css.decompose(article, trash)
         try:
-            date = dt.datetime.fromisoformat(css.select(article, *selectors.date))
+            date = dt.datetime.fromisoformat(css.select(article, selectors.date))
         except Exception:  # noqa: BLE001
             date = None
 
@@ -484,43 +481,43 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
     @classmethod
     def _external_links(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.links
-        links = css.iselect(post.content, selector.element)
+        links = css.iselect(post.content, selector.css)
         valid_links = (link for link in links if not cls.is_username_or_attachment(link))
         return iter_links(valid_links, selector.attribute)
 
     @classmethod
     def _images(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.a_tag_w_image if cls.IGNORE_EMBEDED_IMAGES_SRC else cls.SELECTORS.posts.images
-        images = css.iselect(post.content, selector.element)
+        images = css.iselect(post.content, selector.css)
         return iter_links(images, selector.attribute)
 
     @classmethod
     def _videos(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.videos
-        videos = css.iselect(post.content, selector.element)
+        videos = css.iselect(post.content, selector.css)
         return iter_links(videos, selector.attribute)
 
     @classmethod
     def _attachments(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.attachments
-        attachments = css.iselect(post.article, selector.element)
+        attachments = css.iselect(post.article, selector.css)
         return iter_links(attachments, selector.attribute)
 
     @classmethod
     def _embeds(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.embeds
-        embeds = css.iselect(post.content, selector.element)
+        embeds = css.iselect(post.content, selector.css)
         return iter_links(embeds, selector.attribute)
 
     @classmethod
     def _lazy_load_embeds(cls, post: ForumPostProtocol) -> Iterable[str]:
         selector = cls.SELECTORS.posts.lazy_load_embeds
-        for lazy_media in css.iselect(post.content, selector.element):
+        for lazy_media in css.iselect(post.content, selector.css):
             yield extr_text(css.attr(lazy_media, selector.attribute), "loadMedia(this, '", "')")
 
     def get_next_page(self, soup: BeautifulSoup) -> str | None:
         try:
-            return css.select(soup, *self.SELECTORS.next_page)
+            return css.select(soup, self.SELECTORS.next_page)
         except css.SelectorError:
             return None
 
@@ -558,7 +555,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
 
         soup = await self.request_soup(link)
         selector = self.SELECTORS.confirmation_button
-        confirm_button = soup.select_one(selector.element)
+        confirm_button = soup.select_one(selector.css)
         if not confirm_button:
             return None
 
@@ -581,7 +578,7 @@ class HTMLMessageBoardCrawler(MessageBoardCrawler, is_abc=True):
         if link_obj.select_one(".username"):
             return True
         try:
-            if link_str := css.attr(link_obj, cls.SELECTORS.posts.links.element):
+            if link_str := css.attr(link_obj, cls.SELECTORS.posts.links.attribute):
                 return cls.is_attachment(link_str)
         except Exception:  # noqa: BLE001
             pass
@@ -639,7 +636,7 @@ def get_thread_page_and_post(
 
 def get_post_title(soup: BeautifulSoup, selectors: MessageBoardSelectors) -> str:
     try:
-        title_block = css.select(soup, selectors.title.element)
+        title_block = css.select(soup, selectors.title.css)
         for trash in selectors.title_trash:
             css.decompose(title_block, trash)
     except (AttributeError, AssertionError, css.SelectorError) as e:

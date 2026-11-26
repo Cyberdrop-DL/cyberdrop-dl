@@ -17,27 +17,24 @@ if TYPE_CHECKING:
     from cyberdrop_dl.crawlers.crawler import SupportedPaths
 
 
-Selector = css.CssAttributeSelector
-
-
 DEFAULT_INVISION_POST_SELECTORS = dataclasses.replace(
     DEFAULT_XF_POST_SELECTORS,
     article="div[class*=ipsComment_content]",
     content="div.cPost_contentWrap",
     article_trash=(".message-signature", ".message-footer"),
     content_trash=("blockquote", "fauxBlockLink"),
-    id=Selector("data-commentid", "data-commentid"),
-    attachments=Selector("a[class*=ipsAttachLink]", "href"),
-    images=Selector("a[class*=ipsAttachLink_image]", "href"),
-    videos=Selector("video.ipsEmbeddedVideo source", "src"),
+    id=css.Selector("data-commentid", "data-commentid"),
+    attachments=css.Selector("a[class*=ipsAttachLink]", "href"),
+    images=css.Selector("a[class*=ipsAttachLink_image]", "href"),
+    videos=css.Selector("video.ipsEmbeddedVideo source", "src"),
 )
 
 
 DEFAULT_INVISION_SELECTORS = dataclasses.replace(
     DEFAULT_XF_SELECTORS,
     posts=DEFAULT_INVISION_POST_SELECTORS,
-    title=Selector("span.ipsType_break.ipsContained span"),
-    next_page=Selector("li.ipsPagination_next a[href]", "href"),
+    title=css.Selector("span.ipsType_break.ipsContained span"),
+    next_page=css.Selector("li.ipsPagination_next a[href]", "href"),
 )
 
 

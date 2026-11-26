@@ -123,8 +123,8 @@ class DiscourseCrawler(MessageBoardCrawler, is_generic=True):
 
     async def extract_links(self, post: AvailablePost) -> AsyncGenerator[AbsoluteHttpURL]:
         soup = await css.asoup(post.content_html)
-        images = css.iselect(soup, *css.images)
-        links = css.iselect(soup, *css.links)
+        images = css.iselect(soup, css.IMAGE)
+        links = css.iselect(soup, css.ANY_LINK)
         external_links = (ref.url for ref in post.link_counts)
 
         for link_str in filter(None, unique(itertools.chain(external_links, images, links))):

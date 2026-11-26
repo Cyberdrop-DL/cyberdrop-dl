@@ -37,8 +37,7 @@ _MOBILE_HEADERS = _HEADERS | {
 class Selector:
     CHANNEL_NAME = ".album-info_name"
     CHANNEL_HASH = "script:-soup-contains('gwtHash:')"
-
-    CHANNEL_LAST_ELEMENT = css.CssAttributeSelector("[data-last-element]", "data-last-element")
+    CHANNEL_LAST_ELEMENT = css.Selector("[data-last-element]", "data-last-element")
 
 
 class OdnoklassnikiCrawler(Crawler):
@@ -76,7 +75,7 @@ class OdnoklassnikiCrawler(Crawler):
         gwt_hash = extr_text(css.select_text(soup, Selector.CHANNEL_HASH), 'gwtHash:"', '",')
 
         try:
-            last_element_id = css.select(soup, *Selector.CHANNEL_LAST_ELEMENT)
+            last_element_id = css.select(soup, Selector.CHANNEL_LAST_ELEMENT)
         except css.SelectorError:
             last_element_id = None
 

@@ -11,6 +11,7 @@ import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
+from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.network.http import HTTPConfig
@@ -36,16 +37,11 @@ _HTTP_URL_REGEX = re.compile(
 _EXT_REGEX = re.compile(r"\d{2,}x\d{2,}(\.\w+)?")
 
 
-_Selector = css.CssAttributeSelector
-
-
 class Selector:
     POST_TITLE: str = "#content .single-post-title"
     POST_CONTENT: str = "#content .entry-content"
-    POST_ID: _Selector = _Selector("[id*='post-']", "id")
-    IMG: _Selector = _Selector("img[class*='wp-image']", "srcset")
-    POST_LINK_FROM_PAGE: _Selector = _Selector(".post a[href], article[id*=post] a[href]", "href")
-    NEXT_PAGE: _Selector = _Selector("a.page-numbers.next", "href")
+    POST_LINK_FROM_PAGE: str = ".post a[href], article[id*=post] a[href]"
+    POST_ID: css.Selector = css.Selector("[id*='post-']", "id")
 
 
 _POST_ID_REGEX = re.compile(r"(?:postid-|post-)(\d+)")
@@ -261,9 +257,11 @@ class WordPressHTMLCrawler(WordPressBaseCrawler, is_generic=True):
         await self._post_pager(scrape_item)
 
     async def _post_pager(self, scrape_item: ScrapeItem) -> None:
+        sleep = aio.periodic_sleep(10)
         async for soup in self.web_pager(scrape_item.url):
-            for new_scrape_item in self.iter_children(scrape_item, soup, Selector.POST_LINK_FROM_PAGE.element):
-                self.create_task(self.run(new_scrape_item))
+            for new_item in self.iter_children(scrape_item, soup, Selector.POST_LINK_FROM_PAGE):
+                self.create_task(self.run(new_item))
+                await sleep()
 
 
 def _match_date_from_path(url_parts: tuple[str, ...]) -> dt.datetime | None:
@@ -286,8 +284,8 @@ def _get_original_quality_link(link: str) -> str:
 
 async def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
     soup = await css.asoup(html)
-    images = css.iselect(soup, *css.images)
-    iframes = css.iselect(soup, *css.iframes)
+    images = css.iselect(soup, css.IMAGE)
+    iframes = css.iselect(soup, css.IFRAME)
     if use_regex:
         regex = (match.group() for match in re.finditer(_HTTP_URL_REGEX, html))
         return itertools.chain(images, iframes, regex)
@@ -295,7 +293,7 @@ async def _iter_links(html: HTML, *, use_regex: bool) -> Iterable[str]:
 
 
 def get_post_id(soup: BeautifulSoup) -> int:
-    id_text = Selector.POST_ID(soup)
+    id_text = css.select(soup, Selector.POST_ID)
     if match := _POST_ID_REGEX.search(id_text):
         post_id = match.group(1)
         for trash in ("post", "id", "-"):
