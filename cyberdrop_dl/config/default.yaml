@@ -1,4 +1,8 @@
 auth:
+  deviantart:
+    client_id: ""
+    client_secret: ""
+    refresh_token: ""
   gofile:
     api_key: null
   jdownloader:
@@ -35,6 +39,10 @@ crawlers:
     threads: true
   clypit:
     prefer_mp3: false
+  deviantart:
+    download_originals: true
+    include_mature: true
+    include_scraps: false
   disabled: []
   generic:
     chevereto: []

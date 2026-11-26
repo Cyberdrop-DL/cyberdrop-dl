@@ -106,6 +106,17 @@ class PatreonConfig(ConfigModel):
     "Download any URL found inside the description (text) of a post"
 
 
+class DeviantArtConfig(ConfigModel):
+    include_mature: bool = True
+    "Include mature content deviations when scraping"
+
+    download_originals: bool = True
+    "Download original files when available instead of preview images"
+
+    include_scraps: bool = False
+    "Include deviations from the user's Scraps folder when scraping their gallery"
+
+
 class BlueSkyConfig(ConfigModel):
     external: bool = True
     "Parse and download embeds from third-party sites"
@@ -209,6 +220,7 @@ class Crawlers(ConfigGroup, name=None):
     bluesky: BlueSkyConfig = Field(default_factory=BlueSkyConfig)
     clonr: ClonrConfig = Field(default_factory=ClonrConfig, deprecated=True, exclude=True)
     clypit: ClypitConfig = Field(default_factory=ClypitConfig)
+    deviantart: DeviantArtConfig = Field(default_factory=DeviantArtConfig)
     generic: GenericCrawlers = Field(default_factory=GenericCrawlers)
     google_drive: GoogleDriveConfig = Field(default_factory=GoogleDriveConfig)
     octave_music: OctaveMusicConfig = Field(default_factory=OctaveMusicConfig)

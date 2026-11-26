@@ -746,6 +746,29 @@ List of sites supported by cyberdrop-dl-patched as of version 10.17.1
 - Video:
   - `/videos/<video_id>/...`
 
+### DeviantArt
+
+**Primary URL**: [https://www.deviantart.com](https://www.deviantart.com)
+
+**Supported Domains**: `deviantart.com`, `fav.me`
+
+**Supported Paths**:
+
+- Deviation:
+  - `/<username>/art/<slug>-<id>`
+- Favourites:
+  - `/<username>/favourites`
+  - `/<username>/favourites/<folder_id>/<slug>`
+  - `/<username>/favourites/all`
+- Gallery:
+  - `/<username>`
+  - `/<username>/gallery`
+  - `/<username>/gallery/<folder_id>/<slug>`
+  - `/<username>/gallery/all`
+  - `/<username>/gallery/scraps`
+- Short link:
+  - `fav.me/<short_id>`
+
 ### DirectHttpFile
 
 **Primary URL**: [::GENERIC CRAWLER::](::GENERIC CRAWLER::)

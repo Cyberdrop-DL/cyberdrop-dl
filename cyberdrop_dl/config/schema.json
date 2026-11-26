@@ -45,6 +45,9 @@
     "Authentication": {
       "additionalProperties": false,
       "properties": {
+        "deviantart": {
+          "$ref": "#/$defs/DeviantArtAuth"
+        },
         "gofile": {
           "$ref": "#/$defs/ApiKeyAuth"
         },
@@ -200,6 +203,9 @@
         "clypit": {
           "$ref": "#/$defs/ClypitConfig"
         },
+        "deviantart": {
+          "$ref": "#/$defs/DeviantArtConfig"
+        },
         "generic": {
           "$ref": "#/$defs/GenericCrawlers"
         },
@@ -255,6 +261,50 @@
         }
       },
       "title": "Dedupe",
+      "type": "object"
+    },
+    "DeviantArtAuth": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "default": "",
+          "title": "Client Id",
+          "type": "string"
+        },
+        "client_secret": {
+          "default": "",
+          "title": "Client Secret",
+          "type": "string"
+        },
+        "refresh_token": {
+          "default": "",
+          "title": "Refresh Token",
+          "type": "string"
+        }
+      },
+      "title": "DeviantArtAuth",
+      "type": "object"
+    },
+    "DeviantArtConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "include_mature": {
+          "default": true,
+          "title": "Include Mature",
+          "type": "boolean"
+        },
+        "download_originals": {
+          "default": true,
+          "title": "Download Originals",
+          "type": "boolean"
+        },
+        "include_scraps": {
+          "default": false,
+          "title": "Include Scraps",
+          "type": "boolean"
+        }
+      },
+      "title": "DeviantArtConfig",
       "type": "object"
     },
     "Downloads": {

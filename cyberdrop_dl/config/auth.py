@@ -41,6 +41,12 @@ class ApiKeyAuth(CensoredModel):
     api_key: str | None = None
 
 
+class DeviantArtAuth(CensoredModel):
+    client_id: str = ""
+    client_secret: str = ""
+    refresh_token: str = ""
+
+
 class EmailAuth(CensoredModel):
     email: str | None = None
     password: str | None = None
@@ -71,6 +77,7 @@ class Notifications(CensoredModel):
 
 @Parameter(show=False)
 class Authentication(ConfigModel):
+    deviantart: DeviantArtAuth = Field(default_factory=DeviantArtAuth)
     gofile: ApiKeyAuth = Field(default_factory=ApiKeyAuth)
     jdownloader: JDownloaderAuth = Field(default_factory=JDownloaderAuth)
     mega_nz: EmailAuth = Field(default_factory=EmailAuth)

@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Create a backup of the entire database before any auto update
 
+### Added
+
+- DeviantArt support
+
 ### Fixed
 
 - Handle media with malformed/no names (Patreon)
