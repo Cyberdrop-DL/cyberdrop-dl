@@ -4,7 +4,7 @@ import dataclasses
 import datetime as dt
 import logging
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, final
+from typing import TYPE_CHECKING, Any, Literal, Self, final
 
 import m3u8.model
 from m3u8 import M3U8 as _M3U8
@@ -16,7 +16,7 @@ from cyberdrop_dl.mediaprops import Codecs, Resolution
 from cyberdrop_dl.signature import dataclass_repr, vars_repr
 from cyberdrop_dl.url_objects import ExtraInfo
 from cyberdrop_dl.utils import next_or_error
-from cyberdrop_dl.utils.dataclass import DictDataclass
+from cyberdrop_dl.utils.dataclass import DictDataclass, struct
 from cyberdrop_dl.utils.urls import ensure_trailing_slash, parse_http_url
 
 if TYPE_CHECKING:
@@ -74,10 +74,14 @@ class MediaList(list[Media]):
             return autoselect
 
 
-class MediaURLs(NamedTuple):
+@struct
+class MediaURLs:
     video: AbsoluteHttpURL
     audio: AbsoluteHttpURL | None
     subtitle: AbsoluteHttpURL | None
+
+    def as_tuple(self) -> tuple[AbsoluteHttpURL, AbsoluteHttpURL | None, AbsoluteHttpURL | None]:
+        return self.video, self.audio, self.subtitle
 
     def with_query(self, query: Mapping[str, Any]) -> MediaURLs:
         return MediaURLs(
@@ -85,6 +89,12 @@ class MediaURLs(NamedTuple):
             audio=self.audio and self.audio.with_query(query),
             subtitle=self.subtitle and self.subtitle.with_query(query),
         )
+
+    def __json__(self) -> dict[str, str | None]:
+        def url_or_none(a: AbsoluteHttpURL | None) -> str | None:
+            return None if a is None else str(a)
+
+        return {k: url_or_none(v) for k, v in DictDataclass.__iter__(self)}
 
 
 @dataclasses.dataclass(slots=True)
@@ -122,7 +132,7 @@ class StreamInfo:
     __iter__ = DictDataclass.__iter__
 
 
-@dataclasses.dataclass(frozen=True, slots=True, order=True)
+@struct(order=True)
 class RenditionDetails:
     resolution: Resolution
     stream_info: StreamInfo
@@ -131,7 +141,7 @@ class RenditionDetails:
     urls: MediaURLs
 
     def __json__(self) -> dict[str, Any]:
-        return {"stream": dict(self.stream_info), "urls": self.urls._asdict()}
+        return {"stream": dict(self.stream_info), "urls": self.urls.__json__()}
 
     @staticmethod
     def new(playlist: Playlist) -> RenditionDetails:
@@ -150,17 +160,23 @@ class RenditionDetails:
 
         if audio_group_id := playlist.stream_info.audio:
             audio = next_or_error(media.filter_by(type=MediaType.audio, group_id=audio_group_id), "M3U8 audio group")
-            audio_url: AbsoluteHttpURL | None = get_url(audio)
+            audio_url = get_url(audio)
 
         if subtitle_group_id := playlist.stream_info.subtitles:
             subtitle = next_or_error(
                 media.filter_by(type=MediaType.subtitles, group_id=subtitle_group_id), "M3U8 subtitle group"
             )
-            subtitle_url: AbsoluteHttpURL | None = get_url(subtitle)
+            subtitle_url = get_url(subtitle)
 
-        media_urls = MediaURLs(video_url, audio_url, subtitle_url)
+        media_urls = MediaURLs(video=video_url, audio=audio_url, subtitle=subtitle_url)
 
-        return RenditionDetails(resolution, stream_info, codecs, media, media_urls)
+        return RenditionDetails(
+            resolution=resolution,
+            stream_info=stream_info,
+            codecs=codecs,
+            media=media,
+            urls=media_urls,
+        )
 
 
 def _parse_stream_resolution(stream_info: StreamInfo, video_url: AbsoluteHttpURL) -> Resolution:

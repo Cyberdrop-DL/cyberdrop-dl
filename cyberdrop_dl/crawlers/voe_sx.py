@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.mediaprops import Resolution, Subtitle
+from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import b64_pad, m3u8, open_graph
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -67,7 +67,7 @@ class VoeVideo:
     url: AbsoluteHttpURL
     resolution: Resolution | None
     hls_url: AbsoluteHttpURL | None
-    subtitles: tuple[Subtitle, ...]
+    subtitles: tuple[ISO639Subtitle, ...]
 
 
 class VoeSxCrawler(Crawler):
@@ -228,15 +228,14 @@ def _extract_mp4_urls(
         yield Resolution.unknown(), url
 
 
-def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generator[Subtitle]:
+def _parse_subs(video_info: dict[str, Any], origin: AbsoluteHttpURL) -> Generator[ISO639Subtitle]:
     for track in video_info.get("captions", []):
         if track["kind"] != "captions":
             continue
 
         url = parse_http_url(track["file"], origin)
         label: str = track["label"]
-        lang_code = _parse_lang_code(url.name, label)
-        yield Subtitle(url, lang_code, label)
+        yield ISO639Subtitle(url=url, lang_code=_parse_lang_code(url.name, label), name=label)
 
 
 def _parse_lang_code(name: str, label: str) -> str:

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler
 from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.utils import css, json_ld, open_graph
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     VIDEO_SRC = ".gif-video, #main_video source"
     COLLECTION_TITLE = "h2.object-title"
@@ -24,7 +26,8 @@ class Selector:
     NEXT_PAGE = "div.pagination-holder li.next > a"
 
 
-class Format(NamedTuple):
+@struct(kw_only=False, order=True)
+class Format:
     resolution: Resolution
     link_str: str
 

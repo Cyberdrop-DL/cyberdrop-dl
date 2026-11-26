@@ -25,7 +25,7 @@ def fields_names(cls: type[_DataClass]) -> tuple[str, ...]:
     return tuple(f.name for f in dataclasses.fields(cls) if f.init)
 
 
-def filter_data[DataClassT: _DataClass](cls: type[DataClassT], data: Mapping[str, Any], /) -> dict[str, Any]:
+def filter_data(cls: type[_DataClass], data: Mapping[str, Any], /) -> dict[str, Any]:
     return {name: value for name in fields_names(cls) if (value := data.get(name, MISSING)) is not MISSING}
 
 
@@ -69,11 +69,13 @@ deserialize = Deserializer()
 
 
 class DictDataclass(_DataClass, Protocol):
-    def __iter__(self) -> Iterator[tuple[str, Any]]:
+    def __iter__(self: _DataClass) -> Iterator[tuple[str, Any]]:
         for field_name in fields_names(type(self)):
             yield field_name, getattr(self, field_name)
 
-    filter_dict = classmethod(filter_data)  # pyright: ignore[reportUnannotatedClassAttribute]
+    @classmethod
+    def filter_dict(cls: type[_DataClass], data: Mapping[str, Any], /) -> dict[str, Any]:
+        return filter_data(cls, data)
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any], /, **overrides: Any) -> Self:

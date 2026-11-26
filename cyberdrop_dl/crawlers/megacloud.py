@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.mediaprops import Subtitle
+from cyberdrop_dl.mediaprops import ISO639Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 from cyberdrop_dl.utils.urls import name_from_url
@@ -27,7 +27,7 @@ class MegaCloudVideo:
     id: str
     embed_url: AbsoluteHttpURL
     sources: tuple[AbsoluteHttpURL, ...]
-    subtitles: tuple[Subtitle, ...]
+    subtitles: tuple[ISO639Subtitle, ...]
     title: str = ""
 
 
@@ -101,16 +101,18 @@ class MegaCloudCrawler(Crawler):
             # TODO: Add logic to handle encrypted videos
             raise ScrapeError(403, "Video is encrypted")
 
-        def parse_subs() -> Generator[Subtitle]:
+        def parse_subs() -> Generator[ISO639Subtitle]:
             for track in resp["tracks"]:
                 if track["kind"] != "captions":
                     continue
 
                 url = self.parse_url(track["file"])
-                label: str = track["label"]
-                lang_code = _parse_lang_code(url.name, label)
-
-                yield Subtitle(url, lang_code, label)
+                label = track["label"]
+                yield ISO639Subtitle(
+                    url=url,
+                    name=label,
+                    lang_code=_parse_lang_code(url.name, label),
+                )
 
         return MegaCloudVideo(
             id=video_id,

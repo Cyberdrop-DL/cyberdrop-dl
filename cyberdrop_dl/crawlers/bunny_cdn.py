@@ -8,7 +8,7 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths
 from cyberdrop_dl.downloader.bunny_cdn import BunnyCDNDownloader
 from cyberdrop_dl.exceptions import DownloadError
-from cyberdrop_dl.mediaprops import Subtitle
+from cyberdrop_dl.mediaprops import ISO639Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, extr_text
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -101,14 +101,14 @@ class Video:
     thumb: AbsoluteHttpURL
     src: AbsoluteHttpURL
     original: AbsoluteHttpURL | None
-    subs: tuple[Subtitle, ...]
+    subs: tuple[ISO639Subtitle, ...]
 
 
-def _extract_subs(video: bs4.Tag) -> Generator[Subtitle]:
+def _extract_subs(video: bs4.Tag) -> Generator[ISO639Subtitle]:
     for track in css.iselect(video, "track[src]"):
         kind = css.attr_or_none(track, "kind")
         if not kind or kind in {"subtitles", "captions"}:
-            yield Subtitle(
+            yield ISO639Subtitle(
                 url=css.attr(track, "src"),
                 name=css.attr_or_none(track, "label"),
                 lang_code=css.attr_or_none(track, "srclang", "lang", "label") or "unk",

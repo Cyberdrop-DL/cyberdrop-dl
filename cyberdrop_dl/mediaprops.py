@@ -4,12 +4,12 @@ import dataclasses
 import logging
 import re
 from fractions import Fraction
-from typing import TYPE_CHECKING, ClassVar, Final, NamedTuple, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, NamedTuple, final
 
 from cyberdrop_dl.exceptions import ScrapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Generator, Mapping
 
     import yarl
 
@@ -136,6 +136,10 @@ class Resolution(NamedTuple):
     width: int
     height: int
 
+    @staticmethod
+    def from_dict(res: Mapping[str, Any]) -> Resolution:
+        return Resolution(**{key: res[key] for key in Resolution._fields})
+
     @property
     def name(self) -> str:
         if 7600 < self.width < 8200:
@@ -244,7 +248,8 @@ COMMON_RESOLUTIONS: Final = tuple(
 )
 
 
-class ISO639Subtitle(NamedTuple):
+@dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
+class ISO639Subtitle:
     """`lang_code` MUST be a valid ISO639 code (ex: en, eng, fra)"""
 
     url: AbsoluteHttpURL | str
@@ -252,9 +257,6 @@ class ISO639Subtitle(NamedTuple):
     name: str | None = None
     ext: str | None = None
     fallback_ext: str | None = None
-
-
-Subtitle = ISO639Subtitle
 
 
 @final

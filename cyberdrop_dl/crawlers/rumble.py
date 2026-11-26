@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, override
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import API, Crawler, SupportedPaths, auto_task_id
 from cyberdrop_dl.exceptions import DDOSGuardError, ScrapeError
-from cyberdrop_dl.mediaprops import Resolution, Subtitle
+from cyberdrop_dl.mediaprops import ISO639Subtitle, Resolution
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, m3u8, traversal
@@ -62,7 +62,7 @@ class Video:
     upload_date: str
     permalink: AbsoluteHttpURL
     formats: tuple[Format, ...]
-    subtitles: tuple[Subtitle, ...]
+    subtitles: tuple[ISO639Subtitle, ...]
     thumb: str | None = None
 
     @property
@@ -364,9 +364,9 @@ def _parse_embed_formats(formats: dict[str, list[dict[str, Any]] | dict[str, dic
             )
 
 
-def _parse_subs(subs: dict[str, dict[str, str]]) -> Generator[Subtitle]:
+def _parse_subs(subs: dict[str, dict[str, str]]) -> Generator[ISO639Subtitle]:
     for code, sub in subs.items():
-        yield Subtitle(
+        yield ISO639Subtitle(
             url=sub["path"],
             lang_code=code.replace("-auto", ".auto"),
             name=sub.get("language"),

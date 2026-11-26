@@ -8,7 +8,7 @@ from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedDomains, SupportedPaths, auto_task_id
 from cyberdrop_dl.crawlers.reddit.api import ArcticShiftAPI, SearchQuery
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.mediaprops import Subtitle
+from cyberdrop_dl.mediaprops import ISO639Subtitle
 from cyberdrop_dl.url_objects import AbsoluteHttpURL, ScrapeItem
 from cyberdrop_dl.utils import css, unique
 from cyberdrop_dl.utils.errors import error_handling_wrapper
@@ -141,7 +141,7 @@ class RedditVideoCrawler(Crawler, wiki_site="RedditVideos"):
             audio_codec=info and info.codecs.audio,
         )
         await self.handle_file(m3u8_url, scrape_item, video_id, ext, m3u8=m3u8, custom_filename=filename)
-        self.handle_subs(scrape_item, filename, [Subtitle(m3u8_url.with_name("wh_ben_en.vtt"), lang_code="en")])
+        self.handle_subs(scrape_item, filename, [ISO639Subtitle(m3u8_url.with_name("wh_ben_en.vtt"), lang_code="en")])
 
 
 class RedditCrawler(Crawler):

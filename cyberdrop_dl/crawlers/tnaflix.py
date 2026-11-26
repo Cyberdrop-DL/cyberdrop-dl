@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, final
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.crawlers.crawler import Crawler, SupportedPaths
@@ -8,6 +8,7 @@ from cyberdrop_dl.mediaprops import Resolution
 from cyberdrop_dl.network.http import HTTPConfig
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
 from cyberdrop_dl.utils import css, json_ld, open_graph
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.errors import error_handling_wrapper
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from cyberdrop_dl.url_objects import ScrapeItem
 
 
+@final
 class Selector:
     VIDEO_SRC = "video#video-player source"
     COLLECTION_TITLE = "div.ph-title > h1"
@@ -25,7 +27,8 @@ class Selector:
     NEXT_PAGE = "li.pagination-next > a"
 
 
-class Format(NamedTuple):
+@struct(kw_only=False, order=True)
+class Format:
     resolution: Resolution
     link_str: str
 
@@ -57,7 +60,7 @@ class TNAFlixCrawler(Crawler):
     @error_handling_wrapper
     async def video(self, scrape_item: ScrapeItem, video_id: str) -> None:
         if await self.check_complete_from_referer(scrape_item.url):
-            return None
+            return
 
         soup = await self.request_soup(scrape_item.url)
         best_format = max(_parse_formats(soup))
@@ -65,8 +68,15 @@ class TNAFlixCrawler(Crawler):
         filename, ext = self.get_filename_and_ext(link.name)
         title = open_graph.title(soup)
         scrape_item.uploaded_at = json_ld.upload_date(soup)
-        custom_filename = self.create_custom_filename(title, ext, file_id=video_id, resolution=best_format.resolution)
-        return await self.handle_file(link, scrape_item, filename, ext, custom_filename=custom_filename)
+        await self.handle_file(
+            link,
+            scrape_item,
+            filename,
+            ext,
+            custom_filename=self.create_custom_filename(
+                title, ext, file_id=video_id, resolution=best_format.resolution
+            ),
+        )
 
     @error_handling_wrapper
     async def collection(self, scrape_item: ScrapeItem, collection_type: str, name: str | None = None) -> None:

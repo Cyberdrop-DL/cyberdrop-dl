@@ -7,13 +7,14 @@ import itertools
 import logging
 from contextvars import ContextVar
 from http import HTTPStatus
-from typing import TYPE_CHECKING, NamedTuple, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from cyberdrop_dl import aio, constants, context, ffmpeg
 from cyberdrop_dl.exceptions import DownloadError
 from cyberdrop_dl.url_objects import ByteRange, ExtraInfo
 from cyberdrop_dl.utils.cleanup import rm_partial_files
 from cyberdrop_dl.utils.crypto import aes_cbc_decrypt, aes_unpad
+from cyberdrop_dl.utils.dataclass import struct
 from cyberdrop_dl.utils.m3u8 import HLSKey
 from cyberdrop_dl.utils.urls import parse_http_url
 
@@ -37,13 +38,18 @@ _PLAYLIST_FILE = f"playlist{constants.TempExt.HLS}"
 _DECRYPTER: ContextVar[AESHLSDecrypter] = ContextVar("_DECRYPTER")
 
 
-class Streams(NamedTuple):
+@struct(kw_only=False)
+class Streams:
     video: Path
     audio: Path | None
     subs: Path | None
 
+    def as_tuple(self) -> tuple[Path, Path | None, Path | None]:
+        return self.video, self.audio, self.subs
 
-class HLSSegment(NamedTuple):
+
+@struct(kw_only=False, order=True)
+class HLSSegment:
     idx: int
     name: str
     url: AbsoluteHttpURL
@@ -294,4 +300,4 @@ async def download(media_item: MediaItem, rendition: Rendition, download_fn: Dow
     except OSError:
         pass
 
-    return Streams(video.result(), audio.result(), subs.result())
+    return Streams(video=video.result(), audio=audio.result(), subs=subs.result())
