@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import html
 from typing import TYPE_CHECKING, cast, final, overload
@@ -10,10 +9,10 @@ from bs4.filter import SoupStrainer
 
 from cyberdrop_dl import aio
 from cyberdrop_dl.exceptions import ScrapeError
-from cyberdrop_dl.utils import catch, strict_variadic
+from cyberdrop_dl.utils import catch, strict_variadic, transform_generator
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator
+    from collections.abc import Coroutine, Generator, Iterable, Iterator
 
     from bs4.element import Tag
 
@@ -256,10 +255,6 @@ def soup(content: str, parse_only: tuple[str, ...] | str | None = None) -> Beaut
     return BeautifulSoup(content, HTML_PARSER, parse_only=SoupStrainer(parse_only) if parse_only is not None else None)
 
 
-async def asoup(content: str, parse_only: tuple[str, ...] | str | None = None) -> BeautifulSoup:
-    return await asyncio.to_thread(soup, content, parse_only)
-
-
 unescape = html.unescape
 
 IFRAME = Selector("iframe", "src")
@@ -269,3 +264,42 @@ VIDEO_SOURCE = Selector("video source", "src")
 
 select_or_none = catch(select, SelectorError)
 select_text_or_none = catch(select_text, SelectorError)
+select_all = transform_generator(list)(iselect)
+
+
+aselect = aio.to_thread(select)
+aselect_text = aio.to_thread(select_text)
+aiselect_text = aio.to_thread(transform_generator(list)(iselect_text))
+asoup = aio.to_thread(soup)
+apage_title = aio.to_thread(page_title)
+
+
+@overload
+def aiselect(tag: Tag, selector: str) -> aio.AsyncIteratorWrapper[Tag]: ...
+
+
+@overload
+def aiselect(tag: Tag, selector: Selector) -> Coroutine[None, None, list[str]]: ...
+
+
+@overload
+def aiselect(tag: Tag, selector: str, attribute: str) -> Coroutine[None, None, list[str]]: ...
+
+
+def aiselect(
+    tag: Tag, selector: Selector | str, attribute: str | None = None
+) -> Coroutine[None, None, list[str]] | aio.AsyncIteratorWrapper[Tag]:
+    selector, attribute = _normalize_selector(selector, attribute)
+    if attribute:
+        return _aselect_all_w_attributes(tag, selector, attribute)
+    return _aiselect_tags(tag, selector)
+
+
+@aio.to_thread
+def _aselect_all_w_attributes(tag: Tag, selector: str, attribute: str) -> list[str]:
+    return list(iselect(tag, selector, attribute))
+
+
+@aio.iterable_to_thread
+def _aiselect_tags(tag: Tag, selector: str) -> Iterable[Tag]:
+    return iselect(tag, selector)

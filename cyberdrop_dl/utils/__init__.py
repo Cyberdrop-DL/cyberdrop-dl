@@ -254,3 +254,18 @@ def remove_quotes(string: str) -> str:
         if start in {"'", '"'} and start == end:
             return string[1:-1]
     return string
+
+
+def transform_generator[**P, T, R](
+    converter: Callable[[Iterable[T]], R],
+) -> Callable[[Callable[P, Iterable[T]]], Callable[P, R]]:
+    def decorator(
+        func: Callable[P, Iterable[T]],
+    ) -> Callable[P, R]:
+
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            return converter(func(*args, **kwargs))
+
+        return wrapper
+
+    return decorator

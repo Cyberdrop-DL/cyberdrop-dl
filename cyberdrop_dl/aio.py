@@ -377,14 +377,6 @@ class AsyncIteratorWrapper[T]:
 
         return cast("T", value)
 
-    @classmethod
-    def wrap[**P, R](cls, fn: Callable[P, Awaitable[Iterable[R]]]) -> Callable[P, AsyncIteratorWrapper[R]]:
-
-        def async_iter(*args: P.args, **kwargs: P.kwargs) -> AsyncIteratorWrapper[R]:
-            return AsyncIteratorWrapper(fn(*args, **kwargs))
-
-        return async_iter
-
 
 @overload
 async def gather[T1](coro1: Awaitable[T1], /, *, fail_fast: bool = True) -> tuple[T1]: ...
@@ -693,6 +685,13 @@ def to_thread[**P, R](fn: Callable[P, R]) -> Callable[P, Coroutine[None, None, R
     return async_run
 
 
+def iterable_to_thread[**P, R](fn: Callable[P, Iterable[R]]) -> Callable[P, AsyncIteratorWrapper[R]]:
+    def async_iter(*args: P.args, **kwargs: P.kwargs) -> AsyncIteratorWrapper[R]:
+        return AsyncIteratorWrapper(to_thread(fn)(*args, **kwargs))
+
+    return async_iter
+
+
 @to_thread
 def move(src: Path, dst: Path) -> None:
     import shutil
@@ -716,23 +715,20 @@ unlink = remove = to_thread(Path.unlink)
 write_bytes = to_thread(Path.write_bytes)
 write_text = to_thread(Path.write_text)
 rmdir = to_thread(Path.rmdir)
-walk = AsyncIteratorWrapper.wrap(to_thread(Path.walk))
+walk = iterable_to_thread(Path.walk)
 
 
-@AsyncIteratorWrapper.wrap
-@to_thread
+@iterable_to_thread
 def glob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
     return filter(filter_fn, path.glob(pattern))
 
 
-@AsyncIteratorWrapper.wrap
-@to_thread
+@iterable_to_thread
 def rglob(path: Path, pattern: str, *, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
     return filter(filter_fn, path.rglob(pattern))
 
 
-@AsyncIteratorWrapper.wrap
-@to_thread
+@iterable_to_thread
 def iterdir(path: Path, filter_fn: Callable[[Path], bool] | None = None) -> Iterable[Path]:
     return filter(filter_fn, path.iterdir())
 
