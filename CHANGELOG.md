@@ -22,7 +22,7 @@ All notable changes to this project will be documented here. For more details, v
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [10.17.1] - 2026-11-26
 
 ### Changed:
 
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Handle media with malformed/no names (Patreon)
 
-## [10.17.0] - 2026-11-26
+## [10.17.0] - 2026-11-22
 
 ### Added
 

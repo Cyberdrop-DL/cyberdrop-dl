@@ -56,7 +56,7 @@ See: <https://script-ware.gitbook.io/cyberdrop-dl/reference/config/crawlers#disa
 
 ## Supported sites
 
-List of sites supported by cyberdrop-dl-patched as of version 10.17.0
+List of sites supported by cyberdrop-dl-patched as of version 10.17.1
 
 ### 1fichier
 
