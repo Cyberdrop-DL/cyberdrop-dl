@@ -50,7 +50,11 @@ if env.DEBUG_MODE:
         except RuntimeError:
             return
 
-        operation = f"A {name} operation" if name else "This operation"
+        if name:
+            prefix = "An" if name[0].lower() == "a" else "A"
+            operation = f"{prefix} {name} operation"
+        else:
+            operation = "This operation"
         raise RuntimeError(f"{operation} is slow and should run on another thread to not block the event loop")
 
 else:

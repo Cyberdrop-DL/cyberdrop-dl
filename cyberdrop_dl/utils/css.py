@@ -13,7 +13,7 @@ from cyberdrop_dl.exceptions import ScrapeError
 from cyberdrop_dl.utils import catch, strict_variadic
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterator
+    from collections.abc import Generator, Iterable, Iterator
 
     from bs4.element import Tag
 
@@ -148,18 +148,18 @@ def select(tag: Tag, selector: Selector | str, attribute: str | None = None) -> 
 
 
 @overload
-def iselect(tag: Tag, selector: str) -> Generator[Tag]: ...
+def iselect(tag: Tag, selector: str) -> Iterable[Tag]: ...
 
 
 @overload
-def iselect(tag: Tag, selector: Selector) -> Generator[str]: ...
+def iselect(tag: Tag, selector: Selector) -> Iterable[str]: ...
 
 
 @overload
-def iselect(tag: Tag, selector: str, attribute: str) -> Generator[str]: ...
+def iselect(tag: Tag, selector: str, attribute: str) -> Iterable[str]: ...
 
 
-def iselect(tag: Tag, selector: Selector | str, attribute: str | None = None) -> Generator[Tag] | Generator[str]:
+def iselect(tag: Tag, selector: Selector | str, attribute: str | None = None) -> Iterable[Tag] | Iterable[str]:
     """Same as `tag.select(selector)`, but it returns a generator instead of a list."""
     selector, attribute = _normalize_selector(selector, attribute)
     tags = _soup_iselect(tag, selector)
@@ -172,14 +172,13 @@ def iselect(tag: Tag, selector: Selector | str, attribute: str | None = None) ->
                 yield attr
 
 
-def iselect_text(soup: Tag, /, selector: Selector | str, contains: tuple[str, ...] | str = ()) -> Generator[str]:
+def iselect_text(soup: Tag, /, selector: Selector | str, contains: tuple[str, ...] | str = ()) -> Iterable[str]:
     selector, _ = _normalize_selector(selector, None)
     contains = strict_variadic(contains)
     for tag in iselect(soup, selector):
         content = text(tag)
-        for key in contains:
-            if key not in content:
-                continue
+        if contains and not all(key in content for key in contains):
+            continue
         yield content
 
 
@@ -206,7 +205,9 @@ def _decompose(tag: Tag, selector: Selector | str) -> None:
         inner_tag.decompose()
 
 
-decompose = _decompose
+def decompose(tag: Tag, *selectors: Selector | str) -> None:
+    for trash in selectors:
+        _decompose(tag, trash)
 
 
 def rstrip_domain(title: str, domain: str) -> str:
