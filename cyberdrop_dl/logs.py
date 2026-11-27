@@ -67,8 +67,10 @@ class RedactedConsole(Console):
     def _render_buffer(self, buffer: Iterable[Segment]) -> str:
         msg = self._redact_username(super()._render_buffer(buffer))
         if self.secrets:
-            for secret in self.secrets:
-                if len(secret.get_secret_value()) >= self.SECRET_MIN_LEN:
+            for len_, secret in sorted(((len(s.get_secret_value()), s) for s in self.secrets), reverse=True):
+                if len_ < self.SECRET_MIN_LEN:
+                    self.secrets.discard(secret)
+                else:
                     msg = msg.replace(secret.get_secret_value(), self.REDACTED)
         return msg
 

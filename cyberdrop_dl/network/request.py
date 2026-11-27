@@ -61,8 +61,7 @@ class Request:
         if self.headers:
             headers = self.headers.copy()
             for sec_header in AUTH_HEADERS:
-                values = headers.popall(sec_header, None)
-                if values:
+                if bool(headers.popall(sec_header, None)):
                     headers[sec_header] = RedactedConsole.REDACTED
 
             me["headers"] = dict(headers)
