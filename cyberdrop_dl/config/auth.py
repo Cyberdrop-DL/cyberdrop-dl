@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, override
 
 from cyclopts import Parameter
-from pydantic import Field, Secret
+from pydantic import BaseModel, Field, Secret
 
 from cyberdrop_dl.models import AppriseURL, ConfigModel
 from cyberdrop_dl.models.types import FalsyAsNone  # noqa: TC001
@@ -81,3 +81,10 @@ class Authentication(ConfigModel):
 
     def censored_dump(self) -> dict[str, bool]:
         return {site: all(vars(credentials).values()) for site, credentials in self}
+
+    def secrets(self: BaseModel) -> Iterable[Secret[str]]:
+        for _, inner in self:
+            if isinstance(inner, BaseModel):
+                yield from Authentication.secrets(inner)
+            elif isinstance(inner, str):
+                yield Secret(inner)

@@ -11,7 +11,7 @@ from enum import StrEnum
 from io import StringIO
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, final, override
+from typing import TYPE_CHECKING, Any, ClassVar, Final, final, override
 
 from rich._log_render import LogRender
 from rich.console import Console, Group
@@ -27,7 +27,9 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Callable, Generator, Iterable
 
+    from pydantic.types import Secret
     from rich.console import ConsoleRenderable
+    from rich.segment import Segment
 
 
 logger = logging.getLogger("cyberdrop_dl")
@@ -53,20 +55,30 @@ class HandlerName(StrEnum):
     DEBUG_LOG = "cdl-debug-log-file"
 
 
+@final
 class RedactedConsole(Console):
-    """Custom console to remove username from logs"""
+    """Custom console to remove sensitive info from logs"""
+
+    secrets: set[Secret[str]] | None = None
+    REDACTED: Final = "[REDACTED]"
+    SECRET_MIN_LEN: Final = 5
 
     @override
-    def _render_buffer(self, buffer) -> str:
-        return self._redact_message(super()._render_buffer(buffer))
+    def _render_buffer(self, buffer: Iterable[Segment]) -> str:
+        msg = self._redact_username(super()._render_buffer(buffer))
+        if self.secrets:
+            for secret in self.secrets:
+                if len(secret.get_secret_value()) >= self.SECRET_MIN_LEN:
+                    msg = msg.replace(secret.get_secret_value(), self.REDACTED)
+        return msg
 
     @classmethod
-    def _redact_message(cls, message: object) -> str:
+    def _redact_username(cls, message: object) -> str:
         redacted = str(message)
         for sep in ("\\", "\\\\", "/"):
             as_tail = sep + _USER_NAME
             as_part = _USER_NAME + sep
-            redacted = redacted.replace(as_tail, f"{sep}[REDACTED]").replace(as_part, f"[REDACTED]{sep}")
+            redacted = redacted.replace(as_tail, f"{sep}{cls.REDACTED}").replace(as_part, f"{cls.REDACTED}{sep}")
         return redacted
 
 
@@ -461,6 +473,15 @@ def flush_logs() -> None:
     listener = _MAIN_LOG_LISTENER.get()
     listener.stop()
     listener.start()
+
+
+def redact_from_logs(secrets: Iterable[Secret[str]]) -> None:
+    for handler in _MAIN_LOG_LISTENER.get().handlers:
+        if isinstance(handler, RichHandler) and type(handler.console) is RedactedConsole:
+            if handler.console.secrets is None:
+                handler.console.secrets = set()
+
+            handler.console.secrets.update(secrets)
 
 
 def disable_console_logging():

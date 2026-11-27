@@ -15,7 +15,7 @@ from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands._compat import check_for_v9_files
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup
-from cyberdrop_dl.logs import log_spacer, set_console_level, setup_file_logging
+from cyberdrop_dl.logs import log_spacer, redact_from_logs, set_console_level, setup_file_logging
 from cyberdrop_dl.models.validators import to_yarl_url
 from cyberdrop_dl.scrape_source import URLsSource
 from cyberdrop_dl.url_objects import AbsoluteHttpURL
@@ -39,6 +39,7 @@ def scrape(manager: Manager, source: URLsSource | RetryScrapeSource) -> None:
         level=manager.config.logs.effective_level,
         log_http_traffic=manager.config.logs.http_traffic,
     ):
+        redact_from_logs(manager.config.auth.secrets())
         aio.run(_scrape(manager, source))
 
 

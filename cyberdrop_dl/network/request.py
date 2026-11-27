@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, Self, TypedDict
 
 from multidict import CIMultiDict
 
+from cyberdrop_dl.logs import RedactedConsole
+from cyberdrop_dl.network import AUTH_HEADERS
 from cyberdrop_dl.utils.dataclass import DictDataclass, deserialize, fields_names
 
 if TYPE_CHECKING:
@@ -57,7 +59,14 @@ class Request:
         me = {k: v for k, v in self if (v and k != "method") or (k in {"json", "data"} and v is not None)}
         me["url"] = str(self.url)
         if self.headers:
-            me["headers"] = dict(self.headers)
+            headers = self.headers.copy()
+            for sec_header in AUTH_HEADERS:
+                values = headers.popall(sec_header, None)
+                if values:
+                    headers[sec_header] = RedactedConsole.REDACTED
+
+            me["headers"] = dict(headers)
+
         return me
 
     def __str__(self) -> str:
