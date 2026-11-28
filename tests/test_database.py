@@ -6,12 +6,13 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import aiosqlite
 import pytest
 
 from cyberdrop_dl import aio, context, scrape_mapper
 from cyberdrop_dl.config import Config
 from cyberdrop_dl.crawlers.crawler import _prepare_download_path
-from cyberdrop_dl.database import common, schema
+from cyberdrop_dl.database import common, make_conn_aware, schema
 from cyberdrop_dl.database.backup import _delete_journal_if_empty, merge_journal_files
 from cyberdrop_dl.database.conn import connect
 from cyberdrop_dl.database.db import Database
@@ -329,3 +330,142 @@ def test_delete_journal_if_empty_does_not_delete_nonempty_journal(tmp_path: Path
         _delete_journal_if_empty(db_path, journal)
 
     assert journal.exists()
+
+
+class TestMakeAware:
+    def test_sync_connection(self) -> None:
+        def fn(conn: sqlite3.Connection, value: int) -> int:
+            return conn.execute("SELECT ?", (value,)).fetchone()[0]
+
+        aware = make_conn_aware(fn)
+
+        with contextlib.closing(sqlite3.connect(":memory:")) as conn:
+            result = aware(conn, 42)
+            assert result == 42
+            assert not hasattr(result, "__await__")
+
+    async def test_async_connection(self) -> None:
+        def fn(conn: sqlite3.Connection, value: int) -> int:
+            return conn.execute("SELECT ?", (value,)).fetchone()[0]
+
+        aware = make_conn_aware(fn)
+
+        async with aiosqlite.connect(":memory:") as conn:
+            result = aware(conn, 42)
+
+            assert hasattr(result, "__await__")
+            assert await result == 42
+
+    def test_sync_connection_forwards_args_and_kwargs(self) -> None:
+        def fn(
+            _: sqlite3.Connection,
+            a: int,
+            b: int,
+            *,
+            multiplier: int = 1,
+        ) -> int:
+            return (a + b) * multiplier
+
+        aware = make_conn_aware(fn)
+
+        with contextlib.closing(sqlite3.connect(":memory:")) as conn:
+            assert aware(conn, 2, 3, multiplier=4) == 20
+
+    async def test_async_connection_forwards_args_and_kwargs(self) -> None:
+        def fn(
+            _: sqlite3.Connection,
+            a: int,
+            b: int,
+            *,
+            multiplier: int = 1,
+        ) -> int:
+            return (a + b) * multiplier
+
+        aware = make_conn_aware(fn)
+
+        async with aiosqlite.connect(":memory:") as conn:
+            assert await aware(conn, 2, 3, multiplier=4) == 20
+
+    def test_sync_connection_passes_original_connection(self):
+        received: list[sqlite3.Connection] = []
+
+        def fn(conn: sqlite3.Connection) -> sqlite3.Connection:
+            received.append(conn)
+            return conn
+
+        aware = make_conn_aware(fn)
+
+        with contextlib.closing(sqlite3.connect(":memory:")) as conn:
+            assert aware(conn) is conn
+            assert received == [conn]
+
+    async def test_async_connection_passes_underlying_connection(self) -> None:
+        received: list[sqlite3.Connection] = []
+
+        def fn(conn: sqlite3.Connection) -> sqlite3.Connection:
+            received.append(conn)
+            return conn
+
+        aware = make_conn_aware(fn)
+
+        async with aiosqlite.connect(":memory:") as conn:
+            result = await aware(conn)
+
+            assert result is conn._conn
+            assert received == [conn._conn]
+
+    def test_sync_connection_propagates_exception(self) -> None:
+        error = ValueError("test error")
+
+        def fn(_: sqlite3.Connection) -> None:
+            raise error
+
+        aware = make_conn_aware(fn)
+
+        with (
+            contextlib.closing(sqlite3.connect(":memory:")) as conn,
+            pytest.raises(ValueError, match="test error") as exc,
+        ):
+            aware(conn)
+
+        assert exc.value is error
+
+    async def test_async_connection_propagates_exception(self) -> None:
+        error = ValueError("test error")
+
+        def fn(_: sqlite3.Connection) -> None:
+            raise error
+
+        aware = make_conn_aware(fn)
+
+        async with aiosqlite.connect(":memory:") as conn:
+            with pytest.raises(ValueError, match="test error") as exc:
+                await aware(conn)
+
+            assert exc.value is error
+
+    def test_sync_connection_calls_function_once(self) -> None:
+        calls: list[sqlite3.Connection] = []
+
+        def fn(conn: sqlite3.Connection) -> int:
+            calls.append(conn)
+            return 123
+
+        aware = make_conn_aware(fn)
+
+        with contextlib.closing(sqlite3.connect(":memory:")) as conn:
+            assert aware(conn) == 123
+            assert calls == [conn]
+
+    async def test_async_connection_calls_function_once(self) -> None:
+        calls: list[sqlite3.Connection] = []
+
+        def fn(conn: sqlite3.Connection) -> int:
+            calls.append(conn)
+            return 123
+
+        aware = make_conn_aware(fn)
+
+        async with aiosqlite.connect(":memory:") as conn:
+            assert await aware(conn) == 123
+            assert calls == [conn._conn]

@@ -6,7 +6,7 @@ import logging
 import sqlite3
 from typing import TYPE_CHECKING, NamedTuple, final, override
 
-from cyberdrop_dl.database import user_version
+from cyberdrop_dl.database import make_conn_aware, user_version
 from cyberdrop_dl.database.conn import stdlib_connect
 from cyberdrop_dl.exceptions import DatabaseError
 
@@ -15,8 +15,6 @@ from .definitions import CREATE_SCHEMA
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from cyberdrop_dl.database.conn import DBConnection
 
 
 @final
@@ -106,15 +104,16 @@ class SchemaTable(Table, name="schema_version"):
             logger.info(f"Updated database schema to {version!s}")
 
 
-async def dump(db_conn: DBConnection) -> str:
+@make_conn_aware
+def dump(db_conn: sqlite3.Connection) -> str:
     query = "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name"
-    rows = await db_conn.execute_fetchall(query)
-    index_queries: list[str] = []
-    table_queries: list[str] = []
+    with contextlib.closing(db_conn.execute(query)) as cursor:
+        index_queries: list[str] = []
+        table_queries: list[str] = []
 
-    for query in (row["sql"] for row in rows):
-        group = table_queries if "CREATE TABLE" in query else index_queries
-        group.append(query)
+        for query in (row["sql"] for row in cursor.fetchall()):
+            group = table_queries if "CREATE TABLE" in query else index_queries
+            group.append(query)
 
     return ";\n".join([*sorted(table_queries), *sorted(index_queries)]) + ";"
 
@@ -176,6 +175,7 @@ def _get_applied_versions(conn: sqlite3.Connection) -> list[str]:
         return []
 
 
+@make_conn_aware
 def detect_version(conn: sqlite3.Connection) -> Version | None:
     tables = get_table_names(conn)
 
