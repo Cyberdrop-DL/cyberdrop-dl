@@ -6,6 +6,7 @@ from cyclopts.exceptions import RepeatArgumentError, ValidationError
 
 from cyberdrop_dl import __version__
 from cyberdrop_dl.__main__ import run_cdl
+from cyberdrop_dl.cli import make_app, register_lazy_modules, should_load_lazy_module
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands.report import generate_report
 from cyberdrop_dl.config import Config
@@ -84,3 +85,15 @@ def test_cli_multi_args() -> None:
 
     with pytest.raises(RepeatArgumentError):
         Config.parse_args(["--skip-hosts", "a", "--skip-hosts", "b", "c"])
+
+
+def test_lazy_loaded_retry_cmd() -> None:
+    cmd = ["retry", "all"]
+    app = make_app()
+    with pytest.raises(SystemExit) as exc:
+        make_app().parse_args(cmd)
+    assert exc.value.args == (2,)
+
+    assert should_load_lazy_module(cmd) is True
+    register_lazy_modules(app)
+    app.parse_args(cmd)

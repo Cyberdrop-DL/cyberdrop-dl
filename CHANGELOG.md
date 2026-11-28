@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Redact sensitive authentication info from HTTP headers and request payloads in the main log file
 
+### Fixed
+
+- `retry` commands not working from the CLI
+
 ## [10.17.1] - 2026-11-26
 
 ### Changed:

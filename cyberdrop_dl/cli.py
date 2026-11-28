@@ -1,5 +1,4 @@
 import logging
-import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Literal
@@ -11,7 +10,7 @@ from cyclopts.core import App
 from cyclopts.exceptions import CommandCollisionError
 from cyclopts.help import DefaultFormatter
 
-from cyberdrop_dl import __version__
+from cyberdrop_dl import __version__, env
 from cyberdrop_dl.commands import CLIarguments
 from cyberdrop_dl.commands.cache import app as cache_app
 from cyberdrop_dl.commands.cleanup import app as cleanup_app
@@ -27,7 +26,7 @@ NO_CONFIG_COMMANDS = []
 
 
 def make_app():
-    app = App(
+    return App(
         name="cyberdrop-dl",
         version=__version__,
         default_parameter=DEFAULT_PARAMETER,
@@ -42,12 +41,13 @@ def make_app():
         result_action="return_value",
         help_formatter=DefaultFormatter().with_newline_metadata(),  # pyright: ignore[reportUnknownMemberType]
     )
-    if "pytest" in sys.modules:
-        register_download(app)
-    return app
 
 
-def register_download(app: App) -> None:
+def should_load_lazy_module(tokens: list[str]) -> bool:
+    return env.IS_PYTEST or not tokens or tokens[0] in {"download", "retry", "docs", "--help"}
+
+
+def register_lazy_modules(app: App) -> None:
     from cyberdrop_dl.commands.retry import app as retry_app
     from cyberdrop_dl.commands.scrape import download
 

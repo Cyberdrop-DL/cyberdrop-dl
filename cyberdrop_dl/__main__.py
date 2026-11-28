@@ -31,12 +31,12 @@ def run_cdl(args: Sequence[str] | None = None) -> int:
     tracebacks.install_exception_hook()
 
     with setup_console_logging():
-        from cyberdrop_dl.cli import app, parse_tokens, register_download
+        from cyberdrop_dl.cli import app, parse_tokens, register_lazy_modules, should_load_lazy_module
         from cyberdrop_dl.exceptions import CDLConfigRuntimeErrorsGroup, DatabaseError
 
         tokens = parse_tokens(args)
-        if not tokens or tokens[0] in {"download", "docs", "--help"}:
-            register_download(app)
+        if should_load_lazy_module(tokens):
+            register_lazy_modules(app)
 
         try:
             app(tokens)
