@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
+import sqlite3
 from typing import TYPE_CHECKING, Self
 
 from cyberdrop_dl import aio
@@ -17,6 +19,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from cyberdrop_dl.database.conn import DBConnection
+
+
+SQLITE_VERSION_WITH_STRICT_TABLES = (3, 37, 0)
+logger = logging.getLogger(__name__)
 
 
 @dataclass_repr("path", "ignore_history", "has_backup")
@@ -88,6 +94,14 @@ class Database:
         self.schema.info = await asyncio.to_thread(get_schema, self.path)
         self.schema.log_updates = True
         self.schema.info.log()
+
+        if sqlite3.sqlite_version_info < SQLITE_VERSION_WITH_STRICT_TABLES:
+            logger.warning(
+                "SQLite version %s or higher will be required v11 (current: %s)",
+                SQLITE_VERSION_WITH_STRICT_TABLES,
+                sqlite3.sqlite_version_info,
+            )
+
         if self.is_new:
             return
 

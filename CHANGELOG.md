@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Redact sensitive authentication info from HTTP headers and request payloads in the main log file
 
+### Deprecated
+
+- Python compiled with an SQLite version lower than v3.37.0 won't be supported on the next major release
+
 ### Fixed
 
 - `retry` commands not working from the CLI
