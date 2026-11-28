@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import dataclasses
 import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar, LiteralString
 
+from cyberdrop_dl.database import make_conn_aware
+
 if TYPE_CHECKING:
     import sqlite3
 
-    from cyberdrop_dl.database.conn import DBConnection
     from cyberdrop_dl.database.pool import PoolManager
 
 logger = logging.getLogger(__name__)
@@ -35,39 +35,46 @@ class Table(ABC):
     async def create(self) -> None: ...
 
     async def exists(self) -> bool:
-        query = "SELECT 1 FROM sqlite_master WHERE type='table' AND name= ? LIMIT 1;"
         async with self.db.reader() as db_conn:
-            cursor = await db_conn.execute(query, (self.NAME,))
-            return await cursor.fetchone() is not None
+            return await check_table_exists(db_conn, self.NAME)
 
 
-async def unused_space(db_conn: DBConnection) -> int:
-    async def execute(query: str) -> int:
-        row = await db_conn.execute_fetchone(query)
-        assert row is not None
-        return int(row[0])
+@make_conn_aware
+def check_table_exists(db_conn: sqlite3.Connection, name: str) -> bool:
+    query = "SELECT 1 FROM sqlite_master WHERE type='table' AND name= ? LIMIT 1;"
+    with contextlib.closing(db_conn.execute(query, (name,))) as cursor:
+        return cursor.fetchone() is not None
 
-    free_pages, page_size = await asyncio.gather(execute("PRAGMA freelist_count;"), execute("PRAGMA page_size;"))  # noqa: TID251
+
+@make_conn_aware
+def unused_space(db_conn: sqlite3.Connection) -> int:
+    with contextlib.closing(db_conn.execute("PRAGMA freelist_count;")) as cursor:
+        free_pages: int = cursor.fetchone()[0]
+        page_size: int = cursor.execute("PRAGMA page_size;").fetchone()[0]
+
     return free_pages * page_size
 
 
-async def pre_allocate_250mb(db_conn: DBConnection) -> None:
+@make_conn_aware
+def pre_allocate_250mb(db_conn: sqlite3.Connection) -> None:
     """Pre-allocate SQL file just in case the user runs out of disk space."""
 
-    if await unused_space(db_conn) > MIN_FREE_SPACE:
+    if unused_space(db_conn) > MIN_FREE_SPACE:
         return
 
     logger.debug("Database free rows are too low. Preallocating an additional 250MiB")
     script = "CREATE TABLE IF NOT EXISTS t(x);INSERT INTO t VALUES(zeroblob(250*1024*1024));DROP TABLE t;"
-    await (await db_conn.executescript(script)).close()
-    await db_conn.commit()
+    db_conn.executescript(script).close()
+    db_conn.commit()
 
 
+@make_conn_aware
 def get_table_names(conn: sqlite3.Connection, schema: LiteralString = "main") -> set[str]:
     with contextlib.closing(conn.execute(f"SELECT name FROM {schema}.sqlite_master WHERE type='table'")) as cursor:  # noqa: S608
         return {r[0] for r in cursor.fetchall()}
 
 
+@make_conn_aware
 def get_column_names(conn: sqlite3.Connection, table: str, schema: str = "main") -> set[str]:
     with contextlib.closing(conn.execute(f"PRAGMA {schema}.table_info({table})")) as cursor:
         return {r[1] for r in cursor.fetchall()}
