@@ -4,7 +4,7 @@ import pytest
 from cyclopts import App
 from cyclopts.exceptions import RepeatArgumentError, ValidationError
 
-from cyberdrop_dl import __version__
+from cyberdrop_dl import __version__, env
 from cyberdrop_dl.__main__ import run_cdl
 from cyberdrop_dl.cli import make_app, register_lazy_modules, should_load_lazy_module
 from cyberdrop_dl.commands import CLIarguments
@@ -90,10 +90,20 @@ def test_cli_multi_args() -> None:
 def test_lazy_loaded_retry_cmd() -> None:
     cmd = ["retry", "all"]
     app = make_app()
+    app.print_error = False
     with pytest.raises(SystemExit) as exc:
-        make_app().parse_args(cmd)
+        app.parse_args(cmd)
     assert exc.value.args == (2,)
 
     assert should_load_lazy_module(cmd) is True
+    assert should_load_lazy_module(["test"]) is True
+
+    try:
+        env.IS_PYTEST = False
+        assert should_load_lazy_module(["test"]) is False
+        assert should_load_lazy_module(cmd) is True
+    finally:
+        env.IS_PYTEST = True
+
     register_lazy_modules(app)
     app.parse_args(cmd)
